@@ -52,6 +52,15 @@ in UI code.
 from the request. For SSRF: allowlist hosts, resolve-then-validate the IP,
 disable redirects to new hosts, and fetch through an egress proxy where possible.
 
+**Exposure-boundary discriminator (rate severity by the boundary, not the render).**
+Before rating any "sensitive/gated data is exposed" finding, establish the
+**actual** boundary: is the data-carrying artifact tracked in version control
+(`git ls-files --error-unmatch <path>`) rather than gitignored
+(`git check-ignore <path>`)? served on an unauthenticated route (enumerate the
+routes)? shipped in a client bundle? Pin severity to that boundary, not to the
+rendering code — the same finding can sit a full severity level apart depending
+on it, so one command often settles High vs Critical.
+
 ## A02:2025 — Security Misconfiguration
 
 **How to detect**: debug/verbose errors in prod; stack traces returned to
@@ -161,6 +170,15 @@ compare), reset tokens from a non-CSPRNG.
 **Fix**: rate-limit and lock out; rotate session on auth state change; short
 token lifetimes + server-side revocation; verify JWT signature/alg/exp/aud; MFA
 where warranted.
+
+**🚩 CSRF guard mistaken for authentication.** An `Origin` / `Referer` /
+`Sec-Fetch-Site` check is CSRF defense only — (1) any non-browser client sets
+those headers freely, and (2) browsers omit `Origin` on many same-site **GET**
+navigations, so the check is simultaneously bypassable and leaky. If it is the
+*only* gate on a sensitive/paid/mutating action, that action is effectively
+unauthenticated: CWE-352 (CSRF) is not a substitute for CWE-306 (Missing
+Authentication) / CWE-862 (Missing Authorization). Confirm a real identity check
+exists.
 
 ## A08:2025 — Software or Data Integrity Failures
 

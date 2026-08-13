@@ -3,6 +3,41 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.1.0] — 2026-08-13
+
+Field-hardening pass distilled from four independent FULL-run engagements. No
+restructuring — phases, domains A–R, and report formats are unchanged; these are
+additive method, rubric, and reference refinements.
+
+### Added
+- `references/parallel-audit.md` — fan-out protocol for large targets: a shared
+  context packet, a fabrication-resistant subagent contract (one named invariant,
+  `file:line` + failing case, `NONE` is valued), and orchestrator re-verification
+  of every subagent finding in both directions. Routed from "Review mechanics"
+  and Phase 2.
+
+### Changed
+- **Phase 1** now verifies gate *scope*: run the project's own aggregate gate by
+  name, confirm exit codes, enumerate what the gates exclude and report coverage
+  per subtree, prove each gate goes red on a planted defect, and flag
+  decorative/unwired tests — plus a container/serverless deploy-contract
+  preflight.
+- **Severity rubric** gains a reachability qualifier: a `latent` finding keeps its
+  intrinsic severity but gates "enabling the subsystem," not merge (a bounded +
+  gated + recoverable destructive breach may be High); owner priority raises
+  prominence, not severity. Machine and human reports gain a two-status verdict
+  and `CONFIRMED`/`PLAUSIBLE` finding confidence.
+- **Domains A–E, C, O** and their references gain: latest-batch-by-`max(col)`;
+  exposure-boundary-first + CSRF≠auth; the "asserted-but-unenforced safety
+  property" class; a spend-safety checklist (default-off caps, fail-open ledgers,
+  `SELECT sum()` TOCTOU, cross-process guards); monotonic read-path shadowing +
+  write-guard-covers-every-primitive; and a docs↔code claim-reconciliation
+  technique.
+- **Principle 2 / Phases 4–5**: byte-fidelity before invisible-character claims; a
+  live-vs-documented-incident discriminator; report privacy re-scan, third-party
+  proper-noun scrub, and PR-split by risk surface.
+- README reference-file count (9 → 10).
+
 ## [1.0.0] — 2026-08-13
 
 Initial release: a universal, evidence-grounded deep code-review skill.

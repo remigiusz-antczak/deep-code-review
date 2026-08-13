@@ -135,6 +135,23 @@ LLM-backed feature, add cases that assert the guardrail holds:
   402/429.
 - **Provenance & grounding**: citations/sources for claims that reach users;
   confidence surfaced; unverifiable claims flagged, not shipped as fact.
+- **Falsify asserted-but-unenforced safety properties.** A safety parameter set
+  at a call site but silently **dropped or overridden by the layer below** — so
+  the code (and often a comment) *claims* a property that is not in force. Worse
+  than a missing safeguard because it reads as present. Two sub-cases:
+  - *Dropped by a lower layer.* e.g. `temperature: 0` "so the verifier is
+    deterministic" is omitted by the payload builder for a model tier that
+    rejects a non-default temperature (HTTP 400) — so the determinism claim is
+    false and a verifier feeding a human-review queue is non-deterministic. Grep
+    every `temperature`, `verify=`, `timeout`, `signal`, dry-run flag, allowlist,
+    and `readOnly` for a downstream drop/override.
+  - *Delegated to an unverifiable platform guarantee.* The control depends on an
+    external/platform behavior you can't test from the code. State the residual
+    risk that holds **regardless** of the guarantee and rest severity on the code
+    you can test; convert the unverifiable part into a single owner-run check in
+    "Decisions needed."
+
+  **A comment asserting a safety property is the highest-value thing to falsify.**
 
 **🚩 grep**: f-strings / `format` / template literals building a prompt from
 raw user or retrieved text; model output passed to `execute`/`exec`/`os.system`

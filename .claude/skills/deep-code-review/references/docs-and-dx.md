@@ -63,6 +63,10 @@ survives the *next* contributor — see "Standards imprint" below.
   count, a schema/field list) — a pointer can't drift, a duplicate always will.
   Enforce a CI **doc↔code sync check** that fails when a tracked doc, field, or
   count drifts.
+- **Reconcile load-bearing claims against the code.** For each doc claim using
+  *optional / required / always / never / all / every*, locate the code that
+  enforces it and confirm. A mismatch is a finding; a mismatch on a
+  **deploy-contract** claim (what is required to run) is at least High.
 - **Enumerate "lockstep surfaces"** — the sets of files that must change
   together (schema ↔ validator ↔ type ↔ prompt ↔ docs ↔ test). Misalignment
   surfaces as silent runtime breakage, not a compile error, so name them.

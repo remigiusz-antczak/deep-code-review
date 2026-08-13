@@ -25,6 +25,16 @@ an empty, lower-confidence, or duplicate one.
 - **Require a regression test that fails on this exact failure mode** — e.g.
   "an existing verified email must survive an enrichment run that returns blank
   for that field." The test fails on the old code, passes after the fix.
+- **A degraded/fallback/timeout result written as valid-but-empty** (e.g.
+  `status: complete` with all fields blank / `NO_PUBLIC_INFO`) is the same breach
+  when a **"latest/max" read surfaces it over a good prior record** — *even
+  though no overwrite occurred*, so a naive "did we UPDATE a good row?" check
+  misses it entirely. Tag it (`degraded: true`) and have latest/best reads skip
+  or de-prioritize it, or do not persist it as the newest record. This is
+  precisely why the pinned populated→worse regression test is mandatory and a
+  runtime echo-verify **cannot** replace it: some stores omit empty fields from a
+  write's response, so an empty write **reads back as equal to absent** and the
+  clobber passes echo-verification silently.
 
 ### The two-part non-regression gate
 
@@ -102,11 +112,24 @@ rate), validity (schema/format/range). For each:
 - **Every consumer, renderer, and export calls the same shared quality/noise
   filter as the upstream pipeline.** A surface that skips it silently re-admits
   already-filtered junk.
+- **A write/erosion guard must intercept every mutation primitive the storage
+  layer offers** (update AND clear AND append AND delete), not just the common
+  one — a cleanup pass that blanks populated cells via an unguarded `clear`/
+  `batchClear` bypasses a guard that only wraps `update`/`batchUpdate`, and its
+  only remaining protection is a volume ceiling, not the erosion check. Enumerate
+  the primitives and check each. The test that proves guard coverage must
+  **discover** write-sites (grep/AST), never hardcode a list that goes stale as
+  new sites are added.
 
 ## 6. Idempotency, ownership & lifecycle
 
 - Idempotent, safe to run twice; last-write-wins **only** by a stable key and
   **only** when it does not violate §1.
+- **Batch membership is an explicit batch id, never a shared timestamp.**
+  Selecting "the latest batch/generation" via `WHERE col = max(col)` (or
+  `ORDER BY col DESC LIMIT`-as-batch) is silently repointed by *any* single-row
+  write to `col` — collapsing the view to one row. Stamp an explicit
+  generation/batch id and select on it (cross-ref A in `SKILL.md`).
 - **Machine-computed fields are owned by the pipeline** — never hand-edited.
   Reject any change or proposal that mutates them.
 - **Never mass-close, expire, or delete records on a failed or partial upstream

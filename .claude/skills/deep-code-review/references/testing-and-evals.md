@@ -40,6 +40,12 @@ theater.**
   too: feed it null-resolution, truncation, substring false-matches, empty
   input. In CI, **self-test every gate against a planted defect** so a check
   can't silently rot into a no-op that passes everything.
+- **Trace which tests the gate actually runs.** Enumerate the test files, then
+  read the gate/CI command and list which it invokes. Tests present in the tree
+  but wired to no gate are **decorative** — a finding; name the highest-stakes
+  untested logic. (Pair with the planted-defect self-test above: prove the gate
+  both *runs* the test and *goes red* when it should — and that the reported
+  count changes, so a test can't be silently skipped.)
 - **Never report success over input you didn't read.** When a required input is
   absent, **skip loudly** (or fail) — a green tick over unread input is worse
   than a red one, because it looks like assurance.

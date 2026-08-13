@@ -62,6 +62,17 @@ need the how-to-test detail.
   secrets or money — recommend an independent reviewer (a human, or a *different*
   model that doesn't share this one's context). Redundant reviewers who share
   context share blind spots.
+- **Fan out on a large target.** When the repo is too large for one pass, review
+  it across parallel subagents — but first assemble a shared context packet and
+  hand every subagent the same anti-fabrication contract, then re-verify each
+  survivor at source before it enters the report. A fan-out manufactures
+  plausible-but-fake findings without that contract. See
+  `references/parallel-audit.md`.
+- **Triage by blast radius, not file order.** Read the highest-consequence paths
+  first so Criticals surface early and cheaply. A useful default for an
+  LLM/enrichment pipeline: budget/cost path → external-call clients →
+  write-back/persistence → route auth → orchestration/concurrency → untrusted
+  intake. (A hint, not a mandate — reorder to the target's archetype.)
 
 ---
 
@@ -73,10 +84,21 @@ need the how-to-test detail.
 2. **Verify, don't trust.** Build it, run the tests, run the linters, trace the
    data flow, and — when cheap and safe — run the actual pipeline/app. A claim
    you can check by running, you check. **Read your own diff**; a green gate is a
-   floor, not a certificate.
+   floor, not a certificate. **Confirm the bytes before asserting an
+   invisible-character claim** — any finding that hinges on a non-printable or
+   easily-confused character ("this delimiter is absent," "this comment is
+   stale," "these two strings differ") is checked at the byte level (`xxd`/`od`/a
+   code-point dump), not from a rendered view: your own viewer may collapse
+   NUL/zero-width/bidi/BOM to whitespace or drop them. Treat a tool-rendered
+   invisible region as `unverified` until byte-checked — it kills false
+   "stale comment" findings *and* catches real invisible-character injection the
+   render hides (cross-ref C, R).
 3. **No fabrication.** Never invent a defect, a metric, a CWE, a source, or a
-   line number. If you can't verify, say `unverified` and why. Missing evidence
-   is a finding, not a guess.
+   line number. If you can't verify, say `unverified` and why — and **name the
+   specific artifact that would resolve it** (a schema, a column type, a contract
+   file), routing it to "Decisions needed (owner)". Often that artifact is
+   in-repo and turns `unverified` into a confirmed finding on the spot. Missing
+   evidence is a finding, not a guess.
 4. **Do no harm — net-positive on every axis.** Any change you propose or apply
    must improve overall code health and must **not** regress any axis:
    correctness, security, performance, tests, docs, data quality, accessibility.
@@ -120,21 +142,51 @@ say so.
 (where untrusted input enters). Inventory every `TODO`/`FIXME`/`HACK`/`XXX`/
 "pending"/"temporary" marker in code **and** docs. Detect language(s),
 frameworks, build system, package manager, test runner, CI. State in one
-paragraph: what problem this code solves and how.
+paragraph: what problem this code solves and how. For anything with a network or
+untrusted-input surface, sketch a **trust-boundary table** —
+`untrusted input → who can set it → what validates/authorizes it → what it can
+reach`; rows that reach money, writes, or secrets with an empty validation column
+are the adversarial pass's starting list.
 
 **Phase 1 — Establish ground truth.** Install/build with the documented steps;
-record every deviation (a broken "one-command setup" is a finding). Run the full
-test suite (pass/fail, coverage, skipped/flaky). Run linters, type-checkers,
-formatters, and any wired security/dependency scanners. If a pipeline/app exists
-and running it is cheap, safe, and non-destructive, run it and capture the
-**before** output for a later quality-delta. Never touch paid APIs or production
-data without approval. Anything that won't build, test, or run as documented is
-a Blocker until proven otherwise.
+record every deviation (a broken "one-command setup" is a finding). **Run the
+project's own one-command aggregate gate by name** (`make check` / `npm run
+verify` / …), not a hand-picked subset — and **never record a gate as clean
+without confirming its exit code**; empty output is not a pass. Run the full test
+suite (pass/fail, coverage, skipped/flaky), linters, type-checkers, formatters,
+and any wired security/dependency scanners. Then, before trusting "green":
+- **Enumerate what the gates exclude, and audit it separately.** Read the
+  lint/type/test/CI config for `exclude`/`ignore`/path-filter entries and any
+  nested project with its own manifest; run each excluded subtree's own gate or
+  state it has none. Report coverage **per subtree** (`root: N pass (excludes
+  X)` + `X: M pass (separate gate)`) — never an unqualified "tests pass" when any
+  code is gate-excluded. "Green root gate + excluded privileged subtree" is a
+  finding in its own right: coverage gaps concentrate where risk does.
+- **Prove each gate can fail.** Confirm the gate actually runs in CI, then plant
+  a minimal defect it should catch (a throw, an undefined identifier, a banned
+  string, a format break) and confirm it goes **red and the reported
+  count/exit changes**, then revert. A gate that stays green on a planted defect
+  is a **Blocker/Critical reported before any code finding** — it invalidates the
+  ground truth everything else builds on. Trace which test files the gate
+  actually invokes; tests present but unwired are "decorative" (procedures:
+  `references/testing-and-evals.md`).
+- **Deploy-contract preflight** (containerized/serverless targets): lockfile
+  committed ↔ install command, entrypoint/CMD file mode, build-time vs runtime
+  data dependencies, and **boot the documented-minimal config and hit the
+  health/readiness path** as a first-class Blocker gate (procedures:
+  `references/infra-iac-containers.md`).
+
+If a pipeline/app exists and running it is cheap, safe, and non-destructive, run
+it and capture the **before** output for a later quality-delta. Never touch paid
+APIs or production data without approval. Anything that won't build, test, or run
+as documented is a Blocker until proven otherwise.
 
 **Phase 2 — Domain audits.** Walk every applicable domain section (A–R). For
 each, produce findings with `file:line` + impact + fix. Load the domain's
 `references/*.md` for detection procedures. Domains that don't apply are marked
-N/A with a one-line reason.
+N/A with a one-line reason. When the target is large, run these as parallel
+one-invariant audits under the contract in `references/parallel-audit.md` — and
+re-verify every subagent finding at source before it enters the report.
 
 **Phase 3 — Adversarial / red-team pass.** Switch to attacker mindset (section
 below). Actively try to break auth, inject, exfiltrate, exhaust, poison, and to
@@ -142,13 +194,29 @@ find useless/costly work. Assume a hostile user **and** a hostile upstream.
 
 **Phase 4 — Synthesize & rank.** Deduplicate, assign severity, separate blocking
 from non-blocking. Note systemic patterns (one root cause behind many symptoms)
-rather than listing every instance.
+rather than listing every instance. Also identify **compounds** — findings from
+different domains where one disables another's safeguard; a compound's severity
+is the joint effect, which can exceed either part, so state it as one finding
+with the fix order. **Distinguish a live defect from a documented past one:**
+comments often narrate fixed incidents in present tense — before reporting, check
+(a) is there a test pinning the corrected behavior? and (b) does
+`git log -S'<symbol>' --oneline` show the fix already landed? If either is yes,
+it is a historical note, not a finding.
 
 **Phase 5 — Report.** Emit the machine-actionable findings report (the exact
 format below) to the user / PR, **and** write a plain-language, non-technical
 report into the reviewed repo's top-level `code-review/` directory (additive +
-dated — see "Human-readable report" below). Surface every decision that needs a
-human owner.
+dated — see "Human-readable report" below); writing that report **is** the
+deliverable the invocation asked for — do not additionally broadcast or publish
+it anywhere unless asked. **After writing it, re-run the project's own
+privacy/name gate and link-check over the new file** — it is untracked content
+the gate scans, and writing it can turn a clean tree red. Surface every decision
+that needs a human owner. **Split the remediation by risk surface:** when the
+review yields both routine fixes and a change to a security/permission/authz
+boundary, land them in **separate PRs** — the security-critical diff on its own,
+small, flagged for a decorrelated reviewer, never buried under nit commits.
+Fixes ride on a branch + PR (gated on approval), never a direct push to the
+default branch.
 
 **Phase 6 — Imprint standards (opt-in; writes to the repo).** Offer to persist a
 tailored standards set so the bar holds on future iterations — an AI-facing
@@ -181,13 +249,18 @@ augment, never silently overwrite; defer to an existing style guide. See
 - A **scope/subset flag must REPLACE the working set, not union into it** — an
   accidental union silently balloons scope and cost; test the two selectors are
   disjoint.
+- A query that selects "the latest batch/generation" via `WHERE col = max(col)`
+  (or `ORDER BY col DESC LIMIT`-as-batch) is silently broken by **any**
+  single-row write to `col` — it can collapse a whole view to one row. Batch
+  membership must be an explicit batch id, not a shared timestamp individual
+  writes can move (cross-ref D).
 - Error paths are correct, not just happy paths; idempotent where retried;
   deterministic where relied upon.
 - **UI chrome is a claim** — a tab/heading/count asserts data beneath it; render
   it only when backing data exists ("empty beats fabricated" for layout too).
 - 🚩 `==`/truthiness bugs, `float` for money, naive datetimes, mutation of
   shared/default args, silent coercion, unhandled enum case, subset flag that
-  unions.
+  unions, "latest batch" keyed on a shared timestamp a single write can move.
 
 ### B. Security — application (OWASP Top 10:2025) → `references/security-appsec.md`
 - **A01 Broken Access Control** (incl. SSRF): server-side authorization on every
@@ -205,6 +278,15 @@ augment, never silently overwrite; defer to an existing style guide. See
   a non-empty result is not proof the layer ran. Enforce an **egress allow-list
   that a test scans the source against**, so the security doc can't drift from
   the code.
+- **Before rating a "sensitive/gated data exposed" finding, establish the actual
+  exposure boundary** — is the data-carrying artifact tracked in version control,
+  served on an unauthenticated route, or in a client bundle? Pin severity to that
+  boundary (`git check-ignore`, `git ls-files --error-unmatch`, route
+  enumeration), not to the rendering code. And an `Origin`/`Referer`/
+  `Sec-Fetch-Site` check is **CSRF defense, not authentication** — bypassable by
+  any non-browser client and absent on many GET navigations; if it is the only
+  gate on a sensitive/paid/mutating action, that action is effectively
+  unauthenticated.
 - **Secrets**: nothing sensitive in source, history, comments, logs, error
   strings, or fixtures; env/secret-manager only. A gate that finds a secret
   reports `file:line` — it **never echoes the secret**. User-facing errors expose
@@ -237,9 +319,16 @@ Agentic Applications 2026.
 - **Bound consumption** (LLM10): token/cost/rate caps enforced *before* each
   billable call; loop caps; breakers on 402/429; a **no-model fast path** for
   rejected/unauthenticated input so a flood can't burn budget.
+- **A safety param set at a call site is a claim, not a guarantee** — confirm the
+  layer below actually applies it. A `temperature`, `verify=`, `timeout`, `signal`,
+  dry-run flag, allowlist, or `readOnly` can be silently dropped/overridden by a
+  lower layer, or delegated to an unverifiable platform guarantee; a comment
+  asserting a safety property is the highest-value thing to falsify (the class
+  and its two sub-cases are in `references/security-ai-agents.md`).
 - 🚩 f-string/format prompts from raw input, output → `execute`/`render`
   unchecked, no `max_tokens`/`timeout`/retry cap, broad-scope tools with no
-  confirmation, secrets/authz in the system prompt.
+  confirmation, secrets/authz in the system prompt, a safety param asserted at
+  the call site but dropped downstream.
 
 ### D. Data integrity & data quality → `references/data-quality.md`
 Apply to any pipeline, ETL, enrichment, scraping, or dataset producer. Judge the
@@ -250,6 +339,12 @@ Apply to any pipeline, ETL, enrichment, scraping, or dataset producer. Judge the
   Require a regression test that fails on this exact mode. Non-regression gate:
   a within-dataset uniqueness check **plus** a populated→worse check against an
   **explicitly pinned** baseline (never the live artifact).
+- A **degraded/empty/fallback result surfaced by a "latest/max" read is the same
+  monotonic breach** even when no overwrite occurred — tag it (`degraded: true`)
+  and have latest/best queries skip it. A write/erosion guard must intercept
+  **every** mutation primitive (update AND clear AND append AND delete), not just
+  the common one, and the test proving its coverage must **discover** write-sites
+  (grep/AST), never hardcode a list that rots (see `references/data-quality.md`).
 - **No fabrication in the data**: skip a field rather than guess; corroboration =
   **two+ independent sources**; `inferred` ≠ `sourced`; omit the unverifiable.
 - **Entity resolution biases false-exclude over false-merge**: stable-id/proof
@@ -261,7 +356,9 @@ Apply to any pipeline, ETL, enrichment, scraping, or dataset producer. Judge the
   hand-edited); **never lower a baseline just to pass a build**.
 - 🚩 unconditional upsert ignoring confidence, fuzzy single-field merge, dedup on
   non-normalized keys, "latest wins" clobbering verified data, a metric scored
-  `0` where N/A, freshness from `fetched_at`, a model call returning a score/gate.
+  `0` where N/A, freshness from `fetched_at`, a model call returning a score/gate,
+  a guard that watches one write API but not its siblings, a fallback/empty record
+  a "latest" read surfaces over a good one.
 
 ### E. Performance, efficiency & cost → `references/performance-db-cost.md`
 - **Algorithmic**: no accidental O(n²)+ on hot paths; right data structure;
@@ -280,10 +377,17 @@ Apply to any pipeline, ETL, enrichment, scraping, or dataset producer. Judge the
   events over polling; don't re-fetch/re-embed unchanged inputs. Enforce spend
   caps **before** the call — per-run **and** a global/monthly cap (from an
   append-only ledger); a **dry-run must cost nothing** (gate the call, not just
-  the write); calibrate a big paid run on a small zero-write sample first.
+  the write); calibrate a big paid run on a small zero-write sample first. Spend
+  caps have subtle holes — a per-run cap whose default is `0`/unlimited is not a
+  cap, a ledger loader that resets to empty on a read fault fails **open**, and a
+  `SELECT sum()` then check-then-act (or an in-process singleton shared across
+  multiple processes) is not concurrency-safe: the spend-safety checklist is in
+  `references/performance-db-cost.md`.
 - 🚩 queries in a loop, `SELECT *`, missing `LIMIT`, identical repeated
   HTTP/LLM calls, no timeout, `CREATE INDEX` without `CONCURRENTLY`, `ADD COLUMN
-  … NOT NULL` w/o default, unbounded caches, per-run cap but no global cap.
+  … NOT NULL` w/o default, unbounded caches, per-run cap but no global cap, a
+  per-run cap defaulting to 0/unlimited, a spend ledger that fails open on a read
+  error, a `SELECT sum()`-then-act spend check, no dry-run/apply switch at all.
 
 ### F. Reliability & error handling
 - Every external call handles failure explicitly: **check status before reading
@@ -429,8 +533,10 @@ or cloud config. (OWASP A02/A03; benchmark against CIS.)
 - **DX**: a `doctor`/preflight that names each missing piece with a fix, prints
   no secrets, and fails only on a genuine blocker; a documented
   missing-prerequisite → symptom map; a **single source of truth** for
-  cross-referenced facts enforced by a doc↔code sync check; document what is
-  deliberately **not** tested/N-A and why.
+  cross-referenced facts enforced by a doc↔code sync check — reconcile each
+  load-bearing *optional/required/always/never/all/every* claim against the code
+  that enforces it (a mismatch on a deploy-contract claim is at least High);
+  document what is deliberately **not** tested/N-A and why.
 - 🚩 aspirational README, stale setup, undocumented env vars, no diagram, "see
   the code," live counts hard-coded in prose.
 
@@ -518,6 +624,20 @@ Guiding standard (Google): approve once the change **definitely improves overall
 code health**, even if imperfect — but never wave through a Blocker/Critical, and
 never approve a change that regresses another axis (principle 4).
 
+**Severity = f(defect, reachability).** Tag a finding `latent` when it is real but
+not currently reachable (feature-flag off by default, an incomplete/break-glass
+path, unregistered or dead-but-present code). Keep its **intrinsic** severity — a
+latent Critical is still a Critical and must be fixed **before** the gate/flag
+flips — but its gate instruction becomes **"blocks enabling the subsystem /
+flipping the flag, not merge of unrelated work."** Do **not** down-rank a latent
+Critical to Medium; that discards the actionable fact. One exception, keyed to
+consequence-today: a **destructive/monotonic breach that is gated behind an
+explicit apply flag, bounded in blast radius, AND recoverable (old value logged)**
+may be ranked **High** rather than Critical — but only if all three mitigations
+are stated and a regression test is required before the next apply. And
+**owner/stakeholder priority raises a finding's reporting prominence, not its
+severity** — severity is consequence, not importance-to-the-owner.
+
 ---
 
 ## Findings report — exact format
@@ -527,11 +647,17 @@ never approve a change that regresses another axis (principle 4).
 
 ## Verdict
 <Approve | Approve-with-nits | Changes-requested | Blocked> — one-line reason.
+(When the repo has distinct risk surfaces — e.g. a live service plus a disabled
+subsystem — give a **two-status verdict**, each scoped: e.g. "🟡 running system ·
+🔴 enabling <subsystem>".)
 Counts: Blocker N · Critical N · High N · Medium N · Low N · Nit N
 
 ## Ground truth
 - Build: <ok / failed: …>
-- Tests: <X/Y pass, Z skipped, coverage …>
+- Tests: <X/Y pass, Z skipped, coverage — scoped per subtree if any gate
+  excludes code, e.g. `root: N (excludes X)` + `X: M (separate gate)`>
+- Gate scope & self-test: <what the gates exclude; each gate proven red on a
+  planted defect, or the gate-rot finding>
 - Lint/type/scan: <results>
 - Pipeline/app run: <before-state metrics, or N/A>
 
@@ -567,8 +693,11 @@ Counts: Blocker N · Critical N · High N · Medium N · Low N · Nit N
 ```
 
 Rules: findings sorted by severity; each has `file:line`; unverifiable items
-marked `unverified` with the reason; no fabricated metrics; systemic issues
-stated once with instances listed.
+marked `unverified` with the reason (naming the artifact that would resolve it);
+findings from a fan-out marked `CONFIRMED` (lead re-verified at source) or
+`PLAUSIBLE` (subagent-reported, not yet lead-verified); a real-but-unreachable
+finding tagged `latent` with the trigger that would make it live; no fabricated
+metrics; systemic issues stated once with instances listed.
 
 ---
 
@@ -585,7 +714,12 @@ plus an index, so history is preserved and nothing is overwritten:
 This output is additive and reversible (a new dated file); it never edits code.
 Keep the language jargon-free — explain each risk as *what could happen*, not as
 a CWE number — and link each item to its technical finding ID so an engineer can
-jump to the detail.
+jump to the detail. Relative links in this file resolve **from `code-review/`**
+(e.g. `../docs/x.md`), and a new top-level dir must satisfy any doc-link gate.
+Scrub **third-party proper nouns** too (public event/conference/product names are
+usually not on a derived deny-set, so they pass the privacy gate but still leak
+context) — keep committed findings generic. After writing, run the project's
+privacy/name gate over this file (Phase 5).
 
 Template for `code-review/review-YYYY-MM-DD.md`:
 
@@ -594,6 +728,9 @@ Template for `code-review/review-YYYY-MM-DD.md`:
 
 ## In one line
 <🟢 Healthy | 🟡 Needs attention | 🔴 Not ready to ship> — <one plain sentence>.
+<If the project has two risk surfaces (e.g. what runs today vs. a switched-off
+part), give one status for each — e.g. "🟡 what runs today · 🔴 before turning on
+<the part>".>
 
 ## What this project does
 <one short paragraph in plain language: the problem it solves and how>
@@ -635,8 +772,10 @@ with exact file locations and fixes, is in <the findings above / the PR / link>.
 ## Definition of done
 
 - ✅ Builds and runs with the documented one-command setup.
-- ✅ All tests pass; edge/regression coverage matched to the code; security + (if
-  LLM) prompt-injection tests; AI evals for model-dependent output.
+- ✅ All tests pass (scoped per subtree where a gate excludes code; each gate
+  proven to fail on a planted defect); edge/regression coverage matched to the
+  code; security + (if LLM) prompt-injection tests; AI evals for model-dependent
+  output.
 - ✅ Lint, format, type-check, and dependency/security scan clean.
 - ✅ Zero Blocker/Critical; High fixed or explicitly owner-accepted.
 - ✅ **No regression on any axis** — the change is net-positive (principle 4).

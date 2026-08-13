@@ -146,7 +146,7 @@ verified** — never a remembered link.
 │   └── standards-index.md          # verified standards, URLs, verification dates
 └── .claude/skills/deep-code-review/
     ├── SKILL.md                    # the review method + all domain checklists
-    └── references/                 # on-demand deep playbooks (9 files)
+    └── references/                 # on-demand deep playbooks (10 files)
 ```
 
 ---

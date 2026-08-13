@@ -8,6 +8,30 @@ relevant **CIS Benchmarks**; adopt **SLSA** for build provenance.
 
 ---
 
+## Deploy-contract preflight (run first for a containerized/serverless target)
+
+Cheap one-line checks that decide "Blocked" vs merely "changes-requested" — run
+them before the domain audits, because they fail late and silently otherwise:
+
+- **Lockfile ↔ install command.** If the build runs `npm ci` /
+  `pip install --require-hashes` / `yarn --immutable`, the lockfile must be
+  committed or the build hard-fails (`git ls-files | grep -E
+  'package-lock|pnpm-lock|yarn.lock|poetry.lock|go.sum|Cargo.lock'`).
+- **Entrypoint file mode.** `CMD ["./entrypoint.sh"]` with no exec bit never
+  starts — check `git ls-files -s <entrypoint>` shows mode `100755`, or a
+  `chmod +x` runs in the Dockerfile.
+- **Build-time vs runtime data dependency.** A page/module that opens a DB or
+  reads a runtime secret at **module/import scope** breaks a build-time prerender
+  — it must defer to runtime (`export const dynamic = "force-dynamic"` or the
+  framework's equivalent), or the build fails against a resource that doesn't
+  exist yet.
+- **Boot the documented-minimal config and hit the health/readiness path.** The
+  configuration the README calls "minimal" must actually start and answer
+  `/health` — a `set -e` entrypoint that aborts when an "optional" dependency is
+  absent violates the deploy contract on the exact path the docs call optional.
+
+---
+
 ## Containers (Docker / OCI)
 
 - **Non-root**: an explicit `USER` (not root); read-only root filesystem where

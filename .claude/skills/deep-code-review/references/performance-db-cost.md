@@ -74,6 +74,26 @@ Every billable or slow call must map to value delivered.
   per-session/request, **and** a global/daily/monthly cap for scheduled or
   unattended jobs (a per-run cap alone won't stop a runaway schedule). Circuit
   breakers on 402/429; bounded retries with exponential backoff + jitter.
+- **The spend-safety holes** (verify each — two unrelated engagements independently
+  hit them):
+  - **A cap that defaults to off is not a cap.** Check the *default value* of
+    every spend/row/rate cap; a per-run cap whose env var defaults to
+    `0`/unlimited leaves a bare, freshly-configured run bounded only by the global
+    aggregate. A paid pass with **no dry-run/apply switch at all** is the same
+    gap.
+  - **A ledger loader that fails open.** `try { readWholeFile } catch {
+    events = [] }` on a spend/rate accumulator zeroes month-to-date on *any* read
+    fault (permissions, IO, truncation) and disables the ceiling. Branch
+    **ENOENT** (absent → empty is correct) vs a fault on a **present** file (fail
+    closed).
+  - **`SELECT sum()` then check-then-act is not atomic.** Concurrent callers each
+    read the pre-spend total and both spend. Use an atomic reservation
+    (insert-the-charge-first, or a transactional decrement/lock).
+  - **An in-process singleton guard does not hold across processes.** A
+    `globalThis` "is a job running?" flag or single-flight promise is per-process;
+    if a second process (scheduler, worker, replica) shares the datastore, the
+    guard is an illusion — verify it against the real process model (e.g. an
+    entrypoint that runs `worker &` alongside the server).
 - **Calibrate before a big paid run**: dry-run a small **zero-write** sample,
   measure real cost-per-call and failure rate, then extrapolate and get sign-off
   before the full apply. Don't discover the bill after the batch.
@@ -102,4 +122,6 @@ large `OFFSET`; `.all()` then filter in code; identical HTTP/LLM calls with the
 same args; no `timeout=`/`AbortController` on network calls; `while True` poll
 loops; `CREATE INDEX` without `CONCURRENTLY`; `ADD COLUMN … NOT NULL` with no
 default; unbounded in-memory caches/dicts as module globals; retry loops with no
-cap.
+cap; a per-run cap whose default is `0`/unlimited; a `catch` that sets a spend
+accumulator to empty; `SELECT sum(...)` then an app-side spend decision; a
+`globalThis`/in-process job guard shared across processes.
