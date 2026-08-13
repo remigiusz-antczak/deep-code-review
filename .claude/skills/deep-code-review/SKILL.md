@@ -377,14 +377,18 @@ Apply to any pipeline, ETL, enrichment, scraping, or dataset producer. Judge the
   events over polling; don't re-fetch/re-embed unchanged inputs. Enforce spend
   caps **before** the call — per-run **and** a global/monthly cap (from an
   append-only ledger); a **dry-run must cost nothing** (gate the call, not just
-  the write); calibrate a big paid run on a small zero-write sample first. Spend
+  the write); calibrate a big paid run on a small zero-write sample first. For
+  model calls, cache the longest stable prompt prefix, bill each token class at
+  its real rate, and don't wrap an auto-retrying SDK in a second retry loop. Spend
   caps have subtle holes — a per-run cap whose default is `0`/unlimited is not a
   cap, a ledger loader that resets to empty on a read fault fails **open**, and a
   `SELECT sum()` then check-then-act (or an in-process singleton shared across
   multiple processes) is not concurrency-safe: the spend-safety checklist is in
   `references/performance-db-cost.md`.
 - 🚩 queries in a loop, `SELECT *`, missing `LIMIT`, identical repeated
-  HTTP/LLM calls, no timeout, `CREATE INDEX` without `CONCURRENTLY`, `ADD COLUMN
+  HTTP/LLM calls, an external call in a `no-store`/dynamic render body, a fresh
+  SDK/HTTP client per call, a prompt-cache marker on per-call-varying content, no
+  timeout, `CREATE INDEX` without `CONCURRENTLY`, `ADD COLUMN
   … NOT NULL` w/o default, unbounded caches, per-run cap but no global cap, a
   per-run cap defaulting to 0/unlimited, a spend ledger that fails open on a read
   error, a `SELECT sum()`-then-act spend check, no dry-run/apply switch at all.
