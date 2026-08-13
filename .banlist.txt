@@ -1,0 +1,32 @@
+# Privacy gate — banned-term seed list (dogfooded by this repo).
+#
+# WHY: a pre-commit name-grep gate scans staged content against these patterns
+# and FAILS CLOSED on any hit, keeping real names, company/team names, internal
+# identifiers, and secrets out of commits, history, PR bodies, and shared output.
+#
+# WHAT LIVES WHERE:
+#   - This committed file holds only GENERIC, high-precision patterns and
+#     fictional placeholders. It is safe to publish.
+#   - Real internal identifiers (real person/company/team names, internal
+#     hostnames, sheet/base/project/dataset/table IDs) go in `.banlist.local.txt`,
+#     which is gitignored and loaded at runtime ALONGSIDE this file. A missing
+#     local file degrades to a clean no-op, never a crash.
+#
+# FORMAT: one pattern per line; '#' begins a comment. High-precision secret
+# shapes below block automatically. Keyword-style hits (if you add them to your
+# local file) should be triaged by a human, not auto-blocked, to avoid false
+# positives on legitimate docs.
+
+# --- Secret-shaped tokens (auto-block; tune to your stack) ---
+AKIA[0-9A-Z]{16}
+ASIA[0-9A-Z]{16}
+gh[pousr]_[A-Za-z0-9]{36,}
+xox[baprs]-[A-Za-z0-9-]{10,}
+sk-[A-Za-z0-9]{20,}
+-----BEGIN (RSA |EC |OPENSSH |DSA |PGP )?PRIVATE KEY-----
+
+# --- Fictional placeholders that are EXPECTED and allowed in fixtures ---
+# (Listed for documentation; do NOT block these — they are the safe defaults.)
+#   Acme Capital, Jane Smith, jane@example.com, example.com, operator, the team
+
+# --- Add project-specific REAL identifiers to .banlist.local.txt, never here. ---

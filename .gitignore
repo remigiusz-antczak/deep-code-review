@@ -1,0 +1,30 @@
+# Local privacy gate — real internal identifiers are NEVER committed.
+# Put real names / company names / internal IDs / hostnames here instead of
+# in the committed .banlist.txt. See .banlist.txt for the mechanism.
+.banlist.local.txt
+
+# Secrets / environment
+.env
+.env.*
+!.env.example
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/
+
+# Tooling artifacts (if any linters/tests are ever run in this repo)
+node_modules/
+dist/
+build/
+coverage/
+*.log
+
+# Claude Code local settings (machine-specific)
+.claude/settings.local.json
+
+# install.sh backups created when updating an existing skill install
+*.backup-*
