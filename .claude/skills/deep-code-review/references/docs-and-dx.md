@@ -1,9 +1,11 @@
 # Documentation, DX & standards-imprint
 
 Read this when reviewing (or writing) a project's documentation, its setup /
-developer experience, or when the review should **leave durable standards
-behind** so future contributors and agents hold the quality bar on later
-iterations. Expands section O of `SKILL.md`.
+developer experience, its **repository hygiene** (license, security policy,
+contribution + ownership files, branch protection, changelog), its **cross-agent
+instruction files** (`CLAUDE.md` / `AGENTS.md` and peers), or when the review
+should **leave durable standards behind** so future contributors and agents hold
+the quality bar on later iterations. Expands section O of `SKILL.md`.
 
 ---
 
@@ -49,12 +51,37 @@ conventions, how to build/test/run, the **definition of done**, and the hard
 confidentiality + no-fabrication rules. It is the mechanism by which quality
 survives the *next* contributor — see "Standards imprint" below.
 
+- **Portability & interop (check for divergence).** `AGENTS.md` is a cross-agent
+  convention many tools read; `CLAUDE.md` is Claude Code's file. Different agents
+  read different files — `AGENTS.md`, `CLAUDE.md`, `.github/copilot-
+  instructions.md`, Cursor `.cursor/rules` / `.cursorrules`, Windsurf
+  `.windsurf/rules` / `.windsurfrules`, `GEMINI.md`, Aider `CONVENTIONS.md`. **If
+  a repo carries more than one, they must not drift**: keep the standards in one
+  file and have the others point to it (Claude Code reads `CLAUDE.md`, *not*
+  `AGENTS.md`, so bridge with an `@AGENTS.md` import or a symlink). **If it has
+  none, write the one the repo's actual toolchain reads.** Two agent-instruction
+  files with conflicting rules is the finding — not which name is "primary."
+- **A standards doc is context, not enforcement.** Prose in `CLAUDE.md` / `AGENTS.md`
+  guides an agent but binds nothing — per Claude Code's own guidance these files
+  are "context, not enforced configuration." A load-bearing standard survives
+  future sessions only when a **gate** backs it (a pre-commit hook, a required CI
+  status check). "Documented but unenforced" is the highest-value durable-
+  standards finding (see the imprint below).
+
 ## Developer experience
 
 - **One-command setup**, and a **`doctor`/preflight** that names each missing
   piece with an actionable fix line, prints **no secret values**, and exits
   non-zero **only** on a genuine blocker (not on an optional key the user may
   not need).
+- **Fewest commands to first run.** clone→run and clone→green-test should each be
+  a single normalized command — a `script/bootstrap` + `script/test` convention,
+  a `make` / `just` target, or a devcontainer — so a newcomer needs the *pattern*,
+  not project-specific knowledge, to build or test. A long or undocumented
+  time-to-first-run is DX friction (Info), not a defect; a **CONTRIBUTING that
+  promises a workflow the scripts don't actually run** is a real finding. Watch
+  **dev/prod parity** — local backing services/versions that diverge from
+  production can hide correctness bugs.
 - **Document the missing-prerequisite → symptom map** for any gitignored setup:
   each absent file surfaces at a different step with an error that reads like a
   code defect. Record which absence causes which failure so each newcomer
@@ -75,6 +102,51 @@ survives the *next* contributor — see "Standards imprint" below.
 
 ---
 
+## Repository hygiene & community health
+
+A healthy repository ships more than code. Check for the community-health files
+and process controls below, but **rate each by the exposure the repo actually
+has** — on a private/internal repo most are Info/Low; each escalates when the
+repo is **public, distributed/packaged, or accepts outside contributions** (the
+same baseline-plus-trigger logic as the `SKILL.md` severity rubric). Don't emit a
+wall of Mediums on a private repo — batch the Info/Low items and let the trigger
+decide escalation.
+
+- **LICENSE** — absent → legal reuse is undefined. Low for a private repo; **High
+  once public or published to a package registry** (an undefined license blocks
+  lawful use). OpenSSF passing criteria require a FLOSS license in a standard
+  location.
+- **SECURITY.md** — no vulnerability-disclosure channel. Low; Medium once public
+  or externally used (OpenSSF: a project MUST publish how to report a
+  vulnerability).
+- **CONTRIBUTING** / **CODE_OF_CONDUCT** — Info; Low for a public project taking
+  outside contributions. A CONTRIBUTING that documents a build/test flow the repo
+  can't actually run is a real finding (cross-ref DX above).
+- **CODEOWNERS — only as strong as its enforcing rule.** CODEOWNERS alone merely
+  *requests* review; it binds a merge only when branch protection enables "require
+  review from Code Owners." Present but unenforced on sensitive paths → Medium.
+- **Branch protection / required checks** on the default and release branches:
+  require a PR + human review + passing status checks before merge, and block
+  force-push. Missing → Medium (maps to OpenSSF Scorecard *Branch-Protection* /
+  *Code-Review* / *CI-Tests*); **High if unreviewed pushes reach production.**
+- **CHANGELOG / release notes** — versioned releases with no human-readable change
+  summary. Info; Low once consumers must track versions. Keep a Changelog:
+  `CHANGELOG.md`, an `Unreleased` section, categories
+  Added/Changed/Deprecated/Removed/Fixed/Security (OpenSSF: release notes MUST be
+  human-readable).
+- **Issue / PR templates** — `.github/ISSUE_TEMPLATE` and a PR template mirroring
+  the definition of done. Info.
+
+Do **not** re-home posture other sections already own: `.gitignore` / secret
+hygiene is section N; general style consistency is section H.
+
+**🚩**: a public repo with no LICENSE or SECURITY.md; CODEOWNERS with no "require
+Code Owner review" rule; a default branch mergeable with no review or passing
+checks; force-push allowed on a release branch; versioned releases with no
+changelog.
+
+---
+
 ## Standards imprint — leave the bar in place (Phase 6 of the review)
 
 A review that only finds problems lets quality regress on the next iteration.
@@ -92,21 +164,41 @@ conventions or design, surface it as an owner decision rather than imposing it.
 What to imprint (tailored to the project's actual stack and to this review's
 findings — not a generic dump):
 
-1. **AI-facing standards doc** (`CLAUDE.md`/`AGENTS.md`): the code standards, the
-   definition of done, the stack-specific red flags this review surfaced, the
-   data-integrity invariants (if a data product), the LLM-safety rules (if it
-   calls a model), and the hard no-fabrication + confidentiality rules — written
-   so the next agent complies without re-deriving them.
+1. **AI-facing standards doc — canonical `AGENTS.md`.** Write the standards once
+   in a root `AGENTS.md` (the cross-vendor format most agents read), and make
+   every other agent file a **thin pointer** to it, not a copy: a `CLAUDE.md`
+   that imports it (`@AGENTS.md`) or symlinks to it for Claude Code, and
+   equivalent one-line pointers for the agents the repo's toolchain actually uses
+   (Cursor `.cursor/rules`, `.github/copilot-instructions.md`, `GEMINI.md`, Aider
+   `.aider.conf.yml` `read:`). **If the repo already standardizes on a specific
+   agent file, defer to it** — fill gaps, don't relocate it. Keep the canonical
+   file concise (Claude Code targets under ~200 lines) and push depth into
+   referenced files. Contents: the code standards, the definition of done, the
+   stack-specific red flags this review surfaced, the data-integrity invariants
+   (if a data product), the LLM-safety rules (if it calls a model), and the hard
+   no-fabrication + confidentiality rules — so the next agent complies without
+   re-deriving them.
 2. **Pre-commit / CI gates**: lint (0 warnings), format, type-check, tests, a
    **privacy/secret gate that fails closed when its banned-terms input is
    missing and reports `file:line` only — never echoing the matched secret**,
    and dependency/secret scanning. The gate scans the lines a branch *adds*; a
    green gate is a floor, not a certificate.
 3. **Templates**: `.env.example` (secret-free), an ADR template, a PR checklist
-   mirroring the definition of done, and a `.banlist.txt` seed (real identifiers
-   go in a gitignored local file).
+   mirroring the definition of done, a `.banlist.txt` seed (real identifiers go
+   in a gitignored local file), and the editor/versioning conventions that keep
+   diffs clean across contributors — `.editorconfig`, a `CHANGELOG.md` (Keep a
+   Changelog), and Conventional Commits where releases are versioned.
 
-### Minimal `CLAUDE.md` / `AGENTS.md` skeleton to imprint
+**Write it safely — the imprint is idempotent and additive.** It creates, it does
+not clobber: **detect and stop** if the standard already exists; **create-if-
+missing, never overwrite** a good file; when touching a shared file like
+`.gitignore`, **add only the missing lines** (grouped under a labeled comment),
+never removing or duplicating existing entries; and **print exactly what was added
+vs. already present** so the change is auditable. And remember a doc alone is
+advisory — **pair each load-bearing standard with the gate that enforces it** (a
+pre-commit hook / required CI check) or it will not survive the next session.
+
+### Minimal `AGENTS.md` skeleton to imprint (canonical — point `CLAUDE.md` and peers at it)
 
 ```markdown
 # Engineering standards (AI-facing)
@@ -142,4 +234,6 @@ findings — not a generic dump):
 **🚩 red flags**: a README describing an aspirational system; stale setup steps;
 undocumented env vars; no architecture diagram; "see the code for details"; live
 counts hard-coded in prose; a decision with no rationale anywhere; a project with
-strict standards in a contributor's head but nothing an agent can read and apply.
+strict standards in a contributor's head but nothing an agent can read and apply;
+conflicting agent-instruction files (`CLAUDE.md` vs `AGENTS.md`); a standards doc
+that no gate enforces.

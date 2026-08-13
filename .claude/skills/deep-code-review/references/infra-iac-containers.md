@@ -110,4 +110,5 @@ hard-coded `access_key`/`secret`/`password` in `.tf`.
 ---
 
 Cross-references: A02/A03 detail in `security-appsec.md`; secret handling in
-section M of `SKILL.md`; spend/egress control in `performance-db-cost.md`.
+section N of `SKILL.md` (and M for log-leakage); spend/egress control in
+`performance-db-cost.md`.

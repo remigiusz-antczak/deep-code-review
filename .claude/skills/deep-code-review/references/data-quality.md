@@ -193,14 +193,13 @@ rate), validity (schema/format/range). For each:
 
 ## 11. Cost discipline (enrichment specifics)
 
-- Cascade free/keyless pre-gates **ahead of** any paid call. Enforce a spend cap
-  checked **before** each paid call (latch-and-log-once, then skip), with both a
-  per-run and a global/monthly cap. Log the exact spend per pass.
-- Before a big paid apply, **dry-run a small zero-write sample**, measure real
-  cost-per-call and precision/failure rate, then extrapolate and get sign-off. A
-  gate that **drops/deletes** records needs far higher measured precision than
-  one that merely enriches — refuse a whole-dataset apply unless it is scoped to
-  a verified subset.
+- Cascade free/keyless pre-gates **ahead of** any paid call, and apply the spend
+  governance from `performance-db-cost.md` (before-call caps, per-run **and**
+  global/monthly, a dry-run that costs nothing, calibrate on a zero-write sample)
+  — it is not restated here.
+- **Data-specific precision floor:** a gate that **drops/deletes** records needs
+  far higher measured precision than one that merely enriches — refuse a
+  whole-dataset apply unless it is scoped to a verified subset.
 
 ---
 

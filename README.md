@@ -28,9 +28,10 @@ Two things make it more than a checklist:
   errors, silent quality regressions — against a hard "quality can only improve,
   never silently degrade" invariant.
 - **It leaves the bar in place.** An optional final phase imprints a tailored
-  standards set (`CLAUDE.md`/`AGENTS.md`, pre-commit gates, templates) into the
-  reviewed project so the *next* contributor or agent holds the same quality,
-  security, and efficiency bar — without re-deriving it.
+  standards set — a canonical cross-vendor `AGENTS.md` (with `CLAUDE.md` and peer
+  agent files as thin pointers to it), pre-commit/CI gates, and templates — into
+  the reviewed project so the *next* contributor or agent (Claude or otherwise)
+  holds the same quality, security, and efficiency bar without re-deriving it.
 
 ---
 
@@ -51,11 +52,11 @@ and a deep detection playbook in `references/`.
 | H Maintainability | dead code, duplication, feature flags, lockstep surfaces | — |
 | I APIs & integration | contracts, webhooks, message-schema evolution | — |
 | J Testing & evals | taxonomy, test-the-failure, AI eval harness | `testing-and-evals.md` |
-| K Build / CI / supply chain | reproducible build, SHA-pinned actions, SBOM, signatures | — |
+| K Build / CI / supply chain | reproducible build, SHA-pinned actions, SBOM, signatures, dependency currency & safe upgrades | `dependency-currency-and-upgrades.md` |
 | L Infra / IaC / cloud | Docker, K8s, Terraform, IAM, network exposure | `infra-iac-containers.md` |
 | M Observability | structured logs, no PII, honest failure accounting | — |
 | N Config & secrets | env-only secrets, safe defaults, clean no-op | — |
-| O Docs & DX | Diátaxis, C4, ADRs, one-command setup, standards imprint | `docs-and-dx.md` |
+| O Docs & DX | Diátaxis, C4, ADRs, one-command setup, repo hygiene, cross-agent imprint | `docs-and-dx.md` |
 | P Frontend / a11y | WCAG 2.2 AA, Core Web Vitals, respect existing design | `frontend-a11y.md` |
 | Q Privacy & licensing | data minimization, retention/erasure, license compat | — |
 | R i18n & encoding | locale-aware formatting, Unicode normalization | — |
@@ -74,7 +75,8 @@ Plus a dedicated **adversarial / red-team pass** and a **useless-work audit**
 ```bash
 git clone https://github.com/remigiusz-antczak/deep-code-review.git
 cd deep-code-review
-./install.sh /path/to/your/project      # defaults to the current directory
+./install.sh /path/to/your/project              # defaults to the current directory
+./install.sh --portable /path/to/your/project   # also drop a cross-agent AGENTS.md pointer
 ```
 
 Then in that project:
@@ -89,6 +91,11 @@ Then in that project:
 any capable model, then name the target and scope.
 
 **As a human checklist** — walk the domain sections (A–R) directly.
+
+**For non-Claude agents** (Codex, Cursor, Copilot, Gemini, Aider) — run
+`./install.sh --portable`, which additively drops a root `AGENTS.md` pointer
+(never overwriting an existing one) so any agent that reads `AGENTS.md` natively
+discovers the method; or paste `SKILL.md` as a prompt.
 
 ---
 
@@ -120,13 +127,17 @@ owner — so a founder or leader can act on the outcome without reading the code
 ## Standards it tracks
 
 Verified for this release (full list with URLs and verification dates in
-[`docs/standards-index.md`](docs/standards-index.md)): OWASP Top 10:2025, OWASP
-Top 10 for LLM Applications 2025, OWASP Top 10 for Agentic Applications 2026,
-OWASP API Security Top 10 (2023), OWASP ASVS 5.0, CWE Top 25 (2025), WCAG 2.2,
-Google Engineering Practices, Diátaxis, and the C4 model. Referenced by name
-(verify the current version before citing): OWASP WSTG, MITRE ATLAS, NIST SSDF
-and AI RMF, SLSA, CIS Benchmarks, ISO/IEC 25010, Twelve-Factor, SemVer, and
-Conventional Commits.
+[`docs/standards-index.md`](docs/standards-index.md)): OWASP Top 10:2025 (incl.
+the A03 supply-chain detail), OWASP Top 10 for LLM Applications 2025, OWASP Top 10
+for Agentic Applications 2026, OWASP API Security Top 10 (2023), OWASP ASVS 5.0,
+CWE Top 25 (2025), WCAG 2.2, Google Engineering Practices, Diátaxis, the C4 model,
+Semantic Versioning, OpenSSF Scorecard, OpenSSF Best Practices Badge, OSV, GitHub
+Dependabot, Keep a Changelog, pre-commit, EditorConfig, Development Containers,
+AGENTS.md, and the GitHub community-health + Claude Code memory docs. Referenced
+by name (verify the current version before citing): OWASP WSTG, MITRE ATLAS, NIST
+SSDF and AI RMF, SLSA, CIS Benchmarks, ISO/IEC 25010, Twelve-Factor, Conventional
+Commits, and the per-agent instruction-file conventions (Cursor, Copilot,
+Windsurf, Gemini, Aider).
 
 Standards move. The skill instructs the reviewer to **fetch the current version
 before relying on version-specific detail, and to cite only URLs it has
@@ -146,7 +157,7 @@ verified** — never a remembered link.
 │   └── standards-index.md          # verified standards, URLs, verification dates
 └── .claude/skills/deep-code-review/
     ├── SKILL.md                    # the review method + all domain checklists
-    └── references/                 # on-demand deep playbooks (10 files)
+    └── references/                 # on-demand deep playbooks (11 files)
 ```
 
 ---

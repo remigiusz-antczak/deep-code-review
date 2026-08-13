@@ -3,6 +3,67 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.2.0] — 2026-08-14
+
+Coverage extension — dependency currency & safe upgrades, repository hygiene,
+cross-agent portability of the standards imprint, and DX depth — plus the repo now
+enforces its own documented gates in CI. Additive; phases, domains A–R, and report
+formats are unchanged.
+
+### Added
+- `references/dependency-currency-and-upgrades.md` — detect stale / EOL /
+  known-vulnerable dependencies, then upgrade with discipline (no blind "latest",
+  semver-risk sizing, changelog review, regenerated lockfile, the project's own
+  gate proven green on the bumped tree, provenance check) with severity discipline
+  so "behind latest" never becomes noise. Routed from K and H.
+- Repository hygiene & community-health review (`docs-and-dx.md`, SKILL.md O):
+  LICENSE, SECURITY.md, CONTRIBUTING, CODEOWNERS + its enforcing rule, branch
+  protection, CHANGELOG, templates — rated by repo exposure (Info/Low private,
+  escalating when public / distributed / reaching production).
+- Cross-agent portability: a divergence check across `CLAUDE.md` / `AGENTS.md` /
+  peer instruction files, and a Phase-6 imprint that now defaults fresh standards
+  to a canonical cross-vendor `AGENTS.md` with thin per-agent pointers; the
+  "documented but unenforced = advisory" durable-standards finding.
+- `install.sh --portable` — additively drops an idempotent root `AGENTS.md`
+  pointer so non-Claude agents (Codex, Cursor, Copilot, Gemini, Aider) discover
+  the method.
+- This repository now dogfoods its own bar: `.github/workflows/ci.yml` (routing,
+  name-match, `install.sh` parse, banlist-driven fail-closed privacy gate; a
+  SHA-pinned action + least-privilege token), plus `SECURITY.md`,
+  `CONTRIBUTING.md`, and `.editorconfig`.
+- 16 standards verified by direct fetch and logged in `docs/standards-index.md`.
+
+### Changed
+- **DX** (`docs-and-dx.md`) gains fewest-commands-to-first-run (normalized
+  bootstrap / devcontainer), dev/prod parity, and time-to-first-run as friction.
+- **Phase 6 / imprint** is now idempotent and additive (detect-and-stop,
+  create-if-missing, add-only-missing-lines, print-what-changed) and pairs every
+  imprinted standard with the gate that enforces it.
+- **Decorrelated second-model review** (SKILL.md review mechanics) is read-only
+  and fail-soft — it advises, never hard-blocks.
+- README reference-file count (10 → 11); standards list refreshed.
+
+### Fixed (from a self-review of the skill)
+- **Phase 5** no longer mandates writing `code-review/…` for a `DIFF` of a PR/MR
+  (which may have no writable checkout, and would land the file inside the diff
+  under review) — that write is scoped to FULL / local-checkout, and a DIFF's
+  deliverable is the review comment on the PR.
+- **Phase 1**'s planted-defect gate probe now requires a verified-clean tree (or a
+  throwaway worktree) and a confirmed revert, carved into principle 7 as the one
+  permitted transient mutation.
+- **Severity rubric**: `unverified` / `PLAUSIBLE` findings now have an explicit
+  gate rule (reported at provisional severity, block only once confirmed); Blocker
+  vs Critical for data damage is discriminated (already-corrupting vs
+  will-corrupt-next-run).
+- **Coverage**: input-amplification DoS (ReDoS, decompression / entity-expansion
+  bombs) added to the adversarial pass and the red-flag greps; AI-eval golden-set
+  **contamination** flagged as a Critical eval defect; one-shot-prompt mode now
+  names the references to also paste.
+- **Duplication / pointers**: data-quality's spend-governance restatement folded
+  into a cross-reference to `performance-db-cost.md`; a stale "section M" secret
+  pointer repointed to N; `N-A` → `N/A`; `CREATE INDEX CONCURRENTLY` marked
+  Postgres-specific.
+
 ## [1.1.0] — 2026-08-13
 
 Field-hardening pass distilled from four independent FULL-run engagements. No

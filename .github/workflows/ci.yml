@@ -1,0 +1,58 @@
+name: gates
+
+# Enforce the standards this repo documents. The skill it ships now flags
+# "standards documented but no gate enforces them" as a finding — so this repo
+# wires its own documented gates (CLAUDE.md pre-commit block + definition of done)
+# into CI rather than leaving them advisory.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read # least privilege (OWASP Scorecard: Token-Permissions)
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      # SHA-pinned, not a mutable tag (the skill's own K rule for CI actions).
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Every reference is routed from SKILL.md, and every route resolves
+        run: |
+          skill=.claude/skills/deep-code-review/SKILL.md
+          fail=0
+          for f in .claude/skills/deep-code-review/references/*.md; do
+            grep -q "$(basename "$f")" "$skill" || { echo "UNROUTED: $f"; fail=1; }
+          done
+          while read -r p; do
+            [ -f ".claude/skills/deep-code-review/$p" ] || { echo "DANGLING ROUTE: $p"; fail=1; }
+          done < <(grep -oE 'references/[A-Za-z0-9._-]+\.md' "$skill" | sort -u)
+          exit $fail
+
+      - name: SKILL.md name matches its directory
+        run: |
+          grep -qE '^name: deep-code-review$' .claude/skills/deep-code-review/SKILL.md
+
+      - name: install.sh parses
+        run: bash -n install.sh
+
+      - name: Privacy gate — banlist-driven, fails closed if the banlist is missing
+        run: |
+          # Fail closed when the banned-terms input is absent (the skill's own rule).
+          test -f .banlist.txt || { echo "BLOCK: .banlist.txt missing -> failing closed"; exit 1; }
+          fail=0
+          while IFS= read -r pat; do
+            case "$pat" in ''|\#*) continue;; esac
+            # -l prints file names only: report the file, never echo the secret.
+            files=$(grep -rIlE --exclude-dir=.git --exclude=.banlist.txt "$pat" . 2>/dev/null || true)
+            if [ -n "$files" ]; then
+              echo "BLOCK: a banned pattern matched (content withheld); files:"
+              echo "$files" | sed 's/^/  /'
+              fail=1
+            fi
+          done < .banlist.txt
+          [ "$fail" -eq 0 ] && echo "privacy: clean"
+          exit $fail

@@ -23,11 +23,36 @@ Verification date for all direct fetches below: **2026-08-13**.
 | Google Engineering Practices — Standard of Code Review | https://google.github.io/eng-practices/review/reviewer/standard.html | Core standard: approve once the change "definitely improves the overall code health," even if imperfect. |
 | Diátaxis | https://diataxis.fr/ | Four documentation types: Tutorials, How-to guides, Reference, Explanation. |
 | C4 model | https://c4model.com/ | Four abstraction levels: Context, Container, Component, Code. |
+| OWASP Top 10:2025 — A03 detail | https://owasp.org/Top10/2025/A03_2025-Software_Supply_Chain_Failures/ | A03 absorbed the former A06:2021 "Vulnerable and Outdated Components"; explicitly covers software that is "vulnerable, unsupported, or out of date"; guidance to upgrade "in a risk-based, timely fashion" and to "deliberately choose which version of a dependency you use and upgrade only when there is need"; names OWASP Dependency-Track / Dependency-Check / retire.js as inventory tools. |
+| OpenSSF Scorecard | https://github.com/ossf/scorecard | Automated repo security scorer (0–10 per check). Check names verbatim: `Maintained` (active within ~90 days), `Dependency-Update-Tool` (Dependabot/Renovate present), `Vulnerabilities` (unfixed vulns, via the OSV service), `Pinned-Dependencies`. |
+| OSV | https://osv.dev/ | Distributed open-source vulnerability database spanning 40+ package ecosystems (npm, PyPI, Go, Maven, Debian, …); `osv-scanner` scans a lockfile or SBOM and queries by package version or commit hash. |
+| Semantic Versioning | https://semver.org/ | MAJOR = "incompatible API changes"; MINOR = "add functionality in a backward compatible manner"; PATCH = "backward compatible bug fixes." |
+| GitHub Dependabot — version updates | https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/about-dependabot-version-updates | Opens automated PRs to update dependencies to the latest version "even when they don't have any vulnerabilities"; documented reviewer step is to "check that your tests pass, review the changelog and release notes." (This page did **not** state that Dependabot PRs auto-trigger CI or support grouping — those are not claimed by the skill.) |
+| endoflife.date | https://endoflife.date/ | Tracks end-of-life / support-lifecycle dates for 400+ products (programming languages, frameworks, databases, OSes, devices, cloud services); offers an API. |
 
 Reference repository reviewed for patterns (not a standard):
 `nickmaglowsch/claude-setup` — https://github.com/nickmaglowsch/claude-setup
 (diff-scoped review packets; a decorrelated cross-model second opinion on
 sensitive diffs — auth, payments, crypto, concurrency, DB migrations).
+
+## Verified by direct fetch (2026-08-14) — meta-review additions
+
+Verification date for the rows below: **2026-08-14**. Added while extending the
+skill's documentation/DX, repository-hygiene, cross-agent-portability, and
+durable-standards coverage.
+
+| Standard / source | URL | What was confirmed |
+|---|---|---|
+| GitHub community health files | https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/about-community-profiles-for-public-repositories | Recommended community-health files: README, CODE_OF_CONDUCT, LICENSE, CONTRIBUTING, SECURITY, and issue + pull-request templates; issue templates must live in `.github/ISSUE_TEMPLATE`. (Folder precedence for other files, and "LICENSE must be in-repo," were **not** reproduced on this fetch — not asserted by the skill.) |
+| OpenSSF Best Practices Badge (passing criteria) | https://www.bestpractices.dev/en/criteria/0 | Passing-level **MUST** items used as hygiene checks: a FLOSS license posted in a standard location; a published process for reporting vulnerabilities; per-release human-readable release notes; at least one automated test suite. Documented contribution requirements is **SHOULD**, not MUST. |
+| OpenSSF Scorecard — checks catalog | https://github.com/ossf/scorecard/blob/main/docs/checks.md | Verbatim check descriptions: Branch-Protection ("default and release branches are protected"), Code-Review ("requires human code review before pull requests … are merged"), CI-Tests ("runs tests before pull requests are merged"), License, Security-Policy, Maintained. (Distinct from the Scorecard repo-root row above.) |
+| AGENTS.md | https://agents.md/ | "A simple, open format for guiding coding agents" — a cross-vendor Markdown file at the repo root; nested files take precedence for their subprojects. (No adoption count or governing body asserted.) |
+| Claude Code — memory / CLAUDE.md | https://code.claude.com/docs/en/memory | CLAUDE.md and auto-memory are "context, not enforced configuration. To block an action regardless of what Claude decides, use a PreToolUse hook instead." Claude Code reads `CLAUDE.md`, not `AGENTS.md`; bridge an existing `AGENTS.md` via an `@AGENTS.md` import or `ln -s AGENTS.md CLAUDE.md`. Project file at `./CLAUDE.md` or `./.claude/CLAUDE.md`. |
+| pre-commit | https://pre-commit.com/ | "A framework for managing and maintaining multi-language pre-commit hooks." Config `.pre-commit-config.yaml`; installed with `pre-commit install`; runs on staged files before a commit completes. |
+| Development Containers | https://containers.dev/ | A dev container "allows you to use a container as a full-featured development environment" for consistency across local/remote/CI. (Exact config-file path not asserted.) |
+| github/scripts-to-rule-them-all | https://github.com/github/scripts-to-rule-them-all | Normalized script names (`script/bootstrap`, `setup`, `update`, `server`, `test`, `cibuild`, `console`) so contributors "only need to know the pattern"; goal: contribute "without first learning how to bootstrap the project or how to get its tests to run." |
+| EditorConfig | https://editorconfig.org/ | `.editorconfig` standardizes indent style/size, charset, end-of-line, trailing-whitespace, and final-newline across editors/IDEs. |
+| Keep a Changelog 1.1.0 | https://keepachangelog.com/en/1.1.0/ | `CHANGELOG.md`; "Changelogs are for humans, not machines"; an `Unreleased` section; categories Added / Changed / Deprecated / Removed / Fixed / Security; newest version first. |
 
 ## Referenced by name (not fetched this session — verify before citing a URL)
 
@@ -44,8 +69,23 @@ sensitive diffs — auth, payments, crypto, concurrency, DB migrations).
 - **ISO/IEC 25010** — software product-quality model (the axes this review
   covers).
 - **The Twelve-Factor App** — config/dependency/deploy hygiene.
-- **Semantic Versioning** + **Conventional Commits** — versioning and commit
-  discipline.
+- **Conventional Commits** — commit-message discipline. (Semantic Versioning
+  graduated to the verified table above this session.)
+- **OWASP Dependency-Check / Dependency-Track**, **retire.js**, **Renovate**,
+  **Trivy / Grype**, and the per-ecosystem auditors (**pip-audit**,
+  **govulncheck**, **cargo audit**, **bundler-audit**) — SCA and
+  dependency-update tooling named in `dependency-currency-and-upgrades.md`. Tools,
+  not standards; confirm the current invocation per ecosystem at review time.
+- **Cross-agent instruction-file conventions** — Cursor (`.cursor/rules` /
+  `.cursorrules`), GitHub Copilot (`.github/copilot-instructions.md`), Windsurf
+  (`.windsurf/rules` / `.windsurfrules`), Gemini CLI (`GEMINI.md`), Aider
+  (`CONVENTIONS.md`). The file **names** are corroborated by the verified Claude
+  Code memory doc above; per-agent semantics, frontmatter, and size caps were not
+  independently fetched — confirm at imprint time.
+- **Scrum Guide — Definition of Done** — the concept the skill's definition-of-done
+  checklist rests on ("the state of the Increment when it meets the quality
+  measures required"); cite the Scrum Guide directly if a version-specific claim
+  is needed.
 
 > When the skill needs a version-specific detail from any of these, it must fetch
 > the current source at review time and cite only the URL it verified.

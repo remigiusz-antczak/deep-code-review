@@ -77,7 +77,10 @@ needs its own harness:
 
 - A **labeled golden set** scored for correctness/consistency (not vibes),
   tracked over time, with an **accuracy threshold that gates** prompt or
-  model-version changes (a change that drops accuracy fails the build).
+  model-version changes (a change that drops accuracy fails the build). The golden
+  set must be **disjoint from the prompt / few-shot / fine-tune content** — a
+  leaked example makes the bench measure memorization, not quality; treat
+  contamination as a Critical eval defect.
 - The harness's **own scoring logic is pure and unit-tested**, and it
   **fail-fasts on a malformed case** — silently skipping a case inflates the
   score.

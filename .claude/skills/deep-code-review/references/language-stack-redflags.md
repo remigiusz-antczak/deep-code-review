@@ -99,8 +99,20 @@ grep -rInE 'console\.log|print\(|dbg!|System\.out\.print|fmt\.Print' .
 - String interpolation into SQL (see per-language above).
 - `SELECT *` in app code; missing `LIMIT`/pagination; query inside a loop (N+1).
 - Migrations: `ALTER`/`CREATE INDEX` without `CONCURRENTLY` on a large table
-  (locks writes); adding a `NOT NULL` column with no default; backfill in the
-  same transaction as DDL; no rollback path. See `performance-db-cost.md`.
+  (locks writes; Postgres syntax — use the engine's online-DDL equivalent
+  elsewhere); adding a `NOT NULL` column with no default; backfill in the same
+  transaction as DDL; no rollback path. See `performance-db-cost.md`.
+
+## Denial of service / resource amplification
+
+- **ReDoS** — catastrophic backtracking from nested/overlapping quantifiers
+  (`(a+)+`, `(.*)*`, `(\d+)*$`) on untrusted input, or an untrusted string
+  compiled into a pattern (`new RegExp(userInput)`, `re.compile(userInput)`).
+  Bound input length, prefer a linear-time engine (RE2), or apply a match timeout.
+- **Decompression / entity-expansion bombs** — an archive (`zip`/`gzip`/`tar`)
+  extracted with no size or ratio cap, or XML parsed with entity expansion enabled
+  (billion-laughs): a small input that inflates to gigabytes. Cap the decompressed
+  size and disable external/DTD entity resolution.
 
 ## Shell / Bash
 

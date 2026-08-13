@@ -43,8 +43,9 @@ of work earn its keep?**
 
 A migration is a deploy-time hazard, not just a query. Check:
 - **Locking**: `ALTER TABLE` / `CREATE INDEX` on a large table without the
-  non-blocking variant (`CREATE INDEX CONCURRENTLY`, safe column-add order)
-  locks writes and can take an outage. 
+  non-blocking variant (`CREATE INDEX CONCURRENTLY` in Postgres — use the engine's
+  online-DDL equivalent elsewhere, e.g. MySQL `ALGORITHM=INPLACE` or gh-ost; plus
+  safe column-add order) locks writes and can take an outage. 
 - **Backward compatibility during rolling deploy**: old and new code run
   simultaneously mid-deploy — a migration must be compatible with both. Follow
   expand → migrate → contract: add the new column/table (nullable), backfill,
