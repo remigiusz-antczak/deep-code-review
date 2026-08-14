@@ -37,7 +37,7 @@ Two things make it more than a checklist:
 
 ## What it checks
 
-The method walks eighteen domains (A–R); each has a red-flag list in `SKILL.md`
+The method walks nineteen domains (A–S); each has a red-flag list in `SKILL.md`
 and a deep detection playbook in `references/`.
 
 | Domain | Covers | Deep reference |
@@ -60,6 +60,7 @@ and a deep detection playbook in `references/`.
 | P Frontend / a11y | WCAG 2.2 AA, Core Web Vitals, respect existing design | `frontend-a11y.md` |
 | Q Privacy & licensing | data minimization, retention/erasure, license compat | — |
 | R i18n & encoding | locale-aware formatting, Unicode normalization | — |
+| S Branches & open-work triage | branching model, merge/PR/rebase/delete per branch, squash-merge detection, safe cleanup | `branch-and-merge-hygiene.md` |
 | + | per-language grep-able footguns | `language-stack-redflags.md` |
 
 Plus a dedicated **adversarial / red-team pass** and a **useless-work audit**
@@ -91,7 +92,7 @@ Then in that project:
 **As a one-shot prompt** — paste `.claude/skills/deep-code-review/SKILL.md` into
 any capable model, then name the target and scope.
 
-**As a human checklist** — walk the domain sections (A–R) directly.
+**As a human checklist** — walk the domain sections (A–S) directly.
 
 **For non-Claude agents** (Codex, Cursor, Copilot, Gemini, Aider) — the default
 install already writes a root `AGENTS.md` pointer (additive, never overwriting an
@@ -105,7 +106,7 @@ You can also paste `SKILL.md` as a one-shot prompt.
 ```mermaid
 flowchart LR
   P0[Phase 0<br/>Map the target] --> P1[Phase 1<br/>Ground truth<br/>build · test · lint]
-  P1 --> P2[Phase 2<br/>Domain audits A–R]
+  P1 --> P2[Phase 2<br/>Domain audits A–S]
   P2 --> P3[Phase 3<br/>Adversarial<br/>red-team pass]
   P3 --> P4[Phase 4<br/>Synthesize<br/>& rank severity]
   P4 --> P5[Phase 5<br/>Report<br/>file:line + fixes]
@@ -158,7 +159,7 @@ verified** — never a remembered link.
 │   └── standards-index.md          # verified standards, URLs, verification dates
 └── .claude/skills/deep-code-review/
     ├── SKILL.md                    # the review method + all domain checklists
-    └── references/                 # on-demand deep playbooks (11 files)
+    └── references/                 # on-demand deep playbooks (12 files)
 ```
 
 ---

@@ -7,13 +7,18 @@ description: >-
   quality-gate code, a repo, a PR/MR, a branch, or a diff — or mentions
   review, code quality, security vulnerabilities, prompt injection, dead
   code, duplication, slow/expensive queries, wasteful API or LLM calls, test
-  coverage, data quality, accessibility, or "is this production-ready".
+  coverage, data quality, accessibility, unmerged or stale branches, cleaning
+  up branches, whether open work should be merged to main or develop or opened
+  as a PR, or "is this production-ready".
   Covers correctness, application security (OWASP Top 10:2025), AI/LLM + agent
   security (OWASP LLM Top 10:2025 and Agentic Applications 2026), data
   integrity, performance and cost, reliability, concurrency, maintainability,
   APIs and integrations, testing and evals, build/CI/supply chain,
   infrastructure/IaC, observability, config/secrets, docs/DX, accessibility,
-  privacy, and i18n. Produces a severity-ranked findings report with
+  privacy, i18n, and version-control branch/merge/PR hygiene. It also triages
+  every open branch — advising per branch whether to merge, open a PR, rebase,
+  delete, archive, or escalate — so open work gets cleaned up, not left to rot.
+  Produces a severity-ranked findings report with
   file:line evidence and concrete fixes, and can imprint a durable standards
   set into the reviewed project. Prefer this over an ad-hoc read-through even
   when the word "review" is absent — any request to make code better, safer,
@@ -150,9 +155,15 @@ say so.
 **Phase 0 — Map the target.** Entry points, pipeline stages, request/data flow
 (sources → processing → sinks), external dependencies, and trust boundaries
 (where untrusted input enters). Inventory every `TODO`/`FIXME`/`HACK`/`XXX`/
-"pending"/"temporary" marker in code **and** docs. Detect language(s),
-frameworks, build system, package manager, test runner, CI. State in one
-paragraph: what problem this code solves and how. For anything with a network or
+"pending"/"temporary" marker in code **and** docs. **On a FULL / repo-level
+review (or when the request names branches or cleanup), also inventory the open
+branches and their merge state** — refresh first (`git fetch --all --prune`; an
+un-refreshed clone hides open work), then list branches with their last-commit
+age, ahead/behind, and any open PR — the raw material for the branch triage
+(domain S; `references/branch-and-merge-hygiene.md`). Skip this for a narrow
+`DIFF`/`FILE`, which stays a compact packet.
+Detect language(s), frameworks, build system, package manager, test runner, CI.
+State in one paragraph: what problem this code solves and how. For anything with a network or
 untrusted-input surface, sketch a **trust-boundary table** —
 `untrusted input → who can set it → what validates/authorizes it → what it can
 reach`; rows that reach money, writes, or secrets with an empty validation column
@@ -194,7 +205,7 @@ it and capture the **before** output for a later quality-delta. Never touch paid
 APIs or production data without approval. Anything that won't build, test, or run
 as documented is a Blocker until proven otherwise.
 
-**Phase 2 — Domain audits.** Walk every applicable domain section (A–R). For
+**Phase 2 — Domain audits.** Walk every applicable domain section (A–S). For
 each, produce findings with `file:line` + impact + fix. Load the domain's
 `references/*.md` for detection procedures. Domains that don't apply are marked
 N/A with a one-line reason. When the target is large, run these as parallel
@@ -232,7 +243,10 @@ review yields both routine fixes and a change to a security/permission/authz
 boundary, land them in **separate PRs** — the security-critical diff on its own,
 small, flagged for a decorrelated reviewer, never buried under nit commits.
 Fixes ride on a branch + PR (gated on approval), never a direct push to the
-default branch.
+default branch. **For a FULL / repo-level review with open branches, also emit the
+branch & merge triage** (domain S) — one recommendation per branch with the exact
+command; acting on any of it (merge, delete, push, rebase) is destructive/
+shared-state and runs only on explicit approval.
 
 **Phase 6 — Imprint standards (opt-in; writes to the repo).** Offer to persist a
 tailored standards set so the bar holds on future iterations — a canonical
@@ -249,7 +263,7 @@ keep them from diverging. See `references/docs-and-dx.md`.
 
 ---
 
-## Domain audit checklists (A–R)
+## Domain audit checklists (A–S)
 
 > Each item folds in the *why*. A "🚩" line lists patterns to grep/scan for.
 > Load the linked reference for per-item detection procedures. To turn any red
@@ -626,6 +640,55 @@ Apply if the code produces UI. Target **WCAG 2.2 AA**.
 - 🚩 concatenated translated fragments, `.sort()` on localized text without a
   collator, unnormalized text as a key, `latin-1`/mojibake at an I/O boundary.
 
+### S. Branches, merges & open-work triage → `references/branch-and-merge-hygiene.md`
+Apply on a **FULL / repo-level review**, or whenever the request names branches,
+cleanup, or open work. **N/A by scope on a narrow `DIFF`/`FILE`** — a PR/branch
+reviewed against a base stays a compact packet (don't fetch and triage every
+branch to review a ten-line change) unless branch cleanup was explicitly asked.
+The deliverable is a **triage of all open work**: for every branch, one
+recommendation and the exact command. Distinct from section O, which owns whether
+branch *protection* is configured — this owns *what open work exists and what to
+do with it*; the one seam ("must this merge go through a PR?") reads O's posture.
+- **Ground the branch set before judging it** — `git fetch --all --prune` first;
+  an un-refreshed/shallow clone hides open branches and a "nothing to clean up" is
+  then a false all-clear (principle 2). **Open-PR / merged-PR state is forge state,
+  not git state** (`gh pr list`); if forge auth is absent, mark that column
+  `unverified`, never infer "no PR."
+- **Detect the branching model → it sets each branch's target.** The user's "merge
+  to develop **or** main" is answered by the model in use: **git-flow** (a
+  `develop` branch exists) merges features to `develop` and `release/*`/`hotfix/*`
+  to `main`; **trunk-based / GitHub flow / GitLab flow** integrate to the default
+  branch (`main`). State the detected model before recommending targets.
+- **Classify by content, not just tip.** `git branch --merged` misses squash- and
+  rebase-merged branches; `git cherry` recovers single-commit squashes and
+  rebases but **a multi-commit squash defeats patch-id matching** — so the forge's
+  merged-PR list is the authoritative "already merged" corroborator. Recommending
+  a merge/PR for already-merged work is a fabricated, conflict-generating finding.
+- **One recommendation per branch**, target resolved from the model: merge /
+  open a PR / rebase-or-refresh / **delete-if-merged** / **split** (security part
+  onto its own PR — Phase 5) / **cherry-pick the one good commit** / **close-as-
+  superseded** / **convert-to-draft** / **tag-then-delete** (reversible) /
+  **escalate to owner** (stale WIP). Carrying any of these out is
+  destructive/shared-state — **advise + give the command, execute only on
+  approval** (principle 7); **never delete unique unmerged work** (data loss —
+  push or tag it first), never rewrite shared history (`--force-with-lease`, never
+  `--force`).
+- **A leaked secret is not remediated by deleting the branch** — the objects stay
+  reachable on the remote until GC/forge cleanup and clones already have them;
+  the fix is **credential rotation** (cross-ref B), not `git push --delete`.
+- **Severity discipline** (mirrors K/dependency currency): batch routine cleanup
+  as **one** Low/Info finding carrying the triage table; escalate individually only
+  on consequence — an **unmerged security/bug fix on a stale branch** (written but
+  never shipped) is **High**, a **branch that is the only copy** of real work is a
+  **High** data-loss risk, a long-lived `develop`/`release/*` badly diverged is
+  Medium merge-debt. Don't let branch-cleanup volume outrank a real defect.
+- 🚩 a `develop` unmerged to `main` for months; dozens of merged-but-undeleted
+  branches with no auto-delete-on-merge; a long-lived branch many commits behind
+  its target; an unmerged security fix; a branch with no upstream (only copy); a
+  "merge this" recommendation for a branch the forge already squash-merged;
+  `git push --force` near a shared branch; "just delete the branch" offered as the
+  fix for a committed secret.
+
 ---
 
 ## Adversarial / red-team pass
@@ -742,6 +805,16 @@ Counts: Blocker N · Critical N · High N · Medium N · Low N · Nit N
 |---|---|---|---|
 | Dedup rate / Fill rate / Records | … | … | |
 
+## Branch & merge triage (FULL / repo-level review with open branches; else N/A)
+Detected model: <trunk-based | GitHub flow | GitLab flow | git-flow> → target <main|develop>.
+Coverage: <N local + M remote branches; PR state via gh | unverified: no forge auth>.
+| Branch | Last commit | State | Unique commits | Open PR | Recommendation | Command |
+|--------|-------------|-------|----------------|---------|----------------|---------|
+| feature/x | 3 days ago | unmerged, ready | 4 | none | Open PR → develop | gh pr create -B develop -H feature/x |
+| bugfix/y | 6 months ago | squash-merged (PR #42) | 0* | merged | Delete | git push origin --delete bugfix/y |
+(Routine cleanup batched here as one Low/Info finding; consequence branches —
+unmerged security fix, only-copy work — escalated in the findings table above.)
+
 ## Decisions needed (owner)
 - <question> — needs <role/owner>.  (Includes any design-altering a11y/UX change.)
 
@@ -781,8 +854,12 @@ jump to the detail. Relative links in this file resolve **from `code-review/`**
 (e.g. `../docs/x.md`), and a new top-level dir must satisfy any doc-link gate.
 Scrub **third-party proper nouns** too (public event/conference/product names are
 usually not on a derived deny-set, so they pass the privacy gate but still leak
-context) — keep committed findings generic. After writing, run the project's
-privacy/name gate over this file (Phase 5).
+context) — keep committed findings generic. **Branch names and PR titles are an
+identifier vector** — real ones carry client names, ticket IDs, and personal
+prefixes (`feature/acme-integration`, `jane/wip-payroll`); generalize them in the
+committed report (`feature/<redacted>`, "the client-integration branch") and keep
+the raw branch/PR triage in the session output, which is not committed. After
+writing, run the project's privacy/name gate over this file (Phase 5).
 
 Template for `code-review/review-YYYY-MM-DD.md`:
 
@@ -816,6 +893,12 @@ part), give one status for each — e.g. "🟡 what runs today · 🔴 before tu
 
 ## What's already good
 - <what to keep — credit the things done right>
+
+## Open work to tidy up (if there are leftover branches)
+<plain language: how many unfinished/leftover branches exist, and what should
+happen — e.g. "8 are already merged and safe to remove; 1 holds an unfinished fix
+that was never shipped; 1 exists only on one machine and should be backed up." A
+short "clean up / finish / decide" list, not the technical commands.>
 
 ## Decisions we need from you
 - <owner decision — includes any fix that would noticeably change the current
@@ -854,6 +937,10 @@ with exact file locations and fixes, is in <the findings above / the PR / link>.
 - ✅ README (human) + AI-facing doc accurate, with architecture + data-flow
   diagrams and confidentiality rules restated.
 - ✅ Every Phase-0 TODO/pending marker closed or tracked with an owner.
+- ✅ Open branches triaged (FULL / repo-level review): the branching model is stated and
+  every branch has one recommendation — merge / PR / rebase / delete-if-merged /
+  archive / escalate — with no unique unmerged work deleted and no shared history
+  rewritten; or N/A with reason.
 - ✅ Standards imprinted (if opted in), non-destructively and idempotently — each
   load-bearing standard paired with the gate that enforces it, and cross-agent
   instruction files kept from diverging.
@@ -896,6 +983,11 @@ Verified live for this repository (URLs + verification dates in
   (outdated/unsupported components), OpenSSF Scorecard, OSV (osv.dev), Semantic
   Versioning, GitHub Dependabot, endoflife.date; depth in
   `references/dependency-currency-and-upgrades.md`.
+- **Branch, merge & open-work triage** — Trunk-Based Development, GitHub flow,
+  GitLab flow, the git-flow branching model (Vincent Driessen), Fowler's
+  *Patterns for Managing Source Code Branches*, GitHub's merge-method /
+  protected-branch / merge-queue docs, and the `git` reference manual for the
+  enumeration commands; depth in `references/branch-and-merge-hygiene.md`.
 
 Reference by name (fetch the current version before relying on version-specific
 detail; cite only URLs you have verified): OWASP WSTG; OWASP Cheat Sheet Series;

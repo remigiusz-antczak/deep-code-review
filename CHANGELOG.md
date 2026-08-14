@@ -3,6 +3,47 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.3.0] — 2026-08-14
+
+New capability — **branch, merge & open-work triage**. The review now analyzes
+every open branch and advises, per branch, whether to merge it (to `main` or
+`develop`, per the detected branching model), open a PR, rebase/refresh, delete
+(if already merged), archive, split, or escalate — so leftover work gets cleaned
+up instead of rotting. Unlike 1.2.0, this **does** change the domain list
+(A–R → A–S) and **adds a report section** (the branch & merge triage table).
+Additive and opt-in to act on: the triage is advice; any merge/delete/push runs
+only on explicit approval.
+
+### Added
+- `references/branch-and-merge-hygiene.md` — the depth behind the new domain S:
+  ground the branch set before judging it (`git fetch --all --prune`; a shallow/
+  stale clone hides open work; open-PR state is forge state, mark `unverified`
+  when forge auth is absent); detect the branching model (Trunk-Based / GitHub
+  flow / GitLab flow / git-flow) to resolve each branch's target; classify by
+  **content, not just tip** — `git branch --merged` misses squash/rebase-merges,
+  `git cherry` recovers single-commit squashes but a **multi-commit squash defeats
+  patch-id matching**, so the forge merged-PR list is the authoritative
+  corroborator; a per-branch decision tree → recommendation with the exact
+  command; merge-strategy trade-offs; safety rails (never delete unique unmerged
+  work, `--force-with-lease` not `--force`, a leaked secret is fixed by rotation
+  not branch deletion); and severity discipline so branch cleanup never buries a
+  real defect. All enumeration commands validated against a scratch repo this
+  session. Routed from the new domain S.
+- **Domain S — Branches, merges & open-work triage** in `SKILL.md` (A–R → A–S),
+  scoped to a local git checkout; a Phase-0 open-branch/open-PR inventory hook; a
+  Phase-5 triage-table output; a **Branch & merge triage** section in the findings
+  report and an "Open work to tidy up" section in the human-readable report; and a
+  definition-of-done line requiring every open branch to carry one recommendation.
+- Boundary made explicit with section O (`docs-and-dx.md`): O owns *is branch
+  protection configured*; S owns *what open work exists and what to do with it* —
+  cross-referenced, not duplicated.
+- `docs/standards-index.md`: verified-this-session rows (2026-08-14) for
+  Trunk-Based Development, GitHub flow, GitLab flow, git-flow (Driessen), Fowler's
+  branching-patterns article, GitHub's merge-method / protected-branch / merge-
+  queue / branch-deletion docs, and the `git` reference manual, with the two
+  attribution caveats surfaced by primary-source checks (GitHub's own docs do not
+  state "main is always deployable"; "merge debt" is not Fowler's phrase).
+
 ## [1.2.1] — 2026-08-14
 
 ### Fixed
