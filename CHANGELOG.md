@@ -3,6 +3,20 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.2.1] — 2026-08-14
+
+### Fixed
+- `install.sh` backed up an existing skill to `…/.claude/skills/<name>.backup-<ts>`
+  — **inside** `skills/`, where Claude Code then loaded the backup as a duplicate
+  skill. Backups now go to `…/.claude/skill-backups/` and are never loaded.
+
+### Changed
+- `install.sh` is **universal by default**: alongside the Claude Code skill it
+  writes an additive, idempotent cross-agent `AGENTS.md` pointer (Codex, Cursor,
+  Copilot, Gemini, Aider), so the method is not Claude-only. The opt-in
+  `--portable` flag is replaced by a `--claude-only` opt-out (`--portable` is still
+  accepted as a no-op, with a note).
+
 ## [1.2.0] — 2026-08-14
 
 Coverage extension — dependency currency & safe upgrades, repository hygiene,

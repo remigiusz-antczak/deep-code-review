@@ -1,37 +1,41 @@
 #!/usr/bin/env bash
-# install.sh — install the deep-code-review skill into a target project.
+# install.sh — install the deep-code-review skill into a project, for ANY agent.
 #
 # Usage:
-#   ./install.sh [--portable] [TARGET_DIR]
+#   ./install.sh [--claude-only] [TARGET_DIR]
 #
-# Copies the deep-code-review Claude Code skill into
-#   <TARGET_DIR>/.claude/skills/deep-code-review/
-# so you can invoke `/deep-code-review <scope>` in that project.
+# Installs the review method so any coding agent can run it:
+#   - copies the skill to <TARGET_DIR>/.claude/skills/deep-code-review/ (Claude
+#     Code loads it natively; those files are also the canonical copy other agents
+#     read); and
+#   - writes/updates a root AGENTS.md pointer so cross-agent tools (Codex, Cursor,
+#     Copilot, Gemini, Aider, …) discover the method. Additive + idempotent: never
+#     overwrites an existing AGENTS.md; appends a marked block only if absent.
 #
-#   --portable   Also drop a root AGENTS.md pointer so non-Claude agents
-#                (Codex, Cursor, Copilot, Gemini, Aider, …) discover the method.
-#                Additive and idempotent: never overwrites an existing AGENTS.md;
-#                appends a clearly-marked pointer block only if not already there.
-#   -h, --help   Show this help.
+#   --claude-only   Install just the Claude Code skill; skip the AGENTS.md pointer.
+#   -h, --help      Show this help.
 #
 #   - TARGET_DIR defaults to the current working directory.
-#   - Re-running updates an existing install in place; any existing skill is
-#     moved to a timestamped backup first.
+#   - Re-running updates in place; any existing skill is moved to a timestamped
+#     backup under <TARGET_DIR>/.claude/skill-backups/ — never inside skills/, so a
+#     backup is never loaded as a duplicate skill.
 #   - No network, no sudo, fully local and reversible.
 
 set -euo pipefail
 
 usage() {
   cat >&2 <<'EOF'
-install.sh — install the deep-code-review skill into a target project.
+install.sh — install the deep-code-review skill into a project, for ANY agent.
 
 Usage:
-  ./install.sh [--portable] [TARGET_DIR]
+  ./install.sh [--claude-only] [TARGET_DIR]
 
-  --portable   Also drop a root AGENTS.md pointer so non-Claude agents
-               (Codex, Cursor, Copilot, Gemini, Aider) discover the method.
-               Additive + idempotent: never overwrites an existing AGENTS.md.
-  -h, --help   Show this help.
+By default installs the skill AND writes a cross-agent AGENTS.md pointer, so any
+coding agent (Claude Code, Codex, Cursor, Copilot, Gemini, Aider) can run it. The
+AGENTS.md write is additive + idempotent and never overwrites an existing file.
+
+  --claude-only   Install just the Claude Code skill; skip the AGENTS.md pointer.
+  -h, --help      Show this help.
 
 TARGET_DIR defaults to the current working directory.
 EOF
@@ -41,11 +45,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILL_NAME="deep-code-review"
 SRC="${SCRIPT_DIR}/.claude/skills/${SKILL_NAME}"
 
-PORTABLE=0
+WRITE_AGENTS=1
 POSITIONAL=()
 for arg in "$@"; do
   case "${arg}" in
-    -p|--portable) PORTABLE=1 ;;
+    --claude-only) WRITE_AGENTS=0 ;;
+    -p|--portable) echo "note: --portable is now the default; ignoring (use --claude-only to opt out)." >&2 ;;
     -h|--help) usage; exit 0 ;;
     -*) echo "error: unknown option: ${arg}" >&2; usage; exit 2 ;;
     *) POSITIONAL+=("${arg}") ;;
@@ -74,21 +79,22 @@ fi
 
 mkdir -p "${TARGET_DIR}/.claude/skills"
 
+# Back up an existing install OUTSIDE skills/, so the backup is never loaded as a
+# duplicate skill (Claude Code loads every SKILL.md under .claude/skills/).
 if [[ -e "${DEST}" ]]; then
-  BACKUP="${DEST}.backup-$(date +%Y%m%d-%H%M%S)"
+  BACKUP_DIR="${TARGET_DIR}/.claude/skill-backups"
+  mkdir -p "${BACKUP_DIR}"
+  BACKUP="${BACKUP_DIR}/${SKILL_NAME}-$(date +%Y%m%d-%H%M%S)"
   echo "note: existing skill found -> backing up to ${BACKUP}"
   mv "${DEST}" "${BACKUP}"
 fi
 
 cp -R "${SRC}" "${DEST}"
-
 echo "installed: ${SKILL_NAME} -> ${DEST}"
 
-# --portable: drop a cross-agent AGENTS.md pointer (additive + idempotent),
-# so agents that read AGENTS.md natively (Codex, Cursor, Copilot, Gemini, Aider)
-# discover the installed method. This mirrors the skill's own imprint contract:
-# create-if-missing, append-only, never overwrite, and print what changed.
-if [[ "${PORTABLE}" -eq 1 ]]; then
+# Cross-agent pointer (default). Additive + idempotent, mirroring the skill's own
+# imprint contract: create-if-missing, append-only, never overwrite, print change.
+if [[ "${WRITE_AGENTS}" -eq 1 ]]; then
   AGENTS="${TARGET_DIR}/AGENTS.md"
   MARKER="deep-code-review:begin"
   read -r -d '' BLOCK <<'EOF' || true
@@ -104,16 +110,17 @@ severity-ranked findings report plus a plain-language report under `code-review/
 <!-- deep-code-review:end -->
 EOF
   if [[ -f "${AGENTS}" ]] && grep -q "${MARKER}" "${AGENTS}"; then
-    echo "portable: AGENTS.md already has the deep-code-review pointer -> left as-is"
+    echo "agents: AGENTS.md already has the deep-code-review pointer -> left as-is"
   elif [[ -f "${AGENTS}" ]]; then
     printf '\n%s\n' "${BLOCK}" >> "${AGENTS}"
-    echo "portable: appended deep-code-review pointer -> ${AGENTS}"
+    echo "agents: appended deep-code-review pointer -> ${AGENTS}"
   else
     printf '# AGENTS.md\n\n%s\n' "${BLOCK}" > "${AGENTS}"
-    echo "portable: created ${AGENTS} with the deep-code-review pointer"
+    echo "agents: created ${AGENTS} with the deep-code-review pointer"
   fi
-  echo "  non-Claude agents (Codex, Cursor, Copilot, Gemini, Aider) read AGENTS.md natively."
+  echo "  read natively by Claude Code, Codex, Cursor, Copilot, Gemini, Aider."
 fi
 
-echo "invoke it in ${TARGET_DIR} with:  /deep-code-review <scope>"
+echo "run it:  read .claude/skills/${SKILL_NAME}/SKILL.md, then name a scope"
 echo "  scopes: FULL (whole repo) | DIFF <base-ref> (a PR/branch) | FILE <paths>"
+echo "  (Claude Code shortcut: /deep-code-review <scope>)"

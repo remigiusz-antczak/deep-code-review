@@ -70,13 +70,14 @@ Plus a dedicated **adversarial / red-team pass** and a **useless-work audit**
 
 ## How to use it
 
-**Install into a project** (copies the skill into `.claude/skills/`):
+**Install into a project** (works for any agent — copies the skill into
+`.claude/skills/` and writes a cross-agent `AGENTS.md` pointer):
 
 ```bash
 git clone https://github.com/remigiusz-antczak/deep-code-review.git
 cd deep-code-review
-./install.sh /path/to/your/project              # defaults to the current directory
-./install.sh --portable /path/to/your/project   # also drop a cross-agent AGENTS.md pointer
+./install.sh /path/to/your/project                 # any agent: skill + AGENTS.md pointer
+./install.sh --claude-only /path/to/your/project   # Claude Code skill only (no AGENTS.md)
 ```
 
 Then in that project:
@@ -92,10 +93,10 @@ any capable model, then name the target and scope.
 
 **As a human checklist** — walk the domain sections (A–R) directly.
 
-**For non-Claude agents** (Codex, Cursor, Copilot, Gemini, Aider) — run
-`./install.sh --portable`, which additively drops a root `AGENTS.md` pointer
-(never overwriting an existing one) so any agent that reads `AGENTS.md` natively
-discovers the method; or paste `SKILL.md` as a prompt.
+**For non-Claude agents** (Codex, Cursor, Copilot, Gemini, Aider) — the default
+install already writes a root `AGENTS.md` pointer (additive, never overwriting an
+existing one) that these agents read natively; pass `--claude-only` to skip it.
+You can also paste `SKILL.md` as a one-shot prompt.
 
 ---
 
