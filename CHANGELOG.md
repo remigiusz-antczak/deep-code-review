@@ -3,6 +3,38 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.5.0] — 2026-08-17
+
+Depth + install portability on top of 1.4.0's multi-agent checkout safety. New
+reference playbooks for reliability, concurrency, and API contracts; review-
+surface gate in the definition of done; harness notes for fan-out; version
+stamp + optional Cursor-native install path; worked fictional example report.
+
+### Added
+- `references/reliability-error-handling.md` — domain F depth (timeouts/aborts,
+  retries, crash/SIGINT resume, silent subsystem no-op).
+- `references/concurrency-shared-state.md` — domain G depth (races, file stores,
+  TOCTOU, tests/jobs vs real shared paths).
+- `references/api-contracts.md` — domain I depth (public contracts, webhooks,
+  message-schema evolution; OWASP API Top 10 overlay stays in appsec).
+- Skill `VERSION` file (`1.5.0`); `install.sh` stamps version + short SHA into
+  the AGENTS.md pointer and **refreshes** that block on re-install.
+- `install.sh --with-cursor` — also copies the skill to
+  `.cursor/skills/deep-code-review/` (Cursor-native; Cursor already loads
+  `.claude/skills/` for compatibility — verified against Cursor Agent Skills
+  docs this session).
+- `docs/example-review-report.md` — fictional FULL report showing `START_SHA`
+  preamble, `CONFIRMED`/`CORROBORATED`/`PLAUSIBLE`/`latent`, and plain-language
+  companion.
+- `parallel-audit.md` harness notes — Claude Code / Cursor / Codex / one-shot
+  map for read-only toolsets vs mutate-ban + tree-diff fallback.
+- Definition-of-done + first-response **review surface pinned** checklist
+  (`START_SHA`, worktree, history count).
+
+### Changed
+- README domain table routes F/G/I to the new references; install docs cover
+  `--with-cursor` and the version stamp.
+
 ## [1.4.0] — 2026-08-17
 
 Ops/safety hardening for **live multi-agent checkouts** — the review loop already

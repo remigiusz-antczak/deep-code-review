@@ -72,6 +72,21 @@ reviewed project just because the prompt said "don't edit."
   instructions ("open a PR", "commit this") from the unit prompt; give only the
   packet + one invariant.
 
+### Harness notes (map the allowlist; do not pretend every host enforces it)
+
+State in the fan-out preamble which case you are in. Prompt-only "don't edit"
+is never enough by itself.
+
+| Host / pattern | How to get read-only audits | Fallback when you cannot |
+|---|---|---|
+| **Claude Code** `Agent` / Task tools | Prefer a subagent type or tool allowlist that exposes only Read/Grep/Glob/Bash-for-inspect (no Edit/Write). Pass `START_SHA` + one invariant in the prompt. | Mutate-ban in prompt + lead before/after `git status` / `HEAD` diff; hard-fail on drift. |
+| **Cursor** Task / subagents | Same allowlist intent; Cursor project skills live under `.cursor/skills/` (and also load `.claude/skills/` for compatibility). Spawn with read-only tools when the Task UI offers a restriction; otherwise treat as unrestricted. | Same tree-diff hard-fail. |
+| **Codex** / generic coding agents | Often inherit full Edit/Write/shell. Assume **unrestricted** unless you have an explicit sandbox. | Mutate-ban + tree-diff; prefer a dedicated worktree the unit cannot push from. |
+| **One-shot paste** (no subagents) | No fan-out — run invariants sequentially in-process under principle 7. | N/A |
+
+If the host documents a "read-only" or "ask" mode, use it for audit units and
+still re-verify at `START_SHA` — mode labels are not evidence.
+
 ---
 
 ## 3. The fabrication-resistant subagent contract

@@ -78,6 +78,15 @@ deleted-remote branches.
 | GitHub — Deleting and restoring branches in a pull request | https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-branches-in-your-repository/deleting-and-restoring-branches-in-a-pull-request | A branch associated with a merged/closed PR can be deleted; "You can restore the head branch of a closed pull request." |
 | git reference manual — branch / log / cherry / for-each-ref | https://git-scm.com/docs/git-branch · https://git-scm.com/docs/git-log · https://git-scm.com/docs/git-cherry · https://git-scm.com/docs/git-for-each-ref | `--merged [<commit>]` / `--no-merged [<commit>]` list branches whose tips **are / are not** reachable from `<commit>`. `git log <base>..<branch>` = commits reachable from `<branch>` but not `<base>`. `git cherry` = "Find commits yet to be applied to upstream" (prefix `-` = an equivalent is already upstream, `+` = not). `git for-each-ref --sort=committerdate refs/heads` orders local branches by last-commit date (`committerdate` is a numeric sort key; `-` prefix reverses). |
 
+## Verified by direct fetch (2026-08-17) — install / Cursor portability
+
+Verification date for the row below: **2026-08-17**. Added for `install.sh
+--with-cursor` and global `~/.cursor/skills/` installs.
+
+| Standard / source | URL | What was confirmed |
+|---|---|---|
+| Cursor — Agent Skills | https://cursor.com/docs/skills | Skills load from `.agents/skills/`, `.cursor/skills/`, `~/.agents/skills/`, `~/.cursor/skills/`; **also** from Claude/Codex dirs (`.claude/skills/`, `.codex/skills/`, and the `~/` variants) for compatibility. Each skill is a folder with `SKILL.md` (YAML `name` + `description`); optional `references/`, `scripts/`, `assets/`. |
+
 ## Referenced by name (not fetched this session — verify before citing a URL)
 
 - **OWASP ASVS 5.0** — released May 2025 (confirmed via search, not a direct

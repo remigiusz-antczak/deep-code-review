@@ -26,5 +26,8 @@ coverage/
 # Claude Code local settings (machine-specific)
 .claude/settings.local.json
 
+# Editor-local rules / skills (maintainer machine; not part of the skill product)
+.cursor/
+
 # install.sh backups created when updating an existing skill install
 *.backup-*

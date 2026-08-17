@@ -47,10 +47,10 @@ and a deep detection playbook in `references/`.
 | C AI / LLM / agents | OWASP LLM Top 10:2025 + Agentic 2026, injection, output handling | `security-ai-agents.md` |
 | D Data integrity | monotonic quality, no-fabrication, entity resolution, evals | `data-quality.md` |
 | E Performance & cost | N+1, indexes, migrations, API/LLM spend | `performance-db-cost.md` |
-| F Reliability | error handling, retries, idempotency, rollbacks | — |
-| G Concurrency | races, TOCTOU, shared-state writes | — |
+| F Reliability | error handling, retries, idempotency, rollbacks | `reliability-error-handling.md` |
+| G Concurrency | races, TOCTOU, shared-state writes | `concurrency-shared-state.md` |
 | H Maintainability | dead code, duplication, feature flags, lockstep surfaces | — |
-| I APIs & integration | contracts, webhooks, message-schema evolution | — |
+| I APIs & integration | contracts, webhooks, message-schema evolution | `api-contracts.md` |
 | J Testing & evals | taxonomy, test-the-failure, AI eval harness | `testing-and-evals.md` |
 | K Build / CI / supply chain | reproducible build, SHA-pinned actions, SBOM, signatures, dependency currency & safe upgrades | `dependency-currency-and-upgrades.md` |
 | L Infra / IaC / cloud | Docker, K8s, Terraform, IAM, network exposure | `infra-iac-containers.md` |
@@ -72,15 +72,20 @@ Plus a dedicated **adversarial / red-team pass** and a **useless-work audit**
 ## How to use it
 
 **Install into a project** (works for any agent — copies the skill into
-`.claude/skills/` and writes a cross-agent `AGENTS.md` pointer):
+`.claude/skills/` and writes a cross-agent `AGENTS.md` pointer stamped with
+skill `VERSION` + install SHA):
 
 ```bash
 git clone https://github.com/remigiusz-antczak/deep-code-review.git
 cd deep-code-review
-./install.sh /path/to/your/project                 # any agent: skill + AGENTS.md pointer
-./install.sh --claude-only /path/to/your/project   # Claude Code skill only (no AGENTS.md)
+./install.sh /path/to/your/project                    # skill + AGENTS.md pointer
+./install.sh --with-cursor /path/to/your/project      # also .cursor/skills/ (Cursor-native)
+./install.sh --claude-only /path/to/your/project      # Claude Code skill only (no AGENTS.md)
 ```
 
+Re-running refreshes the AGENTS.md stamp. For a personal Cursor install, copy to
+`~/.cursor/skills/deep-code-review/` (Cursor also loads `~/.claude/skills/` for
+compatibility).
 Then in that project:
 
 ```
@@ -126,7 +131,8 @@ being read mid-audit. The plain-language report lands in top-level `code-review/
 when the tree is idle — or out-of-tree / on a dedicated review branch when the
 checkout is shared or occupied — a traffic-light health scorecard, the top risks
 in human terms, and the decisions that need an owner, so a founder or leader can
-act without reading the code.
+act without reading the code. A worked fictional example is in
+[`docs/example-review-report.md`](docs/example-review-report.md).
 
 ---
 
@@ -139,7 +145,8 @@ for Agentic Applications 2026, OWASP API Security Top 10 (2023), OWASP ASVS 5.0,
 CWE Top 25 (2025), WCAG 2.2, Google Engineering Practices, Diátaxis, the C4 model,
 Semantic Versioning, OpenSSF Scorecard, OpenSSF Best Practices Badge, OSV, GitHub
 Dependabot, Keep a Changelog, pre-commit, EditorConfig, Development Containers,
-AGENTS.md, and the GitHub community-health + Claude Code memory docs. Referenced
+AGENTS.md, the GitHub community-health + Claude Code memory docs, and Cursor
+Agent Skills directory docs. Referenced
 by name (verify the current version before citing): OWASP WSTG, MITRE ATLAS, NIST
 SSDF and AI RMF, SLSA, CIS Benchmarks, ISO/IEC 25010, Twelve-Factor, Conventional
 Commits, and the per-agent instruction-file conventions (Cursor, Copilot,

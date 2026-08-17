@@ -36,8 +36,29 @@ jobs:
         run: |
           grep -qE '^name: deep-code-review$' .claude/skills/deep-code-review/SKILL.md
 
+      - name: VERSION file present and semver-shaped
+        run: |
+          ver=$(tr -d '[:space:]' < .claude/skills/deep-code-review/VERSION)
+          echo "VERSION=$ver"
+          echo "$ver" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'
+          # Changelog must announce this version
+          grep -qE "^## \[${ver}\]" CHANGELOG.md
+
       - name: install.sh parses
         run: bash -n install.sh
+
+      - name: install.sh dry-run into a temp project (stamp + --with-cursor)
+        run: |
+          tmp=$(mktemp -d)
+          ./install.sh --with-cursor "$tmp"
+          test -f "$tmp/.claude/skills/deep-code-review/SKILL.md"
+          test -f "$tmp/.cursor/skills/deep-code-review/SKILL.md"
+          grep -q 'deep-code-review:begin' "$tmp/AGENTS.md"
+          grep -q 'Installed:' "$tmp/AGENTS.md"
+          # re-install refreshes stamp
+          ./install.sh "$tmp"
+          grep -q 'Installed:' "$tmp/AGENTS.md"
+          rm -rf "$tmp"
 
       - name: Privacy gate — banlist-driven, fails closed if the banlist is missing
         run: |

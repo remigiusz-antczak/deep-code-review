@@ -57,9 +57,11 @@ archetype (data pipeline → `data-quality.md` + `performance-db-cost.md`; LLM/a
   touched lines.
 - `FILE <paths>` — a named set of files.
 
-**First response before reviewing:** state the resolved scope, the pinned review
-ref (`START_SHA` when the target is a git checkout; base ref for `DIFF`), and
-any assumption you had to make — in one line, then proceed.
+**First response before reviewing:** in one or two lines state the resolved
+scope; the pinned review ref (`START_SHA` when git, else why N/A); whether a
+dedicated worktree/clone is in use (required default for `FULL`, or why not);
+`git rev-list --count HEAD` when git; the base ref for `DIFF`; and any
+assumption you had to make — then proceed.
 
 **Review mechanics (efficiency):**
 - **Pin an immutable review surface — do not assume a quiet working tree.** Capture
@@ -476,7 +478,7 @@ Apply to any pipeline, ETL, enrichment, scraping, or dataset producer. Judge the
   per-run cap defaulting to 0/unlimited, a spend ledger that fails open on a read
   error, a `SELECT sum()`-then-act spend check, no dry-run/apply switch at all.
 
-### F. Reliability & error handling
+### F. Reliability & error handling → `references/reliability-error-handling.md`
 - Every external call handles failure explicitly: **check status before reading
   the body**; API clients return null/empty and let the caller escalate; batch
   loops catch **per-item** errors, log, and continue so one bad item can't halt
@@ -500,7 +502,7 @@ Apply to any pipeline, ETL, enrichment, scraping, or dataset producer. Judge the
   lost on crash, status not checked before body read, an emergency stop behind
   the limiter.
 
-### G. Concurrency & shared state
+### G. Concurrency & shared state → `references/concurrency-shared-state.md`
 - No data races on shared mutable state; correct locking/atomicity; no deadlock
   ordering; no check-then-act (TOCTOU). Async: awaited promises, no
   fire-and-forget that drops errors, cancellation handled.
@@ -511,7 +513,8 @@ Apply to any pipeline, ETL, enrichment, scraping, or dataset producer. Judge the
   before editing and commit explicit paths — never stage-all.
 - 🚩 shared mutable globals, missing `await`, non-atomic read-modify-write, lock
   held across I/O, two workers writing the same file, **tests or jobs that write
-  a real shared/tracked data path** (cross-ref J).
+  a real shared/tracked data path** (cross-ref J;
+  `references/testing-and-evals.md`).
 
 ### H. Tech debt, dead code & maintainability
 - **Dead code & deps** removed (unreferenced code is maintenance + attack
@@ -532,7 +535,7 @@ Apply to any pipeline, ETL, enrichment, scraping, or dataset producer. Judge the
 - 🚩 commented-out blocks, `v2`/`_old`/`copy` files, duplicate helpers, dead
   flags, unused imports/deps, god-functions.
 
-### I. API, interface, contracts & integration
+### I. API, interface, contracts & integration → `references/api-contracts.md`
 - Public interfaces minimal, consistent, hard to misuse; breaking changes
   versioned (SemVer) and documented; inputs validated at the boundary; outputs
   match the documented schema; errors typed and documented.
@@ -545,7 +548,8 @@ Apply to any pipeline, ETL, enrichment, scraping, or dataset producer. Judge the
   **out-of-order and duplicate** delivery. Never trust a webhook body's identity
   claims without verification.
 - For HTTP/GraphQL APIs, overlay the OWASP API Security Top 10 (2023) — see the
-  appsec reference.
+  appsec reference (`security-appsec.md`); contract evolution and webhook
+  procedures live in `api-contracts.md`.
 - 🚩 unverified webhook handler, unvalidated request body, silent contract change,
   required-field added to a live message schema, inconsistent error shapes.
 
@@ -899,7 +903,9 @@ non-technical reader can act on** into a top-level `code-review/` directory
 (create it if absent) so it is easy to find from the repo root — **unless** Phase
 5's shared-tree escape hatch applies, in which case keep the same template
 out-of-tree or on a dedicated review branch. Use a dated file plus an index, so
-history is preserved and nothing is overwritten:
+history is preserved and nothing is overwritten. A worked fictional example
+(machine + plain-language, with `CORROBORATED` / `latent`) lives in
+`docs/example-review-report.md` in the skill repository.
 
 - `code-review/README.md` — index: one line per review (date · verdict · link).
 - `code-review/review-YYYY-MM-DD.md` — the report for this run.
@@ -974,6 +980,10 @@ with exact file locations and fixes, is in <the findings above / the PR / link>.
 
 ## Definition of done
 
+- ✅ **Review surface pinned** (git checkouts): first response stated `START_SHA`,
+  whether a dedicated worktree/clone is in use (default for `FULL`), and measured
+  history depth (`git rev-list --count HEAD`); or N/A with reason (non-git /
+  compact `DIFF`/`FILE` packet). Citations re-verified at that ref.
 - ✅ Builds and runs with the documented one-command setup.
 - ✅ All tests pass (scoped per subtree where a gate excludes code; each gate
   proven to fail on a planted defect); edge/regression coverage matched to the
