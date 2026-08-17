@@ -3,6 +3,47 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.4.0] — 2026-08-17
+
+Ops/safety hardening for **live multi-agent checkouts** — the review loop already
+caught real defects under an anti-fabrication contract; this release makes the
+method safe when another agent is editing, switching branches, or committing in
+the same tree. Additive: domains A–S and report sections unchanged; new
+confidence marker `CORROBORATED`; Phase 0/1/5 and `parallel-audit.md` carry the
+depth.
+
+### Added
+- **Immutable review surface** — Phase 0 captures `START_SHA`, prefers
+  `git show $START_SHA:path` or a dedicated worktree/clone (default for `FULL`),
+  and detects a shared/mutating checkout (`git status` twice; occupied → don't
+  plant or write into the live tree). First-response line states the pinned ref.
+- **History-depth check** — Phase 0 runs `git rev-list --count HEAD` /
+  `git log --oneline -5` (and shallow detection); never trust a prose "no
+  history" claim; tree scrub ≠ history scrub for secrets/PII.
+- **Triage-first fast lane** — Phase 0 runs project `doctor`/gates/documented
+  invariants before expensive fan-out; Review mechanics and Phase 2 order by
+  blast radius after those hits.
+- **`parallel-audit.md` contracts** — read-only tool allowlist (or mutate-ban +
+  lead before/after tree-diff hard-fail); transitive identifier masking in
+  subagent returns; mega-file chunking by named concern; `CORROBORATED`
+  confidence when independent units converge on the same sink.
+- **Phase 5 shared-tree escape hatch** — if the checkout is occupied or an
+  unrelated change is in flight, deliver the human-readable report out-of-tree /
+  offer a dedicated review branch instead of writing `code-review/` into someone
+  else's commit surface.
+- **Hermetic-test shared-state red flag** — domain J (cross-ref G) + depth in
+  `testing-and-evals.md`: tests that write real tracked/shared data paths with
+  cleanup only in `finally`/`try` that hard-exit can skip.
+
+### Changed
+- Principle 7 — planted-defect probe defaults to a dedicated worktree/copy;
+  report write is conditional on an unshared idle tree; fan-out least-privilege
+  is by toolset where the harness allows.
+- Principle 11 / confidentiality restatement — masking is transitive through
+  fan-out, not lead-only.
+- Phase 1 planted probe — worktree/copy at `START_SHA` by default; never plant
+  into a tree another process can commit from.
+
 ## [1.3.0] — 2026-08-14
 
 New capability — **branch, merge & open-work triage**. The review now analyzes

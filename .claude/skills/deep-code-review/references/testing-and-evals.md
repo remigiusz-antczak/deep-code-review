@@ -62,6 +62,15 @@ theater.**
   import. Sanitize the environment passed to any spawned subprocess down to an
   explicit allowlist — children inherit the full parent env by default, which
   both leaks secrets and lets a test operate on real shared state.
+- **Tests must not write real shared/production data paths.** A suite that
+  points the server-under-test at a tracked, shared, or default data directory
+  (no temp-dir / network-dir override) will intermittently corrupt real state —
+  especially when "restore" lives only in `finally`/`try`/`afterEach` that a
+  hard exit (`process.exit`, SIGINT, worker crash) or overlapping runs can skip.
+  Rate as High/Critical by consequence (data loss, PII mix-up, flaky CI that
+  mutates the operator's machine). Fix pattern: inject a store root, default
+  tests to an OS temp dir, make cleanup signal-safe or use unique per-run dirs
+  the OS reaps. Cross-ref domain G when the path is also a concurrent writer.
 - **Coherence test for necessarily-duplicated logic.** Where logic is mirrored
   (a port, a re-implementation, a circular-import copy), link the source of
   truth in a comment **and** add a test that runs one fixture through both paths
@@ -112,7 +121,8 @@ against **both** a ground-truth **recall** bench and a **noise/precision** bench
 **🚩 red flags**: no test for the reported bug; tests that never fail; mocks
 that make the assertion trivial; a checker with no test of its own; `skip`/
 `xfail` hiding a broken case; hard-coded expected values with a comment like
-"update if it changes"; tests that hit the real network or real services; an AI
-feature with only mocked unit tests and no eval bench; a coverage % cited as
-proof of correctness; a threshold lowered in the same diff that would otherwise
+"update if it changes"; tests that hit the real network or real services; **tests
+that write a real tracked/shared data path with cleanup only in `finally`/`try`**;
+an AI feature with only mocked unit tests and no eval bench; a coverage % cited
+as proof of correctness; a threshold lowered in the same diff that would otherwise
 fail.

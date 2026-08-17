@@ -105,7 +105,7 @@ You can also paste `SKILL.md` as a one-shot prompt.
 
 ```mermaid
 flowchart LR
-  P0[Phase 0<br/>Map the target] --> P1[Phase 1<br/>Ground truth<br/>build · test · lint]
+  P0[Phase 0<br/>Pin ref · map · triage-first] --> P1[Phase 1<br/>Ground truth<br/>build · test · lint]
   P1 --> P2[Phase 2<br/>Domain audits A–S]
   P2 --> P3[Phase 3<br/>Adversarial<br/>red-team pass]
   P3 --> P4[Phase 4<br/>Synthesize<br/>& rank severity]
@@ -116,13 +116,17 @@ flowchart LR
 
 The report is severity-ranked (Blocker → Critical → High → Medium → Low → Nit),
 every finding carries `file:line` evidence and a concrete fix, and unverifiable
-items are marked `unverified` rather than guessed. See `SKILL.md` for the exact
-report format and the definition of done.
+items are marked `unverified` rather than guessed. Fan-out findings are
+`CONFIRMED`, `CORROBORATED`, or `PLAUSIBLE`. See `SKILL.md` for the exact report
+format and the definition of done.
 
-It also writes a **plain-language report** a non-technical reader can act on into
-a top-level `code-review/` directory in the reviewed repo — a traffic-light
-health scorecard, the top risks in human terms, and the decisions that need an
-owner — so a founder or leader can act on the outcome without reading the code.
+On a git checkout the review **pins an immutable ref** (`START_SHA`) and, for
+`FULL`, prefers a dedicated worktree so a concurrent agent cannot change what is
+being read mid-audit. The plain-language report lands in top-level `code-review/`
+when the tree is idle — or out-of-tree / on a dedicated review branch when the
+checkout is shared or occupied — a traffic-light health scorecard, the top risks
+in human terms, and the decisions that need an owner, so a founder or leader can
+act without reading the code.
 
 ---
 
