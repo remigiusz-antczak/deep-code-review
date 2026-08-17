@@ -47,16 +47,21 @@ jobs:
       - name: install.sh parses
         run: bash -n install.sh
 
-      - name: install.sh dry-run into a temp project (stamp + --with-cursor)
+      - name: install.sh dry-run into a temp project (multi-path + stamp)
         run: |
           tmp=$(mktemp -d)
-          ./install.sh --with-cursor "$tmp"
+          ./install.sh "$tmp"
           test -f "$tmp/.claude/skills/deep-code-review/SKILL.md"
           test -f "$tmp/.cursor/skills/deep-code-review/SKILL.md"
+          test -f "$tmp/.agents/skills/deep-code-review/SKILL.md"
           grep -q 'deep-code-review:begin' "$tmp/AGENTS.md"
           grep -q 'Installed:' "$tmp/AGENTS.md"
-          # re-install refreshes stamp
-          ./install.sh "$tmp"
+          grep -q 'Agent-agnostic' "$tmp/AGENTS.md"
+          ./install.sh --with-codex "$tmp"
+          test -f "$tmp/.codex/skills/deep-code-review/SKILL.md"
+          ./install.sh --minimal "$tmp"
+          test -f "$tmp/.claude/skills/deep-code-review/SKILL.md"
+          # minimal does not remove prior mirrors; stamp still refreshes
           grep -q 'Installed:' "$tmp/AGENTS.md"
           rm -rf "$tmp"
 

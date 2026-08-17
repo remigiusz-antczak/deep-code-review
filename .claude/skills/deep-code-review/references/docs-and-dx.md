@@ -51,21 +51,17 @@ conventions, how to build/test/run, the **definition of done**, and the hard
 confidentiality + no-fabrication rules. It is the mechanism by which quality
 survives the *next* contributor — see "Standards imprint" below.
 
-- **Portability & interop (check for divergence).** `AGENTS.md` is a cross-agent
-  convention many tools read; `CLAUDE.md` is Claude Code's file. Different agents
-  read different files — `AGENTS.md`, `CLAUDE.md`, `.github/copilot-
-  instructions.md`, Cursor `.cursor/rules` / `.cursorrules`, Windsurf
-  `.windsurf/rules` / `.windsurfrules`, `GEMINI.md`, Aider `CONVENTIONS.md`. **If
-  a repo carries more than one, they must not drift**: keep the standards in one
-  file and have the others point to it (Claude Code reads `CLAUDE.md`, *not*
-  `AGENTS.md`, so bridge with an `@AGENTS.md` import or a symlink). **If it has
-  none, write the one the repo's actual toolchain reads.** Two agent-instruction
-  files with conflicting rules is the finding — not which name is "primary."
-- **A standards doc is context, not enforcement.** Prose in `CLAUDE.md` / `AGENTS.md`
-  guides an agent but binds nothing — per Claude Code's own guidance these files
-  are "context, not enforced configuration." A load-bearing standard survives
-  future sessions only when a **gate** backs it (a pre-commit hook, a required CI
-  status check). "Documented but unenforced" is the highest-value durable-
+- **Portability & interop (check for divergence).** Prefer a canonical root
+  **`AGENTS.md`** (cross-vendor). Peer files — `CLAUDE.md`, `.github/copilot-
+  instructions.md`, Cursor `.cursor/rules` / skills, Windsurf `.windsurf/rules`,
+  `GEMINI.md`, Aider `CONVENTIONS.md` — must be **thin pointers**, not forks.
+  Bridge hosts that only read another name (e.g. Claude Code → `@AGENTS.md`
+  import or symlink). **If the repo already standardizes on one file, defer to
+  it** and fill gaps. Two instruction files with conflicting rules is the
+  finding — not which filename is "primary."
+- **A standards doc is context, not enforcement.** Prose in `AGENTS.md` / peers
+  guides an agent but binds nothing unless a **gate** backs it (pre-commit,
+  required CI). "Documented but unenforced" is the highest-value durable-
   standards finding (see the imprint below).
 
 ## Developer experience
@@ -165,19 +161,17 @@ What to imprint (tailored to the project's actual stack and to this review's
 findings — not a generic dump):
 
 1. **AI-facing standards doc — canonical `AGENTS.md`.** Write the standards once
-   in a root `AGENTS.md` (the cross-vendor format most agents read), and make
-   every other agent file a **thin pointer** to it, not a copy: a `CLAUDE.md`
-   that imports it (`@AGENTS.md`) or symlinks to it for Claude Code, and
-   equivalent one-line pointers for the agents the repo's toolchain actually uses
-   (Cursor `.cursor/rules`, `.github/copilot-instructions.md`, `GEMINI.md`, Aider
-   `.aider.conf.yml` `read:`). **If the repo already standardizes on a specific
-   agent file, defer to it** — fill gaps, don't relocate it. Keep the canonical
-   file concise (Claude Code targets under ~200 lines) and push depth into
-   referenced files. Contents: the code standards, the definition of done, the
-   stack-specific red flags this review surfaced, the data-integrity invariants
-   (if a data product), the LLM-safety rules (if it calls a model), and the hard
-   no-fabrication + confidentiality rules — so the next agent complies without
-   re-deriving them.
+   in a root `AGENTS.md` (cross-vendor), and make every other agent file a **thin
+   pointer** to it, not a copy: `CLAUDE.md` via `@AGENTS.md` / symlink where
+   needed, plus one-line pointers for Cursor rules, Copilot instructions,
+   `GEMINI.md`, Aider `read:`, Windsurf rules — whatever the repo's toolchain
+   actually uses. **If the repo already standardizes on a specific agent file,
+   defer to it** — fill gaps, don't relocate it. Keep the canonical file concise
+   and push depth into referenced files. Contents: code standards, definition of
+   done, stack-specific red flags this review surfaced, data-integrity
+   invariants (if a data product), LLM-safety rules (if it calls a model), and
+   the hard no-fabrication + confidentiality rules — so the *next* agent of any
+   vendor complies without re-deriving them.
 2. **Pre-commit / CI gates**: lint (0 warnings), format, type-check, tests, a
    **privacy/secret gate that fails closed when its banned-terms input is
    missing and reports `file:line` only — never echoing the matched secret**,

@@ -3,6 +3,28 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.6.0] — 2026-08-17
+
+**Agent-agnostic packaging.** The method was already host-neutral in substance;
+install + docs still read Claude-first. Default install now mirrors the skill
+into every common skill root (`.agents/`, `.cursor/`, `.claude/`), `AGENTS.md`
+is the cross-vendor entry pointer, and SKILL/parallel-audit/docs speak to any
+major coding agent first.
+
+### Added
+- Default multi-path install: `.agents/skills/`, `.cursor/skills/`,
+  `.claude/skills/` (+ optional `--with-codex` → `.codex/skills/`).
+- `--minimal` lean install; `--with-cursor` kept as no-op for compatibility.
+- Harness table rows for Copilot / Gemini / Aider / Windsurf; generic-first
+  fan-out contract.
+
+### Changed
+- SKILL "How to use" + confidentiality restatement → agent-agnostic discovery
+  and `AGENTS.md`-canonical imprint language.
+- `docs-and-dx.md` portability / imprint: prefer `AGENTS.md`, peers as pointers.
+- README / AGENTS.md install pointer: no "for non-Claude agents" framing.
+- CI dry-run asserts `.agents` + `.cursor` + `.claude` paths on default install.
+
 ## [1.5.0] — 2026-08-17
 
 Depth + install portability on top of 1.4.0's multi-agent checkout safety. New

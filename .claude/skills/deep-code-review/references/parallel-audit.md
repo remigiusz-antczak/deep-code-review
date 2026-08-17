@@ -75,17 +75,20 @@ reviewed project just because the prompt said "don't edit."
 ### Harness notes (map the allowlist; do not pretend every host enforces it)
 
 State in the fan-out preamble which case you are in. Prompt-only "don't edit"
-is never enough by itself.
+is never enough by itself. **Contract is host-neutral** — only the spawn
+mechanism changes.
 
 | Host / pattern | How to get read-only audits | Fallback when you cannot |
 |---|---|---|
-| **Claude Code** `Agent` / Task tools | Prefer a subagent type or tool allowlist that exposes only Read/Grep/Glob/Bash-for-inspect (no Edit/Write). Pass `START_SHA` + one invariant in the prompt. | Mutate-ban in prompt + lead before/after `git status` / `HEAD` diff; hard-fail on drift. |
-| **Cursor** Task / subagents | Same allowlist intent; Cursor project skills live under `.cursor/skills/` (and also load `.claude/skills/` for compatibility). Spawn with read-only tools when the Task UI offers a restriction; otherwise treat as unrestricted. | Same tree-diff hard-fail. |
-| **Codex** / generic coding agents | Often inherit full Edit/Write/shell. Assume **unrestricted** unless you have an explicit sandbox. | Mutate-ban + tree-diff; prefer a dedicated worktree the unit cannot push from. |
+| **Generic / any agent** | Spawn or hand off with an explicit tool allowlist: Read / Grep / Glob / non-mutating git only. Pass identical packet + `START_SHA` + one invariant. | Mutate-ban in prompt + lead before/after `git status` / `HEAD` diff; hard-fail on drift. Prefer a dedicated worktree the unit cannot push from. |
+| **Cursor** (Task / subagents / skills) | Skills under `.cursor/skills/` or `.agents/skills/` (also loads `.claude/skills/` / `.codex/skills/`). Restrict tools when the Task UI offers it; otherwise treat as unrestricted. | Same tree-diff hard-fail. |
+| **Claude Code** (subagents / Task) | Prefer a subagent/tool allowlist with no Edit/Write. Slash-invoke `/deep-code-review` when installed under `.claude/skills/`. | Mutate-ban + tree-diff. |
+| **Codex** | May load `.codex/skills/` or follow `AGENTS.md`. Assume full Edit/Write/shell unless sandboxed. | Mutate-ban + tree-diff; worktree. |
+| **Copilot / Gemini / Aider / Windsurf** | Usually instruction-file driven (`AGENTS.md`, copilot-instructions, `GEMINI.md`, `.windsurf/rules`). No reliable tool lockdown — sequential in-process invariants under principle 7, or external read-only checkout. | Same. |
 | **One-shot paste** (no subagents) | No fan-out — run invariants sequentially in-process under principle 7. | N/A |
 
-If the host documents a "read-only" or "ask" mode, use it for audit units and
-still re-verify at `START_SHA` — mode labels are not evidence.
+If the host documents a "read-only" / "ask" / "plan" mode, use it for audit
+units and still re-verify at `START_SHA` — mode labels are not evidence.
 
 ---
 

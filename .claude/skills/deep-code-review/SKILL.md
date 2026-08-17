@@ -42,8 +42,14 @@ need the how-to-test detail.
 
 ## How to use this file
 
-**As an agent / Claude Code skill** — place at
-`.claude/skills/deep-code-review/SKILL.md` and invoke `/deep-code-review <scope>`.
+**Agent-agnostic.** Same method on Claude Code, Cursor, Codex, Copilot, Gemini,
+Aider, Windsurf, or any model that can read files. Discover the skill from
+wherever your agent loads skills (common roots: `.agents/skills/`,
+`.cursor/skills/`, `.claude/skills/`, `.codex/skills/`, plus the matching `~/`
+user dirs), or from the project's `AGENTS.md` pointer after `install.sh`. Invoke
+by name (`/deep-code-review <scope>` where slash-skills exist) **or** by asking
+the agent to run a deep code review with scope `FULL` | `DIFF <base>` |
+`FILE <paths>`.
 **As a one-shot prompt** — paste this file, then name the target and scope; for a
 non-file-capable model, also paste the `references/*.md` for the target's
 archetype (data pipeline → `data-quality.md` + `performance-db-cost.md`; LLM/agent
@@ -56,6 +62,11 @@ archetype (data pipeline → `data-quality.md` + `performance-db-cost.md`; LLM/a
   handed a diff or PR link. Review the change **and its blast radius**, not just
   touched lines.
 - `FILE <paths>` — a named set of files.
+
+**Host-neutral tools.** Prefer portable actions (read files, search/`rg`,
+`git show` / `git log`, run the project's own scripts). Do not assume a
+vendor-specific Task/Agent API — fan-out rules in `references/parallel-audit.md`
+map the same contract onto whatever subagent mechanism the host provides.
 
 **First response before reviewing:** in one or two lines state the resolved
 scope; the pinned review ref (`START_SHA` when git, else why N/A); whether a
@@ -641,7 +652,8 @@ or cloud config. (OWASP A02/A03; benchmark against CIS.)
   sources → processing → output) in plain language for a non-technical reader;
   an architecture + data-flow diagram (Mermaid / C4); cross-linked docs;
   one-command setup + `.env.example`. Never bake live metrics into prose — cite
-  the command. **AI-facing doc** (`CLAUDE.md`/`AGENTS.md`): standards,
+  the command. **AI-facing doc** (`AGENTS.md` canonical; `CLAUDE.md` / peers as
+  pointers): standards,
   conventions, definition of done, hard rules. Structure docs by **Diátaxis**;
   record significant decisions as **ADRs**.
 - **DX**: a `doctor`/preflight that names each missing piece with a fix, prints
@@ -656,12 +668,13 @@ or cloud config. (OWASP A02/A03; benchmark against CIS.)
   the rule that enforces it**, CHANGELOG) and a protected default/release branch
   (PR + review + passing checks, no force-push) — rated Info/Low on a private
   repo, escalating when public/distributed/reaching prod. Agent-instruction files
-  (`CLAUDE.md`/`AGENTS.md`/peers) must not diverge — one canonical, the rest point
+  (`AGENTS.md` canonical; `CLAUDE.md`/peers as pointers) must not diverge — one
+  canonical, the rest point
   to it. **A standards doc with no enforcing gate is advisory** and won't survive
   the next session. (Depth + per-item severities in `references/docs-and-dx.md`.)
 - 🚩 aspirational README, stale setup, undocumented env vars, no diagram, "see
-  the code," live counts hard-coded in prose, conflicting `CLAUDE.md`/`AGENTS.md`,
-  a public repo with no LICENSE/SECURITY.md, a default branch mergeable with no
+  the code," live counts hard-coded in prose, conflicting agent-instruction
+  files,  a public repo with no LICENSE/SECURITY.md, a default branch mergeable with no
   review, a standards doc no gate enforces.
 
 ### P. Frontend / UI / UX / accessibility → `references/frontend-a11y.md`
@@ -880,7 +893,8 @@ unmerged security fix, only-copy work — escalated in the findings table above.
 - <brief; what to keep / what was done right>
 
 ## Standards imprint (Phase 6, if opted in)
-- <what was added/merged into CLAUDE.md / gates / templates, or "not requested">
+- <what was added/merged into AGENTS.md (and peer pointers) / gates / templates,
+  or "not requested">
 
 ## Definition of done — status
 <checklist below, each ✅/❌/N/A>
@@ -1014,7 +1028,7 @@ with exact file locations and fixes, is in <the findings above / the PR / link>.
 
 ---
 
-## No-fabrication & confidentiality (restate in the repo's `CLAUDE.md`)
+## No-fabrication & confidentiality (restate in the repo's `AGENTS.md` / peers)
 
 - **No fabrication, anywhere.** No invented findings, data, sources, metrics,
   CWEs, or line numbers. Omit or flag rather than guess.
@@ -1033,6 +1047,9 @@ with exact file locations and fixes, is in <the findings above / the PR / link>.
 - **Confirm before anything destructive, irreversible, billable, or shared-state**
   (force-push, history rewrite, deletes, sends, paid API calls).
 
+Restate these rules in the project's **canonical** AI-facing standards file
+(prefer `AGENTS.md`; keep `CLAUDE.md`, Copilot instructions, Cursor rules,
+`GEMINI.md`, etc. as thin pointers so agents never drift).
 ---
 
 ## Appendix — reference standards

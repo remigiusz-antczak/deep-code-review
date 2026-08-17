@@ -4,8 +4,9 @@
 repository.** It turns "look this over" into a rigorous, reproducible audit that
 covers correctness, security, AI/LLM safety, data quality, performance and cost,
 reliability, testing, infrastructure, docs, and accessibility — and ends with a
-severity-ranked report you can act on. Works in any language or stack, as a
-Claude Code skill, a one-shot prompt, or a human checklist.
+severity-ranked report you can act on. Works in any language or stack, on any
+major coding agent (Cursor, Claude Code, Codex, Copilot, Gemini, Aider, …), as a
+one-shot prompt, or as a human checklist.
 
 ---
 
@@ -30,8 +31,8 @@ Two things make it more than a checklist:
 - **It leaves the bar in place.** An optional final phase imprints a tailored
   standards set — a canonical cross-vendor `AGENTS.md` (with `CLAUDE.md` and peer
   agent files as thin pointers to it), pre-commit/CI gates, and templates — into
-  the reviewed project so the *next* contributor or agent (Claude or otherwise)
-  holds the same quality, security, and efficiency bar without re-deriving it.
+  the reviewed project so the *next* contributor or agent (any vendor) holds the
+  same quality, security, and efficiency bar without re-deriving it.
 
 ---
 
@@ -71,39 +72,38 @@ Plus a dedicated **adversarial / red-team pass** and a **useless-work audit**
 
 ## How to use it
 
-**Install into a project** (works for any agent — copies the skill into
-`.claude/skills/` and writes a cross-agent `AGENTS.md` pointer stamped with
-skill `VERSION` + install SHA):
+**Install into a project** (agent-agnostic — copies the skill into the skill
+roots major hosts discover, and writes a version-stamped `AGENTS.md` pointer):
 
 ```bash
 git clone https://github.com/remigiusz-antczak/deep-code-review.git
 cd deep-code-review
-./install.sh /path/to/your/project                    # skill + AGENTS.md pointer
-./install.sh --with-cursor /path/to/your/project      # also .cursor/skills/ (Cursor-native)
-./install.sh --claude-only /path/to/your/project      # Claude Code skill only (no AGENTS.md)
+./install.sh /path/to/your/project                 # .agents + .cursor + .claude skills + AGENTS.md
+./install.sh --with-codex /path/to/your/project    # also .codex/skills/
+./install.sh --minimal /path/to/your/project       # only .claude/skills/ + AGENTS.md
+./install.sh --claude-only /path/to/your/project   # only .claude/skills/ (no AGENTS.md)
 ```
 
-Re-running refreshes the AGENTS.md stamp. For a personal Cursor install, copy to
-`~/.cursor/skills/deep-code-review/` (Cursor also loads `~/.claude/skills/` for
-compatibility).
-Then in that project:
+Re-running refreshes the AGENTS.md stamp. Personal/global Cursor install: copy
+to `~/.cursor/skills/deep-code-review/` (and optionally `~/.agents/skills/` /
+`~/.claude/skills/`).Then in that project (any agent):
 
 ```
-/deep-code-review FULL                   # the whole repository
-/deep-code-review DIFF origin/main       # a PR / branch vs a base
-/deep-code-review FILE src/auth.ts        # a named set of files
+/deep-code-review FULL                   # slash-skill hosts
+# or: "run a deep code review FULL on this repo"
+/deep-code-review DIFF origin/main
+/deep-code-review FILE src/auth.ts
 ```
 
-**As a one-shot prompt** — paste `.claude/skills/deep-code-review/SKILL.md` into
-any capable model, then name the target and scope.
+**As a one-shot prompt** — paste the installed `SKILL.md` into any capable model,
+then name the target and scope.
 
 **As a human checklist** — walk the domain sections (A–S) directly.
 
-**For non-Claude agents** (Codex, Cursor, Copilot, Gemini, Aider) — the default
-install already writes a root `AGENTS.md` pointer (additive, never overwriting an
-existing one) that these agents read natively; pass `--claude-only` to skip it.
-You can also paste `SKILL.md` as a one-shot prompt.
-
+**Discovery** — Cursor / Agent Skills / Claude Code / Codex load from
+`.agents/skills/`, `.cursor/skills/`, `.claude/skills/`, and/or `.codex/skills/`
+(see Cursor Agent Skills docs). The root `AGENTS.md` pointer is the
+cross-vendor fallback when a host does not auto-load skills.
 ---
 
 ## How it works

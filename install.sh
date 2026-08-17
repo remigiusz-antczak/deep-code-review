@@ -2,45 +2,44 @@
 # install.sh — install the deep-code-review skill into a project, for ANY agent.
 #
 # Usage:
-#   ./install.sh [--claude-only] [--with-cursor] [TARGET_DIR]
+#   ./install.sh [--minimal] [--with-codex] [TARGET_DIR]
 #
-# Installs the review method so any coding agent can run it:
-#   - copies the skill to <TARGET_DIR>/.claude/skills/deep-code-review/ (Claude
-#     Code loads it natively; Cursor also discovers .claude/skills/ for
-#     compatibility; those files are the canonical copy); and
-#   - writes/updates a root AGENTS.md pointer so cross-agent tools (Codex,
-#     Cursor, Copilot, Gemini, Aider, …) discover the method. Additive: never
-#     overwrites an existing AGENTS.md body; refreshes the marked block on
-#     re-install so the version stamp stays current.
+# Default (agent-agnostic): copies the skill into every common skill root the
+# major hosts discover, and writes/refreshes a root AGENTS.md pointer:
+#   - .agents/skills/deep-code-review/   (Agent Skills / open standard)
+#   - .cursor/skills/deep-code-review/   (Cursor)
+#   - .claude/skills/deep-code-review/   (Claude Code; Cursor/Codex also load)
+# Optional:
+#   --with-codex   also .codex/skills/deep-code-review/
+#   --minimal      only .claude/skills/ + AGENTS.md (legacy lean install)
+#   --claude-only  only .claude/skills/ ; skip AGENTS.md (compat alias)
+#   --with-cursor  no-op (Cursor path is now part of the default set)
 #
-#   --claude-only   Install just the Claude Code skill; skip the AGENTS.md pointer.
-#   --with-cursor   Also copy the skill to <TARGET_DIR>/.cursor/skills/deep-code-review/
-#                   (Cursor-native path; optional — Cursor already loads .claude/skills/).
-#   -h, --help      Show this help.
+# Source of truth in the upstream repo remains a single tree under
+# .claude/skills/deep-code-review/ — install copies *from* there; never duplicates
+# the skill inside the upstream repository itself.
 #
-#   - TARGET_DIR defaults to the current working directory.
-#   - Re-running updates in place; any existing skill is moved to a timestamped
-#     backup under <TARGET_DIR>/.claude/skill-backups/ — never inside skills/, so a
-#     backup is never loaded as a duplicate skill.
-#   - No network, no sudo, fully local and reversible.
+# Backups land under <TARGET>/.{agents,cursor,claude,codex}/skill-backups/ —
+# never inside skills/, so backups are never loaded as duplicate skills.
+# No network, no sudo, fully local and reversible.
 
 set -euo pipefail
 
 usage() {
   cat >&2 <<'EOF'
-install.sh — install the deep-code-review skill into a project, for ANY agent.
+install.sh — install deep-code-review for any coding agent.
 
 Usage:
-  ./install.sh [--claude-only] [--with-cursor] [TARGET_DIR]
+  ./install.sh [--minimal] [--with-codex] [--claude-only] [TARGET_DIR]
 
-By default installs the skill AND writes a cross-agent AGENTS.md pointer, so any
-coding agent (Claude Code, Codex, Cursor, Copilot, Gemini, Aider) can run it. The
-AGENTS.md write is additive and never overwrites unrelated content; on re-install
-it refreshes the marked deep-code-review block (version stamp).
+Default: install into .agents/skills/, .cursor/skills/, and .claude/skills/,
+plus an AGENTS.md pointer (version-stamped; refreshed on re-install).
 
-  --claude-only   Install just the Claude Code skill; skip the AGENTS.md pointer.
-  --with-cursor   Also install to .cursor/skills/deep-code-review/ (Cursor-native).
-  -h, --help      Show this help.
+  --minimal       Only .claude/skills/ + AGENTS.md
+  --with-codex    Also .codex/skills/
+  --claude-only   Only .claude/skills/; skip AGENTS.md
+  --with-cursor   Accepted as no-op (Cursor path is default now)
+  -h, --help      Show this help
 
 TARGET_DIR defaults to the current working directory.
 EOF
@@ -51,13 +50,16 @@ SKILL_NAME="deep-code-review"
 SRC="${SCRIPT_DIR}/.claude/skills/${SKILL_NAME}"
 
 WRITE_AGENTS=1
-WITH_CURSOR=0
+MINIMAL=0
+WITH_CODEX=0
 POSITIONAL=()
 for arg in "$@"; do
   case "${arg}" in
-    --claude-only) WRITE_AGENTS=0 ;;
-    --with-cursor) WITH_CURSOR=1 ;;
-    -p|--portable) echo "note: --portable is now the default; ignoring (use --claude-only to opt out)." >&2 ;;
+    --claude-only) WRITE_AGENTS=0; MINIMAL=1 ;;
+    --minimal) MINIMAL=1 ;;
+    --with-codex) WITH_CODEX=1 ;;
+    --with-cursor) echo "note: --with-cursor is default now; ignoring." >&2 ;;
+    -p|--portable) echo "note: --portable is default; ignoring (use --minimal / --claude-only to narrow)." >&2 ;;
     -h|--help) usage; exit 0 ;;
     -*) echo "error: unknown option: ${arg}" >&2; usage; exit 2 ;;
     *) POSITIONAL+=("${arg}") ;;
@@ -65,7 +67,6 @@ for arg in "$@"; do
 done
 
 TARGET_DIR="${POSITIONAL[0]:-$(pwd)}"
-DEST="${TARGET_DIR}/.claude/skills/${SKILL_NAME}"
 
 if [[ ! -f "${SRC}/SKILL.md" ]]; then
   echo "error: cannot find ${SRC}/SKILL.md" >&2
@@ -78,7 +79,6 @@ if [[ ! -d "${TARGET_DIR}" ]]; then
   exit 1
 fi
 
-# Refuse to install into itself (would create a recursive copy).
 if [[ "$(cd "${TARGET_DIR}" && pwd)" == "${SCRIPT_DIR}" ]]; then
   echo "error: target is the repository itself; choose another project directory." >&2
   exit 1
@@ -107,41 +107,58 @@ install_skill_copy() {
   echo "installed: ${SKILL_NAME} ${VERSION} (@ ${INSTALL_SHA}) -> ${dest}"
 }
 
-mkdir -p "${TARGET_DIR}/.claude/skills"
-# Back up an existing install OUTSIDE skills/, so the backup is never loaded as a
-# duplicate skill (Claude Code loads every SKILL.md under .claude/skills/).
-install_skill_copy "${DEST}" "${TARGET_DIR}/.claude/skill-backups"
+# Always install the Claude-compatible path (many hosts also discover it).
+install_skill_copy \
+  "${TARGET_DIR}/.claude/skills/${SKILL_NAME}" \
+  "${TARGET_DIR}/.claude/skill-backups"
 
-if [[ "${WITH_CURSOR}" -eq 1 ]]; then
+if [[ "${MINIMAL}" -eq 0 ]]; then
   install_skill_copy \
     "${TARGET_DIR}/.cursor/skills/${SKILL_NAME}" \
     "${TARGET_DIR}/.cursor/skill-backups"
+  install_skill_copy \
+    "${TARGET_DIR}/.agents/skills/${SKILL_NAME}" \
+    "${TARGET_DIR}/.agents/skill-backups"
 fi
 
-# Cross-agent pointer (default). Additive + idempotent, mirroring the skill's own
-# imprint contract: create-if-missing, refresh marked block, never wipe the file.
+if [[ "${WITH_CODEX}" -eq 1 ]]; then
+  install_skill_copy \
+    "${TARGET_DIR}/.codex/skills/${SKILL_NAME}" \
+    "${TARGET_DIR}/.codex/skill-backups"
+fi
+
 if [[ "${WRITE_AGENTS}" -eq 1 ]]; then
   AGENTS="${TARGET_DIR}/AGENTS.md"
   MARKER_BEGIN="deep-code-review:begin"
   MARKER_END="deep-code-review:end"
+  LOCATIONS=".claude/skills/${SKILL_NAME}/SKILL.md"
+  if [[ "${MINIMAL}" -eq 0 ]]; then
+    LOCATIONS="${LOCATIONS}; also .cursor/skills/ and .agents/skills/"
+  fi
+  if [[ "${WITH_CODEX}" -eq 1 ]]; then
+    LOCATIONS="${LOCATIONS}; .codex/skills/"
+  fi
   BLOCK="$(cat <<EOF
 <!-- ${MARKER_BEGIN} -->
 ## Code review — deep-code-review
 
 Installed: **${VERSION}** (@ \`${INSTALL_SHA}\`).
 
-This repository ships a universal, deep code-review method at
-\`.claude/skills/deep-code-review/SKILL.md\` (depth in its \`references/\`). Any
-coding agent can run it: read \`SKILL.md\`, state the scope
-(\`FULL\` | \`DIFF <base-ref>\` | \`FILE <paths>\`), then work its phases in order,
-loading \`references/*.md\` on demand as \`SKILL.md\` routes to them. It yields a
-severity-ranked findings report plus a plain-language report under \`code-review/\`.
-Re-run the upstream \`install.sh\` to refresh this stamp.
+Agent-agnostic deep code-review method (same phases on any coding agent).
+Primary path: \`.claude/skills/${SKILL_NAME}/SKILL.md\` (${LOCATIONS}).
+Depth lives in that skill \`references/\` directory.
+
+How to run: read \`SKILL.md\`, state scope (\`FULL\` | \`DIFF <base-ref>\` |
+\`FILE <paths>\`), work phases in order, load \`references/*.md\` on demand as
+routed. Or invoke \`/deep-code-review <scope>\` where slash-skills are supported.
+Yields a severity-ranked findings report plus a plain-language report under
+\`code-review/\` (or out-of-tree if the checkout is shared).
+
+Re-run upstream \`install.sh\` to refresh this stamp.
 <!-- ${MARKER_END} -->
 EOF
 )"
   if [[ -f "${AGENTS}" ]] && grep -q "${MARKER_BEGIN}" "${AGENTS}"; then
-    # Refresh the marked block so the version/SHA stamp stays current.
     block_file="$(mktemp)"
     out_file="$(mktemp)"
     printf '%s\n' "${BLOCK}" > "${block_file}"
@@ -165,12 +182,9 @@ EOF
     printf '# AGENTS.md\n\n%s\n' "${BLOCK}" > "${AGENTS}"
     echo "agents: created ${AGENTS} with the deep-code-review pointer"
   fi
-  echo "  read natively by Claude Code, Codex, Cursor, Copilot, Gemini, Aider."
+  echo "  works with Cursor, Claude Code, Codex, Copilot, Gemini, Aider, Windsurf, ..."
 fi
 
-echo "run it:  read .claude/skills/${SKILL_NAME}/SKILL.md, then name a scope"
-echo "  scopes: FULL (whole repo) | DIFF <base-ref> (a PR/branch) | FILE <paths>"
-echo "  (Claude Code shortcut: /deep-code-review <scope>)"
-if [[ "${WITH_CURSOR}" -eq 1 ]]; then
-  echo "  Cursor: also at .cursor/skills/${SKILL_NAME}/ (invoke /deep-code-review)"
-fi
+echo "run it:  ask your agent for a deep code review, or /deep-code-review <scope>"
+echo "  scopes: FULL | DIFF <base-ref> | FILE <paths>"
+echo "  read:   .claude/skills/${SKILL_NAME}/SKILL.md (mirrors under .cursor/.agents/ when default install)"
