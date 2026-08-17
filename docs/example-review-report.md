@@ -22,7 +22,7 @@ history: 187 commits · triage-first: doctor + documented tenant-isolation invar
 ```
 # Code review — Acme Capital agent platform — DIFF/FULL/FILE: FULL
 Reviewed: START_SHA a1b2c3d (dedicated worktree) · 2026-08-17
-Reviewer: deep-code-review 1.5.0
+Reviewer: deep-code-review 1.8.0
 
 ## Summary
 🟡 Needs attention — tenant isolation holds on live routes; two Highs

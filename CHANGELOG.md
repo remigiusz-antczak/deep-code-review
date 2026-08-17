@@ -3,6 +3,77 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.8.0] — 2026-08-17
+
+Depth from multi-model review of the skill itself: close authenticated-IDOR and
+cache/CDN blind spots; force agent hard-gates; install support docs; lean privacy
++ observability refs; token-cutting coverage ledger and DIFF-scoped Phase 1.
+
+### Added
+- A01: Identity Map **forgeability** column + bypass row-set; **bidirectional
+  gate proof**; **two-principal matrix**; **cache/CDN authz**; dual-surface
+  beyond `page.tsx` (serialized payload, server actions, RPC/GraphQL/WS);
+  tenant/row scoping; presigned URL / upload checks; safer anon-GET (canary +
+  anon-vs-auth body diff; local/dev default).
+- A05 files/archives/XXE; A06 business-logic detect steps; A07 session cookies +
+  OAuth/OIDC + refresh rotation; API overlay procedures (BOLA/BFLA, mass-
+  assignment, zombie APIs, GraphQL/gRPC/WS).
+- `references/privacy-compliance.md`, `references/observability.md`.
+- Phase-0 coverage ledger + archetype → load map; first-response hard block
+  (`SCOPE`/`START_SHA`/`TREE_STATE`/`REVERTS_CHECKED`/…).
+- Banned remedies: deleted gate paths (`--diff-filter=D`), not only Revert
+  subjects.
+- Authz posture ledger in Ground truth; negative authz tests in DoD;
+  DIFF authz 🚩 list; public-repo disclosure rule for committed reports.
+- Parallel-audit: frozen packet schema + invariant catalog.
+- `install.sh` copies `standards-index.md` + `example-review-report.md` into
+  installed `references/`.
+- ASVS 5.0.0 verified by direct fetch (2026-08-17) in standards-index.
+
+### Changed
+- Phase 5 default: chat BLUF ≤30 lines + out-of-tree; `code-review/` write is
+  opt-in (`--write-report` / confirm).
+- Phase 1 scoped for `DIFF`/`FILE` (changed-path tests; plant only if gate under
+  review).
+- Domain S FULL: consequence branches + count by default.
+- Domain B: SSRF ranges single-sourced in appsec; A02–A10 one-liners + force
+  load of `security-appsec.md` before Phase 3.
+- S2 world-reachable without auth = Critical (zero discretion).
+- README domain table + reference count; example report version stamp 1.8.0.
+- CI asserts installed support docs present.
+
+## [1.7.0] — 2026-08-17
+
+Access-control depth from a production anonymous-read class of defect:
+identity must be mapped per request class before any gate is proposed; API
+redaction is not page protection; preflight that expects anonymous 200 on
+data routes is a finding; internal business data is Confidentiality Tier S2.
+
+### Added
+- **Identity Arrival Map** (document / XHR / bare curl) in `security-appsec.md`
+  A01 — required before proposing middleware or document gates; "middleware on
+  document when identity only arrives via client Bearer" marked anti-pattern.
+- **Dual-surface check** — sensitive loader used by API ∩ RSC/SSR page;
+  asymmetric redaction = Critical when world-reachable.
+- **Anonymous GET sweep** — mandatory Phase 0/3 opener for networked apps
+  (status + body size, no auth).
+- **Confidentiality tiers S0–S3** in the severity rubric (incl. internal
+  business data as S2 → Critical if world-readable).
+- Phase 0: platform-vs-app-vs-preflight trust rows; **banned remedies** from
+  recent auth/middleware/gate reverts.
+- Phase 1 planted-defect matrix: missing / **empty** / wrong / path-excluding
+  config.
+- `parallel-audit.md`: specialized-subagent reject → **generalPurpose** fallback
+  under the same read-only contract (do not stall A01 on harness ceremony).
+
+### Changed
+- Phase 5: prefer out-of-tree report during active Critical remediation; chat
+  order for FULL = verdict → plain top 5 → decisions → path to machine table
+  (table in file, not first bubble); advise-only on security gates (no
+  auto-implement middleware).
+- Domain B checklist + adversarial opener cross-link the new A01 procedures.
+- `testing-and-evals.md`: empty-config self-test called out.
+
 ## [1.6.0] — 2026-08-17
 
 **Agent-agnostic packaging.** The method was already host-neutral in substance;

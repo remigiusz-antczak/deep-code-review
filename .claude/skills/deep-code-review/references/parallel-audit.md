@@ -35,21 +35,40 @@ line numbers for unread regions; unread → `unverified` or out of scope.
 
 A subagent that re-discovers the project from scratch spends most of its budget
 re-reading what the lead already knows, and judges against a slightly different
-bar. Assemble **one** packet and give the identical copy to each unit:
+bar. Assemble **one** packet (frozen schema below) and give the identical copy
+to each unit.
 
-- **The project's hard rules, distilled** — the no-fabrication + confidentiality
-  bar (including **mask identifiers in your return**), the data-integrity
-  invariants (if a data product), the LLM-safety rules (if it calls a model).
-  One screen, not the whole `SKILL.md`.
-- **`START_SHA` / worktree path** — the only tree they may cite.
-- **The Phase-1 ground-truth summary** — what built, what passed, coverage, and
-  the **gate scope** (which subtrees the gate excludes — see `SKILL.md` Phase 1).
-- **Triage-first hits already found** — so units do not re-derive them; they may
-  deepen a hit, not duplicate it as new.
-- **The already-cleared list** — files/areas the lead has audited and that are
-  therefore **not** to be re-reviewed.
+### Packet schema (copy-paste; fill every field)
 
-Then give each subagent only its **unique scope + questions**. This pays the
+```
+START_SHA: <sha>
+WORKTREE: <path | none — citations still at START_SHA>
+HARD_RULES: no fabrication; mask identifiers; read-only tools only
+GATE_SCOPE: <what root gate excludes; subtree gates>
+TRIAGE_HITS: <already found — deepen, do not re-report as new>
+CLEARED: <paths/areas not to re-review>
+ARCHETYPE: <web|api|data|agent|iac|lib|other>
+AUTHZ_LEDGER: <entry points N · anon planned Y/N · two-principal Y/N>
+BYTE_FIDELITY: check invisible chars before claiming string equality
+LIVE_VS_PAST: git log -S before reporting "live" bugs narrated in comments
+NONE_OK: empty finding list is valued
+```
+
+### Invariant catalog (pick one per unit — do not invent overlapping "find issues")
+
+| Unit id | Invariant (one sentence) |
+|---|---|
+| anon-GET | Every documented GET refuses sensitive bodies without auth |
+| IDOR | Two-principal object-swap: other→403/404, none→401 |
+| dual-surface | Every caller of a sensitive loader enforces the same authz/redaction |
+| cache-authz | Identity-derived responses not publicly cached at CDN/origin |
+| injection | No string-built SQL/command/HTML sinks on untrusted input |
+| spend-cap | Every paid call is behind a pre-call cap (default 0 = no cap = finding) |
+| monotonic | No write path lowers a populated/higher-confidence field |
+| gate-exclude | Gate-excluded subtrees are named and audited or flagged |
+| fail-closed | Security/config absent or empty → refuse, never pass |
+
+Then give each subagent only its **unique scope + one catalog id**. This pays the
 domain-context duplication once instead of once per unit.
 
 ---
@@ -89,6 +108,22 @@ mechanism changes.
 
 If the host documents a "read-only" / "ask" / "plan" mode, use it for audit
 units and still re-verify at `START_SHA` — mode labels are not evidence.
+
+### Specialized-subagent quirks → never stall security
+
+Some hosts ship **rigid specialized reviewers** (fixed-prompt units that accept
+only a repo path + diff selector and refuse a free-form A01 / domain audit).
+**Harness ceremony must not delay the security pass.**
+
+| Situation | Action |
+|---|---|
+| Specialized reviewer rejects / ignores a domain-invariant prompt | Retry **immediately** with a **general-purpose** (or equivalent unconstrained) unit under the **same** read-only contract + shared packet + one named invariant. |
+| Specialized reviewer only accepts "branch changes" / "uncommitted changes" | Use it for that shape; run domain A01/authz as a separate generalPurpose unit — do not skip A01 waiting for the specialty harness. |
+| Specialty unit unavailable / times out | Same fallback: generalPurpose, read-only, re-verify at `START_SHA`. |
+
+Record the fallback in the fan-out preamble ("specialty rejected → generalPurpose")
+so the lead knows the unit was not the decorrelated specialty reviewer — still
+re-verify; never drop A01 because the host's named security agent was picky.
 
 ---
 

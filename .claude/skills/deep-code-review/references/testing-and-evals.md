@@ -39,7 +39,9 @@ theater.**
 - **Adversarially test the checker itself.** A gate/validator/parser is code
   too: feed it null-resolution, truncation, substring false-matches, empty
   input. In CI, **self-test every gate against a planted defect** so a check
-  can't silently rot into a no-op that passes everything.
+  can't silently rot into a no-op that passes everything — include
+  **empty/whitespace-only config** (not only a missing file); see Phase 1's
+  planted-defect matrix in `SKILL.md`.
 - **Trace which tests the gate actually runs.** Enumerate the test files, then
   read the gate/CI command and list which it invokes. Tests present in the tree
   but wired to no gate are **decorative** — a finding; name the highest-stakes

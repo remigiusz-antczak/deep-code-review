@@ -54,6 +54,8 @@ jobs:
           test -f "$tmp/.claude/skills/deep-code-review/SKILL.md"
           test -f "$tmp/.cursor/skills/deep-code-review/SKILL.md"
           test -f "$tmp/.agents/skills/deep-code-review/SKILL.md"
+          test -f "$tmp/.claude/skills/deep-code-review/references/standards-index.md"
+          test -f "$tmp/.claude/skills/deep-code-review/references/example-review-report.md"
           grep -q 'deep-code-review:begin' "$tmp/AGENTS.md"
           grep -q 'Installed:' "$tmp/AGENTS.md"
           grep -q 'Agent-agnostic' "$tmp/AGENTS.md"

@@ -55,11 +55,11 @@ and a deep detection playbook in `references/`.
 | J Testing & evals | taxonomy, test-the-failure, AI eval harness | `testing-and-evals.md` |
 | K Build / CI / supply chain | reproducible build, SHA-pinned actions, SBOM, signatures, dependency currency & safe upgrades | `dependency-currency-and-upgrades.md` |
 | L Infra / IaC / cloud | Docker, K8s, Terraform, IAM, network exposure | `infra-iac-containers.md` |
-| M Observability | structured logs, no PII, honest failure accounting | — |
+| M Observability | logs/metrics/traces, golden signals, audit integrity, restore drills | `observability.md` |
 | N Config & secrets | env-only secrets, safe defaults, clean no-op | — |
 | O Docs & DX | Diátaxis, C4, ADRs, one-command setup, repo hygiene, cross-agent imprint | `docs-and-dx.md` |
 | P Frontend / a11y | WCAG 2.2 AA, Core Web Vitals, respect existing design | `frontend-a11y.md` |
-| Q Privacy & licensing | data minimization, retention/erasure, license compat | — |
+| Q Privacy & licensing | minimization, retention/erasure, consent flags, license compat | `privacy-compliance.md` |
 | R i18n & encoding | locale-aware formatting, Unicode normalization | — |
 | S Branches & open-work triage | branching model, merge/PR/rebase/delete per branch, squash-merge detection, safe cleanup | `branch-and-merge-hygiene.md` |
 | + | per-language grep-able footguns | `language-stack-redflags.md` |
@@ -170,7 +170,9 @@ verified** — never a remembered link.
 │   └── standards-index.md          # verified standards, URLs, verification dates
 └── .claude/skills/deep-code-review/
     ├── SKILL.md                    # the review method + all domain checklists
-    └── references/                 # on-demand deep playbooks (12 files)
+    └── references/                 # on-demand deep playbooks (19 files incl.
+                                    # privacy, observability, install stubs for
+                                    # standards-index + example report)
 ```
 
 ---

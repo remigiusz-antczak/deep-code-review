@@ -104,6 +104,13 @@ install_skill_copy() {
     mv "${dest}" "${backup}"
   fi
   cp -R "${SRC}" "${dest}"
+  # Support docs the skill cites — must resolve after install (not only in upstream repo).
+  if [[ -f "${SCRIPT_DIR}/docs/standards-index.md" ]]; then
+    cp "${SCRIPT_DIR}/docs/standards-index.md" "${dest}/references/standards-index.md"
+  fi
+  if [[ -f "${SCRIPT_DIR}/docs/example-review-report.md" ]]; then
+    cp "${SCRIPT_DIR}/docs/example-review-report.md" "${dest}/references/example-review-report.md"
+  fi
   echo "installed: ${SKILL_NAME} ${VERSION} (@ ${INSTALL_SHA}) -> ${dest}"
 }
 
@@ -151,8 +158,8 @@ Depth lives in that skill \`references/\` directory.
 How to run: read \`SKILL.md\`, state scope (\`FULL\` | \`DIFF <base-ref>\` |
 \`FILE <paths>\`), work phases in order, load \`references/*.md\` on demand as
 routed. Or invoke \`/deep-code-review <scope>\` where slash-skills are supported.
-Yields a severity-ranked findings report plus a plain-language report under
-\`code-review/\` (or out-of-tree if the checkout is shared).
+Yields a severity-ranked findings report (chat BLUF by default; full table
+out-of-tree or, with explicit confirmation, under \`code-review/\`).
 
 Re-run upstream \`install.sh\` to refresh this stamp.
 <!-- ${MARKER_END} -->
