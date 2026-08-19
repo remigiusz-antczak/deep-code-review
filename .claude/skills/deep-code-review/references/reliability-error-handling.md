@@ -20,6 +20,11 @@ the checklist.
    append-only progress? resume that does not double-apply side effects?
 4. **Missing credential / feature off.** Does the integration become a **clean
    no-op**, or does it throw halfway / write half a record / bill a partial call?
+   **Soft-no-op persistence:** returning `[]` / empty rows is clean only if the
+   CLI does **not** then write that empty artifact over last-good bytes that a
+   merge or reader treats as present data. Skip the write (leave prior file) or
+   mark skipped; present-empty ≠ absent. Cross-ref `data-quality.md`
+   artifact→consumer census.
 
 ---
 
@@ -88,5 +93,6 @@ subsystem never executing in production while local runs look fine.
 
 **🚩 red flags**: swallowed exceptions; retry-forever; no timeout; non-idempotent
 retry; work lost on crash; status not checked before body read; emergency stop
-behind the rate limiter; missing-key path that corrupts state instead of clean
-no-op; `finally`-only cleanup on a process that calls `exit`.
+  behind the rate limiter; missing-key path that corrupts state instead of clean
+  no-op; missing-key path that **writes empty artifacts** over last-good data;
+  `finally`-only cleanup on a process that calls `exit`.

@@ -101,6 +101,7 @@ START_SHA: <sha | N/A>
 TREE_STATE: <CLEAN | DIRTY | WORKTREE_PATH=<path>>
 HISTORY_DEPTH: <git rev-list --count HEAD | N/A>
 REVERTS_CHECKED: <commits | NONE>
+BANNED_REMEDIES: <concrete rejected approaches from the revert/deletion scan | NONE>
 ARCHETYPE: <web|api|data|agent|iac|lib|other>
 COVERAGE_LEDGER: <path or inline summary — applicable domains + must-load refs>
 ```
@@ -109,6 +110,10 @@ Non-git targets fill `N/A` with the reason. If `TREE_STATE` is `DIRTY`, or an
 incident/hotfix is in flight, a **dedicated worktree/clone is mandatory** (record
 its path in `WORKTREE_PATH=`) and **planted probes are banned on the live tree** —
 Phase 1 plants only inside that worktree, or records the gate as `unverified`.
+When the planted-defect probe is skipped (dirty/shared tree, fan-out declared
+out of scope, or no throwaway worktree), that caps only the **gate-self-test**
+claim in Ground truth / definition-of-done — mark it `unverified` or ❌ there;
+it does **not** by itself make the whole review incomplete.
 
 **Review mechanics (efficiency):**
 - **Pin an immutable review surface — do not assume a quiet working tree.** Capture
@@ -178,7 +183,9 @@ Phase 1 plants only inside that worktree, or records the gate as `unverified`.
    smallest correct fix would substantially change a deliberate design — layout,
    API shape, data model, visual system — do not impose it; surface it and ask
    whether there's a style guide to conform to, or whether it's a prototype that
-   can be freely changed.
+   can be freely changed. An intentional public/open (or otherwise permissive)
+   posture needs a **named stating artifact**; **drift from that stated posture
+   is the finding**, not a free redesign.
 6. **Rank ruthlessly.** Sort by severity (rubric below). Separate must-fix from
    nice-to-have. Never bury a Critical under ten Nits.
 7. **Least-privilege actions.** Review is read-only by default, and the default
@@ -276,7 +283,8 @@ say so.
   named and addressed (the deletion is evidence the shape failed here). Treat
   reverted approaches the same way unless the revert message's root cause is
   explicitly addressed in the new proposal. **Cite the output in
-  `REVERTS_CHECKED`** (commits, or `NONE`) — a reviewer who only reads `HEAD`
+  `REVERTS_CHECKED`** (commits, or `NONE`) and record the concrete rejected
+  approaches in **`BANNED_REMEDIES`** (or `NONE`) — a reviewer who only reads `HEAD`
   (no middleware file) otherwise re-recommends the exact fix that already caused
   an outage.
 - **Triage-first (cheap, before fan-out).** Run the project's own
@@ -359,12 +367,16 @@ as documented is a Blocker until proven otherwise.
 each, produce findings with `file:line` + impact + fix. Load the domain's
 `references/*.md` for detection procedures. Domains that don't apply are marked
 N/A with a one-line reason. Start from Phase 0's triage-first hits and blast-
-radius order. When the target is large, run these as parallel one-invariant
-audits under the contract in `references/parallel-audit.md` — read-only toolset,
-pinned `START_SHA`, identifier masking — and re-verify every subagent finding at
-source before it enters the report. **A refused delegation is not a blocked
-domain:** if a specialized subagent rejects a free-form domain prompt (fixed
-prompt shape, single-shot, wrong review type), immediately retry **once** with a
+radius order. **Stated invariant / landed guard → bypass census:** when a module
+states an invariant or a guard lands on one path, inventory callers/entry points
+that can skip it (procedure: `references/security-appsec.md` for untrusted egress;
+`references/data-quality.md` for artifact→consumer). When the target is large,
+run these as parallel one-invariant audits under the contract in
+`references/parallel-audit.md` — read-only toolset, pinned `START_SHA`,
+identifier masking — and re-verify every subagent finding at source before it
+enters the report. **A refused delegation is not a blocked domain:** if a
+specialized subagent rejects a free-form domain prompt (fixed prompt shape,
+single-shot, wrong review type), immediately retry **once** with a
 general-purpose subagent or run the audit in-process — under the same read-only,
 pinned-ref contract — and note the substitution. Never let a harness's prompt
 contract stall **A01/domain B**; the fallback is the audit, not a skip. Depth:
@@ -404,11 +416,15 @@ plausible-but-absent line number reaches the report.
 
 **Phase 5 — Report.** **Default delivery is two artifacts, and neither is a
 commit into the reviewed repo:** (1) a **chat BLUF, ≤30 lines** — one-line
-verdict, the top ≤5 findings in plain language, decisions needed, and the path to
+verdict, the top ≤5 **confirmed defects** in plain language, a one-line
+`Decisions: N` pointer (not product ideas filling defect slots), and the path to
 the full technical table; and (2) the **full report written out-of-tree**
-(`~/Downloads/`, session scratch, or the PR comment). **Never paste the machine
-findings table as the first chat bubble** — a 15-domain table buries the verdict
-it was supposed to deliver.
+(`~/Downloads/`, session scratch, or the PR comment). Product/redesign ideas go
+under **Decisions needed (owner)** — they never carry Blocker/Critical gate
+language. Severity still follows consequence: a product choice that creates a
+Critical defect remains a defect. **Never paste the machine findings table as
+the first chat bubble** — a 15-domain table buries the verdict it was supposed
+to deliver.
 
 **Writing into the repo's `code-review/` directory is opt-in.** It requires the
 user's explicit confirmation (or an explicit `--write-report`), *and* an unshared,
@@ -682,7 +698,9 @@ Apply to any pipeline, ETL, enrichment, scraping, or dataset producer. Judge the
 - Long jobs are SIGINT-clean, cursor-resumable, idempotent, with append-only
   progress so a crash loses no work; a **two-key confirmation** guards the
   highest-consequence irreversible actions; every credentialed integration
-  degrades to a **clean no-op** without its key. A **load-order/registration bug
+  degrades to a **clean no-op** without its key — unsafe if the CLI still
+  **persists an empty/zero artifact** that downstream merge/read treats as data
+  (procedure: `references/reliability-error-handling.md`). A **load-order/registration bug
   can silently no-op an entire subsystem** — assert each optional/paid subsystem
   actually executes in the deployed environment, not just locally. Route
   control-plane traffic (kill-switch, approval) **above** the rate limiter.
@@ -1048,6 +1066,11 @@ alone. Until confirmed, name the specific artifact that would confirm each
 `unverified` finding is a loud call to verify, never a silent merge-block and
 never a reason to wave the change through.
 
+**Config/runtime evidence.** Severity must not assume an unobserved
+config/runtime branch (env present vs absent, storage mode, feature flag). If
+you did not observe that branch, mark the claim `unverified` and name the
+resolving artifact — do not assign Blocker/Critical on a hypothetical path.
+
 ---
 
 ## Findings report — exact format
@@ -1070,8 +1093,8 @@ Counts: Blocker N · Critical N · High N · Medium N · Low N · Nit N
 - Tests: <X/Y pass, Z skipped, coverage — scoped per subtree if any gate
   excludes code, e.g. `root: N (excludes X)` + `X: M (separate gate)`>
 - Gate scope & self-test: <what the gates exclude; each gate proven red on a
-  planted defect incl. empty/whitespace config where applicable, or the
-  gate-rot finding>
+  planted defect incl. empty/whitespace config where applicable, or
+  `unverified`/skipped with reason — skip caps self-test only>
 - Lint/type/scan: <results>
 - Authz posture: <N entry points · anon probed N · cross-account M · untested: …>
 - Pipeline/app run: <before-state metrics, or N/A>
@@ -1223,9 +1246,12 @@ the code is fit to merge. A thorough review of an unshippable target is (a) ✅ 
 
 - ✅ **Review surface pinned** (git checkouts): the first-response block stated
   `SCOPE`, `START_SHA`, `TREE_STATE`, `HISTORY_DEPTH`, `REVERTS_CHECKED`,
-  `ARCHETYPE`, and `COVERAGE_LEDGER`; or N/A with reason (non-git / compact
-  `DIFF`/`FILE` packet). Citations re-verified at that ref, each with a verbatim
-  snippet from `git show $START_SHA:<file>`.
+  `BANNED_REMEDIES`, `ARCHETYPE`, and `COVERAGE_LEDGER`; or N/A with reason
+  (non-git / compact `DIFF`/`FILE` packet). Citations re-verified at that ref,
+  each with a verbatim snippet from `git show $START_SHA:<file>`.
+- ✅ **Gate self-test claimed only when run** — planted-defect probe green/red
+  recorded, or explicitly `unverified`/❌ when skipped; a skip does not alone
+  fail method completeness.
 - ✅ **Coverage ledger reconciled** — every domain the ledger called applicable is
   ruled on (finding, clean, or `unverified` + named artifact), and every must-load
   reference was actually loaded.

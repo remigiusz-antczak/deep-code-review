@@ -106,7 +106,9 @@ Every billable or slow call must map to value delivered.
     events = [] }` on a spend/rate accumulator zeroes month-to-date on *any* read
     fault (permissions, IO, truncation) and disables the ceiling. Branch
     **ENOENT** (absent → empty is correct) vs a fault on a **present** file (fail
-    closed).
+    closed). **Test the present-fault branch:** unreadable path (`EACCES`), path
+    is a directory (`EISDIR`), truncated/invalid body — `guard` must refuse the
+    paid call, not proceed as if spend were zero.
   - **`SELECT sum()` then check-then-act is not atomic.** Concurrent callers each
     read the pre-spend total and both spend. Use an atomic reservation
     (insert-the-charge-first, or a transactional decrement/lock) — and a

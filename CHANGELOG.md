@@ -3,6 +3,31 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.9.0] — 2026-08-19
+
+Method honesty and detection depth from two FULL multi-model skill-feedback
+runs — narrowed to durable invariants; host/model ceremony and duplicated
+doctrine left out.
+
+### Added
+- SCOPE / packet field `BANNED_REMEDIES` (records Phase 0 revert/deletion scan).
+- Principle 5: drift from a named stating artifact is the finding.
+- Phase 2 named check: stated invariant / landed guard → bypass census
+  (appsec untrusted-egress caller census; data-quality artifact→consumer).
+- Config/runtime evidence rule: no severity on an unobserved branch.
+- Planted-probe skip caps gate-self-test only (DoD wording).
+- Parallel-audit: unit manifest, material dissent preservation, stop rule,
+  named substitute in fan-out preamble.
+- Soft-no-op persistence (empty artifact overwrite) in reliability + F map.
+- Concurrency: corrupt→wipe ban; stale RMW across `await`.
+- Data-quality: denominator integrity; absent/expected-empty/false/empty-list.
+- Spend ledger: test present-fault branch (`EACCES`/`EISDIR`/invalid body).
+
+### Changed
+- Phase 5 BLUF: top defects + `Decisions: N` pointer; product/redesign never
+  carries Blocker/Critical gate language.
+- Example report version stamp 1.9.0.
+
 ## [1.8.0] — 2026-08-17
 
 Depth from multi-model review of the skill itself: close authenticated-IDOR and

@@ -50,6 +50,10 @@ Common in agent/tooling repos: JSON/YAML "DB" files, append logs, lockfiles.
 - **Reload-before-access** for long-lived readers; a process that load-once at
   boot will serve stale or post-corruption state.
 - Corrupt/torn read of a critical record → **fail closed**, do not guess.
+- **Present-but-corrupt / unreadable must not wipe.** `JSON.parse` (or
+  equivalent) failure, permission error, or truncated body on an existing store
+  must not `catch → write []/{}` and clobber last-good bytes — fail closed or
+  refuse the write; absent-file empty-init is a different branch.
 - Concurrent agents/workers **claim a lane** (file set + expiring claim/
   lease) before editing; commit **explicit paths** — never `git add -A` /
   stage-all from a shared tree (cross-ref principle 7 / Phase 0 occupied
@@ -65,6 +69,10 @@ Common in agent/tooling repos: JSON/YAML "DB" files, append logs, lockfiles.
   concurrency — the constraint is the source of truth.
 - Idempotency keys for charges/sends: store the key uniquely; retries return
   the first result.
+- **Stale RMW across `await`:** `load → await I/O → write computed snapshot`
+  without re-reading (or versioning) after the suspension races with other
+  writers — including single-process JSON/Postgres JSON stores. Re-read or CAS
+  after the await before persisting.
 
 ---
 
@@ -82,6 +90,7 @@ is skipped by `process.exit`, SIGINT, worker crash, or overlapping runs.
 ---
 
 **🚩 red flags**: shared mutable globals; missing `await`; non-atomic
-read-modify-write; lock held across I/O; two writers on one file; check-then-act
+read-modify-write; load→await→write without re-read/CAS; lock held across I/O;
+two writers on one file; corrupt/unreadable store wiped to empty; check-then-act
 without a constraint/transaction; tests/jobs writing a real tracked/shared data
 path; stage-all from a multi-agent checkout.

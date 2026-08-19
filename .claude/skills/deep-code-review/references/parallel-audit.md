@@ -49,10 +49,21 @@ TRIAGE_HITS: <already found — deepen, do not re-report as new>
 CLEARED: <paths/areas not to re-review>
 ARCHETYPE: <web|api|data|agent|iac|lib|other>
 AUTHZ_LEDGER: <entry points N · anon planned Y/N · two-principal Y/N>
+BANNED_REMEDIES: <from Phase 0 SCOPE | NONE — do not re-propose>
 BYTE_FIDELITY: check invisible chars before claiming string equality
 LIVE_VS_PAST: git log -S before reporting "live" bugs narrated in comments
 NONE_OK: empty finding list is valued
 ```
+
+### Unit manifest (lead-owned; fill before spawn, update on done)
+
+| Unit id | Invariant | Owned paths | Unit/tier actually used | Status |
+|---|---|---|---|---|
+| <catalog id> | <one sentence> | <paths or glob> | <requested → actual if substituted> | planned / running / done / skipped |
+
+Record unavailable or refused units in the **fan-out preamble** with the
+**named substitute actually used** (never a silent swap). Same-tier units from
+the same model family are not decorrelated second opinions.
 
 ### Invariant catalog (pick one per unit — do not invent overlapping "find issues")
 
@@ -121,9 +132,10 @@ only a repo path + diff selector and refuse a free-form A01 / domain audit).
 | Specialized reviewer only accepts "branch changes" / "uncommitted changes" | Use it for that shape; run domain A01/authz as a separate generalPurpose unit — do not skip A01 waiting for the specialty harness. |
 | Specialty unit unavailable / times out | Same fallback: generalPurpose, read-only, re-verify at `START_SHA`. |
 
-Record the fallback in the fan-out preamble ("specialty rejected → generalPurpose")
-so the lead knows the unit was not the decorrelated specialty reviewer — still
-re-verify; never drop A01 because the host's named security agent was picky.
+Record the fallback in the fan-out preamble ("specialty rejected → generalPurpose"
+or "requested unit unavailable → <named substitute>") so the lead knows the unit
+was not the decorrelated specialty reviewer — still re-verify; never drop A01
+because the host's named security agent was picky. Never silently swap models.
 
 ---
 
@@ -174,6 +186,15 @@ source, adversarially** — and verification runs **two ways**:
   blocks a gate, but treat convergence as a stronger signal than either alone.
 - `PLAUSIBLE` — subagent-reported, not yet lead-verified. A sibling of the
   `unverified` convention; **never silently promoted** to a bare finding.
+
+**Preserve material dissent.** When unit A reports `NONE` and unit B confirms a
+finding on the same sink (or they disagree on severity/reachability), keep both
+claims in the lead notes until source re-verify decides. Do **not** majority-
+collapse; record which unit the lead favored and why.
+
+**Stop rule.** Stop expanding fan-out when high-blast sinks already have two
+independent passes plus lead re-verify at `START_SHA` — more units on a settled
+sink is theater, not coverage.
 
 ---
 

@@ -78,6 +78,13 @@ middleware ships).
   metadata (`169.254/16`), IPv4-mapped/6to4, `.internal`, dotless labels;
   `redirect: manual` and re-validate each hop. (Full range list stays here — do
   not restate a divergent copy in `SKILL.md`.)
+- **Untrusted-egress caller census (after a guard lands):** inventory every
+  call site that fetches an untrusted or attacker-influenced URL (HTTP clients,
+  redirect-following options, robots/calendar/sidecar scripts — language-
+  neutral, not a single API name). Confirm each uses the guarded transport and
+  hop-revalidates; a breaker or allowlist on **one** client while siblings still
+  follow redirects bare is the same class of miss. A guard nothing calls is a
+  no-op.
 
 **Two-principal matrix (mandatory beside the anonymous sweep).** Seed two
 accounts (different tenant/role when multi-tenant). For every object-bearing

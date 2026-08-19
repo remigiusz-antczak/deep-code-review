@@ -89,6 +89,14 @@ rate), validity (schema/format/range). For each:
 
 - **Mark a structurally-inapplicable metric `N/A` — never score it `0`.** A `0`
   silently penalizes rank and pollutes aggregates. Make penalties grain-aware.
+- **Denominator integrity:** every entity type that can fail a check must be
+  eligible for the denominator (`checks_total` / coverage base). Scoring failures
+  against a narrower type set than the failure set understates or misstates
+  coverage.
+- **Empty-shape honesty:** distinguish **absent**, **expected-empty**,
+  **false**, and **empty-list** when completeness or compare-and-swap logic
+  collapses them — treating "blank field" as "no check" or "no prior" mis-scores
+  and loses races.
 - **A named quantity must carry the same value everywhere** it appears; add a
   check that flags stale duplicates. Repetition is not corroboration.
 - **Freshness is computed from the subject's own newest activity**, never your
@@ -112,6 +120,13 @@ rate), validity (schema/format/range). For each:
 - **Every consumer, renderer, and export calls the same shared quality/noise
   filter as the upstream pipeline.** A surface that skips it silently re-admits
   already-filtered junk.
+- **Artifact → consumer census:** for each file/table/topic a pipeline writes,
+  find the readers and exports that consume it. An artifact with **zero
+  consumers** is dead pipe (honest comment or wire it); a consumer that reads a
+  sibling path skipping the stated guard/filter is the bypass-census miss from
+  Phase 2. When testing degraded/empty output, confirm consumers treat
+  present-empty as empty — not as valid data (cross-ref
+  `reliability-error-handling.md` soft-no-op persistence).
 - **A write/erosion guard must intercept every mutation primitive the storage
   layer offers** (update AND clear AND append AND delete), not just the common
   one — a cleanup pass that blanks populated cells via an unguarded `clear`/
@@ -206,8 +221,10 @@ rate), validity (schema/format/range). For each:
 **🚩 red flags**: unconditional `UPDATE`/upsert that ignores existing
 confidence; `merge` on a single fuzzy field; dedup on non-normalized keys;
 "latest wins" clobbering verified data; a metric scored `0` where it doesn't
-apply; freshness derived from `fetched_at`; a model call that returns a score or
-a boolean gate; weights inlined in code with no snapshot; a consumer/export that
-re-queries raw instead of the filtered set; mass status-change on an upstream
-error; live counts hard-coded into docs; a coverage threshold lowered in the
-same diff that would otherwise fail it.
+apply; failure types excluded from the denominator; absent/empty/false/list
+collapsed in completeness or CAS; freshness derived from `fetched_at`; a model
+call that returns a score or a boolean gate; weights inlined in code with no
+snapshot; a consumer/export that re-queries raw instead of the filtered set;
+written artifact with no reader; mass status-change on an upstream error; live
+counts hard-coded into docs; a coverage threshold lowered in the same diff that
+would otherwise fail it.
