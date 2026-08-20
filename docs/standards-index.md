@@ -128,3 +128,14 @@ Verification date for the row below: **2026-08-17**. Added for `install.sh
 
 > When the skill needs a version-specific detail from any of these, it must fetch
 > the current source at review time and cite only the URL it verified.
+
+---
+
+## Verification addendum (2026-08-20)
+
+| Standard | URL | What was confirmed |
+|---|---|---|
+| OWASP Top 10 for Agentic Applications 2026 (announcement) | https://genai.owasp.org/2025/12/09/owasp-top-10-for-agentic-applications-the-benchmark-for-agentic-security-in-the-age-of-autonomous-ai/ | ASI01–ASI10 titles verbatim from the 2025-12-09 announcement: Agent Goal Hijack; Tool Misuse; Identity & Privilege Abuse; Agentic Supply Chain Vulnerabilities; Unexpected Code Execution; Memory & Context Poisoning; Insecure Inter-Agent Communication; Cascading Failures; Human-Agent Trust Exploitation; Rogue Agents. PDF not re-fetched this session — PDF wins on conflict. |
+| OWASP Top 10 for Agentic Applications 2026 (resource) | https://genai.owasp.org/resource/owasp-top-10-for-agentic-applications-for-2026/ | Resource page still current 2026-08-20; published 2025-12-09. |
+| OWASP GenAI LLM Top 10 2026 | https://genai.owasp.org/resource/owasp-genai-llm-top-10-2026/ | A 2026 LLM edition exists (page dated 2026-08-03). Numbered titles **not** confirmed verbatim from the PDF this session. Do **not** claim the 2025 LLM Top 10 is the latest edition; keep citing 2025 names until 2026 titles are fetched. |
+
