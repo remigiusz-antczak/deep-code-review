@@ -85,6 +85,16 @@ referenced nowhere; no scheduled task issuing a delete at all.
 
 ---
 
+
+## Committable artifacts (PRs, docs, fixtures)
+
+A review that only greps runtime logs will miss the leak that already shipped:
+identifiers in **commits, PR titles/bodies, docs, fixtures, comments**. If the
+repo states a privacy gate (no real names, no agent-instance names, no personal
+workflow in new commits), treat a violation as a **Q finding**, not a style nit.
+Fixtures: `uid-test` / invented names. Protocols key on tenant/uid, never a
+display name. Cross-ref ASI07 (audience) in `security-ai-agents.md`.
+
 ## Analytics, telemetry & third-party SDKs
 
 - **Allow-list, not deny-list**: events carry only explicitly permitted
