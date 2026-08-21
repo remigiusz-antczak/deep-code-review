@@ -83,6 +83,38 @@ from an automated score alone.
   mis-click.
 - Copy is clear; errors say what happened and how to fix it.
 
+## Cross-view consistency (multi-route apps)
+
+Per-route auditing cannot see inconsistency **between** routes — every page passes
+on its own. On a multi-route UI, collect once and diff:
+
+1. **Harvest** the platform-computed accessible name + role of every interactive
+   element (accessibility snapshot / `getByRole(...)`, **never** an `innerText`
+   proxy — see principle 2), plus headings and empty-state sentences, per route.
+2. **Same action, two labels** — group by destination (`href`/handler/resulting
+   route); more than one distinct name in a group is a defect, not a nit: WCAG 2.2
+   **3.2.4 Consistent Identification** (Level AA). Consistent Help (3.2.6) is the
+   sibling for help/contact placement.
+3. **Malformed names** — flag a name that is visually two lines but one token
+   (missing separator, `"<name><Kind>"`), a bare icon glyph, an ellipsis
+   truncation, or a name duplicating its own text. **Presence checks (`if (!name)`)
+   catch none of these**; the usual root cause is one shared component
+   concatenating sibling text nodes — fix it once in the design system.
+4. **Empty-state phrasing** — one voice and one next action per class of emptiness;
+   N different "nothing here yet" sentences is a design-system drift finding.
+
+Report as **one systemic finding** naming the shared component, instances listed
+(principle 6) — not one per route. Severity by consequence: a same-action-two-
+labels group on a primary flow is Medium–High; phrasing drift is Low.
+
+> **Read the name from the platform, not the DOM text.** A gate that computes
+> accessible names from `innerText`/`textContent` (collapsing or inserting
+> whitespace) reports a *different* string than the browser's accessibility tree —
+> a permanently-green gate (principle 2). Contrast has the mirror trap the other
+> way: WCAG 2.2 SC 1.4.3 **exempts** inactive/disabled controls ("a disabled
+> control in HTML"), so a gate flagging them is stricter than the standard —
+> narrow it, don't weaken the real check (SKILL.md Phase 1, gate-vs-standard).
+
 ## Reliability & performance (Core Web Vitals)
 
 - **LCP** (loading) ≤ 2.5 s, **INP** (interactivity — replaced FID in 2024)

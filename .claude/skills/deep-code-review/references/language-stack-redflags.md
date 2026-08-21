@@ -119,6 +119,31 @@ grep -rInE 'console\.log|print\(|dbg!|System\.out\.print|fmt\.Print' .
 - Unquoted expansions (`rm -rf $DIR`), `eval`, `curl … | bash`, parsing `ls`,
   missing `set -euo pipefail`, secrets in `set -x` traces, world-writable temp.
 
+### The reviewer's own verification shell (measuring, not reviewing)
+
+The rule above hunts `pipefail` in *reviewed* code; these hazards apply to the
+commands **you** run to establish ground truth, where an empty or wrong exit is
+read as a pass (SKILL.md Phase 1). All measured, not asserted:
+
+- **A pipe hands you the last stage's status.** `gate | tail`/`| head`/`| grep`/
+  `| less` report the *reader's* exit, so a failing gate reads `0`. Preference
+  order: (1) **capture then echo** — `./gate >/tmp/g.log 2>&1; echo "exit=$?";
+  tail -20 /tmp/g.log` (no shell-dialect difference); (2) `set -o pipefail` before
+  the pipeline; (3) read the array **on the very next command** — bash
+  `${PIPESTATUS[0]}`, zsh `${pipestatus[1]}` (1-indexed, different name) — **any**
+  intervening command, including a bare `:` no-op, resets it.
+- **SIGPIPE reads as `141`, not the gate's code.** Under `pipefail`, a reader that
+  exits early (`… | head -1`) makes the pipeline `141` — looks like a real failure
+  and is not the gate's.
+- **`grep -q` inverts success.** `grep` exits `0` when it *finds* the string —
+  which may be the failure message, so `cmd | grep -q ERROR` "passes" on error.
+- **Never `2>/dev/null` in a fact-establishing step.** It converts "the thing does
+  not exist" into "the measurement came back clean." A classic trap:
+  `git show <ref>:missing.sh >/tmp/x.sh 2>/dev/null; bash /tmp/x.sh; echo $?` —
+  `git show` fails (path untracked), the capture is 0 bytes, `bash` on an empty
+  file exits `0`, and the absent gate reads as a passing one. Assert non-empty
+  output (or a known sentinel) before trusting any exit code.
+
 ## Infrastructure as code
 
 Terraform / Kubernetes / Docker / cloud config have their own catalog — see

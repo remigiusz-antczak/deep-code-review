@@ -25,6 +25,16 @@ paths. Expands section G of `SKILL.md`. Cross-ref J /
 
 - Shared mutable globals / module-level caches mutated from request handlers or
   workers without synchronization → data race or cross-request leakage.
+- **Lifetime mismatch on a long-lived object (fires *with* perfect
+  synchronization).** A field on a framework singleton (NestJS `@Injectable`,
+  Spring `@Component`) or any module-level global that holds data valid for **one
+  request/run** — a per-user snapshot, a per-run cache, a "current batch" pointer —
+  leaks into the next invocation even single-threaded, with no race at all. For
+  every stateful field ask: *what is its lifetime, and does it match the lifetime
+  of the data it holds?* Fix by threading a per-run value as a parameter (mirror
+  any per-call cache the orchestrator already passes), not by adding a lock. A
+  self-authored test that calls the method **once** is structurally blind to this —
+  add a two-run regression test.
 - **Non-atomic read-modify-write** (`x = load(); x.f++; store(x)`) under
   concurrency needs a lock, atomic primitive, or single-writer queue.
 - **Lock held across I/O** — latency multiplies; deadlock risk rises when a
@@ -89,7 +99,8 @@ is skipped by `process.exit`, SIGINT, worker crash, or overlapping runs.
 
 ---
 
-**🚩 red flags**: shared mutable globals; missing `await`; non-atomic
+**🚩 red flags**: shared mutable globals; a per-request/run field held on a
+singleton/long-lived object (lifetime mismatch); missing `await`; non-atomic
 read-modify-write; load→await→write without re-read/CAS; lock held across I/O;
 two writers on one file; corrupt/unreadable store wiped to empty; check-then-act
 without a constraint/transaction; tests/jobs writing a real tracked/shared data
