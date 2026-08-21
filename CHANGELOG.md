@@ -3,22 +3,63 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
-## [1.9.1] — 2026-08-20
+## [1.11.0] — 2026-08-21
 
 Harvest from a same-owner inter-agent bridge review: name ASI01–ASI10, and
 treat audience-mismatch plus committable-identifier leaks as first-class.
 
 ### Added
 - ASI01–ASI10 titles (from the 2025-12-09 OWASP announcement, verified
-  2026-08-20) in `references/security-ai-agents.md`.
+  2026-08-21) in `references/security-ai-agents.md`.
 - Same-owner vs many-audience probe under ASI07 (channel audience named;
   protocol keyed on tenant/uid, not a display name).
 - Privacy: committable artifacts (PR/doc/fixture/commit) as a Q surface.
-- Standards-index addendum 2026-08-20 (ASI titles; 2026 LLM Top 10 exists,
+- Fan-out revision identity now fails closed on a missing or mistyped full SHA.
+- Executable review units use separate worktrees and temp/port/process namespaces;
+  aggregate suites serialize when that isolation is unavailable.
+- Standards-index addendum 2026-08-21 (ASI titles; 2026 LLM Top 10 exists,
   titles unverified).
 
 ### Changed
 - Domain C / adversarial pass / domain Q flags point at the new probes.
+
+## [1.10.0] — 2026-08-21
+
+Instrument/measurement discipline from three 2026-08-21 FULL/PR feedback runs —
+the reviewer's own tools, not the code, were the dominant error source. Durable
+invariants only; host-CI trimmed to one Phase-1 line + one report row (no new
+first-response field), requirements-move ceremony left out.
+
+### Added
+- Principle 2: an absence needs a positive control; canonical instrument over
+  proxy; read a platform-computed value from the platform (a gate reimplementing
+  it is a finding); a project's enforcement is verified against the artifact, not
+  the doc; self-review test blind spot.
+- Phase 1: pipe/`$?`, SIGPIPE-141, `grep -q`, and `2>/dev/null` gate hazards
+  (mechanics in `language-stack-redflags.md`); a tool count is a floor until caps
+  are checked; gate-vs-standard (narrow ≠ weaken; WCAG 1.4.3 example); host-CI of
+  the base branch.
+- Phase 0: provision the worktree (never symlink deps; an env-shaped failure in a
+  fresh worktree ≠ Blocker); read the revert *body* for its invariant.
+- DIFF quick-path (consolidated) + ceremony-to-scope: ledger emitted at every
+  scope, two-artifact report FULL-only, lighter `found → fix → re-gate` trail when
+  reviewer = fixer.
+- `mechanism-unproven` fix marker (Fix line + Phase 5 + definition-of-done).
+- Domain G: singleton lifetime-vs-data bug class (leaks with perfect sync).
+- Domain P 🚩: an a11y gate computing names from `innerText`; a presence-only name
+  check.
+- Ground-truth report row: `Host CI (base <ref>)`.
+- `parallel-audit.md`: `REVERT_INVARIANTS` packet field; brief facts labelled
+  `verified`/`to-be-verified` with premise verified before dispatch;
+  `BRIEF_CONTRADICTION` as first-class output; symmetric re-verification; per-run
+  diagnostic paths.
+- `frontend-a11y.md`: cross-view consistency pass (WCAG 3.2.4 / 3.2.6) and the
+  accessibility-tree-not-`innerText` rule.
+- WCAG SC 1.4.3 / 3.2.4 / 3.2.6 verified by direct fetch (2026-08-21) in
+  `docs/standards-index.md`.
+
+### Changed
+- Example report version stamp 1.10.0.
 
 ## [1.9.0] — 2026-08-19
 
