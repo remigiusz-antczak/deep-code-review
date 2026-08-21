@@ -3,6 +3,26 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.11.0] — 2026-08-21
+
+Harvest from a same-owner inter-agent bridge review: name ASI01–ASI10, and
+treat audience-mismatch plus committable-identifier leaks as first-class.
+
+### Added
+- ASI01–ASI10 titles (from the 2025-12-09 OWASP announcement, verified
+  2026-08-21) in `references/security-ai-agents.md`.
+- Same-owner vs many-audience probe under ASI07 (channel audience named;
+  protocol keyed on tenant/uid, not a display name).
+- Privacy: committable artifacts (PR/doc/fixture/commit) as a Q surface.
+- Fan-out revision identity now fails closed on a missing or mistyped full SHA.
+- Executable review units use separate worktrees and temp/port/process namespaces;
+  aggregate suites serialize when that isolation is unavailable.
+- Standards-index addendum 2026-08-21 (ASI titles; 2026 LLM Top 10 exists,
+  titles unverified).
+
+### Changed
+- Domain C / adversarial pass / domain Q flags point at the new probes.
+
 ## [1.10.0] — 2026-08-21
 
 Instrument/measurement discipline from three 2026-08-21 FULL/PR feedback runs —
