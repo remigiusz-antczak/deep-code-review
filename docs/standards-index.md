@@ -95,6 +95,19 @@ Verification date for the row below: **2026-08-17**. Added for `install.sh
 |---|---|---|
 | Cursor — Agent Skills | https://cursor.com/docs/skills | Skills load from `.agents/skills/`, `.cursor/skills/`, `~/.agents/skills/`, `~/.cursor/skills/`; **also** from Claude/Codex dirs (`.claude/skills/`, `.codex/skills/`, and the `~/` variants) for compatibility. Each skill is a folder with `SKILL.md` (YAML `name` + `description`); optional `references/`, `scripts/`, `assets/`. |
 
+## Verified by direct fetch (2026-08-21) — WCAG success-criteria details
+
+Verification date for the rows below: **2026-08-21**. Added for the a11y
+gate-vs-standard rule (`SKILL.md` Phase 1) and the cross-view consistency pass
+(`references/frontend-a11y.md`). Each row fetched from its W3C "Understanding"
+page this session.
+
+| Standard / source | URL | What was confirmed |
+|---|---|---|
+| WCAG 2.2 SC 1.4.3 Contrast (Minimum) | https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html | Level AA. Inactive-component exception, verbatim: text/images of text "that are part of an inactive user interface component … have no contrast requirement"; inactive = "not available for user interaction (e.g., a disabled control in HTML)." Basis for "a contrast gate flagging disabled controls is stricter than its standard." |
+| WCAG 2.2 SC 3.2.4 Consistent Identification | https://www.w3.org/WAI/WCAG22/Understanding/consistent-identification.html | Level AA. Requirement verbatim: "Components that have the same functionality within a set of web pages are identified consistently." Basis for the same-action-two-labels cross-view finding. |
+| WCAG 2.2 SC 3.2.6 Consistent Help | https://www.w3.org/WAI/WCAG22/Understanding/consistent-help.html | Level A; new in WCAG 2.2. Repeated help mechanisms (human contact details/mechanism, self-help, automated contact) "occur in the same order relative to other page content, unless a change is initiated by the user." Sibling criterion for help/contact placement. |
+
 ## Referenced by name (not fetched this session — verify before citing a URL)
 
 - **OWASP WSTG** — how-to-test companion for each web risk.

@@ -69,6 +69,23 @@ archetype (data pipeline → `data-quality.md` + `performance-db-cost.md`; LLM/a
     identity-bearing response.
 - `FILE <paths>` — a named set of files.
 
+**DIFF quick-path** — for a small, self-contained diff you will fix immediately.
+Run these and batch-mark untouched domains N/A; escalate to the full method on any
+blast-radius 🚩 above. Each links an existing domain, it does not replace it:
+1. Each new stateful field — does its lifetime match its data's? (→ G)
+2. Each new flag/default and the code that must move in lockstep with it (→ N).
+3. Each new external call fails closed (→ B/C/F).
+4. The touched invariant's *other* callers — the blast radius, not just the diff.
+5. Edge cases of each new pure function (→ J).
+6. The interaction with the nearest existing guard.
+7. Read your own diff; ask what the new tests never vary (principle 2).
+8. The exit code of every gate you run — no pipe masking it (Phase 1).
+
+Snippet-or-drop (Phase 4) still applies; the ledger is still emitted and each
+applicable domain ruled on. The two-artifact report (Phase 5) is owed on `FULL` —
+on `DIFF`/`FILE`, when you are also the fixer, a compact `found → root cause → fix
+→ re-gate` trail may replace it.
+
 **Archetype → load map** (`ARCHETYPE` from the first-response block; add domains
 the code actually touches, never fewer):
 
@@ -115,6 +132,14 @@ out of scope, or no throwaway worktree), that caps only the **gate-self-test**
 claim in Ground truth / definition-of-done — mark it `unverified` or ❌ there;
 it does **not** by itself make the whole review incomplete.
 
+**Provision the worktree; never link a dependency tree into it.** A fresh `git
+worktree` holds tracked files only — run the documented install *inside* it and
+count it as ground-truth cost; symlinking a dep tree in from another checkout fails
+toolchains that enforce a filesystem root. **A build/test failure that first
+appears inside a fresh worktree is `unverified`** until reproduced in a
+normally-provisioned checkout at the same ref — an environment-shaped failure is
+never a Blocker on the base branch.
+
 **Review mechanics (efficiency):**
 - **Pin an immutable review surface — do not assume a quiet working tree.** Capture
   `START_SHA`, prefer a dedicated worktree/clone for `FULL`, detect a
@@ -158,7 +183,9 @@ it does **not** by itself make the whole review incomplete.
 2. **Verify, don't trust.** Build it, run the tests, run the linters, trace the
    data flow, and — when cheap and safe — run the actual pipeline/app. A claim
    you can check by running, you check. **Read your own diff**; a green gate is a
-   floor, not a certificate. **Confirm the bytes before asserting an
+   floor, not a certificate. When you *authored* the diff, assume its tests
+   inherit its blind spot — ask what each test never varies (second call,
+   concurrent call, empty input, second run). **Confirm the bytes before asserting an
    invisible-character claim** — any finding that hinges on a non-printable or
    easily-confused character ("this delimiter is absent," "this comment is
    stale," "these two strings differ") is checked at the byte level (`xxd`/`od`/a
@@ -166,7 +193,16 @@ it does **not** by itself make the whole review incomplete.
    NUL/zero-width/bidi/BOM to whitespace or drop them. Treat a tool-rendered
    invisible region as `unverified` until byte-checked — it kills false
    "stale comment" findings *and* catches real invisible-character injection the
-   render hides (cross-ref C, R).
+   render hides (cross-ref C, R). **An absence is evidence only after a positive
+   control fires**: before reporting a zero (no matches, no modified files, no such
+   symbol), prove the same instrument detects a known positive — else `unverified`,
+   not zero. **Prefer the canonical instrument over a proxy, named** (`git diff`
+   over file mtime; a `git fetch`-backed check over a stale tracking ref). **Read a
+   platform-computed value (accessible name, computed contrast, a normalized URL, a
+   resolved DNS answer) from the platform's API, never a hand-rolled proxy — a gate
+   that reimplements a platform computation is itself a finding** (cross-ref J, P).
+   **What a project *enforces* is verified against the enforcement artifact at the
+   ref, not the doc describing it; the gap is the finding.**
 3. **No fabrication.** Never invent a defect, a metric, a CWE, a source, or a
    line number. If you can't verify, say `unverified` and why — and **name the
    specific artifact that would resolve it** (a schema, a column type, a contract
@@ -286,7 +322,11 @@ say so.
   `REVERTS_CHECKED`** (commits, or `NONE`) and record the concrete rejected
   approaches in **`BANNED_REMEDIES`** (or `NONE`) — a reviewer who only reads `HEAD`
   (no middleware file) otherwise re-recommends the exact fix that already caused
-  an outage.
+  an outage. **Read the revert *body*, don't just count the revert** — one authored
+  by whoever shipped the failure often states the root cause and the **invariant it
+  establishes**; carry both forward as design constraints, since a new remedy that
+  contradicts the invariant is the banned one in different clothing
+  (`references/parallel-audit.md` carries it into fan-out as `REVERT_INVARIANTS`).
 - **Triage-first (cheap, before fan-out).** Run the project's own
   `doctor`/preflight and any documented invariant checks; grep/scan the
   invariants the project itself claims; note obvious exposure (world-readable
@@ -309,7 +349,12 @@ say so.
 record every deviation (a broken "one-command setup" is a finding). **Run the
 project's own one-command aggregate gate by name** (`make check` / `npm run
 verify` / …), not a hand-picked subset — and **never record a gate as clean
-without confirming its exit code**; empty output is not a pass. Run the full test
+without confirming its exit code**; empty output is not a pass. **A pipe reports
+the last stage's status, not the gate's** — capture then read `$?`, or the gate is
+`unverified` (`gate | tail`, SIGPIPE `141`, `grep -q` inversion:
+`references/language-stack-redflags.md`). **Never `2>/dev/null` a fact-establishing
+step** — it turns "does not exist" into "clean" — and a gate that would "look
+passed" if absent is itself a finding. Run the full test
 suite (pass/fail, coverage, skipped/flaky), linters, type-checkers, formatters,
 and any wired security/dependency scanners. Then, before trusting "green":
 - **Enumerate what the gates exclude, and audit it separately.** Read the
@@ -337,6 +382,18 @@ and any wired security/dependency scanners. Then, before trusting "green":
   are a common silent green. Trace which test files the gate actually invokes;
   tests present but unwired are "decorative" (procedures:
   `references/testing-and-evals.md`).
+- **Check a firing gate against its own standard first.** A gate *stricter* than
+  the spec it implements (e.g. a contrast gate flagging disabled controls, which
+  WCAG 2.2 SC 1.4.3 exempts) yields a "fix" that regresses another axis
+  (principle 4): record the citation and **narrow the gate, saying so in writing**
+  — narrowing an over-strict rule and weakening a real one look identical in the
+  diff and are opposite acts.
+- **Read the host CI, not only your own shell.** Fetch the base branch's latest
+  pipeline conclusion (`gh run list --branch <base> --limit 5`, or the forge
+  equivalent); "green locally" is not "green in CI" (different OS image, browser
+  binaries, gate set). A red, unexplained base is `unverified` ground truth — say
+  whether it is a flake, pre-existing and unrelated, or caused by this work — and
+  you cannot show a change "regresses no axis" against a baseline already failing.
 - **Deploy-contract preflight** (containerized/serverless targets): lockfile
   committed ↔ install command, entrypoint/CMD file mode, build-time vs runtime
   data dependencies, and **boot the documented-minimal config and hit the
@@ -350,6 +407,12 @@ review ten lines, and don't skip it on a repo):
 |---|---|
 | `FULL` | The whole matrix above: aggregate gate by name + exit code, per-subtree coverage, and the planted-defect probe (missing / empty / wrong / path-excluding config). |
 | `DIFF` / `FILE` | Run the tests that **cover the changed paths**, and read the **CI path-filters** for those paths — a change under a filtered-out path is effectively ungated, which is a finding. **Plant only when the gate itself is what changed**; otherwise state the probe as out of scope. |
+
+**A tool-produced count is a floor until you check for a cap.** Before quoting a
+count a script emits, grep the script for a `limit`/`slice`/`head`/`take`/`break`
+or early return on that collection and label the number `>= n` when one exists —
+an instrument that stops recording at six reports six, not the total (distinct
+from the caps *you* impose).
 
 **Memory-unsafe code raises the floor.** If the target contains native C/C++ or
 `unsafe` Rust on a reviewed path, a plain green test run is not ground truth: run
@@ -412,7 +475,10 @@ finding carries a **verbatim snippet re-read at the pinned ref** — `git show
 $START_SHA:<file>` (or a byte dump per principle 2 when the claim hinges on
 invisible characters). A finding you cannot quote at `START_SHA` is `unverified`
 with the artifact named, or it is dropped; a paraphrase from memory is how a
-plausible-but-absent line number reaches the report.
+plausible-but-absent line number reaches the report. A **quantitative** claim (a
+count, a metric, a before/after delta) likewise names the ref it was measured at,
+inline — "N at `origin/main`", or "in the uncommitted tree" when the working tree
+is the subject; on a dirty checkout those are two different products.
 
 **Phase 5 — Report.** **Default delivery is two artifacts, and neither is a
 commit into the reviewed repo:** (1) a **chat BLUF, ≤30 lines** — one-line
@@ -424,7 +490,9 @@ under **Decisions needed (owner)** — they never carry Blocker/Critical gate
 language. Severity still follows consequence: a product choice that creates a
 Critical defect remains a defect. **Never paste the machine findings table as
 the first chat bubble** — a 15-domain table buries the verdict it was supposed
-to deliver.
+to deliver. **The two-artifact report is owed on `FULL`;** on a `DIFF`/`FILE` you
+are also fixing, a compact `found → root cause → fix → re-gate` trail may stand in
+for the out-of-tree report (snippet-or-drop still applies).
 
 **Writing into the repo's `code-review/` directory is opt-in.** It requires the
 user's explicit confirmation (or an explicit `--write-report`), *and* an unshared,
@@ -464,6 +532,12 @@ branch. **For a FULL / repo-level review with open branches, also emit the
 branch & merge triage** (domain S) — one recommendation per branch with the
 exact command; acting on any of it (merge, delete, push, rebase) is
 destructive/shared-state and runs only on explicit approval.
+
+**A `mechanism-unproven` fix does not close its finding.** Report it as *mitigation
+applied, cause unconfirmed*, keep the finding open at its original severity, and
+name what would settle it (N green runs on the same job; the repro landing
+red-first). For an intermittent failure "the symptom stopped" is not evidence —
+never write "fixed" where the mechanism was only inferred.
 
 **Phase 6 — Imprint standards (opt-in; writes to the repo).** Offer to persist a
 tailored standards set so the bar holds on future iterations — a canonical
@@ -717,7 +791,12 @@ Apply to any pipeline, ETL, enrichment, scraping, or dataset producer. Judge the
   readers never re-read; a corrupt/torn read of a critical record fails closed.
   Concurrent agents/workers **claim a lane** (the file set, with expiring claims)
   before editing and commit explicit paths — never stage-all.
-- 🚩 shared mutable globals, missing `await`, non-atomic read-modify-write, lock
+- **Lifetime, not only synchronization.** A field on a long-lived singleton
+  (framework `@Injectable`/`@Component`, a module global) holding per-request/run
+  data leaks across calls **even with perfect synchronization** — match each
+  stateful field's lifetime to its data's; thread a per-run value.
+- 🚩 shared mutable globals, a singleton field whose lifetime outlives its data,
+  missing `await`, non-atomic read-modify-write, lock
   held across I/O, two workers writing the same file, **tests or jobs that write
   a real shared/tracked data path** (cross-ref J;
   `references/testing-and-evals.md`).
@@ -888,7 +967,10 @@ Apply if the code produces UI. Target **WCAG 2.2 AA**.
   (target size 24px, dragging alternative, accessible authentication, redundant
   entry). Core Web Vitals (LCP/INP/CLS). **No secrets/keys in the client bundle.**
 - 🚩 `<div onClick>` with no keyboard handler, missing labels, contrast failures,
-  no loading/error state, secrets in the bundle, `localStorage` for tokens.
+  no loading/error state, secrets in the bundle, `localStorage` for tokens, an
+  a11y/UX gate that computes accessible names from `innerText`/`textContent`
+  instead of the accessibility tree, a name check that tests presence
+  (`if (!name)`) but never shape.
 
 ### Q. Privacy, compliance & licensing → `references/privacy-compliance.md`
 Load the reference when the target stores, exports, or logs personal data, or when
@@ -1092,6 +1174,8 @@ Counts: Blocker N · Critical N · High N · Medium N · Low N · Nit N
 - Build: <ok / failed: …>
 - Tests: <X/Y pass, Z skipped, coverage — scoped per subtree if any gate
   excludes code, e.g. `root: N (excludes X)` + `X: M (separate gate)`>
+- Host CI (base <ref>): <pass | FAIL: <job> › <step> (run <id>) | NO_CI |
+  unverified: no forge auth>
 - Gate scope & self-test: <what the gates exclude; each gate proven red on a
   planted defect incl. empty/whitespace config where applicable, or
   `unverified`/skipped with reason — skip caps self-test only>
@@ -1110,7 +1194,10 @@ Counts: Blocker N · Critical N · High N · Medium N · Low N · Nit N
 - What: <precise description>
 - Why it matters: <impact / exploit / wrong result>
 - Evidence: <failing case, query plan, repro, or the offending snippet>
-- Fix: <smallest correct change; root-cause where possible>
+- Fix: <smallest correct change; root-cause where possible> — mark
+  `mechanism-unproven` when the failure was never reproduced under your control
+  (CI-only, intermittent, environment-specific), and name what would prove it (the
+  failing seed, the constrained repro, the assertion that fails red first).
 
 ## Quality delta (if the pipeline ran)
 | Metric | Before | After (if fixed) | Notes |
@@ -1260,6 +1347,9 @@ the code is fit to merge. A thorough review of an unshippable target is (a) ✅ 
 - ✅ Standards **not claimed unless walked**: no "ASVS covered" / "CIS benchmarked"
   / "SLSA compliant" without naming the level and chapters/controls actually
   checked or the source fetched this session.
+- ✅ **No fix described as closing a finding on an unreproduced mechanism** — every
+  `mechanism-unproven` fix keeps its finding open with the confirming observation
+  named.
 
 **(b) Target ship-ready**
 

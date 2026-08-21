@@ -50,10 +50,24 @@ CLEARED: <paths/areas not to re-review>
 ARCHETYPE: <web|api|data|agent|iac|lib|other>
 AUTHZ_LEDGER: <entry points N · anon planned Y/N · two-principal Y/N>
 BANNED_REMEDIES: <from Phase 0 SCOPE | NONE — do not re-propose>
+REVERT_INVARIANTS: <one-line mechanism facts the reverts established — design constraints, not history | NONE>
 BYTE_FIDELITY: check invisible chars before claiming string equality
 LIVE_VS_PAST: git log -S before reporting "live" bugs narrated in comments
 NONE_OK: empty finding list is valued
 ```
+
+**Label every fact-carrying field `verified` or `to-be-verified`** (ids, targets,
+counts, names, "X already does Y"): a fact is `verified` only once the lead re-read
+it at `START_SHA`; unlabelled ⇒ `to-be-verified`. **Verify each lane's premise at
+the pinned ref *before* dispatch** — if the entity a lane names doesn't exist
+there, or a value differs from the canonical source, fix the packet before
+spawning. A fan-out amplifies one wrong premise into N confident, well-cited, wrong
+findings — the most expensive kind, because every anti-fabrication check passes.
+
+**Diagnostics are per-run.** Copy any diagnostic a gate writes to a run-scoped
+path the moment it is produced; a tool that writes diagnostics to a fixed global
+path (`/tmp/ux-audit.json`) races other units, and on a parallel-gate project that
+fixed path is itself a finding.
 
 ### Unit manifest (lead-owned; fill before spawn, update on done)
 
@@ -153,6 +167,12 @@ hand back a hundred confident inventions.
   severity words without a reproduction.
 - **`NONE` is a correct, expected, valued answer.** Say so explicitly, or the
   unit invents an issue rather than return empty.
+- **A packet fact is a hypothesis until you read it at `START_SHA`; contradicting
+  it is first-class output.** If the entity the packet names does not exist, or a
+  value differs from the canonical source, report `BRIEF_CONTRADICTION: <asserted>
+  | <found at file:line@START_SHA> | <what I'd have written if I'd trusted it>`
+  **first, and stop** — do not substitute a nearby entity or soften it to a caveat.
+  A unit that returns only a contradiction has done its job.
 - **Cap findings (~5)** and **prefer running a probe over speculating** — a
   five-line script that proves the break is worth more than a paragraph of
   "this could…". Probes that need a planted defect run only in the lead's
@@ -191,6 +211,14 @@ source, adversarially** — and verification runs **two ways**:
 finding on the same sink (or they disagree on severity/reachability), keep both
 claims in the lead notes until source re-verify decides. Do **not** majority-
 collapse; record which unit the lead favored and why.
+
+**Re-verification is symmetric, and a brief contradiction never majority-
+collapses.** When a unit's *measurement* contradicts the lead's *diagnosis*, the
+lead verifies the measurement — a hypothesis carries no evidentiary weight against
+an instrument reading, and a review that never corrects its own lead is not being
+verified. One unit contradicting the packet outweighs nine succeeding on it (the
+nine answered a question the tenth just showed was wrong): re-verify at source,
+correct the packet, and re-run any unit whose invariant depended on the bad fact.
 
 **Stop rule.** Stop expanding fan-out when high-blast sinks already have two
 independent passes plus lead re-verify at `START_SHA` — more units on a settled

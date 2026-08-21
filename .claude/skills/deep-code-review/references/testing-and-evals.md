@@ -36,6 +36,11 @@ theater.**
 - **Probe the real function on the real fixture before pinning an expected
   value.** Never hand-guess an expected string — a guessed expectation encodes a
   misunderstanding as a green test.
+- **Reviewing your own diff? The tests inherit your blind spot.** The mind that
+  wrote the bug wrote the tests, so they exercise the axis you considered and hold
+  fixed the one the bug hides on. For each new test ask what it does *not* vary —
+  second call, concurrent call, empty input, second run — and add that case
+  (cross-ref G's singleton-lifetime class).
 - **Adversarially test the checker itself.** A gate/validator/parser is code
   too: feed it null-resolution, truncation, substring false-matches, empty
   input. In CI, **self-test every gate against a planted defect** so a check
