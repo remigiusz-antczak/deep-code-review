@@ -14,7 +14,7 @@ Verification date for all direct fetches below: **2026-08-13**.
 | Standard | URL | What was confirmed |
 |---|---|---|
 | OWASP Top 10:2025 | https://owasp.org/Top10/2025/ | Categories A01–A10:2025 verbatim (A01 Broken Access Control … A10 Mishandling of Exceptional Conditions). |
-| OWASP Top 10 for LLM Applications 2025 | https://genai.owasp.org/llm-top-10/ | 2025 is the current edition; LLM01–LLM10:2025 names verbatim. No 2026 LLM edition was referenced by the authoritative page as of this date. |
+| OWASP Top 10 for LLM Applications 2025 | https://genai.owasp.org/llm-top-10/ | LLM01–LLM10:2025 names verbatim. A 2026 edition now exists; see the verification addendum below. |
 | OWASP Top 10 for LLM Applications 2025 (resource) | https://genai.owasp.org/resource/owasp-top-10-for-llm-applications-2025/ | Edition landing page; document publication 2024-11-17. |
 | OWASP Top 10 for Agentic Applications 2026 | https://genai.owasp.org/resource/owasp-top-10-for-agentic-applications-for-2026/ | Framework exists; published 2025-12-09; peer-reviewed by 100+ practitioners. (The ASI01–ASI10 titles were corroborated across secondary sources but not confirmed verbatim from the authoritative PDF — the skill presents the risk themes and points here for the authoritative list.) |
 | OWASP API Security Top 10 (2023) | https://owasp.org/API-Security/editions/2023/en/0x11-t10/ | API1–API10:2023 names verbatim. |
@@ -95,6 +95,19 @@ Verification date for the row below: **2026-08-17**. Added for `install.sh
 |---|---|---|
 | Cursor — Agent Skills | https://cursor.com/docs/skills | Skills load from `.agents/skills/`, `.cursor/skills/`, `~/.agents/skills/`, `~/.cursor/skills/`; **also** from Claude/Codex dirs (`.claude/skills/`, `.codex/skills/`, and the `~/` variants) for compatibility. Each skill is a folder with `SKILL.md` (YAML `name` + `description`); optional `references/`, `scripts/`, `assets/`. |
 
+## Verified by direct fetch (2026-08-21) — WCAG success-criteria details
+
+Verification date for the rows below: **2026-08-21**. Added for the a11y
+gate-vs-standard rule (`SKILL.md` Phase 1) and the cross-view consistency pass
+(`references/frontend-a11y.md`). Each row fetched from its W3C "Understanding"
+page this session.
+
+| Standard / source | URL | What was confirmed |
+|---|---|---|
+| WCAG 2.2 SC 1.4.3 Contrast (Minimum) | https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html | Level AA. Inactive-component exception, verbatim: text/images of text "that are part of an inactive user interface component … have no contrast requirement"; inactive = "not available for user interaction (e.g., a disabled control in HTML)." Basis for "a contrast gate flagging disabled controls is stricter than its standard." |
+| WCAG 2.2 SC 3.2.4 Consistent Identification | https://www.w3.org/WAI/WCAG22/Understanding/consistent-identification.html | Level AA. Requirement verbatim: "Components that have the same functionality within a set of web pages are identified consistently." Basis for the same-action-two-labels cross-view finding. |
+| WCAG 2.2 SC 3.2.6 Consistent Help | https://www.w3.org/WAI/WCAG22/Understanding/consistent-help.html | Level A; new in WCAG 2.2. Repeated help mechanisms (human contact details/mechanism, self-help, automated contact) "occur in the same order relative to other page content, unless a change is initiated by the user." Sibling criterion for help/contact placement. |
+
 ## Referenced by name (not fetched this session — verify before citing a URL)
 
 - **OWASP WSTG** — how-to-test companion for each web risk.
@@ -131,11 +144,10 @@ Verification date for the row below: **2026-08-17**. Added for `install.sh
 
 ---
 
-## Verification addendum (2026-08-20)
+## Verification addendum (2026-08-21)
 
 | Standard | URL | What was confirmed |
 |---|---|---|
 | OWASP Top 10 for Agentic Applications 2026 (announcement) | https://genai.owasp.org/2025/12/09/owasp-top-10-for-agentic-applications-the-benchmark-for-agentic-security-in-the-age-of-autonomous-ai/ | ASI01–ASI10 titles verbatim from the 2025-12-09 announcement: Agent Goal Hijack; Tool Misuse; Identity & Privilege Abuse; Agentic Supply Chain Vulnerabilities; Unexpected Code Execution; Memory & Context Poisoning; Insecure Inter-Agent Communication; Cascading Failures; Human-Agent Trust Exploitation; Rogue Agents. PDF not re-fetched this session — PDF wins on conflict. |
-| OWASP Top 10 for Agentic Applications 2026 (resource) | https://genai.owasp.org/resource/owasp-top-10-for-agentic-applications-for-2026/ | Resource page still current 2026-08-20; published 2025-12-09. |
+| OWASP Top 10 for Agentic Applications 2026 (resource) | https://genai.owasp.org/resource/owasp-top-10-for-agentic-applications-for-2026/ | Resource page still current 2026-08-21; published 2025-12-09. |
 | OWASP GenAI LLM Top 10 2026 | https://genai.owasp.org/resource/owasp-genai-llm-top-10-2026/ | A 2026 LLM edition exists (page dated 2026-08-03). Numbered titles **not** confirmed verbatim from the PDF this session. Do **not** claim the 2025 LLM Top 10 is the latest edition; keep citing 2025 names until 2026 titles are fetched. |
-
