@@ -5,7 +5,7 @@ that plans, calls tools, executes code, keeps memory, or coordinates with other
 agents. Expands section C of `SKILL.md`.
 
 Standards tracked (verified URLs + dates in `docs/standards-index.md`): OWASP
-Top 10 for LLM Applications **2025** (current edition), OWASP Top 10 for Agentic
+Top 10 for LLM Applications **2025** (verified numbered titles; a 2026 edition exists), OWASP Top 10 for Agentic
 Applications **2026**, NIST AI RMF + Generative AI Profile, and MITRE ATLAS.
 
 **The one principle under all of this:** everything the model reads that did not
@@ -55,7 +55,7 @@ control you built outside the model.
 ## OWASP Top 10 for Agentic Applications 2026 — additional risks
 
 Published 2025-12-09; titles below taken from the OWASP GenAI announcement
-(verified 2026-08-20; PDF numbering not re-fetched this session — if a title
+(verified 2026-08-21; PDF numbering not re-fetched this session — if a title
 conflicts with the PDF, the PDF wins). When the code is an **autonomous agent**,
 walk ASI01–ASI10; do not collapse them into LLM01–LLM10.
 
@@ -83,7 +83,7 @@ walk ASI01–ASI10; do not collapse them into LLM01–LLM10.
   (session/uid, not a display name). No fleet secret as the credential.
 - **ASI08 Cascading Failures** — one agent's error or compromise propagates
   across a multi-agent system with no isolation, rate control, or breaker.
-- **ASI09 Human–Agent Trust Exploitation** — fluent, confident output socially
+- **ASI09 Human-Agent Trust Exploitation** — fluent, confident output socially
   engineers the operator into approving a harmful action. Approval prompts must
   name the audience and the action; a buried "yes" in chat is not consent.
 - **ASI10 Rogue Agents** — agent operating outside intended scope or oversight;

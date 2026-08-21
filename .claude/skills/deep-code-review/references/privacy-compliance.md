@@ -85,7 +85,6 @@ referenced nowhere; no scheduled task issuing a delete at all.
 
 ---
 
-
 ## Committable artifacts (PRs, docs, fixtures)
 
 A review that only greps runtime logs will miss the leak that already shipped:
