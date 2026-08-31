@@ -1425,7 +1425,9 @@ Verified live for this repository (URLs + verification dates in
 `docs/standards-index.md` in the skill repo; `references/standards-index.md` after
 `install.sh` copies it):
 - **OWASP Top 10:2025** (web application security risks A01–A10).
-- **OWASP Top 10 for LLM Applications 2025** (LLM01–LLM10) — use the verified 2025 titles; a 2026 edition exists, but its numbered titles are not yet verified here.
+- **OWASP Top 10 for LLM Applications 2025** (LLM01–LLM10) — use the verified
+  2025 titles; a 2026 edition exists, but its numbered titles are not yet
+  verified here.
 - **OWASP Top 10 for Agentic Applications 2026** — autonomous-agent risks.
 - **OWASP API Security Top 10 (2023)** — API1–API10.
 - **CWE Top 25 (2025)** — weakness-level detail.

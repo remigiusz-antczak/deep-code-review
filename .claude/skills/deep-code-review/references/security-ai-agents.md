@@ -5,8 +5,9 @@ that plans, calls tools, executes code, keeps memory, or coordinates with other
 agents. Expands section C of `SKILL.md`.
 
 Standards tracked (verified URLs + dates in `docs/standards-index.md`): OWASP
-Top 10 for LLM Applications **2025** (verified numbered titles; a 2026 edition exists), OWASP Top 10 for Agentic
-Applications **2026**, NIST AI RMF + Generative AI Profile, and MITRE ATLAS.
+Top 10 for LLM Applications **2025** (verified numbered titles; a 2026 edition
+exists), OWASP Top 10 for Agentic Applications **2026**, NIST AI RMF +
+Generative AI Profile, and MITRE ATLAS.
 
 **The one principle under all of this:** everything the model reads that did not
 come from your trusted prompt — user input, retrieved documents, web pages,
