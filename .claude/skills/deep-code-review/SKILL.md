@@ -691,7 +691,9 @@ Agentic Applications 2026.
 - 🚩 f-string/format prompts from raw input, output → `execute`/`render`
   unchecked, no `max_tokens`/`timeout`/retry cap, broad-scope tools with no
   confirmation, secrets/authz in the system prompt, a safety param asserted at
-  the call site but dropped downstream.
+  the call site but dropped downstream, a same-owner ask written to a
+  many-audience board/mesh, inter-agent messages keyed on a display name
+  instead of a tenant/uid, an approval prompt that does not name the audience.
 
 ### D. Data integrity & data quality → `references/data-quality.md`
 Apply to any pipeline, ETL, enrichment, scraping, or dataset producer. Judge the
@@ -982,7 +984,10 @@ export-boundary suppression, and licence-compatibility detail live there.
   compatible; attributions where required. Regulatory obligations (consent,
   data-subject rights) met where in scope.
 - 🚩 PII in analytics events, GPL code in a permissive project, no retention
-  story, tracking without consent, erasure reimplemented per-consumer.
+  story, tracking without consent, erasure reimplemented per-consumer, a
+  committable artifact (PR body, doc, fixture, commit) carrying a real name,
+  agent-instance name, or personal workflow when the repo's privacy gate
+  forbids it.
 
 ### R. Internationalization, encoding & localization
 - No hardcoded user-facing strings; locale-aware formatting, sort/collation, and
@@ -1064,8 +1069,12 @@ body — see `references/security-appsec.md`. Then actively try to:
   field; SSRF via every URL/host input; path traversal via every filename.
 - **Turn the LLM against the system** — direct + indirect prompt injection,
   jailbreak, system-prompt extraction, tool-abuse, output that pivots into
-  SQL/shell/HTML; for agents: **goal hijack, poisoned tools, memory/context
-  poisoning, inter-agent spoofing, rogue-agent** scope escape.
+  SQL/shell/HTML; for agents walk **ASI01–ASI10** (goal hijack, tool misuse,
+  identity/privilege abuse, agentic supply chain, unexpected code exec,
+  memory/context poisoning, insecure inter-agent communication, cascading
+  failure, human–agent trust exploitation, rogue agent). Cheap opener for
+  ASI07: same-owner vs many-audience probe in
+  `references/security-ai-agents.md`.
 - **Exfiltrate secrets** — from source, history, logs, error messages, prompts,
   embeddings, or verbose responses.
 - **Poison data** — feed malicious records into ingestion/enrichment/RAG; see if
@@ -1416,7 +1425,9 @@ Verified live for this repository (URLs + verification dates in
 `docs/standards-index.md` in the skill repo; `references/standards-index.md` after
 `install.sh` copies it):
 - **OWASP Top 10:2025** (web application security risks A01–A10).
-- **OWASP Top 10 for LLM Applications 2025** (LLM01–LLM10) — current edition.
+- **OWASP Top 10 for LLM Applications 2025** (LLM01–LLM10) — use the verified
+  2025 titles; a 2026 edition exists, but its numbered titles are not yet
+  verified here.
 - **OWASP Top 10 for Agentic Applications 2026** — autonomous-agent risks.
 - **OWASP API Security Top 10 (2023)** — API1–API10.
 - **CWE Top 25 (2025)** — weakness-level detail.
