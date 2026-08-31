@@ -15,12 +15,23 @@ their own authority into the report.** Both have to be engineered against.
 ## 0. Same pinned surface for every unit
 
 Hand every audit the Phase-0 `START_SHA` (or the dedicated worktree path at that
-SHA). Units read via `git show $START_SHA:path` / files in that worktree — never
+SHA). Resolve the **full object ID before fan-out**. A missing or mistyped requested
+SHA is a hard scope failure: do not silently substitute the checked-out commit or
+a unique-looking prefix and call the result exact. Correct the packet and rerun
+the exact-scope unit; use abbreviated SHAs only for display after pinning the full
+ID. Units read via `git show $START_SHA:path` / files in that worktree — never
 "whatever is checked out now." A live tree another agent is editing will otherwise
 produce disagreeing `file:line` citations and findings about code that does not
 exist on the reviewed ref. If the harness cannot isolate a worktree, the lead
 records that limitation and still requires every citation to resolve at
 `START_SHA` on re-verify.
+
+A shared pinned worktree is sufficient only for genuinely read-only units. Give
+every unit that runs tests or builds its **own worktree/clone and per-run temp,
+port, and process namespace**. Aggregate suites can write ignored fixtures, bind
+fixed ports, or kill a sibling server even when tracked files stay clean. If the
+harness cannot isolate executable units, run them serially and record the limit;
+never interpret a concurrently contaminated failure as a candidate defect.
 
 **Mega-files / huge blobs:** when a single file is too large to hold in one
 context (tens of KB of dense logic, generated bundles, vendored trees), split by

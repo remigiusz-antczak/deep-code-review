@@ -5,8 +5,9 @@ that plans, calls tools, executes code, keeps memory, or coordinates with other
 agents. Expands section C of `SKILL.md`.
 
 Standards tracked (verified URLs + dates in `docs/standards-index.md`): OWASP
-Top 10 for LLM Applications **2025** (current edition), OWASP Top 10 for Agentic
-Applications **2026**, NIST AI RMF + Generative AI Profile, and MITRE ATLAS.
+Top 10 for LLM Applications **2025** (verified numbered titles; a 2026 edition
+exists), OWASP Top 10 for Agentic Applications **2026**, NIST AI RMF +
+Generative AI Profile, and MITRE ATLAS.
 
 **The one principle under all of this:** everything the model reads that did not
 come from your trusted prompt — user input, retrieved documents, web pages,
@@ -54,37 +55,48 @@ control you built outside the model.
 
 ## OWASP Top 10 for Agentic Applications 2026 — additional risks
 
-Published 2025-12-09; peer-reviewed by 100+ practitioners. When the code is an
-**autonomous agent**, add these risk areas. (Consult the official document for
-the authoritative numbered titles; the areas below are corroborated across
-sources.)
+Published 2025-12-09; titles below taken from the OWASP GenAI announcement
+(verified 2026-08-21; PDF numbering not re-fetched this session — if a title
+conflicts with the PDF, the PDF wins). When the code is an **autonomous agent**,
+walk ASI01–ASI10; do not collapse them into LLM01–LLM10.
 
-- **Agent goal / behavior hijack** — an attacker redirects the agent's objective
-  through content it *reads* rather than code it runs, so it pursues the
-  attacker's goal while appearing to serve the user's. This is indirect prompt
-  injection promoted to the planning layer — the highest-impact agentic risk.
-- **Tool misuse & exploitation** — the agent is steered into calling legitimate
-  tools with harmful arguments (e.g. a "summarize this URL" tool turned into an
-  SSRF/exfil primitive).
-- **Identity & privilege abuse** — the agent acts with more authority than the
-  requesting user should have; confused-deputy problems; over-broad service
-  credentials.
-- **Agentic supply-chain vulnerabilities** — poisoned tools, skills, plugins, or
-  model artifacts (e.g. a malicious tool published to a marketplace / MCP
-  server). Vet and pin every tool the agent can load, exactly like a dependency.
-- **Unexpected code execution (RCE)** — code-execution tools/sandboxes that the
-  agent can be talked into abusing to run attacker code or escape the sandbox.
-- **Memory & context poisoning** — persisted memory, scratchpads, or RAG context
-  corrupted so a later run acts on planted instructions/data. Validate and scope
-  what enters long-term memory.
-- **Insecure inter-agent communication** — messages between agents are trusted
+- **ASI01 Agent Goal Hijack** — attacker redirects the agent's objective through
+  content it *reads* rather than code it runs. Indirect prompt injection at the
+  planning layer. Highest-impact agentic risk.
+- **ASI02 Tool Misuse** — agent steered into calling a *legitimate* tool with
+  harmful arguments (summarize-URL → SSRF/exfil).
+- **ASI03 Identity & Privilege Abuse** — agent acts with more authority than the
+  requesting user; confused deputy; over-broad service credentials.
+- **ASI04 Agentic Supply Chain Vulnerabilities** — poisoned tools, skills,
+  plugins, MCP servers, model artifacts. Pin and vet every loadable tool like a
+  dependency.
+- **ASI05 Unexpected Code Execution** — code-exec tools/sandboxes the agent can
+  be talked into abusing (RCE / sandbox escape).
+- **ASI06 Memory & Context Poisoning** — persisted memory, scratchpads, or RAG
+  context corrupted so a later run acts on planted instructions. Validate and
+  scope what enters long-term memory.
+- **ASI07 Insecure Inter-Agent Communication** — messages between agents trusted
   without authentication/validation; one agent spoofs or injects into another.
-- **Cascading failures** — one agent's error or compromise propagates across a
-  multi-agent system with no isolation, rate control, or circuit breaker.
-- **Human–agent trust exploitation** — the agent's fluent, confident output is
-  used to socially engineer the human operator into approving harmful actions.
-- **Rogue agents** — an agent operating outside its intended scope or oversight;
-  no kill-switch, no bound on autonomy, no audit trail of what it did.
+  **Audience is the control:** a same-owner private pipe is not the many-owner
+  network board. Reusing a many-audience channel for same-owner Q&A is a leak
+  by construction (cross-ref Q). Probe: a message meant for one principal must
+  not be readable by another tenant, a commons, or a mesh. Authn on the pipe
+  (session/uid, not a display name). No fleet secret as the credential.
+- **ASI08 Cascading Failures** — one agent's error or compromise propagates
+  across a multi-agent system with no isolation, rate control, or breaker.
+- **ASI09 Human-Agent Trust Exploitation** — fluent, confident output socially
+  engineers the operator into approving a harmful action. Approval prompts must
+  name the audience and the action; a buried "yes" in chat is not consent.
+- **ASI10 Rogue Agents** — agent operating outside intended scope or oversight;
+  no kill-switch, no bound on autonomy, no audit trail.
+
+**Same-owner vs many-audience probe (ASI07, cheap, before fan-out).** If the
+target has more than one agent, board, mesh, or "ask a peer" tool: list each
+channel and its named audience (one owner / one tenant / every agent on the
+network / another human's agent). A write that can land on a wider audience
+than the prompt named is a finding — even if the bytes look like a private DM.
+Key the protocol on a stable tenant/uid, never a display name (names are
+per-owner and collide).
 
 Attacker techniques against agent tool ecosystems are also catalogued in **MITRE
 ATLAS** (e.g. poisoned agent tools, sandbox/host escape) — useful for building
