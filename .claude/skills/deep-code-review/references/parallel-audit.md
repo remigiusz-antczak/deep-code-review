@@ -82,13 +82,22 @@ fixed path is itself a finding.
 
 ### Unit manifest (lead-owned; fill before spawn, update on done)
 
-| Unit id | Invariant | Owned paths | Unit/tier actually used | Status |
-|---|---|---|---|---|
-| <catalog id> | <one sentence> | <paths or glob> | <requested → actual if substituted> | planned / running / done / skipped |
+| Unit id | Invariant | Owned paths | Unit/tier actually used | Lead-read | Status |
+|---|---|---|---|---|---|
+| <catalog id> | <one sentence> | <paths or glob> | <requested → actual if substituted> | Y/N | planned / running / done / skipped |
 
 Record unavailable or refused units in the **fan-out preamble** with the
 **named substitute actually used** (never a silent swap). Same-tier units from
 the same model family are not decorrelated second opinions.
+
+**A stalled or missing unit is `unverified`, never silently absorbed.** A unit that
+never reaches `done` (slow, capped-out, crashed, timed out, refused) does not
+vanish into an implied "all clear": its owned invariant is reported `unverified`
+in the Phase 5 reconciliation, named with the unit id. Fill the **Lead-read**
+column as the lead's own independent read (section 4) covers each owned path, so
+Phase 5 can state, per unit, **who actually covered it — finder id *and* lead-read**
+— the "no silent caps" principle applied to the fan-out's own completeness, not
+only to sampling inside a unit.
 
 ### Invariant catalog (pick one per unit — do not invent overlapping "find issues")
 
@@ -106,6 +115,29 @@ the same model family are not decorrelated second opinions.
 
 Then give each subagent only its **unique scope + one catalog id**. This pays the
 domain-context duplication once instead of once per unit.
+
+### Tier the sweep — cheap enumerate, then expensive confirm
+
+One monolithic high-effort finder per domain makes total agent-minutes scale with
+**domain size**, not defect count: two large surfaces then hold the whole pipeline
+under a small concurrency cap while clean domains sit queued behind them. Split the
+fan-out into two tiers so cost tracks **candidate count** instead:
+
+- **Tier 1 — candidate sweep (fast, low-effort).** One cheap pass per unit that
+  only *enumerates* candidate invariant violations (`file:line` + a one-line
+  claim), no deep proof. A clean domain then costs one cheap sweep, not fifteen
+  minutes of deep reading.
+- **Tier 2 — confirm (high-effort).** Runs **only on the candidates that survive
+  Tier 1**, plus the adversarial re-verify of section 4. High-effort minutes are
+  now proportional to surviving candidates, so the fan-out degrades gracefully
+  under a small cap.
+
+**Size units small — one invariant, a few hundred lines of owned surface.** A unit
+that owns a 500-line file plus its tests is the one that stalls; keep the
+one-invariant-per-unit split the catalog already prefers, sized so no single finder
+holds more than a few hundred lines of owned surface (mega-files still split by
+named concern per section 0). Record the tier each unit actually ran in the
+manifest's *Unit/tier actually used* column.
 
 ---
 
@@ -193,6 +225,16 @@ hand back a hundred confident inventions.
   strings → role placeholders or redacted forms (`j***e@e***.com`). Fan-out is
   how PII otherwise reaches the lead's context and the report. Do not echo
   secret values even redacted if a fingerprint/`file:line` suffices.
+- **Return an affirmative `checked_sound` list, not only findings.** For each
+  invariant the unit opened the code and confirmed *holds*, record it with the
+  same `file:line`-or-drop rigor a defect gets — `invariant | file:line@START_SHA
+  | what proves it`. Say this list is a valued, expected product: on a hardened
+  target the finding list is empty and `checked_sound` is the unit's **entire**
+  output, so the unit affirms specific soundness ("tenant selection is
+  JWT-`sub`-only; body/query/header cannot select a tenant") instead of inventing
+  a defect to look thorough. An affirmative claim must be as falsifiable as a
+  defect claim — the lead re-verifies it (section 4), and it is the primary
+  deliverable on a hardened target (SKILL Phase 5, "Invariants verified to hold").
 
 ---
 
@@ -208,6 +250,24 @@ source, adversarially** — and verification runs **two ways**:
 - **Test whether a `NONE`/caveat understated a gap.** A unit that returned
   "NONE, minor caveat" may have missed that the caveat *is* the finding.
   Verification catches **under**-reports, not only over-reports.
+
+**Check the finding against the tests before `CONFIRMED` — re-reading the source
+the finder read cannot catch an intended-behavior false positive.** The source
+looks exactly as the finder (and a source-only verifier) described it; only the
+**tests and the suite encode intent**, so a verify stage that just re-reads source
+inherits the finder's blind spot. Before any `CONFIRMED` verdict, do at least one
+of:
+- **Test-awareness (minimum).** Locate and read the tests that exercise the
+  finding's file/function. A finding whose proposed fix would **contradict an
+  existing passing assertion** is `REFUTED` — the behavior is intended by design,
+  not a defect — unless you can show the test itself is wrong (say why, in
+  writing). `REFUTED` drops the finding; it never enters the report.
+- **Fix-against-suite (gold standard; required when the finding proposes a code
+  change to security / cost / concurrency logic).** Apply the proposed fix in a
+  **throwaway worktree** (never the shared tree — principle 7) and run the repo's
+  own gates. A fix that turns the suite **red** refutes the finding, or proves it
+  needs a different fix; a fix that keeps the suite green and reproduces the
+  original break red-first is the strongest `CONFIRMED` a fan-out can produce.
 
 **Confidence marker on every finding** (surface it in the report):
 - `CONFIRMED` — the lead independently re-verified it at `file:line` on
@@ -230,6 +290,25 @@ an instrument reading, and a review that never corrects its own lead is not bein
 verified. One unit contradicting the packet outweighs nine succeeding on it (the
 nine answered a question the tenth just showed was wrong): re-verify at source,
 correct the packet, and re-run any unit whose invariant depended on the bad fact.
+
+**Affirmative `checked_sound` claims are re-verified too.** A unit's "this
+invariant holds" entries carry the unit's authority exactly as findings do; the
+lead re-opens the load-bearing ones at `file:line`@`START_SHA` and drops any that
+don't hold. An unverified "invariant holds" is as misleading as an unverified
+defect — and on a hardened target it *is* the deliverable (SKILL Phase 5,
+"Invariants verified to hold"), so it earns the same file:line-or-drop rigor.
+
+**The lead reads the top-N blast-radius files independently — concurrently with
+the fan-out, not post-hoc.** When there are **zero survivors** (the common outcome
+on a hardened target, where finders return `[]` and re-verify has nothing to chew
+on), the review's credibility rests entirely on the lead's own reading — so make
+it explicit and non-empty. While units run, the lead reads the top-N
+highest-blast-radius files (N sized to the target; Phase 0's triage already ranks
+blast radius) adversarially and independently. This (a) gives a **non-empty
+confidence basis on a clean target**, (b) cross-checks the finders' `[]` returns
+against a second independent read, and (c) means a slow or stalled fan-out never
+leaves the highest-stakes surfaces unread. Record it in the manifest's **Lead-read**
+column; Phase 5 reports lead-read coverage alongside finder coverage.
 
 **Stop rule.** Stop expanding fan-out when high-blast sinks already have two
 independent passes plus lead re-verify at `START_SHA` — more units on a settled
