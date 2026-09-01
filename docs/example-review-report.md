@@ -12,7 +12,9 @@ All names, paths, and findings are invented fixtures (`Acme Capital`,
 
 ```
 Scope: FULL · START_SHA=a1b2c3d · worktree: /tmp/dcr-wt-a1b2c3d (default) ·
-history: 187 commits · triage-first: doctor + documented tenant-isolation invariant
+history: 187 commits · triage-first: doctor + documented tenant-isolation invariant ·
+fan-out: 12 units (tier-1 cheap sweep → tier-2 confirm on survivors) ·
+lead-read: top-6 blast-radius files, concurrent with fan-out
 ```
 
 ---
@@ -22,7 +24,7 @@ history: 187 commits · triage-first: doctor + documented tenant-isolation invar
 ```
 # Code review — Acme Capital agent platform — DIFF/FULL/FILE: FULL
 Reviewed: START_SHA a1b2c3d (dedicated worktree) · 2026-08-17
-Reviewer: deep-code-review 1.10.0
+Reviewer: deep-code-review 1.12.0
 
 ## Summary
 🟡 Needs attention — tenant isolation holds on live routes; two Highs
@@ -65,8 +67,27 @@ Reviewer: deep-code-review 1.10.0
 - Status: PLAUSIBLE — lead not yet byte-checked; artifact to confirm: run under
   mocked 429. Routed to Decisions needed until CONFIRMED.
 
+## Invariants verified to hold
+(Primary deliverable here — the finding list is short because the target is hardened.)
+| Invariant | Where proven | What proves it | Confidence |
+|-----------|--------------|----------------|------------|
+| Tenant is selected from JWT `sub` only — no body/query/header can pick a tenant | `api/mw/tenant.mjs:31` | anon-GET → 401; two-principal swap → 403; loader takes no tenant arg from the request | CONFIRMED (finder u3 + lead-read) |
+| Every paid enrichment call is behind a pre-call spend cap; an unset/`0` cap is rejected at boot | `lib/budget.mjs:12,88` | boot self-proof refuses to start on an unset/`0` cap; unit test drives the empty-config branch red | CONFIRMED (finder u7 + lead-read) |
+| Boot self-proof runs real hostile input and fails closed (subsystem disabled) if any check reads OPEN | `boot/selfproof.mjs:44` | lead ran the documented-minimal config with one check forced OPEN → subsystem stayed disabled | CONFIRMED (lead-read) |
+
+## Refuted at verify (intended behavior — not findings)
+- **Warehouse "budget lockout" (candidate, ranked High by the finder).** A finder
+  and a source-only verifier both described a reservation held across a two-day
+  window that locks the tenant out. REFUTED at verify: `test/warehouse-parent.mjs:60`
+  advances the clock two days and **asserts the reservation is still held** (an
+  unknown-outcome billable job may already have been billed) — the behavior is
+  intended. The proposed "fix" turned that test red in a throwaway worktree.
+  Fail-closed anyway (availability-only, never overspends), so even if real it caps
+  at Low, not High.
+
 ## What's good
-- Tenant isolation invariant SAFE with evidence on live routes.
+- Tenant isolation invariant SAFE with evidence on live routes (see the affirmative
+  ledger above).
 - Distinguishable-from-design discipline avoided false Criticals on intentional
   single-tenant admin CLI.
 
@@ -82,6 +103,8 @@ not requested
 
 ## Definition of done — status
 - ✅ Review surface pinned
+- ✅ Coverage reconciled — 12/12 finder units done; lead-read top-6 (no stalls)
+- ✅ Invariants verified to hold — 3 properties proven at file:line (finder + lead-read)
 - ❌ Zero Blocker/Critical — F1 latent Critical remains
 - ❌ High fixed or owner-accepted — F2, F3 open
 ```

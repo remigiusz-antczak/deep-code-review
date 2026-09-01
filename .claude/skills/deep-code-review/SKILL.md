@@ -341,9 +341,11 @@ say so.
   **A–S** apply and which are N/A with the one-line reason; the `references/*.md`
   files this target **must** load; and whether an **anonymous GET sweep** and a
   **two-principal object-swap** are planned (`Y/N` each, with the reason for any
-  `N`). **Phase 5 reconciles the report against this ledger** — a domain the
-  ledger called applicable but the report never rules on is an unfinished review,
-  not a silent omission.
+  `N`). **When the audit fans out, the ledger also tracks, per unit, who covers it
+  — finder id *and* lead-read `Y/N`** — so a stall is visible (`references/parallel-audit.md`
+  unit manifest). **Phase 5 reconciles the report against this ledger** — a domain
+  the ledger called applicable but the report never rules on, or a fan-out unit
+  whose finder never completed, is `unverified`, not a silent omission.
 
 **Phase 1 — Establish ground truth.** Install/build with the documented steps;
 record every deviation (a broken "one-command setup" is a finding). **Run the
@@ -437,7 +439,13 @@ that can skip it (procedure: `references/security-appsec.md` for untrusted egres
 run these as parallel one-invariant audits under the contract in
 `references/parallel-audit.md` — read-only toolset, pinned `START_SHA`,
 identifier masking — and re-verify every subagent finding at source before it
-enters the report. **A refused delegation is not a blocked domain:** if a
+enters the report. **Concurrently with the fan-out, the lead reads the top-N
+highest-blast-radius files independently and adversarially** (N sized to the
+target; Phase 0's triage ranks blast radius) — so a hardened, zero-survivor
+fan-out still has a **non-empty confidence basis**, the finders' empty returns are
+cross-checked by a second independent read, and a slow or stalled unit never leaves
+the highest-stakes surface unread. Phase 5 reports this lead-read coverage
+alongside finder coverage. **A refused delegation is not a blocked domain:** if a
 specialized subagent rejects a free-form domain prompt (fixed prompt shape,
 single-shot, wrong review type), immediately retry **once** with a
 general-purpose subagent or run the audit in-process — under the same read-only,
@@ -470,7 +478,16 @@ with the fix order. **Distinguish a live defect from a documented past one:**
 comments often narrate fixed incidents in present tense — before reporting, check
 (a) is there a test pinning the corrected behavior? and (b) does
 `git log -S'<symbol>' --oneline` show the fix already landed? If either is yes,
-it is a historical note, not a finding. **Snippet-or-drop:** every surviving
+it is a historical note, not a finding. **Distinguish a defect from intended
+behavior a test encodes:** before reporting, check whether the proposed fix would
+break an existing **passing** test — if it would, the flagged behavior is intended
+by design (the fix is wrong, not the code), so it is `REFUTED`, not a defect.
+Re-reading the source the finder read cannot catch this class — the source looks
+exactly as described; only the tests and the suite encode intent, so locate the
+tests that exercise the finding, and for a change to security/cost/concurrency
+logic apply the fix in a throwaway worktree and run the suite before confirming
+(`references/parallel-audit.md` §4). **Weigh the failure direction** (fail-open vs
+fail-closed) as an explicit severity axis — see the rubric below. **Snippet-or-drop:** every surviving
 finding carries a **verbatim snippet re-read at the pinned ref** — `git show
 $START_SHA:<file>` (or a byte dump per principle 2 when the claim hinges on
 invisible characters). A finding you cannot quote at `START_SHA` is `unverified`
@@ -485,7 +502,16 @@ commit into the reviewed repo:** (1) a **chat BLUF, ≤30 lines** — one-line
 verdict, the top ≤5 **confirmed defects** in plain language, a one-line
 `Decisions: N` pointer (not product ideas filling defect slots), and the path to
 the full technical table; and (2) the **full report written out-of-tree**
-(`~/Downloads/`, session scratch, or the PR comment). Product/redesign ideas go
+(`~/Downloads/`, session scratch, or the PR comment). **The full report carries an
+"Invariants verified to hold" section, co-equal with the findings table** — the
+specific security/correctness properties each unit (and the lead's independent
+read) opened the code and confirmed, each grounded at `file:line` with the same
+snippet-or-drop rigor a defect gets. On a **hardened target this is the primary
+deliverable**: a finding-count report has the least to say exactly when the owner
+needs the most reassurance, and "here are the N properties we opened the code and
+proved" is worth more than "we found nothing." An affirmative claim is as
+falsifiable as a defect claim — drop any you cannot quote at `START_SHA`.
+Product/redesign ideas go
 under **Decisions needed (owner)** — they never carry Blocker/Critical gate
 language. Severity still follows consequence: a product choice that creates a
 Critical defect remains a defect. **Never paste the machine findings table as
@@ -513,6 +539,11 @@ ledger called applicable is ruled on (finding, clean, or `unverified` + artifact
 every must-load reference was actually loaded, and the planned anon-GET /
 two-principal probes either ran or are reported as not-run with the reason. A
 ledger line with no verdict means the review is unfinished, and the verdict says so.
+**When the audit fanned out, reconcile coverage per unit — who actually covered it
+(finder id **and** lead-read `Y/N`) — and mark any unit whose finder did not
+complete (slow, capped-out, crashed, refused) `unverified`, never absorbed into an
+implied all-clear.** The "no silent caps" principle applies to the fan-out's own
+completeness, not only to sampling inside a unit.
 
 **For a `DIFF` of a PR/MR** (often
 a fork or an API-fetched change with no writable checkout) **the deliverable is
@@ -641,6 +672,17 @@ unwalked domain.
   **refuse rather than pass** — a non-empty result is not proof the layer ran.
   Enforce an **egress allow-list that a test scans the source against**, so the
   security doc can't drift from the code.
+- **Prove the gate runs; don't assume it from a present code path.** For each
+  security-critical gate, is it **measured at runtime** — a boot self-proof or
+  health check that exercises the gate against real hostile input and **refuses to
+  enable when any check reads OPEN** — or is it merely present in the source? When
+  the proof is unavailable or the environment is misconfigured, the feature must
+  **fail closed (disabled)**, not silently proceed on the assumption the gate is
+  wired. An unproven gate that *reads* as safe is itself the finding — this is what
+  separates defense-in-depth theatre from a real fail-closed posture, and it
+  extends principle 2 ("what a project enforces is verified against the enforcement
+  artifact, not the doc") to runtime. Cross-ref C (tool-authz proven live) and F
+  (subsystem proven to execute).
 - **Before rating a "sensitive/gated data exposed" finding, establish the actual
   exposure boundary** — is the data-carrying artifact tracked in version control,
   served on an unauthenticated route, or in a client bundle? Pin severity to that
@@ -656,7 +698,9 @@ unwalked domain.
   an error-*class*, never upstream response bodies.
 - 🚩 raw SQL concat, `eval`/`exec`/`system`/`pickle.loads`/`yaml.load`,
   `innerHTML`/`dangerouslySetInnerHTML`, `verify=False`, wildcard CORS with
-  credentials, committed `.env`, tokens/keys in the diff.
+  credentials, committed `.env`, tokens/keys in the diff, a security gate assumed
+  from a present code path but never proven live, a feature that enables itself
+  when its gate's self-proof is unavailable.
 
 ### C. Security — AI / LLM / agents → `references/security-ai-agents.md`
 Apply if the code calls an LLM, embeds/retrieves, or runs an agent. Maps to
@@ -674,6 +718,9 @@ Agentic Applications 2026.
   execution, not only at the tool-offer layer. **Least-privilege tools**;
   human-in-the-loop on irreversible/high-impact actions; scope every
   approval/consent token to the specific action **and stage** it authorizes.
+  **Prove the re-check fires at runtime** — a self-proof / health check that
+  exercises it — not merely that the code path exists; an unproven tool-authz gate
+  must fail closed, or it is a finding (the runtime-proven-gate lens, domain B).
 - **Deterministic-first**: the model never authors a number, score, status, or
   gate — deterministic code does; the model only phrases/adjudicates behind hard
   gates, with a deterministic fallback and a counter for how often it fires. Use
@@ -778,8 +825,11 @@ Apply to any pipeline, ETL, enrichment, scraping, or dataset producer. Judge the
   **persists an empty/zero artifact** that downstream merge/read treats as data
   (procedure: `references/reliability-error-handling.md`). A **load-order/registration bug
   can silently no-op an entire subsystem** — assert each optional/paid subsystem
-  actually executes in the deployed environment, not just locally. Route
-  control-plane traffic (kill-switch, approval) **above** the rate limiter.
+  actually executes in the deployed environment, not just locally, and that each
+  security-critical gate is **proven live (a self-proof / health check) and fails
+  closed when the proof is absent**, never assumed from a present code path (the
+  runtime-proven-gate lens, domain B). Route control-plane traffic (kill-switch,
+  approval) **above** the rate limiter.
 - 🚩 swallowed exceptions, retry-forever, no timeout, non-idempotent retry, work
   lost on crash, status not checked before body read, an emergency stop behind
   the limiter.
@@ -808,7 +858,12 @@ Apply to any pipeline, ETL, enrichment, scraping, or dataset producer. Judge the
   surface). **Duplication** unified judiciously — but three similar lines beat a
   wrong abstraction, and a one-caller "helper" is premature; where logic *must*
   be mirrored, link the source of truth in a comment **and** add a coherence test
-  running one fixture through both paths.
+  running one fixture through both paths. **Copies that must stay byte-for-byte in
+  lockstep** — vendored modules, per-runtime-plane duplicates, generated-vs-source
+  pairs — need a **parity test or a single generated source**, or they silently
+  drift; flag the *missing guard*, not the duplication itself (a drifting second
+  copy of a crypto/auth module would encrypt/decrypt or authorize differently on
+  each plane — a security hazard, cross-ref B).
 - **Complexity**: one thing per function; shallow nesting; named constants/enums
   over magic values in one place. **Naming & structure** navigable by human and
   AI. **Dependencies current and safely upgraded** — see K and
@@ -820,7 +875,8 @@ Apply to any pipeline, ETL, enrichment, scraping, or dataset producer. Judge the
 - **Lockstep surfaces** enumerated — the file sets that must change together
   (schema ↔ validator ↔ type ↔ prompt ↔ docs ↔ test).
 - 🚩 commented-out blocks, `v2`/`_old`/`copy` files, duplicate helpers, dead
-  flags, unused imports/deps, god-functions.
+  flags, unused imports/deps, god-functions, byte-identical duplicated modules
+  (per-plane, vendored) with no parity guard.
 
 ### I. API, interface, contracts & integration → `references/api-contracts.md`
 - Public interfaces minimal, consistent, hard to misuse; breaking changes
@@ -1148,6 +1204,24 @@ are stated and a regression test is required before the next apply. And
 **owner/stakeholder priority raises a finding's reporting prominence, not its
 severity** — severity is consequence, not importance-to-the-owner.
 
+**Failure direction is a severity axis — separate a fail-closed self-DoS from a
+fail-open bypass.** Before ranking a robustness or accounting gap, ask which way it
+fails:
+- **fail-open** — a bypass, an over-grant, a leak, or accounting that
+  **over-spends / under-denies**: severity scales with blast radius (it can hand
+  out access, money, or data).
+- **fail-closed** — a self-DoS, an over-deny, or conservative accounting that
+  **over-denies** (a budget reservation that leaks on a failed query and
+  eventually locks the tenant out; a guard that refuses too much): **cap severity
+  Low** unless it enables a *further* exploit, because the failure can only
+  over-restrict, never over-grant.
+
+State the direction so finders don't inflate defensive/conservative accounting into
+a vuln, and a reader can tell "this denies too much" from "this grants too much" at
+a glance. A fail-closed gap can still be a genuine availability defect worth
+fixing — it just is not the Critical that a fail-open bypass of the same mechanism
+would be.
+
 **Unverified findings (`unverified`, or fan-out `PLAUSIBLE`) carry their
 provisional severity for *reporting* but block the gate only once confirmed.**
 `CORROBORATED` still needs lead re-verify at `START_SHA` before it blocks a
@@ -1208,6 +1282,15 @@ Counts: Blocker N · Critical N · High N · Medium N · Low N · Nit N
   (CI-only, intermittent, environment-specific), and name what would prove it (the
   failing seed, the constrained repro, the assertion that fails red first).
 
+## Invariants verified to hold (affirmative — co-equal with Findings)
+| Invariant | Where proven | What proves it | Confidence |
+|-----------|--------------|----------------|------------|
+| Tenant selection is JWT-`sub`-only; no body/query/header can select a tenant | api/mw/tenant.ts:31 | anon-GET → 401 and two-principal swap → 403; no untrusted tenant source in the loader | CONFIRMED |
+(Primary deliverable on a hardened target — not "we found nothing" but the specific
+properties opened and proven. Each row grounded at `file:line`@`START_SHA` with the
+same snippet-or-drop rigor a finding gets; drop any you cannot quote. Coverage —
+finder id + lead-read — reconciled per Phase 5.)
+
 ## Quality delta (if the pipeline ran)
 | Metric | Before | After (if fixed) | Notes |
 |---|---|---|---|
@@ -1244,6 +1327,9 @@ findings from a fan-out marked `CONFIRMED` (lead re-verified at source),
 lead re-verify), or `PLAUSIBLE` (subagent-reported, not yet lead-verified); a
 real-but-unreachable finding tagged `latent` with the trigger that would make it
 live; no fabricated metrics; systemic issues stated once with instances listed.
+The **Invariants verified to hold** section carries the same `file:line`-or-drop
+rigor as findings (an affirmative claim is as falsifiable as a defect claim) and is
+the primary deliverable on a hardened target where findings are few or none.
 
 ---
 
@@ -1350,7 +1436,13 @@ the code is fit to merge. A thorough review of an unshippable target is (a) ✅ 
   fail method completeness.
 - ✅ **Coverage ledger reconciled** — every domain the ledger called applicable is
   ruled on (finding, clean, or `unverified` + named artifact), and every must-load
-  reference was actually loaded.
+  reference was actually loaded. On a fan-out, coverage is attributed per unit
+  (finder id + lead-read), and any unit whose finder did not complete is marked
+  `unverified`, never silently absorbed.
+- ✅ **Affirmative ledger emitted** on a fan-out or hardened target — "Invariants
+  verified to hold" names each proven property at `file:line`@`START_SHA` (as
+  falsifiable as a finding), the primary deliverable when findings are few; or N/A
+  with reason (nothing affirmatively opened and proven).
 - ✅ **Identity Arrival Map printed** whenever a gate/middleware change is proposed
   (document vs XHR vs bare curl), and security/authz changes routed to their own PR.
 - ✅ Standards **not claimed unless walked**: no "ASVS covered" / "CIS benchmarked"

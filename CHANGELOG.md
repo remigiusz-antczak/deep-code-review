@@ -3,6 +3,52 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.12.0] — 2026-09-01
+
+Throughput-and-affirmation harvest from a FULL run against a large, hardened
+production Node codebase: make the fan-out cheap on large targets, make the verify
+step catch intended-behavior false positives, and make the review's value legible
+on a target that yields few or no defects. Additive — phases, domains A–S, and the
+report shape are unchanged; the report gains one co-equal affirmative section.
+
+### Added
+- `parallel-audit.md`: **two-tier sweep** — a cheap Tier-1 candidate enumeration
+  before the high-effort Tier-2 confirm that runs only on survivors, so
+  agent-minutes track candidate count, not domain size; plus small
+  one-invariant units (a few hundred lines of owned surface) so no single finder
+  stalls the pipeline under a small concurrency cap.
+- **Verify against the tests, not only the source** (`parallel-audit.md` §4 +
+  SKILL Phase 4): before `CONFIRMED`, read the tests that exercise the finding — a
+  fix that contradicts a passing assertion is `REFUTED` as intended behavior — and,
+  for a change to security/cost/concurrency logic, apply the fix in a throwaway
+  worktree and run the suite. Re-reading the source the finder read cannot catch an
+  intended-behavior false positive; only the tests encode intent.
+- **"Invariants verified to hold"** as a first-class, co-equal report section
+  (Phase 5 + report format + rules + definition of done) fed by a new
+  `checked_sound` affirmative return in the fan-out contract — the primary
+  deliverable on a hardened target, grounded `file:line`-or-drop like any finding.
+- **Runtime-proven-gate lens** in domains B (home), C (tool-authz proven live), and
+  F (subsystem proven to execute): is the gate measured at runtime (a
+  self-proof/health check) and **fail-closed when the proof is absent**, or merely
+  present in code? An unproven gate that reads as safe is itself the finding.
+- **Failure direction as a severity axis** (rubric + Phase 4): fail-open (bypass /
+  over-grant / leak) scales with blast radius; fail-closed (self-DoS / over-deny /
+  conservative accounting) caps **Low** unless it enables a further exploit.
+- Domain H: **duplicate-source-drift** probe — byte-identical lockstep copies
+  (vendored, per-plane, generated-vs-source) need a parity test or single source;
+  flag the missing guard, not the duplication.
+- **Lead independent read of the top-N blast-radius files**, concurrent with the
+  fan-out (`parallel-audit.md` §4 + Phase 2), so a zero-survivor run still has a
+  non-empty confidence basis and no high-stakes surface goes unread.
+- **Coverage attributed per unit** — finder id + lead-read, with a stalled/refused
+  unit marked `unverified` rather than silently absorbed (Phase 0 ledger + Phase 5
+  reconciliation + `parallel-audit.md` unit-manifest Lead-read column).
+
+### Changed
+- Example report version stamp 1.12.0; the example now shows the affirmative
+  invariants ledger, a REFUTED-at-verify candidate (intended, test-encoded,
+  fail-closed), and finder + lead-read coverage.
+
 ## [1.11.0] — 2026-08-21
 
 Harvest from a same-owner inter-agent bridge review: name ASI01–ASI10, and
