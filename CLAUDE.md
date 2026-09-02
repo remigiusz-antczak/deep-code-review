@@ -41,12 +41,19 @@ that a human or an agent executes.
   version numbers, or line numbers. If a source won't confirm it, omit it or mark
   it `unverified`. When two sources conflict, trust the authoritative one and
   make no claim you can't back.
-- **Confidentiality / privacy.** No real names, company/team names, emails,
-  internal IDs, hostnames, or identifying URLs anywhere — code, comments, docs,
-  fixtures, commits, PR bodies, or git history. Fictional placeholders only
-  (`Acme Capital`, `jane@example.com`, "the operator"). This repository is built
-  partly from lessons mined out of private projects; those lessons are
-  **generalized to their underlying principle** and stripped of every identifier.
+- **Confidentiality / privacy (first- vs third-party).** No secrets anywhere, and
+  no *third-party* real names, company/team/client names, emails, internal IDs, or
+  private hostnames — in code, comments, docs, fixtures, commits, PR bodies, or git
+  history. Use fictional placeholders (`Acme Capital`, `jane@example.com`, "the
+  operator") for everyone else. The project's **own intended-public identity is not
+  a leak**: the public repository URL and the `LICENSE`/package author may stand
+  where the project itself publishes them (e.g. in `README.md` or `LICENSE`), and
+  the committed `.banlist.txt` bans only secrets plus generic patterns while real
+  identifiers live in gitignored `.banlist.local.txt`. Treat drift **beyond** that
+  stated-public surface as the finding. This mirrors the skill's principle 11. This
+  repository is built partly from lessons mined out of private projects; those
+  lessons are **generalized to their underlying principle** and stripped of every
+  third-party identifier.
 - **Do no harm.** Any edit is net-positive across every axis (clarity, accuracy,
   coverage, consistency) and never regresses another. Respect the existing
   structure; propose a restructure as a decision, don't impose it.

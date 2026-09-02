@@ -99,7 +99,18 @@ install_skill_copy() {
   mkdir -p "$(dirname "${dest}")"
   if [[ -e "${dest}" ]]; then
     mkdir -p "${backup_root}"
+    # Portable, collision-free backup name: a seconds-resolution timestamp plus
+    # an existence-checked numeric suffix, so rapid repeated installs within the
+    # same second never reuse a name. Avoids `date +%N` (unsupported on BSD/macOS
+    # date), which is why a plain timestamp alone would collide.
     local backup="${backup_root}/${SKILL_NAME}-$(date +%Y%m%d-%H%M%S)"
+    if [[ -e "${backup}" ]]; then
+      local n=1
+      while [[ -e "${backup}-${n}" ]]; do
+        n=$((n + 1))
+      done
+      backup="${backup}-${n}"
+    fi
     echo "note: existing skill found -> backing up to ${backup}"
     mv "${dest}" "${backup}"
   fi

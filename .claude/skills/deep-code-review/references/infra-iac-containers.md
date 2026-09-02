@@ -2,9 +2,10 @@
 
 Read this when the target ships Dockerfiles, Kubernetes manifests/Helm,
 Terraform/Pulumi/CloudFormation, CI/CD workflows, or any cloud configuration.
-Misconfiguration here is the highest-frequency real-world breach cause (OWASP
-Top 10:2025 A02) and a supply-chain surface (A03). Benchmark against the
-relevant **CIS Benchmarks**; adopt **SLSA** for build provenance.
+Misconfiguration here is a common real-world breach cause tracked under the
+named OWASP category (OWASP Top 10:2025 A02) and a supply-chain surface
+(A03). Benchmark against the relevant **CIS Benchmarks**; adopt **SLSA** for
+build provenance.
 
 ---
 

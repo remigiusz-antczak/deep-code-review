@@ -3,6 +3,73 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.13.0] — 2026-09-02
+
+A role-aware **software-house overlay** over the existing method, plus the repo's
+own gates re-homed into one fail-closed helper proven by a self-test harness.
+Additive and smallest-sufficient — the six phases, domains **A–S**, the severity
+rubric, and the report shape are unchanged; the overlay only orders and assigns
+domains through a delivery-role or security-team lens, it never adds or drops one.
+
+### Added
+- **Role & team overlay** in `SKILL.md` + `references/role-coverage.md` (routed
+  by path with a "read this when…" trigger): per-role leads-on domains for the
+  nine delivery roles, driven through the same A–S method. Adds the lenses this
+  file does not hold — **architecture quality** (seams, dependency direction,
+  SPOFs, drift from the stated design), **lightweight product planning**
+  (problem→acceptance, smallest slice, success metric), **SLI/SLO with error
+  budget & burn-rate**, and **release-owner sign-off**.
+- **Security-team colour model** (re-packages the same evidence by stance — no new
+  rules; Red still needs `file:line`, Blue still fails closed): **Red** adversarial
+  pass, **Blue** detection/fail-closed, **Purple** red→blue gate, **Yellow** build,
+  **Green** (Yellow+Blue), **Orange** (Yellow+Red), **White** scope/ROE/owner
+  decisions/sign-off.
+- **Black Team — the agent boundary is absolute.** A physical / human-operations
+  lens (intrusion, impersonation, social engineering, surveillance, badge/lock
+  bypass, device placement) where an agent may **only plan, tabletop, and analyse
+  owner-supplied evidence** — never perform or operationally direct any such action,
+  and never test a real person or site. Real assessments are **human-led under
+  written owner authorization and legal rules of engagement (ROE)**; a request that
+  crosses the line has its operational part refused and its planning part kept.
+- `scripts/ci-gates.sh` — one **fail-closed** production helper for the repo's
+  documented gates (`privacy`, `routing`, `version`, `install`): no `|| true`, no
+  always-success fallback, no pipeline that swallows the real exit status. Privacy
+  reports matching **file names only, never content**, and fails closed on a
+  missing, empty/comment-only, or malformed-ERE banlist while honouring an optional
+  sibling `.banlist.local.txt`. Routing matches basenames **literally** (fixed-
+  string) and flags dangling routes, with a non-failing size WARN.
+- `scripts/test-ci-gates.sh` — a **16-case RED/GREEN self-test harness** pinning
+  that helper's contract with real exit codes preserved: privacy (reject empty and
+  all-comment banlists, detect a planted secret, reject an invalid ERE without
+  disclosing banlist content, load the sibling local override), routing (reject
+  unrouted, reject a regex-meta basename match, WARN on an oversized SKILL.md),
+  version (reject malformed VERSION and a missing CHANGELOG heading), and install
+  (overwrite a placeholder with the real vendored docs; **Claude**, **minimal**,
+  **Codex**, and **full** agent-agnostic default modes; **Codex/full** assert the
+  managed AGENTS.md block sentinels — `deep-code-review:begin`, `Installed:`,
+  `Agent-agnostic` — and **full** re-installs to prove exactly one idempotent
+  managed block, never a duplicate; collision-free backups on rapid repeated
+  installs).
+
+### Changed
+- CI (`.github/workflows/ci.yml`) now runs the self-tests and then enforces the
+  documented gates through that **same single helper** — one authoritative
+  implementation, no inline copies, so the enforced check and its tests never
+  diverge.
+- `install.sh` backups are **portable and collision-free** — a seconds-resolution
+  timestamp plus an existence-checked numeric suffix (avoiding `date +%N`, which is
+  unsupported on BSD/macOS `date`), landing under `.../skill-backups/`, never inside
+  `skills/`.
+- **Confidentiality scoped first- vs third-party** (principle 11): a project's
+  intended-public identity (published maintainer/author, public repo URL) is not a
+  leak, while drift beyond that stated-public surface is the finding; softened the
+  prose's unsupported scanner/breach claims to what the gate actually proves. The
+  project's own `CLAUDE.md` confidentiality rule is aligned to the same scoping so
+  the repo's governance and the skill it ships no longer disagree on first-party
+  identity (the repo dogfoods its own gate: `.banlist.txt` bans secrets + generic
+  patterns, real identifiers live in gitignored `.banlist.local.txt`).
+- README reference-file count → **20**.
+
 ## [1.12.0] — 2026-09-01
 
 Throughput-and-affirmation harvest from a FULL run against a large, hardened

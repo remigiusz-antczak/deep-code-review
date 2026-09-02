@@ -102,6 +102,49 @@ Domains outside the archetype's defaults are marked **N/A with a one-line
 reason** (one line for the batch, not a paragraph each). `other` has no default
 set — derive the domain list from Phase 0's entry points and say what you derived.
 
+**Role & team overlay (optional lens; complements the archetype map).** When the
+request, the org, or a fan-out split is framed by **delivery role** or by
+**security-team colour**, drive the same A–S method through that lens — the
+overlay only orders and assigns domains, it never adds or drops one. Full per-role
+checklists, the colour model, and role-keyed fan-out live in
+`references/role-coverage.md` — **read it when** you review through a role/team
+lens, split a fan-out by role, or need the **architecture-quality**,
+**lightweight-product-planning**, **SLI/SLO error-budget & burn-rate**, or
+**release-owner-sign-off** checklists it holds and this file does not.
+
+| Role | Leads on (domains) |
+|---|---|
+| Architect | A E G H I + architecture quality (seams, dependency direction, SPOFs, drift from the stated design) |
+| Product & requirements | A O J + lightweight product planning (problem→acceptance, smallest slice, success metric) |
+| UX & UI | P R |
+| Frontend | P · A (client logic) · B (client authz/XSS) · N (no secrets in bundle) |
+| Backend (API & DB) | B I E A G |
+| Data & AI | D C E J Q |
+| Platform / DevOps / SRE | L K M N F + SLI/SLO, error budget & burn-rate |
+| QA / performance / a11y | J E P |
+| Release & docs | S O K + release owner sign-off |
+
+**Security-team colours** re-package the same evidence by stance (no new rules —
+Red still needs `file:line`, Blue still fails closed): **Red** drives Phase 3's
+adversarial pass; **Blue** owns detection / fail-closed (M, F, A09, runtime-proven
+gates); **Purple** turns each red finding into a blue gate/detection (Phase 4
+compounds + the invariants ledger); **Yellow** builds (A H I + architecture
+quality); **Green** = Yellow+Blue, defensive lessons become build-time gates (K,
+self-proving gates, Phase 6); **Orange** = Yellow+Red, attacker lessons become
+design constraints (A06 abuse rows, banned remedies); **White** governs scope,
+ROE, owner decisions, confidentiality, and release sign-off (the lead's synthesis
+role).
+
+**Black Team — the agent boundary is absolute.** A physical / human-operations
+lens (physical intrusion, impersonation, social engineering, surveillance,
+badge/lock bypass, device placement, covert access). **An agent may only plan,
+tabletop, and analyse evidence the owner supplies — it must never perform or
+operationally direct any of those actions, and never test a real person or a real
+site.** Real physical/social assessments are **human-led, under written owner
+authorization and legal rules of engagement (ROE)**. If a request crosses this
+line, refuse the operational part, keep the planning/analysis part, and say which
+is which (depth: `references/role-coverage.md`).
+
 **Host-neutral tools.** Prefer portable actions (read files, search/`rg`,
 `git show` / `git log`, run the project's own scripts). Do not assume a
 vendor-specific Task/Agent API — fan-out rules in `references/parallel-audit.md`
@@ -246,10 +289,17 @@ never a Blocker on the base branch.
 10. **Improve the outcome, not just the code.** For data/ML/pipeline work, judge
     what the code *produces* (correctness, coverage, quality delta), not only how
     it reads.
-11. **Confidentiality by default.** Fail closed on any real name, secret, or
-    internal identifier in committable artifacts **and** in fan-out subagent
-    returns (mask before the lead's context sees them — see the final section
-    and `references/parallel-audit.md`).
+11. **Confidentiality by default — scoped to first vs third party.** Fail closed
+    on any secret, and on any **third-party** real name, email, internal
+    identifier, or private hostname, in committable artifacts **and** in fan-out
+    subagent returns (mask before the lead's context sees them — see the final
+    section and `references/parallel-audit.md`). A project's **own intended-public
+    identity is not a leak**: the published maintainer/author identity and the
+    public repository URL may stand where the project itself publishes them — a
+    public remote, a `LICENSE`/package author, or another named stating artifact
+    (principle 5). Protect everyone else — clients, colleagues, other third-party
+    people, and non-public internal IDs (sheet/base/dataset/host) — and treat any
+    drift **beyond** the stated-public surface as the finding.
 
 ---
 
@@ -1468,8 +1518,10 @@ the code is fit to merge. A thorough review of an unshippable target is (a) ✅ 
   gate before merge.
 - ✅ Zero Blocker/Critical; High fixed or explicitly owner-accepted.
 - ✅ **No regression on any axis** — the change is net-positive (principle 4).
-- ✅ No secrets, PII, real names, or internal identifiers in code, comments,
-  history, logs, or committable docs.
+- ✅ No secrets, PII, third-party/private real names, private company/team names,
+  or internal identifiers in code, comments, history, logs, or committable docs; a
+  project's own intended-public identity only when required and corroborated by an
+  existing project-owned public artifact, with drift treated as a finding.
 - ✅ Data-integrity invariants hold; monotonic-quality regression test present for
   any data producer.
 - ✅ No dead code/deps; no unnecessary/redundant external or LLM calls on hot
@@ -1491,16 +1543,22 @@ the code is fit to merge. A thorough review of an unshippable target is (a) ✅ 
 
 - **No fabrication, anywhere.** No invented findings, data, sources, metrics,
   CWEs, or line numbers. Omit or flag rather than guess.
-- **Nothing private/internal/confidential/identifying** in committable code,
-  comments, docs, commits, or PR/MR bodies: no real names, company/team names,
-  emails, internal IDs (sheet/base/project/dataset/table), hostnames, or
-  identifying URLs. Use role placeholders ("operator", "the team") and fictional
-  fixtures (`Acme Capital`, `jane@example.com`). **Fan-out audits mask the same
-  classes in their own returns** before the lead sees them (e.g.
-  `j***e@e***.com`) — confidentiality is transitive, not lead-only; see
-  `references/parallel-audit.md`. Scan before every commit; **fail closed on any
-  hit**, including in git history. The scan reports `file:line` and **never
-  echoes the matched secret**; a green scan is a floor — read your own diff.
+- **Nothing private/internal/confidential/identifying about a third party** in
+  committable code, comments, docs, commits, or PR/MR bodies: no other person's
+  real name or email, no company/team/client names, no internal IDs
+  (sheet/base/project/dataset/table), private hostnames, or identifying URLs.
+  **A project's own intended-public first-party identity is exempt** — the
+  published maintainer/author name and the public repository URL may appear where
+  the project itself publishes them (a public remote, `LICENSE`, package
+  metadata; principle 5's named stating artifact) — but drift beyond that
+  stated-public surface is the finding. Use role placeholders ("operator", "the
+  team") and fictional fixtures (`Acme Capital`, `jane@example.com`) for everyone
+  else. **Fan-out audits mask the same third-party classes in their own returns**
+  before the lead sees them (e.g. `j***e@e***.com`) — confidentiality is
+  transitive, not lead-only; see `references/parallel-audit.md`. Scan before every
+  commit; **fail closed on any hit**, including in git history. The scan reports
+  `file:line` and **never echoes the matched secret**; a green scan is a floor —
+  read your own diff.
 - **Secrets via env/secret manager only** — never in a committable file or shared
   output.
 - **Confirm before anything destructive, irreversible, billable, or shared-state**
