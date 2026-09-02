@@ -25,16 +25,16 @@ jobs:
       # Prove the gate helper against its own fixtures (routing/version/privacy
       # + the real install path) before trusting it on this repo.
       - name: Gate helper self-tests
-        run: scripts/test-ci-gates.sh
+        run: bash scripts/test-ci-gates.sh
 
       # Enforce the documented gates on the real repo via the same helper the
       # self-tests pin — one authoritative implementation, no inline copies.
       - name: Enforce documented gates
         run: |
           set -euo pipefail
-          scripts/ci-gates.sh routing --max-bytes 100000 .claude/skills/deep-code-review
-          scripts/ci-gates.sh version .
-          scripts/ci-gates.sh privacy --banlist .banlist.txt .
+          bash scripts/ci-gates.sh routing --max-bytes 100000 .claude/skills/deep-code-review
+          bash scripts/ci-gates.sh version .
+          bash scripts/ci-gates.sh privacy --banlist .banlist.txt .
 
       - name: SKILL.md name matches its directory
         run: |
