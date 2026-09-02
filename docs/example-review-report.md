@@ -24,7 +24,7 @@ lead-read: top-6 blast-radius files, concurrent with fan-out
 ```
 # Code review — Acme Capital agent platform — DIFF/FULL/FILE: FULL
 Reviewed: START_SHA a1b2c3d (dedicated worktree) · 2026-08-17
-Reviewer: deep-code-review 1.12.0
+Reviewer: deep-code-review 1.13.0
 
 ## Summary
 🟡 Needs attention — tenant isolation holds on live routes; two Highs
