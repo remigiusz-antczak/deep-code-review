@@ -29,5 +29,12 @@ coverage/
 # Editor-local rules / skills (maintainer machine; not part of the skill product)
 .cursor/
 
-# install.sh backups created when updating an existing skill install
-*.backup-*
+# install.sh skill backups — a prior skill install moved aside on re-install.
+# Named .{claude,agents,codex}/skill-backups/deep-code-review-<timestamp>[-N].
+# (.cursor/ is already ignored above, which covers .cursor/skill-backups/.)
+.claude/skill-backups/
+.agents/skill-backups/
+.codex/skill-backups/
+
+# Deep Code Review CI contract-test scratch dir (scripts/test-ci-gates.sh).
+.dcr-test-work/
