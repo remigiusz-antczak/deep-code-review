@@ -170,7 +170,7 @@ verified** — never a remembered link.
 │   └── standards-index.md          # verified standards, URLs, verification dates
 └── .claude/skills/deep-code-review/
     ├── SKILL.md                    # the review method + all domain checklists
-    └── references/                 # on-demand deep playbooks (19 files incl.
+    └── references/                 # on-demand deep playbooks (20 files incl.
                                     # privacy, observability, install stubs for
                                     # standards-index + example report)
 ```
@@ -182,10 +182,13 @@ verified** — never a remembered link.
 The skill enforces — and this repository dogfoods — two hard rules: **no
 fabrication** (skip or flag rather than guess; no invented findings, data,
 sources, metrics, CWEs, or line numbers) and **no private/identifying data** in
-any committable artifact (real names, company/team names, emails, internal IDs,
-hostnames, or identifying URLs), including git history. All examples use
-fictional placeholders (`Acme Capital`, `jane@example.com`). A privacy gate that
-finds a secret reports its `file:line` and never echoes the secret itself.
+any committable artifact — secrets, PII, third-party/private real names, private
+company/team names, internal identifiers, private hostnames, or identifying URLs —
+including git history. A project's **own intended-public identity** may stand only
+when required and corroborated by an existing project-owned public artifact, with
+drift treated as a finding. All examples use fictional placeholders (`Acme Capital`,
+`jane@example.com`). A privacy gate that finds a secret reports its `file:line` and
+never echoes the secret itself.
 
 ## Attribution & license
 
