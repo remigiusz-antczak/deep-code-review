@@ -69,9 +69,10 @@ without regressing a deliberate design.
 - Autocomplete tokens on personal-data fields (1.3.5).
 
 **Verify with tools + manual**: automated scanners (axe, Lighthouse, pa11y)
-catch ~30–40% — always add a manual keyboard-only pass and a screen-reader
-smoke test (VoiceOver/NVDA). Report the method used; don't claim conformance
-from an automated score alone.
+detect some classes of WCAG failures, not all; assert no percentage without a cited
+source. Always add a manual keyboard-only pass and a screen-reader smoke test
+(VoiceOver/NVDA). Report the method used; don't claim conformance from an
+automated score alone.
 
 ---
 
