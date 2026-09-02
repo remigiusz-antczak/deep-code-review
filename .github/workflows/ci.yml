@@ -3,7 +3,9 @@ name: gates
 # Enforce the standards this repo documents. The skill it ships now flags
 # "standards documented but no gate enforces them" as a finding — so this repo
 # wires its own documented gates (CLAUDE.md pre-commit block + definition of done)
-# into CI rather than leaving them advisory.
+# into CI rather than leaving them advisory. The gate logic lives in one place,
+# scripts/ci-gates.sh, exercised by scripts/test-ci-gates.sh; CI runs that same
+# helper against the real repo so the enforced check and its tests never diverge.
 
 on:
   push:
@@ -20,67 +22,23 @@ jobs:
       # SHA-pinned, not a mutable tag (the skill's own K rule for CI actions).
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Every reference is routed from SKILL.md, and every route resolves
+      # Prove the gate helper against its own fixtures (routing/version/privacy
+      # + the real install path) before trusting it on this repo.
+      - name: Gate helper self-tests
+        run: scripts/test-ci-gates.sh
+
+      # Enforce the documented gates on the real repo via the same helper the
+      # self-tests pin — one authoritative implementation, no inline copies.
+      - name: Enforce documented gates
         run: |
-          skill=.claude/skills/deep-code-review/SKILL.md
-          fail=0
-          for f in .claude/skills/deep-code-review/references/*.md; do
-            grep -q "$(basename "$f")" "$skill" || { echo "UNROUTED: $f"; fail=1; }
-          done
-          while read -r p; do
-            [ -f ".claude/skills/deep-code-review/$p" ] || { echo "DANGLING ROUTE: $p"; fail=1; }
-          done < <(grep -oE 'references/[A-Za-z0-9._-]+\.md' "$skill" | sort -u)
-          exit $fail
+          set -euo pipefail
+          scripts/ci-gates.sh routing --max-bytes 100000 .claude/skills/deep-code-review
+          scripts/ci-gates.sh version .
+          scripts/ci-gates.sh privacy --banlist .banlist.txt .
 
       - name: SKILL.md name matches its directory
         run: |
           grep -qE '^name: deep-code-review$' .claude/skills/deep-code-review/SKILL.md
 
-      - name: VERSION file present and semver-shaped
-        run: |
-          ver=$(tr -d '[:space:]' < .claude/skills/deep-code-review/VERSION)
-          echo "VERSION=$ver"
-          echo "$ver" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'
-          # Changelog must announce this version
-          grep -qE "^## \[${ver}\]" CHANGELOG.md
-
       - name: install.sh parses
         run: bash -n install.sh
-
-      - name: install.sh dry-run into a temp project (multi-path + stamp)
-        run: |
-          tmp=$(mktemp -d)
-          ./install.sh "$tmp"
-          test -f "$tmp/.claude/skills/deep-code-review/SKILL.md"
-          test -f "$tmp/.cursor/skills/deep-code-review/SKILL.md"
-          test -f "$tmp/.agents/skills/deep-code-review/SKILL.md"
-          test -f "$tmp/.claude/skills/deep-code-review/references/standards-index.md"
-          test -f "$tmp/.claude/skills/deep-code-review/references/example-review-report.md"
-          grep -q 'deep-code-review:begin' "$tmp/AGENTS.md"
-          grep -q 'Installed:' "$tmp/AGENTS.md"
-          grep -q 'Agent-agnostic' "$tmp/AGENTS.md"
-          ./install.sh --with-codex "$tmp"
-          test -f "$tmp/.codex/skills/deep-code-review/SKILL.md"
-          ./install.sh --minimal "$tmp"
-          test -f "$tmp/.claude/skills/deep-code-review/SKILL.md"
-          # minimal does not remove prior mirrors; stamp still refreshes
-          grep -q 'Installed:' "$tmp/AGENTS.md"
-          rm -rf "$tmp"
-
-      - name: Privacy gate — banlist-driven, fails closed if the banlist is missing
-        run: |
-          # Fail closed when the banned-terms input is absent (the skill's own rule).
-          test -f .banlist.txt || { echo "BLOCK: .banlist.txt missing -> failing closed"; exit 1; }
-          fail=0
-          while IFS= read -r pat; do
-            case "$pat" in ''|\#*) continue;; esac
-            # -l prints file names only: report the file, never echo the secret.
-            files=$(grep -rIlE --exclude-dir=.git --exclude=.banlist.txt "$pat" . 2>/dev/null || true)
-            if [ -n "$files" ]; then
-              echo "BLOCK: a banned pattern matched (content withheld); files:"
-              echo "$files" | sed 's/^/  /'
-              fail=1
-            fi
-          done < .banlist.txt
-          [ "$fail" -eq 0 ] && echo "privacy: clean"
-          exit $fail
