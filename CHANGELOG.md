@@ -3,7 +3,7 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
-## [1.13.0] — 2026-09-01
+## [1.13.0] — 2026-09-02
 
 A role-aware **software-house overlay** over the existing method, plus the repo's
 own gates re-homed into one fail-closed helper proven by a self-test harness.
@@ -38,14 +38,18 @@ domains through a delivery-role or security-team lens, it never adds or drops on
   missing, empty/comment-only, or malformed-ERE banlist while honouring an optional
   sibling `.banlist.local.txt`. Routing matches basenames **literally** (fixed-
   string) and flags dangling routes, with a non-failing size WARN.
-- `scripts/test-ci-gates.sh` — a **15-case RED/GREEN self-test harness** pinning
+- `scripts/test-ci-gates.sh` — a **16-case RED/GREEN self-test harness** pinning
   that helper's contract with real exit codes preserved: privacy (reject empty and
   all-comment banlists, detect a planted secret, reject an invalid ERE without
   disclosing banlist content, load the sibling local override), routing (reject
   unrouted, reject a regex-meta basename match, WARN on an oversized SKILL.md),
   version (reject malformed VERSION and a missing CHANGELOG heading), and install
   (overwrite a placeholder with the real vendored docs; **Claude**, **minimal**,
-  and **Codex** modes; collision-free backups on rapid repeated installs).
+  **Codex**, and **full** agent-agnostic default modes; **Codex/full** assert the
+  managed AGENTS.md block sentinels — `deep-code-review:begin`, `Installed:`,
+  `Agent-agnostic` — and **full** re-installs to prove exactly one idempotent
+  managed block, never a duplicate; collision-free backups on rapid repeated
+  installs).
 
 ### Changed
 - CI (`.github/workflows/ci.yml`) now runs the self-tests and then enforces the
@@ -59,7 +63,11 @@ domains through a delivery-role or security-team lens, it never adds or drops on
 - **Confidentiality scoped first- vs third-party** (principle 11): a project's
   intended-public identity (published maintainer/author, public repo URL) is not a
   leak, while drift beyond that stated-public surface is the finding; softened the
-  prose's unsupported scanner/breach claims to what the gate actually proves.
+  prose's unsupported scanner/breach claims to what the gate actually proves. The
+  project's own `CLAUDE.md` confidentiality rule is aligned to the same scoping so
+  the repo's governance and the skill it ships no longer disagree on first-party
+  identity (the repo dogfoods its own gate: `.banlist.txt` bans secrets + generic
+  patterns, real identifiers live in gitignored `.banlist.local.txt`).
 - README reference-file count → **20**.
 
 ## [1.12.0] — 2026-09-01

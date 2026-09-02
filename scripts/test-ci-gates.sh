@@ -251,6 +251,11 @@ fi
 
 # 2b) codex mode on a fresh destination installs the claude skill plus the
 #     cursor/agents/codex skill roots and leaves the managed AGENTS.md pointer.
+#     Assert the block sentinels install.sh actually writes — the
+#     `deep-code-review:begin` marker it keys its idempotent re-install replace
+#     on, plus the `Installed:` and `Agent-agnostic` lines — not merely that
+#     AGENTS.md is non-empty (a non-empty but unstamped file would still pass a
+#     bare `-s` check while breaking re-install).
 dest_codex="$WORK/dest-codex"
 mkdir -p "$dest_codex"
 gate "$GATES" install --src "$ROOT" --dest "$dest_codex" --mode codex
@@ -259,10 +264,40 @@ if [ "$GATE_RC" -eq 0 ] \
   && [ -e "$dest_codex/.cursor" ] \
   && [ -e "$dest_codex/.agents" ] \
   && [ -e "$dest_codex/.codex" ] \
-  && [ -s "$dest_codex/AGENTS.md" ]; then
-  record 0 "install: codex creates claude/cursor/agents/codex roots + AGENTS.md pointer"
+  && [ -s "$dest_codex/AGENTS.md" ] \
+  && grep -q 'deep-code-review:begin' "$dest_codex/AGENTS.md" \
+  && grep -q 'Installed:' "$dest_codex/AGENTS.md" \
+  && grep -q 'Agent-agnostic' "$dest_codex/AGENTS.md"; then
+  record 0 "install: codex creates claude/cursor/agents/codex roots + stamped AGENTS.md pointer"
 else
-  record 1 "install: codex creates claude/cursor/agents/codex roots + AGENTS.md pointer"
+  record 1 "install: codex creates claude/cursor/agents/codex roots + stamped AGENTS.md pointer"
+fi
+
+# 2c) full (agent-agnostic default) mode: the bare `install.sh TARGET` path the
+#     CI used to run first and the helper's own `full|default` branch — untested
+#     until now. It must create the claude + cursor + agents skill roots and a
+#     stamped AGENTS.md, but NOT the codex root. A second install must then leave
+#     exactly ONE managed block (idempotent replace via the marker), never a
+#     duplicate appended block — the same re-install hygiene the collision-free
+#     backup fix protects.
+dest_full="$WORK/dest-full"
+mkdir -p "$dest_full"
+gate "$GATES" install --src "$ROOT" --dest "$dest_full" --mode full
+rc_full_first=$GATE_RC
+gate "$GATES" install --src "$ROOT" --dest "$dest_full" --mode full
+n_blocks=0
+[ -f "$dest_full/AGENTS.md" ] && n_blocks="$(grep -c 'deep-code-review:begin' "$dest_full/AGENTS.md")"
+if [ "$rc_full_first" -eq 0 ] && [ "$GATE_RC" -eq 0 ] \
+  && [ -f "$dest_full/$skill_rel/SKILL.md" ] \
+  && [ -e "$dest_full/.cursor" ] \
+  && [ -e "$dest_full/.agents" ] \
+  && [ ! -e "$dest_full/.codex" ] \
+  && grep -q 'Installed:' "$dest_full/AGENTS.md" \
+  && grep -q 'Agent-agnostic' "$dest_full/AGENTS.md" \
+  && [ "$n_blocks" -eq 1 ]; then
+  record 0 "install: full default creates claude/cursor/agents (no codex) + one idempotent AGENTS.md block"
+else
+  record 1 "install: full default creates claude/cursor/agents (no codex) + one idempotent AGENTS.md block"
 fi
 
 # 3) rapid repeated installs create distinct backups of the prior skill.
