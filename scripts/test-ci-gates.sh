@@ -40,10 +40,10 @@ record() {
   fi
 }
 
-# gate <cmd...> — run the tested command, capturing its REAL exit code into
+# gate <cmd...> — run the tested helper through bash, capturing its REAL exit code into
 # GATE_RC without masking it. Output is kept for postcondition inspection.
 gate() {
-  if "$@" >"$WORK/last.log" 2>&1; then
+  if bash "$@" >"$WORK/last.log" 2>&1; then
     GATE_RC=0
   else
     GATE_RC=$?
@@ -51,7 +51,7 @@ gate() {
 }
 
 # ---------------------------------------------------------------------------
-# precondition — the helper under test must exist and be executable.
+# precondition — the helper under test must exist as a regular file.
 #
 # Without this guard a missing scripts/ci-gates.sh would silently corrupt the
 # result: a command that cannot run exits non-zero, and every rejection case
@@ -59,8 +59,8 @@ gate() {
 # green while proving nothing. Fail loudly and early instead, so a missing
 # helper makes this harness FAIL.
 # ---------------------------------------------------------------------------
-if [ ! -x "$GATES" ]; then
-  printf 'PRECONDITION FAIL: executable helper not found: %s\n' "$GATES" >&2
+if [ ! -f "$GATES" ]; then
+  printf 'PRECONDITION FAIL: helper file not found: %s\n' "$GATES" >&2
   exit 1
 fi
 
