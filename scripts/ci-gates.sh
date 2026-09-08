@@ -11,7 +11,7 @@
 # Subcommands:
 #   privacy --banlist <file> <path...>   scan paths for banned patterns (files only, never content)
 #   routing [--max-bytes N] <skill-dir>  every references/*.md routed from SKILL.md; size WARNs (non-failing)
-#   version <root>                       VERSION is semver and announced in CHANGELOG.md
+#   version <root>                       VERSION is byte-exact ASCII core semver; first CHANGELOG heading announces it
 #   install --src <dir> --dest <dir> --mode <claude|minimal|full|codex|overlays|recommend>
 #                                        run the real installer, then verify vendored docs are real (not placeholders)
 #
@@ -193,7 +193,7 @@ cmd_routing() {
 }
 
 # ---------------------------------------------------------------------------
-# version — VERSION is semver and the CHANGELOG announces it.
+# version — VERSION is byte-exact ASCII core semver; first CHANGELOG heading announces it.
 #
 # Accepts a flat fixture root (<root>/VERSION) or the real repo, where VERSION
 # lives nested in the skill and CHANGELOG.md sits at the repo root.
@@ -222,19 +222,30 @@ cmd_version() {
   local changelog="$root/CHANGELOG.md"
   [ -f "$changelog" ] || die "version: no CHANGELOG.md under $root (fail closed)"
 
+  # Validate raw bytes before converting them to a shell string. Bash command
+  # substitution cannot carry NUL; the hexadecimal representation can. This
+  # permits only ASCII core SemVer with no leading zero in any multi-digit part,
+  # plus one optional terminal LF. No normalization is performed.
+  local version_hex
+  version_hex="$(LC_ALL=C od -An -v -tx1 "$version_file" | tr -d '[:space:]')"
+  [[ "$version_hex" =~ ^(30|3[1-9](3[0-9])*)2e(30|3[1-9](3[0-9])*)2e(30|3[1-9](3[0-9])*)(0a)?$ ]] \
+    || die "version: VERSION must be byte-exact ASCII core semver with optional final LF"
+
+  # Safe only after raw-byte validation above: the input cannot contain NUL,
+  # whitespace except an optional terminal LF, or more than one line.
   local ver
-  ver="$(tr -d '[:space:]' < "$version_file")"
-  [ -n "$ver" ] || die "version: VERSION file is empty: $version_file"
+  ver="$(LC_ALL=C tr -d '\n' < "$version_file")"
   printf 'VERSION=%s (from %s)\n' "$ver" "$version_file"
 
-  printf '%s\n' "$ver" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$' \
-    || die "version: VERSION is not semver MAJOR.MINOR.PATCH: $ver"
-
-  # Match "## <ver>" or "## [<ver>]" with the version terminated by ']', space,
-  # or end of line, so 1.2.3 never matches a longer 1.2.30. Dots are escaped.
-  local ver_re="${ver//./\\.}"
-  grep -qE "^## \[?${ver_re}(\]| |\$)" "$changelog" \
-    || die "version: no CHANGELOG heading announces $ver in $changelog"
+  # The current release must be the first release heading. Searching later
+  # headings would allow stale changelog ordering to pass provenance checks.
+  local first_heading
+  first_heading="$(LC_ALL=C grep -m1 '^## ' "$changelog" || true)"
+  [ -n "$first_heading" ] || die "version: CHANGELOG has no release heading"
+  case "$first_heading" in
+    "## $ver"|"## $ver "*|"## [$ver]"|"## [$ver] "*) ;;
+    *) die "version: first CHANGELOG release heading does not announce $ver" ;;
+  esac
 
   printf 'version: ok (%s announced in CHANGELOG)\n' "$ver"
 }

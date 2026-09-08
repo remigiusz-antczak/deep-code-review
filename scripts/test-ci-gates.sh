@@ -175,7 +175,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# version — VERSION format and matching CHANGELOG heading
+# version — VERSION format and first CHANGELOG heading must announce it
 # ---------------------------------------------------------------------------
 
 vbad="$WORK/ver-malformed"
@@ -193,6 +193,58 @@ printf '# Changelog\n\n## 9.9.9 - earlier\n' >"$vnochg/CHANGELOG.md"
 
 gate "$GATES" version "$vnochg"
 if [ "$GATE_RC" -ne 0 ]; then record 0 "version: reject missing matching CHANGELOG heading"; else record 1 "version: reject missing matching CHANGELOG heading"; fi
+
+# Byte-exact release provenance contract. VERSION accepts only ASCII core SemVer
+# bytes with optional final LF; first CHANGELOG release heading must announce it.
+version_case() {
+  local label="$1" version_bytes="$2" changelog_text="$3" expect="$4" dir="$WORK/version-$1"
+  mkdir -p "$dir"
+  printf '%b' "$version_bytes" >"$dir/VERSION"
+  printf '%s' "$changelog_text" >"$dir/CHANGELOG.md"
+  gate "$GATES" version "$dir"
+  if [ "$expect" = reject ] && [ "$GATE_RC" -ne 0 ]; then
+    record 0 "version: reject $label"
+  elif [ "$expect" = accept ] && [ "$GATE_RC" -eq 0 ]; then
+    record 0 "version: accept $label"
+  else
+    record 1 "version: $expect $label"
+  fi
+}
+
+version_case "leading-zero major" '01.13.0\n' '# Changelog
+
+## [01.13.0] — test
+' reject
+version_case "NUL byte" '1.13.0\0\n' '# Changelog
+
+## [1.13.0] — test
+' reject
+version_case "embedded whitespace" '1. 13.0\n' '# Changelog
+
+## [1.13.0] — test
+' reject
+version_case "multiline VERSION" '1.\n13.0\n' '# Changelog
+
+## [1.13.0] — test
+' reject
+version_case "leading whitespace" '  1.13.0\n' '# Changelog
+
+## [1.13.0] — test
+' reject
+version_case "stale first release heading" '1.13.0\n' '# Changelog
+
+## [1.12.0] — stale
+
+## [1.13.0] — later
+' reject
+version_case "exact 1.13.0" '1.13.0\n' '# Changelog
+
+## [1.13.0] — current
+' accept
+version_case "no trailing LF" '1.13.0' '# Changelog
+
+## [1.13.0] — current
+' accept
 
 # ---------------------------------------------------------------------------
 # install — behaviour of the real installer against the real repo
