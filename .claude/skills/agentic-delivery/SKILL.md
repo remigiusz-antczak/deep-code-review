@@ -120,13 +120,14 @@ skill) — start at the stronger tier only when the lane's blast radius
 already calls for decorrelation (`idea-critic`'s high-blast rule), not by
 default; a cheaper tier that clears the gate is preferred.
 
-**An independent, empirical check on this shape:** a study of 1600+
-multi-agent traces across seven frameworks found real failures cluster
-into three named categories — system design issues, inter-agent
-misalignment, and task verification (under-specified tasks, agents
-stepping on each other, and results accepted without real verification, in
-plain terms). They map onto this roster's own gates without forcing a new
-one: system design issues → G0/G1, inter-agent misalignment → G2 and the
+**An independent, empirical check on this shape:** a 2025 study of 1600+
+multi-agent traces across seven frameworks (Cemri et al., "Why Do
+Multi-Agent LLM Systems Fail?") found real failures cluster into three
+named categories — system design issues, inter-agent misalignment, and
+task verification (under-specified tasks, agents stepping on each other,
+and results accepted without real verification, in plain terms). They map
+onto this roster's own gates without forcing a new one: system design
+issues → G0/G1, inter-agent misalignment → G2 and the
 worktree preflight, task verification → G5/G6. Read as confirmation the
 gate shape already covers the failure surface that actually occurs, not as
 a reason to add an eleventh gate.
