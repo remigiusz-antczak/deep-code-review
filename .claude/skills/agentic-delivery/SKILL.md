@@ -10,7 +10,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.23.0"
+  version: "1.24.0"
 ---
 
 # Agentic delivery
@@ -239,6 +239,14 @@ rule, and yesterday's number may not hold today.
   sibling) — frontier only where the blast radius already calls for
   decorrelation, not by default; and whether a heavy gate runs locally at
   all or waits for CI/a shared runner when local capacity is short.
+- **A composite predicate beats a single free-RAM check.** Spawn another heavy
+  lane only while free RAM >15% AND `load1 < cores × 1.3` (host load average
+  against core count: `sysctl -n vm.loadavg`/`uptime` vs. `nproc`/`sysctl -n
+  hw.ncpu`) AND CPU idle >25% (`top -l 1 -n 0` on macOS, `mpstat`/`top`
+  elsewhere) — on macOS also read `sysctl vm.swapusage`, since swap pressure
+  can be live while free RAM still looks fine. Throttle the instant any one of
+  the three trips; the numbers are a starting rule of thumb to recalibrate on
+  the host in front of you, not a constant to port unchanged.
 - **Shell semantics belong to the probe, not to guesswork mid-script.** Know
   which shell will actually run a script before writing a list-membership or
   exclusion check in it — `branch-and-merge-hygiene.md` §6 has the concrete

@@ -3,6 +3,23 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.24.0] — 2026-09-08
+
+Cost-governance leftover from colliding PR #13, restamped onto
+current main so it does not reuse shipped 1.22.0 / 1.23.0.
+
+### Added
+- **`model-tiering.md`**: default-and-ceiling callout — cheapest tier
+  that clears its own gate; state a reason before exceeding frontier
+  except lead-verify / adversarial-design.
+- **`agentic-delivery` environment probe**: composite resource
+  predicate (free RAM >15% AND load1 < cores × 1.3 AND CPU idle >25%,
+  plus macOS swap check). Throttle when any one trips.
+
+### Changed
+- Overlay `VERSION` files, the three `SKILL.md` stamps, and the
+  plugin manifest follow **1.24.0**.
+
 ## [1.23.0] — 2026-09-08
 
 Discipline and compatibility cut. Mechanisms, not packs. Default
