@@ -103,6 +103,14 @@ review time, not a PRD.
 - **Success metric defined and measurable.** "How will we know it worked?" ties
   to D (data quality) / J (evals). A feature with no observable success signal
   can't be judged to have shipped value.
+- **The metric must trace to an actual emitter, not just a doc.** A stated
+  success metric is a **goal**; it must name a **signal** (a real, observable
+  user action or event) that is **actually instrumented** — a specific emitting
+  `file:line` in the diff, or an already-existing one you cite. A metric with no
+  traceable emitter is `unverified`, exactly parallel to "an SLI defined only in
+  a doc is `unverified`" below — this is the same rule applied to product truth
+  instead of system health, and it closes the loop between speccing a metric and
+  the code actually producing it, not a new measurement philosophy.
 - **Prioritization mirrors severity discipline.** Must-have vs nice-to-have maps
   onto the severity rubric; a nice-to-have gap is a Low/Nit, never a Blocker.
 - **Product ideas are owner decisions.** Redesign/scope proposals go under
@@ -130,8 +138,12 @@ An SLO with no SLI you actually measure is aspirational — hold it to principle
 - **Burn-rate alerting beats a static threshold.** Prefer **multi-window,
   multi-burn-rate** alerts — a fast burn (large budget fraction in a short window)
   **pages**; a slow burn (smaller fraction over a long window) **tickets** — so a
-  single static line doesn't both miss slow erosion and page on noise. Alerts on
-  the control path route above the limiter (F).
+  single static line doesn't both miss slow erosion and page on noise (Google SRE
+  workbook, "Alerting on SLOs" — `docs/standards-index.md`; e.g. for a 99.9% SLO,
+  page at a 14.4× burn over 1h/5m windows, page at 6× over 6h/30m, ticket at 1×
+  over 3d/6h — a short window exists so the alert clears minutes after the issue
+  resolves rather than staying hot on stale data). Alerts on the control path
+  route above the limiter (F).
 - **Toil & rollback.** A documented, *tested* rollback path (cross-ref E
   migrations, F) and a clean no-op degrade without each credential (N) are part of
   the reliability contract, not extras.

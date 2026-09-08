@@ -117,7 +117,9 @@ the detected model (§2) — `develop` under git-flow, else the default branch.
    (local `git branch -d`; remote `git push origin --delete <b>`; local `[gone]`
    ref → `git fetch --prune` already flagged it). `-d` refuses if git thinks it's
    unmerged — for a confirmed squash-merge use `-D` **only after** the forge
-   confirms the merge.
+   confirms the merge. **Before any delete, check for a stacked PR first**
+   (§6) — a branch can be safely merged-away by every check above and still be
+   the *base* of another open PR.
 2. **Never pushed and holds unique commits (only copy)** → **push first**
    (`git push -u origin <b>`) so it's recoverable, *then* apply the rest of the
    tree. Never delete an unpushed unique branch (§6).
@@ -171,6 +173,32 @@ against the latest base so the branch is never broken by incompatible changes �
 recommend it instead of racing merges. Never recommend a direct push to a
 protected default branch (`SKILL.md` Phase 5).
 
+### Merge trains — landing several ready PRs without a platform merge queue
+
+When several independently-green PRs are ready at once and no merge queue is
+available, merging one at a time and waiting for the base's CI between each
+serializes for no benefit — the base was already known-green before each
+subsequent PR's own checks ran. A **merge train** verifies the *combination*
+once instead:
+
+1. Build a **throwaway integration branch** off the target with every
+   candidate PR's head merged in. Resolve any collision **keep-both**, never
+   dropping one side — a generated/compiled-file collision follows §6's
+   regenerate-don't-hand-splice rule.
+2. Run the **full aggregate gate once** on that union. Green means the combined
+   tree is sound.
+3. Merge the member PRs **individually and back-to-back**, preserving each
+   one's own commits and issue-closing keyword. **Never squash the union into
+   one commit** — that orphans every member PR's own issue and review thread
+   instead of closing them.
+4. Discard the integration branch; it is never itself merged.
+
+**Sequence a gate-adding PR last within the batch.** A PR that adds a new
+required gate, merged first, forces every other PR in the batch to retrofit a
+gate that didn't exist when it was authored — extra round-trips for no benefit.
+When triaging several ready branches at once, check whether any changes
+required-CI/gate configuration and put it at the back of the landing order.
+
 ## 6 — Safety rails (acting on the triage is destructive / shared-state)
 
 Triage is **advice**; carrying it out mutates shared state. Under `SKILL.md`
@@ -182,6 +210,26 @@ explicit approval** — the same opt-in bar as the Phase 6 imprint.
   nowhere else is irreversible data loss. Gate every delete on "content is in the
   target (§3 confirmed) **or** it's tagged/pushed elsewhere." Prefer
   **tag-then-delete** so any delete is reversible.
+- **A branch can be safely merged-away and still be another PR's base — check
+  before deleting *any* branch, even a confirmed-merged one.** If another open
+  PR uses this branch as its **base** (a stacked PR reviewing changes on top of
+  an unmerged branch), deleting the base auto-closes the stacked PR on most
+  forges, with no reopen/retarget once the base ref is gone — even though the
+  underlying commits may survive a while in reflog/backup. Check first:
+  `gh pr list --state open --base <branch>`. If any exist, retarget them
+  (`gh pr edit <n> --base <new-base>`) or get explicit confirmation that losing
+  that PR's thread is acceptable — every time, not only when a stack is
+  suspected.
+- **Never hand-resolve a merge conflict inside a generated/compiled file.**
+  When two branches both regenerate the same derived artifact (a build output,
+  a compiled config, a generated manifest/index) and a merge conflicts inside
+  it, take either side, then **re-run the generator** against the merged source
+  inputs — never hand-splice the two conflicting versions. A hand-merged
+  generated file can be syntactically valid and still contain a combination no
+  run of the generator would ever produce, and the corruption is often silent
+  until a much later read (cross-ref domain H: a generated/source pair needs a
+  parity test or a single generated source so this doesn't drift over time —
+  this is the same failure at the moment of a merge conflict, not over time).
 - **Never rewrite shared history.** Rebase/force-push only branches that are
   personal and undepended-on. When a force is genuinely needed, it is
   **`git push --force-with-lease`** (refuses if the remote moved under you), never
@@ -193,6 +241,35 @@ explicit approval** — the same opt-in bar as the Phase 6 imprint.
   not `git push --delete`. Flag this as its own line, never "delete fixes it."
 - **Remote deletes and history rewrites are confirmed, explicit, one at a time** —
   no batch `--delete` of a list the user hasn't seen and approved.
+- **Gate an irreversible command on the verdict string, not just "ran" — and
+  make sure a list-membership guard actually checks the list.** Two related
+  failure shapes, both "the guard didn't guard because the shell's real
+  semantics differ from the author's mental model":
+  - A preflight/safety script's *contract* is often to print a pass/fail
+    verdict while still exiting 0 (so a human watching sees the message) — or
+    its exit code is checked but the next command runs unconditionally
+    regardless. `./preflight.sh; ./publish.sh` (a bare `;`, or two unconditional
+    steps) fires the irreversible command whether or not the gate passed. Before
+    recommending or running a merge/delete/publish/deploy command, confirm the
+    preceding gate's **documented pass condition** (an exact string and/or exit
+    code checked with `&&`/`if`), not merely that it ran without erroring.
+  - A **safety-critical exclusion list** (a held/blocked/do-not-merge set) is
+    commonly checked with `for x in $LIST; do [ "$x" = "$item" ] && skip; done`
+    — this silently breaks under any shell where an unquoted `$LIST` does not
+    word-split (zsh, by default, does not; `for x in $LIST` then iterates
+    **once** with `x` bound to the whole string, so the comparison almost never
+    matches and the exclusion never fires). A script that is meant to run in
+    "the reviewer's shell" cannot assume bash's word-splitting semantics. Use a
+    **literal `case`/explicit split** instead — `case "$item" in
+    id1|id2|id3) skip ;; esac`, or a line-based exact match
+    (`printf '%s\n' "$LIST" | grep -qxF "$item"`) — for any exclusion check
+    that gates an irreversible or shared-state action (a held-PR exclusion in a
+    merge script is the canonical instance: a silently-broken guard here
+    doesn't fail loud, it just merges the thing that was supposed to be
+    excluded). Detector: grep scripts/CI config for a for-loop iterating an
+    unquoted variable immediately followed by a merge/delete/publish/deploy
+    call, and confirm the loop actually iterates more than once against a
+    multi-item fixture in the shells the script claims to support.
 
 ## 7 — Severity discipline (don't turn cleanup into noise)
 
@@ -218,6 +295,24 @@ the triage table**; escalate a branch to its own finding only on consequence:
 
 Never let the volume of routine branch cleanup outrank a real defect.
 
+## 8 — Spike / prototype branches (a naming convention, not a new gate)
+
+A deliberately fidelity-capped, disposable-by-construction exploration (Shape
+Up's breadboard/fat-marker-sketch idea, applied to code instead of design) is
+cheap to discard *if it's marked as one before it's built*. This rides the
+branch-pattern logic this domain already owns — not a new file, not a new gate:
+
+- **Gate:** a branch matching a spike/prototype naming convention (`spike/*`,
+  `prototype/*`, or the project's own documented equivalent) declares its
+  timebox and throwaway status (in the branch's first commit message or a
+  linked issue), and never merges to the target **as-is** — it is rewritten to
+  production quality or explicitly "graduated" (renamed/re-based onto a normal
+  feature branch) first. **Trigger:** branch-name pattern match only, at merge
+  time — never fires on an ordinary feature branch. **Owning hat:** Release &
+  docs (this domain already owns branch triage).
+- **Planted-defect test:** a `spike/foo` branch merged directly to the target
+  with no rewrite and no graduation marker → the gate flags it.
+
 ## Triage table (the deliverable — emitted in the report)
 
 ```
@@ -242,6 +337,19 @@ squash). Mark any PR column `unverified` when forge auth was absent (§1).
   squash (the §3 trap) — a fabricated, conflict-generating finding.
 - `git push --force` (not `--force-with-lease`) anywhere near a shared branch.
 - "Just delete the branch" offered as the fix for a leaked secret.
+- A branch deleted with no check for a stacked PR using it as base.
+- A generated/compiled-file merge conflict resolved by hand-splicing instead of
+  regenerating from the merged source inputs.
+- A runbook/script chaining a preflight and an irreversible command with a bare
+  `;` (or two unconditional steps) instead of the preflight's documented pass
+  condition.
+- A safety-critical exclusion/allowlist check built on an unquoted
+  `for x in $VAR` loop with no verification it actually iterates per-item in
+  the shells the script claims to support.
+- A `spike/*`/`prototype/*` branch merged to the target as-is, with no rewrite
+  and no graduation marker.
+- A merge-train batch landing a gate-adding PR before the PRs it would force to
+  retrofit that gate.
 
 ## Cross-references
 

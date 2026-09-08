@@ -118,6 +118,25 @@ labels group on a primary flow is Medium–High; phrasing drift is Low.
 > control in HTML"), so a gate flagging them is stricter than the standard —
 > narrow it, don't weaken the real check (SKILL.md Phase 1, gate-vs-standard).
 
+## Drawer / filter / detail state should be URL-backed
+
+Whatever a drawer, filter, or detail view represents should be bound to the
+URL (`searchParams`/`router.query`/equivalent), not held only in component
+memory (`useState`). State that lives only in memory silently resets on
+refresh, Back, or a shared link — the user reopens the exact page and lands on
+the bare list, because the open item's id was never anywhere but memory. This
+is distinct from *whether* a detail view should overlay vs. navigate (a
+product-intent call for `product-ux-quality.md`'s drawers-overlay rule); this
+is about the state **surviving** navigation once the surface exists, and it is
+mechanically checkable: does the component that holds the open/selected/filter
+state also read and write the URL, and does the state actually survive a
+reload.
+
+**🚩 grep**: a drawer/detail/filter component whose expanded or selected id
+lives only in `useState`/component memory, with no corresponding
+`useSearchParams`/`router.query` read or write nearby. Confirm live: open the
+state, reload the page, verify it survives.
+
 ## Reliability & performance (Core Web Vitals)
 
 - **LCP** (loading) ≤ 2.5 s, **INP** (interactivity — replaced FID in 2024)

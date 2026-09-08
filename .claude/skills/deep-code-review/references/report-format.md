@@ -46,6 +46,15 @@ Counts: Blocker N · Critical N · High N · Medium N · Low N · Nit N
   (CI-only, intermittent, environment-specific), and name what would prove it (the
   failing seed, the constrained repro, the assertion that fails red first).
 
+**The same evidence bar extends to status reporting, not only fix-closure.**
+"N agents are working on this" or "should be fixed now," said before any lane
+has produced a verified, green result, overstates progress the same way a
+`mechanism-unproven` fix would if reported as simply "fixed." A task is
+*running* until it has a green PR, a passing test you personally ran, or a
+browser-verified change — report that state honestly, not as progress toward
+done. Completion language ("fixed", "done", "shipped") with no citation (a PR
+link, a run URL, a commit SHA, a screenshot) in the same message is the smell.
+
 ## Invariants verified to hold (affirmative — co-equal with Findings)
 | Invariant | Where proven | What proves it | Confidence |
 |-----------|--------------|----------------|------------|

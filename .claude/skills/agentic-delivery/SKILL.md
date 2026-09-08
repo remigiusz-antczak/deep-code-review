@@ -10,7 +10,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.18.0"
+  version: "1.19.0"
 ---
 
 # Agentic delivery
@@ -83,6 +83,55 @@ Builder never reviews builder. Architect, UX & Design, Release, and Docs
 fire from the same risk triggers — `references/roles.md` maps each to its
 gate and its review lens.
 
+### Conductor operating rhythm
+
+The Conductor's attention is **event-driven, not polled.** It is triggered
+by exactly four things: a lane blocking a gate, a lane returning a receipt
+(the output contract, at an exact SHA), a lane exceeding its stated
+time/cost budget, or a preflight collision (*Worktrees and occupancy*,
+below). Between those events the Conductor does not read a lane's raw
+tool-call transcript and does not do the lane's work itself — it reads
+status only, the same way a subagent's own context stays isolated from its
+parent's (a worker "returns only a condensed, distilled summary of its
+work," however much it explored to get there — Anthropic, context
+engineering for AI agents).
+
+**Size the fan-out to the decomposition, not to available concurrency.** A
+lead that hands out vague, overlapping instructions gets duplicated work,
+not more coverage — subagents given no clear boundary have been observed
+independently re-investigating the same ground (Anthropic, multi-agent
+research system). Default tiers: a single fact/lookup needs one lane; a
+bounded comparison needs 2-4; only a genuinely decomposable task graph
+justifies 10+, and each of those needs its own objective, output format,
+and explicit boundary against its siblings. Never spawn more lanes than
+there are independently-verifiable objectives — spawning dozens of
+subagents for a simple query is a named failure mode, not a hypothetical
+one. **Pilot before full fan-out:** on a wide, mechanical batch, run a
+handful of lanes first, fix what the pilot exposes, then commit the rest
+of the width — cheaper than discovering a bad task boundary after the full
+width is already running.
+
+**Escalate a lane, don't just retry it.** After two equivalent failures on
+the same lane, change approach — not the same fix again (*Failure*,
+below). "Change approach" in order of cost: reframe the task boundary,
+decorrelate (fresh context or a different model), or move the lane to a
+strictly stronger model tier (`model-tiering.md` in the `deep-code-review`
+skill) — start at the stronger tier only when the lane's blast radius
+already calls for decorrelation (`idea-critic`'s high-blast rule), not by
+default; a cheaper tier that clears the gate is preferred.
+
+**An independent, empirical check on this shape:** a 2025 study of 1600+
+multi-agent traces across seven frameworks (Cemri et al., "Why Do
+Multi-Agent LLM Systems Fail?") found real failures cluster into three
+named categories — system design issues, inter-agent misalignment, and
+task verification (under-specified tasks, agents stepping on each other,
+and results accepted without real verification, in plain terms). They map
+onto this roster's own gates without forcing a new one: system design
+issues → G0/G1, inter-agent misalignment → G2 and the
+worktree preflight, task verification → G5/G6. Read as confirmation the
+gate shape already covers the failure surface that actually occurs, not as
+a reason to add an eleventh gate.
+
 ---
 
 ## Gates (G0–G10)
@@ -92,20 +141,24 @@ independent verification or a human approval that actually applies.
 
 | Gate | Input | Required output | Hard condition |
 |---|---|---|---|
-| G0 Intake | Owner goal | Brief | Goals, non-goals, constraints; `idea-critic` on any agent-originated approach before the owner sees it |
+| G0 Intake | Owner goal | Brief | Goals, non-goals, constraints, and **appetite** (a stated time-box, not an estimate — Shape Up: "Appetites start with a number and end with a design"); `idea-critic` on any agent-originated approach before the owner sees it |
 | G1 Spec | Brief | Testable spec | Acceptance criteria; names `deep-code-review` scope and pinned base SHA |
-| G2 Plan | Spec | Acyclic work graph | Role triggers, one writer per worktree |
-| G3 Design | Graph | ADRs / contracts | Interfaces, NFR budgets, data/security decisions explicit |
+| G2 Plan | Spec | Acyclic work graph | Role triggers, one writer per worktree; **every lane with a paid model call names a per-lane token/dollar budget before G4 starts — no budget set is blocked, not unlimited** (mirrors the review bar's own LLM10 / `spend-cap` invariants back onto this skill: a cap that defaults to off is not a cap) |
+| G3 Design | Graph | ADRs / contracts | Interfaces, NFR budgets, data/security decisions explicit. Shape: `template-adr.md` |
 | G4 Implement | Work packets | Patch/commit per lane | Tests before or with the change; packet names review skill + immutable base SHA |
 | G5 Verify | Exact revision | Test receipts | **Local stack up** (project's one-command / compose / devcontainer) then build, lint, type, unit, and applicable integration/E2E **green at that SHA**. A gate that never started the app is `UNVERIFIED`, not pass |
 | G6 Review | Exact revision + receipts | `deep-code-review` + QA + security verdicts | Independent of the builder; no unresolved Blocker/High/Medium |
 | G7 Integrate | Accepted lanes | Integration receipt + `deep-code-review DIFF` | One integration owner; rerun affected gates on the exact final SHA |
 | G8 Release | Exact integrated SHA | Release manifest | Rollback proven; **owner approves** outward/production action |
 | G9 Production verify | Deployed SHA | Verification receipt | Served behaviour and SLOs; rollback on breach |
-| G10 Learn | Receipts | Retrospective | Escaped gap → regression test in this repo. Reusable lesson is generalized and stripped of third-party identifiers before it leaves the project |
+| G10 Learn | Receipts | Retrospective | Escaped gap → regression test in this repo. Reusable lesson is generalized and stripped of third-party identifiers before it leaves the project. Mandatory-trigger criteria, blameless shape, and the action-item-closure gate: `retrospective.md` + `template-postmortem.md` |
 
 **Missing evidence is `UNVERIFIED`, never pass. Missing price is
-`UNPRICED`, never zero.**
+`UNPRICED`, never zero. Missing spend cap is `BLOCKED`, never unlimited** —
+`UNPRICED` is a labeling rule (report the cost honestly); the G2 budget
+above is the bound itself, and the two are not substitutes for each other.
+Model-tier selection (which tier a lane runs on, and when to escalate) is
+`model-tiering.md` in the `deep-code-review` skill.
 
 ---
 
