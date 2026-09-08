@@ -184,13 +184,13 @@ footguns: `references/language-stack-redflags.md`.
 | B | AppSec (OWASP Top 10:2025) | `security-appsec.md` |
 | C | AI / LLM / agents | `security-ai-agents.md` |
 | D | Data integrity | `data-quality.md` |
-| E | Performance, efficiency & cost | `performance-db-cost.md` |
+| E | Performance, efficiency & cost | `performance-db-cost.md`, `model-tiering.md` |
 | F | Reliability & error handling | `reliability-error-handling.md` |
 | G | Concurrency & shared state | `concurrency-shared-state.md` |
 | H | Tech debt, dead code, maintainability | `domain-checklists.md` |
 | I | API, contracts, integration | `api-contracts.md` |
 | J | Testing & evaluation | `testing-and-evals.md` |
-| K | Build, CI, supply chain, release | `dependency-currency-and-upgrades.md` |
+| K | Build, CI, supply chain, release | `dependency-currency-and-upgrades.md`, `release-engineering.md` |
 | L | Infra / IaC / containers / cloud | `infra-iac-containers.md` |
 | M | Observability | `observability.md` |
 | N | Config, secrets, environments | `domain-checklists.md` |
