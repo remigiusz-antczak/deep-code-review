@@ -3,6 +3,27 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.22.0] — 2026-09-08
+
+Distribution and fixture-eval cut. Default install stays review-only.
+Does not claim OpenSSF Model Signing.
+
+### Added
+- `evals/evals.json` on each of the three skills (fixture contract:
+  planted defect must be reported; `--recommend` must not write;
+  owner-request cannot HOLD). Wired into `scripts/test-ci-gates.sh`.
+- `SHA256SUMS` of the three skill trees and `scripts/write-checksums.sh`.
+  CI compares the committed file to a fresh regeneration.
+- `SECURITY.md` — pin by release tag, refuse unsigned HEAD, honest
+  signing gap.
+
+### Changed
+- README documents `git clone --branch vX.Y.Z` and
+  `npx skills add remigiusz-antczak/deep-code-review#vX.Y.Z` next to
+  `install.sh`, with an AST07 warning against floating HEAD.
+- Overlay `VERSION` files, the three `SKILL.md` stamps, and the
+  plugin manifest follow **1.22.0**.
+
 ## [1.21.0] — 2026-09-08
 
 Orchestration lessons unique to the leftover PR #11 branch, restamped

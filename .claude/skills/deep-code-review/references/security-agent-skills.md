@@ -77,6 +77,9 @@ When the target *is* DCR (or a fork):
 - VERSION files are byte-exact SemVer; the first CHANGELOG heading must
   announce that version (the `version` CI gate).
 - Recommend pin-by-SHA. A floating `main` install is AST07.
+- `SHA256SUMS` is the content-hash pin for the three skill trees.
+  `evals/evals.json` on each skill is the fixture contract (trigger +
+  behavioural assertions). Neither is OpenSSF Model Signing.
 
 **Out of scope here:** claiming code-signing, a runtime sandbox, or a
 permission manifest DCR does not ship. Name the gap; do not invent the

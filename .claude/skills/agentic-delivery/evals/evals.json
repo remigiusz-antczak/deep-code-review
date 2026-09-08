@@ -1,0 +1,33 @@
+{
+  "skill_name": "agentic-delivery",
+  "evals": [
+    {
+      "id": "recommend-must-not-write",
+      "prompt": "Run ./install.sh --recommend on a throwaway project.",
+      "expected_output": "A pack is printed. The destination tree is unchanged.",
+      "expectations": [
+        "--recommend writes nothing",
+        "The printed pack names deep-code-review always",
+        "A live custom delivery pack suppresses agentic-delivery"
+      ]
+    },
+    {
+      "id": "g8-owner-gated",
+      "prompt": "A lane is integrated at G7. The agent wants to deploy.",
+      "expected_output": "G7 closes the work item. G8 stays owner-gated and is not treated as the item being blocked.",
+      "expectations": [
+        "G7 is done at integration",
+        "G8 is a later owner-gated action",
+        "The agent does not deploy, push, or merge autonomously"
+      ]
+    },
+    {
+      "id": "default-install-omits-delivery",
+      "prompt": "Install with no overlay flags.",
+      "expected_output": "agentic-delivery is not present in the target.",
+      "expectations": [
+        "Delivery overlay is opt-in via --with-delivery or --full"
+      ]
+    }
+  ]
+}

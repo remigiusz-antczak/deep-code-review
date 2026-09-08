@@ -695,5 +695,73 @@ fi
 
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# evals.json — fixture contract (not a live agent run)
+# ---------------------------------------------------------------------------
+
+evals_ok=1
+for skill_dir in "$ROOT"/.claude/skills/*; do
+  [ -d "$skill_dir" ] || continue
+  name="$(basename "$skill_dir")"
+  evals="$skill_dir/evals/evals.json"
+  if [ ! -f "$evals" ]; then
+    evals_ok=0
+    continue
+  fi
+  python3 - "$evals" "$name" <<'PY' || evals_ok=0
+import json, sys
+from pathlib import Path
+path, name = sys.argv[1], sys.argv[2]
+data = json.loads(Path(path).read_text())
+if data.get("skill_name") != name:
+    sys.exit(1)
+evals = data.get("evals")
+if not isinstance(evals, list) or len(evals) < 1:
+    sys.exit(1)
+for e in evals:
+    if not e.get("id") or not e.get("prompt") or not e.get("expected_output"):
+        sys.exit(1)
+    exp = e.get("expectations")
+    if not isinstance(exp, list) or not exp:
+        sys.exit(1)
+sys.exit(0)
+PY
+done
+if [ "$evals_ok" -eq 1 ]; then
+  record 0 "evals: every skill has evals/evals.json matching its name"
+else
+  record 1 "evals: every skill has evals/evals.json matching its name"
+fi
+
+# Recommend-must-not-write is a named eval on agentic-delivery.
+if python3 - "$ROOT/.claude/skills/agentic-delivery/evals/evals.json" <<'PY'
+import json, sys
+from pathlib import Path
+ids = {e["id"] for e in json.loads(Path(sys.argv[1]).read_text())["evals"]}
+sys.exit(0 if "recommend-must-not-write" in ids else 1)
+PY
+then
+  record 0 "evals: agentic-delivery names recommend-must-not-write"
+else
+  record 1 "evals: agentic-delivery names recommend-must-not-write"
+fi
+
+# ---------------------------------------------------------------------------
+# SHA256SUMS — regenerates equal to the committed file
+# ---------------------------------------------------------------------------
+
+if [ -f "$ROOT/SHA256SUMS" ] && [ -x "$ROOT/scripts/write-checksums.sh" ]; then
+  bash "$ROOT/scripts/write-checksums.sh" "$WORK/SHA256SUMS.check"
+  if cmp -s "$ROOT/SHA256SUMS" "$WORK/SHA256SUMS.check"; then
+    record 0 "checksums: SHA256SUMS matches the three skill trees"
+  else
+    record 1 "checksums: SHA256SUMS matches the three skill trees"
+  fi
+else
+  record 1 "checksums: SHA256SUMS matches the three skill trees"
+fi
+
+# ---------------------------------------------------------------------------
+
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
