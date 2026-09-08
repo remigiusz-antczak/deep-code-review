@@ -404,6 +404,147 @@ else
   record 1 "recommend: archive superpowers is not a live delivery pack"
 fi
 
+# 8) --recommend also treats a live CUSTOM delivery pack (a gated-delivery skill
+#    under a live skill root, or an already-installed agentic-delivery) as
+#    another delivery OS, so --full does not stack a second one. A live
+#    review-only skill and archived delivery notes must NOT suppress. A SKILL.md
+#    that is a symlink or a FIFO must be skipped (no hang, no out-of-tree read).
+#    Fictional skill names only (factory / security-review); no real product names.
+python3 - "$ROOT/scripts/recommend-overlays.py" "$WORK" <<'PY' || true
+import importlib.util, sys, json, os, signal
+from pathlib import Path
+mod_path = Path(sys.argv[1])
+work = Path(sys.argv[2])
+spec = importlib.util.spec_from_file_location("recommend", mod_path)
+mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
+
+def skill(root, rel, body):
+    p = root / rel
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(body)
+
+# A) live custom delivery skill under .claude/skills/ — must suppress.
+a = work / "cust-deliver"
+skill(a, ".claude/skills/factory/SKILL.md",
+      "---\nname: factory\n"
+      "description: Gated multi-role delivery overlay — software-house pattern, "
+      "gates G0 through G10, one writer per worktree.\n---\n"
+      "# Factory\nA gated delivery OS. G0 intake, G10 learn; independent QA and security.\n")
+(a / "package.json").write_text("{}\n")
+Path(work / "rec-cust-deliver.json").write_text(json.dumps(mod.recommend(a)))
+
+# B) live review-only skill under .claude/skills/ — must NOT suppress.
+b = work / "cust-review"
+skill(b, ".claude/skills/security-review/SKILL.md",
+      "---\nname: security-review\n"
+      "description: Audit code for vulnerabilities and unsafe patterns; produce a "
+      "findings report. Read-only.\n---\n"
+      "# Security Review\nAn audit skill. Inspect auth, input handling, and "
+      "dependencies. A review of code, not a pipeline that builds or releases it.\n")
+(b / "package.json").write_text("{}\n")
+Path(work / "rec-cust-review.json").write_text(json.dumps(mod.recommend(b)))
+
+# C) already-installed agentic-delivery stub — counts as a live delivery pack.
+c = work / "cust-installed"
+skill(c, ".claude/skills/agentic-delivery/SKILL.md",
+      "---\nname: agentic-delivery\ndescription: Gated delivery overlay "
+      "(installed stub).\n---\n# Agentic Delivery\nInstalled delivery overlay.\n")
+(c / "package.json").write_text("{}\n")
+Path(work / "rec-cust-installed.json").write_text(json.dumps(mod.recommend(c)))
+
+# D) archived custom delivery notes under docs/ — must NOT count (no live path).
+d = work / "cust-archive"
+skill(d, "docs/factory/SKILL.md",
+      "---\nname: factory\ndescription: Gated delivery overlay notes — "
+      "software-house pattern, G0 through G10.\n---\n# Factory (archived)\n"
+      "Old gated delivery plans. software-house pattern, shipping loop.\n")
+(d / "package.json").write_text("{}\n")
+Path(work / "rec-cust-archive.json").write_text(json.dumps(mod.recommend(d)))
+
+# E) SKILL.md is a symlink to a delivery-named file — must skip (F1).
+e = work / "cust-symlink"
+skill_dir = e / ".claude" / "skills" / "factory"
+skill_dir.mkdir(parents=True, exist_ok=True)
+outside = work / "cust-symlink-outside.md"
+outside.write_text("---\nname: factory\ndescription: software-house gated delivery G0 G10.\n---\n")
+(skill_dir / "SKILL.md").symlink_to(outside)
+(e / "package.json").write_text("{}\n")
+Path(work / "rec-cust-symlink.json").write_text(json.dumps(mod.recommend(e)))
+
+# F) SKILL.md is a FIFO — must skip without hanging (F1). Alarm so a missing
+#    is_file() guard cannot stall CI.
+f = work / "cust-fifo"
+fifo_dir = f / ".claude" / "skills" / "factory"
+fifo_dir.mkdir(parents=True, exist_ok=True)
+os.mkfifo(fifo_dir / "SKILL.md")
+(f / "package.json").write_text("{}\n")
+class _FifoHang(Exception):
+    pass
+def _alarm(_signum, _frame):
+    raise _FifoHang("FIFO open hung")
+signal.signal(signal.SIGALRM, _alarm)
+signal.alarm(2)
+try:
+    rec_f = mod.recommend(f)
+    fifo_ok = True
+except _FifoHang:
+    rec_f = {"other_delivery": None, "skills": []}
+    fifo_ok = False
+finally:
+    signal.alarm(0)
+rec_f["_fifo_ok"] = fifo_ok
+Path(work / "rec-cust-fifo.json").write_text(json.dumps(rec_f))
+PY
+
+if python3 - "$WORK/rec-cust-deliver.json" <<'PY'
+import json, sys
+from pathlib import Path
+r = json.loads(Path(sys.argv[1]).read_text())
+sys.exit(0 if (r.get("other_delivery") is True and "agentic-delivery" not in r.get("skills", [])) else 1)
+PY
+then record 0 "recommend: live custom delivery skill suppresses agentic-delivery"; else record 1 "recommend: live custom delivery skill suppresses agentic-delivery"; fi
+
+if python3 - "$WORK/rec-cust-review.json" <<'PY'
+import json, sys
+from pathlib import Path
+r = json.loads(Path(sys.argv[1]).read_text())
+sys.exit(0 if (r.get("other_delivery") is False and "agentic-delivery" in r.get("skills", [])) else 1)
+PY
+then record 0 "recommend: live review-only skill does not suppress agentic-delivery"; else record 1 "recommend: live review-only skill does not suppress agentic-delivery"; fi
+
+if python3 - "$WORK/rec-cust-installed.json" <<'PY'
+import json, sys
+from pathlib import Path
+r = json.loads(Path(sys.argv[1]).read_text())
+sys.exit(0 if (r.get("other_delivery") is True and "agentic-delivery" not in r.get("skills", [])) else 1)
+PY
+then record 0 "recommend: installed agentic-delivery counts as a live delivery pack"; else record 1 "recommend: installed agentic-delivery counts as a live delivery pack"; fi
+
+if python3 - "$WORK/rec-cust-archive.json" <<'PY'
+import json, sys
+from pathlib import Path
+r = json.loads(Path(sys.argv[1]).read_text())
+sys.exit(0 if (r.get("other_delivery") is False and "agentic-delivery" in r.get("skills", [])) else 1)
+PY
+then record 0 "recommend: archived custom delivery notes do not count"; else record 1 "recommend: archived custom delivery notes do not count"; fi
+
+if python3 - "$WORK/rec-cust-symlink.json" <<'PY'
+import json, sys
+from pathlib import Path
+r = json.loads(Path(sys.argv[1]).read_text())
+sys.exit(0 if (r.get("other_delivery") is False and "agentic-delivery" in r.get("skills", [])) else 1)
+PY
+then record 0 "recommend: SKILL.md symlink is skipped"; else record 1 "recommend: SKILL.md symlink is skipped"; fi
+
+if python3 - "$WORK/rec-cust-fifo.json" <<'PY'
+import json, sys
+from pathlib import Path
+r = json.loads(Path(sys.argv[1]).read_text())
+sys.exit(0 if (r.get("_fifo_ok") is True and r.get("other_delivery") is False and "agentic-delivery" in r.get("skills", [])) else 1)
+PY
+then record 0 "recommend: SKILL.md FIFO is skipped without hang"; else record 1 "recommend: SKILL.md FIFO is skipped without hang"; fi
+
 # ---------------------------------------------------------------------------
 # idea-critic verdict validator
 # ---------------------------------------------------------------------------

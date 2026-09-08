@@ -65,7 +65,17 @@ Skills; MetaGPT; ChatDev) logged in `docs/standards-index.md`.
 - **`recommend-overlays.py`** now inspects the target for the quality gates it
   already has (CI, lint, format, tests, pre-commit, privacy — filename-level,
   reporting "not detected", never "absent") and frames the pack as the
-  software-house roles + the gates the imprint would add.
+  software-house roles + the gates the imprint would add. It also detects a
+  **live custom delivery pack**: a skill under a real host skill root
+  (`.claude/skills/` and peers — not a `docs/` archive) whose path, frontmatter
+  `name`, or a small `SKILL.md` prefix names a delivery OS. Named packs already
+  counted; a private factory, a software-house-pattern skill, or an
+  already-installed `agentic-delivery` overlay previously still received
+  `--with-delivery` / `--full`. Detection is review-negative (`deep-code-review`
+  and `idea-critic` never count), skips non-regular files and `SKILL.md`
+  symlinks (a FIFO would hang `open()`; a symlink can point outside the
+  target), and stays bounded — one level under each known skill root, reading
+  only a prefix, failing closed on any single unreadable file.
 - **CI + CONTRIBUTING**: the `routing` gate runs on **all three** skill dirs
   (`deep-code-review`, `agentic-delivery`, `idea-critic`), so a new overlay
   reference cannot ship unrouted — the repo dogfoods its own "documented but

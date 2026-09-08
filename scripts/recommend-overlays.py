@@ -10,6 +10,7 @@ Stdlib only. Bounded walk — no recursive glob of the whole tree.
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from pathlib import Path
 
@@ -42,6 +43,42 @@ LIVE_DELIVERY_SKILL_PATHS = (
     ".claude/skills/gstack/SKILL.md",
     ".agents/skills/gstack/SKILL.md",
 )
+
+# A live CUSTOM delivery pack: a skill directory under a real host skill root
+# (not a docs/ archive) whose path, frontmatter name, or a small body prefix
+# names a delivery OS. This catches a private factory, an already-installed
+# agentic-delivery, or any gated-delivery overlay that is not one of the named
+# packs above — so --recommend does not stack a second delivery OS on top of one
+# already running in the target.
+LIVE_SKILL_ROOTS = (
+    ".claude/skills",
+    ".agents/skills",
+    ".cursor/skills",
+    ".codex/skills",
+)
+# Review/critique OSes are never "other delivery", even though their prose names
+# delivery gates (the review bar cites `agentic-delivery` and G0–G10; idea-critic
+# cites G0/G1). Excluding them by name stops a review-only install from
+# suppressing the very overlay a target may still want.
+REVIEW_ONLY_SKILLS = {"deep-code-review", "idea-critic"}
+# Delivery-positive tokens (case-insensitive). Distinctive multi-char tokens are
+# matched as substrings; the short gate labels g0/g10 need word boundaries so
+# they do not fire inside unrelated words. A token is required — merely being a
+# "skill" or a "review" is not delivery.
+DELIVERY_SUBSTRINGS = (
+    "agentic-delivery",
+    "software-house",
+    "gated delivery",
+    "shipping loop",
+    "/ship",
+    "spec-kit",
+    "gstack",
+    "delivery overlay",
+)
+DELIVERY_GATE_RE = re.compile(r"\b(?:g0|g10)\b")
+# Read only a small prefix of each SKILL.md (frontmatter plus a little body),
+# never the whole file, and never a walk of the tree under the skill root.
+SKILL_PREFIX_CHARS = 4096
 WEB_FILES = {
     "package.json",
     "next.config.js",
@@ -187,6 +224,46 @@ def walk(root: Path, max_depth: int = 3) -> list[Path]:
     return out
 
 
+def _names_delivery_os(text: str) -> bool:
+    low = text.lower()
+    if any(tok in low for tok in DELIVERY_SUBSTRINGS):
+        return True
+    return bool(DELIVERY_GATE_RE.search(low))
+
+
+def has_custom_delivery_skill(root: Path) -> bool:
+    """True if a live (non-archived) skill declares a delivery OS.
+
+    Bounded: for each known host skill root, look one level down at each skill's
+    SKILL.md and read only a prefix — no recursive glob of the tree. Review-only
+    skills are never delivery. Skip non-regular files and symlinks (a FIFO would
+    hang open(); a symlink can point outside the target). Any single
+    unreadable/missing SKILL.md is skipped (fail closed for that file), never
+    fatal to the recommendation.
+    """
+    for host in LIVE_SKILL_ROOTS:
+        try:
+            children = sorted((root / host).iterdir())
+        except OSError:
+            continue
+        for child in children:
+            if child.name in REVIEW_ONLY_SKILLS or not child.is_dir():
+                continue
+            skill_md = child / "SKILL.md"
+            # is_file() follows symlinks; reject those first so a planted FIFO
+            # cannot hang open() and an out-of-tree symlink is not read.
+            if skill_md.is_symlink() or not skill_md.is_file():
+                continue
+            try:
+                with skill_md.open("r", errors="replace") as fh:
+                    blob = fh.read(SKILL_PREFIX_CHARS)
+            except OSError:
+                continue
+            if _names_delivery_os(f"{child.name}\n{blob}"):
+                return True
+    return False
+
+
 def recommend(root: Path) -> dict:
     entries = walk(root)
     names = {p.name for p in entries}
@@ -204,6 +281,8 @@ def recommend(root: Path) -> dict:
                 continue
             other_delivery = True
             break
+    if not other_delivery:
+        other_delivery = has_custom_delivery_skill(root)
     web = bool(names & WEB_FILES)
     api = bool(names & API_FILES)
     iac = bool(names & IAC_FILES) or bool(names & IAC_DIR_NAMES)
