@@ -10,7 +10,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.15.0"
+  version: "1.17.0"
 ---
 
 # Agentic delivery
@@ -84,7 +84,7 @@ independent verification or a human approval that actually applies.
 | G2 Plan | Spec | Acyclic work graph | Role triggers, one writer per worktree |
 | G3 Design | Graph | ADRs / contracts | Interfaces, NFR budgets, data/security decisions explicit |
 | G4 Implement | Work packets | Patch/commit per lane | Tests before or with the change; packet names review skill + immutable base SHA |
-| G5 Verify | Exact revision | Test receipts | Build, lint, type, unit, and applicable integration/E2E **green at that SHA** |
+| G5 Verify | Exact revision | Test receipts | **Local stack up** (project's one-command / compose / devcontainer) then build, lint, type, unit, and applicable integration/E2E **green at that SHA**. A gate that never started the app is `UNVERIFIED`, not pass |
 | G6 Review | Exact revision + receipts | `deep-code-review` + QA + security verdicts | Independent of the builder; no unresolved Blocker/High/Medium |
 | G7 Integrate | Accepted lanes | Integration receipt + `deep-code-review DIFF` | One integration owner; rerun affected gates on the exact final SHA |
 | G8 Release | Exact integrated SHA | Release manifest | Rollback proven; **owner approves** outward/production action |
@@ -118,6 +118,29 @@ integration SHA plus one aggregate gate before a merge train (G7).
   integration branch.
 - Occupancy is **visibility, not a lock**. Say what is live or stale. Do
   not comment "do not merge" on a peer's PR after you stopped writing.
+
+## Local environment (own it)
+
+Delivery owns the running stack, not only the diff.
+
+1. **Discover** the project's one-command path (`README` / `package.json`
+   scripts / `compose.yaml` / `.devcontainer` / `Makefile`). Prefer what
+   the repo already documents. Do not invent a second stack.
+2. **Bring it up** in the writer's worktree. Record the command, the
+   URL/port, and the health probe that returned 200. If a prerequisite is
+   missing, the `doctor` output is the receipt — do not skip to "tests
+   passed on the host."
+3. **Verify against the running process**, not only the repository:
+   served smoke, empty/error UI states where a UI exists, and the
+   project's own `verify:served` / equivalent if it has one.
+4. **Tear down** the stack with the matching command. Leave no orphan
+   listener on the worktree's ports.
+5. **Never** `npm run build` (or equivalent) against a directory a
+   running server is serving — that class of stale-asset bug is a known
+   ship failure. Use the project's isolated verify dir when it has one.
+
+G5 is not green until step 3 ran or is `UNVERIFIED` with the missing
+prerequisite named.
 
 ---
 

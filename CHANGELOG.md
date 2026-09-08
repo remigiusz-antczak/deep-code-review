@@ -3,6 +3,37 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.17.0] — 2026-09-08
+
+Dogfood of 1.15.0/1.16.0 against two private product repos (an agent network
+and a Next.js feed app) plus the Agent Skills spec. Three defects in the bar
+itself, not in those products: `--recommend` treated archived Superpowers
+notes as a live delivery OS; kit-leftover `AGENTS.md` was not a named DX
+defect; delivery never required a running local stack. Anti-slop is now an
+explicit Phase-4 filter so a review of a well-gated product does not emit
+community-health noise.
+
+### Added
+- **Anti-slop** in `references/method.md` Phase 4: drop findings that would
+  not change a merge or a ship. Kit leftover (`AGENTS.md` still describing
+  scaffold `app/` while the product lives in `apps/` / `packages/`) is **one**
+  DX finding, not a docs wall.
+- **Kit leftover vs product tree** and **local environment is DX** in
+  `references/docs-and-dx.md`.
+- **Local environment (own it)** in `agentic-delivery`: discover the project's
+  one-command / compose / devcontainer, bring it up, verify against the
+  running process (`verify:served` when present), tear down. G5 is
+  `UNVERIFIED` if the stack never started.
+- `idea-critic` pitfall: `HOLD` slop recs (extra docs, restyle, second
+  delivery OS) unless a named defect requires them.
+
+### Changed
+- `--recommend` only treats a delivery pack as live when a skill path exists
+  (`.claude/skills/superpowers/SKILL.md` and peers) or a marker directory sits
+  outside `docs/` / `archive` / `history` / `code-review` / `notes`. Historical
+  Superpowers plans under `docs/` no longer suppress `agentic-delivery`.
+- Overlay `VERSION` files and plugin manifest follow 1.17.0.
+
 ## [1.16.0] — 2026-09-08
 
 A **product-UX quality** reference under domain **P** — the *design half* of a

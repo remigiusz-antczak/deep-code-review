@@ -78,6 +78,17 @@ survives the *next* contributor — see "Standards imprint" below.
   promises a workflow the scripts don't actually run** is a real finding. Watch
   **dev/prod parity** — local backing services/versions that diverge from
   production can hide correctness bugs.
+- **Kit leftover vs product tree.** An `AGENTS.md` / `CLAUDE.md` that still
+  describes a scaffold (`app/` + `npm start` on PORT, "you are helping a
+  member build a small web app") while the repo is a real product
+  (`apps/web`, `packages/*`, workspaces) is a **docs/DX defect**, not
+  context. One finding: rewrite or delete the leftover so the next agent
+  does not author into the wrong tree. Do not treat the leftover as the
+  project's contract.
+- **Local environment is part of DX, not optional colour.** The documented
+  one-command path must actually bring the app up locally (or name the
+  exact missing prerequisite). A README that only documents deploy, or a
+  delivery overlay that never starts the stack, fails this check.
 - **Document the missing-prerequisite → symptom map** for any gitignored setup:
   each absent file surfaces at a different step with an error that reads like a
   code defect. Record which absence causes which failure so each newcomer

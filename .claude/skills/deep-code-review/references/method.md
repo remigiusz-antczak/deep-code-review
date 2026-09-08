@@ -246,6 +246,22 @@ count, a metric, a before/after delta) likewise names the ref it was measured at
 inline — "N at `origin/main`", or "in the uncommitted tree" when the working tree
 is the subject; on a dirty checkout those are two different products.
 
+**Anti-slop (drop before the report).** A finding that does not change an
+owner action is not a finding. Drop or demote to Nit/Info:
+- a missing community-health file on a **private** repo with no outside
+  contributors (already batched in `docs-and-dx.md`);
+- restyling, renaming, or "consider maybe" with no defect;
+- a second copy of a fact the project's own gate already enforces and the
+  review already confirmed green;
+- a recommendation that would break a passing test (already `REFUTED`);
+- a kit leftover (`AGENTS.md` / `CLAUDE.md` still describing a scaffold
+  `app/` layout while the real product lives in `apps/` or `packages/`) —
+  that **is** a finding, but **one** DX finding with the smallest fix
+  (rewrite the leftover to match the tree, or delete it). Do not also
+  emit a wall of "add more docs" on the same files.
+Chat BLUF lists **confirmed defects that would change a merge or a
+ship**, not a catalogue of every possible improvement.
+
 **Phase 5 — Report.** **Default delivery is two artifacts, and neither is a
 commit into the reviewed repo:** (1) a **chat BLUF, ≤30 lines** — one-line
 verdict, the top ≤5 **confirmed defects** in plain language, a one-line
