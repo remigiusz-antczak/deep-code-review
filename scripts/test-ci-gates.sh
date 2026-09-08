@@ -554,23 +554,51 @@ if [ ! -f "$VALIDATOR" ]; then
   record 1 "idea-critic: validator present"
 else
   record 0 "idea-critic: validator present"
-  printf '%s\n' '{"verdict":"HOLD","independence":"inline","origin":"owner-request","claim":"x","hats_run":"all","assumptions":"NONE","better_ways":"NONE","kill_criteria":"NONE","questions_parent_must_resolve":"NONE","user_question":"NONE","dissent_ledger":"n","remaining_risk":"n"}' >"$WORK/verdict.illegal.json"
+  # Every fixture below carries steelman + strongest_attack_survived so each
+  # case dies at the assertion it names, not at the missing-key check —
+  # a fixture missing either new key would report PASS for the wrong reason
+  # (silently vacuous; this is exactly the class of defect the planted-defect
+  # discipline exists to catch, applied to this harness's own fixtures).
+  printf '%s\n' '{"verdict":"HOLD","independence":"inline","origin":"owner-request","claim":"x","steelman":"s","hats_run":"all","assumptions":"NONE","better_ways":"NONE","kill_criteria":"NONE","strongest_attack_survived":"NONE","questions_parent_must_resolve":"NONE","user_question":"NONE","dissent_ledger":"n","remaining_risk":"n"}' >"$WORK/verdict.illegal.json"
   if python3 "$VALIDATOR" --file "$WORK/verdict.illegal.json" >/dev/null 2>&1; then
     record 1 "idea-critic: reject owner-request+HOLD"
   else
     record 0 "idea-critic: reject owner-request+HOLD"
   fi
-  printf '%s\n' '{"verdict":"PASS_TO_USER","independence":"inline","origin":"owner-request","claim":"x","hats_run":"all","assumptions":"NONE","better_ways":"NONE","kill_criteria":"NONE","questions_parent_must_resolve":"NONE","user_question":["a","b"],"dissent_ledger":"n","remaining_risk":"n"}' >"$WORK/verdict.listq.json"
+  printf '%s\n' '{"verdict":"PASS_TO_USER","independence":"inline","origin":"owner-request","claim":"x","steelman":"s","hats_run":"all","assumptions":"NONE","better_ways":"NONE","kill_criteria":"NONE","strongest_attack_survived":"a real attack, survived because x","questions_parent_must_resolve":"NONE","user_question":["a","b"],"dissent_ledger":"n","remaining_risk":"n"}' >"$WORK/verdict.listq.json"
   if python3 "$VALIDATOR" --file "$WORK/verdict.listq.json" >/dev/null 2>&1; then
     record 1 "idea-critic: reject list-shaped user_question"
   else
     record 0 "idea-critic: reject list-shaped user_question"
   fi
-  printf '%s\n' '{"verdict":"PASS_TO_USER","independence":"inline","origin":"owner-request","claim":"x","hats_run":"all","assumptions":"NONE","better_ways":"NONE","kill_criteria":"NONE","questions_parent_must_resolve":"NONE","user_question":"NONE","dissent_ledger":"n","remaining_risk":"n"}' >"$WORK/verdict.ok.json"
+  printf '%s\n' '{"verdict":"PASS_TO_USER","independence":"inline","origin":"owner-request","claim":"x","steelman":"s","hats_run":"all","assumptions":"NONE","better_ways":"NONE","kill_criteria":"NONE","strongest_attack_survived":"a real attack, survived because x","questions_parent_must_resolve":"NONE","user_question":"NONE","dissent_ledger":"n","remaining_risk":"n"}' >"$WORK/verdict.ok.json"
   if python3 "$VALIDATOR" --file "$WORK/verdict.ok.json" >/dev/null 2>&1; then
     record 0 "idea-critic: accept a complete PASS_TO_USER verdict"
   else
     record 1 "idea-critic: accept a complete PASS_TO_USER verdict"
+  fi
+  # steelman: empty is rejected regardless of verdict.
+  printf '%s\n' '{"verdict":"HOLD","independence":"inline","origin":"agent-originated","claim":"x","steelman":"","hats_run":"all","assumptions":"NONE","better_ways":"NONE","kill_criteria":"NONE","strongest_attack_survived":"NONE","questions_parent_must_resolve":"NONE","user_question":"NONE","dissent_ledger":"n","remaining_risk":"n"}' >"$WORK/verdict.emptysteelman.json"
+  if python3 "$VALIDATOR" --file "$WORK/verdict.emptysteelman.json" >/dev/null 2>&1; then
+    record 1 "idea-critic: reject empty steelman"
+  else
+    record 0 "idea-critic: reject empty steelman"
+  fi
+  # strongest_attack_survived: empty on PASS_TO_USER is rejected (this is
+  # the fixture that proves the gate can actually fail — I1's own bar).
+  printf '%s\n' '{"verdict":"PASS_TO_USER","independence":"inline","origin":"owner-request","claim":"x","steelman":"s","hats_run":"all","assumptions":"NONE","better_ways":"NONE","kill_criteria":"NONE","strongest_attack_survived":"","questions_parent_must_resolve":"NONE","user_question":"NONE","dissent_ledger":"n","remaining_risk":"n"}' >"$WORK/verdict.emptyattack.json"
+  if python3 "$VALIDATOR" --file "$WORK/verdict.emptyattack.json" >/dev/null 2>&1; then
+    record 1 "idea-critic: reject empty strongest_attack_survived on PASS_TO_USER"
+  else
+    record 0 "idea-critic: reject empty strongest_attack_survived on PASS_TO_USER"
+  fi
+  # strongest_attack_survived: a generic/performative phrase on PASS_TO_USER
+  # is rejected — "no issues found" is present but defeats the field's point.
+  printf '%s\n' '{"verdict":"PASS_TO_USER","independence":"inline","origin":"owner-request","claim":"x","steelman":"s","hats_run":"all","assumptions":"NONE","better_ways":"NONE","kill_criteria":"NONE","strongest_attack_survived":"no issues found","questions_parent_must_resolve":"NONE","user_question":"NONE","dissent_ledger":"n","remaining_risk":"n"}' >"$WORK/verdict.genericattack.json"
+  if python3 "$VALIDATOR" --file "$WORK/verdict.genericattack.json" >/dev/null 2>&1; then
+    record 1 "idea-critic: reject generic/performative strongest_attack_survived on PASS_TO_USER"
+  else
+    record 0 "idea-critic: reject generic/performative strongest_attack_survived on PASS_TO_USER"
   fi
 fi
 
