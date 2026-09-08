@@ -58,7 +58,7 @@ and a deep detection playbook in `references/`.
 | M Observability | logs/metrics/traces, golden signals, audit integrity, restore drills | `observability.md` |
 | N Config & secrets | env-only secrets, safe defaults, clean no-op | — |
 | O Docs & DX | Diátaxis, C4, ADRs, one-command setup, repo hygiene, cross-agent imprint | `docs-and-dx.md` |
-| P Frontend / a11y | WCAG 2.2 AA, Core Web Vitals, respect existing design | `frontend-a11y.md` |
+| P Frontend / a11y | WCAG 2.2 AA, Core Web Vitals, plus the *design half* (five data states, encoding, metric deltas) | `frontend-a11y.md`, `product-ux-quality.md` |
 | Q Privacy & licensing | minimization, retention/erasure, consent flags, license compat | `privacy-compliance.md` |
 | R i18n & encoding | locale-aware formatting, Unicode normalization | — |
 | S Branches & open-work triage | branching model, merge/PR/rebase/delete per branch, squash-merge detection, safe cleanup | `branch-and-merge-hygiene.md` |
@@ -165,8 +165,8 @@ AGENTS.md, the GitHub community-health + Claude Code memory docs, and Cursor
 Agent Skills directory docs. Referenced
 by name (verify the current version before citing): OWASP WSTG, MITRE ATLAS, NIST
 SSDF and AI RMF, SLSA, CIS Benchmarks, ISO/IEC 25010, Twelve-Factor, Conventional
-Commits, and the per-agent instruction-file conventions (Cursor, Copilot,
-Windsurf, Gemini, Aider).
+Commits, Nielsen's usability heuristics (named, no URL), and the per-agent
+instruction-file conventions (Cursor, Copilot, Windsurf, Gemini, Aider).
 
 Standards move. The skill instructs the reviewer to **fetch the current version
 before relying on version-specific detail, and to cite only URLs it has
