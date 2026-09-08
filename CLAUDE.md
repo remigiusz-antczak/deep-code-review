@@ -1,26 +1,32 @@
 # CLAUDE.md — working in this repository (AI-facing)
 
 ## What this is
-This repo is a **single deliverable**: a universal, deep code-review skill.
-The crown jewel is `.claude/skills/deep-code-review/SKILL.md`; its depth lives in
-`.claude/skills/deep-code-review/references/*.md`. Everything else (`README.md`,
-`install.sh`, `docs/standards-index.md`) supports distributing and trusting that
-skill. There is no application to build and no runtime — the "product" is prose
-that a human or an agent executes.
+This repo is a **portable bar**: a universal, deep code-review skill (the
+default product) plus optional overlays that inject a gated-delivery pattern
+and a pre-owner idea attack into a target repo. The crown jewel is
+`.claude/skills/deep-code-review/SKILL.md`; its depth lives in that skill's
+`references/`. Sibling skills live under `.claude/skills/agentic-delivery/`
+and `.claude/skills/idea-critic/`. Everything else (`README.md`, `install.sh`,
+`docs/standards-index.md`) supports distributing and trusting those skills.
+There is no application to build and no runtime — the "product" is prose a
+human or an agent executes. Default install is review-only.
 
 ## How to work here
-- **Edit the skill, not a copy of it.** The skill has exactly one home
-  (`.claude/skills/deep-code-review/`). `install.sh` copies *from* there; never
+- **Edit the skill, not a copy of it.** Each skill has exactly one home
+  (`.claude/skills/<name>/`). `install.sh` copies *from* there; never
   create a second copy anywhere in this repo.
 - **No duplication — this is the repo's thesis.** The skill condemns duplicated
   logic; the repo must not contain a second copy of any checklist, principle, or
-  definition. `SKILL.md` holds the map + concise checklists; each `references/`
-  file holds depth `SKILL.md` doesn't. If you're tempted to restate a section,
-  link to it instead.
-- **Every reference file must be routed.** `SKILL.md` must name each
-  `references/*.md` by path with an explicit "read this when…" trigger.
+  definition. `SKILL.md` holds the map; each `references/` file holds depth
+  `SKILL.md` doesn't. If you're tempted to restate a section, link to it instead.
+- **Every reference file must be routed.** Each skill's `SKILL.md` must name each
+  of its `references/*.md` by path with an explicit "read this when…" trigger.
   Progressive disclosure only works if the parent routes to it; an unrouted
   reference is dead weight and fails review.
+- **Overlays stay public-safe.** No operator preferences, private intake
+  routes, exact model denylists, or third-party identifiers. Chat voice is
+  not vendored — point at the public caveman repository if a project wants
+  compressed assistant prose. Persisted artifacts stay normal English.
 - **Verify before you cite.** Any standard, version, date, or list added to the
   skill or to `docs/standards-index.md` must come from a source you actually
   fetched this session. Record the URL + verification date in

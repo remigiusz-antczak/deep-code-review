@@ -72,17 +72,33 @@ Plus a dedicated **adversarial / red-team pass** and a **useless-work audit**
 
 ## How to use it
 
-**Install into a project** (agent-agnostic — copies the skill into the skill
-roots major hosts discover, and writes a version-stamped `AGENTS.md` pointer):
+**Install into a project** (agent-agnostic — copies skills into the skill
+roots major hosts discover, and writes a version-stamped `AGENTS.md` pointer).
+Default is **review only**. Overlays are opt-in. An agent should run
+`--recommend` and let the owner decide before `--full`.
 
 ```bash
 git clone https://github.com/remigiusz-antczak/deep-code-review.git
 cd deep-code-review
-./install.sh /path/to/your/project                 # .agents + .cursor + .claude skills + AGENTS.md
+./install.sh /path/to/your/project                 # review only (.agents + .cursor + .claude + AGENTS.md)
+./install.sh --recommend /path/to/your/project     # inspect; print a pack; write nothing
+./install.sh --with-delivery /path/to/your/project # + gated delivery overlay
+./install.sh --with-critic /path/to/your/project   # + pre-owner idea critic
+./install.sh --full /path/to/your/project          # review + delivery + critic
 ./install.sh --with-codex /path/to/your/project    # also .codex/skills/
+./install.sh --with-extra-hosts /path/to/your/project  # Gemini, OpenCode, Copilot, Windsurf, Hermes, Kiro
 ./install.sh --minimal /path/to/your/project       # only .claude/skills/ + AGENTS.md
 ./install.sh --claude-only /path/to/your/project   # only .claude/skills/ (no AGENTS.md)
 ```
+
+Superpowers makes the agent disciplined. Spec Kit makes the spec durable.
+This repo makes the **bar** portable — review, security, data integrity, and
+(opt-in) gated delivery — so any agent on any repo is judged the same way.
+Do not also install a second delivery OS on the same project.
+
+Chat voice is not vendored. If a project wants compressed assistant prose,
+add [JuliusBrussee/caveman](https://github.com/JuliusBrussee/caveman)
+separately. Code, PR bodies, and docs stay normal English.
 
 Re-running refreshes the AGENTS.md stamp. Personal/global Cursor install: copy
 to `~/.cursor/skills/deep-code-review/` (and optionally `~/.agents/skills/` /
@@ -164,16 +180,20 @@ verified** — never a remembered link.
 .
 ├── README.md                       # this file (human-facing)
 ├── CLAUDE.md                       # AI-facing standards for working in THIS repo
-├── install.sh                      # copy the skill into a target project
+├── install.sh                      # copy skills into a target project
 ├── .banlist.txt                    # privacy-gate seed (dogfooded)
+├── .claude-plugin/plugin.json      # Claude Code marketplace manifest
 ├── docs/
 │   └── standards-index.md          # verified standards, URLs, verification dates
-└── .claude/skills/deep-code-review/
-    ├── SKILL.md                    # the review method + all domain checklists
-    └── references/                 # on-demand deep playbooks (20 files incl.
-                                    # privacy, observability, install stubs for
-                                    # standards-index + example report)
+└── .claude/skills/
+    ├── deep-code-review/           # default product — the review bar
+    ├── agentic-delivery/           # opt-in gated delivery overlay
+    └── idea-critic/                # opt-in pre-owner idea attack
 ```
+
+`deep-code-review/references/` holds on-demand depth (method, domain
+checklists, report format, plus per-domain playbooks). Count routed depth
+files, not copies of `docs/`.
 
 ---
 
