@@ -11,7 +11,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.19.1"
+  version: "1.20.0"
 ---
 
 # Deep Code Review
@@ -63,7 +63,7 @@ Batch-mark untouched domains N/A; escalate on any blast-radius 🚩. Procedure:
 | web | A B E F J O P | `security-appsec.md`, `frontend-a11y.md`, `product-ux-quality.md` |
 | api / service | A B E F I J | `security-appsec.md`, `api-contracts.md` |
 | data / ETL | A D E F G J | `data-quality.md`, `performance-db-cost.md` |
-| agent / LLM | A B C E F J | `security-ai-agents.md`, `security-appsec.md` |
+| agent / LLM | A B C E F J | `security-ai-agents.md`, `security-agent-skills.md`, `security-appsec.md` |
 | IaC / platform | B K L N | `infra-iac-containers.md` |
 | lib / SDK | A H I J K | `api-contracts.md`, `dependency-currency-and-upgrades.md` |
 
@@ -165,7 +165,7 @@ review after the first-response block.
 | 0 Map | Pin `START_SHA`, worktree, history depth, trust boundaries, banned remedies, coverage ledger | `method.md`, `branch-and-merge-hygiene.md` on FULL |
 | 1 Ground truth | Documented setup, aggregate gate by name + exit code, per-subtree coverage, planted-defect probe (missing / empty / wrong / path-excluding config) | `method.md`, `testing-and-evals.md`, `language-stack-redflags.md` |
 | 2 Domain audits | Walk applicable A–S with `file:line`; fan-out under `parallel-audit.md` | `domain-checklists.md` + per-domain refs |
-| 3 Adversarial | Hostile user **and** hostile upstream; networked openers: anon GET, two-principal swap, dual-surface, then injection/SSRF | `security-appsec.md`, `security-ai-agents.md` |
+| 3 Adversarial | Hostile user **and** hostile upstream; networked openers: anon GET, two-principal swap, dual-surface, then injection/SSRF | `security-appsec.md`, `security-ai-agents.md`, `security-agent-skills.md` |
 | 4 Synthesize | Dedup, compounds, snippet-or-drop at `START_SHA`, fail-open vs fail-closed, **anti-slop** | `method.md` |
 | 5 Report | Chat BLUF ≤30 lines + full table out-of-tree; in-repo `code-review/` only on confirmation | `report-format.md`, `example-review-report.md` |
 | 6 Imprint | Opt-in `AGENTS.md` + gates; detect-and-stop if present; pair each standard with a gate | `docs-and-dx.md` |
@@ -186,7 +186,7 @@ footguns: `references/language-stack-redflags.md`.
 |---|---|---|
 | A | Correctness & logic | `domain-checklists.md` |
 | B | AppSec (OWASP Top 10:2025) | `security-appsec.md` |
-| C | AI / LLM / agents | `security-ai-agents.md` |
+| C | AI / LLM / agents | `security-ai-agents.md`, `security-agent-skills.md` |
 | D | Data integrity | `data-quality.md` |
 | E | Performance, efficiency & cost | `performance-db-cost.md`, `model-tiering.md` |
 | F | Reliability & error handling | `reliability-error-handling.md` |
@@ -212,9 +212,10 @@ Assume a hostile user **and** a hostile upstream. Networked apps, in order:
 anonymous GET sweep; two-principal object-swap; dual-surface every caller of
 the same loader; then injection, SSRF, traversal, prompt injection,
 exhaustion, races. Procedures: `references/security-appsec.md` and
-`references/security-ai-agents.md`. Useless-work audit (cost with no value)
-rides here. Prove exploitability locally and non-destructively only; never
-attack a system you don't own or aren't authorized to test.
+`references/security-ai-agents.md` and, when the target is or installs a
+skill, `references/security-agent-skills.md`. Useless-work audit (cost with
+no value) rides here. Prove exploitability locally and non-destructively
+only; never attack a system you don't own or aren't authorized to test.
 
 ---
 
@@ -345,8 +346,9 @@ repo. This review skill always composes.
 
 Verified live for this repository (URLs + dates in
 `docs/standards-index.md` / `references/standards-index.md` after install):
-OWASP Top 10:2025; OWASP Top 10 for LLM Applications 2025; OWASP Top 10 for
-Agentic Applications 2026; OWASP API Security Top 10 (2023); CWE Top 25
+OWASP Top 10:2025; OWASP Top 10 for LLM Applications 2026; OWASP Top 10 for
+Agentic Applications 2026; OWASP Agentic Skills Top 10 (AST01–AST10); OWASP
+API Security Top 10 (2023); CWE Top 25
 (2025); WCAG 2.2; Google Engineering Practices; Diátaxis; C4; dependency
 currency (`references/dependency-currency-and-upgrades.md`); branch/merge
 hygiene (`references/branch-and-merge-hygiene.md`).

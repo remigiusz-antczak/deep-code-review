@@ -1,15 +1,15 @@
 ---
 name: idea-critic
 description: >-
-  Use before a plan, architecture, process, new agent, new skill, or
-  unsolicited "we should" reaches the owner. Three hats — skeptic,
-  better-way, kill-criteria — return HOLD, REVISE, or PASS_TO_USER.
-  Owner-request cannot HOLD. Not code review and not artifact polish.
-  Opt-in overlay; install with --with-critic or --full.
+  Use when attacking a plan, architecture, process, new agent, new
+  skill, or unsolicited "we should" before it reaches the owner. Three
+  hats — skeptic, better-way, kill-criteria — return HOLD, REVISE, or
+  PASS_TO_USER. Owner-request cannot HOLD. Not code review and not
+  artifact polish. Opt-in overlay; install with --with-critic or --full.
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.19.1"
+  version: "1.20.0"
 ---
 
 # Idea critic

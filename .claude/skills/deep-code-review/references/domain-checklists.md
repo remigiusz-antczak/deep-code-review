@@ -121,8 +121,9 @@ unwalked domain.
 
 ### C. Security — AI / LLM / agents → `references/security-ai-agents.md`
 Apply if the code calls an LLM, embeds/retrieves, or runs an agent. Maps to
-OWASP Top 10 for LLM Applications 2025 (LLM01–LLM10) and the OWASP Top 10 for
-Agentic Applications 2026.
+OWASP Top 10 for LLM Applications **2026** (LLM01–LLM10:2026) and the OWASP
+Top 10 for Agentic Applications 2026. When the target **is or installs a
+skill**, also walk AST01–AST10 in `references/security-agent-skills.md`.
 - **Untrusted-in / untrusted-out**: everything the model reads that isn't your
   trusted prompt is data that may contain instructions; everything it emits is
   untrusted input to the next stage. Fence/delimit untrusted content; **strip
@@ -143,7 +144,7 @@ Agentic Applications 2026.
   gates, with a deterministic fallback and a counter for how often it fires. Use
   **temperature 0** for judges/verifiers. Ground claims to the input;
   **log a redacted fingerprint** of output, never the raw text.
-- **Bound consumption** (LLM10): token/cost/rate caps enforced *before* each
+- **Bound consumption** (LLM06:2026, was LLM10:2025): token/cost/rate caps enforced *before* each
   billable call; loop caps; breakers on 402/429; a **no-model fast path** for
   rejected/unauthenticated input so a flood can't burn budget.
 - **A safety param set at a call site is a claim, not a guarantee** — confirm the

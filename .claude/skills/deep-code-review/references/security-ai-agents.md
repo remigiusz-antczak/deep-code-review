@@ -5,9 +5,11 @@ that plans, calls tools, executes code, keeps memory, or coordinates with other
 agents. Expands section C of `SKILL.md`.
 
 Standards tracked (verified URLs + dates in `docs/standards-index.md`): OWASP
-Top 10 for LLM Applications **2025** (verified numbered titles; a 2026 edition
-exists), OWASP Top 10 for Agentic Applications **2026**, NIST AI RMF +
-Generative AI Profile, and MITRE ATLAS.
+Top 10 for LLM Applications **2026** (titles quoted 2026-09-08 from
+`OWASP-GenAI-LLM-Top-10-2026-v1.0.pdf`; 2025 names kept only as a
+compatibility map), OWASP Top 10 for Agentic Applications **2026**, OWASP
+Agentic Skills Top 10 (AST01–AST10 — `references/security-agent-skills.md`),
+NIST AI RMF + Generative AI Profile, and MITRE ATLAS.
 
 **The one principle under all of this:** everything the model reads that did not
 come from your trusted prompt — user input, retrieved documents, web pages,
@@ -18,40 +20,81 @@ control you built outside the model.
 
 ---
 
-## OWASP Top 10 for LLM Applications 2025 — per-risk review
+## OWASP Top 10 for LLM Applications 2026 — per-risk review
 
-- **LLM01 Prompt Injection** (direct & indirect). Is untrusted content clearly
-  separated from instructions (delimiting / spotlighting / distinct roles), and
-  never concatenated into the trusted instruction block? Assume any retrieved or
-  fetched content is adversarial. **Test it** (see the injection test set
-  below). This is the root cause behind most agentic incidents.
-- **LLM02 Sensitive Information Disclosure**. No secrets/PII/internal system
-  prompts in prompts, logs, traces, or outputs. Output is filtered before it
-  reaches a user or another system.
-- **LLM03 Supply Chain**. Model/provider, plugins, adapters, and datasets are
-  trusted and pinned; provenance known. A model or tool pulled from an open hub
-  is a dependency with the same risk as any package.
-- **LLM04 Data and Model Poisoning**. Training / fine-tuning / RAG-ingested data
-  is validated and provenance-tracked; an attacker can't get malicious content
-  into the corpus that later steers outputs.
-- **LLM05 Improper Output Handling**. Model output is schema-validated /
-  sanitized **before** any downstream use — never fed raw into SQL, a shell,
-  HTML, `eval`, a file path, or an HTTP call. Treat it exactly like user input.
-- **LLM06 Excessive Agency**. Tools are least-privilege: minimal set, minimal
-  scope, minimal permissions. High-impact or irreversible actions require human
-  confirmation. The agent cannot reach beyond its task.
-- **LLM07 System Prompt Leakage**. Assume the system prompt is extractable.
-  No secrets, credentials, or authorization logic live in it; security is
-  enforced outside the model.
-- **LLM08 Vector and Embedding Weaknesses**. RAG stores enforce access control
-  and tenant isolation; no cross-user/cross-tenant retrieval leakage; embeddings
-  and retrieval can't be manipulated to exfiltrate.
-- **LLM09 Misinformation**. Model claims that reach a user or third party are
-  grounded/verifiable; hallucination is mitigated (grounding, citations,
-  confidence, human check). Never shipped as fact unchecked.
-- **LLM10 Unbounded Consumption**. Token / cost / rate caps enforced **before**
-  each billable call; loops bounded; circuit breakers on 402/429; no
-  user-controlled unbounded generation. Both a DoS and a cost attack.
+Titles quoted from `OWASP-GenAI-LLM-Top-10-2026-v1.0.pdf` (resource dated
+2026-08-03; PDF fetched 2026-09-08). Official `/llm-top-10/` HTML still
+renders 2025 cards — do not take IDs from that landing page. When the model
+is a **component**, walk LLM01–LLM10:2026. When it is an **actor** (tools,
+memory, downstream consequences), pair with ASI01–ASI10. When the artifact
+**is a skill**, also walk AST01–AST10 (`security-agent-skills.md`).
+
+2025 → 2026 rank map (same PDF, "What's New"): Prompt Injection and
+Sensitive Information Disclosure held 1–2; Excessive Agency climbed to 3;
+Supply Chain 3→4; Data and Model Poisoning 4→5; Unbounded Consumption
+10→6; Misinformation 9→7; System Prompt Leakage renamed **Hidden Context
+Exposure** at 8; Vector and Embedding Weaknesses 8→9; Improper Output
+Handling 5→10.
+
+- **LLM01:2026 Prompt Injection** (direct, indirect, and cross-modal). Is
+  untrusted content clearly separated from instructions (delimiting /
+  spotlighting / distinct roles), and never concatenated into the trusted
+  instruction block? Assume any retrieved, fetched, **image, or audio**
+  content is adversarial. **Test it** (see the injection test set below).
+  This is the root cause behind most agentic incidents.
+- **LLM02:2026 Sensitive Information Disclosure**. No secrets/PII/internal
+  system prompts in prompts, logs, traces, or outputs. Output is filtered
+  before it reaches a user or another system.
+- **LLM03:2026 Excessive Agency**. Tools are least-privilege: minimal set,
+  minimal scope, minimal permissions. High-impact or irreversible actions
+  require human confirmation. The agent cannot reach beyond its task. The
+  most consequential 2025→2026 move (was LLM06).
+- **LLM04:2026 Supply Chain**. Model/provider, plugins, adapters, datasets,
+  and **promoted model artifacts** are trusted and pinned; provenance
+  known. A model or tool pulled from an open hub is a dependency with the
+  same risk as any package. (Was LLM03:2025.)
+- **LLM05:2026 Data and Model Poisoning**. Training / fine-tuning /
+  RAG-ingested data is validated and provenance-tracked; an attacker can't
+  get malicious content into the corpus that later steers outputs. Absorbs
+  fine-tuning subversion. (Was LLM04:2025.)
+- **LLM06:2026 Unbounded Consumption**. Token / cost / rate caps enforced
+  **before** each billable call; loops bounded; circuit breakers on 402/429;
+  no user-controlled unbounded generation. Both a DoS and a cost attack.
+  (Was LLM10:2025.)
+- **LLM07:2026 Misinformation**. Model claims that reach a user or third
+  party are grounded/verifiable; hallucination is mitigated (grounding,
+  citations, confidence, human check). Never shipped as fact unchecked.
+  Incident record ranked this higher than the 2025 vote. (Was LLM09:2025.)
+- **LLM08:2026 Hidden Context Exposure**. Broader than 2025's System Prompt
+  Leakage: assume hidden instructions, tool schemas, and retrieved context
+  are extractable. No secrets, credentials, or authorization logic live in
+  them; security is enforced outside the model. (Was LLM07:2025.)
+- **LLM09:2026 Vector and Embedding Weaknesses**. RAG stores enforce access
+  control and tenant isolation; no cross-user/cross-tenant retrieval
+  leakage; embeddings and retrieval can't be manipulated to exfiltrate.
+  (Was LLM08:2025.)
+- **LLM10:2026 Improper Output Handling**. Model output is schema-validated
+  / sanitized **before** any downstream use — never fed raw into SQL, a
+  shell, HTML, `eval`, a file path, or an HTTP call. Treat it exactly like
+  user input. Now also spans insecure code assistants generate at scale.
+  (Was LLM05:2025.)
+
+## 2025 compatibility map (do not walk as current)
+
+Use only when a target, citation, or older report still names 2025 IDs.
+
+| 2025 | 2026 |
+|---|---|
+| LLM01 Prompt Injection | LLM01:2026 Prompt Injection |
+| LLM02 Sensitive Information Disclosure | LLM02:2026 Sensitive Information Disclosure |
+| LLM03 Supply Chain | LLM04:2026 Supply Chain |
+| LLM04 Data and Model Poisoning | LLM05:2026 Data and Model Poisoning |
+| LLM05 Improper Output Handling | LLM10:2026 Improper Output Handling |
+| LLM06 Excessive Agency | LLM03:2026 Excessive Agency |
+| LLM07 System Prompt Leakage | LLM08:2026 Hidden Context Exposure |
+| LLM08 Vector and Embedding Weaknesses | LLM09:2026 Vector and Embedding Weaknesses |
+| LLM09 Misinformation | LLM07:2026 Misinformation |
+| LLM10 Unbounded Consumption | LLM06:2026 Unbounded Consumption |
 
 ## OWASP Top 10 for Agentic Applications 2026 — additional risks
 
