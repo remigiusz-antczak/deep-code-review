@@ -124,7 +124,7 @@ separately. Code, PR bodies, and docs stay normal English.
 
 Re-running refreshes the AGENTS.md stamp. Personal/global Cursor install: copy
 to `~/.cursor/skills/deep-code-review/` (and optionally `~/.agents/skills/` /
-`~/.claude/skills/`).Then in that project (any agent):
+`~/.claude/skills/`). Then in that project (any agent):
 
 ```
 /deep-code-review FULL                   # slash-skill hosts

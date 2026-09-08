@@ -3,6 +3,43 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.21.0] — 2026-09-08
+
+Orchestration lessons unique to the leftover PR #11 branch, restamped
+onto current main so they do not collide with shipped 1.20.0. Additive
+on 1.20.0 — the review bar's six phases, domains A–S, the gate table,
+and the report shape are unchanged. Two items checked against 1.19.0
+were already present (robust shell list-membership; worktree-per-lane
+preflight) and are not duplicated.
+
+### Added
+- **`agentic-delivery/SKILL.md`**: "Environment probe (before you size
+  anything)" (probe RAM/CPU/disk and usable tool/connector auth; decide
+  heavy-lane count, model tier, and local-vs-CI from the probe, not
+  habit); a general-lane context-inheriting-fork rule (a fork carries
+  every prior instruction, not only the newest one — fresh unit for
+  narrow work, or an explicit prohibition plus a check of what the unit
+  actually called); a lane's own scope ends at its own green PR, not at
+  the merge; Gate epistemology principle 9 (closing/deleting shared
+  state needs evidence, not presumption); G7-vs-G8 clarification (a
+  work item is done at integration; release/deploy is later and
+  owner-gated); principle 3 gains a concrete triage step (identify the
+  failing job **and step**, rerun a suspected flake, before reverting).
+- **`deep-code-review/references/parallel-audit.md`** §2: tree-diff is
+  blind outside the tree (issue/comment/message); verify a prompt-level
+  strip actually held from the unit's tool calls, not its summary.
+- **`deep-code-review/references/branch-and-merge-hygiene.md`** §1:
+  truncated forge listing — `gh issue list`/`gh pr list` default page
+  is 30; count with `--limit` or paginate.
+- **`deep-code-review/references/product-ux-quality.md`**: reviewable
+  who/what/when change history behind any decision-of-record edit, and
+  agent/model-authored values stamped as such at write time.
+
+### Changed
+- Overlay `VERSION` files, the three `SKILL.md` version stamps, and the
+  plugin manifest follow **1.21.0**.
+- README missing-space nit after the personal-install sentence.
+
 ## [1.20.0] — 2026-09-08
 
 Closes the remaining 1.19.0 self-review backlog after 1.19.1 landed
