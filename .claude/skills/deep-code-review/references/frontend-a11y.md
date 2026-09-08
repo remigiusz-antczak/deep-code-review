@@ -1,9 +1,11 @@
 # Frontend, UI/UX & accessibility review
 
 Read this when the target renders UI (web, mobile web, component library, or a
-server-rendered view). Expands section P of `SKILL.md`. Target **WCAG 2.2
-level AA** (W3C Recommendation, 2024-12-12); note AAA items where a flow is
-high-stakes.
+server-rendered view). Expands section P of `SKILL.md` — the **a11y-correctness
+half**; `product-ux-quality.md` is the companion **design half** (whether the UI
+feels *at-home*: data states, encoding, the metric delta, self-evidence). Target
+**WCAG 2.2 level AA** (W3C Recommendation, 2024-12-12); note AAA items where a
+flow is high-stakes.
 
 ---
 
