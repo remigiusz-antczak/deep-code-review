@@ -27,6 +27,8 @@ Run the same gates CI runs ([`.github/workflows/ci.yml`](.github/workflows/ci.ym
 ```bash
 bash scripts/test-ci-gates.sh
 bash scripts/ci-gates.sh routing --max-bytes 100000 .claude/skills/deep-code-review
+bash scripts/ci-gates.sh routing --max-bytes 100000 .claude/skills/agentic-delivery
+bash scripts/ci-gates.sh routing --max-bytes 100000 .claude/skills/idea-critic
 bash scripts/ci-gates.sh version .
 bash scripts/ci-gates.sh privacy --banlist .banlist.txt .
 bash -n install.sh

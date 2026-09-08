@@ -10,6 +10,7 @@ Stdlib only. Bounded walk — no recursive glob of the whole tree.
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from pathlib import Path
 
@@ -42,6 +43,42 @@ LIVE_DELIVERY_SKILL_PATHS = (
     ".claude/skills/gstack/SKILL.md",
     ".agents/skills/gstack/SKILL.md",
 )
+
+# A live CUSTOM delivery pack: a skill directory under a real host skill root
+# (not a docs/ archive) whose path, frontmatter name, or a small body prefix
+# names a delivery OS. This catches a private factory, an already-installed
+# agentic-delivery, or any gated-delivery overlay that is not one of the named
+# packs above — so --recommend does not stack a second delivery OS on top of one
+# already running in the target.
+LIVE_SKILL_ROOTS = (
+    ".claude/skills",
+    ".agents/skills",
+    ".cursor/skills",
+    ".codex/skills",
+)
+# Review/critique OSes are never "other delivery", even though their prose names
+# delivery gates (the review bar cites `agentic-delivery` and G0–G10; idea-critic
+# cites G0/G1). Excluding them by name stops a review-only install from
+# suppressing the very overlay a target may still want.
+REVIEW_ONLY_SKILLS = {"deep-code-review", "idea-critic"}
+# Delivery-positive tokens (case-insensitive). Distinctive multi-char tokens are
+# matched as substrings; the short gate labels g0/g10 need word boundaries so
+# they do not fire inside unrelated words. A token is required — merely being a
+# "skill" or a "review" is not delivery.
+DELIVERY_SUBSTRINGS = (
+    "agentic-delivery",
+    "software-house",
+    "gated delivery",
+    "shipping loop",
+    "/ship",
+    "spec-kit",
+    "gstack",
+    "delivery overlay",
+)
+DELIVERY_GATE_RE = re.compile(r"\b(?:g0|g10)\b")
+# Read only a small prefix of each SKILL.md (frontmatter plus a little body),
+# never the whole file, and never a walk of the tree under the skill root.
+SKILL_PREFIX_CHARS = 4096
 WEB_FILES = {
     "package.json",
     "next.config.js",
@@ -73,6 +110,102 @@ REVIEW_PATHS = (
     ".cursor/skills/deep-code-review/SKILL.md",
 )
 
+# Gate/tooling markers, by basename, so the recommendation can report which
+# quality gates the target ALREADY has and propose only what is missing. A
+# marker's absence is reported as "not detected" — never "you have none": this
+# is a bounded, filename-level inspection, not a guarantee.
+LINT_MARKERS = {
+    ".eslintrc", ".eslintrc.js", ".eslintrc.cjs", ".eslintrc.json",
+    ".eslintrc.yml", ".eslintrc.yaml", "eslint.config.js", "eslint.config.mjs",
+    "ruff.toml", ".ruff.toml", ".flake8", ".pylintrc", "biome.json",
+    ".golangci.yml", ".golangci.yaml", ".rubocop.yml",
+}
+FORMAT_MARKERS = {
+    ".prettierrc", ".prettierrc.js", ".prettierrc.json", ".prettierrc.yml",
+    ".prettierrc.yaml", ".prettierrc.cjs", ".editorconfig", "rustfmt.toml",
+    ".rustfmt.toml", ".clang-format",
+}
+TEST_FILE_MARKERS = {
+    "pytest.ini", "tox.ini", "conftest.py", "jest.config.js", "jest.config.ts",
+    "vitest.config.ts", "vitest.config.js", "phpunit.xml", "karma.conf.js",
+}
+TEST_DIR_MARKERS = {"tests", "test", "__tests__", "spec"}
+PRECOMMIT_MARKERS = {".pre-commit-config.yaml", ".pre-commit-config.yml"}
+BANLIST_MARKERS = {".banlist.txt", ".banlist.local.txt"}
+CI_FILE_MARKERS = {
+    ".gitlab-ci.yml", ".gitlab-ci.yaml", "azure-pipelines.yml", "Jenkinsfile",
+    ".travis.yml", "bitbucket-pipelines.yml",
+}
+
+
+def _pkg_scripts(root: Path) -> set:
+    """Return the npm script names declared in a root package.json (best effort)."""
+    import json
+
+    pkg = root / "package.json"
+    if not pkg.is_file():
+        return set()
+    try:
+        data = json.loads(pkg.read_text(encoding="utf-8"))
+        scripts = data.get("scripts", {})
+        return set(scripts) if isinstance(scripts, dict) else set()
+    except (OSError, ValueError):
+        return set()
+
+
+def _pyproject_tools(root: Path) -> str:
+    """Return the text of a root pyproject.toml (best effort, empty on failure)."""
+    py = root / "pyproject.toml"
+    if not py.is_file():
+        return ""
+    try:
+        return py.read_text(encoding="utf-8")
+    except OSError:
+        return ""
+
+
+def detect_gates(root: Path, names: set, entries: list) -> dict:
+    """Filename-level inspection of which quality gates the target already has.
+
+    Reads at most two well-known manifests (package.json, pyproject.toml) plus
+    basename membership; never a full-tree content scan. Every value is a
+    best-effort boolean; False means "not detected here", not "absent".
+    """
+    scripts = _pkg_scripts(root)
+    pyproject = _pyproject_tools(root)
+    dir_names = {p.name for p in entries if p.is_dir()}
+
+    ci = (root / ".github" / "workflows").is_dir() or bool(names & CI_FILE_MARKERS)
+    lint = (
+        bool(names & LINT_MARKERS)
+        or "lint" in scripts
+        or "[tool.ruff]" in pyproject
+        or "[tool.flake8]" in pyproject
+        or "[tool.pylint" in pyproject
+    )
+    fmt = (
+        bool(names & FORMAT_MARKERS)
+        or "format" in scripts
+        or "[tool.black]" in pyproject
+        or "[tool.ruff.format]" in pyproject
+    )
+    tests = (
+        bool(names & TEST_FILE_MARKERS)
+        or bool(dir_names & TEST_DIR_MARKERS)
+        or "test" in scripts
+        or "[tool.pytest.ini_options]" in pyproject
+    )
+    pre_commit = bool(names & PRECOMMIT_MARKERS)
+    privacy = bool(names & BANLIST_MARKERS)
+    return {
+        "ci": ci,
+        "lint": lint,
+        "format": fmt,
+        "tests": tests,
+        "pre_commit": pre_commit,
+        "privacy": privacy,
+    }
+
 
 def walk(root: Path, max_depth: int = 3) -> list[Path]:
     out: list[Path] = []
@@ -89,6 +222,46 @@ def walk(root: Path, max_depth: int = 3) -> list[Path]:
                 _walk(child, depth + 1)
     _walk(root, 0)
     return out
+
+
+def _names_delivery_os(text: str) -> bool:
+    low = text.lower()
+    if any(tok in low for tok in DELIVERY_SUBSTRINGS):
+        return True
+    return bool(DELIVERY_GATE_RE.search(low))
+
+
+def has_custom_delivery_skill(root: Path) -> bool:
+    """True if a live (non-archived) skill declares a delivery OS.
+
+    Bounded: for each known host skill root, look one level down at each skill's
+    SKILL.md and read only a prefix — no recursive glob of the tree. Review-only
+    skills are never delivery. Skip non-regular files and symlinks (a FIFO would
+    hang open(); a symlink can point outside the target). Any single
+    unreadable/missing SKILL.md is skipped (fail closed for that file), never
+    fatal to the recommendation.
+    """
+    for host in LIVE_SKILL_ROOTS:
+        try:
+            children = sorted((root / host).iterdir())
+        except OSError:
+            continue
+        for child in children:
+            if child.name in REVIEW_ONLY_SKILLS or not child.is_dir():
+                continue
+            skill_md = child / "SKILL.md"
+            # is_file() follows symlinks; reject those first so a planted FIFO
+            # cannot hang open() and an out-of-tree symlink is not read.
+            if skill_md.is_symlink() or not skill_md.is_file():
+                continue
+            try:
+                with skill_md.open("r", errors="replace") as fh:
+                    blob = fh.read(SKILL_PREFIX_CHARS)
+            except OSError:
+                continue
+            if _names_delivery_os(f"{child.name}\n{blob}"):
+                return True
+    return False
 
 
 def recommend(root: Path) -> dict:
@@ -108,6 +281,8 @@ def recommend(root: Path) -> dict:
                 continue
             other_delivery = True
             break
+    if not other_delivery:
+        other_delivery = has_custom_delivery_skill(root)
     web = bool(names & WEB_FILES)
     api = bool(names & API_FILES)
     iac = bool(names & IAC_FILES) or bool(names & IAC_DIR_NAMES)
@@ -155,6 +330,7 @@ def recommend(root: Path) -> dict:
         "pack_flag": pack_flag,
         "reasons": reasons,
         "shape": {"web": web, "api": api, "iac": iac, "agentic": agentic},
+        "gates": detect_gates(root, names, entries),
     }
 
 
@@ -179,6 +355,28 @@ def main(argv: list[str]) -> int:
     print("why:")
     for r in rec["reasons"]:
         print(f"  - {r}")
+
+    gates = rec["gates"]
+    glabel = {"pre_commit": "pre-commit", "ci": "CI"}
+    present = [glabel.get(g, g) for g, ok in gates.items() if ok]
+    missing = [glabel.get(g, g) for g, ok in gates.items() if not ok]
+    print()
+    print("quality gates detected (filename-level; 'not detected' != 'absent'):")
+    print(f"  present:      {', '.join(present) or '(none detected)'}")
+    print(f"  not detected: {', '.join(missing) or '(all core gates detected)'}")
+    if "agentic-delivery" in rec["skills"]:
+        print()
+        print("software-house pack (install with --with-delivery / --full):")
+        print("  Adds the delivery roles as hats (not standing bots): Conductor,")
+        print("  Product Analyst, Architect, Implementer, Evil Twin, QA, Security,")
+        print("  UX & Design, Release, Docs. Depth: agentic-delivery/references/roles.md.")
+        if missing:
+            print("  Gates the deep-code-review Phase-6 imprint can wire that are")
+            print(f"  not detected here: {', '.join(missing)}.")
+        if rec["shape"]["web"]:
+            print("  UI target: also wire verify-visible-UX + ux-evidence")
+            print("  (deep-code-review product-ux-quality.md).")
+
     print()
     print("Owner decides. Agent may recommend --full. Do not install")
     print("overlays without a yes. Caveman is not in this pack — see")

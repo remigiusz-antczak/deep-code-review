@@ -318,9 +318,10 @@ sink is theater, not coverage.
 
 ## 5. Subagents inherit the reviewer's blind spots — inject the discriminators
 
-A tool that renders bytes, and a repo that documents its own past, fool every
-unit the same way. Put both discriminators in **every** subagent prompt, and have
-the orchestrator apply them to security-critical claims itself:
+A tool that renders bytes, a repo that documents its own past, and a grep that
+matches dead code fool every unit the same way. Put these discriminators in
+**every** subagent prompt, and have the orchestrator apply them to
+security-critical claims itself:
 
 - **Byte-fidelity** (cross-ref principle 2, domains C & R): the viewer may
   collapse NUL / zero-width / bidi / BOM to whitespace or drop them. Any finding
@@ -337,6 +338,18 @@ the orchestrator apply them to security-critical claims itself:
   note, not a finding. A fan-out will otherwise re-report the repo's own
   changelog as new bugs, once per unit. Pair with Phase 0's **measured** history
   depth — do not argue from a README claim that history is absent.
+- **Grep hit vs the surface that actually runs** (cross-ref principle 9,
+  root-cause-not-symptom): a string match is a *candidate*, not a confirmed live
+  site. The file may not be on the reviewed route's render or execution path at
+  all — a component never mounted on the screen in question, a handler wired to
+  nothing, dead code kept for history. Before a finding (or a fix) names a
+  `file:line` as *the* live surface, trace it: for a UI, route → component tree to
+  confirm the component renders on that screen; for a code path, the call graph
+  from a real entry point to confirm it executes. `git grep` / symbol search finds
+  candidates; the render or call trace confirms. A fix aimed at a grep hit the
+  target never runs is wasted work that also leaves the real surface — the one
+  that does render — still broken. The lead applies this to any finding whose
+  severity rests on the cited line being live.
 
 ---
 

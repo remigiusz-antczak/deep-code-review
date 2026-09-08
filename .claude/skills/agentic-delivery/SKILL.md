@@ -10,7 +10,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.17.0"
+  version: "1.18.0"
 ---
 
 # Agentic delivery
@@ -52,23 +52,36 @@ Before any agent-originated "we should" reaches the owner, load
 
 ## Operating model
 
-Smallest sufficient team. Hats fire from risk, they are not standing
-roles.
+Smallest sufficient team. Hats fire from risk; they are not standing
+roles, and never a bot or profile per role. One worker wears several
+compatible hats on a small change. The full roster — each hat's trigger,
+the gate it owns, the build/product discipline it carries, and the
+`deep-code-review` review lens it maps to — is `references/roles.md`. The
+core hats:
 
 - **Conductor** — intent, scope, task graph, merge plan, evidence roll-up.
   Never self-approves.
-- **Builder** — implements in a dedicated worktree. Never wears independent
-  QA, security, or release-approval.
+- **Product Analyst** — turns a real signal (user/product feedback, an
+  owner goal) into a testable spec and a feedback-coverage entry; enforces
+  interaction-completeness and benchmarks solved elements against named
+  comparable products. Recommends; the owner decides scope. Feeds G0/G1.
+- **Builder / Implementer** — implements in a dedicated worktree to the
+  build bar in `references/roles.md`. Never wears independent QA, security,
+  or release-approval.
+- **Evil Twin** — attacks a plan or an agent-originated "we should" before
+  the owner sees it (G0/G1); a lead to verify, not an oracle. Mechanism in
+  the `idea-critic` skill.
 - **QA** — independent, exact-revision functional / regression / a11y /
-  performance verification.
+  state-coverage / performance verification.
 - **Security** — independent AppSec / privacy / supply-chain. Red attacks
   on paper and in authorized testbeds; Blue fail-closed; White scope/ROE.
   Physical / social-engineering assessment is **human-led under written
   ROE**. An agent may only plan, tabletop, and analyse owner-supplied
   evidence.
 
-One worker may wear several compatible hats on a small change. Builder
-never reviews builder.
+Builder never reviews builder. Architect, UX & Design, Release, and Docs
+fire from the same risk triggers — `references/roles.md` maps each to its
+gate and its review lens.
 
 ---
 
@@ -112,8 +125,21 @@ integration SHA plus one aggregate gate before a merge train (G7).
 
 ## Worktrees and occupancy
 
-- One writer per worktree. Read-only reviewers may share a pinned
+- **One writer per worktree — and a worktree is not automatic.** A subagent
+  or fork mechanism does **not** necessarily give a separate working tree:
+  verify your host's isolation semantics and **assume a shared tree until
+  proven otherwise**. Branch, index, and installed dependencies are
+  per-tree, so two writers in one tree collide even when their file sets are
+  disjoint. Give every write-lane its own isolated worktree (or a claimed
+  branch), and **clean the base to the mainline before launching** so lanes
+  branch off a known-good state. Read-only reviewers may share a pinned
   checkout.
+- **Preflight before spawning any lane.** Enumerate what is already in
+  flight — running workers, existing worktrees (`git worktree list`), and
+  open PRs (the forge's PR list) — and claim the work (a draft PR or an
+  assigned issue) before starting. Never spawn a duplicate of a lane already
+  running, and never start on a branch that already carries commits without
+  reading them first. One writer per file.
 - Serialize shared-state edits, migrations, generated files, and the
   integration branch.
 - Occupancy is **visibility, not a lock**. Say what is live or stale. Do
@@ -203,6 +229,11 @@ result.
 ## Failure
 
 - Start/auth failure: do not claim work ran.
+- **A running lane is not a finished one.** A spawned worker/worktree is
+  work in progress; report what is *running*, and report a lane's output as
+  done only once it is verified — a green gate at the exact SHA, or a change
+  confirmed in the running product. Never present "N lanes attacking it" as
+  progress.
 - After two equivalent failures, change approach.
 - Provider/model unavailable: fail that lane closed; no silent fallback.
 - Owner-session end: no uncommitted writer work without a recovery
@@ -223,6 +254,8 @@ without saying so.
 
 - Default `./install.sh` does not copy this skill.
 - `--with-delivery` / `--full` copies it next to `deep-code-review`.
+- `references/roles.md` ships with the skill (whole-directory copy) and is
+  routed from this file.
 - A planted defect makes G5/G6 fail.
 - A denied outward action remains blocked.
 - No third-party identifier, private intake, or operator preference
