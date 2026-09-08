@@ -3,6 +3,77 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.18.0] — 2026-09-08
+
+The delivery overlay becomes a **software-house in a repo**: the full role roster
+as hats (not standing bots), a first-class **Product Analyst** role, a hardened
+adversary, the orchestration discipline that keeps parallel lanes from thrashing,
+and the product-UX **interaction-completeness** bar. Additive on 1.17.0 — the six
+review phases, domains **A–S**, the severity rubric, and the report shape are
+unchanged; the review side gains one product-UX section and one fan-out
+discriminator, the delivery overlay gains one routed reference, and the CI routing
+gate now also covers the overlays. Grounded in five directly-fetched sources
+(Anthropic *Building Effective AI Agents*; Claude Code Subagents; Anthropic Agent
+Skills; MetaGPT; ChatDev) logged in `docs/standards-index.md`.
+
+### Added
+- **`agentic-delivery/references/roles.md`** (routed from that skill's `SKILL.md`):
+  the software-house role roster as **hats, not headcount** — Conductor, Product
+  Analyst, Architect, Implementer, Evil Twin, QA, Security, UX & Design, Release,
+  Docs — each mapped to when it fires, the gate it owns (G0–G10), and the
+  `deep-code-review` review lens it corresponds to. Depth only for the three roles
+  the review-side `role-coverage.md` does **not** hold (Product Analyst,
+  Evil-Twin-as-hat, Implementer); one-line pointers for the rest, to avoid
+  restating the review overlay. Includes the two-tier **gates a software-house
+  repo runs** table (commit-time: privacy/format/lint/type/unit+count; CI:
+  build+E2E-at-SHA / verify-visible-UX / ux-evidence / dependency) with the repo's
+  own gate epistemology (tell can't-check from found-a-problem; fail open on the
+  former; provable-red on a planted defect; never stricter than the standard).
+- **Product Analyst** hat in `agentic-delivery` (Operating model + G0/G1): turns a
+  real signal into a testable spec, enforces **interaction-completeness**,
+  benchmarks solved elements against **named** comparable products, and maintains
+  a **feedback-coverage map** (each item → scoped → verified / deferred) — the
+  product analogue of the review's coverage ledger.
+- **Interaction-completeness + unified-UX** section in
+  `references/product-ux-quality.md` (domain P): one **shared component per
+  concept** (reuse/extend, never reimplement per page; a fix lands in the shared
+  component, not one caller), **no write-only inputs** (read-back required),
+  **WYSIWYG** (store markup, render it — never show raw `**`/`<u>` tokens), and
+  fix-the-surface-that-renders — with new grep 🚩 rows and two pre-ship checklist
+  items.
+- **Render-surface discriminator** in `references/parallel-audit.md` §5: a grep
+  match is a *candidate*, not a live site — trace route → component (UI) or the
+  call graph (code path) before a finding or a fix names a `file:line` as the live
+  surface; a fix aimed at a grep hit the target never runs is wasted work that
+  leaves the real surface broken.
+- `docs/standards-index.md`: a **2026-09-08** verified-by-direct-fetch section for
+  the five sources above, each row stating what the fetch did and did **not**
+  confirm (the arXiv abstracts do not enumerate specific role titles verbatim).
+
+### Changed
+- **`idea-critic`** hardened into a "proper evil twin": a **default-to-dissent**
+  prime directive (with the reflexive-praise trigger), **attack before
+  substantive work** (not after), and **verify-your-own-objection — the critic is
+  a lead, not an oracle** (check a pushback's premise against current verified
+  state; a critic that blocks good work with a stale fact is a false negative).
+- **`agentic-delivery` orchestration discipline**: *Worktrees and occupancy* now
+  states that a subagent/fork mechanism does **not** necessarily isolate the tree
+  (assume shared until proven; branch/index/deps are per-tree), requires cleaning
+  the base before launching and a **preflight** (running workers, `git worktree
+  list`, open PRs) before spawning any lane; *Failure* adds **a running lane is
+  not a finished one** (report what runs; report done only when verified).
+- **`recommend-overlays.py`** now inspects the target for the quality gates it
+  already has (CI, lint, format, tests, pre-commit, privacy — filename-level,
+  reporting "not detected", never "absent") and frames the pack as the
+  software-house roles + the gates the imprint would add.
+- **CI + CONTRIBUTING**: the `routing` gate runs on **all three** skill dirs
+  (`deep-code-review`, `agentic-delivery`, `idea-critic`), so a new overlay
+  reference cannot ship unrouted — the repo dogfoods its own "documented but
+  unenforced is a finding" rule.
+- Overlay `VERSION` files, the three `SKILL.md` version stamps, and the plugin
+  manifest follow **1.18.0**. README gains a *software-house overlay* section and
+  refreshed counts.
+
 ## [1.17.0] — 2026-09-08
 
 Dogfood of 1.15.0/1.16.0 against two private product repos (an agent network

@@ -112,6 +112,47 @@ aesthetic-and-minimalist design; recognition over recall.)
   detail on hover. **No dead controls** — a toggle that does nothing is worse
   than none; it is a trust defect, not a cosmetic one.
 
+## Unified across modules — one component per concept
+
+The consistency rule below has a structural cause and a structural fix.
+**Inconsistency across views is almost always the same concept built more than
+once and drifting** — a row, card, field, empty-state, status chip, or editor
+reimplemented per page, so a fix to one misses the others and the app feels like
+a different product on each screen. This is a maintainability defect (cross-ref
+domain H) with a UX consequence, so it is ruled on here too.
+
+- **One shared component per concept.** Before building a UI element, grep for an
+  existing component or pattern that already does it and **reuse or extend it** —
+  never reimplement per page. A duplicated UI string or markup block across files
+  is the red flag (cross-ref H's duplicate-source-drift: byte-identical lockstep
+  copies need a single source or a parity test).
+- **A fix to a shared concept lands in the shared component**, not in one caller —
+  otherwise the same defect survives in every other caller, and whoever checked
+  only the screen they were shown signs off a still-broken app.
+- **Fix the surface that renders, not the first grep hit.** A string can live in a
+  file the target route never renders; trace route → component and confirm the
+  component is actually shown on that screen before editing it. Grep finds
+  candidates; the render trace confirms (cross-ref `parallel-audit.md` §5).
+
+## Interaction-completeness — the loop must close
+
+A control is a defect until its whole loop works in the running product, not just
+until it renders:
+
+- **No write-only inputs.** Any surface where a user adds or edits data must let
+  them **see, reach, and edit** what they added, in that same view (read-back). An
+  input that posts to a store but never shows the value back is a defect, not a
+  slice — the user cannot tell it worked, correct it, or undo it.
+- **WYSIWYG, never raw markup shown to users.** Store markup; **display it
+  formatted**. A rich-text field that shows `**bold**`, `<u>`, or `*` tokens while
+  the user types has leaked its storage format into the UI — render what the text
+  will look like once posted.
+- **No dead controls, and disabled must look disabled.** A button/toggle/arrow
+  rendered enabled whose handler is a no-op is a trust defect; a control that is
+  unavailable must *look* unavailable, not merely be inert. Unit-logic tests
+  passing is **not** a working UI — exercise the real control in the running app
+  (cross-ref the live-verification rule below).
+
 ## Match a named standard; visual & number-format consistency
 
 Before designing an element, recall how the best products solve it and **name the
@@ -140,7 +181,12 @@ descriptions of marks rather than the marks (self-evident) · a "drawer"/"detail
 that pushes a route change or unmounts the list, or an `onClick` that is a
 no-op / `// TODO` (drawers / dead controls) · `>1` font-size/spacing value for one
 role, or column numbers interpolated without `toLocaleString`/tabular figures
-(consistency).
+(consistency) · the same UI string or markup block duplicated across ≥2
+component files, or a second hand-rolled copy of a row/card/field a shared
+component already renders (one concept built more than once) · a text input that
+persists markup while rendering its raw `**`/`*`/`<u>` tokens back to the user
+(not WYSIWYG) · an add/create/edit handler that writes to a store with no path
+that reads the value back into the same view (write-only input).
 
 ## Pre-ship checklist (mirror SKILL.md's report discipline)
 - [ ] Does it need explaining? If yes, redesign until it doesn't (or demote the text to progressive disclosure).
@@ -149,6 +195,8 @@ role, or column numbers interpolated without `toLocaleString`/tabular figures
 - [ ] Deltas are caret + magnitude, coloured by sentiment; flat is a muted `—` with a period anchor?
 - [ ] Matches a **named** top-product pattern; convention gaps surfaced to the owner, not silently redesigned?
 - [ ] Consistent type scale / spacing / components / number format with sibling views (tabular figures in columns)?
+- [ ] One shared component per concept — reused/extended, not reimplemented per page; a fix landed in the shared component, not one caller?
+- [ ] Interaction loops close — read-back on every input (no write-only), WYSIWYG not raw markup, no dead controls — checked on the route that actually renders?
 - [ ] Drawers overlay (don't navigate away); collapse scope correct; no dead controls?
 - [ ] Verified live in the running product, in more than the happy-path state?
 
