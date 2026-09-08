@@ -3,6 +3,32 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.19.1] — 2026-09-08
+
+Patch on 1.19.0. The VERSION provenance gate no longer strips
+whitespace before matching, and it no longer accepts a matching heading
+anywhere in CHANGELOG.md. VERSION must be byte-exact ASCII core SemVer
+(`MAJOR.MINOR.PATCH`, no leading zeros in a multi-digit part) with at
+most one optional terminal LF. The first `## ` heading in CHANGELOG.md
+must announce that version.
+
+Closes the fail-open that accepted a planted `  1.19.0  ` file, and the
+stale-ordering hole where an older first heading still passed if a later
+heading matched. Ports the unpushed local `d104e72` contract onto main
+and adds the planted whitespace / NUL / first-heading cases to
+`scripts/test-ci-gates.sh`.
+
+### Changed
+- `scripts/ci-gates.sh` `version`: hex-validate raw VERSION bytes, then
+  require the first CHANGELOG release heading to announce it.
+- Overlay `VERSION` files, the three `SKILL.md` version stamps, and the
+  plugin manifest follow **1.19.1**.
+
+### Tests
+- Eight new version-gate cases: leading-zero major, NUL, embedded
+  whitespace, multiline, leading whitespace, stale first heading
+  (reject); exact `1.13.0` with trailing LF, and no trailing LF (accept).
+
 ## [1.19.0] — 2026-09-08
 
 A hardening pass on top of 1.18.0's software-house roles, from four research
