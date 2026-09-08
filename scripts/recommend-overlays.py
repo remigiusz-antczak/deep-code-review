@@ -356,6 +356,13 @@ def main(argv: list[str]) -> int:
     for r in rec["reasons"]:
         print(f"  - {r}")
 
+    specify = (root / ".specify").is_dir() or (root / "constitution.md").is_file()
+    if specify:
+        print()
+        print("Spec Kit constitution detected. Review against it")
+        print("(docs-and-dx.md). Do not install Spec Kit. Do not stack")
+        print("agentic-delivery on top of .specify.")
+
     gates = rec["gates"]
     glabel = {"pre_commit": "pre-commit", "ci": "CI"}
     present = [glabel.get(g, g) for g, ok in gates.items() if ok]

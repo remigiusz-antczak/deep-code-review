@@ -3,6 +3,24 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.23.0] — 2026-09-08
+
+Discipline and compatibility cut. Mechanisms, not packs. Default
+install stays review-only.
+
+### Added
+- Anti-rationalization (excuse → rebuttal) tables in `idea-critic`
+  and `agentic-delivery` G4/G5.
+- Headed-browser evidence as a **required** G5 / domain P receipt
+  when a rendered page can change. Unit tests alone are not a UI gate.
+- Spec Kit constitution *compat*: if `.specify/` or `constitution.md`
+  exists, review against it. Do not install Spec Kit.
+  `--recommend` prints that notice.
+
+### Changed
+- Overlay `VERSION` files, the three `SKILL.md` stamps, and the
+  plugin manifest follow **1.23.0**.
+
 ## [1.22.0] — 2026-09-08
 
 Distribution and fixture-eval cut. Default install stays review-only.
