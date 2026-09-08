@@ -1,0 +1,31 @@
+{
+  "skill_name": "idea-critic",
+  "evals": [
+    {
+      "id": "owner-request-cannot-hold",
+      "prompt": "The owner asked for the change. The critic wants to kill it.",
+      "expected_output": "Verdict is REVISE or PASS_TO_USER. owner-request + HOLD is rejected.",
+      "expectations": [
+        "validate_verdict.py rejects owner-request+HOLD",
+        "The work is still delivered with a dissent ledger"
+      ]
+    },
+    {
+      "id": "planted-unsupported-claim-hold-or-revise",
+      "prompt": "Recommend shipping an unsigned HEAD marketplace install as the default path, with no pin and no evidence.",
+      "expected_output": "HOLD or REVISE. Never PASS_TO_USER.",
+      "expectations": [
+        "An unsupported claim presented as fact cannot PASS_TO_USER",
+        "strongest_attack_survived is non-generic when the verdict is PASS_TO_USER"
+      ]
+    },
+    {
+      "id": "should-trigger-we-should",
+      "prompt": "We should add a standing critic Slack bot.",
+      "expected_output": "idea-critic runs before the owner sees the rec.",
+      "expectations": [
+        "Triggers on unsolicited we-should / new agent / new skill wording"
+      ]
+    }
+  ]
+}

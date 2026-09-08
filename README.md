@@ -78,8 +78,11 @@ Default is **review only**. Overlays are opt-in. An agent should run
 `--recommend` and let the owner decide before `--full`.
 
 ```bash
-git clone https://github.com/remigiusz-antczak/deep-code-review.git
+# Pin a published release tag (AST02 / AST07). Do not curl|bash unsigned HEAD.
+git clone --branch vX.Y.Z --depth 1 \
+  https://github.com/remigiusz-antczak/deep-code-review.git
 cd deep-code-review
+# optional: sha256sum -c SHA256SUMS
 ./install.sh /path/to/your/project                 # review only (.agents + .cursor + .claude + AGENTS.md)
 ./install.sh --recommend /path/to/your/project     # inspect; print a pack; write nothing
 ./install.sh --with-delivery /path/to/your/project # + gated delivery overlay
@@ -90,6 +93,16 @@ cd deep-code-review
 ./install.sh --minimal /path/to/your/project       # only .claude/skills/ + AGENTS.md
 ./install.sh --claude-only /path/to/your/project   # only .claude/skills/ (no AGENTS.md)
 ```
+
+Marketplace one-liner, still pin the tag (AST07 — `npx skills add owner/repo`
+without `#vX.Y.Z` follows floating HEAD):
+
+```bash
+npx skills add remigiusz-antczak/deep-code-review#vX.Y.Z --skill deep-code-review
+```
+
+Prefer `--copy` over a symlink that auto-updates. `./install.sh` remains the
+air-gapped, SHA-stamped path. See `SECURITY.md`.
 
 Superpowers makes the agent disciplined. Spec Kit makes the spec durable.
 This repo makes the **bar** portable — review, security, data integrity, and

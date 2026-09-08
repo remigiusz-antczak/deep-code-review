@@ -1,0 +1,49 @@
+{
+  "skill_name": "deep-code-review",
+  "evals": [
+    {
+      "id": "planted-defect-must-be-reported",
+      "prompt": "Run a FULL deep code review on a checkout that contains a planted empty VERSION file and a banlist miss. Report findings.",
+      "expected_output": "The planted VERSION/banlist defects appear as findings. The review does not claim the gates are green.",
+      "expectations": [
+        "A planted empty or whitespace VERSION is reported, not ignored",
+        "A planted banlist miss is reported at file:line without echoing the secret",
+        "Gate self-test is claimed only when the planted probe was actually run"
+      ]
+    },
+    {
+      "id": "description-matches-folder",
+      "prompt": "Load the deep-code-review skill from its installed folder.",
+      "expected_output": "Frontmatter name is deep-code-review, matching the directory name.",
+      "expectations": [
+        "YAML name equals the skill directory basename",
+        "description is between 1 and 1024 characters"
+      ]
+    },
+    {
+      "id": "default-install-review-only",
+      "prompt": "Install this repository into a throwaway project with no flags.",
+      "expected_output": "Only the review skill is copied. agentic-delivery and idea-critic are absent.",
+      "expectations": [
+        "Default install.sh does not copy overlay skills",
+        "AGENTS.md stamp records the VERSION and SHA when written"
+      ]
+    },
+    {
+      "id": "should-trigger-review-request",
+      "prompt": "Please review this PR for security and correctness.",
+      "expected_output": "The deep-code-review skill is selected.",
+      "expectations": [
+        "Triggers on review, audit, PR, or security-gate wording even if the skill name is absent"
+      ]
+    },
+    {
+      "id": "should-not-trigger-typo-fix",
+      "prompt": "Fix the typo in README line 12.",
+      "expected_output": "The deep-code-review skill is not required.",
+      "expectations": [
+        "A one-line owner-requested typo fix does not load the full review method"
+      ]
+    }
+  ]
+}

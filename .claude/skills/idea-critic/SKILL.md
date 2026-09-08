@@ -9,7 +9,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.21.0"
+  version: "1.22.0"
 ---
 
 # Idea critic
@@ -209,3 +209,5 @@ script ships next to this file and is copied by `install.sh`.
   empty or a generic pass phrase.
 - An agent-originated `HOLD` never appears in the owner-facing reply.
 - No new profile or bot was created.
+- `evals/evals.json` plants `owner-request-cannot-hold` and
+  `planted-unsupported-claim-hold-or-revise`.

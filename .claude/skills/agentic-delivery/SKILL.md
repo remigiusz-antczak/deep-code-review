@@ -10,7 +10,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.21.0"
+  version: "1.22.0"
 ---
 
 # Agentic delivery
@@ -383,5 +383,7 @@ without saying so.
   routed from this file.
 - A planted defect makes G5/G6 fail.
 - A denied outward action remains blocked.
+- `evals/evals.json` names `recommend-must-not-write` and
+  `default-install-omits-delivery`.
 - No third-party identifier, private intake, or operator preference
   appears in this file.
