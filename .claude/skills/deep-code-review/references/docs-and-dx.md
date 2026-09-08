@@ -97,6 +97,20 @@ survives the *next* contributor — see "Standards imprint" below.
   count, a schema/field list) — a pointer can't drift, a duplicate always will.
   Enforce a CI **doc↔code sync check** that fails when a tracked doc, field, or
   count drifts.
+- **Dated status/handoff docs accumulate faster than anyone prunes them.** In a
+  project with many contributors or agents, `STATUS-jan.md`, `HANDOFF-v2.md`,
+  `HANDOFF-v3.md`-style snapshots pile up in `docs/` — each accurate the day
+  it's written, stale the next, with no marker for which one is current. The
+  fix is not "write a better doc": live coordination state (who owns what,
+  what's blocked on whom) belongs in the issue tracker, which has native
+  open/closed/assignee semantics a markdown file doesn't; at most one
+  continuously-**updated** pointer doc survives in the repo, never a new dated
+  file per session. Detector: `find . -iname '*status*.md' -o -iname
+  '*handoff*.md' -o -iname '*progress*.md'` (excluding `node_modules`) turning
+  up more than a small handful, especially with dates/version suffixes in the
+  filename, is the smell; two of them asserting different values for the same
+  fact (an owner, a current blocker) is proof the duplication has already
+  drifted.
 - **Reconcile load-bearing claims against the code.** For each doc claim using
   *optional / required / always / never / all / every*, locate the code that
   enforces it and confirm. A mismatch is a finding; a mismatch on a
@@ -247,4 +261,5 @@ undocumented env vars; no architecture diagram; "see the code for details"; live
 counts hard-coded in prose; a decision with no rationale anywhere; a project with
 strict standards in a contributor's head but nothing an agent can read and apply;
 conflicting agent-instruction files (`CLAUDE.md` vs `AGENTS.md`); a standards doc
-that no gate enforces.
+that no gate enforces; more than a handful of dated status/handoff/progress
+snapshot docs, or two of them disagreeing on the same fact.

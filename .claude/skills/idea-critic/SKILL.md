@@ -9,7 +9,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.18.0"
+  version: "1.19.0"
 ---
 
 # Idea critic
@@ -89,7 +89,7 @@ One skill, three hats. Default: run all three. Do not invent a fourth.
 |---|---|---|
 | `skeptic` | Attack assumptions, inverted incentives, "what would have to be true" | Unsupported claims presented as fact |
 | `better-way` | Cheaper, simpler, or already-existing paths; Chesterton's fence | No alternative considered |
-| `kill-criteria` | When not to do it, reversibility, what reverses the rec | No stop condition |
+| `kill-criteria` | When not to do it, reversibility, what reverses the rec; run a **premortem** — assume this has already failed badly, write why, then extract kill criteria from it (Klein, 2007) | No stop condition |
 
 ---
 
@@ -97,13 +97,21 @@ One skill, three hats. Default: run all three. Do not invent a fourth.
 
 1. **Classify origin.** `owner-request` vs `agent-originated`. Only the
    latter may be withheld.
-2. **Write the packet:** claim, origin, blast, reversibility, evidence on
-   hand, alternatives already rejected, what the parent wants to tell the
-   owner.
+2. **Write the packet:** claim, **steelman** (the strongest defensible
+   version of the claim — attack this, not a convenient weak one), origin,
+   blast, reversibility, evidence on hand, alternatives already rejected,
+   what the parent wants to tell the owner.
 3. **Independence.** Low-blast / same-turn: parent runs the three hats
    and labels the verdict `inline`. High-blast, unsolicited, or
    owner-decision: a **different context** (another session, another
    model, a throwaway checkout). Calling `inline` "independent" is a lie.
+   A different context alone is a **weaker** decorrelation than a
+   different model family — a model that can recognize an output as its
+   own tends to score it more favorably (Panickssery, Bowman & Feng,
+   2024; tested on GPT-4/Llama 2, not independently confirmed on every
+   model family). Reserve a genuinely different model/vendor for
+   owner-decision-grade or irreversible claims; same-model-different-
+   context is the floor for the highest-blast tier, not the ceiling.
 4. **Return only the verdict schema.** Invalid or missing = `HOLD`.
 5. **Act before any owner-facing message:**
    - `HOLD` — do not recommend it. Owner hears nothing unless they asked.
@@ -123,10 +131,14 @@ verdict                HOLD | REVISE | PASS_TO_USER
 independence           inline | independent
 origin                 owner-request | agent-originated
 claim                  <one sentence>
+steelman               the strongest defensible version of the claim
 hats_run               skeptic, better-way, kill-criteria
 assumptions            list or NONE
 better_ways            list or NONE
 kill_criteria          list or NONE
+strongest_attack_survived   the single sharpest objection actually tried,
+                            and why it failed — required and non-generic
+                            whenever verdict is PASS_TO_USER
 questions_parent_must_resolve   list or NONE
 user_question          one direct line, or NONE (never a list)
 dissent_ledger         short
@@ -138,6 +150,13 @@ remaining_risk         short
 - Critics are reviewers, not evidence sources. Re-check objective claims.
 - `owner-request` + `HOLD` is illegal. Attack, then `REVISE` or
   `PASS_TO_USER`.
+- `steelman` and `strongest_attack_survived` must not be empty. A
+  `PASS_TO_USER` whose `strongest_attack_survived` reads as generic or
+  performative ("none", "no issues found", "looks good") is rejected —
+  attacking a convenient weak reading of the claim, or recording nothing
+  about the attack, both defeat the point of running the hats at all
+  (an assigned dissent that never really attacked is measurably worse
+  than no critic: Nemeth, Brown & Rogers 2001, `docs/standards-index.md`).
 
 Validate a machine-readable verdict:
 
@@ -173,6 +192,10 @@ script ships next to this file and is copied by `install.sh`.
 - **Slop recs.** `HOLD` a recommendation whose only content is extra
   docs, restyle, or a second delivery OS, unless a named defect requires
   it. Prefer the existing bar.
+- **False-closure REVISE.** Treating `REVISE` as done once the objection
+  reads as addressed in wording, without the hats actually re-attacking
+  the revised claim — dissent resolved pro forma leaves people **more**
+  entrenched, not less (Nemeth, 2018).
 
 ---
 
@@ -181,6 +204,8 @@ script ships next to this file and is copied by `install.sh`.
 - A planted unsupported claim yields `HOLD` or `REVISE`, never
   `PASS_TO_USER`.
 - `scripts/validate_verdict.py` rejects a missing key, illegal
-  `owner-request`+`HOLD`, and a list-shaped `user_question`.
+  `owner-request`+`HOLD`, a list-shaped `user_question`, an empty
+  `steelman`, and a `PASS_TO_USER` whose `strongest_attack_survived` is
+  empty or a generic pass phrase.
 - An agent-originated `HOLD` never appears in the owner-facing reply.
 - No new profile or bot was created.

@@ -333,7 +333,10 @@ writing theater.
   especially when cleanup lives only in `finally`/`try` that `process.exit` /
   SIGINT / overlapping runs can skip** (depth: `references/testing-and-evals.md`).
 
-### K. Build, CI/CD, supply chain & release
+### K. Build, CI/CD, supply chain & release → `references/release-engineering.md`
+Two halves: build/supply-chain (below) and the **release** half — feature-flag
+lifecycle, canary/blue-green claims vs actual config, DORA-or-`UNMEASURED` —
+`references/release-engineering.md`.
 - One-command reproducible build; lockfiles committed and honored; CI gates
   merge on lint + format + type + tests + security/dependency scan.
 - Third-party CI actions **pinned to a commit SHA** (not `@main`/`@v3`), bumped

@@ -42,7 +42,9 @@ Two rules override the whole roster:
   Implementer — a different context, and for a sensitive diff a decorrelated
   second model (the reviewer runs in its **own context window with its own tool
   access**, the property that makes a subagent a real second opinion rather than
-  an echo — Claude Code subagents).
+  an echo — Claude Code subagents); a fresh context is also documented to reduce
+  self-bias specifically ("a fresh context improves code review since Claude
+  won't be biased toward code it just wrote" — Claude Code best practices).
 
 ---
 
@@ -58,7 +60,7 @@ Two rules override the whole roster:
 | **QA** | Behaviour, data, or UI changed | Independent functional / regression / a11y / state-coverage verification at the exact SHA (G5, G6) | role-coverage.md *QA* |
 | **Security** | Authn/authz/egress/secret/supply-chain surface touched | Independent AppSec / privacy / supply-chain; red on paper + authorized testbed only (G6) | role-coverage.md *Data & AI*, *Backend*; `security-*.md` |
 | **UX & Design** | A rendered surface changed | At-home bar, five data states, encoding hygiene, interaction-completeness (G4, G6) | role-coverage.md *UX & UI*; `product-ux-quality.md` |
-| **Release** | A change is ready to ship | Named-owner sign-off, rollback proven, human approval on the outward action (G8, G9) | role-coverage.md *Release & docs* |
+| **Release** | A change is ready to ship, or a feature flag is added | Named-owner sign-off, rollback proven, human approval on the outward action (G8, G9) | role-coverage.md *Release & docs* + **below** |
 | **Docs** | Behaviour, API, or nav a reader sees changed | The docs move in the **same change** as their subject; no stale pointer left behind (G4, G10) | role-coverage.md *Release & docs*; `docs-and-dx.md` |
 
 Every hat above is the **delivery** form of a review lens `role-coverage.md`
@@ -173,6 +175,39 @@ what already works. It is a generic engineering standard; a project's own
 
 The Implementer hands QA and Security the **final reviewed SHA**, never its own
 narrative, and never reviews its own build.
+
+---
+
+## Release — the discipline behind a shippable change
+
+`role-coverage.md`'s Release & docs lens judges a release **at review time**
+(sign-off checklist, rollback tested, branch triage). This is the **authoring**
+counterpart: what the Release hat does *while a change is being built*, so the
+review side has something real to check rather than a claim to take on faith.
+Depth and the review-side checklist: the `deep-code-review` skill's
+`release-engineering.md`.
+
+- **Tag a feature flag's category the moment it is added**, not only when a
+  later review finds it stale. Fowler's four categories: release (short-lived —
+  a week or two, then remove), experiment (A/B/cohort — lifetime tracks the
+  experiment), ops (operator kill-switch — meant to be long-lived), permissioning
+  (feature-by-segment — long-lived, treat as an authz surface). A release-category
+  flag ships with a removal date or a tracking issue **in the same change**, not
+  as a follow-up nobody files.
+- **A canary or blue-green claim ships with the config that makes it true**: a
+  named traffic-split/router mechanism and a named halt metric (not error-rate
+  alone — a business-metric regression is also a rollback trigger), not only a
+  runbook sentence. "We'll do a canary rollout" in a PR description with no
+  matching config is a plan, not a release.
+- **Rollback is exercised, not only documented.** A tested rollback (a drill, a
+  game-day, a prior incident that actually used it) is what G8 means by "rollback
+  proven" — a runbook path that has never been run is `unverified`, the same as
+  any other undemonstrated claim.
+- **DORA-or-`UNMEASURED` before G8 is called done.** Compute deployment
+  frequency, change lead time, change fail rate, deployment rework rate, and
+  failed-deployment recovery time where the pipeline has the raw signal (deploy
+  timestamps, incident/rollback records); report `UNMEASURED` where it doesn't —
+  never a fabricated number, never a silent "fine."
 
 ---
 

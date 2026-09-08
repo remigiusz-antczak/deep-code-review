@@ -11,7 +11,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.18.0"
+  version: "1.19.0"
 ---
 
 # Deep Code Review
@@ -132,7 +132,11 @@ tree. Skip of the planted-defect probe caps only the gate-self-test claim.
 4. **Do no harm — net-positive on every axis.** Never fix one axis by
    silently degrading another. Unavoidable trade-off = owner decision.
 5. **Respect the existing design.** Defects vs redesigns. Intentional public
-   posture needs a **named stating artifact**; drift from it is the finding.
+   posture needs a **named stating artifact**; drift from it is the finding. A
+   choice the owner already made **deliberately and explicitly** (not a default,
+   not an oversight) is treated the same as a stated style guide: propose
+   against it openly if it's worth challenging, never silently revert it as if
+   it were an accident.
 6. **Rank ruthlessly.** Severity rubric below. Never bury a Critical under
    Nits.
 7. **Least-privilege actions.** Review is read-only by default; deliverable
@@ -184,13 +188,13 @@ footguns: `references/language-stack-redflags.md`.
 | B | AppSec (OWASP Top 10:2025) | `security-appsec.md` |
 | C | AI / LLM / agents | `security-ai-agents.md` |
 | D | Data integrity | `data-quality.md` |
-| E | Performance, efficiency & cost | `performance-db-cost.md` |
+| E | Performance, efficiency & cost | `performance-db-cost.md`, `model-tiering.md` |
 | F | Reliability & error handling | `reliability-error-handling.md` |
 | G | Concurrency & shared state | `concurrency-shared-state.md` |
 | H | Tech debt, dead code, maintainability | `domain-checklists.md` |
 | I | API, contracts, integration | `api-contracts.md` |
 | J | Testing & evaluation | `testing-and-evals.md` |
-| K | Build, CI, supply chain, release | `dependency-currency-and-upgrades.md` |
+| K | Build, CI, supply chain, release | `dependency-currency-and-upgrades.md`, `release-engineering.md` |
 | L | Infra / IaC / containers / cloud | `infra-iac-containers.md` |
 | M | Observability | `observability.md` |
 | N | Config, secrets, environments | `domain-checklists.md` |
@@ -302,7 +306,11 @@ are thin pointers).
   reports `file:line` and **never echoes the match**.
 - **Secrets via env/secret manager only.**
 - **Confirm** before destructive, irreversible, billable, or shared-state
-  actions.
+  actions. A tentative or question-phrased message ("I think you could merge
+  these?") is a request for an assessment, not a go-ahead — approval is an
+  imperative or an unambiguous affirmative to a **specific named action**; a
+  question or hedge gets a closing confirmation question back, never the
+  action itself.
 
 Verified standards (URLs + dates): `docs/standards-index.md` in this
 repository / `references/standards-index.md` after install. **ASVS / CIS /

@@ -33,6 +33,19 @@ fixed ports, or kill a sibling server even when tracked files stay clean. If the
 harness cannot isolate executable units, run them serially and record the limit;
 never interpret a concurrently contaminated failure as a candidate defect.
 
+**A failure that only appears under heavy fan-out concurrency is contention,
+not a defect, until reproduced at low concurrency.** Running many heavy
+executable units (a real build, browser test, or compute process) at once can
+exhaust the machine's own capacity — CPU, memory, file descriptors — and
+produce timeouts or flakes indistinguishable, from inside one unit, from a
+genuine defect in the code under test. This is the same "unverified until
+reproduced normally" discipline the skill already applies to an
+environment-shaped failure (one that appears only in a fresh worktree), applied
+to a **capacity**-shaped cause instead of an environment-shaped one: before a
+timeout/flake enters the findings table, re-run the specific failing check in
+isolation. Cap concurrent heavy lanes per machine to a stated ceiling, distinct
+from the candidate-count tiering above.
+
 **Mega-files / huge blobs:** when a single file is too large to hold in one
 context (tens of KB of dense logic, generated bundles, vendored trees), split by
 **named concern** (auth surface, write path, egress, parser) with overlapping
@@ -48,6 +61,25 @@ A subagent that re-discovers the project from scratch spends most of its budget
 re-reading what the lead already knows, and judges against a slightly different
 bar. Assemble **one** packet (frozen schema below) and give the identical copy
 to each unit.
+
+**The packet is also a cacheable prefix — mark it as one.** A stable, reused
+block handed unchanged to every unit is exactly the shape prompt/prefix caching
+wants; a cached prefix is billed far below fresh input on re-send, and on a host
+that supports it a cache read is routinely the single largest lever on a fan-out's
+token cost — worth more than which model runs it. Assemble the packet once,
+enable caching on it if the host offers the primitive, then spawn units against
+the cached copy rather than re-sending it fresh per unit. Depth on this and
+every other cost lever: `model-tiering.md`.
+
+**Don't fan out at all when the work is one dependent chain or fits a single
+context.** A fan-out earns its cost only when there is real bulk to split —
+otherwise the plan, the handoff, and the merge it requires are pure overhead a
+single pass gets for free, and on genuinely hard, non-bulk work a solo pass has
+been measured to beat a coordinated fan-out outright at meaningfully lower
+cost. This is the complement of section 4's stop rule: that rule says when to
+stop *expanding* an already-justified fan-out; this one says when not to
+*start* one — a single well-scoped `FILE`/small `DIFF` review is the common
+case that should never reach for a fan-out in the first place.
 
 ### Packet schema (copy-paste; fill every field)
 
@@ -138,6 +170,17 @@ one-invariant-per-unit split the catalog already prefers, sized so no single fin
 holds more than a few hundred lines of owned surface (mega-files still split by
 named concern per section 0). Record the tier each unit actually ran in the
 manifest's *Unit/tier actually used* column.
+
+**Tier by model capability too, not only by effort.** Running everything cheap
+first and only re-running survivors at full strength has been measured to reach
+the same pass rate for roughly half the cost of running everything strong from
+the start — the same principle this section already applies to *depth of pass*
+applies to *model choice*: run Tier 1 on a fast/cheap model, promote only
+survivors to Tier 2 on a mid/frontier model, and reserve the strongest available
+tier for the lead's own re-verify (section 4) and any candidate that could
+become Blocker/Critical. Spending the strongest tier on every Tier-1 enumeration
+pass burns budget and rate-limit headroom without buying accuracy where it
+matters least. Depth and the vendor-neutral tier definitions: `model-tiering.md`.
 
 ---
 

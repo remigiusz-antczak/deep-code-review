@@ -7,6 +7,21 @@ theater.**
 
 ---
 
+## Pick and name a test-shape philosophy first
+
+Two named, citable shapes disagree on emphasis — that disagreement is itself
+useful, so don't silently pick one: the **Test Pyramid** (Cohn/Fowler — mostly
+unit, some integration, few e2e; optimizes for speed and low flakiness, fits a
+small team or complex pure domain logic) and the **Testing Trophy** (Kent C.
+Dodds — mostly integration, thinner static/unit layers, a thin e2e cap;
+optimizes for confidence-per-test, fits an I/O- and UI-heavy app where unit
+tests would mostly re-test mocks). A heavily skewed suite (e.g. 90% e2e,
+near-zero unit) with **no stated philosophy anywhere in the repo** is a
+finding — the same way this skill already treats an undocumented architecture
+as the finding, not the architecture's shape. Neither shape is "correct" in
+the abstract; require the project to name which one it follows (or an
+explicit third choice), not which one this review prefers.
+
 ## The test taxonomy (apply what fits)
 
 - **Unit** — every exported function and its edge cases; pure logic isolated
@@ -132,4 +147,5 @@ that make the assertion trivial; a checker with no test of its own; `skip`/
 that write a real tracked/shared data path with cleanup only in `finally`/`try`**;
 an AI feature with only mocked unit tests and no eval bench; a coverage % cited
 as proof of correctness; a threshold lowered in the same diff that would otherwise
-fail.
+fail; a heavily skewed pyramid-or-trophy shape with no stated test philosophy
+anywhere in the repo.

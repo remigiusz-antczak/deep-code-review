@@ -16,10 +16,12 @@ REQUIRED = (
     "independence",
     "origin",
     "claim",
+    "steelman",
     "hats_run",
     "assumptions",
     "better_ways",
     "kill_criteria",
+    "strongest_attack_survived",
     "questions_parent_must_resolve",
     "user_question",
     "dissent_ledger",
@@ -28,6 +30,21 @@ REQUIRED = (
 VERDICTS = {"HOLD", "REVISE", "PASS_TO_USER"}
 INDEPENDENCE = {"inline", "independent"}
 ORIGINS = {"owner-request", "agent-originated"}
+# Phrases that read as a performative, non-attacking "attack" — a
+# strongest_attack_survived that reduces to one of these defeats the point
+# of the field (see idea-critic/SKILL.md, verdict schema).
+GENERIC_PASS_PHRASES = {
+    "none",
+    "n/a",
+    "na",
+    "no issues found",
+    "no issues",
+    "looks good",
+    "nothing",
+    "no objections",
+    "no attack",
+    "not applicable",
+}
 
 
 def die(code: int, msg: str) -> NoReturn:
@@ -56,6 +73,8 @@ def main(argv: list[str]) -> int:
     origin = data["origin"]
     independence = data["independence"]
     user_q = data["user_question"]
+    steelman = data["steelman"]
+    strongest_attack = data["strongest_attack_survived"]
 
     if verdict not in VERDICTS:
         die(1, "verdict must be HOLD | REVISE | PASS_TO_USER")
@@ -69,6 +88,20 @@ def main(argv: list[str]) -> int:
         die(1, "user_question must be one line or NONE, never a list")
     if not isinstance(user_q, str) or not user_q.strip():
         die(1, "user_question must be a non-empty string or NONE")
+    if not isinstance(steelman, str) or not steelman.strip():
+        die(1, "steelman must be a non-empty string")
+    # Only PASS_TO_USER is checked for content: HOLD/REVISE never reach the
+    # owner, so a thin strongest_attack_survived there is not yet the defect
+    # this field exists to catch (it becomes one the moment the verdict
+    # would surface unattacked to the owner).
+    if verdict == "PASS_TO_USER":
+        if not isinstance(strongest_attack, str) or not strongest_attack.strip():
+            die(1, "PASS_TO_USER requires a non-empty strongest_attack_survived")
+        if strongest_attack.strip().lower() in GENERIC_PASS_PHRASES:
+            die(
+                1,
+                "strongest_attack_survived reads as generic/performative, not a real attack",
+            )
     print("validate_verdict: ok")
     return 0
 
