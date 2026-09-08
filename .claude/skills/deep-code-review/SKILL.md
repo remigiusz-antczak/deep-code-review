@@ -11,7 +11,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.15.0"
+  version: "1.16.0"
 ---
 
 # Deep Code Review
@@ -60,7 +60,7 @@ Batch-mark untouched domains N/A; escalate on any blast-radius 🚩. Procedure:
 
 | Archetype | Default domains | Must-load refs |
 |---|---|---|
-| web | A B E F J O P | `security-appsec.md`, `frontend-a11y.md` |
+| web | A B E F J O P | `security-appsec.md`, `frontend-a11y.md`, `product-ux-quality.md` |
 | api / service | A B E F I J | `security-appsec.md`, `api-contracts.md` |
 | data / ETL | A D E F G J | `data-quality.md`, `performance-db-cost.md` |
 | agent / LLM | A B C E F J | `security-ai-agents.md`, `security-appsec.md` |
@@ -195,7 +195,7 @@ footguns: `references/language-stack-redflags.md`.
 | M | Observability | `observability.md` |
 | N | Config, secrets, environments | `domain-checklists.md` |
 | O | Docs & DX | `docs-and-dx.md` |
-| P | Frontend / UI / a11y | `frontend-a11y.md` |
+| P | Frontend / UI / a11y | `frontend-a11y.md`, `product-ux-quality.md` |
 | Q | Privacy, compliance, licensing | `privacy-compliance.md` |
 | R | i18n, encoding, localization | `domain-checklists.md` |
 | S | Branches, merges, open-work triage | `branch-and-merge-hygiene.md` |
@@ -345,4 +345,7 @@ hygiene (`references/branch-and-merge-hygiene.md`).
 
 By name (fetch before citing version-specific detail): OWASP WSTG; Cheat
 Sheet Series; MITRE CWE/CVE and ATLAS; NIST SSDF and AI RMF; SLSA; CIS
-Benchmarks; ISO/IEC 25010; Twelve-Factor; Conventional Commits.
+Benchmarks; ISO/IEC 25010; Twelve-Factor; Conventional Commits; Nielsen's
+usability heuristics (named, no URL). Domain P design half:
+`references/product-ux-quality.md` — **read it when** the target renders a
+product UI a human operates (dashboard, table, form, chart, metric).

@@ -3,6 +3,37 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.16.0] — 2026-09-08
+
+A **product-UX quality** reference under domain **P** — the *design half* of a
+frontend review (whether a UI feels **at-home**: conventional, self-evident,
+correct in every data state, cleanly encoded), complementing the a11y-correctness
+half `frontend-a11y.md` already owns. Additive on 1.15.0: the six phases, domains
+**A–S**, the severity rubric, and the report shape are unchanged; domain P gains
+a second reference (routed by a "read it when…" trigger) and the web archetype
+must-load set. No new URL, version, or date is cited — the design half grounds
+in WCAG 2.2 (already tracked), Nielsen's usability heuristics (named, not
+URL-cited), and the public precedent of top products.
+
+### Added
+- **`references/product-ux-quality.md`** (routed from domain P): the "at-home"
+  design bar — **every data state ruled on** (empty/loading/error/partial/
+  overflow), **one-visual-channel-per-dimension** encoding hygiene,
+  **never-colour-alone** (the greyscale test), the **metric/KPI delta standard**
+  (caret + magnitude, colour by *sentiment* not direction), **self-evident-over-
+  explained** (progressive disclosure; legends collapsed, glyph-grid not prose),
+  **drawers-overlay + no-dead-controls**, and a **named** top-product precedent
+  per solved element. Opens with the reconciliation rule (read first): matching a
+  convention is a review **observation** surfaced under "Decisions needed (owner)"
+  with the minimal-visual-impact fix — **never a licence to redesign**. Closes
+  with a **Phase-6 UX-evidence gate** that fails open on could-not-check.
+
+### Changed
+- `SKILL.md` domain **P** routes both `frontend-a11y.md` and
+  `product-ux-quality.md`. Web archetype must-load includes the design half.
+- README P-row names the design half; Nielsen's usability heuristics added to
+  the by-name standards list.
+
 ## [1.15.0] — 2026-09-08
 
 The review bar stays the default product. Optional overlays inject a

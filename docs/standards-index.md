@@ -134,6 +134,9 @@ page this session.
   (`CONVENTIONS.md`). The file **names** are corroborated by the verified Claude
   Code memory doc above; per-agent semantics, frontmatter, and size caps were not
   independently fetched — confirm at imprint time.
+- **Nielsen's usability heuristics** — named grounding for domain P's design
+  half (`references/product-ux-quality.md`). No URL cited this session; fetch
+  before quoting a numbered heuristic or year.
 - **Scrum Guide — Definition of Done** — the concept the skill's definition-of-done
   checklist rests on ("the state of the Increment when it meets the quality
   measures required"); cite the Scrum Guide directly if a version-specific claim
