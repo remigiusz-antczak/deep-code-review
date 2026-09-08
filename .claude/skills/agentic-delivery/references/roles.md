@@ -4,9 +4,9 @@ Read this when standing up (or running) the full delivery team on a repo: who
 does what, when a hat fires, which gate it owns, and the discipline each hat
 carries that the review lens does not. Expands the **Operating model** in
 `SKILL.md`. Depth only where the delivery role adds something the review side
-does not already hold — for the rest it **points** to
-`deep-code-review/references/role-coverage.md`, the review-time lens for the same
-role, rather than restating it.
+does not already hold — for the rest it **points** to the `deep-code-review`
+skill's `role-coverage.md` (see **Cross-references** below), the review-time lens
+for the same role, rather than restating it.
 
 The shape is grounded in how multi-agent software frameworks actually decompose
 the work — an **assembly line of specialized roles driving a standard operating
@@ -16,7 +16,18 @@ design → coding → testing) — and in the agentic-workflow patterns a team l
 this is built from:
 an **orchestrator** that decomposes and delegates, **parallel** workers, and an
 **evaluator** that critiques a generation in a loop (Anthropic, *Building
-Effective AI Agents*). All by-name; see `docs/standards-index.md`.
+Effective AI Agents*). All by-name; see the standards index
+(`docs/standards-index.md` in the repo, `standards-index.md` in the installed
+`deep-code-review` references).
+
+**Cross-references.** Bare file names below — `role-coverage.md`,
+`product-ux-quality.md`, `docs-and-dx.md`, `security-appsec.md` /
+`security-ai-agents.md`, `standards-index.md` — are files in the **sibling
+`deep-code-review` skill**, reachable at `../../deep-code-review/references/<file>`
+from here; the installer always ships that skill alongside this overlay, so the
+path resolves whenever this file does. Bare `SKILL.md` means **this** skill's
+`SKILL.md`; the review bar's own phases are named "the `deep-code-review`
+bar's …".
 
 Two rules override the whole roster:
 
@@ -76,15 +87,15 @@ multi-agent build from hallucinating a plausible-but-wrong feature (MetaGPT).
   feature that lets a user *add* something is unfinished until they can **see,
   reach, and edit** what they added, in the same surface — a write-only input is
   a defect, not a slice. Trace every state change the ask implies through to its
-  read-back. Depth and the greppable red flags:
-  `deep-code-review/references/product-ux-quality.md`.
+  read-back. Depth and the greppable red flags: the `deep-code-review` skill's
+  `product-ux-quality.md`.
 - **Benchmark against comparable products, by name.** Before speccing a solved
   element (a feed, a composer, an empty state, a delta, a filter), name how two
   or three comparable products solve it and match the muscle memory users already
   have; a novel design for a solved problem is a cost. "Looks nicer" is not a
-  reason — name the precedent (same by-name discipline `product-ux-quality.md`
-  uses). A deviation is surfaced to the owner as a decision, never shipped
-  silently.
+  reason — name the precedent (the same by-name discipline the review bar's
+  `product-ux-quality.md` uses). A deviation is surfaced to the owner as a
+  decision, never shipped silently.
 - **Maintain a feedback-coverage map.** A living list: each reported item →
   `scoped` (issue/spec) → `verified` (the shipped fix was checked against the
   original signal) or `deferred: <reason>`. It is the product analogue of the
@@ -169,7 +180,8 @@ narrative, and never reviews its own build.
 
 The roster is only doctrine until each mandate has a gate that enforces it — a
 standard with no gate is advisory, and "documented but unenforced" is itself a
-review finding (`SKILL.md` Phase 6). Two tiers: a fast **commit-time** tier the
+review finding (the `deep-code-review` bar's Phase 6). Two tiers: a fast
+**commit-time** tier the
 Implementer runs on every commit, and a slower **CI / pre-merge** tier the
 independent hats own. Wire only what the target lacks; defer to gates it already
 has.
