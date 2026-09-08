@@ -50,6 +50,16 @@ condemns (`SKILL.md` principle 2). Before any triage:
   the coverage honestly: "triaged N local + M fetched remote branches; forge PR
   state <read via gh | unverified: no forge auth>." A triage that silently omits
   un-fetched branches is a false all-clear.
+- **A truncated listing is not a complete count — the same trap at a different
+  threshold.** `gh issue list` / `gh pr list` (and most forge list APIs) default
+  to a page of **30** items; counting or triaging with no `--limit` (or no
+  pagination loop) silently truncates there and under-reports everything past
+  it — a real backlog of over a hundred can get reported as thirty. Before
+  stating any count read from a forge list, pass a limit that comfortably
+  exceeds the expected total (`--limit 500`, or paginate on a returned cursor)
+  and say what limit was used. "Empty output is not a pass" above and
+  "truncated output is not the total" are the same failure: trusting a list's
+  *shape* without checking whether the list is actually complete.
 
 Fail closed: if you cannot refresh the refs or read PR state, the triage is
 `unverified` with the missing artifact named — never a confident "nothing to

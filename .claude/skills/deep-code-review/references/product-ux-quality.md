@@ -152,6 +152,14 @@ until it renders:
   unavailable must *look* unavailable, not merely be inert. Unit-logic tests
   passing is **not** a working UI — exercise the real control in the running app
   (cross-ref the live-verification rule below).
+- **Reviewable change history, and no silent AI edits.** Any surface where an
+  edit is itself a decision of record (a value, a target, an assignment, an
+  owner) needs a visible who/what/when history behind the current value, not a
+  silent overwrite — the same defect class as a write-only input, one level up.
+  A value an agent or model proposed or wrote on a person's behalf is stamped
+  in that history as AI-recommended, with its source, **at write time** —
+  never merged into the record indistinguishably from a human edit. An
+  unstamped AI edit is a defect a reviewer cannot see, not a shortcut.
 
 ## Match a named standard; visual & number-format consistency
 
@@ -186,7 +194,10 @@ component files, or a second hand-rolled copy of a row/card/field a shared
 component already renders (one concept built more than once) · a text input that
 persists markup while rendering its raw `**`/`*`/`<u>` tokens back to the user
 (not WYSIWYG) · an add/create/edit handler that writes to a store with no path
-that reads the value back into the same view (write-only input).
+that reads the value back into the same view (write-only input) · an editable
+record's write path with no history/log table behind it, or an
+agent/model-authored value merged in with no field distinguishing it from a
+human edit (change-history / silent AI edit).
 
 ## Pre-ship checklist (mirror SKILL.md's report discipline)
 - [ ] Does it need explaining? If yes, redesign until it doesn't (or demote the text to progressive disclosure).
