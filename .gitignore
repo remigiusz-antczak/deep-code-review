@@ -30,11 +30,17 @@ coverage/
 .cursor/
 
 # install.sh skill backups — a prior skill install moved aside on re-install.
-# Named .{claude,agents,codex}/skill-backups/deep-code-review-<timestamp>[-N].
+# Named .<host>/skill-backups/<skill>-<timestamp>[-N].
 # (.cursor/ is already ignored above, which covers .cursor/skill-backups/.)
 .claude/skill-backups/
 .agents/skill-backups/
 .codex/skill-backups/
+.gemini/skill-backups/
+.opencode/skill-backups/
+.github/skill-backups/
+.windsurf/skill-backups/
+.hermes/skill-backups/
+.kiro/skill-backups/
 
 # Deep Code Review CI contract-test scratch dir (scripts/test-ci-gates.sh).
 .dcr-test-work/

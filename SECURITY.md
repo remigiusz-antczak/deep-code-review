@@ -1,8 +1,10 @@
 # Security policy
 
-This repository is a **documentation artifact** — a code-review *skill* written in
-Markdown. It ships no runtime service, no server, and no secrets; the only
-executable is `install.sh`, a local, network-free file-copy script.
+This repository is a **documentation artifact** — a code-review *skill* (plus
+optional overlay skills) written in Markdown. It ships no runtime service, no
+server, and no secrets; the only executables are `install.sh` (a local,
+network-free file-copy script) and small stdlib Python helpers under
+`scripts/` and `.claude/skills/idea-critic/scripts/`.
 
 ## Reporting a concern
 

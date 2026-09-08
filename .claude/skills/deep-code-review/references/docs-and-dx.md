@@ -192,6 +192,12 @@ vs. already present** so the change is auditable. And remember a doc alone is
 advisory — **pair each load-bearing standard with the gate that enforces it** (a
 pre-commit hook / required CI check) or it will not survive the next session.
 
+Phase 6 imprints **this project's review bar** (`AGENTS.md`, privacy gate, PR
+template). It does **not** install delivery. Delivery is a separate opt-in:
+`./install.sh --with-delivery` or `--full`, after `--recommend` and an owner
+yes. Mention `agentic-delivery` in the imprinted `AGENTS.md` only when that
+skill is already present in the tree.
+
 ### Minimal `AGENTS.md` skeleton to imprint (canonical — point `CLAUDE.md` and peers at it)
 
 ```markdown

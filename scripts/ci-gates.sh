@@ -12,7 +12,7 @@
 #   privacy --banlist <file> <path...>   scan paths for banned patterns (files only, never content)
 #   routing [--max-bytes N] <skill-dir>  every references/*.md routed from SKILL.md; size WARNs (non-failing)
 #   version <root>                       VERSION is semver and announced in CHANGELOG.md
-#   install --src <dir> --dest <dir> --mode <claude|minimal|full|codex>
+#   install --src <dir> --dest <dir> --mode <claude|minimal|full|codex|overlays|recommend>
 #                                        run the real installer, then verify vendored docs are real (not placeholders)
 #
 set -euo pipefail
@@ -43,7 +43,7 @@ Usage:
   ci-gates.sh privacy --banlist <file> <path...>
   ci-gates.sh routing [--max-bytes N] <skill-dir>
   ci-gates.sh version <root>
-  ci-gates.sh install --src <dir> --dest <dir> --mode <claude|minimal|full|codex>
+  ci-gates.sh install --src <dir> --dest <dir> --mode <claude|minimal|full|codex|overlays|recommend>
 EOF
 }
 
@@ -264,7 +264,7 @@ cmd_install() {
 
   [ -n "$src" ]  || die "install: --src <dir> is required"
   [ -n "$dest" ] || die "install: --dest <dir> is required"
-  [ -n "$mode" ] || die "install: --mode <claude|minimal|full|codex> is required"
+  [ -n "$mode" ] || die "install: --mode <claude|minimal|full|codex|overlays|recommend> is required"
   [ -d "$src" ]  || die "install: --src not found: $src"
   [ -d "$dest" ] || die "install: --dest not found: $dest"
 
@@ -276,12 +276,23 @@ cmd_install() {
     claude)       mode_flags=(--claude-only) ;;
     minimal)      mode_flags=(--minimal) ;;
     codex)        mode_flags=(--with-codex) ;;   # multi-path plus codex adapter
-    full|default) : ;;   # agent-agnostic multi-path default
-    *) die "install: unsupported mode: $mode (want claude|minimal|full|codex)" ;;
+    full|default) : ;;   # agent-agnostic multi-path default (review only)
+    overlays)     mode_flags=(--full) ;;         # review + delivery + critic
+    recommend)    mode_flags=(--recommend) ;;    # inspect only; no writes
+    *) die "install: unsupported mode: $mode (want claude|minimal|full|codex|overlays|recommend)" ;;
   esac
 
   # Run the REAL installer; set -e preserves its exit code (no || true).
   bash "$installer" ${mode_flags[@]+"${mode_flags[@]}"} "$dest"
+
+  if [ "$mode" = "recommend" ]; then
+    # Recommend must not create skill trees or AGENTS.md.
+    if [ -e "$dest/.claude" ] || [ -e "$dest/AGENTS.md" ]; then
+      die "install: --recommend wrote to the destination (must be read-only)"
+    fi
+    printf 'install: ok (recommend mode; no writes)\n'
+    return 0
+  fi
 
   # Postcondition: the installer vendors the repo's docs into the installed
   # skill's references/, and the result is the real content (not a placeholder).
@@ -301,6 +312,19 @@ cmd_install() {
     cmp -s "$inst" "$srcdoc" \
       || die "install: installed reference does not equal docs source: $inst"
   done
+
+  if [ "$mode" = "overlays" ]; then
+    [ -f "$dest/.claude/skills/agentic-delivery/SKILL.md" ] \
+      || die "install: overlays mode missing agentic-delivery"
+    [ -f "$dest/.claude/skills/idea-critic/SKILL.md" ] \
+      || die "install: overlays mode missing idea-critic"
+  else
+    # Default review-only modes must not dump overlays.
+    if [ -e "$dest/.claude/skills/agentic-delivery" ] \
+      || [ -e "$dest/.claude/skills/idea-critic" ]; then
+      die "install: review-only mode installed an overlay skill"
+    fi
+  fi
 
   printf 'install: ok (%s mode; docs vendored and verified)\n' "$mode"
 }

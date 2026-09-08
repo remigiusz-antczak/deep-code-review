@@ -1,0 +1,18 @@
+{
+  "name": "deep-code-review",
+  "description": "Evidence-grounded code review bar, with optional gated-delivery and idea-critic overlays.",
+  "version": "1.15.0",
+  "author": {
+    "name": "deep-code-review contributors"
+  },
+  "homepage": "https://github.com/remigiusz-antczak/deep-code-review",
+  "repository": "https://github.com/remigiusz-antczak/deep-code-review",
+  "license": "MIT",
+  "keywords": [
+    "skills",
+    "code-review",
+    "security",
+    "delivery",
+    "qa"
+  ]
+}

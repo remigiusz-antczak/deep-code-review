@@ -25,13 +25,13 @@ change. Read it first; the essentials are only summarized here.
 Run the same gates CI runs ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)):
 
 ```bash
-# every reference is routed from SKILL.md
-for f in .claude/skills/deep-code-review/references/*.md; do
-  grep -q "$(basename "$f")" .claude/skills/deep-code-review/SKILL.md \
-    || echo "UNROUTED: $f"
-done
-bash -n install.sh   # the install script parses
+bash scripts/test-ci-gates.sh
+bash scripts/ci-gates.sh routing --max-bytes 100000 .claude/skills/deep-code-review
+bash scripts/ci-gates.sh version .
+bash scripts/ci-gates.sh privacy --banlist .banlist.txt .
+bash -n install.sh
 ```
 
 Green gates, the definition of done in `CLAUDE.md` satisfied, and a one-line note
-of what you verified in the PR body.
+of what you verified in the PR body. Each skill `description` must be ≤1024
+characters (Agent Skills spec).

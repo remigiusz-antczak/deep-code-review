@@ -3,6 +3,53 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.15.0] — 2026-09-08
+
+The review bar stays the default product. Optional overlays inject a
+public-safe **gated delivery** pattern and a **pre-owner idea attack** into
+a target repo. Spec compliance (Agent Skills description ≤1024 characters,
+`SKILL.md` under 500 lines) unblocks every later install.
+
+### Added
+- **`agentic-delivery`** (opt-in) — G0–G10 gated delivery: smallest-sufficient
+  hats, independent QA/security, one writer per worktree, exact-SHA receipts,
+  human approval on push/merge/deploy. Names `deep-code-review` at G1/G6/G7.
+  Public-safe distillation; no operator preferences, no private intake, no
+  runtime names.
+- **`idea-critic`** (opt-in) — three hats (skeptic, better-way, kill-criteria);
+  verdict `HOLD | REVISE | PASS_TO_USER`; `owner-request` cannot HOLD.
+  `scripts/validate_verdict.py` fail-closes on a missing key, an illegal
+  HOLD, or a list-shaped `user_question`.
+- **`./install.sh --recommend <project>`** — inspects the target and prints a
+  pack. The agent may recommend `--full`; the owner decides. Another delivery
+  pack already in the tree is a reason **not** to also install
+  `agentic-delivery`.
+- Install flags: `--with-delivery`, `--with-critic`, `--full`,
+  `--with-extra-hosts` (Gemini, OpenCode, Copilot `.github/skills/`, Windsurf,
+  Hermes, Kiro).
+- `.claude-plugin/plugin.json` so `/plugin marketplace add` works.
+- Community health: `CODE_OF_CONDUCT.md`, issue templates, PR template.
+- `references/method.md`, `domain-checklists.md`, `report-format.md` — method
+  depth moved out of `SKILL.md` (progressive disclosure).
+
+### Changed
+- Default `./install.sh <project>` remains **review-only**. Delivery is never
+  the default.
+- `deep-code-review` `description` rewritten to ≤1024 characters, when-to-use
+  in the first 57 characters.
+- `SKILL.md` is the map (under 500 lines). Checklists, phase procedures, and
+  report templates load on demand.
+- `CONTRIBUTING.md` points at `scripts/test-ci-gates.sh` + `ci-gates.sh`.
+- Chat voice is **not** vendored. Compressed assistant prose, if wanted, is
+  a pointer to the public caveman skill repository. Persisted artifacts stay
+  normal English.
+
+### Not in this release
+- No private operating-registry content, live values, or third-party
+  identifiers.
+- No default-on full pack.
+- No caveman files copied into this tree.
+
 ## [1.13.0] — 2026-09-02
 
 A role-aware **software-house overlay** over the existing method, plus the repo's
