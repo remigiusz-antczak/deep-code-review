@@ -3,6 +3,99 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.19.0] — 2026-09-08
+
+A hardening pass on top of 1.18.0's software-house roles, from four research
+streams: closing this skill's own spend-cap gap, filling the domain-K release-
+engineering gap and the one-line G10 retrospective, hardening `idea-critic`
+past a same-brain "independent" verdict, and six portable lessons drawn from
+one AI-agent-maintained project's own operational history (scrubbed of every
+project-specific detail — generic principles and fictional examples only).
+Additive on 1.18.0 — the review bar's six phases, domains A–S, gate table, and
+report shape are unchanged. Four candidate detectors from that lessons pass
+(duplicated-UI-concept drift, write-only inputs, render-trace-before-edit,
+UI-changing diffs needing visual proof) were found **already shipped** in
+1.18.0's `product-ux-quality.md` and `parallel-audit.md` §5 during
+verification against this branch — not re-added; see the PR body for the full
+staleness note. Grounded in the sources logged in `docs/standards-index.md`'s
+three new 2026-09-08 sections.
+
+### Added
+- **`references/model-tiering.md`** (domain E): three vendor-neutral model
+  tiers, the cost/quality levers in the order the evidence favors reaching for
+  them (effort tuning, prompt caching, batching, escalate-on-failure, budgets,
+  bounded advisor consults, model swap last), two negative results (don't fan
+  out on a single dependent chain; don't over-consult an advisor), and the
+  mapping onto this skill's own fan-out tiers and delivery hats.
+- **`references/release-engineering.md`** (domain K, the release half
+  `dependency-currency-and-upgrades.md` never covered): feature-flag
+  category/lifetime checklist, canary/blue-green claims checked against actual
+  router/traffic-split config, DORA-or-`UNMEASURED`. Paired with a **Release**
+  depth section in `agentic-delivery/references/roles.md`.
+- **`agentic-delivery/references/retrospective.md`** + **`template-
+  postmortem.md`** (routed from G10): blameless principle, mandatory-trigger
+  criteria (not every bug fix), action-item-closure gate, repeat-root-cause
+  check against prior postmortems.
+- **`agentic-delivery/references/template-adr.md`** (routed from G3): Nygard's
+  five-part shape + MADR's optional sections, giving G3's existing "ADRs /
+  contracts" requirement an actual shape.
+- **"Conductor operating rhythm"** subsection in `agentic-delivery/SKILL.md`:
+  event-driven attention (not polled), fan-out sized to decomposition (not
+  concurrency), pilot before full width, escalate-a-lane-don't-just-retry-it,
+  and an empirical failure-taxonomy callout (Cemri et al., MAST) mapping onto
+  the existing gate shape.
+- **`idea-critic`**: verdict schema gains `steelman` (attack the strongest
+  defensible reading of the claim) and `strongest_attack_survived` (the
+  sharpest objection actually tried, and why it failed — required and
+  non-generic on `PASS_TO_USER`), both enforced by `validate_verdict.py`; a
+  premortem clause on the `kill-criteria` hat; Independence now tiers
+  decorrelation strength (a different model family is stronger than a
+  different context alone); a new "false-closure REVISE" pitfall.
+- Six portable-lesson closes verified absent from this branch before being
+  added: `role-coverage.md` (success-metric-to-emitted-event loop closure +
+  the missing SRE-workbook burn-rate citation), `testing-and-evals.md`
+  (stated Test-Pyramid-vs-Testing-Trophy philosophy required), `frontend-
+  a11y.md` (URL-backed drawer/filter state), `infra-iac-containers.md` (a
+  green health check is not proof of an out-of-band post-deploy data
+  dependency), `docs-and-dx.md` (dated status/handoff doc proliferation),
+  `concurrency-shared-state.md` (worktree-per-lane + spawn-time duplicate-work
+  preflight).
+- `branch-and-merge-hygiene.md`: stacked-PR-safe branch deletion, generated-
+  file merge-conflict resolution (regenerate, never hand-splice), a new
+  "Merge trains" subsection (verify the union once, merge members
+  individually, sequence a gate-adding PR last), a combined safety-rail bullet
+  on gating an irreversible command on a preflight's documented pass condition
+  paired with a robust-shell-list-membership lesson (`for x in $LIST` on an
+  unquoted variable silently stops excluding anything under a non-word-
+  splitting shell; use a literal `case` or `grep -qxF` instead), and a §8
+  spike/prototype branch-naming convention. A matching grep-flag row in
+  `language-stack-redflags.md`'s Shell/Bash section.
+- Three operating-discipline sentences with no code detector: principle 5 (a
+  previously and explicitly made design choice is treated as a stated style
+  guide — propose against it, never silently revert it); the Confirm bullet
+  (a tentative/question-phrased message is a request for assessment, not
+  authorization); `report-format.md`'s mechanism-unproven-fix language now
+  extends to status reporting generally (running ≠ fixed).
+- `docs/standards-index.md`: three new 2026-09-08 sections logging every
+  source above with fetch dates and, per the file's own convention, what each
+  fetch did **not** confirm (DORA's single-source caveat, the MAST paper's
+  14-mode taxonomy not independently enumerated, Panickssery et al. tested on
+  GPT-4/Llama 2 not Claude, and others).
+
+### Changed
+- `parallel-audit.md`: the shared fan-out context packet is flagged cacheable;
+  a don't-start threshold complements the existing stop rule (don't fan out on
+  one dependent chain or a single-context target); the Tier-1→Tier-2 sweep now
+  tiers by model capability, not only effort; a new addendum distinguishes a
+  concurrency-capacity flake from a genuine defect.
+- `agentic-delivery/SKILL.md` G2 now requires a per-lane token/dollar budget
+  before G4 starts (no budget = blocked, not unlimited) — closes a
+  self-referential gap between this skill's own LLM10/`spend-cap` invariants
+  (enforced on every *target*) and its own gate table (which enforced neither
+  on itself). G0 now names an explicit appetite (a time-box, not an estimate).
+- Overlay `VERSION` files, the three `SKILL.md` version stamps, and the plugin
+  manifest follow **1.19.0**.
+
 ## [1.18.0] — 2026-09-08
 
 The delivery overlay becomes a **software-house in a repo**: the full role roster

@@ -11,7 +11,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.18.0"
+  version: "1.19.0"
 ---
 
 # Deep Code Review
