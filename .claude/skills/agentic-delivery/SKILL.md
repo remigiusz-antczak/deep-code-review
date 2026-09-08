@@ -10,7 +10,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.20.0"
+  version: "1.21.0"
 ---
 
 # Agentic delivery
@@ -160,6 +160,12 @@ above is the bound itself, and the two are not substitutes for each other.
 Model-tier selection (which tier a lane runs on, and when to escalate) is
 `model-tiering.md` in the `deep-code-review` skill.
 
+**A work item's own completion is G7, not G8.** Once a lane's change is
+integrated (G7), the work item it closes is done; G8 Release is a separate,
+later, **owner-gated** action on a different clock, often batched across many
+G7s. Never park a G7-complete item as "blocked on deploy" — land it, close it,
+and name G8 as downstream and pending, not as a reason the item isn't done.
+
 ---
 
 ## Exact revision
@@ -193,10 +199,56 @@ integration SHA plus one aggregate gate before a merge train (G7).
   assigned issue) before starting. Never spawn a duplicate of a lane already
   running, and never start on a branch that already carries commits without
   reading them first. One writer per file.
+- **A context-inheriting fork is not a blank slate — a narrow instruction to
+  it is ambiguous by construction.** Distinct from the tree-sharing risk
+  above: a fork mechanism that hands a subagent the parent conversation
+  hands it every prior instruction too, not only the newest one. A lane
+  earlier told "file an issue for anything you find" and later forked with
+  "return a table of what you'd flag, create or change nothing" inherits
+  both — the narrower ask does not erase the wider one still sitting in its
+  context, and it can act on the old brief. Two mitigations, both required
+  for narrow or research-only work: prefer a **fresh, non-forked** unit,
+  which starts with no inherited brief to fall back on; when a fork is the
+  right tool because the work genuinely needs the parent's context, state
+  the prohibition explicitly *and* verify compliance from what the lane
+  actually called, not its own summary — `git status`/`git diff` proves no
+  tracked file changed and proves nothing about an issue filed, a comment
+  posted, or a message sent (`parallel-audit.md` §2 covers this for
+  read-only review fan-out specifically; this is the general-lane case).
 - Serialize shared-state edits, migrations, generated files, and the
   integration branch.
 - Occupancy is **visibility, not a lock**. Say what is live or stale. Do
   not comment "do not merge" on a peer's PR after you stopped writing.
+
+## Environment probe (before you size anything)
+
+Probe the host before deciding lane count, the heavy/light split, or model
+tier — a stated ceiling with no live check behind it is a guess dressed as a
+rule, and yesterday's number may not hold today.
+
+- **Probe:** free RAM and CPU cores (`memory_pressure`/`vm_stat` or `free
+  -h`; `nproc` or `sysctl -n hw.ncpu`), disk (`df -h`), and which
+  tools/connectors this session actually has usable auth for. A lane
+  dispatched against a connector that needs an auth flow it cannot complete
+  fails at the worst point — after it already holds a worktree slot.
+- **Decide from the probe, not from habit:** how many HEAVY lanes (a real
+  build, browser test, or compute process) this run supports — tighten
+  under memory pressure even where a core-count formula would allow more,
+  since a machine can exhaust RAM before it exhausts CPU slots; which model
+  tier a lane needs (`model-tiering.md` in this skill's `deep-code-review`
+  sibling) — frontier only where the blast radius already calls for
+  decorrelation, not by default; and whether a heavy gate runs locally at
+  all or waits for CI/a shared runner when local capacity is short.
+- **Shell semantics belong to the probe, not to guesswork mid-script.** Know
+  which shell will actually run a script before writing a list-membership or
+  exclusion check in it — `branch-and-merge-hygiene.md` §6 has the concrete
+  failure mode and the portable fix; this step only says *check*, not what
+  to write.
+- A **failure that only appears under heavy fan-out concurrency is
+  contention, not a defect, until reproduced at low concurrency**
+  (`parallel-audit.md` §0) — probing capacity first is what keeps that
+  distinction from being made after the fact, on a report already full of
+  false timeouts.
 
 ## Local environment (own it)
 
@@ -259,7 +311,12 @@ Copied as principles, not as anyone's private playbook:
    Gitignored local file = real identifiers. Fail closed if the committed
    list is missing or malformed. Report `file:line`, never echo the match.
 3. **A gate can be wrong about why.** Real defect → fail closed. Check
-   could not run → fail open with `UNVERIFIED`, never a fake pass.
+   could not run → fail open with `UNVERIFIED`, never a fake pass. Applied to a
+   red pipeline: identify the failing job **and step** before concluding the
+   newest merge caused it, and if the shape matches a known-flaky
+   browser/probe/hydration check, rerun that job and recheck **before**
+   reverting on it — a revert is warranted only once the failure reproduces
+   and is causally tied to the change, not merely adjacent to it in time.
 4. **Prove the gate can fail.** Plant, watch red, revert. Required for
    every new gate this project adds.
 5. **Skip loudly over absent input.** Missing fixture ≠ pass.
@@ -267,6 +324,14 @@ Copied as principles, not as anyone's private playbook:
 7. **Test the failure, not only the feature.** Schema reject, authz deny,
    monotonic-quality overwrite.
 8. **Definitions, not live values**, in any public or compiled artifact.
+9. **Closing or deleting shared state needs evidence, not presumption** — the
+   same "skip rather than guess" bar as principle 5, applied to removal. A
+   ticket/issue closed as duplicate or invalid needs a reproducible reason
+   (not "looks like the others"), and any unique context it carried is
+   migrated to the canonical item **before** it closes. Treat a batch of
+   presumed-junk items as a batch of `UNVERIFIED` closures until each is
+   actually checked — a plausible-looking pattern across many items is not
+   evidence for any one of them.
 
 ---
 
@@ -287,6 +352,13 @@ result.
   done only once it is verified — a green gate at the exact SHA, or a change
   confirmed in the running product. Never present "N lanes attacking it" as
   progress.
+- **The converse: a lane's own scope ends at its own finish line, not at the
+  merge.** Once a lane's PR is open with its own gates green, its job is
+  done — it does not loop re-checking CI for a merge that is the
+  Conductor's (or a merge guard's) job, not every lane's. Re-polling a green
+  PR every few minutes burns turns on news that has not changed; report
+  once, then stop, the same "event-driven, not polled" discipline the
+  Conductor applies to lanes, applied by a lane to itself.
 - After two equivalent failures, change approach.
 - Provider/model unavailable: fail that lane closed; no silent fallback.
 - Owner-session end: no uncommitted writer work without a recovery

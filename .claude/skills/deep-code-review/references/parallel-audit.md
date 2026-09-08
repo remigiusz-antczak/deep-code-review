@@ -198,9 +198,25 @@ reviewed project just because the prompt said "don't edit."
   (`git status --porcelain` + `git rev-parse HEAD`) and **diffs after**. Any
   unexpected change → hard-fail the fan-out, restore from `START_SHA` /
   worktree, and discard that unit's unverified output until re-run read-only.
-- Context-inheriting forks are especially dangerous: strip unrelated parent
-  instructions ("open a PR", "commit this") from the unit prompt; give only the
-  packet + one invariant.
+  **The tree diff is blind to anything outside the tree** — it proves no
+  tracked file changed and proves nothing about an issue filed, a comment
+  posted, a message sent, or any other forge/API call a unit's tools can
+  reach. Where a unit has network or forge-CLI access, the read-only
+  contract has to be enforced or checked at that boundary too (a scoped
+  token, a disabled `gh`/API credential, or a post-hoc audit of the unit's
+  actual tool calls) — a clean git diff after a run that had `gh`/API access
+  is evidence about the tree, not about the unit's full action.
+- **Context-inheriting forks are especially dangerous, and stripping the
+  prompt is only half the mitigation.** Strip unrelated parent instructions
+  ("open a PR", "commit this", "file issues for what you find") from the
+  unit prompt; give only the packet + one invariant. Then **verify the strip
+  held** — a fork that inherited "file issues for what you find" earlier in
+  the session and was later given a narrower "return a table, create
+  nothing" can still act on the wider, older instruction it never
+  forgot; the narrowing is a new instruction competing with an old one, not
+  a guaranteed overwrite. Check what the unit actually called (its tool-use
+  log, not its own summary) before trusting that a read-only or
+  narrowed-scope fork stayed inside scope.
 
 ### Harness notes (map the allowlist; do not pretend every host enforces it)
 
