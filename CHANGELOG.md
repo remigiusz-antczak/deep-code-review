@@ -3,6 +3,40 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.20.0] — 2026-09-08
+
+Closes the remaining 1.19.0 self-review backlog after 1.19.1 landed
+the byte-exact VERSION gate (F2/F8).
+
+Domain C now walks OWASP LLM Top 10 **2026** titles quoted from
+`OWASP-GenAI-LLM-Top-10-2026-v1.0.pdf` (fetched 2026-09-08). 2025 IDs
+remain only as a compatibility map. New reference
+`security-agent-skills.md` walks OWASP Agentic Skills Top 10
+AST01–AST10 against both skill-consuming targets and this repo's
+`install.sh` / VERSION / SHA stamp.
+
+Repo dogfood that is settings-not-code (F3/F6/F7) is applied on the
+GitHub repo itself: `delete_branch_on_merge`, secret scanning + push
+protection, Dependabot security updates, tag `v1.19.1`. This commit
+adds Dependabot version updates for GitHub Actions, an issue-template
+`config.yml` so GitHub indexes the templates (F5), a PR-template gate
+list that matches CONTRIBUTING (F10), and the idea-critic description
+trigger `Use when` (F9). Required-review branch protection is still
+off so a same-owner merge is not trapped.
+
+### Added
+- `.claude/skills/deep-code-review/references/security-agent-skills.md`
+  (AST01–AST10), routed from `SKILL.md`.
+- `.github/dependabot.yml` for `github-actions`.
+- `.github/ISSUE_TEMPLATE/config.yml`.
+
+### Changed
+- Domain C / `security-ai-agents.md` walks LLM01–LLM10:**2026**.
+- Overlay `VERSION` files, the three `SKILL.md` stamps, and the
+  plugin manifest follow **1.20.0**.
+- PR template mirrors CONTRIBUTING's pre-PR gate block.
+- idea-critic description starts `Use when`.
+
 ## [1.19.1] — 2026-09-08
 
 Patch on 1.19.0. The VERSION provenance gate no longer strips
