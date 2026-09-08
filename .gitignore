@@ -22,6 +22,8 @@ dist/
 build/
 coverage/
 *.log
+__pycache__/
+*.pyc
 
 # Claude Code local settings (machine-specific)
 .claude/settings.local.json
