@@ -1,26 +1,52 @@
 # Security policy
 
-This repository is a **documentation artifact** — a code-review *skill* (plus
-optional overlay skills) written in Markdown. It ships no runtime service, no
-server, and no secrets; the only executables are `install.sh` (a local,
-network-free file-copy script) and small stdlib Python helpers under
-`scripts/` and `.claude/skills/idea-critic/scripts/`.
+This repository ships markdown skills and local install scripts. There is no
+networked service and no runtime sandbox.
 
-## Reporting a concern
+## How to install a pinned copy (AST02 / AST07)
 
-Please report privately via GitHub's **"Report a vulnerability"** button
-(the repository's **Security → Advisories** tab) rather than opening a public
-issue. In scope:
+Do **not** `curl | bash` unsigned `HEAD`. Do **not** treat `npx skills add
+owner/repo` without a tag as a pin — that follows whatever the default
+branch is today.
 
-- a defect in `install.sh` (for example, a path it could clobber or an unsafe
-  write);
-- text in the skill that would lead a reviewer to a harmful or incorrect action;
-- a privacy slip — any real name, secret, or internal identifier that reached a
-  committed file or the git history (see the confidentiality rules in
-  [`CLAUDE.md`](CLAUDE.md)).
+Verified path:
 
-**Out of scope:** findings about a *project you reviewed using this skill* — take
-those to that project, not here.
+```bash
+git clone --branch vX.Y.Z --depth 1 \
+  https://github.com/remigiusz-antczak/deep-code-review.git
+cd deep-code-review
+# optional: sha256sum -c SHA256SUMS
+./install.sh /path/to/your/project
+```
 
-We aim to acknowledge a report within a few days and to fix or explain it
-promptly.
+Replace `vX.Y.Z` with a published release tag (see GitHub Releases). The
+AGENTS.md stamp records `Installed: **x.y.z** (@ sha)` after copy.
+
+`SHA256SUMS` covers the three skill trees under `.claude/skills/`.
+Regenerate with `bash scripts/write-checksums.sh`. CI checks the file
+against the tree. This is a content hash, **not** OpenSSF Model Signing —
+do not claim a signed skill.
+
+Optional marketplace path, still pinned:
+
+```bash
+npx skills add remigiusz-antczak/deep-code-review#vX.Y.Z --skill deep-code-review
+```
+
+Prefer `--copy` over a symlink that auto-updates. `npx skills update`
+without a re-review is AST07.
+
+## Reporting a vulnerability
+
+Open a private GitHub security advisory on this repository, or an issue
+if the finding is already public. Do not file a proof-of-concept exploit
+against systems you do not own.
+
+## Honest gaps
+
+- `install.sh` is local `cp -R`. It does not sign the payload.
+- Required-review branch protection is off so a same-owner merge is not
+  trapped. Status check `gates` is required.
+- Secret-scanning validity checks and non-provider patterns are GitHub
+  product settings; they may need GitHub Secret Protection. Do not claim
+  they are on unless the live `security_and_analysis` payload says so.
