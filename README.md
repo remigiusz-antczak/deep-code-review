@@ -96,6 +96,28 @@ This repo makes the **bar** portable — review, security, data integrity, and
 (opt-in) gated delivery — so any agent on any repo is judged the same way.
 Do not also install a second delivery OS on the same project.
 
+### Stand up a software-house in your repo (opt-in)
+
+The review skill is the **bar**. Its two sibling skills turn a repo into a
+disciplined software-house — the same roles, gates, and doctrine a top team runs —
+without standing up a bot per role:
+
+- **`agentic-delivery`** — gated **G0–G10** delivery and the full **role roster as
+  hats** (Conductor, Product Analyst, Architect, Implementer, Evil Twin, QA,
+  Security, UX & Design, Release, Docs; `references/roles.md`), one writer per
+  worktree, exact-SHA receipts, and human approval on every outward action. It
+  names `deep-code-review` at specification, review, and integrate.
+- **`idea-critic`** — the "proper evil twin": attacks a plan or a "we should"
+  *before* the owner sees it, defaults to dissent, and verifies its own objection
+  against current state (a critic is a lead, not an oracle).
+
+Let an agent inspect the target first — `./install.sh --recommend <project>`
+reports which quality gates the repo already has and proposes the roles plus the
+gates that are missing. The owner decides; the default install stays review-only.
+Roles are **hats that fire from risk, not headcount** — start with the fewest the
+change needs, grounded in how multi-agent software frameworks (MetaGPT, ChatDev)
+and Anthropic's *Building Effective AI Agents* decompose the work.
+
 Chat voice is not vendored. If a project wants compressed assistant prose,
 add [JuliusBrussee/caveman](https://github.com/JuliusBrussee/caveman)
 separately. Code, PR bodies, and docs stay normal English.
@@ -162,7 +184,10 @@ CWE Top 25 (2025), WCAG 2.2, Google Engineering Practices, Diátaxis, the C4 mod
 Semantic Versioning, OpenSSF Scorecard, OpenSSF Best Practices Badge, OSV, GitHub
 Dependabot, Keep a Changelog, pre-commit, EditorConfig, Development Containers,
 AGENTS.md, the GitHub community-health + Claude Code memory docs, and Cursor
-Agent Skills directory docs. Referenced
+Agent Skills directory docs. For the software-house overlay and
+agent-orchestration discipline (verified 2026-09-08): Anthropic's *Building
+Effective AI Agents*, the Claude Code Subagents and Agent Skills documentation,
+and the MetaGPT and ChatDev multi-agent papers. Referenced
 by name (verify the current version before citing): OWASP WSTG, MITRE ATLAS, NIST
 SSDF and AI RMF, SLSA, CIS Benchmarks, ISO/IEC 25010, Twelve-Factor, Conventional
 Commits, Nielsen's usability heuristics (named, no URL), and the per-agent
@@ -187,8 +212,8 @@ verified** — never a remembered link.
 │   └── standards-index.md          # verified standards, URLs, verification dates
 └── .claude/skills/
     ├── deep-code-review/           # default product — the review bar
-    ├── agentic-delivery/           # opt-in gated delivery overlay
-    └── idea-critic/                # opt-in pre-owner idea attack
+    ├── agentic-delivery/           # opt-in gated delivery + role roster (references/roles.md)
+    └── idea-critic/                # opt-in pre-owner idea attack (the "evil twin")
 ```
 
 `deep-code-review/references/` holds on-demand depth (method, domain

@@ -274,9 +274,12 @@ EOF
     OVERLAY_LINES=""
     if [[ "${WITH_DELIVERY}" -eq 1 ]]; then
       OVERLAY_LINES="${OVERLAY_LINES}
-- \`agentic-delivery\` — gated G0–G10 delivery. Load it for features that
-  span implementation + QA + security. Names \`deep-code-review\` at
-  specification, review, and integrate."
+- \`agentic-delivery\` — gated G0–G10 delivery plus the software-house role
+  roster (Conductor, Product Analyst, Architect, Implementer, Evil Twin, QA,
+  Security, UX & Design, Release, Docs — hats, not standing bots;
+  \`references/roles.md\`). Load it for features that span implementation +
+  QA + security. Names \`deep-code-review\` at specification, review, and
+  integrate."
     fi
     if [[ "${WITH_CRITIC}" -eq 1 ]]; then
       OVERLAY_LINES="${OVERLAY_LINES}

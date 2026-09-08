@@ -108,6 +108,23 @@ page this session.
 | WCAG 2.2 SC 3.2.4 Consistent Identification | https://www.w3.org/WAI/WCAG22/Understanding/consistent-identification.html | Level AA. Requirement verbatim: "Components that have the same functionality within a set of web pages are identified consistently." Basis for the same-action-two-labels cross-view finding. |
 | WCAG 2.2 SC 3.2.6 Consistent Help | https://www.w3.org/WAI/WCAG22/Understanding/consistent-help.html | Level A; new in WCAG 2.2. Repeated help mechanisms (human contact details/mechanism, self-help, automated contact) "occur in the same order relative to other page content, unless a change is initiated by the user." Sibling criterion for help/contact placement. |
 
+## Verified by direct fetch (2026-09-08) — software-house roles & agent orchestration
+
+Verification date for the rows below: **2026-09-08**. Added for the delivery
+role roster (`agentic-delivery/references/roles.md`), the evaluator/adversary
+framing (`idea-critic`), and the orchestration discipline (worktree isolation,
+preflight, render-surface discriminator) in `agentic-delivery` and
+`references/parallel-audit.md`. Each row fetched this session; where a claim was
+not on the fetched page, the row says so.
+
+| Standard / source | URL | What was confirmed |
+|---|---|---|
+| Anthropic — Building Effective AI Agents | https://www.anthropic.com/engineering/building-effective-agents | Published 2024-12-19. Named workflow patterns verbatim: **Prompt chaining**, **Routing**, **Parallelization** ("LLMs work simultaneously on a task and have their outputs aggregated"), **Orchestrator-workers** ("a central LLM dynamically breaks down tasks, delegates them to worker LLMs, and synthesizes their results"), **Evaluator-optimizer** ("one LLM call generates a response while another provides evaluation and feedback in a loop"), and autonomous **Agents**. Guidance: prefer the simplest sufficient structure; add multi-step/agentic complexity only when simpler solutions fall short. |
+| Claude Code — Subagents | https://code.claude.com/docs/en/sub-agents | `docs.claude.com/en/docs/claude-code/sub-agents` 301→ this URL this session. "Each subagent runs in its own context window with a custom system prompt, specific tool access, and independent permissions." Least privilege via a `tools` allowlist or `disallowedTools` denylist. Single-responsibility: "Define a custom subagent when you keep spawning the same kind of worker with the same instructions." Parallelism: "For independent investigations, spawn multiple subagents to work simultaneously." |
+| Anthropic — Agent Skills (overview) | https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview | `docs.claude.com/…/agent-skills/overview` 302→ this URL this session. `SKILL.md` YAML frontmatter requires `name` + `description`. **Progressive disclosure**: Level 1 metadata always loaded (~100 tokens/skill), Level 2 SKILL.md body loaded when triggered, Level 3 bundled resources/scripts read only as needed. `description` ≤1024 chars; `name` ≤64 chars, lowercase/digits/hyphens, cannot contain "anthropic"/"claude". Claude Code discovers filesystem Skills in `~/.claude/skills/` (personal) or `.claude/skills/` (project). "Compose capabilities: Combine Skills for complex, multistep tasks." Security note: use only trusted Skills; externally-fetched content is a risk surface. |
+| MetaGPT (Hong et al.) | https://arxiv.org/abs/2308.00352 | Title "MetaGPT: Meta Programming for A Multi-Agent Collaborative Framework." Abstract confirmed: it "encodes Standardized Operating Procedures (SOPs) into prompt sequences," assigns "diverse roles to various agents" in "an assembly line paradigm," lets agents "verify intermediate results and reduce errors," and targets "cascading hallucinations caused by naively chaining LLMs." (The specific product-manager/architect/engineer/QA role list is **not** quoted verbatim from the abstract fetched this session.) |
+| ChatDev (Qian et al.) | https://arxiv.org/abs/2307.07924 | Title "ChatDev: Communicative Agents for Software Development." Abstract confirmed: specialized LLM-driven agents collaborate across the software lifecycle — "design, coding, and testing" — guided in what to communicate (a chat chain) and how (via "communicative dehallucination"). (Specific role titles such as CEO/CTO and a documentation phase are **not** quoted verbatim from the abstract fetched this session.) |
+
 ## Referenced by name (not fetched this session — verify before citing a URL)
 
 - **OWASP WSTG** — how-to-test companion for each web risk.
