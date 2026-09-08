@@ -13,6 +13,13 @@ skill runs on most often.
 
 ## The three tiers (vendor-neutral)
 
+**Default and ceiling.** Default every task or lane to the cheapest tier that
+clears its own gate; promote only on evidence — a failed cheap attempt, or a
+stated high-blast decision — never start at frontier for routine work. State a
+reason before exceeding frontier/reasoning-class for anything short of the
+lead-verify and adversarial-design work the mapping below names; an unstated
+escalation is a budget drain, not a judgment call.
+
 | Tier | Use for | Claude-family analogue |
 |---|---|---|
 | **Fast/cheap** | Classification, extraction, candidate-sweep enumeration (Tier 1 of a fan-out — `parallel-audit.md`), mechanical formatting, single-grep-shaped invariant checks | Haiku-class |
