@@ -30,6 +30,20 @@ them before the domain audits, because they fail late and silently otherwise:
   configuration the README calls "minimal" must actually start and answer
   `/health` — a `set -e` entrypoint that aborts when an "optional" dependency is
   absent violates the deploy contract on the exact path the docs call optional.
+- **A green health check is not proof the product works.** A process can boot
+  cleanly and answer `/health` while still functionally empty or broken, when a
+  feature depends on a step that runs **outside** the deploy pipeline entirely —
+  a data backfill, a warehouse pull posted to an ingest endpoint, a webhook
+  registration, a cache warm. For every dependency the running system reads at
+  request time that the deploy/build step itself does **not** populate,
+  confirm: (a) the deploy runbook names the out-of-band step as part of "how to
+  deploy," not a separate undocumented ritual, and (b) it is followed by a
+  **content-bearing** smoke check (does the expected data actually exist?), not
+  only a liveness check (did the process start?). A dashboard that redeploys
+  clean and returns 200 immediately, then shows nothing but empty states for
+  hours because the data-populating script never ran, is exactly this failure —
+  and a liveness-only health check cannot see it, because it was never asked to
+  look.
 
 ---
 

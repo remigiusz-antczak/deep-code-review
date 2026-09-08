@@ -68,6 +68,21 @@ Common in agent/tooling repos: JSON/YAML "DB" files, append logs, lockfiles.
   lease) before editing; commit **explicit paths** — never `git add -A` /
   stage-all from a shared tree (cross-ref principle 7 / Phase 0 occupied
   checkout).
+- **A claimed lane is not filesystem isolation — give each write-lane its own
+  git worktree.** A shared working tree's index, staged changes, and even
+  installed dependencies are single-writer resources: two lanes editing
+  genuinely disjoint files can still collide on the tree itself (a `git add -A`
+  from one lane stages another's WIP; a checkout in progress in one lane
+  corrupts a build running in another). A worktree per lane is a stronger,
+  simpler guarantee than a convention because it isolates at the filesystem
+  level, not by agreement.
+- **Preflight before spawning a new write-lane.** A cheap check — running
+  agents/tasks, `git worktree list`, `gh pr list --state open` — prevents
+  launching a duplicate of work already in flight, itself a common source of
+  wasted effort and of two lanes silently fighting over the same files anyway.
+  On review: stray/stale worktrees with no corresponding open PR, orphaned WIP
+  on abandoned branches, or duplicate open PRs/branches targeting the same file
+  set are direct evidence this preflight was skipped.
 
 ---
 
@@ -104,4 +119,7 @@ singleton/long-lived object (lifetime mismatch); missing `await`; non-atomic
 read-modify-write; load→await→write without re-read/CAS; lock held across I/O;
 two writers on one file; corrupt/unreadable store wiped to empty; check-then-act
 without a constraint/transaction; tests/jobs writing a real tracked/shared data
-path; stage-all from a multi-agent checkout.
+path; stage-all from a multi-agent checkout; multiple concurrent-agent write
+lanes sharing one working tree with no worktree-per-lane isolation; a stray or
+stale worktree with no corresponding open PR; duplicate open PRs/branches
+targeting the same file set (no spawn-time preflight).
