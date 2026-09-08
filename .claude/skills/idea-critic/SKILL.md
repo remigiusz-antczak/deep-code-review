@@ -9,7 +9,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.15.0"
+  version: "1.17.0"
 ---
 
 # Idea critic
@@ -136,6 +136,9 @@ script ships next to this file and is copied by `install.sh`.
 - Same-brain pass labeled independent.
 - Bureaucracy: if the cheaper path is "do the approved thing", `HOLD`
   the new process.
+- **Slop recs.** `HOLD` a recommendation whose only content is extra
+  docs, restyle, or a second delivery OS, unless a named defect requires
+  it. Prefer the existing bar.
 
 ---
 

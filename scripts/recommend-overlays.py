@@ -24,12 +24,24 @@ SKIP_DIRS = {
     "__pycache__",
 }
 
-DELIVERY_DIR_MARKERS = {
+# Live delivery OS only. Historical notes under docs/archive/history/code-review
+# do not count — a real product may keep old Superpowers plans without running
+# that pack (dogfood: a private agent repo with docs/superpowers only).
+LIVE_DELIVERY_DIR_MARKERS = {
     "superpowers",
     "gstack",
     "spec-kit",
     ".specify",
 }
+ARCHIVE_TOP = {"docs", "doc", "archive", "history", "code-review", "notes"}
+LIVE_DELIVERY_SKILL_PATHS = (
+    ".claude/skills/superpowers/SKILL.md",
+    ".agents/skills/superpowers/SKILL.md",
+    ".cursor/skills/superpowers/SKILL.md",
+    ".codex/skills/superpowers/SKILL.md",
+    ".claude/skills/gstack/SKILL.md",
+    ".agents/skills/gstack/SKILL.md",
+)
 WEB_FILES = {
     "package.json",
     "next.config.js",
@@ -83,9 +95,19 @@ def recommend(root: Path) -> dict:
     entries = walk(root)
     names = {p.name for p in entries}
     review_present = any((root / m).is_file() for m in REVIEW_PATHS)
-    other_delivery = bool(names & DELIVERY_DIR_MARKERS) or any(
-        "superpowers" in p.parts or "gstack" in p.parts for p in entries
-    )
+    other_delivery = any((root / m).is_file() for m in LIVE_DELIVERY_SKILL_PATHS)
+    if not other_delivery:
+        for p in entries:
+            if p.name not in LIVE_DELIVERY_DIR_MARKERS:
+                continue
+            try:
+                rel = p.relative_to(root)
+            except ValueError:
+                continue
+            if rel.parts and rel.parts[0] in ARCHIVE_TOP:
+                continue
+            other_delivery = True
+            break
     web = bool(names & WEB_FILES)
     api = bool(names & API_FILES)
     iac = bool(names & IAC_FILES) or bool(names & IAC_DIR_NAMES)

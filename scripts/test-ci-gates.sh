@@ -364,6 +364,46 @@ else
   record 1 "install: recommend is read-only"
 fi
 
+# 7) --recommend treats archived Superpowers notes as history, not a live pack.
+python3 - "$ROOT/scripts/recommend-overlays.py" "$WORK" <<'PY' || true
+import importlib.util, sys, json
+from pathlib import Path
+mod_path = Path(sys.argv[1])
+work = Path(sys.argv[2])
+spec = importlib.util.spec_from_file_location("recommend", mod_path)
+mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
+
+hist = work / "hist-superpowers"
+(hist / "docs" / "superpowers" / "plans").mkdir(parents=True)
+(hist / "docs" / "superpowers" / "plans" / "old.md").write_text("archive\n")
+(hist / "package.json").write_text("{}\n")
+rec = mod.recommend(hist)
+Path(work / "rec-hist.json").write_text(json.dumps(rec))
+
+live = work / "live-superpowers"
+(live / ".claude" / "skills" / "superpowers").mkdir(parents=True)
+(live / ".claude" / "skills" / "superpowers" / "SKILL.md").write_text("# Superpowers\n")
+(live / "package.json").write_text("{}\n")
+rec2 = mod.recommend(live)
+Path(work / "rec-live.json").write_text(json.dumps(rec2))
+PY
+if python3 - "$WORK" <<'PY'
+import json, sys
+from pathlib import Path
+work = Path(sys.argv[1])
+hist = json.loads((work / "rec-hist.json").read_text())
+live = json.loads((work / "rec-live.json").read_text())
+ok = (hist.get("other_delivery") is False) and ("agentic-delivery" in hist.get("skills", []))
+ok = ok and (live.get("other_delivery") is True) and ("agentic-delivery" not in live.get("skills", []))
+sys.exit(0 if ok else 1)
+PY
+then
+  record 0 "recommend: archive superpowers is not a live delivery pack"
+else
+  record 1 "recommend: archive superpowers is not a live delivery pack"
+fi
+
 # ---------------------------------------------------------------------------
 # idea-critic verdict validator
 # ---------------------------------------------------------------------------
