@@ -323,6 +323,115 @@ else
   record 1 "install: rapid repeated installs create distinct backups"
 fi
 
+# 4) default/full review-only must NOT install overlay skills.
+dest_no_ov="$WORK/dest-no-overlay"
+mkdir -p "$dest_no_ov"
+gate "$GATES" install --src "$ROOT" --dest "$dest_no_ov" --mode full
+if [ "$GATE_RC" -eq 0 ] \
+  && [ -f "$dest_no_ov/$skill_rel/SKILL.md" ] \
+  && [ ! -e "$dest_no_ov/.claude/skills/agentic-delivery" ] \
+  && [ ! -e "$dest_no_ov/.claude/skills/idea-critic" ]; then
+  record 0 "install: default full is review-only (no overlay skills)"
+else
+  record 1 "install: default full is review-only (no overlay skills)"
+fi
+
+# 5) overlays mode installs review + agentic-delivery + idea-critic and an overlay stamp.
+dest_ov="$WORK/dest-overlays"
+mkdir -p "$dest_ov"
+gate "$GATES" install --src "$ROOT" --dest "$dest_ov" --mode overlays
+if [ "$GATE_RC" -eq 0 ] \
+  && [ -f "$dest_ov/$skill_rel/SKILL.md" ] \
+  && [ -f "$dest_ov/.claude/skills/agentic-delivery/SKILL.md" ] \
+  && [ -f "$dest_ov/.claude/skills/idea-critic/SKILL.md" ] \
+  && grep -q 'dcr-overlays:begin' "$dest_ov/AGENTS.md" \
+  && grep -q 'agentic-delivery' "$dest_ov/AGENTS.md"; then
+  record 0 "install: overlays mode copies delivery+critic and stamps AGENTS.md"
+else
+  record 1 "install: overlays mode copies delivery+critic and stamps AGENTS.md"
+fi
+
+# 6) --recommend inspects and writes nothing.
+dest_rec="$WORK/dest-recommend"
+mkdir -p "$dest_rec"
+gate "$GATES" install --src "$ROOT" --dest "$dest_rec" --mode recommend
+if [ "$GATE_RC" -eq 0 ] \
+  && [ ! -e "$dest_rec/.claude" ] \
+  && [ ! -e "$dest_rec/AGENTS.md" ] \
+  && grep -qi 'recommend' "$WORK/last.log"; then
+  record 0 "install: recommend is read-only"
+else
+  record 1 "install: recommend is read-only"
+fi
+
+# ---------------------------------------------------------------------------
+# idea-critic verdict validator
+# ---------------------------------------------------------------------------
+
+VALIDATOR="$ROOT/.claude/skills/idea-critic/scripts/validate_verdict.py"
+if [ ! -f "$VALIDATOR" ]; then
+  record 1 "idea-critic: validator present"
+else
+  record 0 "idea-critic: validator present"
+  printf '%s\n' '{"verdict":"HOLD","independence":"inline","origin":"owner-request","claim":"x","hats_run":"all","assumptions":"NONE","better_ways":"NONE","kill_criteria":"NONE","questions_parent_must_resolve":"NONE","user_question":"NONE","dissent_ledger":"n","remaining_risk":"n"}' >"$WORK/verdict.illegal.json"
+  if python3 "$VALIDATOR" --file "$WORK/verdict.illegal.json" >/dev/null 2>&1; then
+    record 1 "idea-critic: reject owner-request+HOLD"
+  else
+    record 0 "idea-critic: reject owner-request+HOLD"
+  fi
+  printf '%s\n' '{"verdict":"PASS_TO_USER","independence":"inline","origin":"owner-request","claim":"x","hats_run":"all","assumptions":"NONE","better_ways":"NONE","kill_criteria":"NONE","questions_parent_must_resolve":"NONE","user_question":["a","b"],"dissent_ledger":"n","remaining_risk":"n"}' >"$WORK/verdict.listq.json"
+  if python3 "$VALIDATOR" --file "$WORK/verdict.listq.json" >/dev/null 2>&1; then
+    record 1 "idea-critic: reject list-shaped user_question"
+  else
+    record 0 "idea-critic: reject list-shaped user_question"
+  fi
+  printf '%s\n' '{"verdict":"PASS_TO_USER","independence":"inline","origin":"owner-request","claim":"x","hats_run":"all","assumptions":"NONE","better_ways":"NONE","kill_criteria":"NONE","questions_parent_must_resolve":"NONE","user_question":"NONE","dissent_ledger":"n","remaining_risk":"n"}' >"$WORK/verdict.ok.json"
+  if python3 "$VALIDATOR" --file "$WORK/verdict.ok.json" >/dev/null 2>&1; then
+    record 0 "idea-critic: accept a complete PASS_TO_USER verdict"
+  else
+    record 1 "idea-critic: accept a complete PASS_TO_USER verdict"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# Agent Skills frontmatter — description ≤1024
+# ---------------------------------------------------------------------------
+
+desc_ok=1
+for skill_md in "$ROOT"/.claude/skills/*/SKILL.md; do
+  [ -f "$skill_md" ] || continue
+  python3 - "$skill_md" <<'PY' || desc_ok=0
+import sys
+from pathlib import Path
+text = Path(sys.argv[1]).read_text()
+if not text.startswith("---"):
+    sys.exit(1)
+end = text.find("\n---\n", 3)
+fm = text[4:end]
+lines = fm.splitlines()
+desc = []
+in_d = False
+for line in lines:
+    if line.startswith("description:"):
+        in_d = True
+        rest = line.split("description:", 1)[1].strip()
+        if rest and rest not in (">-", "|", ">"):
+            desc.append(rest)
+        continue
+    if in_d:
+        if line and not line.startswith(" ") and not line.startswith("\t") and ":" in line:
+            break
+        desc.append(line.strip())
+text_desc = " ".join(x for x in desc if x not in (">-", "|", ">"))
+sys.exit(0 if 1 <= len(text_desc) <= 1024 else 1)
+PY
+done
+if [ "$desc_ok" -eq 1 ]; then
+  record 0 "frontmatter: every skill description is 1–1024 chars"
+else
+  record 1 "frontmatter: every skill description is 1–1024 chars"
+fi
+
 # ---------------------------------------------------------------------------
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
