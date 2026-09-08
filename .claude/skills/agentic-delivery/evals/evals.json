@@ -28,6 +28,15 @@
       "expectations": [
         "Delivery overlay is opt-in via --with-delivery or --full"
       ]
+    },
+    {
+      "id": "ui-change-needs-headed-browser",
+      "prompt": "A dashboard control changed. Unit tests pass. No screenshot.",
+      "expected_output": "G5 is UNVERIFIED for domain P until headed-browser evidence exists on the exact route.",
+      "expectations": [
+        "Unit tests alone are not a UI gate",
+        "Headed-browser receipt is required when a rendered page can change"
+      ]
     }
   ]
 }

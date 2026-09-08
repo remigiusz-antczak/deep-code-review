@@ -44,6 +44,15 @@
       "expectations": [
         "A one-line owner-requested typo fix does not load the full review method"
       ]
+    },
+    {
+      "id": "specify-constitution-is-review-not-install",
+      "prompt": "The target has a .specify/memory/constitution.md. Recommend overlays.",
+      "expected_output": "Review against the constitution. Do not install Spec Kit. Do not stack agentic-delivery.",
+      "expectations": [
+        ".specify is a live delivery pack — suppress agentic-delivery",
+        "Absence of .specify is not a finding"
+      ]
     }
   ]
 }

@@ -9,7 +9,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.22.0"
+  version: "1.23.0"
 ---
 
 # Idea critic
@@ -196,6 +196,20 @@ script ships next to this file and is copied by `install.sh`.
   reads as addressed in wording, without the hats actually re-attacking
   the revised claim — dissent resolved pro forma leaves people **more**
   entrenched, not less (Nemeth, 2018).
+
+## Anti-rationalization (excuse → rebuttal)
+
+Pre-written rebuttals to shortcuts the critic — or the parent — has not
+yet taken. Close the shortcut before it is taken.
+
+| Excuse | Rebuttal |
+|---|---|
+| "Too small to attack." | Blast radius is not line count. A one-line rec can still be a standing bot, a second delivery OS, or an unsigned HEAD install. |
+| "Owner already wants it." | Owner-request forbids `HOLD`, not the attack. Deliver the work **and** the dissent. |
+| "Steelman later." | Attack the strongest defensible reading now. A convenient weak reading is a fake critic. |
+| "Seems right / no issues found." | `PASS_TO_USER` with a generic `strongest_attack_survived` is rejected. Name the sharpest objection actually tried. |
+| "I'll skip the hats; we already discussed it." | Discussion is not a verdict. Missing keys = `HOLD`. |
+| "Inline is independent enough." | Calling `inline` independent is a lie. Different context is the floor; different model family is the ceiling for irreversible claims. |
 
 ---
 

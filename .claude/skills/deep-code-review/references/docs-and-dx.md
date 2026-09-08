@@ -223,6 +223,26 @@ template). It does **not** install delivery. Delivery is a separate opt-in:
 yes. Mention `agentic-delivery` in the imprinted `AGENTS.md` only when that
 skill is already present in the tree.
 
+## Spec Kit / constitution compatibility (review, do not install)
+
+If the target already has Spec Kit artifacts — `.specify/`,
+`.specify/memory/constitution.md`, or a root `constitution.md` — **review
+against that constitution**. It is a durable project rulebook: every later
+spec/plan/task is supposed to obey it. A review that ignores it while
+walking `AGENTS.md` is incomplete.
+
+- Load the constitution (and only that file unless a cited spec is in the
+  blast radius). Treat it as a named stating artifact, same class as
+  `AGENTS.md`.
+- Flag drift: code or a proposed change that violates a constitution
+  principle; a constitution so vague it cannot be checked; two
+  constitutions that disagree.
+- `--recommend` already treats `.specify` as a **live delivery pack** and
+  suppresses `agentic-delivery`. Keep that. Do **not** install Spec Kit,
+  do not dump `/speckit.*` commands, do not vendor the pack.
+- Absence of `.specify/` is not a finding. Do not recommend Spec Kit as
+  a second delivery OS.
+
 ### Minimal `AGENTS.md` skeleton to imprint (canonical — point `CLAUDE.md` and peers at it)
 
 ```markdown

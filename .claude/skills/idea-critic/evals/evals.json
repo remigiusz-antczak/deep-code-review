@@ -26,6 +26,15 @@
       "expectations": [
         "Triggers on unsolicited we-should / new agent / new skill wording"
       ]
+    },
+    {
+      "id": "excuse-table-closes-shortcut",
+      "prompt": "Skip the hats; we already discussed it and it seems right.",
+      "expected_output": "Discussion is not a verdict. Missing keys = HOLD. Generic strongest_attack_survived is rejected.",
+      "expectations": [
+        "Anti-rationalization table is applied before PASS_TO_USER",
+        "Seems right is never sufficient"
+      ]
     }
   ]
 }

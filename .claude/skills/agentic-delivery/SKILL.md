@@ -10,7 +10,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.22.0"
+  version: "1.23.0"
 ---
 
 # Agentic delivery
@@ -146,7 +146,7 @@ independent verification or a human approval that actually applies.
 | G2 Plan | Spec | Acyclic work graph | Role triggers, one writer per worktree; **every lane with a paid model call names a per-lane token/dollar budget before G4 starts — no budget set is blocked, not unlimited** (mirrors the review bar's own LLM10 / `spend-cap` invariants back onto this skill: a cap that defaults to off is not a cap) |
 | G3 Design | Graph | ADRs / contracts | Interfaces, NFR budgets, data/security decisions explicit. Shape: `template-adr.md` |
 | G4 Implement | Work packets | Patch/commit per lane | Tests before or with the change; packet names review skill + immutable base SHA |
-| G5 Verify | Exact revision | Test receipts | **Local stack up** (project's one-command / compose / devcontainer) then build, lint, type, unit, and applicable integration/E2E **green at that SHA**. A gate that never started the app is `UNVERIFIED`, not pass |
+| G5 Verify | Exact revision | Test receipts | **Local stack up** (project's one-command / compose / devcontainer) then build, lint, type, unit, and applicable integration/E2E **green at that SHA**. A gate that never started the app is `UNVERIFIED`, not pass. **UI change (domain P):** headed-browser evidence on the exact route after the action — screenshot or equivalent live receipt. Unit tests alone are not a UI gate |
 | G6 Review | Exact revision + receipts | `deep-code-review` + QA + security verdicts | Independent of the builder; no unresolved Blocker/High/Medium |
 | G7 Integrate | Accepted lanes | Integration receipt + `deep-code-review DIFF` | One integration owner; rerun affected gates on the exact final SHA |
 | G8 Release | Exact integrated SHA | Release manifest | Rollback proven; **owner approves** outward/production action |
@@ -271,7 +271,10 @@ Delivery owns the running stack, not only the diff.
    ship failure. Use the project's isolated verify dir when it has one.
 
 G5 is not green until step 3 ran or is `UNVERIFIED` with the missing
-prerequisite named.
+prerequisite named. When the change can alter a rendered page, step 3
+includes **headed-browser** evidence on the exact route after the
+action (`product-ux-quality.md`). A headless unit assertion is not
+that receipt.
 
 ---
 
@@ -363,6 +366,16 @@ result.
 - Provider/model unavailable: fail that lane closed; no silent fallback.
 - Owner-session end: no uncommitted writer work without a recovery
   record.
+
+## Anti-rationalization (G4 / G5)
+
+| Excuse | Rebuttal |
+|---|---|
+| "I'll add tests later." | Later is the load-bearing word. Tests before or with the change (G4). |
+| "Too simple to spec." | Five lines of acceptance is a spec. Zero is not. |
+| "Unit tests cover the UI." | Domain P needs headed-browser evidence on the route that renders. |
+| "Green locally is green in CI." | Different OS, browser, secrets. Exact SHA in CI is the receipt. |
+| "The stack didn't start; tests still passed." | G5 is `UNVERIFIED`, not pass. |
 
 ---
 
