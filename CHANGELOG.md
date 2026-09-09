@@ -332,9 +332,8 @@ Skills; MetaGPT; ChatDev) logged in `docs/standards-index.md`.
 
 ## [1.17.0] — 2026-09-08
 
-Dogfood of 1.15.0/1.16.0 against two private product repos (an agent network
-and a Next.js feed app) plus the Agent Skills spec. Three defects in the bar
-itself, not in those products: `--recommend` treated archived Superpowers
+Dogfood of 1.15.0/1.16.0 against two external product repositories plus the
+Agent Skills spec. Three defects in the bar itself, not in those products: `--recommend` treated archived Superpowers
 notes as a live delivery OS; kit-leftover `AGENTS.md` was not a named DX
 defect; delivery never required a running local stack. Anti-slop is now an
 explicit Phase-4 filter so a review of a well-gated product does not emit

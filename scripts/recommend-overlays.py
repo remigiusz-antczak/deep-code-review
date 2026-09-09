@@ -27,7 +27,7 @@ SKIP_DIRS = {
 
 # Live delivery OS only. Historical notes under docs/archive/history/code-review
 # do not count — a real product may keep old Superpowers plans without running
-# that pack (dogfood: a private agent repo with docs/superpowers only).
+# that pack (example: a repo with only docs/superpowers/ notes, no live pack).
 LIVE_DELIVERY_DIR_MARKERS = {
     "superpowers",
     "gstack",
