@@ -11,7 +11,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.25.0"
+  version: "1.26.0"
 ---
 
 # Deep Code Review
@@ -191,7 +191,7 @@ footguns: `references/language-stack-redflags.md`.
 | E | Performance, efficiency & cost | `performance-db-cost.md`, `model-tiering.md` |
 | F | Reliability & error handling | `reliability-error-handling.md` |
 | G | Concurrency & shared state | `concurrency-shared-state.md` |
-| H | Tech debt, dead code, maintainability | `domain-checklists.md` |
+| H | Tech debt, dead code, maintainability | `domain-checklists.md`, `skill-authoring-and-size.md` (when the target ships/installs skills) |
 | I | API, contracts, integration | `api-contracts.md` |
 | J | Testing & evaluation | `testing-and-evals.md` |
 | K | Build, CI, supply chain, release | `dependency-currency-and-upgrades.md`, `release-engineering.md` |
@@ -203,6 +203,11 @@ footguns: `references/language-stack-redflags.md`.
 | Q | Privacy, compliance, licensing | `privacy-compliance.md` |
 | R | i18n, encoding, localization | `domain-checklists.md` |
 | S | Branches, merges, open-work triage | `branch-and-merge-hygiene.md` |
+
+**Skills as targets.** When the repo ships or installs agent skills, review them
+for leanness and progressive disclosure (a thin core + routed `references/` + a
+size ratchet that fails on bloat): `references/skill-authoring-and-size.md` —
+**read it when** the target contains `**/SKILL.md`.
 
 ---
 

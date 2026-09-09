@@ -3,6 +3,22 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.26.0] — 2026-09-09
+
+New reference `skill-authoring-and-size.md` (domain H): a portable rule for
+keeping agent skills lean as they accrete lessons — a thin always-loaded
+`SKILL.md` core + a routed index, depth in on-demand `references/`, two budgets
+(body tokens on invocation, `description` chars always-loaded, ≤1024 by spec), a
+reasoned allowlist (allowed-not-required), and a size ratchet that FAILS on bloat
+with a self-test that proves it fires. Routed from the domain map (H) and a
+"skills as targets" pointer. CI `--max-bytes` stays 100000 (still a warning);
+tightening to 24000 and making it FAIL need a follow-up with `workflow` scope.
+No behaviour change to the review method.
+
+### Changed
+- Overlay `VERSION` files, the three `SKILL.md` stamps, and the plugin
+  manifest follow **1.26.0**.
+
 ## [1.25.0] — 2026-09-09
 
 Concurrency, scheduling, and merge-cadence cut for `agentic-delivery`. Default
