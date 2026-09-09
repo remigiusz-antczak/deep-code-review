@@ -3,6 +3,28 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.25.0] — 2026-09-09
+
+Concurrency, scheduling, and merge-cadence cut for `agentic-delivery`. Default
+install stays review-only.
+
+### Added
+- **`agentic-delivery/references/fast-agentic-delivery.md`**: five field-tested
+  refinements — a corrected resource-gate signal (free RAM + swap trend, not
+  `load1` alone, which conflates disk I/O with CPU contention), CI-offload as
+  the actual concurrency unlock (lane weight over lane count), sweeping the
+  whole ready queue on every Conductor trigger, a fleet-wide external-advisory
+  gate-epistemology case, and reconciling an independent-PR-queue merge
+  cascade with the existing union-proof-before-a-train rule. Five sources
+  fetched and cited (Kanban WIP limits, Google small-CLs, blast radius,
+  GitLab merge trains, Linux load-average mechanics). Routed from three spots
+  in `SKILL.md` (environment probe, Conductor operating rhythm, gate
+  epistemology).
+
+### Changed
+- Overlay `VERSION` files, the three `SKILL.md` stamps, and the plugin
+  manifest follow **1.25.0**.
+
 ## [1.24.0] — 2026-09-08
 
 Cost-governance leftover from colliding PR #13, restamped onto

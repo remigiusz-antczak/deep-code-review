@@ -10,7 +10,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.24.0"
+  version: "1.25.0"
 ---
 
 # Agentic delivery
@@ -131,6 +131,9 @@ issues → G0/G1, inter-agent misalignment → G2 and the
 worktree preflight, task verification → G5/G6. Read as confirmation the
 gate shape already covers the failure surface that actually occurs, not as
 a reason to add an eleventh gate.
+
+**Sweeping the whole ready queue on every trigger** — a completeness fix to
+this event-driven model, not a change to it: `references/fast-agentic-delivery.md`.
 
 ---
 
@@ -257,6 +260,9 @@ rule, and yesterday's number may not hold today.
   (`parallel-audit.md` §0) — probing capacity first is what keeps that
   distinction from being made after the fact, on a report already full of
   false timeouts.
+- **Resource-gate correction (free RAM + swap trend over `load1`), why
+  CI-offload is the real concurrency unlock, and a worktree-gate
+  provisioning gotcha:** `references/fast-agentic-delivery.md`.
 
 ## Local environment (own it)
 
@@ -343,6 +349,10 @@ Copied as principles, not as anyone's private playbook:
    presumed-junk items as a batch of `UNVERIFIED` closures until each is
    actually checked — a plausible-looking pattern across many items is not
    evidence for any one of them.
+10. **A fleet-wide external advisory is a third case for principle 3, and an
+    independent-queue merge cascade is a cadence choice subordinate to
+    principle 6** — neither restated here; depth and the honest limits of
+    each: `references/fast-agentic-delivery.md`.
 
 ---
 
