@@ -13,13 +13,16 @@ principles 3 and 6, and the worktree/occupancy rules already in `SKILL.md`.
 
 ## Gate on free RAM and the swap trend — `load1` is not a reliable signal alone
 
-The environment probe's composite predicate includes `load1 < cores × 1.3` as
-one of three terms. A session found this term actively misleading in both
-directions and the correction is worth carrying forward: Linux/macOS load
-averages count threads in uninterruptible I/O-wait, not only CPU-runnable
-ones — "adding the uninterruptible state means that Linux load averages can
-increase due to a disk (or NFS) I/O workload, not just CPU demand," with a
-worked example where "a heavily disk-bound system might be extremely
+The environment probe's composite predicate used to include `load1 < cores ×
+1.3` as a primary term. **That bullet is now corrected directly in
+`SKILL.md`** — free RAM and the swap trend primary, CPU idle secondary,
+`load1` a weak corroborating signal at most; this section is the mechanism
+and the worked example behind that fix, not a second, competing rule.
+Linux/macOS load averages count threads in uninterruptible I/O-wait, not only
+CPU-runnable ones — "adding the uninterruptible state means that Linux load
+averages can increase due to a disk (or NFS) I/O workload, not just CPU
+demand," with a worked example where "a heavily disk-bound system might be
+extremely
 sluggish but only have a TASK_RUNNING [CPU-runnable] average of 0.1" (Gregg;
 source below). Observed directly on a 14-core host: `load1` sat at 7
 (comfortably under an 18-ish `cores × 1.3` ceiling) while CPU idle read
