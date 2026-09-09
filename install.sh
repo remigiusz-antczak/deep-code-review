@@ -18,7 +18,8 @@
 # Overlay skills (opt-in; default stays review-only):
 #   --with-delivery      also agentic-delivery
 #   --with-critic        also idea-critic
-#   --full               review + delivery + critic
+#   --with-comms         also communication-structure
+#   --full               review + delivery + critic + comms
 #   --recommend          inspect TARGET, print a pack, install nothing
 # Narrow:
 #   --minimal            only .claude/skills/ + AGENTS.md
@@ -56,7 +57,8 @@ on re-install). Overlay skills are opt-in.
   --with-cursor        Accepted as no-op (Cursor path is default now)
   --with-delivery      Also install agentic-delivery (gated delivery overlay)
   --with-critic        Also install idea-critic (pre-owner idea attack)
-  --full               Review + delivery + critic
+  --with-comms         Also install communication-structure (BLUF messages)
+  --full               Review + delivery + critic + comms
   --recommend          Inspect TARGET and print a recommended pack; no writes
   -h, --help           Show this help
 
@@ -77,6 +79,7 @@ WITH_CODEX=0
 WITH_EXTRA=0
 WITH_DELIVERY=0
 WITH_CRITIC=0
+WITH_COMMS=0
 RECOMMEND_ONLY=0
 POSITIONAL=()
 for arg in "$@"; do
@@ -87,7 +90,8 @@ for arg in "$@"; do
     --with-extra-hosts) WITH_EXTRA=1 ;;
     --with-delivery) WITH_DELIVERY=1 ;;
     --with-critic) WITH_CRITIC=1 ;;
-    --full) WITH_DELIVERY=1; WITH_CRITIC=1 ;;
+    --with-comms) WITH_COMMS=1 ;;
+    --full) WITH_DELIVERY=1; WITH_CRITIC=1; WITH_COMMS=1 ;;
     --recommend) RECOMMEND_ONLY=1 ;;
     --with-cursor) echo "note: --with-cursor is default now; ignoring." >&2 ;;
     -p|--portable) echo "note: --portable is default; ignoring (use --minimal / --claude-only to narrow)." >&2 ;;
@@ -194,6 +198,9 @@ fi
 if [[ "${WITH_CRITIC}" -eq 1 ]]; then
   SKILLS+=("idea-critic")
 fi
+if [[ "${WITH_COMMS}" -eq 1 ]]; then
+  SKILLS+=("communication-structure")
+fi
 
 for skill in "${SKILLS[@]}"; do
   for host in "${HOSTS[@]}"; do
@@ -270,7 +277,7 @@ EOF
 )"
   upsert_agents_block "${AGENTS}" "deep-code-review:begin" "deep-code-review:end" "${REVIEW_BLOCK}"
 
-  if [[ "${WITH_DELIVERY}" -eq 1 || "${WITH_CRITIC}" -eq 1 ]]; then
+  if [[ "${WITH_DELIVERY}" -eq 1 || "${WITH_CRITIC}" -eq 1 || "${WITH_COMMS}" -eq 1 ]]; then
     OVERLAY_LINES=""
     if [[ "${WITH_DELIVERY}" -eq 1 ]]; then
       OVERLAY_LINES="${OVERLAY_LINES}
@@ -286,9 +293,15 @@ EOF
 - \`idea-critic\` — attack a plan or \"we should\" before the owner sees it.
   Three hats; HOLD / REVISE / PASS_TO_USER. Owner-request cannot HOLD."
     fi
+    if [[ "${WITH_COMMS}" -eq 1 ]]; then
+      OVERLAY_LINES="${OVERLAY_LINES}
+- \`communication-structure\` — makes a PR body, issue/PR comment, or status
+  update BLUF, one ask, scannable, zero AI-slop by default. Governs
+  persisted-message structure and length, not chat voice (see below)."
+    fi
     OVERLAY_BLOCK="$(cat <<EOF
 <!-- dcr-overlays:begin -->
-## Delivery overlays (opt-in)
+## Optional overlays
 
 Installed alongside deep-code-review **${VERSION}** (@ \`${INSTALL_SHA}\`).
 These are optional; default \`install.sh\` does not add them.
@@ -299,8 +312,8 @@ Do not also run a second delivery OS on this repo. Persisted artifacts
 here — if compressed assistant prose is wanted, add JuliusBrussee/caveman
 separately.
 
-Re-run upstream \`install.sh --with-delivery\` / \`--with-critic\` / \`--full\`
-to refresh this stamp.
+Re-run upstream \`install.sh --with-delivery\` / \`--with-critic\` /
+\`--with-comms\` / \`--full\` to refresh this stamp.
 <!-- dcr-overlays:end -->
 EOF
 )"
@@ -317,4 +330,7 @@ if [[ "${WITH_DELIVERY}" -eq 1 ]]; then
 fi
 if [[ "${WITH_CRITIC}" -eq 1 ]]; then
   echo "  critic:   load idea-critic before a plan reaches the owner"
+fi
+if [[ "${WITH_COMMS}" -eq 1 ]]; then
+  echo "  comms:    load communication-structure before any human-facing message"
 fi
