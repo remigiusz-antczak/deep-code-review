@@ -10,7 +10,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.24.0"
+  version: "1.25.0"
 ---
 
 # Agentic delivery
@@ -132,6 +132,9 @@ worktree preflight, task verification → G5/G6. Read as confirmation the
 gate shape already covers the failure surface that actually occurs, not as
 a reason to add an eleventh gate.
 
+**Sweeping the whole ready queue on every trigger** — a completeness fix to
+this event-driven model, not a change to it: `references/fast-agentic-delivery.md`.
+
 ---
 
 ## Gates (G0–G10)
@@ -239,14 +242,20 @@ rule, and yesterday's number may not hold today.
   sibling) — frontier only where the blast radius already calls for
   decorrelation, not by default; and whether a heavy gate runs locally at
   all or waits for CI/a shared runner when local capacity is short.
-- **A composite predicate beats a single free-RAM check.** Spawn another heavy
-  lane only while free RAM >15% AND `load1 < cores × 1.3` (host load average
-  against core count: `sysctl -n vm.loadavg`/`uptime` vs. `nproc`/`sysctl -n
-  hw.ncpu`) AND CPU idle >25% (`top -l 1 -n 0` on macOS, `mpstat`/`top`
-  elsewhere) — on macOS also read `sysctl vm.swapusage`, since swap pressure
-  can be live while free RAM still looks fine. Throttle the instant any one of
-  the three trips; the numbers are a starting rule of thumb to recalibrate on
-  the host in front of you, not a constant to port unchanged.
+- **Free RAM and the swap *trend* are the primary gate — `load1` is not a
+  reliable term.** Spawn another heavy lane only while free RAM >15% AND swap
+  is not actively climbing (`sysctl vm.swapusage` on macOS — read it twice, a
+  beat apart, for the trend, not only the level). CPU idle >25% (`top -l 1 -n
+  0` on macOS, `mpstat`/`top` elsewhere) is a useful **secondary**
+  confirmation of real headroom. `load1` (`sysctl -n vm.loadavg`/`uptime` vs.
+  `nproc`/`sysctl -n hw.ncpu`) is at most a **weak corroborating signal, never
+  the deciding term** — Linux/macOS load averages count disk-I/O-wait as well
+  as CPU-runnable threads, so it can read comfortably low while swap is
+  already climbing, or read elevated from a concurrent install with CPU
+  mostly idle. Throttle the instant free RAM or the swap trend trips; the
+  numbers are a starting rule of thumb to recalibrate on the host in front of
+  you, not a constant to port unchanged. Full mechanism and a worked example:
+  `references/fast-agentic-delivery.md`.
 - **Shell semantics belong to the probe, not to guesswork mid-script.** Know
   which shell will actually run a script before writing a list-membership or
   exclusion check in it — `branch-and-merge-hygiene.md` §6 has the concrete
@@ -257,6 +266,9 @@ rule, and yesterday's number may not hold today.
   (`parallel-audit.md` §0) — probing capacity first is what keeps that
   distinction from being made after the fact, on a report already full of
   false timeouts.
+- **Why CI-offload is the real concurrency unlock (lane weight, not lane
+  count), and a worktree-gate provisioning gotcha:**
+  `references/fast-agentic-delivery.md`.
 
 ## Local environment (own it)
 
@@ -343,6 +355,10 @@ Copied as principles, not as anyone's private playbook:
    presumed-junk items as a batch of `UNVERIFIED` closures until each is
    actually checked — a plausible-looking pattern across many items is not
    evidence for any one of them.
+10. **A fleet-wide external advisory is a third case for principle 3, and an
+    independent-queue merge cascade is a cadence choice subordinate to
+    principle 6** — neither restated here; depth and the honest limits of
+    each: `references/fast-agentic-delivery.md`.
 
 ---
 
