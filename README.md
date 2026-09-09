@@ -87,7 +87,8 @@ cd deep-code-review
 ./install.sh --recommend /path/to/your/project     # inspect; print a pack; write nothing
 ./install.sh --with-delivery /path/to/your/project # + gated delivery overlay
 ./install.sh --with-critic /path/to/your/project   # + pre-owner idea critic
-./install.sh --full /path/to/your/project          # review + delivery + critic
+./install.sh --with-comms /path/to/your/project    # + BLUF/no-slop message rule
+./install.sh --full /path/to/your/project          # review + delivery + critic + comms
 ./install.sh --with-codex /path/to/your/project    # also .codex/skills/
 ./install.sh --with-extra-hosts /path/to/your/project  # Gemini, OpenCode, Copilot, Windsurf, Hermes, Kiro
 ./install.sh --minimal /path/to/your/project       # only .claude/skills/ + AGENTS.md
@@ -123,6 +124,13 @@ without standing up a bot per role:
 - **`idea-critic`** — the "proper evil twin": attacks a plan or a "we should"
   *before* the owner sees it, defaults to dissent, and verifies its own objection
   against current state (a critic is a lead, not an oracle).
+
+A third, orthogonal overlay covers what any of those roles hands to a human:
+
+- **`communication-structure`** — makes a PR body, issue/PR comment, or status
+  update BLUF, one ask, scannable, and free of AI-slop by default, so a busy
+  reviewer gets the point in under 30 seconds. Governs structure and length,
+  not voice — see "Chat voice is not vendored" below.
 
 Let an agent inspect the target first — `./install.sh --recommend <project>`
 reports which quality gates the repo already has and proposes the roles plus the
@@ -226,7 +234,8 @@ verified** — never a remembered link.
 └── .claude/skills/
     ├── deep-code-review/           # default product — the review bar
     ├── agentic-delivery/           # opt-in gated delivery + role roster (references/roles.md)
-    └── idea-critic/                # opt-in pre-owner idea attack (the "evil twin")
+    ├── idea-critic/                # opt-in pre-owner idea attack (the "evil twin")
+    └── communication-structure/    # opt-in BLUF/no-slop rule for persisted messages
 ```
 
 `deep-code-review/references/` holds on-demand depth (method, domain

@@ -1,0 +1,41 @@
+{
+  "skill_name": "communication-structure",
+  "evals": [
+    {
+      "id": "bluf-first-line",
+      "prompt": "Draft a status update for a rambling 6-paragraph investigation that ends with a fix already in progress.",
+      "expected_output": "Line 1-2 states the result and the current action; the investigation narrative is cut or moved after it.",
+      "expectations": [
+        "The first line alone would tell a skimming reader the outcome",
+        "No paragraph of process/reasoning precedes the BLUF"
+      ]
+    },
+    {
+      "id": "single-explicit-decision",
+      "prompt": "Draft a PR comment presenting two viable UI options with no strong preference stated.",
+      "expected_output": "One recommendation is named, and the message ends with an explicit A-vs-B ask, not an open-ended 'thoughts?'.",
+      "expectations": [
+        "Exactly one decision is asked for, on the last line",
+        "The two options are named concretely (A/B or equivalent), not left implicit"
+      ]
+    },
+    {
+      "id": "cut-on-sight-phrases-removed",
+      "prompt": "Revise a draft reply that opens with 'You're right, sorry about that' and includes 'it depends' and 'I think maybe'.",
+      "expected_output": "The revised message contains none of the banned phrases and states a position instead of hedging.",
+      "expectations": [
+        "No agreement/apology filler ('you're right', 'sorry')",
+        "No hedge phrases ('it depends', 'I think maybe', 'could potentially')"
+      ]
+    },
+    {
+      "id": "chat-voice-not-overridden",
+      "prompt": "A project has a compressed/caveman chat voice configured. Draft a PR body for a merged fix.",
+      "expected_output": "The PR body is normal, professional English — the compressed chat voice is not applied to a persisted artifact.",
+      "expectations": [
+        "No abbreviated/caveman-style shorthand appears in the PR body",
+        "The message still satisfies BLUF, one-ask and cut-on-sight rules"
+      ]
+    }
+  ]
+}
