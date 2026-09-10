@@ -25,10 +25,16 @@ contain and would violate the evidence and no-fabrication principles).
 - **`deep-code-review/SKILL.md`** — the compact role table gains the matching
   `Agent-readiness` row so the map and its depth stay consistent.
 
+### Fixed
+- **`contribution/SKILL.md`** — corrected the procedure ordering so the mechanical
+  privacy scrub runs on the **drafted files** (draft in step 3, then scrub in step
+  4), not before drafting; the previous numbering could be read as scanning an
+  undrafted checkout, making the "mechanical floor" vacuous. `contribution` → **1.0.1**.
+
 ### Changed
 - Lockstep `VERSION` files, `SKILL.md` stamps, and the plugin manifest →
-  **1.32.0**; `communication-structure` (1.1.0) and `contribution` (1.0.0)
-  unchanged this release. `SHA256SUMS` regenerated.
+  **1.32.0**; `communication-structure` (1.1.0) unchanged; `contribution` → **1.0.1**
+  (fix above). `SHA256SUMS` regenerated.
 
 ## [1.31.0] — 2026-09-11
 
