@@ -31,11 +31,23 @@ Titles below are the official names. Severity labels are the project's.
   a pass — AST08.
 - **AST02 Supply Chain Compromise** (Critical). Provenance of the install
   path: git SHA / content hash, not a floating tag. Nested deps pinned.
-  Repo config files (hooks, host settings) treated as executable, not docs.
+  Repo config files (hooks, host settings) treated as executable, not docs. A
+  checksum fetched from the **same origin** as the payload is integrity
+  (corruption / CDN), not **authenticity** (origin compromise) — grade a
+  `curl | bash` install by whether that origin is the sole documented path for
+  every user (depth: A03 in `security-appsec.md`). A filename read out of a
+  downloaded manifest is validated against path traversal (`*/*`, `*..*`) before
+  use. **CI workflow files are executable config too** — `pull_request_target`
+  untrusted checkout, token `permissions`, and `${{ github.event.* }}` injection
+  are reviewed under A03.
 - **AST03 Over-Privileged Skills** (High). Least privilege vs the stated
   job. No undeclared shell, no credential-store reads, no write to agent
   identity files (`AGENTS.md` / memory / soul files) unless the owner asked.
-  Network egress allowlisted, not `network: true`.
+  Network egress allowlisted, not `network: true`. Installer over-privilege
+  beyond identity files counts too: appending to shell rc files (`~/.zshrc` /
+  `.bashrc` / `.profile`), a global `npm i -g`, or exporting `PATH` is
+  install-time privilege — flag it (a consent prompt mitigates, does not
+  excuse).
 - **AST04 Insecure Metadata** (High). Frontmatter / plugin manifest matches
   observed behavior. No brand impersonation. YAML/JSON loaded with a safe
   parser. Description does not understate permissions.

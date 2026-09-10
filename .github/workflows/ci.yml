@@ -43,7 +43,15 @@ jobs:
 
       - name: SKILL.md name matches its directory
         run: |
-          grep -qE '^name: deep-code-review$' .claude/skills/deep-code-review/SKILL.md
+          set -euo pipefail
+          # Every shipped skill's frontmatter name must equal its directory (not
+          # just deep-code-review) — an overlay cannot ship with a mismatched
+          # name that the routing/version gates would miss.
+          for d in .claude/skills/*/; do
+            skill="$(basename "$d")"
+            grep -qE "^name: ${skill}\$" "${d}SKILL.md" \
+              || { echo "name: does not match directory for ${skill}"; exit 1; }
+          done
 
       - name: install.sh parses
         run: bash -n install.sh

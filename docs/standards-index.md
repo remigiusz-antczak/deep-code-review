@@ -188,6 +188,18 @@ scheduling-, and merge-cadence reference in the `agentic-delivery` skill.
 | GitLab Docs — Merge trains | https://docs.gitlab.com/ci/pipelines/merge_trains/ | "Use merge trains to put merge requests in a queue. Each merge request is compared to the other, earlier merge requests, to ensure they all work together." Names the problem directly: "two merge requests can each pass their own pipeline, but their combined changes can still conflict." Each queued pipeline runs the change combined with the target branch **and** every earlier queued change (a third queued MR's pipeline tests all three, combined). |
 | Brendan Gregg — Linux Load Averages: Solving the Mystery | https://www.brendangregg.com/blog/2017-08-08/linux-load-averages.html | "Adding the uninterruptible state means that Linux load averages can increase due to a disk (or NFS) I/O workload, not just CPU demand." Worked example: "a heavily disk-bound system might be extremely sluggish but only have a TASK_RUNNING [CPU-runnable] average of 0.1"; a decomposed `tar` archival showed a load average of 1.19 including 0.67 from uninterruptible disk reads against only 0.37 actual CPU utilization — the basis for "don't gate concurrency on `load1` alone." |
 
+## Verified by direct fetch (2026-09-10) — dependency cooldown & CI/CD hardening
+
+Verification date for the rows below: **2026-09-10**. Added for the
+release-age-cooldown control (`references/dependency-currency-and-upgrades.md`)
+and the CI/CD trigger-and-token hardening instrument (`references/security-appsec.md`
+A03, cross-referenced from `references/security-agent-skills.md` AST02).
+
+| Standard / source | URL | What was confirmed |
+|---|---|---|
+| Renovate — `minimumReleaseAge` | https://docs.renovatebot.com/configuration-options/ | Supply-chain cooldown option: "Suppress branch/PR creation for X days" / "Prevent holding broken npm packages"; Renovate delays proposing an update until a package has been public for the configured duration, reducing exposure to newly-published malicious or broken releases. Associated option `minimumReleaseAgeBehaviour`. (Dependabot `cooldown` and npm/pnpm `min-release-age`-style keys were **not** fetched this session — confirm the exact key per ecosystem before citing.) |
+| GitHub Actions — Security hardening for GitHub Actions | https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions | Verbatim: `pull_request_target` / `workflow_run` used with an untrusted checkout "expose the repository to security compromises" and "must not explicitly check out untrusted code." Untrusted `${{ github.event.* }}` should be routed through an intermediate `env:` variable rather than inlined into a `run:` script (the value "is stored in memory and used as a variable, and doesn't interact with the script generation process"). Set the default `GITHUB_TOKEN` to "read access only for repository contents," escalating per job as required. (`persist-credentials` on `actions/checkout` was **not** found on this page.) |
+
 ## Referenced by name (not fetched this session — verify before citing a URL)
 
 - **OWASP WSTG** — how-to-test companion for each web risk.

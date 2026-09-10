@@ -3,6 +3,52 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.29.0] — 2026-09-10
+
+Tier 2–3 of the same prime-agent-informed batch: supply-chain and CI/CD
+detection instruments, a dependency release-age cooldown control, six eval
+fixtures, and two repo-hygiene items. Additive; the method and the default
+(review-only) install are unchanged. Two Tier-3 items were found **already
+implemented** during the work and are recorded, not re-added (see Note).
+
+### Added
+- **`deep-code-review/references/security-appsec.md`** — A03 gains CI/CD
+  trigger-and-token hygiene (`pull_request_target` untrusted checkout,
+  `${{ github.event.* }}` script injection, least-privilege
+  `GITHUB_TOKEN` / `permissions`) and a verification-vs-authenticity instrument:
+  a same-origin checksum is integrity, not authenticity, and does not neutralize
+  the trust-on-first-use risk of a `curl | sh` install; severity keys on
+  reachability. Cited to GitHub's Security-hardening guide.
+- **`deep-code-review/references/security-agent-skills.md`** — AST02 gains the
+  integrity-vs-authenticity grade, downloaded-manifest path-traversal
+  validation, and a pointer that CI workflow files are executable config
+  reviewed under A03; AST03 gains installer over-privilege beyond identity files
+  (shell-rc append, global `npm i -g`, `PATH` export).
+- **`deep-code-review/references/dependency-currency-and-upgrades.md`** — a
+  release-age cooldown control (refuse to resolve a version until it has been
+  public N days; Renovate `minimumReleaseAge`, security advisories exempt) plus
+  a matching red flag. Cited to Renovate's docs.
+- **`deep-code-review/evals/evals.json`** — six fixtures pinning the new
+  instruments (interpreter-is-the-exec-sink, silent safety-param drop,
+  process-group-is-not-isolation, installer over-privilege, cost-vs-token cap,
+  inconsistent untrusted-content spotlighting).
+- **`.gitattributes`** — normalize text to LF and keep shipped `*.sh` LF so the
+  installer runs identically on every checkout.
+- **`.github/workflows/ci.yml`** — the `name:`-matches-directory check now runs
+  on every shipped skill, not only `deep-code-review`.
+
+### Changed
+- The three lockstep skill `VERSION` files, their `SKILL.md` stamps, and the
+  plugin manifest follow **1.29.0**; `SHA256SUMS` regenerated.
+  `communication-structure` remains at 1.0.0.
+
+### Note
+- "Run `install.sh` end-to-end in CI" and "sort `SHA256SUMS` entries" were found
+  **already implemented** and were not re-added: `scripts/test-ci-gates.sh`
+  already drives the real installer (`ci-gates.sh install --src .`) across modes
+  with an idempotent-second-run assertion, and `scripts/write-checksums.sh`
+  already sorts its entries.
+
 ## [1.28.0] — 2026-09-10
 
 Five agent/LLM review-instrument sharpenings for domain C, found by routing the

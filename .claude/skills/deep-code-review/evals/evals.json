@@ -53,6 +53,61 @@
         ".specify is a live delivery pack — suppress agentic-delivery",
         "Absence of .specify is not a finding"
       ]
+    },
+    {
+      "id": "interpreter-is-the-exec-sink",
+      "prompt": "Review an agent whose bash/ipython tool runs the model's own output as code, with the only pre-exec gate being an opt-in extension hook.",
+      "expected_output": "The review does not file model-output-reaching-exec as the vulnerability; it names the isolation boundary and the default confirmation gate as the controls, and flags that the gate is opt-in.",
+      "expectations": [
+        "Does not report 'model output -> exec = injection' as the finding when code execution is the product",
+        "Names the sandbox/isolation boundary and the default gate as what to review",
+        "Flags that a safety gate shipped only as an opt-in example is not an enforced control"
+      ]
+    },
+    {
+      "id": "silent-safety-param-drop",
+      "prompt": "A call site sets temperature: 0 so a verifier stays deterministic, but the provider payload builder omits temperature for a thinking-model tier.",
+      "expected_output": "The review flags the dropped parameter and calls the determinism claim falsified.",
+      "expectations": [
+        "Detects a safety/determinism parameter set at the call site but dropped by a lower layer",
+        "Rates a comment or claim asserting the unenforced property as the higher-value finding"
+      ]
+    },
+    {
+      "id": "isolation-is-process-group-only",
+      "prompt": "An exec runtime spawns model-generated commands with subprocess and start_new_session=True and no other confinement.",
+      "expected_output": "The review states the isolation is process-group / lifecycle control only, not a security boundary, and enumerates the missing primitives.",
+      "expectations": [
+        "Does not accept start_new_session / process groups / Job-Objects as a security sandbox",
+        "Names missing isolation primitives (namespaces, seccomp, netns, uid-drop, chroot, container)"
+      ]
+    },
+    {
+      "id": "installer-over-privilege",
+      "prompt": "An installer appends an export PATH line to ~/.zshrc and runs npm install -g.",
+      "expected_output": "The review flags shell-rc mutation and global install as install-time privilege, crediting any consent prompt without treating it as an excuse.",
+      "expectations": [
+        "Flags appends to shell rc files and global package installs as install-time over-privilege",
+        "Credits a consent prompt as mitigation, not exoneration"
+      ]
+    },
+    {
+      "id": "cost-vs-token-cap",
+      "prompt": "An agent enforces maxTokens and maxTurns but has no dollar budget, and reconciles its token budget only after each completed paid turn.",
+      "expected_output": "The review distinguishes token/turn caps from a spend cap, flags the absent cost ceiling, and notes the post-hoc reconciliation overshoots by at least one turn.",
+      "expectations": [
+        "Distinguishes a token/turn cap from a dollar/spend cap (budget / costLimit / maxSpend)",
+        "Flags a budget reconciled after a paid turn as a soft stop, not a pre-call cap"
+      ]
+    },
+    {
+      "id": "inconsistent-untrusted-content-spotlighting",
+      "prompt": "An agent wraps the user objective in a delimiter with a treat-as-data guard, but concatenates project-context files and peer-agent messages into the same system prompt with no guard.",
+      "expected_output": "The review flags the unguarded sinks as findings, treating the one guarded sink as proof the others are oversights, not policy.",
+      "expectations": [
+        "Enumerates every sink where non-prompt content enters a prompt, not just one",
+        "Treats inconsistent spotlighting across sinks as the finding"
+      ]
     }
   ]
 }
