@@ -1,0 +1,5 @@
+# Normalize line endings across contributors' machines. This repo ships shell
+# (install.sh, scripts/*.sh) that must run identically on every checkout, so
+# text files are stored and checked out with LF.
+* text=auto eol=lf
+*.sh text eol=lf

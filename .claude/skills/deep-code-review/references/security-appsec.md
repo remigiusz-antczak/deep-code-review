@@ -166,15 +166,36 @@ Elevated in 2025. Covers dependencies, build, and CI/CD provenance.
 typosquatted package (name a character off from a popular one)? Install-time
 scripts (`postinstall`) from untrusted packages? CI actions pinned to a **commit
 SHA**, not a mutable tag (`@main`, `@v3`)? Is the build reproducible/hermetic?
-Is there dependency + image scanning and an SBOM?
+Is there dependency + image scanning and an SBOM? **CI/CD trigger & token
+hygiene** — does a `pull_request_target` (or `workflow_run`) workflow check out
+untrusted PR head code? GitHub's hardening guide: these triggers "expose the
+repository to security compromises" and "must not explicitly check out untrusted
+code." Is untrusted `${{ github.event.* }}` interpolated straight into a `run:`
+step (script injection — route it through an intermediate `env:` var)? Is
+`GITHUB_TOKEN` / `permissions` read-only by default and escalated per job?
+**Verification vs authenticity** — is a released artifact **signed**
+(SLSA / sigstore), or only checksummed over the **same channel** it ships on? A
+same-origin checksum defends against corruption and a CDN mishap, **not** a
+compromised origin, so it does not neutralize the trust-on-first-use risk of a
+`curl | sh` install from that origin.
 
 **🚩 grep**: `"postinstall"` in `package.json`, `uses: actions/*@main`,
 unpinned base images (`FROM node:latest`), `curl … | bash` in build steps,
-dependencies added in a diff without a lockfile update.
+dependencies added in a diff without a lockfile update, `pull_request_target`
+paired with a checkout of the PR head, `${{ github.event.` inside a `run:`
+block, a workflow with no `permissions:` block or `permissions: write-all`, an
+install path whose only integrity check is a checksum served from the same host
+as the artifact.
 
 **Fix**: pin by hash, commit lockfiles, scan dependencies and images in CI,
 generate an SBOM (CycloneDX/SPDX), and adopt provenance (SLSA) for released
-artifacts. See `infra-iac-containers.md` and section K of `SKILL.md`.
+artifacts. For workflows: never check out untrusted PR code under
+`pull_request_target`; set `permissions` to least privilege (read by default,
+escalate per job); pass untrusted context through an `env:` var, never inline
+`${{ }}` in `run:`; sign released artifacts (a checksum is integrity, not
+authenticity). **Severity keys on reachability** — a weak install verification on
+the *sole documented install path for every user* outranks the same weakness on
+an optional side channel. See `infra-iac-containers.md` and section K of `SKILL.md`.
 
 ## A04:2025 — Cryptographic Failures
 

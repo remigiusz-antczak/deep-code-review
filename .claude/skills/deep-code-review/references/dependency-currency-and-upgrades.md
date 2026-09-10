@@ -14,7 +14,8 @@ supply-chain review; the **integrity** half (pinning, lockfiles, typosquat,
 Standards this file tracks (verified URLs + dates in `docs/standards-index.md`):
 OWASP Top 10:2025 **A03 Software Supply Chain Failures** (which absorbed the
 former A06:2021 *Vulnerable and Outdated Components*), OpenSSF Scorecard, OSV
-(osv.dev), Semantic Versioning, GitHub Dependabot, endoflife.date.
+(osv.dev), Semantic Versioning, GitHub Dependabot, Renovate (`minimumReleaseAge`
+cooldown), endoflife.date.
 
 > The two forces are in tension and the review must hold both. **Staleness is a
 > security risk** — A03:2025 names software that is "vulnerable, unsupported, or
@@ -122,6 +123,13 @@ tests, performance, or another axis.
    confirm provenance/signature and that the version is not typosquatted or
    maintainer-hijacked (A03 in `security-appsec.md`). "Newer" is not "safer" by
    itself. Do **not** auto-merge bot update PRs without this + the green gate.
+   **Prefer a release-age cooldown**: refuse to resolve a version until it has
+   been public for a set window (e.g. 7 days), so a compromised or broken
+   just-published release is caught before it reaches you. Update bots support
+   it (Renovate `minimumReleaseAge` — "Suppress branch/PR creation for X days";
+   Dependabot and pnpm/npm expose an equivalent cooldown / `min-release-age`
+   key — confirm the exact key per ecosystem). Exempt security-advisory updates
+   from the cooldown so real CVE fixes still fast-track.
 6. **Separate the two cadences.** Security patches (usually PATCH/MINOR, or a
    backport) fast-track on their own; feature/major upgrades are scheduled,
    migration-planned work. Conflating them either delays a fix or rushes a
@@ -184,6 +192,9 @@ would confirm it.
 - A direct dep last released years ago / repo archived / registry-deprecated,
   still on a load-bearing path.
 - Auto-merge enabled on bot PRs with no green-gate or provenance gate in front.
+- No release-age cooldown on the update path — freshly-published versions are
+  auto-resolved or auto-merged the day they ship, leaving no window for a
+  compromised release to be caught (cross-ref A03).
 - Chasing pre-release/`latest`-tag versions in production manifests.
 - A "minor" bump that actually broke an API (the dep violates semver) — trust its
   version numbers less thereafter.

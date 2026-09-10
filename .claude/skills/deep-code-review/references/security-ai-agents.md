@@ -180,14 +180,48 @@ LLM-backed feature, add cases that assert the guardrail holds:
   arithmetic or emit JSON that a schema could guarantee is a red flag.
 - **Spotlighting / delimiting** untrusted content (clear markers, separate
   roles/messages) so the model can distinguish data from instructions.
+  **Enumerate the sinks — don't just grep one.** The one-principle above is a
+  *rule*; the instrument is to list **every** site where non-prompt content
+  (tool result, fetched page, file, retrieved doc, another agent's message)
+  enters a prompt, and confirm each carries a delimiter **and** a "this is data,
+  not instructions" guard. **Inconsistent** spotlighting is itself the finding:
+  one guarded sink proves the unguarded siblings are oversights, not policy — a
+  real shape is an objective wrapped in `<untrusted_objective>` while
+  project-context files and skill text are concatenated raw into the *same*
+  system prompt.
 - **Structured output + schema validation** on the way out; reject/repair
   off-schema output before use.
 - **Least-privilege tools** with allowlisted actions and argument validation at
-  the tool boundary (not left to the model to "please only…").
-- **Human-in-the-loop** gate on irreversible/high-impact actions.
+  the tool boundary (not left to the model to "please only…"). **Locate the
+  actual dispatch path and its one pre-execution chokepoint** (a
+  `beforeToolCall`-style hook), then decide whether each safety gate is a
+  **shipped default or an opt-in example** — a demo gate that lives in
+  `examples/` and is never loaded is not a control (cross-ref
+  `security-agent-skills.md` AST06; never cite a demo as shipped policy). A
+  denylist of dangerous-command regexes is bypassable by construction (an
+  `rm -rf` pattern misses `-fr` / `-f -r` / `--force`); treat containment, not
+  pattern-matching, as the boundary.
+- **When the tool *is* code execution, reframe the output-handling test.** For a
+  shell / `ipython` / code-interpreter agent, "model output reaches `exec`" is
+  the product, not a bug, so LLM10's raw-sink test collapses. The controls to
+  review become the **isolation boundary** (`security-agent-skills.md` AST06)
+  and the **default confirmation gate** — and whether that gate is on by
+  default — not the exec call itself.
+- **Human-in-the-loop** gate on irreversible/high-impact actions — and it must
+  **fail closed when there is no interactive UI**. A confirmation that degrades
+  to *allow* in headless / autonomous / agent-to-agent mode is the finding; the
+  correct shape returns *block* when no human can approve. The prompt names the
+  action and the audience (ASI09).
 - **Spend & rate governance**: per-call, per-session, and per-service caps
   enforced in code before the call; bounded retries with backoff; breakers on
-  402/429.
+  402/429. Two tests the prose alone misses: **(1) cost ≠ tokens** — grep for a
+  real spend key (`budget` / `costLimit` / `maxSpend`), not just `max_tokens`
+  and turn counts; a token/turn cap does not bound dollars. **(2) before ≠
+  after** — a budget *reconciled after* a completed paid turn (then a "wrap-up"
+  prompt) is a soft stop that overshoots by ≥1 turn, not a cap checked *before*
+  dispatch. An agent loop written `while (true)` and bounded only by an external
+  caller is a red flag. Prefer capping four axes together — calls/turns, tokens,
+  wall-clock, and dollars — and reporting which one tripped.
 - **Provenance & grounding**: citations/sources for claims that reach users;
   confidence surfaced; unverifiable claims flagged, not shipped as fact.
 - **Falsify asserted-but-unenforced safety properties.** A safety parameter set
@@ -214,4 +248,8 @@ raw user or retrieved text; model output passed to `execute`/`exec`/`os.system`
 / retry cap on the client; tool definitions with broad write/delete/network
 scope and no confirmation; secrets or authz rules embedded in a system prompt;
 `temperature`/model params hardcoded where determinism matters for a security
-check.
+check; a confirm/approve gate that defaults to *allow* when non-interactive;
+`Popen` / `spawn` / `child_process` / `ipython` running model-generated
+commands with no sandbox around the spawn; non-prompt content concatenated into
+a prompt with no delimiter; token caps present but **no** `budget` /
+`costLimit` / `maxSpend`.
