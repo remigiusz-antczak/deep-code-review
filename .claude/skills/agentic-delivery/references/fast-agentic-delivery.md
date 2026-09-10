@@ -59,7 +59,8 @@ not a change to the event-driven model itself.
 
 ## A third gate-epistemology case: a correct, external, fleet-wide finding
 
-Principle 3 separates *the check could not run* (fail open, `UNVERIFIED`)
+Principle 3 separates *the check could not run* (`UNVERIFIED` — never a pass, and
+a *required* missing check still blocks its gated action)
 from *a real defect the diff introduced* (fail closed). A newly-published,
 correctly-detected dependency-vulnerability advisory is neither: the gate is
 right, the finding is real, and it is shared across every open change **and

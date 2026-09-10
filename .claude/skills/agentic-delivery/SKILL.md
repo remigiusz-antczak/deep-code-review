@@ -10,7 +10,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.29.0"
+  version: "1.30.0"
 ---
 
 # Agentic delivery
@@ -168,7 +168,7 @@ independent verification or a human approval that actually applies.
 | G3 Design | Graph | ADRs / contracts | Interfaces, NFR budgets, data/security decisions explicit. Shape: `template-adr.md` |
 | G4 Implement | Work packets | Patch/commit per lane | Tests before or with the change; packet names review skill + immutable base SHA |
 | G5 Verify | Exact revision | Test receipts | **Local stack up** (project's one-command / compose / devcontainer) then build, lint, type, unit, and applicable integration/E2E **green at that SHA**. A gate that never started the app is `UNVERIFIED`, not pass. **UI change (domain P):** headed-browser evidence on the exact route after the action — screenshot or equivalent live receipt. Unit tests alone are not a UI gate |
-| G6 Review | Exact revision + receipts | `deep-code-review` + QA + security verdicts | Independent of the builder; no unresolved Blocker/High/Medium |
+| G6 Review | Exact revision + receipts | `deep-code-review` + QA + security verdicts | Independent of the builder; applies the `deep-code-review` severity rubric — Blocker/Critical block, High needs a named owner's acceptance, Medium is tracked and non-blocking (do not silently block on Medium) |
 | G7 Integrate | Accepted lanes | Integration receipt + `deep-code-review DIFF` | One integration owner; rerun affected gates on the exact final SHA |
 | G8 Release | Exact integrated SHA | Release manifest | Rollback proven; **owner approves** outward/production action |
 | G9 Production verify | Deployed SHA | Verification receipt | Served behaviour and SLOs; rollback on breach |
@@ -178,6 +178,20 @@ independent verification or a human approval that actually applies.
 `UNPRICED`, never zero. Missing spend cap is `BLOCKED`, never unlimited** —
 `UNPRICED` is a labeling rule (report the cost honestly); the G2 budget
 above is the bound itself, and the two are not substitutes for each other.
+
+**Durable state, recovery, and non-code receipts** — one canonical project
+record with a single writer, the resume / crash-after-effect reconciliation
+procedure (an interrupted effect with an *unknown* result is not presumed
+failed, and an uncertain side effect is not replayed), and the artifact-receipt
+contract for design/data/published deliverables: `references/project-state.md` —
+**read it when** beginning multi-step work, changing objectives, checkpointing,
+or recovering context after a reset.
+
+**Claimed vs enforced** — before asserting that state, permission, or spend is
+*enforced* rather than merely followed (or when designing a host adapter), grade
+the claim against `references/host-enforcement.md` — **read it when** you would
+otherwise write "the gate / budget / permission is enforced."
+
 Model-tier selection (which tier a lane runs on, and when to escalate) is
 `model-tiering.md` in the `deep-code-review` skill.
 
@@ -352,7 +366,10 @@ Copied as principles, not as anyone's private playbook:
    Gitignored local file = real identifiers. Fail closed if the committed
    list is missing or malformed. Report `file:line`, never echo the match.
 3. **A gate can be wrong about why.** Real defect → fail closed. Check
-   could not run → fail open with `UNVERIFIED`, never a fake pass. Applied to a
+   could not run → `UNVERIFIED` — neither a defect finding nor a pass; a
+   *required* missing check still blocks its gated action even when
+   authorization exists, because evidence (`PASS` / `FAIL` / `UNVERIFIED`) and
+   permission are separate decisions. Applied to a
    red pipeline: identify the failing job **and step** before concluding the
    newest merge caused it, and if the shape matches a known-flaky
    browser/probe/hydration check, rerun that job and recheck **before**

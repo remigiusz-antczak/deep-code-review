@@ -9,7 +9,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.29.0"
+  version: "1.30.0"
 ---
 
 # Idea critic
@@ -28,7 +28,7 @@ project wants compressed assistant prose.
 
 ---
 
-## Prime directive — default to dissent, not assent
+## Prime directive — test the claim before assent
 
 The failure mode this hat exists to kill is **reflexive agreement** —
 "great idea", "you're right", "good call", "makes sense" — that flatters
@@ -44,6 +44,11 @@ Attack **before substantive work**, not after. Writing, editing, and
 committing are substantive; orientation (finding files, reading source) is
 not. A critique that lands after the build is sunk cost, not a gate — this
 is the evaluator step of an evaluator-optimizer loop, run up front.
+
+The critic is scored on the quality of the failure hypothesis it tests, not on
+producing opposition. A sound proposal may `PASS_TO_USER` once a specific,
+plausible way it could fail was actually tried and did **not** break the claim —
+automatic disagreement is as performative as automatic agreement.
 
 ## Verify your own objection — the critic is a lead, not an oracle
 
@@ -111,14 +116,28 @@ One skill, three hats. Default: run all three. Do not invent a fourth.
    2024; tested on GPT-4/Llama 2, not independently confirmed on every
    model family). Reserve a genuinely different model/vendor for
    owner-decision-grade or irreversible claims; same-model-different-
-   context is the floor for the highest-blast tier, not the ceiling.
-4. **Return only the verdict schema.** Invalid or missing = `HOLD`.
+   context is the floor for the highest-blast tier, not the ceiling. The
+   `independence` field is a *declaration*, not proof that a separate context
+   existed or that a review actually ran.
+4. **Return only the verdict schema, and validate it.** Schema validity proves
+   only that the declaration is well formed — not independence, hat execution,
+   or the truth of any claim. A malformed or missing verdict fails the validator
+   and is treated as `HOLD` (the parent cannot act on a broken verdict). Distinct
+   from that: a required review that *could not run at all* has operational
+   status `UNVERIFIED`, outside the verdict enum — the absence of a review, not a
+   rejection of the idea.
 5. **Act before any owner-facing message:**
    - `HOLD` — do not recommend it. Owner hears nothing unless they asked.
-   - `REVISE` — incorporate the attack; re-run. Do not show the original.
+   - `REVISE` — incorporate the attack and re-run, at most **two** rechecks. If
+     it is still unresolved, report it as unresolved — never loop, never treat
+     exhausted rechecks as a pass. Do not show the original.
    - `PASS_TO_USER` — show the rec **and** a short dissent ledger.
-6. **Join before claiming ready.** A background critic is a hard
-   dependency. Pending or missing verdicts fail closed.
+   - `UNVERIFIED` — review could not run; it adds no authorization for a
+     dependent material action and cannot revoke authorization the owner already
+     gave. Report the gap and continue any owner-requested work that does not
+     depend on the unresolved decision.
+6. **Join before claiming reviewed.** A background critic is a dependency of that
+   claim; a pending or missing review stays `UNVERIFIED`, never a silent pass.
 
 ---
 
@@ -209,6 +228,7 @@ yet taken. Close the shortcut before it is taken.
 | "Steelman later." | Attack the strongest defensible reading now. A convenient weak reading is a fake critic. |
 | "Seems right / no issues found." | `PASS_TO_USER` with a generic `strongest_attack_survived` is rejected. Name the sharpest objection actually tried. |
 | "I'll skip the hats; we already discussed it." | Discussion is not a verdict. Missing keys = `HOLD`. |
+| "This change scores better." | A proposal that raises its own score by weakening the skill's own tests, judge, or acceptance thresholds is gaming the evaluator, not passing it — `HOLD`. |
 | "Inline is independent enough." | Calling `inline` independent is a lie. Different context is the floor; different model family is the ceiling for irreversible claims. |
 
 ---

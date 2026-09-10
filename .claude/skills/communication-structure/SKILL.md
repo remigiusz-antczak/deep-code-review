@@ -8,7 +8,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # Communication structure
@@ -40,8 +40,10 @@ not vocabulary.
 ## Cut on sight
 
 "You're right" / "great point." Apologizing for the mistake instead of fixing
-it. Hedges ("it depends", "I think maybe", "could potentially"). Restating
-the question back. Filler adjectives ("comprehensive", "robust",
+it. Hedges ("it depends", "I think maybe", "could potentially") — but **keep
+material uncertainty**: "the sync may not have run; its execution log is
+unavailable" is load-bearing evidence, not a hedge. Cut the reflexive
+qualifier, never the honest unknown. Restating the question back. Filler adjectives ("comprehensive", "robust",
 "seamless"). A summary of the summary. Take a position — if two are
 genuinely live, name both and say which you'd pick.
 

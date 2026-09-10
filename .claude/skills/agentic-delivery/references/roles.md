@@ -235,7 +235,9 @@ has.
 
 Every gate obeys the same epistemology (`SKILL.md` *Gate epistemology*;
 `product-ux-quality.md` for the three UX gates): it **tells "could not check"
-from "found a problem," fails *open* (`UNVERIFIED`) on the former, is proven
+from "found a problem," reports `UNVERIFIED` on the former — never a pass, and a
+*required* check left `UNVERIFIED` still blocks its gated action (evidence and
+permission are separate decisions) — is proven
 **red on a planted defect** before it is trusted, and is **never stricter than
 the standard it implements** (an over-strict gate produces a fix that regresses
 another axis). A gate that reaches an external service retries a transient error

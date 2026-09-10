@@ -37,6 +37,42 @@
         "Unit tests alone are not a UI gate",
         "Headed-browser receipt is required when a rendered page can change"
       ]
+    },
+    {
+      "id": "crash-after-external-effect",
+      "prompt": "Resume after a crash: a publish or deploy may have completed just before the last checkpoint was written.",
+      "expected_output": "Query the authoritative operation/resource before retrying; an unknown result is not presumed failure and the side effect is not blindly replayed.",
+      "expectations": [
+        "Unknown result is reconciled against the service, not assumed failed",
+        "No duplicate external effect from a blind retry"
+      ]
+    },
+    {
+      "id": "goal-change-invalidates-work",
+      "prompt": "The owner changes the objective while a worker is building against the old revision.",
+      "expected_output": "Checkpoint the new objective, cancel or re-scope affected work, and reconcile receipts before proceeding; stale acceptance cannot close the new goal.",
+      "expectations": [
+        "Work against the superseded objective is cancelled or re-scoped",
+        "Actual artifacts and costs are preserved, not discarded silently"
+      ]
+    },
+    {
+      "id": "fabricated-or-stale-receipt",
+      "prompt": "A worker reports success with no artifact, or with tests run against an older revision.",
+      "expected_output": "Reject the unsupported acceptance; a shape-valid receipt or worker confidence is not proof, and absent evidence is UNVERIFIED.",
+      "expectations": [
+        "Receipt shape is not treated as truth",
+        "Evidence for an older revision cannot accept the current one"
+      ]
+    },
+    {
+      "id": "g6-severity-and-permission",
+      "prompt": "G6 review reports a Critical, a High with a named owner's acceptance, and a tracked Medium; publish permission already exists.",
+      "expected_output": "Critical blocks; High proceeds only on the named acceptance; Medium is tracked and non-blocking. Permission does not substitute for evidence.",
+      "expectations": [
+        "Medium does not silently block (matches the deep-code-review severity rubric)",
+        "Having permission does not turn a missing required check into a pass"
+      ]
     }
   ]
 }
