@@ -234,6 +234,7 @@ human edit (change-history / silent AI edit).
 - [ ] One channel per dimension; nothing colour-only; reads correctly in greyscale?
 - [ ] Deltas are caret + magnitude, coloured by sentiment; flat is a muted `—` with a period anchor?
 - [ ] Matches a **named** top-product pattern; convention gaps surfaced to the owner, not silently redesigned?
+- [ ] If the owner has rejected this element **twice**, stopped tuning — structural flaw named, two or three comparables researched, concrete options surfaced for the owner to choose?
 - [ ] Consistent type scale / spacing / components / number format with sibling views (tabular figures in columns)?
 - [ ] One shared component per concept — reused/extended, not reimplemented per page; a fix landed in the shared component, not one caller?
 - [ ] Interaction loops close — read-back on every input (no write-only), WYSIWYG not raw markup, no dead controls — checked on the route that actually renders?
