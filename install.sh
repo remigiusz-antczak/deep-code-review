@@ -19,6 +19,7 @@
 #   --with-delivery      also agentic-delivery
 #   --with-critic        also idea-critic
 #   --with-comms         also communication-structure
+#   --with-contribution  also contribution (prepare upstream PRs; not in --full)
 #   --full               review + delivery + critic + comms
 #   --recommend          inspect TARGET, print a pack, install nothing
 # Narrow:
@@ -58,6 +59,7 @@ on re-install). Overlay skills are opt-in.
   --with-delivery      Also install agentic-delivery (gated delivery overlay)
   --with-critic        Also install idea-critic (pre-owner idea attack)
   --with-comms         Also install communication-structure (BLUF messages)
+  --with-contribution  Also install contribution (prepare upstream PRs; default off, not in --full)
   --full               Review + delivery + critic + comms
   --recommend          Inspect TARGET and print a recommended pack; no writes
   -h, --help           Show this help
@@ -80,6 +82,7 @@ WITH_EXTRA=0
 WITH_DELIVERY=0
 WITH_CRITIC=0
 WITH_COMMS=0
+WITH_CONTRIBUTION=0
 RECOMMEND_ONLY=0
 POSITIONAL=()
 for arg in "$@"; do
@@ -91,6 +94,7 @@ for arg in "$@"; do
     --with-delivery) WITH_DELIVERY=1 ;;
     --with-critic) WITH_CRITIC=1 ;;
     --with-comms) WITH_COMMS=1 ;;
+    --with-contribution) WITH_CONTRIBUTION=1 ;;
     --full) WITH_DELIVERY=1; WITH_CRITIC=1; WITH_COMMS=1 ;;
     --recommend) RECOMMEND_ONLY=1 ;;
     --with-cursor) echo "note: --with-cursor is default now; ignoring." >&2 ;;
@@ -201,6 +205,9 @@ fi
 if [[ "${WITH_COMMS}" -eq 1 ]]; then
   SKILLS+=("communication-structure")
 fi
+if [[ "${WITH_CONTRIBUTION}" -eq 1 ]]; then
+  SKILLS+=("contribution")
+fi
 
 for skill in "${SKILLS[@]}"; do
   for host in "${HOSTS[@]}"; do
@@ -277,7 +284,7 @@ EOF
 )"
   upsert_agents_block "${AGENTS}" "deep-code-review:begin" "deep-code-review:end" "${REVIEW_BLOCK}"
 
-  if [[ "${WITH_DELIVERY}" -eq 1 || "${WITH_CRITIC}" -eq 1 || "${WITH_COMMS}" -eq 1 ]]; then
+  if [[ "${WITH_DELIVERY}" -eq 1 || "${WITH_CRITIC}" -eq 1 || "${WITH_COMMS}" -eq 1 || "${WITH_CONTRIBUTION}" -eq 1 ]]; then
     OVERLAY_LINES=""
     if [[ "${WITH_DELIVERY}" -eq 1 ]]; then
       OVERLAY_LINES="${OVERLAY_LINES}
@@ -299,6 +306,13 @@ EOF
   update BLUF, one ask, scannable, zero AI-slop by default. Governs
   persisted-message structure and length, not chat voice (see below)."
     fi
+    if [[ "${WITH_CONTRIBUTION}" -eq 1 ]]; then
+      OVERLAY_LINES="${OVERLAY_LINES}
+- \`contribution\` — prepare a privacy-safe, generalized improvement back to the
+  public skillset for a human to review and open as a PR. The agent drafts and
+  gates the change and flags residual risk; a human is the privacy authority and
+  the only one who pushes. Default off; never auto-PRs."
+    fi
     OVERLAY_BLOCK="$(cat <<EOF
 <!-- dcr-overlays:begin -->
 ## Optional overlays
@@ -313,7 +327,7 @@ here — if compressed assistant prose is wanted, add JuliusBrussee/caveman
 separately.
 
 Re-run upstream \`install.sh --with-delivery\` / \`--with-critic\` /
-\`--with-comms\` / \`--full\` to refresh this stamp.
+\`--with-comms\` / \`--with-contribution\` / \`--full\` to refresh this stamp.
 <!-- dcr-overlays:end -->
 EOF
 )"

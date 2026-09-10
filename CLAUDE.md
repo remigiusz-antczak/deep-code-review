@@ -3,11 +3,12 @@
 ## What this is
 This repo is a **portable bar**: a universal, deep code-review skill (the
 default product) plus optional overlays that inject a gated-delivery pattern,
-a pre-owner idea attack, and a persisted-message structure rule into a target
-repo. The crown jewel is `.claude/skills/deep-code-review/SKILL.md`; its depth
+a pre-owner idea attack, a persisted-message structure rule, and a privacy-safe
+upstream-contribution flow into a target repo. The crown jewel is `.claude/skills/deep-code-review/SKILL.md`; its depth
 lives in that skill's `references/`. Sibling skills live under
-`.claude/skills/agentic-delivery/`, `.claude/skills/idea-critic/`, and
-`.claude/skills/communication-structure/`. Everything else (`README.md`,
+`.claude/skills/agentic-delivery/`, `.claude/skills/idea-critic/`,
+`.claude/skills/communication-structure/`, and `.claude/skills/contribution/`.
+Everything else (`README.md`,
 `install.sh`, `docs/standards-index.md`) supports distributing and trusting
 those skills.
 There is no application to build and no runtime — the "product" is prose a

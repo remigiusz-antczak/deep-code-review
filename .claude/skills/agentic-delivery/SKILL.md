@@ -10,7 +10,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.30.0"
+  version: "1.31.0"
 ---
 
 # Agentic delivery
@@ -172,7 +172,7 @@ independent verification or a human approval that actually applies.
 | G7 Integrate | Accepted lanes | Integration receipt + `deep-code-review DIFF` | One integration owner; rerun affected gates on the exact final SHA |
 | G8 Release | Exact integrated SHA | Release manifest | Rollback proven; **owner approves** outward/production action |
 | G9 Production verify | Deployed SHA | Verification receipt | Served behaviour and SLOs; rollback on breach |
-| G10 Learn | Receipts | Retrospective | Escaped gap → regression test in this repo. Reusable lesson is generalized and stripped of third-party identifiers before it leaves the project. Mandatory-trigger criteria, blameless shape, and the action-item-closure gate: `retrospective.md` + `template-postmortem.md` |
+| G10 Learn | Receipts | Retrospective | Escaped gap → regression test in this repo. Reusable lesson is generalized and stripped of third-party identifiers before it leaves the project; if the `contribution` overlay is installed, it is the mechanism for proposing that generalized lesson back to the public skillset. Mandatory-trigger criteria, blameless shape, and the action-item-closure gate: `retrospective.md` + `template-postmortem.md` |
 
 **Missing evidence is `UNVERIFIED`, never pass. Missing price is
 `UNPRICED`, never zero. Missing spend cap is `BLOCKED`, never unlimited** —

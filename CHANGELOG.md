@@ -3,6 +3,47 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.31.0] — 2026-09-11
+
+New opt-in overlay `contribution`: prepare a privacy-safe, generalized
+improvement back to the public skillset for a human to review and open as a PR.
+This is the self-improvement capability the owner asked for — a skillset that
+gets better from field use — built with the safety shape the design work
+required rather than an autonomous push.
+
+### Added
+- **`.claude/skills/contribution/`** (new; independent line at **1.0.0**) — an
+  opt-in overlay that turns a generalizable, scrubbed lesson into a drafted skill
+  edit + CHANGELOG + eval + routing, runs the repo's own gates, and assembles a
+  **provenance-and-risk block** a human signs before the PR. One routed reference
+  (`references/contribution-procedure.md`) and three evals
+  (`third-party-identifier-blocked`, `non-generalizable-imprint-locally`,
+  `no-autonomous-push`). Guardrails: a hard **generality gate** (contribute only a
+  defect-class or method-gap the bar lacks and that reproduces beyond one project —
+  otherwise imprint locally via `deep-code-review` Phase 6); reuse of the repo's
+  existing **fail-closed privacy gate** as the mechanical floor, with the human as
+  the privacy authority for the semantic leaks a pattern scan cannot catch; a
+  **protected core** (tests, privacy gate, and merge authority immutable to the
+  agent) so a self-improvement loop cannot game its own evaluator; and **no
+  autonomous push or PR** to the public repository.
+- **`install.sh`** — `--with-contribution` flag (deliberately **not** part of
+  `--full`, since it is the one overlay whose function is moving content toward a
+  public destination); usage, header, AGENTS.md overlay stamp, and re-install
+  line updated. Default install stays review-only; the new skill is off unless
+  explicitly requested.
+
+### Changed
+- **`agentic-delivery/SKILL.md`** — G10 gains a one-line discovery pointer: when
+  the `contribution` overlay is installed, it is the mechanism for proposing the
+  generalized, stripped lesson back to the public skillset (the
+  generalize-and-strip mandate itself is unchanged).
+- Lockstep `VERSION` files, `SKILL.md` stamps, and the plugin manifest →
+  **1.31.0**; `communication-structure` stays **1.1.0** (unchanged this release);
+  `contribution` starts at **1.0.0** on its own independent line. `SHA256SUMS`
+  regenerated over the five skill trees.
+- **`README.md`**, **`CONTRIBUTING.md`**, **`CLAUDE.md`** — document the new
+  overlay, its install flag, and its routing-gate line.
+
 ## [1.30.0] — 2026-09-11
 
 Selective adoption from an external "studio coordination" proposal, filtered by

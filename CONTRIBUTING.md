@@ -30,6 +30,7 @@ bash scripts/ci-gates.sh routing --max-bytes 100000 .claude/skills/deep-code-rev
 bash scripts/ci-gates.sh routing --max-bytes 100000 .claude/skills/agentic-delivery
 bash scripts/ci-gates.sh routing --max-bytes 100000 .claude/skills/idea-critic
 bash scripts/ci-gates.sh routing --max-bytes 100000 .claude/skills/communication-structure
+bash scripts/ci-gates.sh routing --max-bytes 100000 .claude/skills/contribution
 bash scripts/ci-gates.sh version .
 bash scripts/ci-gates.sh privacy --banlist .banlist.txt .
 bash -n install.sh

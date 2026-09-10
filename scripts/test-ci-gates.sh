@@ -753,12 +753,12 @@ fi
 if [ -f "$ROOT/SHA256SUMS" ] && [ -x "$ROOT/scripts/write-checksums.sh" ]; then
   bash "$ROOT/scripts/write-checksums.sh" "$WORK/SHA256SUMS.check"
   if cmp -s "$ROOT/SHA256SUMS" "$WORK/SHA256SUMS.check"; then
-    record 0 "checksums: SHA256SUMS matches the three skill trees"
+    record 0 "checksums: SHA256SUMS matches the shipped skill trees"
   else
-    record 1 "checksums: SHA256SUMS matches the three skill trees"
+    record 1 "checksums: SHA256SUMS matches the shipped skill trees"
   fi
 else
-  record 1 "checksums: SHA256SUMS matches the three skill trees"
+  record 1 "checksums: SHA256SUMS matches the shipped skill trees"
 fi
 
 # ---------------------------------------------------------------------------

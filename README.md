@@ -88,6 +88,7 @@ cd deep-code-review
 ./install.sh --with-delivery /path/to/your/project # + gated delivery overlay
 ./install.sh --with-critic /path/to/your/project   # + pre-owner idea critic
 ./install.sh --with-comms /path/to/your/project    # + BLUF/no-slop message rule
+./install.sh --with-contribution /path/to/your/project # + prepare upstream PRs (default off, not in --full)
 ./install.sh --full /path/to/your/project          # review + delivery + critic + comms
 ./install.sh --with-codex /path/to/your/project    # also .codex/skills/
 ./install.sh --with-extra-hosts /path/to/your/project  # Gemini, OpenCode, Copilot, Windsurf, Hermes, Kiro
@@ -131,6 +132,15 @@ A third, orthogonal overlay covers what any of those roles hands to a human:
   update BLUF, one ask, scannable, and free of AI-slop by default, so a busy
   reviewer gets the point in under 30 seconds. Governs structure and length,
   not voice — see "Chat voice is not vendored" below.
+
+And one overlay improves the skillset itself:
+
+- **`contribution`** — when the agent learns a genuinely reusable, generalizable
+  lesson on a project, it prepares a privacy-scrubbed, generalized change back to
+  this public repo: drafting the skill edit, CHANGELOG, eval, and routing, running
+  the gates, and flagging residual risk in a provenance block for a human to
+  clear. Default off; the human is the privacy authority and the only one who
+  opens the PR — the agent never auto-PRs.
 
 Let an agent inspect the target first — `./install.sh --recommend <project>`
 reports which quality gates the repo already has and proposes the roles plus the
@@ -235,7 +245,8 @@ verified** — never a remembered link.
     ├── deep-code-review/           # default product — the review bar
     ├── agentic-delivery/           # opt-in gated delivery + role roster (references/roles.md)
     ├── idea-critic/                # opt-in pre-owner idea attack (the "evil twin")
-    └── communication-structure/    # opt-in BLUF/no-slop rule for persisted messages
+    ├── communication-structure/    # opt-in BLUF/no-slop rule for persisted messages
+    └── contribution/               # opt-in: prepare a privacy-safe upstream PR (default off)
 ```
 
 `deep-code-review/references/` holds on-demand depth (method, domain
