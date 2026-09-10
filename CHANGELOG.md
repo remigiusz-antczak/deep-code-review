@@ -3,6 +3,36 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.27.0] — 2026-09-10
+
+Two field lessons for the delivery overlay and the product-UX review half, each
+a completeness fix to an existing rule rather than a new one. No change to the
+review method or the default (review-only) install.
+
+### Added
+- **`agentic-delivery/SKILL.md`** — the Conductor operating rhythm gains a
+  *drift-detection and recovery* step: the event-driven "does not do the lane's
+  work itself" rule stated **behaviourally** (a run of consecutive
+  query/build/edit/mutate turns is the tell), with a stop → package → dispatch →
+  resume recovery and one named exception (work only the Conductor's own session
+  can perform, done minimally and handed straight back). Applies the existing
+  event-driven discipline to *action*, not only attention.
+- **`agentic-delivery/SKILL.md`** — Gate epistemology principle 11:
+  "visible/done" is measured on the owner's own surface, never a proxy (an
+  integrated SHA, a green branch build, a passing test, an insert/grep count);
+  keeps wired/defined/rendered distinct from has-a-real-value. Ties to
+  principle 3's `UNVERIFIED` and the G9 production-verify gate.
+- **`deep-code-review/references/product-ux-quality.md`** — a redesign-trigger
+  section complementing "not a licence to redesign": the owner's *repeated*
+  rejection (2+ times) of the same element is a structural signal to stop tuning,
+  name the flaw, research two or three comparable products, and surface concrete
+  options for the owner to choose (show, don't tell). Reconciled with principle 5
+  and grounded in principle 9.
+
+### Changed
+- Overlay `VERSION` files, the three `SKILL.md` stamps, and the plugin manifest
+  follow **1.27.0**.
+
 ## [1.26.0] — 2026-09-09
 
 New reference `skill-authoring-and-size.md` (domain H): a portable rule for
