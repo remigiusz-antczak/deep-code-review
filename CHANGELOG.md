@@ -3,6 +3,40 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.28.0] — 2026-09-10
+
+Five agent/LLM review-instrument sharpenings for domain C, found by routing the
+skill's own `agent / LLM` archetype path against a production agent runtime and
+recording where a reference stated a rule but handed the reviewer nothing to
+run. Additive; no change to the method, scope modes, or the default
+(review-only) install.
+
+### Added
+- **`deep-code-review/references/security-ai-agents.md`** — the "untrusted
+  content is data" principle gains a detection step (enumerate every sink where
+  non-prompt content enters a prompt; require a delimiter + a data-guard at
+  each; **inconsistent** spotlighting is itself the finding) and a reframe for
+  code-interpreter agents, where "model output reaches `exec`" is the product —
+  so the controls to review are the isolation boundary and the default
+  confirmation gate, not the exec call. Tool-gating now locates the dispatch
+  chokepoint and separates a shipped default from an opt-in `examples/` demo;
+  a human-confirmation gate must fail **closed** when no interactive UI exists.
+  Spend governance gains the **cost ≠ tokens** and **before ≠ after** (pre-call
+  vs post-hoc reconciliation) tests plus a `while (true)` loop-bound check.
+  Matching `🚩 grep` keys throughout.
+- **`deep-code-review/references/security-agent-skills.md`** — AST06 gains an
+  isolation-grading instrument: grep the exec runtime for `subprocess` /
+  `Popen` / `spawn`, check each spawn for a real boundary (namespaces, seccomp,
+  netns, uid-drop, chroot, a container), and treat `start_new_session` /
+  process groups / Job-Objects as lifecycle control, not a security boundary; an
+  opt-in `examples/` sandbox or gate that is not loaded by default is not an
+  enforced control. Matching `🚩 grep` keys.
+
+### Changed
+- The three lockstep skill `VERSION` files, their `SKILL.md` stamps, and the
+  plugin manifest follow **1.28.0**; `SHA256SUMS` regenerated for the changed
+  skill trees. (`communication-structure` remains at 1.0.0.)
+
 ## [1.27.0] — 2026-09-10
 
 Two field lessons for the delivery overlay and the product-UX review half, each
