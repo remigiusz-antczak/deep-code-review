@@ -3,6 +3,33 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.32.0] — 2026-09-11
+
+New review lens: **agent-readiness**. A first-class way to assess whether a repo
+or product is architected, tested, gated, documented, and permissioned for
+coding agents to work in it safely — the thesis-fit, evidence-grounded form of an
+"AI-transformation" review. It is a lens over existing domains (C, J, K, M, N, F,
+O, H), not a new domain or a new skill, and it deliberately **stops at the
+technical substrate**: it never advises which product to build, how to reorganize,
+or what business metric to set (that would require inputs the repo does not
+contain and would violate the evidence and no-fabrication principles).
+
+### Added
+- **`deep-code-review/references/role-coverage.md`** — an **Agent-readiness
+  lens**: a role-map row (leads on C J K M N F O H) and a lens section whose spine
+  is the boundary between reviewable technical substrate (agent-safe scoping,
+  agent-verifiability, gating, observability, legibility — all from existing
+  domains) and business/strategy questions, which are routed to *Decisions needed
+  (owner)*. Deliverable is the standard severity-ranked `file:line` report plus a
+  short agent-readiness summary — never a strategy deck.
+- **`deep-code-review/SKILL.md`** — the compact role table gains the matching
+  `Agent-readiness` row so the map and its depth stay consistent.
+
+### Changed
+- Lockstep `VERSION` files, `SKILL.md` stamps, and the plugin manifest →
+  **1.32.0**; `communication-structure` (1.1.0) and `contribution` (1.0.0)
+  unchanged this release. `SHA256SUMS` regenerated.
+
 ## [1.31.0] — 2026-09-11
 
 New opt-in overlay `contribution`: prepare a privacy-safe, generalized

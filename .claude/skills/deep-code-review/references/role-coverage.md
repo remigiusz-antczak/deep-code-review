@@ -2,7 +2,7 @@
 
 Read this when you drive the review through a **delivery role** (architect,
 product & requirements, UX/UI, frontend, backend API & database, data & AI,
-platform/DevOps/SRE, QA/performance/accessibility, release & docs) or a
+platform/DevOps/SRE, QA/performance/accessibility, release & docs, agent-readiness) or a
 **security-team colour** (Red / Blue / Purple / Yellow / Green / Orange / White /
 Black), when you **split a fan-out by role or colour**, or when you need the
 checklists `SKILL.md` routes here but does not itself hold: **architecture
@@ -33,6 +33,7 @@ orphaned, or (c) make several role-reviewers add up to one whole-target audit.
 | **Platform / DevOps / SRE** | L K M N F | `infra-iac-containers.md`, `observability.md`, `reliability-error-handling.md` | **SLI/SLO, error budget & burn-rate** |
 | **QA / performance / a11y** | J E P | `testing-and-evals.md`, `performance-db-cost.md`, `frontend-a11y.md` | — |
 | **Release & docs** | S O K | `branch-and-merge-hygiene.md`, `docs-and-dx.md` | **Release owner sign-off** |
+| **Agent-readiness** | C J K M N F O H | `security-ai-agents.md`, `security-agent-skills.md`, `observability.md`, `testing-and-evals.md` | **Agent-readiness lens** |
 
 Roles overlap on purpose — B is read by frontend, backend, and data; E by
 architect, backend, data, SRE, and QA. Overlap is not duplication of *work*: the
@@ -166,6 +167,55 @@ self-approve, merge, or push to a protected branch** (principle 7).
   so the decision is auditable (cross-ref A09) and reconstructable later (O — ADR
   / release notes). "It passed CI" is not a sign-off; a named owner accepting a
   named risk is.
+
+### Agent-readiness — is the repo ready for agents to work in it safely?
+
+This lens answers one question for a team adopting coding agents: **is this
+codebase or product architected, tested, gated, documented, and permissioned so
+an agent can work in it safely and verifiably?** It is the technical substrate
+beneath an "AI transformation" — and it stops there. Like every role here it
+re-orders existing domains for a specific reader; it adds no new domain, and
+**no business or strategy scope**.
+
+**The boundary is the spine of this lens.** Review the artifact against the bar
+and report evidence with severity. The moment a question needs context the repo
+does not contain — *which* product to build, how to redesign an org or workflow,
+what business-value metric to set, brand/market/strategy — it leaves the remit
+and goes to a human under **Decisions needed (owner)** (Phase 5), never answered
+from repo-only evidence. Advising direction from repo evidence alone would break
+principle 1 (evidence over opinion) and principle 3 (no fabrication): the tool
+structurally lacks those inputs. This is the Product lens's "product ideas are
+owner decisions" rule, applied to AI strategy.
+
+What the lens checks — all first-read ownership of existing domains, no new
+checklist:
+
+- **Agent-safe by construction (C, N).** Least-privilege tool and credential
+  scoping; fetched/model content treated as data, not instructions (the
+  prompt-injection surface — `security-ai-agents.md`); any skill the repo ships
+  or installs is lean, routed, and size-ratcheted (`security-agent-skills.md`,
+  domain H); secrets via env/secret-manager only, never in a bundle an agent
+  could exfiltrate (N).
+- **Verifiable by an agent (J, F).** A one-command setup, gates that fail closed
+  and are proven red on a planted defect, and tests that let an agent prove its
+  change did no harm — the difference between "an agent can edit this" and "an
+  agent can edit this *and know it is still correct*."
+- **Gated and reproducible (K).** CI enforces the documented standards; actions
+  are SHA-pinned; dependencies are supported — an agent's change lands through the
+  same gate a human's does.
+- **Observable (M).** An agent's effect is measurable at the user boundary
+  (cross-ref the SRE lens's SLI rule), so an autonomous change can be told to have
+  helped or harmed.
+- **Legible (O, H).** An AI-facing doc (`AGENTS.md` / `CLAUDE.md`) states the
+  setup, the gates, and the confidentiality rules, and the code is maintainable
+  enough that an agent's context reaches what it needs. A repo an agent cannot
+  navigate is not agent-ready however good its runtime.
+
+**Deliverable.** The standard severity-ranked `file:line` report plus a short
+**agent-readiness summary** — which of the five above hold, each cited — the same
+report shape every other lens produces, never a strategy deck. The name is
+"agent-readiness," not "AI transformation," on purpose: the artifact is a review,
+and the naming keeps the consultancy reading out.
 
 ---
 
