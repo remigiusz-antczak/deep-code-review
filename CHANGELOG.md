@@ -3,6 +3,69 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.30.0] — 2026-09-11
+
+Selective adoption from an external "studio coordination" proposal, filtered by
+this repo's own bar: security-cleared, thesis-fit, non-regressive, and cited only
+to sources verified this session (no new citations were needed). The proposal's
+product pivot (a brand/marketing "studio OS") and its rewrite of the delivery
+overlay were **declined** — the rewrite would have deleted runnable detection
+instruments and added a standing-authorization carve-out that conflicts with the
+confirm-before-action rule. Every existing instrument is preserved; only
+additions and internal-consistency fixes land.
+
+### Added
+- **`agentic-delivery/references/host-enforcement.md`** (new) — a claimed-vs-enforced
+  honesty framework: three levels (protocol / validated-artifact / host-enforced),
+  each with what it *cannot* establish, a per-control capability declaration, and an
+  optional adapter interface. Routed from `SKILL.md`.
+- **`agentic-delivery/references/project-state.md`** (new) — a durable project-record
+  contract, a resume / crash-after-effect reconciliation protocol (an interrupted
+  effect with an unknown result is not presumed failed; an uncertain side effect is
+  not replayed), and a non-code artifact-receipt contract that *extends*, not
+  restates, the SKILL.md Output contract. Routed from `SKILL.md`.
+- **`deep-code-review/references/model-tiering.md`** — a "did the tiering work?"
+  cost-accounting section (model / usage / price / budget / outcome tracking; cost per
+  *accepted* task with failures in the numerator), added **alongside** — not
+  replacing — the existing optimization levers.
+- **`idea-critic/SKILL.md`** — a "test the claim before assent" reframe (a sound plan
+  may pass once a real failure hypothesis was tried and held; automatic disagreement
+  is as performative as automatic agreement), an `UNVERIFIED` operational status
+  *outside* the verdict enum (review-could-not-run is not a rejection), a two-recheck
+  cap on `REVISE`, an "independence is a declaration" note, and an anti-rationalization
+  row against a proposal that games its own evaluator.
+- **`agentic-delivery/evals/evals.json`** — four scenarios pinning shipped instruments:
+  crash-after-external-effect, goal-change-invalidates-work, fabricated-or-stale-receipt,
+  g6-severity-and-permission.
+
+### Changed
+- **`agentic-delivery/SKILL.md`** — G6 now applies the `deep-code-review` severity
+  rubric verbatim (Blocker/Critical block, High needs a named owner's acceptance,
+  Medium tracked and non-blocking), resolving a contradiction where G6 blocked on
+  Medium; principle 3 reworded so a check that "could not run" is `UNVERIFIED` (never a
+  fake pass) and evidence is separated from permission. The same wording is aligned in
+  `references/roles.md` and `references/fast-agentic-delivery.md`.
+- **`communication-structure/SKILL.md`** — cut reflexive hedges but **keep material
+  uncertainty** ("the log is unavailable" is evidence, not filler); the A/B decision
+  template is retained.
+- Lockstep `VERSION` files, `SKILL.md` stamps, and the plugin manifest → **1.30.0**;
+  `communication-structure` → **1.1.0** (independent line); `SHA256SUMS` regenerated.
+
+### Declined (from the external patch, with reason)
+- The `studio-capabilities` specialist packs (brand/marketing/commercial), the "CEO
+  mandate" Conductor reframe, and the install-trigger `description` rewrite — a
+  different product (agency OS), not a portable code-review bar.
+- A Human-gates "standing authorization — do not ask again" carve-out — conflicts with
+  the confirm-before-destructive/irreversible non-negotiable.
+- The rewrite's deletion of runnable instruments (behavioural drift tell, fan-out tiers
+  + the Cemri failure-mode mapping, the RAM/swap headroom probe, the seven cost levers,
+  the A/B ask template) — all kept.
+- 19 new `standards-index` rows and the promotion of NIST SSDF / AI RMF / SLSA from
+  by-name to verified — not verified by direct fetch this session.
+- The size-enforcement CI cap and the idea-critic validator/test-suite tightening —
+  coupled to the rejected rewrite or to coordinated fixture changes; deferred to a
+  separate, self-contained change rather than risk the gate.
+
 ## [1.29.0] — 2026-09-10
 
 Tier 2–3 of the same prime-agent-informed batch: supply-chain and CI/CD

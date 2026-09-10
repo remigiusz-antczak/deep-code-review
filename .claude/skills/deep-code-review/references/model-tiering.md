@@ -107,6 +107,29 @@ If the `agentic-delivery` and `idea-critic` overlays are installed, the same
 tiers extend to their units — see `roles.md`'s roster and `idea-critic`'s
 Independence step for where each hat sits; do not restate that mapping here.
 
+## Did the tiering work? — cost accounting
+
+The levers above *reduce* cost; this section *measures* whether the reduction was
+real, so a tiering choice is judged on evidence, not vibes. Track, per run:
+
+- **Model control** — requested vs actual provider/model + effort; note any host
+  inheritance or silent substitution, and mark an unobserved actual model as
+  such (never claim a configuration you could not confirm).
+- **Usage & price** — input/output/cache/reasoning units *as reported*, plus tool
+  charges; currency, unit, and the rate's source + date. Missing price is
+  `UNPRICED`, never zero; an estimate is not a billed total.
+- **Budget** — aggregate and per-lane spent / reserved / unknown / remaining, and
+  whether the bound is protocol-only or host-enforced (when the `agentic-delivery`
+  overlay is installed, `host-enforcement.md` grades that).
+- **Outcome** — accepted-task count, task class, quality/regressions, end-to-end
+  latency, and sample size.
+
+**Cost per accepted task = total run cost / accepted tasks** over the same
+declared task set, with failed and cancelled attempts kept in the numerator. Zero
+accepted tasks → the ratio is undefined; report the spend and the zero count.
+This is the explicit, honest denominator behind the levers' own rule (judge by
+cost per *solved* task, never cost per token).
+
 ---
 
 Cross-references: the fan-out mechanics and Tier-1/Tier-2 split this file
