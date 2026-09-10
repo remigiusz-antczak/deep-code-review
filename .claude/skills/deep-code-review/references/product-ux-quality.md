@@ -42,6 +42,35 @@ rule that keeps this reference net-positive on every axis. A product-UX finding
 
 ---
 
+## Repeated owner rejection is a redesign trigger — surface options, don't tune (or impose)
+
+The section above bars a redesign driven by *your* taste. This is its complement,
+resolving the same tension from the other side: a redesign driven by the **owner's
+own repeated rejection** of the same element is warranted — but as options the
+owner chooses, never a change you tune your way into or impose. Both obey
+principle 5 (*respect the existing design; separate a defect from a redesign;
+surface it, don't impose it*).
+
+- **Trigger: the owner rejects the same element two or more times** ("bulky /
+  confusing / too heavy / looks wrong"). That repetition — not a reviewer's
+  aesthetic read — is the evidence the approach is **structurally** wrong, not
+  under-tuned. A first rejection is feedback to apply; the *same* rejection twice
+  says the structure, not the parameters, is the defect.
+- **Stop tuning.** Nudging padding, arrows, spacing, or counts cannot remove a
+  structural defect (three overlapping rings do not stop overlapping because the
+  arrows moved). Re-tuning after a second identical rejection is the failure this
+  rule names — the design-half form of principle 9 (*root-cause, not symptom*):
+  after the same failure twice, change the approach, do not repeat the fix.
+- **Name the structural flaw in one line**, then research how **two or three
+  comparable products** (named, per *Match a named standard* below) solve the same
+  problem — the muscle memory the new direction should borrow.
+- **Hand the owner concrete options to choose — show, don't tell.** A side-by-side
+  of two or three real directions is a decision the owner makes in seconds; a
+  paragraph describing them is not. Product/redesign choices are owner decisions
+  and never carry Blocker/Critical gate language (SKILL.md Phase 5).
+
+---
+
 ## Every data state — rule on each, not just the happy path
 
 Every view is intentional and honest in **all five** states, each ruled on
@@ -205,6 +234,7 @@ human edit (change-history / silent AI edit).
 - [ ] One channel per dimension; nothing colour-only; reads correctly in greyscale?
 - [ ] Deltas are caret + magnitude, coloured by sentiment; flat is a muted `—` with a period anchor?
 - [ ] Matches a **named** top-product pattern; convention gaps surfaced to the owner, not silently redesigned?
+- [ ] If the owner has rejected this element **twice**, stopped tuning — structural flaw named, two or three comparables researched, concrete options surfaced for the owner to choose?
 - [ ] Consistent type scale / spacing / components / number format with sibling views (tabular figures in columns)?
 - [ ] One shared component per concept — reused/extended, not reimplemented per page; a fix landed in the shared component, not one caller?
 - [ ] Interaction loops close — read-back on every input (no write-only), WYSIWYG not raw markup, no dead controls — checked on the route that actually renders?

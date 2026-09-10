@@ -10,7 +10,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.26.0"
+  version: "1.27.0"
 ---
 
 # Agentic delivery
@@ -134,6 +134,24 @@ a reason to add an eleventh gate.
 
 **Sweeping the whole ready queue on every trigger** — a completeness fix to
 this event-driven model, not a change to it: `references/fast-agentic-delivery.md`.
+
+**Catch and reverse your own drift into a lane's work** — the same
+completeness fix applied to *action*, not only attention. The steady-state
+rule above ("does not do the lane's work itself") is easy to state and easy to
+violate under load, so name the tell **behaviourally**: the Conductor has
+drifted when its *own* recent turns are a **run of consecutive tool calls that
+query, build, edit, or mutate the target** rather than dispatch a lane, read a
+receipt, or decide. Two such turns in a row on delivery work is the signal;
+"delegating is slower than doing it myself" is the rationalisation, not an
+exception — the cost is that the evidence roll-up and merge plan go unowned
+while the Conductor types. On the signal: **stop** before finishing the
+hands-on task; **package** it as a lane brief (goal, exact scope, acceptance
+check, output contract); **dispatch** it (a fresh, non-forked unit for narrow
+work — *Worktrees and occupancy*); **resume** status-reading. The lone
+exception is work only the Conductor's own session can perform — a connector,
+credential, or surface no lane holds — done **minimally** and handed straight
+back to a lane; a keyhole for the irreducible step, never a licence to run the
+tactical job by hand.
 
 ---
 
@@ -359,6 +377,17 @@ Copied as principles, not as anyone's private playbook:
     independent-queue merge cascade is a cadence choice subordinate to
     principle 6** — neither restated here; depth and the honest limits of
     each: `references/fast-agentic-delivery.md`.
+11. **"Visible/done" is measured on the owner's own surface, never a proxy.**
+    Integrated to the mainline (G7), a green branch build, a passing test, an
+    insert/row count, a grep count are engineering states — real, but none is
+    "the owner can see it." Before reporting a change as *visible*, fetch the
+    specific rendered thing from the surface the owner actually uses (a running
+    app, the deployed page — which may lag a pinned or cached serve *behind*
+    the integrated code), confirm it, and report only what you observed. Keep
+    the states distinct in words: **wired / defined / rendered ≠ has a real
+    value**; "queryable" ≠ "query written"; "the code path exists" ≠ "it was
+    proven to run" (principle 3's `UNVERIFIED`, stated for the liveness case;
+    it is what G9 verifies against a deployed SHA).
 
 ---
 
