@@ -1,0 +1,69 @@
+name: release
+
+# Cut a GitHub Release whenever a vX.Y.Z tag is pushed, so the "Latest" release
+# and the tag installers are told to pin (README / SECURITY: clone --branch
+# vX.Y.Z) track the actual VERSION instead of going stale. The release notes are
+# that version's CHANGELOG section. The tag is the trigger; nothing here bumps a
+# version. A tag whose number disagrees with VERSION or the top CHANGELOG heading
+# fails closed rather than publishing a mislabelled release.
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: read # least privilege by default (OWASP Scorecard: Token-Permissions)
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # only this job may create the release/tag object
+    steps:
+      # SHA-pinned, not a mutable tag (the skill's own rule for CI actions).
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # The tag must match the shipped VERSION and the top CHANGELOG heading, or
+      # the release would advertise a version the tree does not contain. This is
+      # the same provenance contract scripts/ci-gates.sh version enforces on PRs.
+      - name: Tag matches VERSION and CHANGELOG
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME#v}"
+          ver="$(cat .claude/skills/deep-code-review/VERSION)"
+          if [ "$tag" != "$ver" ]; then
+            echo "tag ${GITHUB_REF_NAME} does not match VERSION ${ver}" >&2
+            exit 1
+          fi
+          head_ver="$(grep -m1 -oE '## \[[0-9]+\.[0-9]+\.[0-9]+\]' CHANGELOG.md | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || true)"
+          if [ "$head_ver" != "$ver" ]; then
+            echo "first CHANGELOG heading (${head_ver:-none}) does not match VERSION ${ver}" >&2
+            exit 1
+          fi
+
+      # Release notes = this version's CHANGELOG section (from its heading to the
+      # next release heading). Fail closed if the section is empty.
+      - name: Extract changelog section
+        run: |
+          set -euo pipefail
+          ver="${GITHUB_REF_NAME#v}"
+          awk -v ver="$ver" '
+            $0 ~ ("^## \\[" ver "\\]") { grab = 1; next }
+            grab && /^## \[/ { grab = 0 }
+            grab { print }
+          ' CHANGELOG.md > notes.md
+          if ! grep -q '[^[:space:]]' notes.md; then
+            echo "no CHANGELOG section for ${GITHUB_REF_NAME}" >&2
+            exit 1
+          fi
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "${GITHUB_REF_NAME}" \
+            --notes-file notes.md \
+            --verify-tag
