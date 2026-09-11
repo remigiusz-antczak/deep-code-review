@@ -60,7 +60,14 @@ LIVE_SKILL_ROOTS = (
 # delivery gates (the review bar cites `agentic-delivery` and G0–G10; idea-critic
 # cites G0/G1). Excluding them by name stops a review-only install from
 # suppressing the very overlay a target may still want.
-REVIEW_ONLY_SKILLS = {"deep-code-review", "idea-critic"}
+REVIEW_ONLY_SKILLS = {
+    "deep-code-review",
+    "idea-critic",
+    "agentic-ceo",
+    "product-discovery",
+    "contribution",
+    "communication-structure",
+}
 # Delivery-positive tokens (case-insensitive). Distinctive multi-char tokens are
 # matched as substrings; the short gate labels g0/g10 need word boundaries so
 # they do not fire inside unrelated words. A token is required — merely being a

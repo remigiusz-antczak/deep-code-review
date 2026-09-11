@@ -66,13 +66,13 @@ roadmap). Every advisory skill keys to it.
 | `communication-structure` | ✅ | BLUF, one-ask human-facing messages |
 | `contribution` | ✅ (hardened — PR #26) | Human-gated, privacy-safe upstream self-improvement |
 | agent-readiness lens | ✅ | Is the repo agent-ready? (a `role-coverage.md` lens) |
-| `agentic-ceo` (orchestrator) | Exists (global) — **extend, don't clone** | Routes to the right skill; stays strategic; sizes its own effort to stage |
+| `agentic-ceo` (orchestrator) | ✅ vendored (1.37.0) | Suite registry + (stage, area) → (skill, lens) routing + effort-sizing + chaos playbook; defers general delivery/critique to `agentic-delivery` / `idea-critic` |
 | `infra-evolution-by-stage` (ref) | Proposed — research done | When to add CI/staging/observability/k8s — extends the going-forward roadmap |
 | `docs-evolution-by-stage` (ref) | Proposed — research done | Which docs at which stage; docs acquire normative force as the product matures |
-| discovery / validation | Proposed — research done | Design + interpret real user research; never fabricate findings |
-| prioritization / focus | Proposed — research done | Riskiest-assumption gate; what to build now vs. defer |
-| product-strategy / PMF | Proposed — research done | JTBD, PMF signals, what *not* to build |
-| growth / analytics | Proposed — research done | Retention-first; North Star; what to instrument per stage |
+| discovery / validation | ✅ shipped in `product-discovery` (1.36.0) | Design + interpret real user research; never fabricate findings |
+| prioritization / focus | ✅ shipped in `product-discovery` (1.36.0) | Riskiest-assumption gate; what to build now vs. defer |
+| product-strategy / PMF | Partial — PMF read shipped in `product-discovery`; non-goals folding into it (step c); standalone skill dropped per carve | JTBD, PMF signals, what *not* to build |
+| growth / analytics | Proposed — **build next** | Retention-first; North Star; what to instrument per stage |
 | positioning / branding | Proposed — research done | VPC → positioning → messaging; highest fabrication-risk → thin guide, built last |
 | business / ops | Proposed — research done | Pricing/unit-economics (apply) vs. legal/tax/securities (route); built last |
 | CEO-under-pressure | Researched → `agentic-ceo` (#36) | Capture losslessly → reflect back → triage → one next action → tracked backlog → support by action (never "calm down") |
@@ -235,7 +235,9 @@ the bad day**. Mostly **lenses** over existing skills, not new skills. Ranked:
    only after the spine is proven; owner picks the name; a migration checklist ships
    with it. GitHub auto-redirects the old repo URL, so the blast is mostly README /
    marketplace slug / `plugin.json` name.
-2. **`agentic-ceo`:** vendor it into this repo, or keep it global and reference it?
+2. **`agentic-ceo`:** ✅ **resolved — vendored into this repo** (1.37.0, the suite
+   conductor). Chosen over reference-global so the suite stays portable; coexists
+   with any global skill of that name via project-scoping.
 3. **Business-advisory skills:** full "advisor" skills, or thin "framework + the
    questions you must answer yourself" guides? (Recommendation: thin guides — lowest
    fabrication surface.)
@@ -243,13 +245,17 @@ the bad day**. Mostly **lenses** over existing skills, not new skills. Ranked:
 
 ## Status ledger (2026-09-11)
 - **Merged to main:** contribution overlay (1.31.0) · agent-readiness lens (1.32.0)
-  · stage-aware review + going-forward roadmap (1.33.0). Global install refreshed.
-- **Open for owner review:** PR #26 — contribution hardening (1.34.0), left open on
-  purpose (self-improvement changes deserve human review).
-- **Proposed / not built:** everything in *Build order* beyond the ✅ items; tracked
-  as GitHub issues using the *Where / Done-when / Verify / Why* contract.
-- **Research complete:** all 12 areas + CEO-under-pressure + gap-analysis. Gaps are
-  tracked as issues; CEO-under-pressure folds into `agentic-ceo` (#36).
+  · stage-aware review + going-forward roadmap (1.33.0) · contribution hardening
+  (1.34.0; contribution 1.1.0) · infra/docs stage-evolution refs (1.35.0) ·
+  `product-discovery` (1.36.0) · `agentic-ceo` conductor (1.37.0). Global install
+  refreshed to 1.37.0.
+- **Owner decisions:** #40 (thin guides) recommended; #38 (rename) deferred until the
+  spine is proven; #39 (agentic-ceo) **resolved — vendored**.
+- **Proposed / not built:** `growth-analytics` next; standalone product-strategy
+  dropped (non-goals fold into `product-discovery`); positioning + business-ops as
+  gated thin guides, last. Tracked as GitHub issues (*Where / Done-when / Verify / Why*).
+- **Research complete:** all 12 areas + CEO-under-pressure + gap-analysis. CEO-under-
+  pressure shipped in `agentic-ceo`'s chaos playbook.
 
 *This document is provisional and will change as skills are built and decisions are
 made. It executes none of the open decisions above.*

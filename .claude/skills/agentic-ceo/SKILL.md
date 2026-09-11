@@ -121,14 +121,9 @@ bar is `deep-code-review`. Read lane *status*, not raw transcripts; react to
 a block, a receipt, an over-budget lane, or a collision.
 
 ## Output discipline (no slop) — enforced across the suite
-Every user-facing output the suite produces — a message, a report, a plan, a
-table, a template — is **clean, concise, and core-value-only**: BLUF first, one
-ask, and nothing the reader did not need. Cut model-forced filler: no restating
-the prompt, no hedging padding, no marketing adjectives or superlatives, no "I
-hope this helps" sign-off, no section that exists only to look thorough. The
-rule's home is `communication-structure` (do not restate it here); the conductor
-holds every skill's output to it. Chat may be terse; persisted deliverables stay
-clean, plain prose a busy reader scans in under a minute.
+Every user-facing output the suite produces — message, report, plan, table, or
+template, not just messages — clears the no-slop bar in `communication-structure`
+before it ships. The conductor holds every skill's output to that standard.
 
 ## Definition of done
 - The right skill was named for the (stage, area, artifact) — not a method
@@ -152,7 +147,8 @@ clean, plain prose a busy reader scans in under a minute.
 
 ## Related skills (this repository)
 - `agentic-delivery` — gated multi-role delivery; the delivery mechanics the
-  conductor dispatches to.
+  conductor dispatches to. (Its internal "Conductor" hat sequences one delivery;
+  this skill conducts the whole suite.)
 - `idea-critic` — the adversarial pass before any plan or recommendation
   reaches the owner.
 - `deep-code-review` — the review bar (and the stage model this skill routes
