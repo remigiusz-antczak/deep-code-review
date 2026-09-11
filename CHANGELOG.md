@@ -3,6 +3,25 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.51.0] — 2026-09-11
+
+Routing-eval coverage for the conductor (issue #63, offline half).
+
+### Added
+- **`agentic-ceo/evals`** — a routing eval per registry destination (deep-code-review,
+  agentic-delivery, idea-critic, growth-analytics, positioning, product-output-safety,
+  communication-structure, contribution — joining the existing product-discovery /
+  business-ops / owner cases). Each pins a (stage, area, artifact) prompt to its
+  expected skill and asserts the routed method is not re-implemented inline
+  (registry-not-bundle).
+- **`test-ci-gates.sh`** — a coverage assertion: every shipped skill except the
+  conductor must have an `agentic-ceo` routing eval, so a destination cannot be
+  mis-routed unnoticed. Now 55/55. Live grading of each case rides the eval harness (#61).
+
+### Changed
+- Lockstep bump to **1.51.0** (deep-code-review, agentic-delivery, idea-critic, plugin).
+  No skill content changed (conductor evals + a self-test added).
+
 ## [1.50.0] — 2026-09-11
 
 Gives the SKILL.md size ratchet teeth and gates the install overlay-stamp guard

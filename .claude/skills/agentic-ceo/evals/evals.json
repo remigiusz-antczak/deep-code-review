@@ -50,6 +50,78 @@
         "Distinguishes the Lane A pricing question from the Lane R regulatory question",
         "Every shipped skill is reachable from the registry (no skill is unroutable)"
       ]
+    },
+    {
+      "id": "routes-review-to-deep-code-review",
+      "prompt": "The PR is ready — audit the diff for security and correctness before we merge.",
+      "expected_output": "Routes to deep-code-review (the review method); does not perform an ad-hoc read-through inline.",
+      "expectations": [
+        "Selects deep-code-review for a review/audit/security-gate request",
+        "Does not re-implement the review method inline (registry-not-bundle)"
+      ]
+    },
+    {
+      "id": "routes-migration-to-agentic-delivery",
+      "prompt": "We need to execute a multi-file migration across the codebase end-to-end, safely, with QA and a human approval before push.",
+      "expected_output": "Routes to agentic-delivery (gated G0–G10 delivery, one writer per worktree, human approval on push); does not free-hand the multi-role delivery inline.",
+      "expectations": [
+        "Selects agentic-delivery for a gated multi-role end-to-end change",
+        "Preserves the human-approval-on-push gate rather than auto-executing"
+      ]
+    },
+    {
+      "id": "routes-attack-an-idea-to-idea-critic",
+      "prompt": "I want to stand up a new always-on bot and a new process — tell me if it's a good idea before I build it.",
+      "expected_output": "Routes to idea-critic (skeptic / better-way / kill-criteria) to attack the claim before build; does not reflexively agree or answer inline.",
+      "expectations": [
+        "Selects idea-critic for an unsolicited 'we should' / new-bot proposal",
+        "Attacks the claim before assent rather than approving inline"
+      ]
+    },
+    {
+      "id": "routes-instrumentation-to-growth-analytics",
+      "prompt": "We're live now — what should we instrument, and what's a real North Star metric (not a vanity one)?",
+      "expected_output": "Routes to growth-analytics (North Star, AARRR, event taxonomy on the user's own analytics); does not invent benchmark numbers inline.",
+      "expectations": [
+        "Selects growth-analytics for a measurement / instrumentation question",
+        "Does not fabricate an industry benchmark (routes to the user's own data)"
+      ]
+    },
+    {
+      "id": "routes-messaging-to-positioning",
+      "prompt": "How should we describe this product to its market — the value proposition and who it's for?",
+      "expected_output": "Routes to positioning (value proposition, segment, message house as a hypothesis to validate); does not fabricate market claims inline.",
+      "expectations": [
+        "Selects positioning for a value-proposition / market-description question",
+        "Frames it as a hypothesis to validate, not asserted market truth"
+      ]
+    },
+    {
+      "id": "routes-output-harm-to-product-output-safety",
+      "prompt": "This feature auto-sends AI-generated recommendations and can take actions on the user's behalf — could its output harm users?",
+      "expected_output": "Routes to product-output-safety (harm inventory, measure, human-in-the-loop gate on high-stakes actions); does not certify 'safe' inline.",
+      "expectations": [
+        "Selects product-output-safety for harm from the product's own AI outputs / automated actions",
+        "Does not certify the system safe/unbiased inline (routes to the method)"
+      ]
+    },
+    {
+      "id": "routes-message-structure-to-communication-structure",
+      "prompt": "Draft the launch update for the team — make sure it isn't bloated AI slop.",
+      "expected_output": "Applies communication-structure (BLUF, cut-on-sight, no slop) to the deliverable; the output rule lives in that skill, not restated inline.",
+      "expectations": [
+        "Selects communication-structure for structuring a human-facing message / deliverable",
+        "Does not restate the no-slop rule inline (single home)"
+      ]
+    },
+    {
+      "id": "routes-upstream-lesson-to-contribution",
+      "prompt": "I learned a genuinely reusable lesson working in a private client repo — how do I contribute it back to the public skillset without leaking anything?",
+      "expected_output": "Routes to contribution (privacy-scrubbed, generalized, human-gated upstream PR flow); does not auto-push or free-hand the scrub inline.",
+      "expectations": [
+        "Selects contribution for a private→public upstream-improvement request",
+        "Preserves the privacy scrub + human merge gate (no autonomous push)"
+      ]
     }
   ]
 }
