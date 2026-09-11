@@ -14,7 +14,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # Business ops
@@ -83,6 +83,15 @@ compliance (GDPR/CCPA and the like).
 - **Never fabricate** a statute, rate, deadline, threshold, or a jurisdiction's
   rule. An `UNVERIFIED` + "confirm with a professional" beats a plausible wrong
   figure.
+
+**Design-time triage (front door).** Before architecture hardens — and again when
+the product enters a new market or handles a new data type — run the
+regulated-domain decision tree in `references/regulated-domain-triage.md` —
+**read it when** you need to know which regimes might apply early enough to shape
+the build (health, payments/card data, minors, EU/UK or US-state personal data,
+biometrics, consequential/automated decisions, money movement, enterprise
+security). It names the regime and surfaces engineering-obligation leads, then
+routes the binding question to counsel; it never concludes that a regime applies.
 
 ## Stage-awareness
 Keys to the stage model in `deep-code-review`. Early: a simple pricing hypothesis

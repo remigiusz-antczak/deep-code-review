@@ -2,7 +2,7 @@
   "name": "deep-code-review",
   "description": "Portable, evidence-grounded deep code-review bar for coding agents — default install is review-only, with optional opt-in overlays: gated delivery, an idea critic, a suite conductor, and stage-aware product, growth, positioning, business-ops, and output-safety specialists.",
   "skills": "./.claude/skills",
-  "version": "1.54.0",
+  "version": "1.55.0",
   "author": {
     "name": "deep-code-review contributors"
   },
