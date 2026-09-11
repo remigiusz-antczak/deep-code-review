@@ -778,6 +778,23 @@ else
   record 1 "evals: agentic-delivery names recommend-must-not-write"
 fi
 
+# #63: every registry skill (every shipped skill except the conductor) must have a
+# routing eval in agentic-ceo — a destination with no routing case can be mis-routed
+# unnoticed. Deterministic coverage; the live grading of each case rides the eval
+# harness (#61).
+ceo_evals="$ROOT/.claude/skills/agentic-ceo/evals/evals.json"
+route_cov=1
+for d in "$ROOT"/.claude/skills/*/; do
+  sk="$(basename "$d")"
+  [ "$sk" = "agentic-ceo" ] && continue
+  grep -q "$sk" "$ceo_evals" || { printf 'ROUTE-COV: no agentic-ceo routing eval names %s\n' "$sk" >&2; route_cov=0; }
+done
+if [ "$route_cov" -eq 1 ]; then
+  record 0 "routing-coverage: every registry skill has an agentic-ceo routing eval"
+else
+  record 1 "routing-coverage: every registry skill has an agentic-ceo routing eval"
+fi
+
 # ---------------------------------------------------------------------------
 # SHA256SUMS — regenerates equal to the committed file
 # ---------------------------------------------------------------------------
