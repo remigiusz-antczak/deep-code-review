@@ -14,6 +14,7 @@
 #   version <root>                       VERSION is byte-exact ASCII core semver; first CHANGELOG heading announces it
 #   install --src <dir> --dest <dir> --mode <claude|minimal|full|codex|overlays|recommend>
 #                                        run the real installer, then verify vendored docs are real (not placeholders)
+#   enumeration <root>                   every shipped skill is present in all five hand-maintained lists
 #
 set -euo pipefail
 
@@ -349,7 +350,8 @@ cmd_install() {
 # agentic-ceo's registry (unroutable), from install.sh (uninstallable), from the
 # ci.yml routing lines (ungated), from the checksum find-list (unpinned), or from
 # recommend-overlays.py (mis-classified). These lists are hand-enumerated, so the
-# globbed self-tests cannot see a gap. Fail closed.
+# globbed self-tests cannot see a gap. Fail closed. Directional: it catches a skill
+# on disk that is missing from a list, not a stale list entry for a deleted skill.
 # ---------------------------------------------------------------------------
 cmd_enumeration() {
   local root="."
@@ -376,10 +378,13 @@ cmd_enumeration() {
   for d in "$skills_dir"/*/; do
     [ -d "$d" ] || continue
     name="$(basename "$d")"
-    # 1) ci.yml routing line (per-skill; enumerated, not globbed)
-    grep -qE "\.claude/skills/${name}[[:space:]]*\$" "$ci" \
+    # 1) ci.yml routing INVOCATION (per-skill; enumerated, not globbed). Anchored to
+    #    the `ci-gates.sh routing` call so a bare mention (a comment) cannot satisfy it.
+    grep -qE "ci-gates\.sh routing .*\.claude/skills/${name}[[:space:]]*\$" "$ci" \
       || { printf 'ENUM: %s has no ci.yml routing line\n' "$name" >&2; fail=1; }
-    # 2) write-checksums.sh find-list (else the skill tree is unpinned)
+    # 2) write-checksums.sh find-list (else the skill tree is unpinned). The path
+    #    followed by whitespace matches the `find` argument list; write-checksums.sh
+    #    holds no other skill paths, so a bare-mention false-PASS has no vector here.
     grep -qE "\.claude/skills/${name}[[:space:]]" "$checksums" \
       || { printf 'ENUM: %s absent from write-checksums.sh find-list\n' "$name" >&2; fail=1; }
     # 3) install.sh — the base ships always; every overlay needs a SKILLS+= line
@@ -387,13 +392,16 @@ cmd_enumeration() {
       grep -qF "SKILLS+=(\"${name}\")" "$installer" \
         || { printf 'ENUM: %s has no install.sh SKILLS+= line\n' "$name" >&2; fail=1; }
     fi
-    # 4) agentic-ceo registry — a table ROW (^| `name` |), not merely prose
+    # 4) agentic-ceo registry — a table ROW (^| `name` |...), not merely prose. Tolerates
+    #    any cell padding before the closing pipe so a table reformat is not a false FAIL.
     if [ "$name" != "agentic-ceo" ]; then
-      grep -qE "^\| ${bt}${name}${bt} \|" "$registry" \
+      grep -qE "^\| ${bt}${name}${bt}[[:space:]]*\|" "$registry" \
         || { printf 'ENUM: %s has no agentic-ceo registry row\n' "$name" >&2; fail=1; }
     fi
-    # 5) recommend-overlays.py knows the skill (else it mis-classifies at --recommend)
-    grep -qF "$name" "$recommend" \
+    # 5) recommend-overlays.py knows the skill (else it mis-classifies at --recommend).
+    #    Quoted set-literal form so a name is not a substring false-match ("critic" is
+    #    not a substring of "idea-critic").
+    grep -qF "\"${name}\"" "$recommend" \
       || { printf 'ENUM: %s not named in recommend-overlays.py\n' "$name" >&2; fail=1; }
   done
 
