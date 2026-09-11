@@ -3,6 +3,25 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.58.0] — 2026-09-11
+
+Adopt the **Perun** umbrella brand (issue #38) — theme + wordmark only.
+
+### Changed
+- **README hero + `plugin.json` description** rebranded to **Perun** ("bring the
+  thunder to your codebase") — the suite's umbrella identity, named for the
+  Slavic thunder god of order and justice (strikes down chaos, never fabricates,
+  leaves the bar in place). The **flagship skill name `deep-code-review` is
+  unchanged**, as are all sibling skill names; the brand is the suite/repo layer.
+  Added `perun` to `plugin.json` keywords.
+- **Repo-slug rename deferred** (owner decision): GitHub redirects make it safe
+  to do anytime; the pinned URLs to update when chosen are README (clone + npx
+  slug) and `plugin.json` (homepage/repository). Brand adopted first.
+- Copy kept **agent-agnostic**: "for building with AI agents", any major coding
+  agent — no single-vendor focus.
+- Lockstep bump to **1.58.0** (deep-code-review, agentic-delivery, idea-critic,
+  plugin). No skill content changed (branding metadata only).
+
 ## [1.57.0] — 2026-09-11
 
 Support & feedback operations lens (issue #44, G3) — agentic-delivery.

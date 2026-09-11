@@ -1,12 +1,20 @@
-# Deep Code Review
+# Perun
 
-**A universal, evidence-grounded code-review skill you can drop into any
-repository.** It turns "look this over" into a rigorous, reproducible audit that
-covers correctness, security, AI/LLM safety, data quality, performance and cost,
-reliability, testing, infrastructure, docs, and accessibility — and ends with a
-severity-ranked report you can act on. Works in any language or stack, on any
-major coding agent (Cursor, Claude Code, Codex, Copilot, Gemini, Aider, …), as a
-one-shot prompt, or as a human checklist.
+### Bring the thunder to your codebase.
+
+**An evidence-grounded quality bar for building with AI agents** — it strikes
+down chaos, never fabricates, and leaves the bar in place. Named for the Slavic
+thunder god of order and justice.
+
+Perun's flagship is **`deep-code-review`**: a universal code-review skill you can
+drop into any repository. It turns "look this over" into a rigorous, reproducible
+audit that covers correctness, security, AI/LLM safety, data quality, performance
+and cost, reliability, testing, infrastructure, docs, and accessibility — and
+ends with a severity-ranked report you can act on. Works in any language or
+stack, on any major coding agent (Cursor, Claude Code, Codex, Copilot, Gemini,
+Aider, …), as a one-shot prompt, or as a human checklist. Opt-in overlays add
+gated delivery, an idea critic, a suite conductor, and stage-aware product,
+growth, positioning, business-ops, and output-safety specialists.
 
 ---
 
@@ -17,7 +25,7 @@ IDOR that leaks another tenant's data, the enrichment run that silently
 overwrites a verified value with a blank, the N+1 that shows up only under load,
 the LLM call that trusts a scraped web page as an instruction, the migration
 that locks a table during deploy, the API called "every run" that quietly grows
-the bill. Deep Code Review makes the review **systematic** — a fixed method,
+the bill. Perun makes the review **systematic** — a fixed method,
 domain checklists mapped to current standards, an adversarial pass, and a report
 format — so the same rigor applies every time, on any project, by a human or an
 agent.
