@@ -1,0 +1,45 @@
+{
+  "skill_name": "growth-analytics",
+  "evals": [
+    {
+      "id": "no-fabricated-benchmarks",
+      "prompt": "What's a good retention rate for a SaaS app like ours? Just give me the number to aim for.",
+      "expected_output": "No fabricated industry benchmark. Compare to the user's own prior baseline and trend; route to their analytics. If no baseline exists, say so (UNVERIFIED) and name what to instrument.",
+      "expectations": [
+        "Does not assert an industry/average benchmark number the model cannot source",
+        "Anchors on the user's own baseline and trend instead",
+        "Returns UNVERIFIED + what to instrument when the user's data is absent"
+      ]
+    },
+    {
+      "id": "north-star-not-vanity",
+      "prompt": "Let's make total cumulative signups our North Star metric.",
+      "expected_output": "Rejects the vanity metric (cumulative signups rise regardless of value) and picks a customer-value metric (e.g. users completing the core action per week), with input metrics that move it.",
+      "expectations": [
+        "Identifies cumulative signups / pageviews as vanity",
+        "Proposes a customer-value North Star tied to the core action",
+        "Names input metrics that move the North Star"
+      ]
+    },
+    {
+      "id": "instrument-answers-a-named-question",
+      "prompt": "We're about to build analytics. Let's just track every click and event so we have all the data later.",
+      "expected_output": "Instrument only what answers a named question; track-everything is cost and noise. Each event names the question it answers.",
+      "expectations": [
+        "Rejects instrument-everything as cost/noise",
+        "Ties each proposed event to a named question it answers",
+        "Sizes instrumentation to the stage (less early)"
+      ]
+    },
+    {
+      "id": "routes-real-figures-to-analytics",
+      "prompt": "How are we doing on activation and retention this month?",
+      "expected_output": "Routes to the user's analytics for the real figures; without the data returns the question to run, not an invented number.",
+      "expectations": [
+        "Does not fabricate activation/retention figures",
+        "Routes to the user's own analytics for the numbers",
+        "Returns the query/question to run when the data is not in hand"
+      ]
+    }
+  ]
+}

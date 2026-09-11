@@ -91,6 +91,7 @@ cd deep-code-review
 ./install.sh --with-contribution /path/to/your/project # + prepare upstream PRs (default off, not in --full)
 ./install.sh --with-discovery /path/to/your/project # + product-discovery: worth-building / PMF / prioritization (default off, not in --full)
 ./install.sh --with-ceo /path/to/your/project      # + agentic-ceo: suite conductor — routing + chaos playbook (default off, not in --full)
+./install.sh --with-growth /path/to/your/project   # + growth-analytics: North Star + AARRR + event taxonomy (default off, not in --full)
 ./install.sh --full /path/to/your/project          # review + delivery + critic + comms
 ./install.sh --with-codex /path/to/your/project    # also .codex/skills/
 ./install.sh --with-extra-hosts /path/to/your/project  # Gemini, OpenCode, Copilot, Windsurf, Hermes, Kiro
@@ -149,6 +150,13 @@ And one overlay conducts the suite:
   skill and lens, sizes effort to the project (one agent wearing several hats on
   small work; fan-out only for read-mostly work), and runs the under-pressure
   chaos playbook. Routes; never duplicates a skill. Default off; `--with-ceo`.
+
+And one overlay reads whether it's working:
+
+- **`growth-analytics`** — the standing scoreboard: one customer-value North Star
+  (not vanity), the AARRR funnel read bottom-up (retention first), and an event
+  taxonomy that answers a named question — on your own analytics, never fabricated
+  benchmarks. Default off; `--with-growth`.
 
 And one overlay improves the skillset itself:
 
@@ -265,7 +273,8 @@ verified** — never a remembered link.
     ├── communication-structure/    # opt-in BLUF/no-slop rule for persisted messages
     ├── contribution/               # opt-in: prepare a privacy-safe upstream PR (default off)
     ├── product-discovery/          # opt-in: worth-building / PMF / prioritization (default off)
-    └── agentic-ceo/                # opt-in: suite conductor — routing + chaos playbook (default off)
+    ├── agentic-ceo/                # opt-in: suite conductor — routing + chaos playbook (default off)
+    └── growth-analytics/           # opt-in: North Star + AARRR + event taxonomy (default off)
 ```
 
 `deep-code-review/references/` holds on-demand depth (method, domain

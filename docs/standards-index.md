@@ -241,6 +241,11 @@ A03, cross-referenced from `references/security-agent-skills.md` AST02).
   reactance; motivational-interviewing reflective listening. Named leads only — no
   URL or figure fetched this session; verify before citing specifics. (WIP limits
   and orchestrator–worker delegation are already registered above.)
+- **Product-analytics frameworks** (named by `growth-analytics`): AARRR / "Pirate
+  Metrics" (McClure); the North Star Metric framework; vanity-vs-actionable metrics;
+  retention cohort analysis; "one metric that matters"; activation / aha-moment
+  analysis. Named leads only — no URL or figure fetched this session; verify before
+  citing a specific figure or threshold.
 
 > When the skill needs a version-specific detail from any of these, it must fetch
 > the current source at review time and cite only the URL it verified.
