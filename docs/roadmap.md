@@ -72,8 +72,8 @@ roadmap). Every advisory skill keys to it.
 | `contribution` | ✅ (hardened — PR #26) | Human-gated, privacy-safe upstream self-improvement |
 | agent-readiness lens | ✅ | Is the repo agent-ready? (a `role-coverage.md` lens) |
 | `agentic-ceo` (orchestrator) | ✅ vendored (1.37.0) | Suite registry + (stage, area) → (skill, lens) routing + effort-sizing + chaos playbook; defers general delivery/critique to `agentic-delivery` / `idea-critic` |
-| `infra-evolution-by-stage` (ref) | Proposed — research done | When to add CI/staging/observability/k8s — extends the going-forward roadmap |
-| `docs-evolution-by-stage` (ref) | Proposed — research done | Which docs at which stage; docs acquire normative force as the product matures |
+| `infra-evolution-by-stage` (ref) | ✅ shipped 1.35.0 (#28→#51) | When to add CI/staging/observability/k8s — extends the going-forward roadmap |
+| `docs-evolution-by-stage` (ref) | ✅ shipped 1.35.0 (#29→#51) | Which docs at which stage; docs acquire normative force as the product matures |
 | discovery / validation | ✅ shipped in `product-discovery` (1.36.0) | Design + interpret real user research; never fabricate findings |
 | prioritization / focus | ✅ shipped in `product-discovery` (1.36.0) | Riskiest-assumption gate; what to build now vs. defer |
 | product-strategy / PMF | ✅ folded into `product-discovery` (1.39.0) — PMF read + Non-goals lens; standalone skill dropped per carve | JTBD, PMF signals, what *not* to build |
@@ -90,7 +90,7 @@ roadmap). Every advisory skill keys to it.
 3. **Product-strategy / "what NOT to build"** — governs the coding agent's backlog; prevents gold-plating.
 4. **Analytics scoreboard + one primary metric** — tells the builder whether the fast-built thing works; anchors every skill to one axis.
 5. **Stage-aware CEO spine** — extend `agentic-ceo` with stage/size-aware routing + the suite registry.
-- **Ready now, low-risk:** the `infra-evolution-by-stage` and `docs-evolution-by-stage` references (extend the going-forward roadmap).
+- **Shipped (1.35.0):** the `infra-evolution-by-stage` and `docs-evolution-by-stage` references (extend the going-forward roadmap).
 - **Defer / lightest touch:** engineering advisor (already covered by the coding agent), design/UX (partly covered + `product-ux-quality`), legal/ops (one-time checklists + a tripwire), fundraising/hiring (stage-gated), positioning/branding + business/ops (highest fabrication-risk → thin "framework + the questions you must answer" guides, built last).
 
 **Sequencing rationale (and the pushback that produced it):** do **not** big-bang a
