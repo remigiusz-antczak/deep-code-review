@@ -252,6 +252,12 @@ A03, cross-referenced from `references/security-agent-skills.md` AST02).
   framework; jobs-to-be-done as a positioning lens; minimum-viable-brand; premature
   scaling as a pre-PMF anti-pattern (Startup Genome; lean-startup). Named leads only —
   no URL or figure fetched this session; verify before citing a specific claim.
+- **Business / unit-economics frameworks** (named by `business-ops`): unit economics
+  (LTV, CAC, LTV:CAC, payback, contribution margin); value-based and cost-plus
+  pricing; runway / burn / break-even; the securities-offering boundary (equity / SAFE
+  fundraising); worker-classification tests; the GDPR/CCPA obligation triage (routed,
+  not concluded). Named leads only — no URL, figure, statute, or rate fetched this
+  session; route regulation questions to a licensed professional.
 
 > When the skill needs a version-specific detail from any of these, it must fetch
 > the current source at review time and cite only the URL it verified.
