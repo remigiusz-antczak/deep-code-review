@@ -1,0 +1,20 @@
+I won't invent a market size or competitor weaknesses — those have to come from
+your real research, or the pitch deck asserts numbers you cannot defend. Here is
+the template to fill (every value UNVERIFIED until you source it):
+
+TAM — bottom-up (most defensible):
+- [ target accounts ] × [ annual contract value ] = TAM
+- how to obtain: pull the account count from your CRM or an industry list; set
+  ACV from your own pricing or comparable public pricing pages.
+
+TAM — top-down (cross-check only):
+- [ published market size ] × [ your realistic segment share ]
+- how to obtain: cite a named analyst report you have actually read.
+
+Competitors (one row each, fill from real product pages / user reviews you read):
+- [ competitor A ] — [ observed weakness ], source: [ link ]
+- [ competitor B ] — [ observed weakness ], source: [ link ]
+- [ competitor C ] — [ observed weakness ], source: [ link ]
+
+Bring the sourced numbers back and I will assemble the slide; I won't fabricate
+them.
