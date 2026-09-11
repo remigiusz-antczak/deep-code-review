@@ -1,23 +1,24 @@
 ---
 name: communication-structure
 description: >-
-  Use before sending any human-facing message — a PR body, a GitHub
-  issue/PR comment, a status update, or a reply to an owner or colleague.
-  Forces BLUF, one ask, zero AI-slop before you draft, not after. Skip for
+  Use before sending any human-facing message — a PR body, issue/PR
+  comment, status update, or reply — or before producing a human-facing
+  deliverable: a report, plan, doc, summary, or table. Forces BLUF, one
+  ask, core value only, zero AI-slop before you draft, not after. Skip for
   chat with the user, which may keep whatever house voice is already set.
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.1.0"
+  version: "1.2.0"
 ---
 
 # Communication structure
 
-Governs the *structure* of any message a human reads without you there to
-narrate it — a PR body, an issue/PR comment, a status update, a reply. Same
-prose-voice boundary as `idea-critic`: persisted artifacts stay normal
-English, never compressed chat shorthand. This is about shape and length,
-not vocabulary.
+Governs the *structure* of anything a human reads without you there to
+narrate it — a message (PR body, issue/PR comment, status update, reply) **or a
+deliverable** (a report, plan, doc, summary, table). Same prose-voice boundary as
+`idea-critic`: persisted artifacts stay normal English, never compressed chat
+shorthand. This is about shape and length, not vocabulary.
 
 ## The rule
 
@@ -36,6 +37,17 @@ not vocabulary.
   context-switch. Give them what changes what they do next; drop the
   reasoning trail that got you there.
 - **Numbers over adjectives.** "40s to 6s" beats "significantly faster."
+
+## Deliverables, not just messages
+
+The rules above are written for a short message; they apply to a **deliverable**
+(a report, plan, doc, table) with one adaptation: the 30-seconds / ~150-word cap
+is a *message* rule — a deliverable is **as long as its content genuinely requires
+and no longer**. BLUF still comes first, every section still earns its place, and
+*Cut on sight* still applies in full: no filler, no restated prompt, no marketing
+adjectives, no summary-of-the-summary, no section that exists only to look
+thorough. Core value only, whatever the length. This is the suite's no-slop output
+contract; other skills reference it rather than restating it.
 
 ## Cut on sight
 
