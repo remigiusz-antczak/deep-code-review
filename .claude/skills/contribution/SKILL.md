@@ -14,7 +14,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.0.0"
+  version: "1.0.1"
 ---
 
 # Contribution
@@ -75,12 +75,15 @@ contribution.
 1. **Detect + test generality** — the two gates above. Fail either → stop, or
    imprint locally.
 2. **Generalize** — lesson → underlying principle; strip every project specific.
-3. **Scrub (mechanical floor).** In your checkout of the *public* repository
-   (where the gate lives), run its own fail-closed privacy gate on the drafted
-   artifact: `bash scripts/ci-gates.sh privacy --banlist .banlist.txt .`
-   A hit blocks. This is the floor, not the ceiling — see Prime constraint.
-4. **Draft the full change** — skill edit + CHANGELOG entry + eval + routing, to
-   the repo's Definition of Done (`CLAUDE.md`). No half-changes.
+3. **Draft the full change** — in a checkout of the *public* repository (where the
+   gate and the Definition of Done live), write the skill edit + CHANGELOG entry +
+   eval + routing to the repo's Definition of Done (`CLAUDE.md`). No half-changes.
+   Generalizing and stripping identifiers as you write (step 2) means the files
+   already carry no third-party specifics.
+4. **Scrub (mechanical floor).** Run the repo's own fail-closed privacy gate on the
+   *drafted files*: `bash scripts/ci-gates.sh privacy --banlist .banlist.txt .`
+   A hit blocks. This runs on what you actually wrote in step 3 — it is the floor,
+   not the ceiling; see Prime constraint.
 5. **Route through the bar** — `deep-code-review` on the diff; `idea-critic` on
    the "we should contribute this" claim.
 6. **Run all gates green** — the gate list in `CONTRIBUTING.md`.

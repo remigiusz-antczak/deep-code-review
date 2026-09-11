@@ -11,7 +11,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.31.0"
+  version: "1.32.0"
 ---
 
 # Deep Code Review
@@ -87,6 +87,7 @@ delivery role or security-team colour.
 | Platform / SRE | L K M N F + SLI/SLO |
 | QA | J E P |
 | Release & docs | S O K + release sign-off |
+| Agent-readiness | C J K M N F O H + agent-readiness lens |
 
 **Security-team colours** re-package the same evidence (no new rules): Red =
 Phase 3; Blue = detection / fail-closed; Purple = red→blue gates; Yellow =
