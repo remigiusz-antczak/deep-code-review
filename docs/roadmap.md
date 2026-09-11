@@ -222,8 +222,10 @@ the bad day**. Mostly **lenses** over existing skills, not new skills. Ranked:
   what-was-fetched; **never** fabricate a statute, deadline, CWE, or metric; route
   every legal/regime determination to a licensed professional. Legal specifics stay
   **by-name / UNVERIFIED** until fetched (as `privacy-compliance.md` already does).
-  NIST AI RMF was verified this session; GDPR/DPIA/COPPA/PCI/breach-clock specifics
-  were not — fetch before citing.
+  The NIST AI RMF core function names (Govern/Map/Measure/Manage) are confirmed
+  (`docs/standards-index.md`); its AI RMF 1.0 / Generative AI Profile control
+  specifics and GDPR/DPIA/COPPA/PCI/breach-clock specifics were not — fetch before
+  citing.
 - **Build first among gaps:** G1, then G2 (unblocks G4/G5), then G3.
 
 ## Decisions for the owner (open)
