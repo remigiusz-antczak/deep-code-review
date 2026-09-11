@@ -10,7 +10,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.55.0"
+  version: "1.56.0"
 ---
 
 # Agentic delivery
@@ -424,6 +424,13 @@ Every worker returns: role, exact SHA, artifacts, acceptance covered,
 commands actually run with exit status, findings with severity + location
 + evidence, remaining risk, cost/`UNPRICED`. `NONE` is a valid findings
 result.
+
+**Work-item contract (the input the output is graded against).** A work item a
+lane accepts is specified as **Where** (the file/area it touches), **Done-when**
+(the observable acceptance), **Verify** (how that acceptance is checked), and
+**Why** (the reason, so scope can be cut). A work item missing *Done-when* or
+*Verify* is underspecified — the output contract above cannot be graded against
+it, so it is sent back to be scoped, not started.
 
 ---
 
