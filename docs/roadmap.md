@@ -71,10 +71,10 @@ roadmap). Every advisory skill keys to it.
 | `docs-evolution-by-stage` (ref) | Proposed — research done | Which docs at which stage; docs acquire normative force as the product matures |
 | discovery / validation | ✅ shipped in `product-discovery` (1.36.0) | Design + interpret real user research; never fabricate findings |
 | prioritization / focus | ✅ shipped in `product-discovery` (1.36.0) | Riskiest-assumption gate; what to build now vs. defer |
-| product-strategy / PMF | Partial — PMF read shipped in `product-discovery`; non-goals folding into it (step c); standalone skill dropped per carve | JTBD, PMF signals, what *not* to build |
+| product-strategy / PMF | ✅ folded into `product-discovery` (1.39.0) — PMF read + Non-goals lens; standalone skill dropped per carve | JTBD, PMF signals, what *not* to build |
 | growth / analytics | ✅ shipped in `growth-analytics` (1.38.0) | Retention-first; North Star; what to instrument per stage |
-| positioning / branding | Proposed — research done | VPC → positioning → messaging; highest fabrication-risk → thin guide, built last |
-| business / ops | Proposed — research done | Pricing/unit-economics (apply) vs. legal/tax/securities (route); built last |
+| positioning / branding | ✅ shipped in `positioning` (1.41.0) | VPC → positioning → message house, as a hypothesis; thin guide; never fabricates TAM/competitor/quotes/clearance |
+| business / ops | ✅ shipped in `business-ops` (1.42.0) | Lane A pricing/unit-economics (apply) vs. Lane R legal/tax/securities (route); thin guide |
 | CEO-under-pressure | Researched → `agentic-ceo` (#36) | Capture losslessly → reflect back → triage → one next action → tracked backlog → support by action (never "calm down") |
 | responsible-AI / output safety | Researched → **build first among gaps** (NEW skill) | Govern the harm the product's own outputs do to end-users (NIST AI RMF lens) |
 | further areas (gap-analysis) | Researched → *Further areas* + issues | regulated-triage, support-ops, op-readiness, privacy-by-design, decision-hygiene, billing — mostly lenses |
@@ -244,18 +244,24 @@ the bad day**. Mostly **lenses** over existing skills, not new skills. Ranked:
 4. **Greenlight + order** of the new skills beyond the ready references.
 
 ## Status ledger (2026-09-11)
-- **Merged to main:** contribution overlay (1.31.0) · agent-readiness lens (1.32.0)
-  · stage-aware review + going-forward roadmap (1.33.0) · contribution hardening
-  (1.34.0; contribution 1.1.0) · infra/docs stage-evolution refs (1.35.0) ·
-  `product-discovery` (1.36.0) · `agentic-ceo` conductor (1.37.0) ·
-  `growth-analytics` (1.38.0). Global install refreshed to 1.38.0.
-- **Owner decisions:** #40 (thin guides) recommended; #38 (rename) deferred until the
-  spine is proven; #39 (agentic-ceo) **resolved — vendored**.
-- **Proposed / not built:** standalone product-strategy dropped (non-goals fold into
-  `product-discovery`, step c); positioning + business-ops as gated thin guides, last.
-  Tracked as GitHub issues (*Where / Done-when / Verify / Why*).
+- **Suite complete — main @ 1.43.0, 10 skills.** Shipped: contribution overlay
+  (1.31.0) · agent-readiness lens (1.32.0) · stage-aware review + going-forward roadmap
+  (1.33.0) · contribution hardening (1.34.0; contribution 1.1.0) · infra/docs
+  stage-evolution refs (1.35.0) · `product-discovery` (1.36.0, +Non-goals 1.39.0 →
+  1.1.0) · `agentic-ceo` conductor (1.37.0, +full registry 1.43.0 → 1.1.0) ·
+  `growth-analytics` (1.38.0) · `positioning` (1.41.0) · `business-ops` (1.42.0) ·
+  no-slop output contract (`communication-structure` → 1.2.0, at 1.40.0). Each new
+  skill passed an independent reviewer pass before merge. Global install refreshed to 1.43.0.
+- **Owner decisions:** #39 (agentic-ceo) **resolved — vendored**; #40 (business-advisory
+  shape) **resolved — thin guides**; #38 (rename) **deferred** until the suite is proven.
+- **Post-build backlog (filed):** #61 live eval harness · #62 suite-enumeration gate ·
+  #63 routing eval coverage · #64 eval-id anti-drift gate · #65 DCR fabrication eval ·
+  #66 [decision] suite scale 10 vs ~8 · #67 README quickstart · #68 `--recommend` surfaces
+  advisory skills · #69 dogfood the contribution loop. Gap-analysis skills: #42–#49.
 - **Research complete:** all 12 areas + CEO-under-pressure + gap-analysis. CEO-under-
   pressure shipped in `agentic-ceo`'s chaos playbook.
 
-*This document is provisional and will change as skills are built and decisions are
-made. It executes none of the open decisions above.*
+*This document is provisional and updated as skills ship. Decisions #39 (vendor) and
+#40 (thin guides) are now resolved and executed; #38 (rename) remains deferred. The
+suite reached 10 skills — one over the stated "~8"; that guardrail vs. the actual count
+is the open decision in #66.*
