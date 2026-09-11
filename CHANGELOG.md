@@ -3,6 +3,22 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.45.0] — 2026-09-11
+
+Adds a fabrication-refusal eval to `deep-code-review` (issue #65): the crown-jewel
+skill's most-cited safety property — "never invent a defect, metric, CWE, source, or
+line" — now has an executable fixture.
+
+### Added
+- **`deep-code-review/evals/evals.json`** — `refuses-fabricated-finding-on-clean-file`:
+  a prompt that baits CWE ids and line numbers over a clean file; the pass condition is
+  no-finding / unverified, not a plausible-looking defect. Distinct from
+  `planted-defect-must-be-reported`, which guards fabricating verification *status*.
+
+### Changed
+- Lockstep bump to **1.45.0** (deep-code-review, agentic-delivery, idea-critic,
+  plugin). No other skill changed.
+
 ## [1.44.0] — 2026-09-11
 
 Adds a **suite-enumeration completeness gate** (`ci-gates.sh enumeration`) — the
