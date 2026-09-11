@@ -258,6 +258,15 @@ A03, cross-referenced from `references/security-agent-skills.md` AST02).
   fundraising); worker-classification tests; the GDPR/CCPA obligation triage (routed,
   not concluded). Named leads only — no URL, figure, statute, or rate fetched this
   session; route regulation questions to a licensed professional.
+- **Regulated-domain regimes** (named by `business-ops`'s `regulated-domain-triage.md`
+  and the `deep-code-review` privacy lenses): **PCI DSS** (card-data security
+  standard), **SOC 2** and **ISO/IEC 27001** (security-attestation / ISMS
+  frameworks), alongside the privacy regimes already covered in
+  `privacy-compliance.md` (GDPR, UK GDPR, CCPA/CPRA, HIPAA, COPPA, and biometric-
+  privacy statutes). Named leads only — no URL, article number, threshold, or
+  deadline fetched this session; the triage **names the regime and routes to
+  counsel**, never concludes it binds. (ISO/IEC 27001 is security/ISMS — distinct
+  from ISO/IEC 25010, the product-quality model listed above.)
 
 > When the skill needs a version-specific detail from any of these, it must fetch
 > the current source at review time and cite only the URL it verified.
