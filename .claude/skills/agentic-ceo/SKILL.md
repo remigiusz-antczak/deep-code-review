@@ -44,6 +44,7 @@ from the skill itself. Route to the skill; let the skill hold its method.
 | `growth-analytics` | deciding what to measure and how to read it once building or shipping — North Star, AARRR funnel, event taxonomy, retention — on the user's own analytics |
 | `positioning` | shaping how the product is described to its market — value proposition, segment, differentiation, message house — as a hypothesis to validate |
 | `business-ops` | money and compliance questions — Lane A applies pricing / unit-economics arithmetic to the user's numbers; Lane R routes legal / tax / securities to a professional |
+| `product-output-safety` | governing harm from the product's OWN AI outputs and automated decisions to end-users — bias, hallucination-as-fact, missing disclosure, unsafe high-stakes automation; map/measure/manage with a human gate, never certifies "safe" |
 | `contribution` | a reusable, generalizable lesson about the skillset itself is worth preparing as a privacy-safe upstream PR |
 
 ## Routing: (stage, area) → (skill, lens)
@@ -66,6 +67,8 @@ model: prototype / mvp / growth / mature), the **area** of the ask, and the
 - "How do we position and describe this to the market?" → `positioning`.
 - "Pricing or unit economics (apply to the user's numbers) vs. a legal / tax /
   securities question (route)?" → `business-ops` (Lane A vs Lane R).
+- "Could this feature's own output or automated action harm a user (bias, hallucination-as-fact,
+  unsafe high-stakes automation)?" → `product-output-safety`.
 - "We learned something reusable about the skillset." → `contribution`.
 - A business, market, legal, or financial input the repo does not hold →
   **route to the owner or a professional; never fabricate it** (the suite's

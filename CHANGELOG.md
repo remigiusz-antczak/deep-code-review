@@ -3,6 +3,34 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.48.0] — 2026-09-11
+
+Adds **`product-output-safety`** (skill #11) — governs the harm a product's own AI
+outputs and automated decisions do to end-users (bias, hallucination surfaced as
+fact, over-reliance, missing AI-disclosure, deceptive patterns, unsafe automation of
+high-stakes actions). Distinct from `deep-code-review` (the code's security) and
+`business-ops` (money/legal routing): it is the behavior of the shipped product
+toward its users. The one gap-analysis item (#42) admitted as a standalone skill
+under the #66 admission rule; the rest fold as lenses/references.
+
+### Added
+- **`.claude/skills/product-output-safety/`** — MAP the per-feature harm inventory,
+  MEASURE it with output-harm evals / red-teaming, MANAGE it with a human-in-the-loop
+  gate on high-stakes / irreversible actions (NIST AI RMF core functions, by name).
+  Hard boundary: red-team + measure + recommend HITL; never certifies "safe" /
+  "unbiased" / "compliant", never fabricates a harm metric, routes any legal
+  disclosure duty to counsel (+ `business-ops` Lane R). Opt-in, `--with-output-safety`,
+  not in `--full`. Four refusal evals (never-certifies-safe, high-stakes-action-gated,
+  routes-legal-disclosure-duty, no-fabricated-harm-metric).
+- Wired into every enumerated site: `ci.yml` routing, `write-checksums.sh`,
+  `install.sh` (flag + `SKILLS` + overlay stamp), `recommend-overlays.py`
+  (`REVIEW_ONLY_SKILLS` + advisory list), the `agentic-ceo` registry + routing,
+  `README.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `docs/roadmap.md`.
+
+### Changed
+- Lockstep bump to **1.48.0** (deep-code-review, agentic-delivery, idea-critic,
+  plugin). The new skill starts at its own `1.0.0`.
+
 ## [1.47.0] — 2026-09-11
 
 Executes the fabrication-refusal evals offline for the first time. Each skill's

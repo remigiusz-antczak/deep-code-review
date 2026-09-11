@@ -25,6 +25,7 @@
 #   --with-growth        also growth-analytics (North Star + AARRR + event taxonomy; not in --full)
 #   --with-positioning   also positioning (value prop / message house; a hypothesis, never fabricated market facts; not in --full)
 #   --with-business      also business-ops (Lane A pricing/unit-economics apply vs Lane R legal/tax/securities route; not in --full)
+#   --with-output-safety also product-output-safety (govern harm from the product's own AI outputs; HITL on high-stakes actions; not in --full)
 #   --full               review + delivery + critic + comms
 #   --recommend          inspect TARGET, print a pack, install nothing
 # Narrow:
@@ -70,6 +71,7 @@ on re-install). Overlay skills are opt-in.
   --with-growth        Also install growth-analytics (North Star + AARRR + event taxonomy; default off, not in --full)
   --with-positioning   Also install positioning (value prop / message house; a hypothesis, never fabricated market facts; default off, not in --full)
   --with-business      Also install business-ops (Lane A pricing/unit-economics apply vs Lane R legal/tax/securities route; default off, not in --full)
+  --with-output-safety Also install product-output-safety (govern harm from the product's own AI outputs; HITL on high-stakes actions; default off, not in --full)
   --full               Review + delivery + critic + comms
   --recommend          Inspect TARGET and print a recommended pack; no writes
   -h, --help           Show this help
@@ -98,6 +100,7 @@ WITH_CEO=0
 WITH_GROWTH=0
 WITH_POSITIONING=0
 WITH_BUSINESS=0
+WITH_OUTPUT_SAFETY=0
 RECOMMEND_ONLY=0
 POSITIONAL=()
 for arg in "$@"; do
@@ -115,6 +118,7 @@ for arg in "$@"; do
     --with-growth) WITH_GROWTH=1 ;;
     --with-positioning) WITH_POSITIONING=1 ;;
     --with-business) WITH_BUSINESS=1 ;;
+    --with-output-safety) WITH_OUTPUT_SAFETY=1 ;;
     --full) WITH_DELIVERY=1; WITH_CRITIC=1; WITH_COMMS=1 ;;
     --recommend) RECOMMEND_ONLY=1 ;;
     --with-cursor) echo "note: --with-cursor is default now; ignoring." >&2 ;;
@@ -243,6 +247,9 @@ fi
 if [[ "${WITH_BUSINESS}" -eq 1 ]]; then
   SKILLS+=("business-ops")
 fi
+if [[ "${WITH_OUTPUT_SAFETY}" -eq 1 ]]; then
+  SKILLS+=("product-output-safety")
+fi
 
 for skill in "${SKILLS[@]}"; do
   for host in "${HOSTS[@]}"; do
@@ -319,7 +326,7 @@ EOF
 )"
   upsert_agents_block "${AGENTS}" "deep-code-review:begin" "deep-code-review:end" "${REVIEW_BLOCK}"
 
-  if [[ "${WITH_DELIVERY}" -eq 1 || "${WITH_CRITIC}" -eq 1 || "${WITH_COMMS}" -eq 1 || "${WITH_CONTRIBUTION}" -eq 1 ]]; then
+  if [[ "${WITH_DELIVERY}" -eq 1 || "${WITH_CRITIC}" -eq 1 || "${WITH_COMMS}" -eq 1 || "${WITH_CONTRIBUTION}" -eq 1 || "${WITH_DISCOVERY}" -eq 1 || "${WITH_CEO}" -eq 1 || "${WITH_GROWTH}" -eq 1 || "${WITH_POSITIONING}" -eq 1 || "${WITH_BUSINESS}" -eq 1 || "${WITH_OUTPUT_SAFETY}" -eq 1 ]]; then
     OVERLAY_LINES=""
     if [[ "${WITH_DELIVERY}" -eq 1 ]]; then
       OVERLAY_LINES="${OVERLAY_LINES}
@@ -381,6 +388,13 @@ EOF
   securities / fundraising to a licensed professional (never concludes). Educational
   information, not advice. Default off."
     fi
+    if [[ "${WITH_OUTPUT_SAFETY}" -eq 1 ]]; then
+      OVERLAY_LINES="${OVERLAY_LINES}
+- \`product-output-safety\` — govern harm from the product's own AI outputs and
+  automated decisions to end-users (bias, hallucination-as-fact, missing disclosure,
+  unsafe high-stakes automation): map the harm inventory, measure it, gate high-stakes
+  actions with a human. Never certifies 'safe'; routes legal duty to counsel. Default off."
+    fi
     OVERLAY_BLOCK="$(cat <<EOF
 <!-- dcr-overlays:begin -->
 ## Optional overlays
@@ -395,7 +409,7 @@ here — if compressed assistant prose is wanted, add JuliusBrussee/caveman
 separately.
 
 Re-run upstream \`install.sh --with-delivery\` / \`--with-critic\` /
-\`--with-comms\` / \`--with-contribution\` / \`--with-discovery\` / \`--with-ceo\` / \`--with-growth\` / \`--with-positioning\` / \`--with-business\` / \`--full\` to refresh this stamp.
+\`--with-comms\` / \`--with-contribution\` / \`--with-discovery\` / \`--with-ceo\` / \`--with-growth\` / \`--with-positioning\` / \`--with-business\` / \`--with-output-safety\` / \`--full\` to refresh this stamp.
 <!-- dcr-overlays:end -->
 EOF
 )"

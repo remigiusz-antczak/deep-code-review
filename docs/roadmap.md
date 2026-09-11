@@ -257,7 +257,7 @@ the bad day**. Mostly **lenses** over existing skills, not new skills. Ranked:
    rather than ship a standalone skill.
 
 ## Status ledger (2026-09-11)
-- **Suite complete + hardening — main @ 1.47.0, 10 skills.** Shipped: contribution overlay
+- **Suite complete + hardening — main @ 1.48.0, 11 skills.** Shipped: contribution overlay
   (1.31.0) · agent-readiness lens (1.32.0) · stage-aware review + going-forward roadmap
   (1.33.0) · contribution hardening (1.34.0; contribution 1.1.0) · infra/docs
   stage-evolution refs (1.35.0) · `product-discovery` (1.36.0, +Non-goals 1.39.0 →
@@ -268,8 +268,8 @@ the bad day**. Mostly **lenses** over existing skills, not new skills. Ranked:
 - **Post-build hardening (1.44–1.47):** suite-enumeration gate (1.44.0, #62) · DCR
   fabrication-refusal eval (1.45.0, #65) · `--recommend` surfaces advisory overlays
   (1.46.0, #68) · README "which skill when" quickstart (#67) · offline eval-predicate
-  discrimination gate (1.47.0, #61 slice 1). Global install content-current (no skill
-  content changed since 1.43.0).
+  discrimination gate (1.47.0, #61 slice 1) · growth-analytics benchmark binding (offline net) ·
+  **product-output-safety = skill #11** (1.48.0, #42 — the one gap admitted standalone under the #66 rule).
 - **Owner decisions:** #39 (agentic-ceo) **resolved — vendored**; #40 (business-advisory
   shape) **resolved — thin guides**; #38 (rename) **deferred** until the suite is proven.
 - **Post-build backlog (filed):** #61 live eval harness · #62 suite-enumeration gate ·

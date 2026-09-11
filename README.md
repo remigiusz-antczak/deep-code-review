@@ -85,6 +85,7 @@ which to reach for.
 | Decide what to measure — North Star, funnel, retention | `growth-analytics` | `--with-growth` |
 | Shape how you describe it to the market | `positioning` | `--with-positioning` |
 | Price it, or tell an arithmetic question from a legal / tax / securities one | `business-ops` | `--with-business` |
+| Ship a feature whose own AI output or automated action could harm a user | `product-output-safety` | `--with-output-safety` |
 | Route a multi-skill session and stay strategic under pressure | `agentic-ceo` | `--with-ceo` |
 | Write a clean, no-slop PR body, status, or deliverable | `communication-structure` | `--with-comms` |
 | Feed a reusable lesson back upstream, privacy-safe | `contribution` | `--with-contribution` |
@@ -120,6 +121,7 @@ cd deep-code-review
 ./install.sh --with-growth /path/to/your/project   # + growth-analytics: North Star + AARRR + event taxonomy (default off, not in --full)
 ./install.sh --with-positioning /path/to/your/project # + positioning: value prop / message house — a hypothesis (default off, not in --full)
 ./install.sh --with-business /path/to/your/project  # + business-ops: Lane A pricing/economics apply, Lane R legal/tax route (default off, not in --full)
+./install.sh --with-output-safety /path/to/your/project  # + product-output-safety: govern harm from the product's own AI outputs, HITL on high-stakes (default off, not in --full)
 ./install.sh --full /path/to/your/project          # review + delivery + critic + comms
 ./install.sh --with-codex /path/to/your/project    # also .codex/skills/
 ./install.sh --with-extra-hosts /path/to/your/project  # Gemini, OpenCode, Copilot, Windsurf, Hermes, Kiro
@@ -199,6 +201,14 @@ And one overlay handles money and compliance, in two lanes:
   own numbers with the formula shown (never a directive); Lane R routes legal, tax,
   securities, and fundraising to a licensed professional (never concludes). Educational
   information, not advice; no fabricated figures or statutes. Default off; `--with-business`.
+
+And one overlay governs the product's own output behavior:
+
+- **`product-output-safety`** — govern harm from the product's own AI outputs and
+  automated decisions to end-users (bias, hallucination surfaced as fact, missing
+  disclosure, unsafe high-stakes automation): map the harm inventory, measure it, and
+  gate high-stakes actions with a human. Never certifies "safe" / "unbiased"; routes any
+  legal disclosure duty to counsel. Default off; `--with-output-safety`.
 
 And one overlay improves the skillset itself:
 
@@ -318,7 +328,8 @@ verified** — never a remembered link.
     ├── agentic-ceo/                # opt-in: suite conductor — routing + chaos playbook (default off)
     ├── growth-analytics/           # opt-in: North Star + AARRR + event taxonomy (default off)
     ├── positioning/                # opt-in: value prop / message house — a hypothesis (default off)
-    └── business-ops/               # opt-in: Lane A pricing/economics apply, Lane R legal/tax route (default off)
+    ├── business-ops/               # opt-in: Lane A pricing/economics apply, Lane R legal/tax route (default off)
+    └── product-output-safety/      # opt-in: govern harm from the product's own AI outputs (default off)
 ```
 
 `deep-code-review/references/` holds on-demand depth (method, domain

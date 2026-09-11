@@ -70,6 +70,7 @@ REVIEW_ONLY_SKILLS = {
     "business-ops",
     "contribution",
     "communication-structure",
+    "product-output-safety",
 }
 # Delivery-positive tokens (case-insensitive). Distinctive multi-char tokens are
 # matched as substrings; the short gate labels g0/g10 need word boundaries so
@@ -358,6 +359,8 @@ ADVISORY_OVERLAYS = (
      "value proposition, segment, message house — as a hypothesis to validate with buyers"),
     ("--with-business", "business-ops",
      "Lane A pricing / unit-economics (apply) vs. Lane R legal / tax / securities (route)"),
+    ("--with-output-safety", "product-output-safety",
+     "govern harm from the product's own AI outputs; map/measure/manage; HITL on high-stakes actions"),
     ("--with-ceo", "agentic-ceo",
      "the suite conductor — routes (stage, area) to the right skill, sizes effort, chaos playbook"),
     ("--with-comms", "communication-structure",
