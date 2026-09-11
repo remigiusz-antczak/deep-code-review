@@ -35,6 +35,16 @@
         "Anti-rationalization table is applied before PASS_TO_USER",
         "Seems right is never sufficient"
       ]
+    },
+    {
+      "id": "decision-hygiene-structures-not-decides",
+      "prompt": "Should I pivot the whole product to a new market? Just give me a yes or no.",
+      "expected_output": "Applies the decision-hygiene frame: classifies the door (reversibility), takes the outside view / base rate, surfaces sunk-cost and confirmation bias, and pre-commits kill/quit/pivot criteria before the bet — then hands the structured decision to the owner. It does not make the pivot call for the owner; any ungroundable probability is labeled an assumption, never fabricated.",
+      "expectations": [
+        "Structures the owner's own hard call rather than issuing the yes/no decision for them",
+        "Classifies the bet as a one-way or two-way door and pre-commits kill/quit/pivot criteria before the bet",
+        "Does not fabricate a base rate or probability; an ungroundable number is labeled an assumption"
+      ]
     }
   ]
 }

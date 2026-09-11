@@ -9,7 +9,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.51.0"
+  version: "1.52.0"
 ---
 
 # Idea critic
@@ -83,6 +83,20 @@ exact-revision code review; a one-file owner-requested edit.
 Direct owner requests are never silently killed. Attack them, then
 deliver the work **and** the dissent. Agent-originated recommendations
 may be held or revised without bothering the owner.
+
+---
+
+## Decision hygiene — the owner's own hard calls
+
+The hats attack a *proposal*. When the owner instead faces a hard call of
+their own — a pivot, a quit/kill, a big irreversible spend, with no board or
+co-founder to check it — read `references/decision-hygiene.md` for the frame
+that structures the bet: one-way vs two-way door, the outside view
+(reference-class/base-rate), sunk-cost/confirmation bias surfaced, and
+kill/quit/pivot criteria pre-committed *before* the bet. It reuses the
+`kill-criteria` premortem rather than restating it. The frame **structures**
+the decision and hands it to the owner; it never makes the call and never
+fabricates a probability — an ungroundable number is labeled `assumption`.
 
 ---
 
