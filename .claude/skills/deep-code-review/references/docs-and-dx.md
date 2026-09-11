@@ -43,6 +43,10 @@ Good docs aren't one long file — they answer distinct needs in distinct places
   reality — a doc that lies is worse than a missing doc.
 - **Never bake live metrics into prose** (they drift the moment they're
   written); cite the command that prints the current number instead.
+- For the full onboarding method behind these non-negotiables — reader/persona
+  modelling, the evaluation arc, progressive disclosure, host-native visuals,
+  anti-slop craft, accuracy-vs-code, and keeping the safe install path as the
+  quickstart — read `readme-authoring.md`.
 
 ## AI-facing doc (`CLAUDE.md` / `AGENTS.md`)
 

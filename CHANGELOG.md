@@ -3,6 +3,28 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.59.0] — 2026-09-11
+
+README-authoring method — so the skillset produces onboarding READMEs for any
+project, not just this one.
+
+### Added
+- **`deep-code-review/references/readme-authoring.md`** — the depth behind the
+  domain-O "README (human-facing)" checklist: model the reader (default the
+  evaluator), the plain-value-first onboarding arc with progressive disclosure,
+  one host-native diagram (quote Mermaid labels; no external badges — a rotting
+  live value), the anti-slop craft (superlatives out, tables over repeated
+  patterns, no uncontrolled third-party claims), accuracy-vs-code (every
+  command/flag verified against the tool; verify a pin actually pins), and keeping
+  the **safe install path as the quickstart**. Generalized from this repo's own
+  README overhaul and its independent review; routed from domain O and cross-linked
+  from `docs-and-dx.md`. New eval resists two planted bad asks (a version badge; a
+  shorter-but-unsafe install first).
+
+### Changed
+- Lockstep bump to **1.59.0** (deep-code-review, agentic-delivery, idea-critic,
+  plugin). Only `deep-code-review` gained content.
+
 ## [1.58.0] — 2026-09-11
 
 Adopt the **Perun** umbrella brand (issue #38) — theme + wordmark only.
