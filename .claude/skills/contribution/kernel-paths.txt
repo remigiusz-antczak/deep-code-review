@@ -1,0 +1,19 @@
+# Protected-core (kernel) paths for the contribution self-improvement flow.
+#
+# A drafted contribution whose changed files intersect this list is a KERNEL edit:
+# human-authored only, never an agent-drafted-and-sent contribution. The list is
+# itself a kernel path (meta-immutability) — the agent cannot widen its own mutable
+# surface by editing what it is forbidden to edit.
+#
+# Check (substring match; any hit STOPS the autonomous send):
+#   git diff --name-only <base>..HEAD | grep -Ff .claude/skills/contribution/kernel-paths.txt
+#
+# These are the evaluator, the scrub, the pins, the CI, and the banlist — the parts
+# that decide what is safe to contribute. They are maintained by humans directly.
+scripts/ci-gates.sh
+scripts/test-ci-gates.sh
+scripts/write-checksums.sh
+SHA256SUMS
+.github/workflows/ci.yml
+.banlist.txt
+.claude/skills/contribution/kernel-paths.txt
