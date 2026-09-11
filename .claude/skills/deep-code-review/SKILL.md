@@ -11,7 +11,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.32.0"
+  version: "1.33.0"
 ---
 
 # Deep Code Review
@@ -110,6 +110,7 @@ HISTORY_DEPTH: <git rev-list --count HEAD | N/A>
 REVERTS_CHECKED: <commits | NONE>
 BANNED_REMEDIES: <rejected approaches | NONE>
 ARCHETYPE: <web|api|data|agent|iac|lib|other>
+STAGE: <prototype|mvp|growth|mature | UNVERIFIED> (owner-declared, or named from evidence; unstated defaults to the stricter reading)
 COVERAGE_LEDGER: <applicable domains + must-load refs>
 ```
 
@@ -251,6 +252,37 @@ another axis (principle 4).
 
 ---
 
+## Project stage (calibrates urgency, not severity)
+
+Context still counts: a two-day **prototype** and a production system do not
+warrant the same *demands*. Stage calibrates **what blocks now vs. what is
+tracked for the next stage** — it never rewrites what a defect is. Set it in the
+first-response block; it shapes the going-forward roadmap (`report-format.md`).
+
+| Stage | What it is | Relax the *demand* on (urgency, not severity) |
+|---|---|---|
+| `prototype` | Throwaway spike / experiment; learning over durability | CI depth, full coverage, perf tuning, docs, tech-debt paydown |
+| `mvp` | First real shippable; finding product fit; keep it lean | scale/perf headroom, exhaustive tests, polish |
+| `growth` | Real users, scaling up | little — this is where CI, tests, observability, perf get hardened |
+| `mature` | Stable / maintenance | net-new scope; focus shifts to stability, tech-debt, supply chain |
+
+**Guardrails — a stage is a lens, never an excuse:**
+1. **Declared or evidenced, never guessed.** Stage is owner-stated, or the review
+   **names the signals** it read (tests/CI present, deploy config, users/traffic,
+   version ≥ 1.0, changelog depth) and marks it `UNVERIFIED` when it cannot.
+   **Unstated → default to the stricter (later-stage) reading.** A review that
+   assumed `prototype` and waved a Critical is a worse failure than one that
+   over-asked for CI on a spike.
+2. **Security, secret-exposure, and data-loss/integrity findings never relax** — a
+   `prototype` with an exposed credential is still Critical. These have no "relax"
+   entry at any stage; that is why the third column omits them on purpose.
+3. **Stage moves urgency, not intrinsic severity.** Every finding keeps its true
+   severity — reuse the latent-findings rule (intrinsic severity stays; stage
+   changes only what *blocks now*). The going-forward roadmap sequences findings
+   by stage-urgency; it does not downgrade them.
+
+---
+
 ## Findings report
 
 Exact templates (machine table, plain-language report, invariants ledger):
@@ -271,9 +303,12 @@ Two checklists; they fail independently.
 
 **(a) Review method complete**
 - First-response block printed (`SCOPE`, `START_SHA`, `TREE_STATE`,
-  `HISTORY_DEPTH`, `REVERTS_CHECKED`, `BANNED_REMEDIES`, `ARCHETYPE`,
+  `HISTORY_DEPTH`, `REVERTS_CHECKED`, `BANNED_REMEDIES`, `ARCHETYPE`, `STAGE`,
   `COVERAGE_LEDGER`); citations re-verified at that ref with a verbatim
   snippet.
+- On a FULL review, `STAGE` is stated (or `UNVERIFIED`, defaulting stricter) and a
+  stage-calibrated going-forward roadmap is produced (`report-format.md`); stage
+  never downgraded a security, secret, or data-loss finding.
 - Gate self-test claimed only when run.
 - Coverage ledger reconciled; fan-out units attributed (finder + lead-read);
   incomplete finder = `unverified`.

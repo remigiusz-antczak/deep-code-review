@@ -85,6 +85,22 @@ unmerged security fix, only-copy work — escalated in the findings table above.
 ## What's good
 - <brief; what to keep / what was done right>
 
+## Going-forward roadmap (stage-calibrated; not a second findings table)
+Sequence the findings **already listed above** by what to do for the current
+`STAGE` — an ordering, never a copy:
+- **Now (blocks at this stage):** <finding IDs whose severity gates here>.
+- **Next (before the next stage):** <IDs tracked now, due as the project matures>.
+- **Skillset to adopt going forward:** run `./install.sh --recommend <target>` and
+  name the overlays it returns (delivery / critic / comms / contribution) — point,
+  don't restate. Whether the repo is ready for an agent to work in it well:
+  `role-coverage.md`'s agent-readiness lens.
+- **Development direction (grounded in the code):** ≤ 3 evidence-backed moves for
+  this stage — e.g. "consolidate the three half-built features before adding a
+  fourth", "set module boundaries now if the team is about to grow" — each citing
+  a `file:line` or a named signal. Anything needing market, financial, or org
+  context the repo cannot evidence goes under **Decisions needed (owner)**, not
+  invented here.
+
 ## Standards imprint (Phase 6, if opted in)
 - <what was added/merged into AGENTS.md (and peer pointers) / gates / templates,
   or "not requested">
@@ -151,6 +167,12 @@ part), give one status for each — e.g. "🟡 what runs today · 🔴 before tu
 
 ## What's already good
 - <what to keep — credit the things done right>
+
+## What to do next (for where this project is)
+<plain language: the 1-3 things worth doing now for a <prototype / mvp / growth /
+mature> project, and what can safely wait until it grows — so the effort matches
+the stage instead of over-building a prototype or under-hardening a live product.
+Anything needing your business judgement is under "Decisions we need from you".>
 
 ## Open work to tidy up (if there are leftover branches)
 <plain language: how many unfinished/leftover branches exist, and what should
