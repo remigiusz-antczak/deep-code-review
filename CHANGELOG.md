@@ -3,6 +3,39 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.54.0] — 2026-09-11
+
+Two deep-code-review lenses: privacy-by-design product artifacts (issue #46, G5)
+and billing/monetization correctness (issue #48, G7).
+
+### Added
+- **`deep-code-review/references/privacy-by-design.md`** — the pre-code
+  privacy/compliance *artifacts* an EU user or enterprise buyer demands, as a lens
+  over domain Q: a ROPA-style processing register, a DPIA scaffold + risk
+  questions, a consent-UX spec, a subprocessor list with data-flow notes, and
+  data-residency options. It sits *above* `privacy-compliance.md` (which stays the
+  code layer — inventory, retention/DSAR/erasure, consent recording) and links to
+  it rather than restating it. **Boundary:** scaffold + gap-detect; the
+  privacy-policy/ToS text, whether a DPIA is legally required, and lawful-basis
+  selection route to counsel. Frameworks named by name only; **no article numbers
+  or legal deadlines** until fetched. New eval: a new PII field prompts the
+  register/DPIA question.
+- **`deep-code-review/references/billing-correctness.md`** — a mechanics lens on
+  domain E (cross-ref F/G/I) for revenue correctness: metering (exactly-once),
+  proration, dunning/failed-payment recovery, tax/VAT *application in code*,
+  refunds/chargebacks, webhook idempotency, and the double-charge/revenue-leakage
+  races. **Boundary:** review the logic; tax registration/filing and
+  revenue-recognition policy route to an accountant, pricing to the owner
+  (`business-ops`); **no invented tax rate**. New eval: a double-charge race and a
+  non-idempotent webhook are both flagged.
+
+### Changed
+- Both references routed from the domain table in `deep-code-review/SKILL.md`
+  (rows E and Q) with when-triggers; SKILL.md 21298 → 21439 bytes, well under the
+  24000 budget.
+- Lockstep bump to **1.54.0** (deep-code-review, agentic-delivery, idea-critic,
+  plugin). Only `deep-code-review` gained content.
+
 ## [1.53.0] — 2026-09-11
 
 Operational-readiness lens — incident response + continuity (issue #45, G4).
