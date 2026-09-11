@@ -3,6 +3,24 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.43.0] — 2026-09-11
+
+Fixes a routing bug in the `agentic-ceo` conductor (→ 1.1.0): its suite registry was
+written at 1.37.0 and never updated as later skills shipped, so it could not route to
+`growth-analytics` (1.38.0), `positioning` (1.41.0), or `business-ops` (1.42.0) — a
+third of the suite was unreachable from the conductor. Found by two independent review
+agents converging on the same defect.
+
+### Fixed
+- **`agentic-ceo` → 1.1.0** — the registry table and routing section now cover all
+  nine non-conductor skills; new routing eval `routes-later-skill-not-inline`
+  exercises dispatch to a later-shipped skill (business-ops Lane A/R). A
+  suite-enumeration completeness gate to prevent recurrence is filed as a follow-up.
+
+### Changed
+- Lockstep bump to **1.43.0** (deep-code-review, agentic-delivery, idea-critic,
+  plugin). All other skills unchanged.
+
 ## [1.42.0] — 2026-09-11
 
 Adds `business-ops` (1.0.0) — the second thin advisory guide (built last) and the
