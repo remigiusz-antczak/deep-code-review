@@ -3,6 +3,31 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.57.0] — 2026-09-11
+
+Support & feedback operations lens (issue #44, G3) — agentic-delivery.
+
+### Added
+- **`agentic-delivery/references/support-ops.md`** — narrow reactive support-ops:
+  an intake + triage taxonomy, a per-severity SLA template (owner sets the
+  numbers), canned-response quality, and the **support→backlog loop** (a ticket
+  revealing real work becomes a well-formed work item via the Where/Done-when/
+  Verify/Why contract). **Load-bearing safety gate:** never auto-send an external
+  reply and never make a promise/refund/commitment without owner approval — the
+  same human-approval-on-external-action gate the skill applies to push/deploy.
+  It cross-refs rather than restates: `incident-response.md` (outage tickets),
+  `deep-code-review`'s `docs-and-dx.md` (Diátaxis help-center), and
+  `communication-structure` (no-slop responses). Scope is narrow — not
+  onboarding/activation (growth/product-ux). New evals: a ticket becomes a
+  well-formed backlog item; no external reply/refund is auto-sent without
+  approval. Independently reviewed before merge.
+
+### Changed
+- Lockstep bump to **1.57.0** (deep-code-review, agentic-delivery, idea-critic,
+  plugin). Only `agentic-delivery` gained content (a reference + a minimal routing
+  pointer + two evals); it stays allowlisted for SKILL.md size (a trim pass into
+  references is due).
+
 ## [1.56.0] — 2026-09-11
 
 Adopt the two additive principles that were not yet codified (issue #37).

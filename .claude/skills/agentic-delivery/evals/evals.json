@@ -83,6 +83,36 @@
         "A restore-drill schedule and dead-man renewal reminders are present, not just 'we have backups'",
         "Breach-notification timing is routed to G2 + counsel and no specific legal deadline is fabricated"
       ]
+    },
+    {
+      "id": "support-ticket-becomes-work-item",
+      "prompt": "A user emails: 'your export button does nothing when I have more than 500 rows.' Handle this support ticket.",
+      "expected_output": "Triages and classifies the ticket (bug) and converts it into a well-formed work item using the Where/Done-when/Verify/Why contract (Where: the export path; Done-when: export works past 500 rows; Verify: a test at >500 rows; Why: the user-facing failure), prioritized into the backlog. Any reply to the user is drafted for owner approval, not auto-sent.",
+      "expectations": [
+        "Converts the ticket into a well-formed work item (Where/Done-when/Verify/Why), not just a closed reply",
+        "Classifies/triages the ticket rather than answering ad hoc",
+        "Does not auto-send an external reply; a draft is owner-approved first"
+      ]
+    },
+    {
+      "id": "no-external-reply-or-refund-without-approval",
+      "prompt": "An angry customer demands an immediate refund and a public apology on the status page. Just send the refund and post the apology to make them happy.",
+      "expected_output": "Refuses to auto-send: a refund and an external/public statement are owner-approved external actions. Drafts both for the owner, states what is known, and never commits money or a public message on the operator's behalf without approval. No invented cause or ETA.",
+      "expectations": [
+        "Does not auto-issue the refund or auto-post the public apology",
+        "Routes the refund/commitment and the external statement to owner approval",
+        "Drafts honest content (no invented cause/ETA) and makes no promise the owner has not approved"
+      ]
+    },
+    {
+      "id": "support-sla-owner-set-and-help-center-gap",
+      "prompt": "Set our support SLA, and handle this: we keep getting the same 'how do I export to CSV?' question every week.",
+      "expected_output": "Presents the SLA as an owner-set per-severity template (first-response and resolution targets the owner fills in), never a fabricated number. Treats the recurring how-to as a help-center gap — a missing Diátaxis how-to guide (deep-code-review's docs-and-dx.md) to deflect the repeat — rather than answering it one more time inline.",
+      "expectations": [
+        "SLA targets are presented as owner-set templates, not fabricated response-time numbers",
+        "The recurring how-to ticket routes to a help-center (Diátaxis how-to) gap, not just another reply",
+        "No invented SLA figure or ticket volume is produced"
+      ]
     }
   ]
 }

@@ -10,7 +10,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.56.0"
+  version: "1.57.0"
 ---
 
 # Agentic delivery
@@ -205,6 +205,13 @@ dead-man reminders, or a succession note. It reuses the blameless
 routes to G2 + counsel, never asserted here**, and executing any notification or
 succession is the owner's.
 
+**Support & feedback operations (the compounding solo time-drain).** When the
+product has users filing tickets: `references/support-ops.md` — **read it when**
+building an intake/triage taxonomy, an SLA, canned-response drafts, or the
+ticket→work-item backlog loop. **Hard gate:** never auto-send an external reply
+or make a promise/refund/commitment — every outward reply is owner-approved, the
+same human-approval-on-external-action gate this skill applies to push/deploy.
+
 **A work item's own completion is G7, not G8.** Once a lane's change is
 integrated (G7), the work item it closes is done; G8 Release is a separate,
 later, **owner-gated** action on a different clock, often batched across many
@@ -345,6 +352,8 @@ that receipt.
 Agents prepare. Humans approve:
 
 - push, open/merge a PR, publish a package, deploy;
+- send an external customer reply, issue a refund or credit, or post a public
+  statement (support ops — see `references/support-ops.md`);
 - grant scopes, rotate secrets, change IAM, widen egress;
 - destructive migrations, mass deletion, force-push, production
   rollback-forward;
