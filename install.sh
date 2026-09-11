@@ -326,7 +326,7 @@ EOF
 )"
   upsert_agents_block "${AGENTS}" "deep-code-review:begin" "deep-code-review:end" "${REVIEW_BLOCK}"
 
-  if [[ "${WITH_DELIVERY}" -eq 1 || "${WITH_CRITIC}" -eq 1 || "${WITH_COMMS}" -eq 1 || "${WITH_CONTRIBUTION}" -eq 1 ]]; then
+  if [[ "${WITH_DELIVERY}" -eq 1 || "${WITH_CRITIC}" -eq 1 || "${WITH_COMMS}" -eq 1 || "${WITH_CONTRIBUTION}" -eq 1 || "${WITH_DISCOVERY}" -eq 1 || "${WITH_CEO}" -eq 1 || "${WITH_GROWTH}" -eq 1 || "${WITH_POSITIONING}" -eq 1 || "${WITH_BUSINESS}" -eq 1 || "${WITH_OUTPUT_SAFETY}" -eq 1 ]]; then
     OVERLAY_LINES=""
     if [[ "${WITH_DELIVERY}" -eq 1 ]]; then
       OVERLAY_LINES="${OVERLAY_LINES}

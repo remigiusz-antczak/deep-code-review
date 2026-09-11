@@ -74,8 +74,10 @@ empty inventory is not a pass — it is an unfilled inventory.
 - **Human-in-the-loop gate on high-stakes / irreversible actions — the floor.**
   Anything costly or hard to reverse is gated behind human review or explicit
   confirmation by default; full autonomous execution of such an action is the
-  failure, not the feature. (Same principle as `agentic-delivery`'s human
-  approval on push/deploy and this repo's confirm-before-irreversible rule.)
+  failure, not the feature. This is the product-behaviour side of the same control
+  `deep-code-review` reviews in the agent's code — its security-ai-agents reference
+  covers Excessive Agency (high-impact / irreversible actions require human
+  confirmation) — and it mirrors `agentic-delivery`'s human approval on push/deploy.
 - **Show uncertainty and offer an override.** Surface confidence/limits; make the
   machine output correctable and reversible where the stakes warrant.
 - **Disclose where it matters.** Recommend an AI-generated / automated-decision
@@ -137,8 +139,11 @@ NIST AI Risk Management Framework — core functions **Govern, Map, Measure, Man
 AI RMF **Generative AI Profile (AI 600-1)** by name only, no control specifics
 asserted. Human-in-the-loop / human oversight of high-stakes automation. Named
 leads only — fetch and log a source before citing a specific figure or control
-(repo convention). Boundary cross-references: `deep-code-review` (the code's
-security) and `business-ops` Lane R (legal / regulatory routing). Output structure
+(repo convention). Boundary cross-references: `deep-code-review` — the code's security, including the
+shared Excessive-Agency / HITL and hallucination-grounding controls in its
+security-ai-agents reference (this skill governs those harms at the
+product-behaviour level, not in the code) — and `business-ops` Lane R (legal /
+regulatory routing). Output structure
 follows `communication-structure`.
 
 ## Verification
