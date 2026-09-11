@@ -344,6 +344,29 @@ def recommend(root: Path) -> dict:
     }
 
 
+# Advisory + conductor overlays — opt-in, default off, not in --full. --recommend
+# lists these UNCONDITIONALLY so the owner learns they exist at pack-selection time;
+# it never auto-installs them. Shape-based auto-push of the highest-fabrication-risk
+# skills (positioning, business-ops) onto a target would violate the deny-by-default,
+# owner-decides posture, so that is a deliberate non-goal.
+ADVISORY_OVERLAYS = (
+    ("--with-discovery", "product-discovery",
+     "is this worth building? what first? is it working? — from real-user evidence"),
+    ("--with-growth", "growth-analytics",
+     "what to measure — North Star, AARRR funnel, event taxonomy — on your own analytics"),
+    ("--with-positioning", "positioning",
+     "value proposition, segment, message house — as a hypothesis to validate with buyers"),
+    ("--with-business", "business-ops",
+     "Lane A pricing / unit-economics (apply) vs. Lane R legal / tax / securities (route)"),
+    ("--with-ceo", "agentic-ceo",
+     "the suite conductor — routes (stage, area) to the right skill, sizes effort, chaos playbook"),
+    ("--with-comms", "communication-structure",
+     "BLUF / no-slop structure for human-facing messages and deliverables"),
+    ("--with-contribution", "contribution",
+     "prepare a privacy-safe upstream improvement for a human to review and open"),
+)
+
+
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("target", help="project directory to inspect")
@@ -393,6 +416,12 @@ def main(argv: list[str]) -> int:
         if rec["shape"]["web"]:
             print("  UI target: also wire verify-visible-UX + ux-evidence")
             print("  (deep-code-review product-ux-quality.md).")
+
+    print()
+    print("advisory overlays available (opt-in, default off, not in --full;")
+    print("--recommend never auto-installs these — the owner chooses):")
+    for flag, name, reach in ADVISORY_OVERLAYS:
+        print(f"  {flag:20} {name} — {reach}")
 
     print()
     print("Owner decides. Agent may recommend --full. Do not install")
