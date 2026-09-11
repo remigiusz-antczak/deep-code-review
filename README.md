@@ -89,6 +89,7 @@ cd deep-code-review
 ./install.sh --with-critic /path/to/your/project   # + pre-owner idea critic
 ./install.sh --with-comms /path/to/your/project    # + BLUF/no-slop message rule
 ./install.sh --with-contribution /path/to/your/project # + prepare upstream PRs (default off, not in --full)
+./install.sh --with-discovery /path/to/your/project # + product-discovery: worth-building / PMF / prioritization (default off, not in --full)
 ./install.sh --full /path/to/your/project          # review + delivery + critic + comms
 ./install.sh --with-codex /path/to/your/project    # also .codex/skills/
 ./install.sh --with-extra-hosts /path/to/your/project  # Gemini, OpenCode, Copilot, Windsurf, Hermes, Kiro
@@ -132,6 +133,14 @@ A third, orthogonal overlay covers what any of those roles hands to a human:
   update BLUF, one ask, scannable, and free of AI-slop by default, so a busy
   reviewer gets the point in under 30 seconds. Governs structure and length,
   not voice — see "Chat voice is not vendored" below.
+
+And one overlay helps decide *what* to build:
+
+- **`product-discovery`** — decide whether something is worth building, what to
+  build first, and whether what shipped works, by structuring evidence from real
+  users (Mom Test, JTBD, riskiest-assumption gate, PMF read, ICE) — never
+  fabricating findings, personas, scores, or a validated verdict. Default off;
+  opt-in with `--with-discovery`.
 
 And one overlay improves the skillset itself:
 
@@ -246,7 +255,8 @@ verified** — never a remembered link.
     ├── agentic-delivery/           # opt-in gated delivery + role roster (references/roles.md)
     ├── idea-critic/                # opt-in pre-owner idea attack (the "evil twin")
     ├── communication-structure/    # opt-in BLUF/no-slop rule for persisted messages
-    └── contribution/               # opt-in: prepare a privacy-safe upstream PR (default off)
+    ├── contribution/               # opt-in: prepare a privacy-safe upstream PR (default off)
+    └── product-discovery/          # opt-in: worth-building / PMF / prioritization (default off)
 ```
 
 `deep-code-review/references/` holds on-demand depth (method, domain
