@@ -3,6 +3,25 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.40.0] — 2026-09-11
+
+Broadens `communication-structure` (→ 1.2.0) into the suite's **no-slop output
+contract**: it now governs human-facing *deliverables* (reports, plans, docs,
+tables), not only short messages. BLUF, one ask, core-value-only, and the full
+"cut on sight" list apply to any output; the 30-second / 150-word cap stays a
+message rule (a deliverable is as long as its content requires and no longer).
+This is the single home the `agentic-ceo` conductor already points every skill's
+output to — enforcing the owner's "clean, concise, no model-forced filler" bar
+across all outputs, not just chat.
+
+### Changed
+- **`communication-structure` → 1.2.0** — scope widened from messages to messages
+  *and* deliverables; new "Deliverables, not just messages" section; description
+  updated.
+- Lockstep bump to **1.40.0** (deep-code-review, agentic-delivery, idea-critic,
+  plugin). `agentic-ceo` / `growth-analytics` (1.0.0), `product-discovery` (1.1.0),
+  and `contribution` (1.1.0) unchanged.
+
 ## [1.39.0] — 2026-09-11
 
 Folds a **Non-goals** lens into `product-discovery` (→ 1.1.0) — the inverse of the
