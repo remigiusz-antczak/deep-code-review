@@ -75,8 +75,9 @@ roadmap). Every advisory skill keys to it.
 | growth / analytics | Proposed — research done | Retention-first; North Star; what to instrument per stage |
 | positioning / branding | Proposed — research done | VPC → positioning → messaging; highest fabrication-risk → thin guide, built last |
 | business / ops | Proposed — research done | Pricing/unit-economics (apply) vs. legal/tax/securities (route); built last |
-| CEO-under-pressure | Under research | Handle a flooding, high-stakes user: capture → triage → focus, support by action |
-| further gaps | Under research | Gap-analysis agent hunting missing areas/edges |
+| CEO-under-pressure | Researched → `agentic-ceo` (#36) | Capture losslessly → reflect back → triage → one next action → tracked backlog → support by action (never "calm down") |
+| responsible-AI / output safety | Researched → **build first among gaps** (NEW skill) | Govern the harm the product's own outputs do to end-users (NIST AI RMF lens) |
+| further areas (gap-analysis) | Researched → *Further areas* + issues | regulated-triage, support-ops, op-readiness, privacy-by-design, decision-hygiene, billing — mostly lenses |
 
 ## Build order (research-backed)
 1. **Critic + verifier** — ✅ have (`idea-critic`, `deep-code-review`); *assemble*, don't rebuild.
@@ -156,6 +157,75 @@ citations — not hoarded user data.
   rules in code, not prose** (= `contribution`'s `kernel-paths.txt` gate); **deny by
   default**. These validated recent work rather than changing it.
 
+## CEO under pressure (chaos playbook) — folds into `agentic-ceo` (#36)
+When the owner floods the orchestrator with many rapid, conflicting asks under real
+pressure, the failure is to freelance (obey the last thing, drop the rest, act on
+colliding orders) or to patronize ("calm down"). Support is **by action, not
+affect** — six moves in order:
+1. **Capture losslessly** — every request/aside becomes a numbered logged item
+   before any judgement; tag request vs. context; nothing filtered or merged.
+2. **Reflect the full list back** — the played-back numbered list *is* the
+   acknowledgement; name any collision between items as its own finding.
+3. **Triage to the vital few** — a sequential first-hit-wins chain: blocks-others or
+   irreversible → Now; failing on the live surface → Now; time-critical but
+   reversible → Next; else → Held (visible, not dropped).
+4. **One highest-leverage next action** — the lead domino + a one-line why, offered
+   as the existing A/B decision so the owner keeps final say.
+5. **Hold the rest as a tracked backlog** — each item has a visible state (in-flight
+   / next / held / dropped-with-reason); WIP-limit to one primary action.
+6. **Support by action** — acknowledge the stakes as legitimate, show the list, name
+   the move. **Forbidden:** "calm down"/"relax" (reactance + invalidation), toxic
+   positivity, minimizing, narrating their feelings, "on it!" with nothing captured,
+   silently absorbing conflicting orders.
+
+Boundary: the agent is an **organizer, not a therapist** — the calm comes from the
+system being visibly under control. Capture-mode is **not** yes-mode: it still
+surfaces real disagreement (conflicts, quality-bar breaches, spread-thin mediocrity)
+in one line with the standard cited, then the owner decides. Frameworks (by name):
+GTD capture/clarify, incident command (single commander, unity-of-command, activity
+log), emergency-severity triage, WIP limits, "the ONE thing," psychological
+reactance, motivational-interviewing reflective listening.
+
+## Further areas (from gap-analysis)
+The suite is strong on builder + product + code; the gap is the **end-user runtime
+axis** (what the product does to people once live) plus **operational readiness for
+the bad day**. Mostly **lenses** over existing skills, not new skills. Ranked:
+- **G1 · Responsible-AI / product-output safety** — NEW skill; govern harm from the
+  product's own outputs (bias, hallucination-as-fact, missing AI-disclosure,
+  deceptive patterns, unsafe automation). NIST AI RMF (GOVERN/MAP/MEASURE/MANAGE)
+  lens; measure via the eval harness (domain J); human-in-the-loop on high-stakes
+  outputs. **The defining hole for an agentic-*product* suite — build first.**
+- **G2 · Regulated-domain obligation triage** — small lens; a design-time decision
+  tree (health? payments? minors? EU data? biometrics? consequential decisions?)
+  that names the regime and routes **before** architecture hardens; re-runs on
+  entering a new market. Cheapest build, earliest bite; unblocks G4/G5.
+- **G3 · Support & feedback operations** — lens; intake/triage/SLA + support→backlog.
+- **G4 · Operational readiness** — lens over `agentic-delivery` postmortem + M/Q:
+  incident-response runbook, severity + comms + status page, break-glass access,
+  credential/renewal inventory with dead-man reminders, solo-founder succession.
+- **G5 · Privacy/compliance by design (product artifacts)** — lens over Q: data
+  inventory/ROPA, DPIA scaffold, consent-UX spec, subprocessor list; coupled to G2.
+- **G6 · Decision hygiene for the builder's own calls** — a routed reference
+  **extending `idea-critic`** (one-/two-way doors, base rates, kill criteria set up
+  front) — not a new skill.
+- **G7 · Billing / monetization system correctness** — a routed `deep-code-review`
+  reference (metering, proration, dunning, tax, webhook idempotency, double-charge
+  races) — mechanics of E/F/G/I applied to revenue.
+- **Conditional:** G8 trust & safety / abuse (multi-user products), G9 vendor
+  business-risk, G10 accessibility-as-design (mostly redundant with domain P).
+- **Do NOT build (redundant):** cost / i18n / a11y-code-gate / supply-chain /
+  data-integrity — already covered. **Owned by planned skills (name in their
+  charters):** scope-defense → prioritization; data-as-moat → product-strategy;
+  event-taxonomy → growth; pricing-strategy → business-ops; cloud right-sizing →
+  infra-by-stage.
+- **Boundary (all gaps):** inventory / scaffold / checklist / red-team / cite-only-
+  what-was-fetched; **never** fabricate a statute, deadline, CWE, or metric; route
+  every legal/regime determination to a licensed professional. Legal specifics stay
+  **by-name / UNVERIFIED** until fetched (as `privacy-compliance.md` already does).
+  NIST AI RMF was verified this session; GDPR/DPIA/COPPA/PCI/breach-clock specifics
+  were not — fetch before citing.
+- **Build first among gaps:** G1, then G2 (unblocks G4/G5), then G3.
+
 ## Decisions for the owner (open)
 1. **Rename / umbrella.** Defensible now that scope has widened (candidate: a
    Slavic-mythology theme, e.g. a "Perun" orchestrator, as a *thin* identity layer
@@ -176,7 +246,8 @@ citations — not hoarded user data.
   purpose (self-improvement changes deserve human review).
 - **Proposed / not built:** everything in *Build order* beyond the ✅ items; tracked
   as GitHub issues using the *Where / Done-when / Verify / Why* contract.
-- **Under research:** CEO-under-pressure, and a gap-analysis of remaining areas.
+- **Research complete:** all 12 areas + CEO-under-pressure + gap-analysis. Gaps are
+  tracked as issues; CEO-under-pressure folds into `agentic-ceo` (#36).
 
 *This document is provisional and will change as skills are built and decisions are
 made. It executes none of the open decisions above.*
