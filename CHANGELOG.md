@@ -3,6 +3,30 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.49.0] — 2026-09-11
+
+Fixes the plugin-install rail and stale first-party metadata (issues #78, #72, #80,
+#79). A `/plugin install` or marketplace pin previously discovered **zero** skills —
+skills live under `.claude/skills/` but the plugin default scans a root `skills/` and
+`plugin.json` declared no `skills` path, so only metadata loaded. Same honesty class
+as #55 (documented pin vs actual tree).
+
+### Fixed
+- **`.claude-plugin/plugin.json`** — add `"skills": "./.claude/skills"` so the plugin
+  rail discovers all 11 skills (the field supplements the default `skills/` scan; path
+  relative to plugin root, per the Claude Code plugins reference fetched this session).
+  `install.sh` already copied from `.claude/skills/`; the two rails now agree (#78).
+- **`plugin.json` description** — was a three-skill string ("gated-delivery and
+  idea-critic"); now states the real posture (review-only default + opt-in overlays)
+  without copying any skill's method (#72). The GitHub About field was updated to
+  match (#79).
+- **`docs/roadmap.md`** — `infra-evolution-by-stage` / `docs-evolution-by-stage`
+  marked shipped 1.35.0, not "Proposed" (#80).
+
+### Changed
+- Lockstep bump to **1.49.0** (deep-code-review, agentic-delivery, idea-critic,
+  plugin). No skill content changed.
+
 ## [1.48.0] — 2026-09-11
 
 Adds **`product-output-safety`** (skill #11) — governs the harm a product's own AI
