@@ -3,6 +3,29 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.41.0] — 2026-09-11
+
+Adds `positioning` (1.0.0) — the first of two thin advisory guides (highest
+fabrication-risk, built last): value proposition, segment, differentiation, and a
+message house on the USER's own inputs, produced as a hypothesis to validate with
+real buyers. Opt-in overlay, default off, not in `--full`; install with
+`--with-positioning`.
+
+### Added
+- **`positioning/`** (new skill, 1.0.0) — Value Proposition Canvas → positioning
+  statement → message house → validate-with-real-buyers, plus the minimum-viable-brand
+  rule pre-PMF. Every artifact is a hypothesis or an empty-slot template; refusal evals
+  enforce it: never fabricate TAM / competitor claims / customer quotes / outcome
+  numbers / trademark-domain clearance (a search is not clearance → route to a
+  professional). Frameworks registered by-name in `docs/standards-index.md`.
+- Wired into CI routing, checksums, `install.sh` (`--with-positioning`),
+  `CONTRIBUTING.md`, `README.md`, `CLAUDE.md`.
+
+### Changed
+- Lockstep bump to **1.41.0** (deep-code-review, agentic-delivery, idea-critic,
+  plugin). `agentic-ceo` / `growth-analytics` (1.0.0), `product-discovery` (1.1.0),
+  `communication-structure` (1.2.0), `contribution` (1.1.0) unchanged.
+
 ## [1.40.0] — 2026-09-11
 
 Broadens `communication-structure` (→ 1.2.0) into the suite's **no-slop output

@@ -23,6 +23,7 @@
 #   --with-discovery     also product-discovery (worth-building / PMF / prioritization; not in --full)
 #   --with-ceo           also agentic-ceo (suite conductor: routing + effort-sizing + chaos playbook; not in --full)
 #   --with-growth        also growth-analytics (North Star + AARRR + event taxonomy; not in --full)
+#   --with-positioning   also positioning (value prop / message house; a hypothesis, never fabricated market facts; not in --full)
 #   --full               review + delivery + critic + comms
 #   --recommend          inspect TARGET, print a pack, install nothing
 # Narrow:
@@ -66,6 +67,7 @@ on re-install). Overlay skills are opt-in.
   --with-discovery     Also install product-discovery (worth-building / PMF / prioritization; default off, not in --full)
   --with-ceo           Also install agentic-ceo (suite conductor: routing, effort-sizing, chaos playbook; default off, not in --full)
   --with-growth        Also install growth-analytics (North Star + AARRR + event taxonomy; default off, not in --full)
+  --with-positioning   Also install positioning (value prop / message house; a hypothesis, never fabricated market facts; default off, not in --full)
   --full               Review + delivery + critic + comms
   --recommend          Inspect TARGET and print a recommended pack; no writes
   -h, --help           Show this help
@@ -92,6 +94,7 @@ WITH_CONTRIBUTION=0
 WITH_DISCOVERY=0
 WITH_CEO=0
 WITH_GROWTH=0
+WITH_POSITIONING=0
 RECOMMEND_ONLY=0
 POSITIONAL=()
 for arg in "$@"; do
@@ -107,6 +110,7 @@ for arg in "$@"; do
     --with-discovery) WITH_DISCOVERY=1 ;;
     --with-ceo) WITH_CEO=1 ;;
     --with-growth) WITH_GROWTH=1 ;;
+    --with-positioning) WITH_POSITIONING=1 ;;
     --full) WITH_DELIVERY=1; WITH_CRITIC=1; WITH_COMMS=1 ;;
     --recommend) RECOMMEND_ONLY=1 ;;
     --with-cursor) echo "note: --with-cursor is default now; ignoring." >&2 ;;
@@ -228,6 +232,9 @@ if [[ "${WITH_CEO}" -eq 1 ]]; then
 fi
 if [[ "${WITH_GROWTH}" -eq 1 ]]; then
   SKILLS+=("growth-analytics")
+fi
+if [[ "${WITH_POSITIONING}" -eq 1 ]]; then
+  SKILLS+=("positioning")
 fi
 
 for skill in "${SKILLS[@]}"; do
@@ -354,6 +361,12 @@ EOF
   that answers a named question — on your own analytics, never fabricated benchmarks.
   Default off."
     fi
+    if [[ "${WITH_POSITIONING}" -eq 1 ]]; then
+      OVERLAY_LINES="${OVERLAY_LINES}
+- \`positioning\` — value proposition, segment, differentiation, and message house on
+  your own inputs, as a hypothesis to validate with real buyers. Never fabricates TAM,
+  competitor claims, quotes, or trademark clearance. Default off."
+    fi
     OVERLAY_BLOCK="$(cat <<EOF
 <!-- dcr-overlays:begin -->
 ## Optional overlays
@@ -368,7 +381,7 @@ here — if compressed assistant prose is wanted, add JuliusBrussee/caveman
 separately.
 
 Re-run upstream \`install.sh --with-delivery\` / \`--with-critic\` /
-\`--with-comms\` / \`--with-contribution\` / \`--with-discovery\` / \`--with-ceo\` / \`--with-growth\` / \`--full\` to refresh this stamp.
+\`--with-comms\` / \`--with-contribution\` / \`--with-discovery\` / \`--with-ceo\` / \`--with-growth\` / \`--with-positioning\` / \`--full\` to refresh this stamp.
 <!-- dcr-overlays:end -->
 EOF
 )"
