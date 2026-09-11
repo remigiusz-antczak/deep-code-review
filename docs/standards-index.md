@@ -235,6 +235,12 @@ A03, cross-referenced from `references/security-agent-skills.md` AST02).
   checklist rests on ("the state of the Increment when it meets the quality
   measures required"); cite the Scrum Guide directly if a version-specific claim
   is needed.
+- **Chaos-playbook / orchestration frameworks** (named by `agentic-ceo`): GTD
+  capture-and-clarify; incident command (single commander, unity-of-command,
+  activity log); emergency-severity triage; "the ONE thing"; psychological
+  reactance; motivational-interviewing reflective listening. Named leads only — no
+  URL or figure fetched this session; verify before citing specifics. (WIP limits
+  and orchestrator–worker delegation are already registered above.)
 
 > When the skill needs a version-specific detail from any of these, it must fetch
 > the current source at review time and cite only the URL it verified.

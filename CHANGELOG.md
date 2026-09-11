@@ -3,6 +3,31 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.37.0] — 2026-09-11
+
+Adds `agentic-ceo` (1.0.0) — the suite's conductor: the orchestrator that routes
+across the specialist skills, sizes its own effort to the project stage, and runs
+the under-pressure chaos playbook. Opt-in overlay, default off, not in `--full`;
+install with `--with-ceo`.
+
+### Added
+- **`agentic-ceo/`** (new skill, 1.0.0) — a registry of the suite's skills (a map,
+  not a bundle), `(stage, area) -> (skill, lens)` routing, stage/size effort-sizing
+  (one agent wearing several skill-hats on small work; fan-out only for read-mostly,
+  decomposable work), and the owner-under-pressure chaos playbook (capture losslessly
+  -> reflect the full list -> triage to the vital few -> one next action -> hold the
+  rest -> support by action, never "calm down"). Refusal evals enforce
+  route-not-fan-out on small work, no dropped request under a flood, and routing the
+  unknowable to the owner. Self-contained for the suite; general delivery/critique
+  defer to `agentic-delivery` / `idea-critic`.
+- Wired into CI routing, checksums, `install.sh` (`--with-ceo`), `CONTRIBUTING.md`,
+  `README.md`, and `CLAUDE.md`.
+
+### Changed
+- Lockstep bump to **1.37.0** (deep-code-review, agentic-delivery, idea-critic,
+  plugin). `product-discovery` (1.0.0), `contribution` (1.1.0), and
+  `communication-structure` (1.1.0) unchanged.
+
 ## [1.36.0] — 2026-09-11
 
 Adds `product-discovery` (1.0.0) — the first product-advisory specialist skill:

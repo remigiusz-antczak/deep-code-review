@@ -21,6 +21,7 @@
 #   --with-comms         also communication-structure
 #   --with-contribution  also contribution (prepare upstream PRs; not in --full)
 #   --with-discovery     also product-discovery (worth-building / PMF / prioritization; not in --full)
+#   --with-ceo           also agentic-ceo (suite conductor: routing + effort-sizing + chaos playbook; not in --full)
 #   --full               review + delivery + critic + comms
 #   --recommend          inspect TARGET, print a pack, install nothing
 # Narrow:
@@ -62,6 +63,7 @@ on re-install). Overlay skills are opt-in.
   --with-comms         Also install communication-structure (BLUF messages)
   --with-contribution  Also install contribution (prepare upstream PRs; default off, not in --full)
   --with-discovery     Also install product-discovery (worth-building / PMF / prioritization; default off, not in --full)
+  --with-ceo           Also install agentic-ceo (suite conductor: routing, effort-sizing, chaos playbook; default off, not in --full)
   --full               Review + delivery + critic + comms
   --recommend          Inspect TARGET and print a recommended pack; no writes
   -h, --help           Show this help
@@ -86,6 +88,7 @@ WITH_CRITIC=0
 WITH_COMMS=0
 WITH_CONTRIBUTION=0
 WITH_DISCOVERY=0
+WITH_CEO=0
 RECOMMEND_ONLY=0
 POSITIONAL=()
 for arg in "$@"; do
@@ -99,6 +102,7 @@ for arg in "$@"; do
     --with-comms) WITH_COMMS=1 ;;
     --with-contribution) WITH_CONTRIBUTION=1 ;;
     --with-discovery) WITH_DISCOVERY=1 ;;
+    --with-ceo) WITH_CEO=1 ;;
     --full) WITH_DELIVERY=1; WITH_CRITIC=1; WITH_COMMS=1 ;;
     --recommend) RECOMMEND_ONLY=1 ;;
     --with-cursor) echo "note: --with-cursor is default now; ignoring." >&2 ;;
@@ -215,6 +219,9 @@ fi
 if [[ "${WITH_DISCOVERY}" -eq 1 ]]; then
   SKILLS+=("product-discovery")
 fi
+if [[ "${WITH_CEO}" -eq 1 ]]; then
+  SKILLS+=("agentic-ceo")
+fi
 
 for skill in "${SKILLS[@]}"; do
   for host in "${HOSTS[@]}"; do
@@ -327,6 +334,12 @@ EOF
   users (Mom Test, JTBD, riskiest-assumption gate, PMF read, ICE). Never
   fabricates findings, personas, scores, or a validated verdict. Default off."
     fi
+    if [[ "${WITH_CEO}" -eq 1 ]]; then
+      OVERLAY_LINES="${OVERLAY_LINES}
+- \`agentic-ceo\` — the suite's conductor: routes (stage, area) to the right skill
+  and lens, sizes effort to the project (no swarm on small work), and runs the
+  under-pressure chaos playbook. Routes; never duplicates a skill. Default off."
+    fi
     OVERLAY_BLOCK="$(cat <<EOF
 <!-- dcr-overlays:begin -->
 ## Optional overlays
@@ -341,7 +354,7 @@ here — if compressed assistant prose is wanted, add JuliusBrussee/caveman
 separately.
 
 Re-run upstream \`install.sh --with-delivery\` / \`--with-critic\` /
-\`--with-comms\` / \`--with-contribution\` / \`--with-discovery\` / \`--full\` to refresh this stamp.
+\`--with-comms\` / \`--with-contribution\` / \`--with-discovery\` / \`--with-ceo\` / \`--full\` to refresh this stamp.
 <!-- dcr-overlays:end -->
 EOF
 )"

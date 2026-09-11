@@ -90,6 +90,7 @@ cd deep-code-review
 ./install.sh --with-comms /path/to/your/project    # + BLUF/no-slop message rule
 ./install.sh --with-contribution /path/to/your/project # + prepare upstream PRs (default off, not in --full)
 ./install.sh --with-discovery /path/to/your/project # + product-discovery: worth-building / PMF / prioritization (default off, not in --full)
+./install.sh --with-ceo /path/to/your/project      # + agentic-ceo: suite conductor — routing + chaos playbook (default off, not in --full)
 ./install.sh --full /path/to/your/project          # review + delivery + critic + comms
 ./install.sh --with-codex /path/to/your/project    # also .codex/skills/
 ./install.sh --with-extra-hosts /path/to/your/project  # Gemini, OpenCode, Copilot, Windsurf, Hermes, Kiro
@@ -141,6 +142,13 @@ And one overlay helps decide *what* to build:
   users (Mom Test, JTBD, riskiest-assumption gate, PMF read, ICE) — never
   fabricating findings, personas, scores, or a validated verdict. Default off;
   opt-in with `--with-discovery`.
+
+And one overlay conducts the suite:
+
+- **`agentic-ceo`** — the suite's conductor: routes (stage, area) to the right
+  skill and lens, sizes effort to the project (one agent wearing several hats on
+  small work; fan-out only for read-mostly work), and runs the under-pressure
+  chaos playbook. Routes; never duplicates a skill. Default off; `--with-ceo`.
 
 And one overlay improves the skillset itself:
 
@@ -256,7 +264,8 @@ verified** — never a remembered link.
     ├── idea-critic/                # opt-in pre-owner idea attack (the "evil twin")
     ├── communication-structure/    # opt-in BLUF/no-slop rule for persisted messages
     ├── contribution/               # opt-in: prepare a privacy-safe upstream PR (default off)
-    └── product-discovery/          # opt-in: worth-building / PMF / prioritization (default off)
+    ├── product-discovery/          # opt-in: worth-building / PMF / prioritization (default off)
+    └── agentic-ceo/                # opt-in: suite conductor — routing + chaos playbook (default off)
 ```
 
 `deep-code-review/references/` holds on-demand depth (method, domain

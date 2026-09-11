@@ -13,6 +13,7 @@ export LC_ALL=C
        .claude/skills/communication-structure \
        .claude/skills/contribution \
        .claude/skills/product-discovery \
+       .claude/skills/agentic-ceo \
        -type f ! -name SHA256SUMS | sort
 } | while IFS= read -r f; do
   sha256sum "$f"
