@@ -11,7 +11,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.53.0"
+  version: "1.54.0"
 ---
 
 # Deep Code Review
@@ -190,7 +190,7 @@ footguns: `references/language-stack-redflags.md`.
 | B | AppSec (OWASP Top 10:2025) | `security-appsec.md` |
 | C | AI / LLM / agents | `security-ai-agents.md`, `security-agent-skills.md` |
 | D | Data integrity | `data-quality.md` |
-| E | Performance, efficiency & cost | `performance-db-cost.md`, `model-tiering.md` |
+| E | Performance, efficiency & cost | `performance-db-cost.md`, `model-tiering.md`, `billing-correctness.md` (when the target meters, subscribes, or charges) |
 | F | Reliability & error handling | `reliability-error-handling.md` |
 | G | Concurrency & shared state | `concurrency-shared-state.md` |
 | H | Tech debt, dead code, maintainability | `domain-checklists.md`, `skill-authoring-and-size.md` (when the target ships/installs skills) |
@@ -202,7 +202,7 @@ footguns: `references/language-stack-redflags.md`.
 | N | Config, secrets, environments | `domain-checklists.md` |
 | O | Docs & DX | `docs-and-dx.md`, `docs-evolution-by-stage.md` (which-docs-when, by stage) |
 | P | Frontend / UI / a11y | `frontend-a11y.md`, `product-ux-quality.md` |
-| Q | Privacy, compliance, licensing | `privacy-compliance.md` |
+| Q | Privacy, compliance, licensing | `privacy-compliance.md` (code layer), `privacy-by-design.md` (pre-code product artifacts) |
 | R | i18n, encoding, localization | `domain-checklists.md` |
 | S | Branches, merges, open-work triage | `branch-and-merge-hygiene.md` |
 

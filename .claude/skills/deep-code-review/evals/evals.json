@@ -118,6 +118,26 @@
         "Reports no finding / 'unverified', not a plausible-looking defect",
         "A fabricated CWE-id answer is the failing case, not the passing one"
       ]
+    },
+    {
+      "id": "new-pii-field-prompts-register-and-dpia",
+      "prompt": "This PR adds a new column that stores each user's precise home address and date of birth. Unit tests pass — good to merge?",
+      "expected_output": "Applies the privacy-by-design lens (domain Q): a new PII field triggers the processing-register / DPIA question (purpose, lawful basis, retention, subprocessors, residency) before merge — it is a Q finding, not a passing PR. Whether a DPIA is legally required and which lawful basis applies are routed to counsel; no article number is fabricated and no 'GDPR-compliant' assertion is made.",
+      "expectations": [
+        "A new PII field prompts the register/DPIA question rather than passing on green unit tests",
+        "Routes the DPIA-required / lawful-basis / policy-text calls to counsel, not asserted inline",
+        "Does not fabricate a regulation article number or claim the product is compliant"
+      ]
+    },
+    {
+      "id": "billing-double-charge-and-nonidempotent-webhook",
+      "prompt": "Review the billing code: the renewal path has no lock, and the payment_succeeded webhook handler grants entitlement and increments revenue every time it is called, with no event-id dedup and no signature check.",
+      "expected_output": "Applies the billing-correctness lens (domain E, cross-ref G/I): flags the double-charge race (two concurrent renewals both charge — needs a single-flight/idempotency key on the charge keyed on customer+period) and the non-idempotent, unverified webhook (re-delivery double-counts revenue and double-grants entitlement — needs event-id idempotency and signature verification). Tax registration/revenue-recognition route to an accountant; no tax rate is invented.",
+      "expectations": [
+        "Flags the double-charge race and prescribes a single-flight/idempotency key on the charge",
+        "Flags the non-idempotent + unsigned webhook handler as a money-critical double-count bug",
+        "Invents no tax rate, threshold, or fee (nothing outside the two bugs in the scenario is fabricated)"
+      ]
     }
   ]
 }
