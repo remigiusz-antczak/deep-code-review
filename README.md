@@ -6,15 +6,33 @@
 down chaos, never fabricates, and leaves the bar in place. Named for the Slavic
 thunder god of order and justice.
 
-Perun's flagship is **`deep-code-review`**: a universal code-review skill you can
-drop into any repository. It turns "look this over" into a rigorous, reproducible
-audit that covers correctness, security, AI/LLM safety, data quality, performance
-and cost, reliability, testing, infrastructure, docs, and accessibility — and
-ends with a severity-ranked report you can act on. Works in any language or
-stack, on any major coding agent (Cursor, Claude Code, Codex, Copilot, Gemini,
-Aider, …), as a one-shot prompt, or as a human checklist. Opt-in overlays add
-gated delivery, an idea critic, a suite conductor, and stage-aware product,
-growth, positioning, business-ops, and output-safety specialists.
+Perun's flagship is **`deep-code-review`**: a universal code-review skill you drop
+into any repository. It turns "look this over" into a rigorous, reproducible audit
+— correctness, security, AI/LLM safety, data quality, performance and cost,
+reliability, testing, infrastructure, docs, accessibility — that ends with a
+severity-ranked report you can act on. Works in any language or stack, on any
+major coding agent (Cursor, Claude Code, Codex, Copilot, Gemini, Aider, …), as a
+one-shot prompt, or as a plain human checklist. Opt-in overlays extend it into a
+full product-building suite.
+
+> [!NOTE]
+> **New here?** Skim **[Who it's for](#who-its-for)**, then
+> **[What's in the box](#whats-in-the-box)**. Ready to try it? **[Quickstart](#quickstart)**.
+
+---
+
+## Who it's for
+
+| You are… | Perun gives you… | Start here |
+|---|---|---|
+| A **solo builder** shipping with AI agents | one consistent bar, so agent-written code is judged the same way every time | [Quickstart](#quickstart) |
+| A **non-technical founder** | a plain-language health scorecard and the decisions that need *you* — without reading the code | [What you get](#what-you-get) |
+| A **small team** | a portable software-house — review, gated delivery, and the roles a strong team runs — without a bot per role | [What's in the box](#whats-in-the-box) |
+| A **platform / infra engineer** | an air-gapped, SHA-verified install and a bar you can imprint across many repos | [Quickstart](#quickstart) |
+
+Every advisory overlay works on **your own inputs and evidence** and never
+fabricates market, financial, or security facts — it structures your reasoning
+and routes what it cannot know to you or a professional.
 
 ---
 
@@ -23,31 +41,182 @@ growth, positioning, business-ops, and output-safety specialists.
 An ad-hoc read-through finds the obvious bugs and misses the expensive ones: the
 IDOR that leaks another tenant's data, the enrichment run that silently
 overwrites a verified value with a blank, the N+1 that shows up only under load,
-the LLM call that trusts a scraped web page as an instruction, the migration
-that locks a table during deploy, the API called "every run" that quietly grows
-the bill. Perun makes the review **systematic** — a fixed method,
-domain checklists mapped to current standards, an adversarial pass, and a report
-format — so the same rigor applies every time, on any project, by a human or an
-agent.
+the LLM call that trusts a scraped web page as an instruction, the migration that
+locks a table during deploy, the API called "every run" that quietly grows the
+bill.
 
-Two things make it more than a checklist:
+Perun makes the review **systematic** — a fixed method, domain checklists mapped
+to current standards, an adversarial pass, and a report format — so the same
+rigor applies every time, on any project, by a human or an agent. Two things make
+it more than a checklist:
 
 - **It judges the outcome, not just the code.** For data and ML pipelines it
-  audits what the code *produces* — fabrication, duplication, entity-merge
-  errors, silent quality regressions — against a hard "quality can only improve,
-  never silently degrade" invariant.
+  audits what the code *produces* — fabrication, duplication, entity-merge errors,
+  silent quality regressions — against a hard "quality can only improve, never
+  silently degrade" invariant.
 - **It leaves the bar in place.** An optional final phase imprints a tailored
   standards set — a canonical cross-vendor `AGENTS.md` (with `CLAUDE.md` and peer
-  agent files as thin pointers to it), pre-commit/CI gates, and templates — into
-  the reviewed project so the *next* contributor or agent (any vendor) holds the
-  same quality, security, and efficiency bar without re-deriving it.
+  agent files as thin pointers to it), pre-commit/CI gates, and templates — so the
+  *next* contributor or agent, of any vendor, holds the same bar without
+  re-deriving it.
+
+---
+
+## What you get
+
+- **A severity-ranked report** (Blocker → Critical → High → Medium → Low → Nit).
+  Every finding carries `file:line` evidence and a concrete fix; anything the
+  evidence can't confirm is marked `unverified`, never guessed.
+- **A plain-language scorecard for non-coders.** The review also lands a
+  human-readable summary — a traffic-light health scorecard, the top risks in
+  plain terms, and the decisions that need an owner — so a founder or lead can act
+  without reading the diff.
+- **A durable bar (opt-in).** The imprint phase leaves standards + gates in the
+  repo so quality holds on the *next* change, not just this one.
+
+A worked, fictional example report: [`docs/example-review-report.md`](docs/example-review-report.md).
+
+---
+
+## What's in the box
+
+One always-on bar, plus opt-in overlays you add only when the moment needs them.
+
+```mermaid
+flowchart TB
+  DCR["⚡ deep-code-review — the always-on bar<br/>review · security · AI-safety · data integrity"]
+  DCR --> DECIDE["Decide what to build<br/>product-discovery · positioning · business-ops"]
+  DCR --> BUILD["Build it<br/>agentic-delivery · idea-critic"]
+  DCR --> SHIP["Ship and grow<br/>product-output-safety · growth-analytics"]
+  DCR --> RUN["Orchestrate and communicate<br/>agentic-ceo · communication-structure · contribution"]
+```
+
+Pick by the need in front of you. Everything except the review bar is **opt-in and
+default-off**:
+
+| Your need | Skill | Install |
+|---|---|---|
+| Review / harden / quality-gate a repo, PR, or diff | `deep-code-review` | **default** (always installed) |
+| Build a feature or migration under gated, multi-role delivery | `agentic-delivery` | `--with-delivery` · in `--full` |
+| Attack a plan or a "we should" before it reaches you | `idea-critic` | `--with-critic` · in `--full` |
+| Decide if it's worth building, what to build first, or if it's working | `product-discovery` | `--with-discovery` |
+| Decide what to measure — North Star, funnel, retention | `growth-analytics` | `--with-growth` |
+| Shape how you describe it to the market | `positioning` | `--with-positioning` |
+| Price it, or tell an arithmetic question from a legal / tax question | `business-ops` | `--with-business` |
+| Ship a feature whose own AI output or action could harm a user | `product-output-safety` | `--with-output-safety` |
+| Route a multi-skill session and stay strategic under pressure | `agentic-ceo` | `--with-ceo` |
+| Write a clean, no-slop PR body, status, or deliverable | `communication-structure` | `--with-comms` · in `--full` |
+| Feed a reusable lesson back upstream, privacy-safe | `contribution` | `--with-contribution` |
+
+`./install.sh --recommend <project>` prints this map tuned to your repo, then lets
+you decide — the default install stays review-only.
+
+> Perun makes the **bar** portable — so any agent, on any repo, is judged the
+> same way. If you already run another delivery framework, keep it — don't stack a
+> second delivery OS on the same project.
+
+---
+
+## Quickstart
+
+Agent-agnostic: `install.sh` copies the skills into the roots major hosts
+discover (`.agents/`, `.cursor/`, `.claude/`) and writes a version-stamped
+`AGENTS.md` pointer. Default is **review only**; overlays are opt-in. It runs
+**fully local — no network, no sudo, and reversible**: any existing skill is
+backed up (never overwritten), so an install can be undone.
+
+> [!IMPORTANT]
+> **Pin a published release tag** and verify the checksums. Don't `curl | bash`
+> an unsigned `HEAD` — this is the supply-chain discipline the review itself
+> checks for (domains K and C).
+
+```bash
+# replace vX.Y.Z with the latest release tag (see the repo's Releases page)
+git clone --branch vX.Y.Z --depth 1 \
+  https://github.com/remigiusz-antczak/deep-code-review.git
+cd deep-code-review
+shasum -a 256 -c SHA256SUMS     # verify integrity — do not skip (Linux: sha256sum -c SHA256SUMS)
+
+./install.sh /path/to/your/project               # review only (the default)
+./install.sh --recommend /path/to/your/project   # inspect, print a pack, write nothing
+./install.sh --full /path/to/your/project         # review + delivery + critic + comms (3 overlays)
+```
+
+<details>
+<summary><b>All overlays &amp; host options</b></summary>
+
+```bash
+./install.sh --with-delivery      /path/to/project   # gated multi-role delivery
+./install.sh --with-critic        /path/to/project   # pre-owner idea critic
+./install.sh --with-comms         /path/to/project   # BLUF / no-slop message rule
+./install.sh --with-discovery     /path/to/project   # worth-building / PMF / prioritization
+./install.sh --with-ceo           /path/to/project   # suite conductor — routing + chaos playbook
+./install.sh --with-growth        /path/to/project   # North Star + AARRR + event taxonomy
+./install.sh --with-positioning   /path/to/project   # value prop / message house (a hypothesis)
+./install.sh --with-business      /path/to/project   # Lane A pricing/economics · Lane R legal/tax route
+./install.sh --with-output-safety /path/to/project   # govern harm from the product's own AI outputs
+./install.sh --with-contribution  /path/to/project   # prepare privacy-safe upstream PRs
+
+# hosts & packaging
+./install.sh --with-codex         /path/to/project   # also .codex/skills/
+./install.sh --with-extra-hosts   /path/to/project   # Gemini, OpenCode, Copilot, Windsurf, Hermes, Kiro
+./install.sh --minimal            /path/to/project   # only .claude/skills/ + AGENTS.md
+./install.sh --claude-only        /path/to/project   # only .claude/skills/ (no AGENTS.md)
+```
+
+The seven overlays here are opt-in and **not** in `--full` (which is review +
+delivery + critic + comms); add each with its flag. `install.sh` **copies** the
+skills — it never symlinks — so re-run it after a `git pull` to update. It's the
+air-gapped, SHA-stamped path; see [`SECURITY.md`](SECURITY.md).
+
+</details>
+
+Once installed, **run it** on slash-skill hosts, or just ask in plain words:
+
+```
+/deep-code-review FULL              # or: "run a deep code review FULL on this repo"
+/deep-code-review DIFF origin/main
+/deep-code-review FILE src/auth.ts
+```
+
+Also usable **as a one-shot prompt** (paste the installed `SKILL.md`, name the
+target and scope) or **as a human checklist** (walk the domain sections A–S
+directly). Chat voice is not vendored — if you want compressed assistant prose,
+add [JuliusBrussee/caveman](https://github.com/JuliusBrussee/caveman) separately;
+code, PR bodies, and docs stay normal English.
+
+---
+
+## How it works
+
+```mermaid
+flowchart LR
+  P0["Phase 0<br/>Pin ref · map · triage-first"] --> P1["Phase 1<br/>Ground truth<br/>build · test · lint"]
+  P1 --> P2["Phase 2<br/>Domain audits A–S"]
+  P2 --> P3["Phase 3<br/>Adversarial<br/>red-team pass"]
+  P3 --> P4["Phase 4<br/>Synthesize and rank severity"]
+  P4 --> P5["Phase 5<br/>Report — file:line + fixes"]
+  P5 -.opt-in.-> P6["Phase 6<br/>Imprint standards<br/>into the repo"]
+  P2 -. loads on demand .- R[("references/")]
+```
+
+On a git checkout the review **pins an immutable ref** (`START_SHA`) and, for
+`FULL`, prefers a dedicated worktree so a concurrent agent can't change what's
+being read mid-audit. Fan-out findings are labelled `CONFIRMED`, `CORROBORATED`,
+or `PLAUSIBLE`. The exact report format and definition of done live in the
+skill's `SKILL.md`.
 
 ---
 
 ## What it checks
 
-The method walks nineteen domains (A–S); each has a red-flag list in `SKILL.md`
-and a deep detection playbook in `references/`.
+Nineteen domains (A–S), each with a red-flag list in `SKILL.md` and a deep
+detection playbook in `references/` — plus a dedicated **adversarial / red-team
+pass** and a **useless-work audit** (cost with no value: repeated identical
+API/LLM/DB calls, over-fetching, "call it every run" patterns).
+
+<details>
+<summary><b>The nineteen domains</b></summary>
 
 | Domain | Covers | Deep reference |
 |---|---|---|
@@ -61,257 +230,55 @@ and a deep detection playbook in `references/`.
 | H Maintainability | dead code, duplication, feature flags, lockstep surfaces | — |
 | I APIs & integration | contracts, webhooks, message-schema evolution | `api-contracts.md` |
 | J Testing & evals | taxonomy, test-the-failure, AI eval harness | `testing-and-evals.md` |
-| K Build / CI / supply chain | reproducible build, SHA-pinned actions, SBOM, signatures, dependency currency & safe upgrades | `dependency-currency-and-upgrades.md` |
+| K Build / CI / supply chain | reproducible build, SHA-pinned actions, SBOM, signatures, dependency currency | `dependency-currency-and-upgrades.md` |
 | L Infra / IaC / cloud | Docker, K8s, Terraform, IAM, network exposure | `infra-iac-containers.md` |
 | M Observability | logs/metrics/traces, golden signals, audit integrity, restore drills | `observability.md` |
 | N Config & secrets | env-only secrets, safe defaults, clean no-op | — |
 | O Docs & DX | Diátaxis, C4, ADRs, one-command setup, repo hygiene, cross-agent imprint | `docs-and-dx.md` |
 | P Frontend / a11y | WCAG 2.2 AA, Core Web Vitals, plus the *design half* (five data states, encoding, metric deltas) | `frontend-a11y.md`, `product-ux-quality.md` |
-| Q Privacy & licensing | minimization, retention/erasure, consent flags, license compat | `privacy-compliance.md` |
+| Q Privacy & licensing | minimization, retention/erasure, consent flags, license compat | `privacy-compliance.md`, `privacy-by-design.md` |
 | R i18n & encoding | locale-aware formatting, Unicode normalization | — |
-| S Branches & open-work triage | branching model, merge/PR/rebase/delete per branch, squash-merge detection, safe cleanup | `branch-and-merge-hygiene.md` |
+| S Branches & open-work triage | branching model, merge/PR/rebase per branch, safe cleanup | `branch-and-merge-hygiene.md` |
 | + | per-language grep-able footguns | `language-stack-redflags.md` |
 
-Plus a dedicated **adversarial / red-team pass** and a **useless-work audit**
-(cost with no value: repeated identical API/LLM/DB calls, over-fetching,
-"call it every run" patterns).
+</details>
 
 ---
 
-## Which skill when
+## Trust & safety
 
-One map, ten skills — pick by the need in front of you. Each is opt-in and
-default-off except the review bar; depth lives in each skill, so this only says
-which to reach for.
+Perun is built to be trusted with your code, and it dogfoods its own rules.
 
-| Your need | Skill | Install |
-|---|---|---|
-| Review / harden / quality-gate a repo, PR, or diff | `deep-code-review` | default (always installed) |
-| Build a feature or migration under gated, multi-role delivery | `agentic-delivery` | `--with-delivery` |
-| Attack a plan or a "we should" before it reaches you | `idea-critic` | `--with-critic` |
-| Decide if it's worth building, what to build first, or if it's working | `product-discovery` | `--with-discovery` |
-| Decide what to measure — North Star, funnel, retention | `growth-analytics` | `--with-growth` |
-| Shape how you describe it to the market | `positioning` | `--with-positioning` |
-| Price it, or tell an arithmetic question from a legal / tax / securities one | `business-ops` | `--with-business` |
-| Ship a feature whose own AI output or automated action could harm a user | `product-output-safety` | `--with-output-safety` |
-| Route a multi-skill session and stay strategic under pressure | `agentic-ceo` | `--with-ceo` |
-| Write a clean, no-slop PR body, status, or deliverable | `communication-structure` | `--with-comms` |
-| Feed a reusable lesson back upstream, privacy-safe | `contribution` | `--with-contribution` |
+- **No fabrication.** Skip or flag rather than guess — no invented findings, data,
+  sources, metrics, CWEs, or line numbers.
+- **No private data in any committable artifact** — secrets, PII, third-party or
+  private names, internal identifiers, private hostnames, or identifying URLs,
+  including git history. Examples use fictional placeholders (`Acme Capital`,
+  `jane@example.com`). A privacy gate reports a secret's `file:line` and never
+  echoes the secret itself.
+- **Standards move, so the skill fetches the current version** before relying on
+  version-specific detail, and cites only URLs it has verified — never a
+  remembered link.
 
-Every advisory skill works on **your own inputs and evidence** and never fabricates
-market, financial, or security facts — it structures your reasoning and routes what
-it cannot know to you or a professional. `./install.sh --recommend <project>` prints
-this map, tuned to your repo.
+<details>
+<summary><b>Standards it tracks</b> (verified for this release)</summary>
 
----
-
-## How to use it
-
-**Install into a project** (agent-agnostic — copies skills into the skill
-roots major hosts discover, and writes a version-stamped `AGENTS.md` pointer).
-Default is **review only**. Overlays are opt-in. An agent should run
-`--recommend` and let the owner decide before `--full`.
-
-```bash
-# Pin a published release tag (AST02 / AST07). Do not curl|bash unsigned HEAD.
-git clone --branch vX.Y.Z --depth 1 \
-  https://github.com/remigiusz-antczak/deep-code-review.git
-cd deep-code-review
-# optional: sha256sum -c SHA256SUMS
-./install.sh /path/to/your/project                 # review only (.agents + .cursor + .claude + AGENTS.md)
-./install.sh --recommend /path/to/your/project     # inspect; print a pack; write nothing
-./install.sh --with-delivery /path/to/your/project # + gated delivery overlay
-./install.sh --with-critic /path/to/your/project   # + pre-owner idea critic
-./install.sh --with-comms /path/to/your/project    # + BLUF/no-slop message rule
-./install.sh --with-contribution /path/to/your/project # + prepare upstream PRs (default off, not in --full)
-./install.sh --with-discovery /path/to/your/project # + product-discovery: worth-building / PMF / prioritization (default off, not in --full)
-./install.sh --with-ceo /path/to/your/project      # + agentic-ceo: suite conductor — routing + chaos playbook (default off, not in --full)
-./install.sh --with-growth /path/to/your/project   # + growth-analytics: North Star + AARRR + event taxonomy (default off, not in --full)
-./install.sh --with-positioning /path/to/your/project # + positioning: value prop / message house — a hypothesis (default off, not in --full)
-./install.sh --with-business /path/to/your/project  # + business-ops: Lane A pricing/economics apply, Lane R legal/tax route (default off, not in --full)
-./install.sh --with-output-safety /path/to/your/project  # + product-output-safety: govern harm from the product's own AI outputs, HITL on high-stakes (default off, not in --full)
-./install.sh --full /path/to/your/project          # review + delivery + critic + comms
-./install.sh --with-codex /path/to/your/project    # also .codex/skills/
-./install.sh --with-extra-hosts /path/to/your/project  # Gemini, OpenCode, Copilot, Windsurf, Hermes, Kiro
-./install.sh --minimal /path/to/your/project       # only .claude/skills/ + AGENTS.md
-./install.sh --claude-only /path/to/your/project   # only .claude/skills/ (no AGENTS.md)
-```
-
-Marketplace one-liner, still pin the tag (AST07 — `npx skills add owner/repo`
-without `#vX.Y.Z` follows floating HEAD):
-
-```bash
-npx skills add remigiusz-antczak/deep-code-review#vX.Y.Z --skill deep-code-review
-```
-
-Prefer `--copy` over a symlink that auto-updates. `./install.sh` remains the
-air-gapped, SHA-stamped path. See `SECURITY.md`.
-
-Superpowers makes the agent disciplined. Spec Kit makes the spec durable.
-This repo makes the **bar** portable — review, security, data integrity, and
-(opt-in) gated delivery — so any agent on any repo is judged the same way.
-Do not also install a second delivery OS on the same project.
-
-### Stand up a software-house in your repo (opt-in)
-
-The review skill is the **bar**. Its two sibling skills turn a repo into a
-disciplined software-house — the same roles, gates, and doctrine a top team runs —
-without standing up a bot per role:
-
-- **`agentic-delivery`** — gated **G0–G10** delivery and the full **role roster as
-  hats** (Conductor, Product Analyst, Architect, Implementer, Evil Twin, QA,
-  Security, UX & Design, Release, Docs; `references/roles.md`), one writer per
-  worktree, exact-SHA receipts, and human approval on every outward action. It
-  names `deep-code-review` at specification, review, and integrate.
-- **`idea-critic`** — the "proper evil twin": attacks a plan or a "we should"
-  *before* the owner sees it, defaults to dissent, and verifies its own objection
-  against current state (a critic is a lead, not an oracle).
-
-A third, orthogonal overlay covers what any of those roles hands to a human:
-
-- **`communication-structure`** — makes a PR body, issue/PR comment, or status
-  update BLUF, one ask, scannable, and free of AI-slop by default, so a busy
-  reviewer gets the point in under 30 seconds. Governs structure and length,
-  not voice — see "Chat voice is not vendored" below.
-
-And one overlay helps decide *what* to build:
-
-- **`product-discovery`** — decide whether something is worth building, what to
-  build first, and whether what shipped works, by structuring evidence from real
-  users (Mom Test, JTBD, riskiest-assumption gate, PMF read, ICE) — never
-  fabricating findings, personas, scores, or a validated verdict. Default off;
-  opt-in with `--with-discovery`.
-
-And one overlay conducts the suite:
-
-- **`agentic-ceo`** — the suite's conductor: routes (stage, area) to the right
-  skill and lens, sizes effort to the project (one agent wearing several hats on
-  small work; fan-out only for read-mostly work), and runs the under-pressure
-  chaos playbook. Routes; never duplicates a skill. Default off; `--with-ceo`.
-
-And one overlay reads whether it's working:
-
-- **`growth-analytics`** — the standing scoreboard: one customer-value North Star
-  (not vanity), the AARRR funnel read bottom-up (retention first), and an event
-  taxonomy that answers a named question — on your own analytics, never fabricated
-  benchmarks. Default off; `--with-growth`.
-
-And one overlay shapes how you describe it to the market:
-
-- **`positioning`** — value proposition, segment, differentiation, and a message
-  house on your own inputs, produced as a *hypothesis to validate with real buyers*.
-  Never fabricates TAM, competitor claims, customer quotes, or trademark clearance —
-  those route to you or a professional. Default off; `--with-positioning`.
-
-And one overlay handles money and compliance, in two lanes:
-
-- **`business-ops`** — Lane A applies pricing and unit-economics arithmetic to your
-  own numbers with the formula shown (never a directive); Lane R routes legal, tax,
-  securities, and fundraising to a licensed professional (never concludes). Educational
-  information, not advice; no fabricated figures or statutes. Default off; `--with-business`.
-
-And one overlay governs the product's own output behavior:
-
-- **`product-output-safety`** — govern harm from the product's own AI outputs and
-  automated decisions to end-users (bias, hallucination surfaced as fact, missing
-  disclosure, unsafe high-stakes automation): map the harm inventory, measure it, and
-  gate high-stakes actions with a human. Never certifies "safe" / "unbiased"; routes any
-  legal disclosure duty to counsel. Default off; `--with-output-safety`.
-
-And one overlay improves the skillset itself:
-
-- **`contribution`** — when the agent learns a genuinely reusable, generalizable
-  lesson on a project, it prepares a privacy-scrubbed, generalized change back to
-  this public repo: drafting the skill edit, CHANGELOG, eval, and routing, running
-  the gates, and flagging residual risk in a provenance block for a human to
-  clear. Default off; the human is the privacy authority and the only one who
-  opens the PR — the agent never auto-PRs.
-
-Let an agent inspect the target first — `./install.sh --recommend <project>`
-reports which quality gates the repo already has and proposes the roles plus the
-gates that are missing. The owner decides; the default install stays review-only.
-Roles are **hats that fire from risk, not headcount** — start with the fewest the
-change needs, grounded in how multi-agent software frameworks (MetaGPT, ChatDev)
-and Anthropic's *Building Effective AI Agents* decompose the work.
-
-Chat voice is not vendored. If a project wants compressed assistant prose,
-add [JuliusBrussee/caveman](https://github.com/JuliusBrussee/caveman)
-separately. Code, PR bodies, and docs stay normal English.
-
-Re-running refreshes the AGENTS.md stamp. Personal/global Cursor install: copy
-to `~/.cursor/skills/deep-code-review/` (and optionally `~/.agents/skills/` /
-`~/.claude/skills/`). Then in that project (any agent):
-
-```
-/deep-code-review FULL                   # slash-skill hosts
-# or: "run a deep code review FULL on this repo"
-/deep-code-review DIFF origin/main
-/deep-code-review FILE src/auth.ts
-```
-
-**As a one-shot prompt** — paste the installed `SKILL.md` into any capable model,
-then name the target and scope.
-
-**As a human checklist** — walk the domain sections (A–S) directly.
-
-**Discovery** — Cursor / Agent Skills / Claude Code / Codex load from
-`.agents/skills/`, `.cursor/skills/`, `.claude/skills/`, and/or `.codex/skills/`
-(see Cursor Agent Skills docs). The root `AGENTS.md` pointer is the
-cross-vendor fallback when a host does not auto-load skills.
----
-
-## How it works
-
-```mermaid
-flowchart LR
-  P0[Phase 0<br/>Pin ref · map · triage-first] --> P1[Phase 1<br/>Ground truth<br/>build · test · lint]
-  P1 --> P2[Phase 2<br/>Domain audits A–S]
-  P2 --> P3[Phase 3<br/>Adversarial<br/>red-team pass]
-  P3 --> P4[Phase 4<br/>Synthesize<br/>& rank severity]
-  P4 --> P5[Phase 5<br/>Report<br/>file:line + fixes]
-  P5 -.opt-in.-> P6[Phase 6<br/>Imprint standards<br/>into the repo]
-  P2 -. loads on demand .- R[(references/)]
-```
-
-The report is severity-ranked (Blocker → Critical → High → Medium → Low → Nit),
-every finding carries `file:line` evidence and a concrete fix, and unverifiable
-items are marked `unverified` rather than guessed. Fan-out findings are
-`CONFIRMED`, `CORROBORATED`, or `PLAUSIBLE`. See `SKILL.md` for the exact report
-format and the definition of done.
-
-On a git checkout the review **pins an immutable ref** (`START_SHA`) and, for
-`FULL`, prefers a dedicated worktree so a concurrent agent cannot change what is
-being read mid-audit. The plain-language report lands in top-level `code-review/`
-when the tree is idle — or out-of-tree / on a dedicated review branch when the
-checkout is shared or occupied — a traffic-light health scorecard, the top risks
-in human terms, and the decisions that need an owner, so a founder or leader can
-act without reading the code. A worked fictional example is in
-[`docs/example-review-report.md`](docs/example-review-report.md).
-
----
-
-## Standards it tracks
-
-Verified for this release (full list with URLs and verification dates in
-[`docs/standards-index.md`](docs/standards-index.md)): OWASP Top 10:2025 (incl.
-the A03 supply-chain detail), OWASP Top 10 for LLM Applications 2025, OWASP Top 10
-for Agentic Applications 2026, OWASP API Security Top 10 (2023), OWASP ASVS 5.0,
-CWE Top 25 (2025), WCAG 2.2, Google Engineering Practices, Diátaxis, the C4 model,
-Semantic Versioning, OpenSSF Scorecard, OpenSSF Best Practices Badge, OSV, GitHub
+Full list with URLs and verification dates in
+[`docs/standards-index.md`](docs/standards-index.md): OWASP Top 10:2025 (incl. the
+A03 supply-chain detail), OWASP Top 10 for LLM Applications, OWASP Top 10 for
+Agentic Applications 2026, OWASP API Security Top 10, OWASP ASVS 5.0, CWE Top 25
+(2025), WCAG 2.2, Google Engineering Practices, Diátaxis, the C4 model, Semantic
+Versioning, OpenSSF Scorecard, OpenSSF Best Practices Badge, OSV, GitHub
 Dependabot, Keep a Changelog, pre-commit, EditorConfig, Development Containers,
-AGENTS.md, the GitHub community-health + Claude Code memory docs, and Cursor
-Agent Skills directory docs. For the software-house overlay and
-agent-orchestration discipline (verified 2026-09-08): Anthropic's *Building
+AGENTS.md, the GitHub community-health docs, and Cursor Agent Skills docs. For the
+software-house overlay and agent-orchestration discipline: Anthropic's *Building
 Effective AI Agents*, the Claude Code Subagents and Agent Skills documentation,
-and the MetaGPT and ChatDev multi-agent papers. Referenced
-by name (verify the current version before citing): OWASP WSTG, MITRE ATLAS, NIST
-SSDF and AI RMF, SLSA, CIS Benchmarks, ISO/IEC 25010, Twelve-Factor, Conventional
-Commits, Nielsen's usability heuristics (named, no URL), and the per-agent
-instruction-file conventions (Cursor, Copilot, Windsurf, Gemini, Aider).
+and the MetaGPT and ChatDev multi-agent papers. Referenced by name (verify before
+citing): OWASP WSTG, MITRE ATLAS, NIST SSDF and AI RMF, SLSA, CIS Benchmarks,
+ISO/IEC 25010, PCI DSS, SOC 2, ISO/IEC 27001, Twelve-Factor, Conventional
+Commits, and Nielsen's usability heuristics.
 
-Standards move. The skill instructs the reviewer to **fetch the current version
-before relying on version-specific detail, and to cite only URLs it has
-verified** — never a remembered link.
+</details>
 
 ---
 
@@ -323,45 +290,31 @@ verified** — never a remembered link.
 ├── CLAUDE.md                       # AI-facing standards for working in THIS repo
 ├── install.sh                      # copy skills into a target project
 ├── .banlist.txt                    # privacy-gate seed (dogfooded)
-├── .claude-plugin/plugin.json      # Claude Code marketplace manifest
-├── docs/
-│   └── standards-index.md          # verified standards, URLs, verification dates
+├── .claude-plugin/plugin.json      # plugin marketplace manifest
+├── docs/standards-index.md         # verified standards, URLs, verification dates
 └── .claude/skills/
     ├── deep-code-review/           # default product — the review bar
-    ├── agentic-delivery/           # opt-in gated delivery + role roster (references/roles.md)
+    ├── agentic-delivery/           # opt-in gated delivery + role roster
     ├── idea-critic/                # opt-in pre-owner idea attack (the "evil twin")
     ├── communication-structure/    # opt-in BLUF/no-slop rule for persisted messages
-    ├── contribution/               # opt-in: prepare a privacy-safe upstream PR (default off)
-    ├── product-discovery/          # opt-in: worth-building / PMF / prioritization (default off)
-    ├── agentic-ceo/                # opt-in: suite conductor — routing + chaos playbook (default off)
-    ├── growth-analytics/           # opt-in: North Star + AARRR + event taxonomy (default off)
-    ├── positioning/                # opt-in: value prop / message house — a hypothesis (default off)
-    ├── business-ops/               # opt-in: Lane A pricing/economics apply, Lane R legal/tax route (default off)
-    └── product-output-safety/      # opt-in: govern harm from the product's own AI outputs (default off)
+    ├── contribution/               # opt-in prepare a privacy-safe upstream PR
+    ├── product-discovery/          # opt-in worth-building / PMF / prioritization
+    ├── agentic-ceo/                # opt-in suite conductor — routing + chaos playbook
+    ├── growth-analytics/           # opt-in North Star + AARRR + event taxonomy
+    ├── positioning/                # opt-in value prop / message house (a hypothesis)
+    ├── business-ops/               # opt-in Lane A pricing apply, Lane R legal/tax route
+    └── product-output-safety/      # opt-in govern harm from the product's own AI outputs
 ```
 
-`deep-code-review/references/` holds on-demand depth (method, domain
-checklists, report format, plus per-domain playbooks). Count routed depth
-files, not copies of `docs/`.
+Each skill has exactly one home; depth lives in its `references/`. `install.sh`
+copies *from* here — there is never a second copy of a checklist or definition
+(the repo dogfoods its own no-duplication rule).
 
 ---
 
-## Confidentiality & no fabrication
-
-The skill enforces — and this repository dogfoods — two hard rules: **no
-fabrication** (skip or flag rather than guess; no invented findings, data,
-sources, metrics, CWEs, or line numbers) and **no private/identifying data** in
-any committable artifact — secrets, PII, third-party/private real names, private
-company/team names, internal identifiers, private hostnames, or identifying URLs —
-including git history. A project's **own intended-public identity** may stand only
-when required and corroborated by an existing project-owned public artifact, with
-drift treated as a finding. All examples use fictional placeholders (`Acme Capital`,
-`jane@example.com`). A privacy gate that finds a secret reports its `file:line` and
-never echoes the secret itself.
-
 ## Attribution & license
 
-Inspired by open Claude Code setups (including
-[`nickmaglowsch/claude-setup`](https://github.com/nickmaglowsch/claude-setup))
-and grounded in the public standards listed above. Released under the
+Inspired by open coding-agent setups (including
+[`nickmaglowsch/claude-setup`](https://github.com/nickmaglowsch/claude-setup)) and
+grounded in the public standards listed above. Released under the
 [MIT License](LICENSE).
