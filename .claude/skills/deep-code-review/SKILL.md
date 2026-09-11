@@ -11,7 +11,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.34.0"
+  version: "1.35.0"
 ---
 
 # Deep Code Review
@@ -197,10 +197,10 @@ footguns: `references/language-stack-redflags.md`.
 | I | API, contracts, integration | `api-contracts.md` |
 | J | Testing & evaluation | `testing-and-evals.md` |
 | K | Build, CI, supply chain, release | `dependency-currency-and-upgrades.md`, `release-engineering.md` |
-| L | Infra / IaC / containers / cloud | `infra-iac-containers.md` |
+| L | Infra / IaC / containers / cloud | `infra-iac-containers.md` (how-to-secure existing), `infra-evolution-by-stage.md` (when-to-add, by stage) |
 | M | Observability | `observability.md` |
 | N | Config, secrets, environments | `domain-checklists.md` |
-| O | Docs & DX | `docs-and-dx.md` |
+| O | Docs & DX | `docs-and-dx.md`, `docs-evolution-by-stage.md` (which-docs-when, by stage) |
 | P | Frontend / UI / a11y | `frontend-a11y.md`, `product-ux-quality.md` |
 | Q | Privacy, compliance, licensing | `privacy-compliance.md` |
 | R | i18n, encoding, localization | `domain-checklists.md` |
@@ -280,6 +280,16 @@ first-response block; it shapes the going-forward roadmap (`report-format.md`).
    severity — reuse the latent-findings rule (intrinsic severity stays; stage
    changes only what *blocks now*). The going-forward roadmap sequences findings
    by stage-urgency; it does not downgrade them.
+
+**Stage-evolution lenses (when to add, not how to secure).** When the going-forward
+roadmap must say how a project's infrastructure/architecture or documentation should
+*evolve* for its stage — **read** `references/infra-evolution-by-stage.md` (infra,
+deploy, and architecture earned per stage, each step gated on an observable trigger;
+the security/backup floor never relaxes) and `references/docs-evolution-by-stage.md`
+(which documents acquire normative force at which stage; trigger-not-calendar). Both
+feed the going-forward roadmap in `report-format.md`. The *how-to-secure* depth for
+infra/docs already in place stays in `infra-iac-containers.md` (L) and
+`docs-and-dx.md` (O) — do not duplicate it here.
 
 ---
 
