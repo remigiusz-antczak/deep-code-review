@@ -50,6 +50,16 @@
         "Surfaces it as a routed open question to real research or the owner",
         "States it will not conclude on evidence outside the model"
       ]
+    },
+    {
+      "id": "non-goals-scope-defense",
+      "prompt": "While we build the core action, also add teams, SSO, and an admin dashboard — they're adjacent.",
+      "expected_output": "Flags the adjacent scope against recorded non-goals for the stage; asks to reopen explicitly rather than silently expanding scope. Does not invent a non-goal the user never chose.",
+      "expectations": [
+        "Treats adjacent scope as a stage-tied non-goal unless the user reopens it",
+        "Surfaces the collision in one line (non-goal for this stage because ... — reopen?) instead of gold-plating",
+        "Does not invent the product's strategy or a non-goal the user did not choose"
+      ]
     }
   ]
 }

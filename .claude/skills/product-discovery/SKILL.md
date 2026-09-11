@@ -2,7 +2,8 @@
 name: product-discovery
 description: >-
   Use when deciding whether something is worth building, what to build
-  first, or whether what already shipped is working — by structuring
+  first, what to deliberately not build (non-goals), or whether what
+  already shipped is working — by structuring
   evidence gathered from real users and real usage, never by asserting
   it. Designs Mom-Test / Jobs-to-be-Done interviews and fake-door /
   concierge experiments, runs the riskiest-assumption gate before a
@@ -14,7 +15,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # Product discovery
@@ -104,6 +105,23 @@ report a result that was not measured.
   **blank inputs and a how-to-obtain note per column**; the user supplies
   the numbers, the skill does the arithmetic and orders the list.
 
+## Non-goals (what you are deliberately NOT building)
+The inverse of the prioritization list, and the scope-defense that stops a coding
+agent from gold-plating. A non-goal is a **recorded, stage-tied decision** — "not
+X yet, because [reason]" — revisited at the next stage, never a permanent ban.
+- **Write non-goals beside goals.** For each thing you are building, name the
+  adjacent thing you are *not* (yet), and why.
+- **Tie them to the stage.** A `prototype`'s non-goals (scale, polish, breadth,
+  auth beyond the floor) differ from a `growth` product's.
+- **Feed them from the riskiest-assumption gate.** Building *on* an untested
+  assumption is a non-goal until the cheap test passes.
+- **Use them as scope defense.** When a new request touches a recorded non-goal,
+  say so in one line — "that is a non-goal for this stage because [reason] —
+  reopen it?" — instead of silently expanding scope.
+Boundary: non-goals are the **user's** strategic choices; the skill structures,
+records, and enforces them, and flags when a request collides with one. It does
+not invent the product's strategy or set a non-goal the user did not choose.
+
 ## Stage-awareness
 Keys to the stage model in `deep-code-review` (the `STAGE` field and the
 *Project stage* section). `prototype` → riskiest-assumption + discovery
@@ -134,6 +152,7 @@ it justify gold-plating the core.
 | "The demo felt great, call it product-market fit." | PMF is a threshold on real retention / survey data, not a feeling. Without data, `UNVERIFIED`. |
 | "Give me the market size so we can decide." | Market size is outside the model. Route to real research; never print a TAM you cannot source. |
 | "Skip the assumption test, we're confident." | Confidence is the thing under test. Name the riskiest assumption and the cheapest test; build after, not instead. |
+| "Add this adjacent feature while we're here." | If it is a stage non-goal, flag the collision and ask to reopen — do not silently expand scope. |
 
 ## Standards (by name; verify a figure/URL before citing one)
 The Mom Test (Fitzpatrick); Jobs-to-be-Done and the switch interview /
@@ -157,4 +176,6 @@ specific figure or URL (repo convention; nothing added to
   naming the assumption + the cheap test (`riskiest-assumption-gate`).
 - A market-size / competitor-fact request is routed, not fabricated
   (`routes-unknowable-to-owner`).
+- A request to add adjacent scope is checked against stage non-goals and
+  reopened explicitly, not gold-plated (`non-goals-scope-defense`).
 - `evals/evals.json` plants these cases.

@@ -3,6 +3,25 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.39.0] — 2026-09-11
+
+Folds a **Non-goals** lens into `product-discovery` (→ 1.1.0) — the inverse of the
+prioritization list and the scope-defense that stops a coding agent from
+gold-plating. This completes the carve decision: the standalone product-strategy
+skill is dropped; its distinct half (what NOT to build) lives here, its JTBD and
+PMF halves already did.
+
+### Changed
+- **`product-discovery` → 1.1.0** — new *Non-goals (what you are deliberately NOT
+  building)* section: recorded, stage-tied decisions revisited each stage; fed by
+  the riskiest-assumption gate; used as one-line scope defense when a request
+  touches a non-goal. Refusal eval `non-goals-scope-defense` (flags the collision,
+  asks to reopen, never invents a non-goal the user did not choose). Description
+  updated to name "what to deliberately not build".
+- Lockstep bump to **1.39.0** (deep-code-review, agentic-delivery, idea-critic,
+  plugin). `agentic-ceo` (1.0.0), `growth-analytics` (1.0.0), `contribution`
+  (1.1.0), and `communication-structure` (1.1.0) unchanged.
+
 ## [1.38.0] — 2026-09-11
 
 Adds `growth-analytics` (1.0.0) — the standing measurement scoreboard: one
