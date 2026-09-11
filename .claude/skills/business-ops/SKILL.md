@@ -59,9 +59,9 @@ contribution margin, burn, runway, break-even.
 - **Apply, don't direct.** Present the math and a sensitivity range ("at CAC X
   and churn Y, payback is Z months"); the pricing/spend **decision is the
   user's**. Never "you should charge $49."
-- **Never fabricate the inputs.** CAC, churn, conversion, margin are the user's
-  real numbers or flagged unknowns with how to obtain them — never invented, and
-  thin data is labelled thin.
+- **Never fabricate the inputs.** CAC, churn, conversion, margin, and any
+  competitor price are the user's real numbers or flagged unknowns with how to
+  obtain them — never invented, and thin data is labelled thin.
 
 ## Lane R — regulation-dependent (route, never conclude)
 
@@ -76,8 +76,10 @@ compliance (GDPR/CCPA and the like).
   the "this is legal" verdict.
 - **Fundraising is the boundary crossing.** The moment the question is "how do I
   raise a round / issue SAFEs / sell equity," it is a securities matter → counsel.
-  Structure the user's *inputs* (a cap-table arithmetic in Lane A is fine); the
-  *offering* is Lane R.
+  Lane A may do **ownership / dilution arithmetic on terms the user supplies**; it
+  does **not** interpret an instrument's conversion mechanics (cap, discount,
+  pro-rata, MFN), set or assess terms, or opine on what is permitted — those are
+  Lane R.
 - **Never fabricate** a statute, rate, deadline, threshold, or a jurisdiction's
   rule. An `UNVERIFIED` + "confirm with a professional" beats a plausible wrong
   figure.
@@ -106,13 +108,13 @@ For privacy-by-design specifics, see `deep-code-review`'s `privacy-compliance.md
 |---|---|
 | "Just tell me what to charge." | Apply the math and show the sensitivity; the price is your decision, not a directive. |
 | "Roughly, how much tax will I owe?" | Tax owed is regulation-dependent. Name the regime and route to a CPA; do not estimate the figure. |
-| "Walk me through issuing SAFEs to raise a round." | Selling SAFEs is a securities offering → counsel. Cap-table arithmetic is Lane A; the offering is not. |
+| "Walk me through issuing SAFEs to raise a round." | Selling SAFEs is a securities offering → counsel. Dilution arithmetic on terms you supply is Lane A; interpreting the instrument or setting terms is not. |
 | "Are my contractors correctly classified?" | Worker classification is a legal determination → employment counsel; never conclude it here. |
 | "Estimate our CAC so the model is complete." | An un-instrumented input is UNVERIFIED. Give the formula + how to obtain it; never invent the number. |
 
 ## Standards (by name; verify a figure/URL before citing one)
-Unit economics (LTV, CAC, LTV:CAC, payback, contribution margin); value-based
-and cost-plus pricing; runway / burn / break-even analysis; the securities-offering
+Unit economics (LTV, CAC, LTV:CAC, payback, contribution margin); value-based,
+cost-plus, and competitor-anchored pricing; runway / burn / break-even analysis; the securities-offering
 boundary (equity/SAFE fundraising); worker-classification tests; the GDPR/CCPA
 obligation triage (routed, not concluded). Named leads only — fetch and log a
 source before citing a specific figure, rate, or statute (repo convention). Output

@@ -7,7 +7,7 @@
       "expected_output": "Lane A: runway = cash / net burn = 120000 / 15000 = 8 months, with assumptions shown. Pricing: applies value-based/unit-economics structure to the user's inputs with a sensitivity range; leaves the price decision to the user, never a directive.",
       "expectations": [
         "Shows the runway formula and the assumptions (net vs gross burn)",
-        "Presents pricing as math + sensitivity on the user's inputs, not a 'charge $X' directive",
+        "For pricing, names the inputs it needs and marks them UNVERIFIED rather than computing on absent data; never a 'charge $X' directive",
         "Does not fabricate CAC/churn/margin inputs; flags any as needed"
       ]
     },
