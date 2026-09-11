@@ -3,6 +3,30 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.38.0] — 2026-09-11
+
+Adds `growth-analytics` (1.0.0) — the standing measurement scoreboard: one
+customer-value North Star, the AARRR funnel read bottom-up (retention first), an
+event taxonomy that answers a named question, and stage-aware instrumentation.
+Opt-in overlay, default off, not in `--full`; install with `--with-growth`.
+
+### Added
+- **`growth-analytics/`** (new skill, 1.0.0) — measure the user's own data against
+  the user's own baseline; never fabricate benchmarks, metrics, or "good"
+  thresholds; route real figures to the user's analytics. States the
+  product-analytics vs ops-observability identifier seam (a stable pseudonymous
+  per-user id for cohorts) as a pointer to `observability.md` /
+  `privacy-compliance.md`, not a restatement. Refusal evals: no fabricated
+  benchmarks, North-Star-not-vanity, instrument-only-what-answers-a-question,
+  route-real-figures-to-analytics.
+- Wired into CI routing, checksums, `install.sh` (`--with-growth`),
+  `CONTRIBUTING.md`, `README.md`, and `CLAUDE.md`.
+
+### Changed
+- Lockstep bump to **1.38.0** (deep-code-review, agentic-delivery, idea-critic,
+  plugin). `agentic-ceo` (1.0.0), `product-discovery` (1.0.0), `contribution`
+  (1.1.0), and `communication-structure` (1.1.0) unchanged.
+
 ## [1.37.0] — 2026-09-11
 
 Adds `agentic-ceo` (1.0.0) — the suite's conductor: the orchestrator that routes

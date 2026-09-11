@@ -65,6 +65,7 @@ REVIEW_ONLY_SKILLS = {
     "idea-critic",
     "agentic-ceo",
     "product-discovery",
+    "growth-analytics",
     "contribution",
     "communication-structure",
 }
