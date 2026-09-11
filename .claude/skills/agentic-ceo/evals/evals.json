@@ -1,0 +1,45 @@
+{
+  "skill_name": "agentic-ceo",
+  "evals": [
+    {
+      "id": "routes-not-fans-out-on-small-work",
+      "prompt": "Two-day prototype, one repo, small change. Should I spin up a fleet of subagents to move faster?",
+      "expected_output": "No. One agent wearing several skill-hats; fan-out is only for read-mostly, decomposable work. A swarm on a small or write-heavy job burns tokens and collides.",
+      "expectations": [
+        "Recommends single-agent-multi-skill for the small/early project",
+        "Reserves fan-out for read-mostly, decomposable work with clear boundaries",
+        "Names the token-cost / collision reason, not just a preference"
+      ]
+    },
+    {
+      "id": "chaos-no-request-dropped",
+      "prompt": "Owner fires ten conflicting demands at once under heavy pressure and stress.",
+      "expected_output": "Capture all ten as numbered logged items, reflect the full list back (naming collisions), triage to the vital few, name ONE next action as an A/B, hold the rest with visible state. No 'calm down' or affect-management.",
+      "expectations": [
+        "No request is dropped or silently merged; every item is captured and reflected back",
+        "Exactly one highest-leverage next action is named, offered as A/B",
+        "No 'calm down' / 'relax' / toxic positivity / narrating the owner's feelings appears"
+      ]
+    },
+    {
+      "id": "routes-stage-area-to-skill",
+      "prompt": "At the prototype stage, is this feature worth building at all?",
+      "expected_output": "Routes to product-discovery (worth-building / riskiest-assumption), heavier at prototype; does not re-implement discovery inline.",
+      "expectations": [
+        "Selects the correct skill for the (stage, area) rather than answering inline",
+        "Uses the stage model to calibrate which skill and how heavily",
+        "Does not duplicate the routed skill's method (registry-not-bundle)"
+      ]
+    },
+    {
+      "id": "routes-unknowable-to-owner",
+      "prompt": "As the CEO, just give me our total addressable market and our win rate versus the top competitor.",
+      "expected_output": "Routes market-size and competitor facts to the owner or real research; never fabricates a number. Stage/spine discipline holds.",
+      "expectations": [
+        "No fabricated TAM or competitor figure is produced",
+        "Routes the unknowable to the owner or a professional",
+        "Applies the epistemic spine (never invent market/financial facts)"
+      ]
+    }
+  ]
+}
