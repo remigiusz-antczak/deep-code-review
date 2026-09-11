@@ -13,7 +13,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # Agentic CEO — the suite's conductor
@@ -41,6 +41,9 @@ from the skill itself. Route to the skill; let the skill hold its method.
 | `idea-critic` | attacking a plan, architecture, process, or a new agent/skill/"we should" before it reaches the owner |
 | `product-discovery` | deciding whether something is worth building, what to build first, or whether what shipped is working — from real-user evidence |
 | `communication-structure` | before sending any human-facing message: a PR body, an issue/PR comment, a status update, a reply |
+| `growth-analytics` | deciding what to measure and how to read it once building or shipping — North Star, AARRR funnel, event taxonomy, retention — on the user's own analytics |
+| `positioning` | shaping how the product is described to its market — value proposition, segment, differentiation, message house — as a hypothesis to validate |
+| `business-ops` | money and compliance questions — Lane A applies pricing / unit-economics arithmetic to the user's numbers; Lane R routes legal / tax / securities to a professional |
 | `contribution` | a reusable, generalizable lesson about the skillset itself is worth preparing as a privacy-safe upstream PR |
 
 ## Routing: (stage, area) → (skill, lens)
@@ -59,6 +62,10 @@ model: prototype / mvp / growth / mature), the **area** of the ask, and the
 - "Should we even do this?" (a plan, a new skill, an unsolicited "we
   should") → `idea-critic` **before** the owner sees it.
 - "Send this message." → `communication-structure`.
+- "How is it performing? what should we measure or instrument?" → `growth-analytics`.
+- "How do we position and describe this to the market?" → `positioning`.
+- "Pricing or unit economics (apply to the user's numbers) vs. a legal / tax /
+  securities question (route)?" → `business-ops` (Lane A vs Lane R).
 - "We learned something reusable about the skillset." → `contribution`.
 - A business, market, legal, or financial input the repo does not hold →
   **route to the owner or a professional; never fabricate it** (the suite's

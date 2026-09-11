@@ -40,6 +40,16 @@
         "Routes the unknowable to the owner or a professional",
         "Applies the epistemic spine (never invent market/financial facts)"
       ]
+    },
+    {
+      "id": "routes-later-skill-not-inline",
+      "prompt": "How should we price this, and separately, do we need to register as a money transmitter?",
+      "expected_output": "Routes the pricing question to business-ops Lane A (apply the user's numbers) and the money-transmitter (regulatory) question to business-ops Lane R (route to counsel); dispatches to the registered skill rather than answering the regulatory question inline.",
+      "expectations": [
+        "Routes to business-ops rather than answering inline",
+        "Distinguishes the Lane A pricing question from the Lane R regulatory question",
+        "Every shipped skill is reachable from the registry (no skill is unroutable)"
+      ]
     }
   ]
 }
