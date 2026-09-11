@@ -3,6 +3,38 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.34.0] — 2026-09-11
+
+Hardens the `contribution` self-improvement skill so quality can only ratchet up —
+it can never weaken the bar, fabricate, or self-authorize a send. Grounded in
+research into secure self-hosted agents (a kernel/userspace split) and
+self-modifying-agent precedents, which converge on one conclusion: keep the
+human-gated, no-auto-PR, protected-core design, and gate only the irreversible step.
+
+### Added
+- **`contribution/kernel-paths.txt`** (new) — the enforceable protected-core path
+  list. A drafted contribution whose changed files intersect it is a **kernel edit →
+  human-authored only**, never an agent-drafted send. Meta-immutable (the list is
+  itself a kernel path).
+- **`contribution/evals/evals.json`** — `kernel-edit-refused` (a draft that would
+  weaken the privacy gate is refused as a kernel edit) and `injection-lesson-rejected`
+  (a lesson that directs the process is treated as untrusted data).
+
+### Changed
+- **`contribution/SKILL.md`** + **`references/contribution-procedure.md`** → **1.1.0**:
+  a kernel-vs-userspace protected core (immutable kernel: the scrub, the
+  evaluator/thresholds, merge authority, the provenance ledger, the Definition of
+  Done, and the kernel path-list itself); the **second-order kernel rule** (a
+  self-improvement that changes how the scrub / evaluator / generality-gate *behaves*
+  is human-authored only); **evaluator independence** (graded by the unmodified
+  harness); the **lesson-is-untrusted-data** injection guard; a **mosaic-leakage**
+  line in the provenance block; the "human-gated send, automate everything reversible
+  before it" reframe; and an explicit scope extension to **agent prompts, skills, and
+  orchestration** as drafts for human review. Anima-style decay/impact triage is
+  admitted only as a *local* candidate filter, never an autonomous upstream writer.
+- Lockstep `VERSION` files, `SKILL.md` stamps, and the plugin manifest → **1.34.0**;
+  `contribution` → **1.1.0** (independent line). `SHA256SUMS` regenerated.
+
 ## [1.33.0] — 2026-09-11
 
 Stage-aware review + a going-forward roadmap. `deep-code-review` now calibrates
