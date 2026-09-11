@@ -12,7 +12,7 @@ specialist skills that support a solo or small builder across a product's whole
 life — code, infrastructure, docs, product/PMF, prioritization, discovery,
 growth, positioning, and business/ops — while **preventing over-engineering** and
 **never fabricating**. One epistemic spine holds every skill together. Navigation
-is by **lenses over ~8 skills**, not a sprawl of new ones. Build the spine and the
+is by **lenses over ~10 skills**, not a sprawl of new ones. Build the spine and the
 lowest-risk skills first; add the advisory skills, on the tightest leash, last.
 
 ## The epistemic spine (non-negotiable in every skill) — and the differentiator
@@ -31,14 +31,19 @@ research found their **limits language is near-empty**. So the differentiator is
 not more personas — it is **honesty, verification, and stage-awareness**. That is
 the white space, and it is exactly this repo's existing thesis.
 
-## Architecture — lenses over ~8 skills (not 70)
+## Architecture — lenses over ~10 skills (not 70)
 A naive `STAGE × AREA` grid invites one skill per cell and detonates the repo's
 anti-duplication thesis. Instead, following the pattern `deep-code-review` already
 runs (fixed domains + an `archetype → load map` + a role overlay that "never adds
 or drops a domain"):
 
-- **Keep ~8 skills.** `STAGE` and `AREA` are **lenses** that select and order
-  existing content. The orchestrator routes `(stage, area) → (skill, lens)`.
+- **Keep ~10 skills; admit a new one only by the admission rule.** A new *skill* is
+  justified only when it **cannot** be a lens or reference over an existing skill,
+  **or** when a safety boundary requires its own home (the reason the suite is 10, not
+  8 — `business-ops` keeps Lane A arithmetic separate from Lane R professional-routing).
+  Lenses and references are **not** skill rows; do not count them as such. `STAGE` and
+  `AREA` are **lenses** that select and order existing content. The orchestrator routes
+  `(stage, area) → (skill, lens)`.
 - **Navigation, two layers.** *Passive:* each skill's frontmatter `description` is
   the routing key — disjoint "use when…", one home per skill, no duplication
   (Level-1 metadata is ~100 tokens/skill, so the orchestrator can hold the whole
@@ -241,27 +246,40 @@ the bad day**. Mostly **lenses** over existing skills, not new skills. Ranked:
 3. **Business-advisory skills:** full "advisor" skills, or thin "framework + the
    questions you must answer yourself" guides? (Recommendation: thin guides — lowest
    fabrication surface.)
-4. **Greenlight + order** of the new skills beyond the ready references.
+4. **Suite scale (#66):** ✅ **resolved — keep ~10 under a written admission rule**
+   (Architecture §). A new *skill* must fail the "can this be a lens/reference over an
+   existing skill?" test **or** be a safety boundary; otherwise it lands as a lens/ref,
+   and lenses/refs are not counted as skill rows. Applying it to the gap backlog:
+   **#43–#49 are lenses/references** over existing skills; only **#42
+   (product-output-safety / responsible-AI)** is admitted as standalone **skill #11** —
+   output-harm governance is a distinct method from code-security and is a safety
+   boundary. Residual risk: if #42 drafts thin, fold it as a `deep-code-review` lens
+   rather than ship a standalone skill.
 
 ## Status ledger (2026-09-11)
-- **Suite complete — main @ 1.43.0, 10 skills.** Shipped: contribution overlay
+- **Suite complete + hardening — main @ 1.47.0, 10 skills.** Shipped: contribution overlay
   (1.31.0) · agent-readiness lens (1.32.0) · stage-aware review + going-forward roadmap
   (1.33.0) · contribution hardening (1.34.0; contribution 1.1.0) · infra/docs
   stage-evolution refs (1.35.0) · `product-discovery` (1.36.0, +Non-goals 1.39.0 →
   1.1.0) · `agentic-ceo` conductor (1.37.0, +full registry 1.43.0 → 1.1.0) ·
   `growth-analytics` (1.38.0) · `positioning` (1.41.0) · `business-ops` (1.42.0) ·
   no-slop output contract (`communication-structure` → 1.2.0, at 1.40.0). Each new
-  skill passed an independent reviewer pass before merge. Global install refreshed to 1.43.0.
+  skill passed an independent reviewer pass before merge.
+- **Post-build hardening (1.44–1.47):** suite-enumeration gate (1.44.0, #62) · DCR
+  fabrication-refusal eval (1.45.0, #65) · `--recommend` surfaces advisory overlays
+  (1.46.0, #68) · README "which skill when" quickstart (#67) · offline eval-predicate
+  discrimination gate (1.47.0, #61 slice 1). Global install content-current (no skill
+  content changed since 1.43.0).
 - **Owner decisions:** #39 (agentic-ceo) **resolved — vendored**; #40 (business-advisory
   shape) **resolved — thin guides**; #38 (rename) **deferred** until the suite is proven.
 - **Post-build backlog (filed):** #61 live eval harness · #62 suite-enumeration gate ·
   #63 routing eval coverage · #64 eval-id anti-drift gate · #65 DCR fabrication eval ·
-  #66 [decision] suite scale 10 vs ~8 · #67 README quickstart · #68 `--recommend` surfaces
+  #66 [decision] suite scale — ✅ resolved (~10 + admission rule) · #67 README quickstart · #68 `--recommend` surfaces
   advisory skills · #69 dogfood the contribution loop. Gap-analysis skills: #42–#49.
 - **Research complete:** all 12 areas + CEO-under-pressure + gap-analysis. CEO-under-
   pressure shipped in `agentic-ceo`'s chaos playbook.
 
-*This document is provisional and updated as skills ship. Decisions #39 (vendor) and
-#40 (thin guides) are now resolved and executed; #38 (rename) remains deferred. The
-suite reached 10 skills — one over the stated "~8"; that guardrail vs. the actual count
-is the open decision in #66.*
+*This document is provisional and updated as skills ship. Decisions #39 (vendor),
+#40 (thin guides), and #66 (suite scale) are resolved and executed; #38 (rename)
+remains deferred. The suite is 10 skills under a written admission rule (Architecture
+§); #42 (product-output-safety) is the one admitted standalone candidate — skill #11.*
