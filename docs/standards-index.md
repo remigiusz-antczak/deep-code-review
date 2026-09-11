@@ -246,6 +246,12 @@ A03, cross-referenced from `references/security-agent-skills.md` AST02).
   retention cohort analysis; "one metric that matters"; activation / aha-moment
   analysis. Named leads only — no URL or figure fetched this session; verify before
   citing a specific figure or threshold.
+- **Positioning / brand frameworks** (named by `positioning`): the Value Proposition
+  Canvas and business-model design (Osterwalder & Pigneur); positioning (Ries & Trout;
+  April Dunford's obviously-awesome positioning); the message house / messaging
+  framework; jobs-to-be-done as a positioning lens; minimum-viable-brand; premature
+  scaling as a pre-PMF anti-pattern (Startup Genome; lean-startup). Named leads only —
+  no URL or figure fetched this session; verify before citing a specific claim.
 
 > When the skill needs a version-specific detail from any of these, it must fetch
 > the current source at review time and cite only the URL it verified.

@@ -8,8 +8,8 @@ upstream-contribution flow into a target repo. The crown jewel is `.claude/skill
 lives in that skill's `references/`. Sibling skills live under
 `.claude/skills/agentic-delivery/`, `.claude/skills/idea-critic/`,
 `.claude/skills/communication-structure/`, `.claude/skills/contribution/`,
-`.claude/skills/product-discovery/`, `.claude/skills/agentic-ceo/`, and
-`.claude/skills/growth-analytics/`.
+`.claude/skills/product-discovery/`, `.claude/skills/agentic-ceo/`, `.claude/skills/growth-analytics/`, and
+`.claude/skills/positioning/`.
 Everything else (`README.md`,
 `install.sh`, `docs/standards-index.md`) supports distributing and trusting
 those skills.

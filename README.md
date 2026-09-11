@@ -92,6 +92,7 @@ cd deep-code-review
 ./install.sh --with-discovery /path/to/your/project # + product-discovery: worth-building / PMF / prioritization (default off, not in --full)
 ./install.sh --with-ceo /path/to/your/project      # + agentic-ceo: suite conductor — routing + chaos playbook (default off, not in --full)
 ./install.sh --with-growth /path/to/your/project   # + growth-analytics: North Star + AARRR + event taxonomy (default off, not in --full)
+./install.sh --with-positioning /path/to/your/project # + positioning: value prop / message house — a hypothesis (default off, not in --full)
 ./install.sh --full /path/to/your/project          # review + delivery + critic + comms
 ./install.sh --with-codex /path/to/your/project    # also .codex/skills/
 ./install.sh --with-extra-hosts /path/to/your/project  # Gemini, OpenCode, Copilot, Windsurf, Hermes, Kiro
@@ -157,6 +158,13 @@ And one overlay reads whether it's working:
   (not vanity), the AARRR funnel read bottom-up (retention first), and an event
   taxonomy that answers a named question — on your own analytics, never fabricated
   benchmarks. Default off; `--with-growth`.
+
+And one overlay shapes how you describe it to the market:
+
+- **`positioning`** — value proposition, segment, differentiation, and a message
+  house on your own inputs, produced as a *hypothesis to validate with real buyers*.
+  Never fabricates TAM, competitor claims, customer quotes, or trademark clearance —
+  those route to you or a professional. Default off; `--with-positioning`.
 
 And one overlay improves the skillset itself:
 
@@ -274,7 +282,8 @@ verified** — never a remembered link.
     ├── contribution/               # opt-in: prepare a privacy-safe upstream PR (default off)
     ├── product-discovery/          # opt-in: worth-building / PMF / prioritization (default off)
     ├── agentic-ceo/                # opt-in: suite conductor — routing + chaos playbook (default off)
-    └── growth-analytics/           # opt-in: North Star + AARRR + event taxonomy (default off)
+    ├── growth-analytics/           # opt-in: North Star + AARRR + event taxonomy (default off)
+    └── positioning/                # opt-in: value prop / message house — a hypothesis (default off)
 ```
 
 `deep-code-review/references/` holds on-demand depth (method, domain

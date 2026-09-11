@@ -66,6 +66,7 @@ REVIEW_ONLY_SKILLS = {
     "agentic-ceo",
     "product-discovery",
     "growth-analytics",
+    "positioning",
     "contribution",
     "communication-structure",
 }
