@@ -763,5 +763,41 @@ fi
 
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# enumeration — every shipped skill is in every hand-maintained list, AND the
+# gate goes RED on a skill absent from those lists (planted, so it can't pass
+# vacuously). This is the class that shipped despite green CI: a new skill
+# missing from the agentic-ceo registry / install.sh / ci.yml / checksums /
+# recommend-overlays.
+# ---------------------------------------------------------------------------
+gate "$ROOT/scripts/ci-gates.sh" enumeration "$ROOT"
+if [ "$GATE_RC" -eq 0 ]; then
+  record 0 "enumeration: every shipped skill is fully enumerated"
+else
+  record 1 "enumeration: every shipped skill is fully enumerated"
+fi
+
+# Planted RED: a POPULATED tree where realskill + agentic-ceo are fully wired but
+# ghost is omitted from every list must fail, AND the failure must name ghost (not
+# realskill) — proving the gate attributes drift to the un-enumerated skill, not that
+# empty files merely fail.
+ENUM_FIX="$WORK/enum"
+mkdir -p "$ENUM_FIX/.claude/skills/realskill" "$ENUM_FIX/.claude/skills/ghost" \
+         "$ENUM_FIX/.claude/skills/agentic-ceo" "$ENUM_FIX/.github/workflows" "$ENUM_FIX/scripts"
+printf 'bash scripts/ci-gates.sh routing .claude/skills/realskill\nbash scripts/ci-gates.sh routing .claude/skills/agentic-ceo\n' \
+  > "$ENUM_FIX/.github/workflows/ci.yml"
+printf '       .claude/skills/realskill \\\n       .claude/skills/agentic-ceo \\\n' \
+  > "$ENUM_FIX/scripts/write-checksums.sh"
+printf 'SKILLS+=("realskill")\nSKILLS+=("agentic-ceo")\n' > "$ENUM_FIX/install.sh"
+printf '| `realskill` | reach for it when x |\n' > "$ENUM_FIX/.claude/skills/agentic-ceo/SKILL.md"
+printf '"realskill"\n"agentic-ceo"\n' > "$ENUM_FIX/scripts/recommend-overlays.py"
+gate "$ROOT/scripts/ci-gates.sh" enumeration "$ENUM_FIX"
+if [ "$GATE_RC" -ne 0 ] && grep -q 'ENUM: ghost' "$WORK/last.log" \
+   && ! grep -q 'ENUM: realskill' "$WORK/last.log"; then
+  record 0 "enumeration: fails closed and names the un-enumerated skill (planted RED)"
+else
+  record 1 "enumeration: fails closed and names the un-enumerated skill (planted RED)"
+fi
+
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
