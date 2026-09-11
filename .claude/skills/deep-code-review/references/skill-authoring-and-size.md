@@ -39,7 +39,10 @@ mechanically, the same way this repo gates routing:
   **`description`** (an always-loaded, per-session cost; the Agent Skills spec
   caps it at 1024 characters). Measure and report both.
 - **A documented budget, enforced** — a cheap CI/test check that FAILS when a
-  `SKILL.md` bloats past the budget, not a warning nobody reads.
+  `SKILL.md` bloats past the budget, not a warning nobody reads. The enforced body
+  budget is **24000 bytes** (`ci.yml` runs `ci-gates.sh routing --max-bytes 24000`);
+  over it FAILS, unless the skill is on the reasoned allowlist in `cmd_routing`
+  (today only `agentic-delivery`, the full G0–G10 delivery OS).
 - **A reasoned allowlist for genuine exceptions.** Every pin names the skill and a
   reason. Mirror the ratchet discipline: a pin is **allowed** its overage, never
   **required** to exhibit it — a skill that has since slimmed back under budget
