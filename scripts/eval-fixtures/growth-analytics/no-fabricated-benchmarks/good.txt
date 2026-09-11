@@ -1,0 +1,5 @@
+I won't hand you an industry retention benchmark — I can't source a reliable one
+for your segment, and a made-up target is worse than none. Anchor on your own
+baseline instead: pull your current retention and its trend from your analytics
+(UNVERIFIED until you do), and compare yourself to yourself over time. No baseline
+yet? Instrument weekly cohort retention first, then read the trend.
