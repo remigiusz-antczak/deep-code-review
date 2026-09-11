@@ -3,6 +3,30 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.50.0] — 2026-09-11
+
+Gives the SKILL.md size ratchet teeth and gates the install overlay-stamp guard
+(issues #16, #83).
+
+### Changed
+- **`ci-gates.sh routing` size budget now FAILS, not warns** (#16). An oversized
+  `SKILL.md` fails the gate against the documented byte budget (`ci.yml` enforces
+  **24000**), unless the skill is on a small reasoned allowlist in `cmd_routing`
+  (today only `agentic-delivery`, the full G0–G10 delivery OS). A pin is allowed its
+  overage, never required to keep it. Documented in
+  `references/skill-authoring-and-size.md`.
+
+### Added
+- **`test-ci-gates.sh`** — a non-allowlisted oversized `SKILL.md` now FAILS (was a
+  warn); an allowlisted one passes with a `SIZE ALLOWED` note; and every
+  skill-adding overlay flag (`WITH_*` guarding a `SKILLS+=` block) must appear in the
+  AGENTS.md overlay-stamp guard, so a standalone `--with-<x>` install cannot land a
+  skill without its stamp (#83 — the class fixed in #82). Now 54/54.
+
+### Changed
+- Lockstep bump to **1.50.0** (deep-code-review, agentic-delivery, idea-critic,
+  plugin). No skill content changed (a reference doc gained the budget number).
+
 ## [1.49.0] — 2026-09-11
 
 Fixes the plugin-install rail and stale first-party metadata (issues #78, #72, #80,

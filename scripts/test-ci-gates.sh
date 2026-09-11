@@ -160,7 +160,9 @@ printf 'literal depth\n' >"$literal/references/literal.md"
 gate "$GATES" routing "$literal"
 if [ "$GATE_RC" -ne 0 ]; then record 0 "routing: reject reference matched only via regex-meta basename"; else record 1 "routing: reject reference matched only via regex-meta basename"; fi
 
-# Oversized SKILL.md that is otherwise well-routed: must PASS but emit a warning.
+# Oversized, well-routed, NON-allowlisted SKILL.md: the size ratchet now FAILS on
+# bloat (it used to only warn). The fixture basename (skill-big) is not on the
+# reasoned allowlist, so it must fail with a SIZE FAIL diagnostic.
 big="$WORK/skill-big"
 mkdir -p "$big/references"
 printf '# Skill\n\nSee references/routed.md for depth.\n' >"$big/SKILL.md"
@@ -168,10 +170,40 @@ head -c $((SKILL_BUDGET * 4)) </dev/zero | tr '\0' 'x' >>"$big/SKILL.md"
 printf 'routed depth\n' >"$big/references/routed.md"
 
 gate "$GATES" routing --max-bytes "$SKILL_BUDGET" "$big"
-if [ "$GATE_RC" -eq 0 ] && grep -qi 'warn' "$WORK/last.log"; then
-  record 0 "routing: warn (non-failing) when SKILL.md exceeds size budget"
+if [ "$GATE_RC" -ne 0 ] && grep -q 'SIZE FAIL' "$WORK/last.log"; then
+  record 0 "routing: FAIL (not warn) when a non-allowlisted SKILL.md exceeds the budget"
 else
-  record 1 "routing: warn (non-failing) when SKILL.md exceeds size budget"
+  record 1 "routing: FAIL (not warn) when a non-allowlisted SKILL.md exceeds the budget"
+fi
+
+# An allowlisted skill (agentic-delivery) may exceed the budget: it emits SIZE
+# ALLOWED and PASSES. Same oversized body; only the dir basename differs, and the
+# allowlist keys on that basename. Proves the allowlist is real, not a blanket skip.
+allow="$WORK/agentic-delivery"
+mkdir -p "$allow/references"
+printf '# Skill\n\nSee references/routed.md for depth.\n' >"$allow/SKILL.md"
+head -c $((SKILL_BUDGET * 4)) </dev/zero | tr '\0' 'x' >>"$allow/SKILL.md"
+printf 'routed depth\n' >"$allow/references/routed.md"
+
+gate "$GATES" routing --max-bytes "$SKILL_BUDGET" "$allow"
+if [ "$GATE_RC" -eq 0 ] && grep -q 'SIZE ALLOWED' "$WORK/last.log"; then
+  record 0 "routing: allowlisted skill (agentic-delivery) may exceed the size budget"
+else
+  record 1 "routing: allowlisted skill (agentic-delivery) may exceed the size budget"
+fi
+
+# Every overlay flag that ADDS a skill (a WITH_* var guarding a SKILLS+= block)
+# must also appear in the AGENTS.md overlay-stamp guard, or a standalone
+# --with-<x> install lands the skill but writes no stamp — the guard-omission bug
+# that silently affected six overlays until it was fixed (#82, #83).
+guard_vars="$(grep -B1 'OVERLAY_LINES=""' "$ROOT/install.sh" | grep -oE 'WITH_[A-Z_]+' | sort -u)"
+skill_vars="$(grep -B1 'SKILLS+=(' "$ROOT/install.sh" | grep -oE 'WITH_[A-Z_]+' | sort -u)"
+stamp_missing="$(comm -23 <(printf '%s\n' "$skill_vars") <(printf '%s\n' "$guard_vars"))"
+if [ -z "$stamp_missing" ]; then
+  record 0 "install: every skill-adding overlay flag is in the AGENTS.md stamp guard"
+else
+  printf 'STAMP-GUARD MISSING: %s\n' "$(printf '%s' "$stamp_missing" | tr '\n' ' ')" >&2
+  record 1 "install: every skill-adding overlay flag is in the AGENTS.md stamp guard"
 fi
 
 # ---------------------------------------------------------------------------

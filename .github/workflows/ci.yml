@@ -34,17 +34,17 @@ jobs:
           set -euo pipefail
           # Routing runs on every shipped skill dir — a reference under an overlay
           # cannot ship unrouted (dogfoods "documented but unenforced is a finding").
-          bash scripts/ci-gates.sh routing --max-bytes 100000 .claude/skills/deep-code-review
-          bash scripts/ci-gates.sh routing --max-bytes 100000 .claude/skills/agentic-delivery
-          bash scripts/ci-gates.sh routing --max-bytes 100000 .claude/skills/idea-critic
-          bash scripts/ci-gates.sh routing --max-bytes 100000 .claude/skills/communication-structure
-          bash scripts/ci-gates.sh routing --max-bytes 100000 .claude/skills/contribution
-          bash scripts/ci-gates.sh routing --max-bytes 100000 .claude/skills/product-discovery
-          bash scripts/ci-gates.sh routing --max-bytes 100000 .claude/skills/agentic-ceo
-          bash scripts/ci-gates.sh routing --max-bytes 100000 .claude/skills/growth-analytics
-          bash scripts/ci-gates.sh routing --max-bytes 100000 .claude/skills/positioning
-          bash scripts/ci-gates.sh routing --max-bytes 100000 .claude/skills/business-ops
-          bash scripts/ci-gates.sh routing --max-bytes 100000 .claude/skills/product-output-safety
+          bash scripts/ci-gates.sh routing --max-bytes 24000 .claude/skills/deep-code-review
+          bash scripts/ci-gates.sh routing --max-bytes 24000 .claude/skills/agentic-delivery
+          bash scripts/ci-gates.sh routing --max-bytes 24000 .claude/skills/idea-critic
+          bash scripts/ci-gates.sh routing --max-bytes 24000 .claude/skills/communication-structure
+          bash scripts/ci-gates.sh routing --max-bytes 24000 .claude/skills/contribution
+          bash scripts/ci-gates.sh routing --max-bytes 24000 .claude/skills/product-discovery
+          bash scripts/ci-gates.sh routing --max-bytes 24000 .claude/skills/agentic-ceo
+          bash scripts/ci-gates.sh routing --max-bytes 24000 .claude/skills/growth-analytics
+          bash scripts/ci-gates.sh routing --max-bytes 24000 .claude/skills/positioning
+          bash scripts/ci-gates.sh routing --max-bytes 24000 .claude/skills/business-ops
+          bash scripts/ci-gates.sh routing --max-bytes 24000 .claude/skills/product-output-safety
           bash scripts/ci-gates.sh version .
           bash scripts/ci-gates.sh privacy --banlist .banlist.txt .
           bash scripts/ci-gates.sh enumeration .
