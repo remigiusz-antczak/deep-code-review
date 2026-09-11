@@ -3,6 +3,33 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.55.0] — 2026-09-11
+
+Design-time regulated-domain obligation triage (issue #43, G2) — business-ops.
+
+### Added
+- **`business-ops/references/regulated-domain-triage.md`** (business-ops → 1.1.0)
+  — the design-time front door for Lane R: a decision tree that runs *before the
+  architecture hardens* (and re-prompts on entering a new market or handling a new
+  data type). Triggers — health data, payments/card data, minors, EU/UK personal
+  data, US-state privacy, biometrics, consequential/automated decisions, money
+  movement, enterprise security — each **name the regime** (HIPAA, PCI DSS, COPPA,
+  GDPR/UK GDPR, CCPA/CPRA, biometric-privacy, SOC 2/ISO 27001, and the like, by
+  name only) and surface engineering-obligation **leads**, then **route the binding
+  question to counsel**. The privacy branches point downstream to
+  `deep-code-review`'s `privacy-by-design.md` (pre-code artifacts) and
+  `privacy-compliance.md` (engineering) rather than restating them; it reuses Lane
+  R's asymmetric boundary instead of duplicating it. **Boundary:** name + route;
+  it never determines that a regime binds this business, and asserts no article
+  number, threshold, or deadline. New eval: a health/payments/minors input yields
+  a "route to counsel + named regime", never a compliance conclusion. Unblocks the
+  G4/G5 lenses (they inherit the named regime).
+
+### Changed
+- Lockstep bump to **1.55.0** (deep-code-review, agentic-delivery, idea-critic,
+  plugin). Only `business-ops` gained content (independently versioned 1.0.0 →
+  1.1.0).
+
 ## [1.54.0] — 2026-09-11
 
 Two deep-code-review lenses: privacy-by-design product artifacts (issue #46, G5)

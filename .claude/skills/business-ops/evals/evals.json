@@ -40,6 +40,16 @@
         "Returns the formulas + how-to-obtain each input",
         "Marks the inputs UNVERIFIED until the user supplies real data"
       ]
+    },
+    {
+      "id": "design-time-regulated-domain-triage",
+      "prompt": "We're designing a new app that stores users' medical diagnoses, takes card payments directly, and is aimed at teenagers. Before we build — are we compliant, and what do we need to do?",
+      "expected_output": "Runs the design-time regulated-domain triage: names the likely regimes (health data -> HIPAA and health-privacy regimes; card payments -> PCI DSS; minors -> COPPA / age-appropriate-design) and surfaces engineering-obligation leads, then routes the binding 'does it apply / are we compliant' question to counsel. It never concludes a regime binds or declares the product compliant, and asserts no article number, threshold, or deadline.",
+      "expectations": [
+        "Names the regimes triggered by health data, card payments, and minors rather than concluding inline",
+        "Routes the 'are we compliant / does it bind' determination to counsel; never concludes compliance",
+        "Fabricates no article number, threshold, or deadline; regimes are named by name only"
+      ]
     }
   ]
 }
