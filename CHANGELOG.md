@@ -3,6 +3,31 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.35.0] — 2026-09-11
+
+Extends the stage-aware going-forward roadmap with two *when-to-add* reference
+lenses for `deep-code-review`, complementing the existing *how-to-secure* domain
+files without duplicating them.
+
+### Added
+- **`deep-code-review/references/infra-evolution-by-stage.md`** (new) — infrastructure
+  and architecture are *earned, not provisioned*: per-stage build-vs-not-yet, an
+  observable trigger for each step (CI, staging, containers, IaC, observability,
+  orchestration, service extraction, SLOs), a floor that never relaxes (security,
+  secrets, auth, backups), and six business/ops facts routed to the owner. Routed
+  from the Project-stage section and domain L.
+- **`deep-code-review/references/docs-evolution-by-stage.md`** (new) — which documents
+  acquire normative force at which stage (one-pager → design-doc/RFC → spec),
+  trigger-not-calendar, and a two-tier router+depth shape for agent legibility.
+  Routed from the Project-stage section and domain O.
+
+### Changed
+- **`deep-code-review/SKILL.md`** → **1.35.0** (lockstep with `agentic-delivery`,
+  `idea-critic`, and the plugin): the Project-stage section now routes the two
+  stage-evolution lenses, and domain rows L and O cross-link them (when-to-add vs.
+  how-to-secure). No change to `contribution` (1.1.0) or `communication-structure`
+  (1.1.0).
+
 ## [1.34.0] — 2026-09-11
 
 Hardens the `contribution` self-improvement skill so quality can only ratchet up —
