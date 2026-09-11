@@ -199,6 +199,7 @@ A03, cross-referenced from `references/security-agent-skills.md` AST02).
 |---|---|---|
 | Renovate — `minimumReleaseAge` | https://docs.renovatebot.com/configuration-options/ | Supply-chain cooldown option: "Suppress branch/PR creation for X days" / "Prevent holding broken npm packages"; Renovate delays proposing an update until a package has been public for the configured duration, reducing exposure to newly-published malicious or broken releases. Associated option `minimumReleaseAgeBehaviour`. (Dependabot `cooldown` and npm/pnpm `min-release-age`-style keys were **not** fetched this session — confirm the exact key per ecosystem before citing.) |
 | GitHub Actions — Security hardening for GitHub Actions | https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions | Verbatim: `pull_request_target` / `workflow_run` used with an untrusted checkout "expose the repository to security compromises" and "must not explicitly check out untrusted code." Untrusted `${{ github.event.* }}` should be routed through an intermediate `env:` variable rather than inlined into a `run:` script (the value "is stored in memory and used as a variable, and doesn't interact with the script generation process"). Set the default `GITHUB_TOKEN` to "read access only for repository contents," escalating per job as required. (`persist-credentials` on `actions/checkout` was **not** found on this page.) |
+| NIST AI Risk Management Framework — core functions (verified 2026-09-11) | https://www.nist.gov/itl/ai-risk-management-framework | The four core function names — **Govern, Map, Measure, Manage** — appear on the official NIST ITL framework page. Only the function names were confirmed here; the full AI RMF 1.0 (AI 100-1) and the Generative AI Profile (AI 600-1) control specifics were **not** fetched this session — cite those by name only (see the by-name list below). |
 
 ## Referenced by name (not fetched this session — verify before citing a URL)
 
@@ -206,8 +207,9 @@ A03, cross-referenced from `references/security-agent-skills.md` AST02).
 - **OWASP Cheat Sheet Series** — concrete implementation guidance.
 - **MITRE CWE / CVE** — weakness and vulnerability naming.
 - **MITRE ATLAS** — adversarial-ML and agent-tool attack techniques.
-- **NIST SSDF (SP 800-218)** and **NIST AI RMF + Generative AI Profile (AI 600-1)**
-  — secure-development and AI-risk lifecycle framing.
+- **NIST SSDF (SP 800-218)** and the **NIST AI RMF Generative AI Profile (AI 600-1)**
+  — secure-development and AI-risk lifecycle framing. (The AI RMF core function names
+  are verified in the table above; these document/profile specifics were not fetched.)
 - **SLSA** — build/supply-chain provenance levels.
 - **CIS Benchmarks** — OS/container/cloud hardening baselines.
 - **ISO/IEC 25010** — software product-quality model (the axes this review
