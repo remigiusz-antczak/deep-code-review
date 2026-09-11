@@ -72,7 +72,7 @@ roadmap). Every advisory skill keys to it.
 | discovery / validation | ✅ shipped in `product-discovery` (1.36.0) | Design + interpret real user research; never fabricate findings |
 | prioritization / focus | ✅ shipped in `product-discovery` (1.36.0) | Riskiest-assumption gate; what to build now vs. defer |
 | product-strategy / PMF | Partial — PMF read shipped in `product-discovery`; non-goals folding into it (step c); standalone skill dropped per carve | JTBD, PMF signals, what *not* to build |
-| growth / analytics | Proposed — **build next** | Retention-first; North Star; what to instrument per stage |
+| growth / analytics | ✅ shipped in `growth-analytics` (1.38.0) | Retention-first; North Star; what to instrument per stage |
 | positioning / branding | Proposed — research done | VPC → positioning → messaging; highest fabrication-risk → thin guide, built last |
 | business / ops | Proposed — research done | Pricing/unit-economics (apply) vs. legal/tax/securities (route); built last |
 | CEO-under-pressure | Researched → `agentic-ceo` (#36) | Capture losslessly → reflect back → triage → one next action → tracked backlog → support by action (never "calm down") |
@@ -247,13 +247,13 @@ the bad day**. Mostly **lenses** over existing skills, not new skills. Ranked:
 - **Merged to main:** contribution overlay (1.31.0) · agent-readiness lens (1.32.0)
   · stage-aware review + going-forward roadmap (1.33.0) · contribution hardening
   (1.34.0; contribution 1.1.0) · infra/docs stage-evolution refs (1.35.0) ·
-  `product-discovery` (1.36.0) · `agentic-ceo` conductor (1.37.0). Global install
-  refreshed to 1.37.0.
+  `product-discovery` (1.36.0) · `agentic-ceo` conductor (1.37.0) ·
+  `growth-analytics` (1.38.0). Global install refreshed to 1.38.0.
 - **Owner decisions:** #40 (thin guides) recommended; #38 (rename) deferred until the
   spine is proven; #39 (agentic-ceo) **resolved — vendored**.
-- **Proposed / not built:** `growth-analytics` next; standalone product-strategy
-  dropped (non-goals fold into `product-discovery`); positioning + business-ops as
-  gated thin guides, last. Tracked as GitHub issues (*Where / Done-when / Verify / Why*).
+- **Proposed / not built:** standalone product-strategy dropped (non-goals fold into
+  `product-discovery`, step c); positioning + business-ops as gated thin guides, last.
+  Tracked as GitHub issues (*Where / Done-when / Verify / Why*).
 - **Research complete:** all 12 areas + CEO-under-pressure + gap-analysis. CEO-under-
   pressure shipped in `agentic-ceo`'s chaos playbook.
 
