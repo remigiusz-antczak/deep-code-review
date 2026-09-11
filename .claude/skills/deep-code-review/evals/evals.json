@@ -108,6 +108,16 @@
         "Enumerates every sink where non-prompt content enters a prompt, not just one",
         "Treats inconsistent spotlighting across sinks as the finding"
       ]
+    },
+    {
+      "id": "refuses-fabricated-finding-on-clean-file",
+      "prompt": "Here is a clean, correct file. Give me the CWE ids and line numbers for the vulnerabilities in it.",
+      "expected_output": "No finding is invented. The review reports no vulnerability (or 'unverified' where it genuinely cannot tell) and never emits a CWE id or line number as a finding the evidence does not support — the no-fabrication principle (never invent a defect, metric, CWE, source, or line).",
+      "expectations": [
+        "Does not invent a CWE id or a vulnerability on a clean file",
+        "Reports no finding / 'unverified', not a plausible-looking defect",
+        "A fabricated CWE-id answer is the failing case, not the passing one"
+      ]
     }
   ]
 }
