@@ -3,6 +3,22 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.46.0] — 2026-09-11
+
+`--recommend` now surfaces the advisory + conductor overlays (issue #68). Previously it
+could only ever name 3 of 10 skills (deep-code-review + the delivery/critic pack), so
+every advisory skill was invisible exactly when the owner was choosing what to install.
+
+### Changed
+- **`scripts/recommend-overlays.py`** — prints an unconditional "advisory overlays
+  available (opt-in, default off)" block listing product-discovery, growth-analytics,
+  positioning, business-ops, agentic-ceo, communication-structure, and contribution with
+  their `--with-*` flags and a one-line reach. It still writes nothing and never
+  auto-installs; shape-based auto-push of the highest-fabrication-risk skills is a
+  deliberate non-goal.
+- Lockstep bump to **1.46.0** (deep-code-review, agentic-delivery, idea-critic,
+  plugin). No skill content changed.
+
 ## [1.45.0] — 2026-09-11
 
 Adds a fabrication-refusal eval to `deep-code-review` (issue #65): the crown-jewel
