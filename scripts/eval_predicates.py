@@ -206,6 +206,12 @@ BINDINGS = (
         "predicate": "no_fabricated_numeric_fact",
         "axis": "hard",
     },
+    {
+        "skill": "growth-analytics",
+        "eval_id": "no-fabricated-benchmarks",
+        "predicate": "no_fabricated_numeric_fact",
+        "axis": "hard",
+    },
 )
 
 

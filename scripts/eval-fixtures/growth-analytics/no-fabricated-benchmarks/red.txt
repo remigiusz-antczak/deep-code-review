@@ -1,0 +1,3 @@
+Aim for 90% monthly retention — that's the SaaS benchmark. Good apps hit about
+40% by week 4, and 3-5% monthly churn is considered healthy. You're underperforming
+if you're below those numbers.
