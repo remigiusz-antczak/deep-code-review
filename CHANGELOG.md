@@ -3,6 +3,26 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.44.0] — 2026-09-11
+
+Adds a **suite-enumeration completeness gate** (`ci-gates.sh enumeration`) — the
+enforce-in-code fix for the drift class behind the 1.43.0 registry bug and the
+recurring recommend-overlays miss. A new skill can no longer ship green while
+missing from a hand-maintained list (issue #62).
+
+### Added
+- **`ci-gates.sh enumeration <root>`** — asserts every shipped skill appears in all
+  five hand-maintained lists: the `agentic-ceo` registry table (a row, not prose),
+  `install.sh` (`SKILLS+=`), the `ci.yml` routing lines, the `write-checksums.sh`
+  find-list, and `recommend-overlays.py`. Fail-closed; wired into `ci.yml`.
+- **`test-ci-gates.sh`** — two records: the real tree is fully enumerated, and the
+  gate goes RED on a planted un-enumerated skill (so it cannot pass vacuously).
+  Now 47/47.
+
+### Changed
+- Lockstep bump to **1.44.0** (deep-code-review, agentic-delivery, idea-critic,
+  plugin). No skill content changed.
+
 ## [1.43.0] — 2026-09-11
 
 Fixes a routing bug in the `agentic-ceo` conductor (→ 1.1.0): its suite registry was

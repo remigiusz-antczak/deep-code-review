@@ -44,6 +44,7 @@ Usage:
   ci-gates.sh routing [--max-bytes N] <skill-dir>
   ci-gates.sh version <root>
   ci-gates.sh install --src <dir> --dest <dir> --mode <claude|minimal|full|codex|overlays|recommend>
+  ci-gates.sh enumeration <root>
 EOF
 }
 
@@ -341,6 +342,65 @@ cmd_install() {
 }
 
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# enumeration — every shipped skill is present in every hand-maintained list.
+#
+# Catches the drift class that shipped despite green CI: a new skill missing from
+# agentic-ceo's registry (unroutable), from install.sh (uninstallable), from the
+# ci.yml routing lines (ungated), from the checksum find-list (unpinned), or from
+# recommend-overlays.py (mis-classified). These lists are hand-enumerated, so the
+# globbed self-tests cannot see a gap. Fail closed.
+# ---------------------------------------------------------------------------
+cmd_enumeration() {
+  local root="."
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      -*) die "enumeration: unknown option: $1" ;;
+      *) root="$1"; shift ;;
+    esac
+  done
+  local skills_dir="$root/.claude/skills"
+  [ -d "$skills_dir" ] || die "enumeration: no skills dir at $skills_dir (fail closed)"
+  local ci="$root/.github/workflows/ci.yml"
+  local checksums="$root/scripts/write-checksums.sh"
+  local installer="$root/install.sh"
+  local registry="$skills_dir/agentic-ceo/SKILL.md"
+  local recommend="$root/scripts/recommend-overlays.py"
+  local f
+  for f in "$ci" "$checksums" "$installer" "$registry" "$recommend"; do
+    [ -f "$f" ] || die "enumeration: missing required file: $f (fail closed)"
+  done
+
+  local bt='`'
+  local fail=0 d name
+  for d in "$skills_dir"/*/; do
+    [ -d "$d" ] || continue
+    name="$(basename "$d")"
+    # 1) ci.yml routing line (per-skill; enumerated, not globbed)
+    grep -qE "\.claude/skills/${name}[[:space:]]*\$" "$ci" \
+      || { printf 'ENUM: %s has no ci.yml routing line\n' "$name" >&2; fail=1; }
+    # 2) write-checksums.sh find-list (else the skill tree is unpinned)
+    grep -qE "\.claude/skills/${name}[[:space:]]" "$checksums" \
+      || { printf 'ENUM: %s absent from write-checksums.sh find-list\n' "$name" >&2; fail=1; }
+    # 3) install.sh — the base ships always; every overlay needs a SKILLS+= line
+    if [ "$name" != "deep-code-review" ]; then
+      grep -qF "SKILLS+=(\"${name}\")" "$installer" \
+        || { printf 'ENUM: %s has no install.sh SKILLS+= line\n' "$name" >&2; fail=1; }
+    fi
+    # 4) agentic-ceo registry — a table ROW (^| `name` |), not merely prose
+    if [ "$name" != "agentic-ceo" ]; then
+      grep -qE "^\| ${bt}${name}${bt} \|" "$registry" \
+        || { printf 'ENUM: %s has no agentic-ceo registry row\n' "$name" >&2; fail=1; }
+    fi
+    # 5) recommend-overlays.py knows the skill (else it mis-classifies at --recommend)
+    grep -qF "$name" "$recommend" \
+      || { printf 'ENUM: %s not named in recommend-overlays.py\n' "$name" >&2; fail=1; }
+  done
+
+  [ "$fail" -eq 0 ] || die "enumeration: one or more skills are not fully enumerated"
+  printf 'enumeration: ok\n'
+}
+
 [ "$#" -gt 0 ] || { usage; exit 2; }
 subcmd="$1"; shift
 case "$subcmd" in
@@ -348,6 +408,7 @@ case "$subcmd" in
   routing) cmd_routing "$@" ;;
   version) cmd_version "$@" ;;
   install) cmd_install "$@" ;;
+  enumeration) cmd_enumeration "$@" ;;
   -h|--help) usage; exit 0 ;;
   *) printf 'ci-gates: unknown subcommand: %s\n' "$subcmd" >&2; usage; exit 2 ;;
 esac

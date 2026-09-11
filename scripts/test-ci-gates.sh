@@ -763,5 +763,35 @@ fi
 
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# enumeration — every shipped skill is in every hand-maintained list, AND the
+# gate goes RED on a skill absent from those lists (planted, so it can't pass
+# vacuously). This is the class that shipped despite green CI: a new skill
+# missing from the agentic-ceo registry / install.sh / ci.yml / checksums /
+# recommend-overlays.
+# ---------------------------------------------------------------------------
+gate "$ROOT/scripts/ci-gates.sh" enumeration "$ROOT"
+if [ "$GATE_RC" -eq 0 ]; then
+  record 0 "enumeration: every shipped skill is fully enumerated"
+else
+  record 1 "enumeration: every shipped skill is fully enumerated"
+fi
+
+# Planted RED: a skill on disk but absent from every hand-maintained list must fail.
+ENUM_FIX="$WORK/enum"
+mkdir -p "$ENUM_FIX/.claude/skills/ghost" "$ENUM_FIX/.claude/skills/agentic-ceo" \
+         "$ENUM_FIX/.github/workflows" "$ENUM_FIX/scripts"
+: > "$ENUM_FIX/.github/workflows/ci.yml"
+: > "$ENUM_FIX/scripts/write-checksums.sh"
+: > "$ENUM_FIX/install.sh"
+: > "$ENUM_FIX/scripts/recommend-overlays.py"
+: > "$ENUM_FIX/.claude/skills/agentic-ceo/SKILL.md"
+gate "$ROOT/scripts/ci-gates.sh" enumeration "$ENUM_FIX"
+if [ "$GATE_RC" -ne 0 ]; then
+  record 0 "enumeration: fails closed on an un-enumerated skill (planted RED)"
+else
+  record 1 "enumeration: fails closed on an un-enumerated skill (planted RED)"
+fi
+
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
