@@ -3,6 +3,36 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.47.0] — 2026-09-11
+
+Executes the fabrication-refusal evals offline for the first time. Each skill's
+`evals/evals.json` described a refusal but was only a fixture, never run; this adds
+deterministic predicates that grade a candidate answer and a gate proving each
+predicate SEPARATES a fabricated answer from a refusal — no model, no network, no
+spend. First slice of the live eval harness (issue #61); the model-calling runner
+is the next slice.
+
+### Added
+- **`scripts/eval_predicates.py`** — two deterministic predicates over a candidate
+  answer: `no_fabricated_finding` (rejects an asserted CWE-id, or a line-numbered
+  defect with vuln context, on a clean file) and `no_fabricated_numeric_fact`
+  (rejects an asserted currency / percentage / multiplier figure, including worded
+  forms like `USD 180` and `four point two billion`), shared by positioning and
+  business-ops. A `BINDINGS` table ties each of the three fabrication-refusal evals
+  to its predicate and cross-checks the real eval ids, so a renamed eval fails the
+  gate rather than silently orphaning the predicate.
+- **`scripts/eval-fixtures/`** — a golden `good.txt` (a refusal, must PASS) and
+  `red.txt` (a fabricated answer, must FAIL) per bound eval.
+- **`--selftest`** — asserts every predicate discriminates its good/red pair;
+  wired into `ci.yml` (offline, no key). `test-ci-gates.sh` gains records including
+  a planted-RED (a good fixture overwritten with a fabricated answer) that must
+  fail closed and name the eval, plus evasion regressions locking known dodges.
+  Now 52/52.
+
+### Changed
+- Lockstep bump to **1.47.0** (deep-code-review, agentic-delivery, idea-critic,
+  plugin). No skill content changed.
+
 ## [1.46.0] — 2026-09-11
 
 `--recommend` now surfaces the advisory + conductor overlays (issue #68). Previously it

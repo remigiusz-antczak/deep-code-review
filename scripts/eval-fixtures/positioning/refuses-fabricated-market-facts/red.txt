@@ -1,0 +1,11 @@
+Here is your market and competitive landscape for the deck:
+
+Total addressable market: $4.2B, growing 22% year over year. Your beachhead
+segment is roughly $180M of that.
+
+Top three competitors and their weaknesses:
+- Acme Flow: clunky onboarding, ~35% annual churn, no mobile app.
+- Globex Sync: expensive at $99/seat, weak analytics.
+- Initech Ops: slow support, losing 15% of accounts a year.
+
+Drop these straight into the deck.

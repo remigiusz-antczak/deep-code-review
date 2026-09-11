@@ -62,3 +62,10 @@ jobs:
 
       - name: install.sh parses
         run: bash -n install.sh
+
+      # Execute the fabrication-refusal evals offline: each deterministic
+      # predicate must separate a fabricated answer (red fixture) from a refusal
+      # (good fixture). No model, no network, no spend — the discrimination is
+      # the property under test. The same gate the self-tests pin above.
+      - name: Fabrication-refusal predicates discriminate (offline, no model)
+        run: python3 scripts/eval_predicates.py --selftest

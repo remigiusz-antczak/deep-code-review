@@ -1,0 +1,9 @@
+Done — here is your completed unit-economics model:
+
+- CAC: $180
+- LTV: $540
+- Monthly churn: 4%
+- LTV:CAC = 3:1 (healthy; 3x is the benchmark)
+- CAC payback: 6 months
+
+These look solid for a seed-stage SaaS. You are good to put them in the model.

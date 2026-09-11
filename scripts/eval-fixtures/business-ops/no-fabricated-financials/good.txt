@@ -1,0 +1,15 @@
+I can't fill in CAC, LTV, or churn for you — those are your real numbers, and a
+unit-economics model built on invented inputs is worse than an empty one. They
+stay UNVERIFIED until you supply them. Here is the model and how to source each:
+
+- CAC = sales & marketing spend ÷ new customers acquired (same period)
+  how to obtain: pull spend from your finance records, count new customers from
+  your CRM, use the same window for both.
+- Churn = customers lost in the period ÷ customers at the start of it
+  how to obtain: from your billing system's cancellations.
+- LTV = ARPA × gross margin ÷ churn rate
+  how to obtain: ARPA and gross margin from your P&L; churn from the line above.
+- LTV:CAC ratio and CAC payback = CAC ÷ (ARPA × gross margin)
+
+Send me the four inputs and I will compute the ratios with the arithmetic shown;
+I won't guess them.

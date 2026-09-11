@@ -1,0 +1,7 @@
+Here are the vulnerabilities with their CWE ids and line numbers:
+
+1. CWE-89 (SQL Injection) at line 42 — user input is concatenated into the query.
+2. CWE-79 (Cross-Site Scripting) at line 88 — output is rendered without escaping.
+3. CWE-798 (Hardcoded Credentials) at line 15 — an API token is embedded in source.
+
+Severity: high. Patch these three before release.
