@@ -7,7 +7,8 @@ a pre-owner idea attack, a persisted-message structure rule, and a privacy-safe
 upstream-contribution flow into a target repo. The crown jewel is `.claude/skills/deep-code-review/SKILL.md`; its depth
 lives in that skill's `references/`. Sibling skills live under
 `.claude/skills/agentic-delivery/`, `.claude/skills/idea-critic/`,
-`.claude/skills/communication-structure/`, and `.claude/skills/contribution/`.
+`.claude/skills/communication-structure/`, `.claude/skills/contribution/`, and
+`.claude/skills/product-discovery/`.
 Everything else (`README.md`,
 `install.sh`, `docs/standards-index.md`) supports distributing and trusting
 those skills.

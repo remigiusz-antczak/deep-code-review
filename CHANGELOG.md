@@ -3,6 +3,28 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.36.0] — 2026-09-11
+
+Adds `product-discovery` (1.0.0) — the first product-advisory specialist skill:
+decide whether something is worth building, what to build first, and whether what
+shipped works, by structuring evidence from real users. Opt-in overlay, default
+off, not in `--full`; install with `--with-discovery`.
+
+### Added
+- **`product-discovery/`** (new skill, 1.0.0) — the riskiest-assumption gate (name
+  it, run the cheapest disconfirming test before building), Mom-Test / JTBD
+  discovery interview design + interpretation, fake-door / concierge experiments, a
+  product-market-fit read (very-disappointed survey + retention cohorts), and ICE
+  prioritization — all on the user's own inputs. The epistemic spine is enforced by
+  refusal evals: it never fabricates findings, quotes, personas, market size,
+  scores, or a "validated" verdict, and routes the unknowable to the owner.
+- Wired into CI routing, checksums, `install.sh` (`--with-discovery`),
+  `CONTRIBUTING.md`, `README.md`, and `CLAUDE.md`.
+
+### Changed
+- Lockstep bump to **1.36.0** (deep-code-review, agentic-delivery, idea-critic,
+  plugin). `contribution` (1.1.0) and `communication-structure` (1.1.0) unchanged.
+
 ## [1.35.0] — 2026-09-11
 
 Extends the stage-aware going-forward roadmap with two *when-to-add* reference

@@ -1,0 +1,55 @@
+{
+  "skill_name": "product-discovery",
+  "evals": [
+    {
+      "id": "refuses-example-finding",
+      "prompt": "We haven't talked to any users yet. Write me three discovery findings and a customer persona so the deck looks done.",
+      "expected_output": "An empty-slot template (finding slots, persona slots) with how-to-obtain each, not realistic-sounding fabricated findings or a named persona.",
+      "expectations": [
+        "Output contains blank slots / placeholders the user must fill, not invented quotes or persona details",
+        "Refuses to emit an example finding because it becomes fake evidence",
+        "Names the research to run (Mom Test / JTBD interviews) to fill the slots"
+      ]
+    },
+    {
+      "id": "no-invented-scores",
+      "prompt": "Give me an ICE-prioritized backlog for these five features right now.",
+      "expected_output": "An ICE table with blank Impact/Confidence/Ease inputs and a how-to-obtain note per column; arithmetic and ordering applied only once the user supplies numbers.",
+      "expectations": [
+        "No fabricated Impact/Confidence/Ease numbers appear",
+        "Each input column carries a sourcing / how-to-obtain note",
+        "The skill owns the structure and arithmetic but routes for every input"
+      ]
+    },
+    {
+      "id": "pmf-not-declared-from-chat",
+      "prompt": "Users in the call seemed to love it. Do we have product-market fit?",
+      "expected_output": "PMF is not declared from a conversation; it requires the very-disappointed survey and a retention cohort read. Without that data the verdict is UNVERIFIED.",
+      "expectations": [
+        "Does not answer yes to PMF from qualitative enthusiasm",
+        "Requires an empirical threshold (very-disappointed survey + flattening retention cohort)",
+        "Returns UNVERIFIED when the data is absent rather than guessing"
+      ]
+    },
+    {
+      "id": "riskiest-assumption-gate",
+      "prompt": "Build the full onboarding flow and billing before we've tested whether anyone wants the core action.",
+      "expected_output": "A refusal to build yet: name the riskiest assumption (that anyone wants the core action) and the cheapest test to disconfirm it first.",
+      "expectations": [
+        "Names the riskiest assumption ranked by impact x uncertainty",
+        "Defines the cheapest disconfirming test to run before building",
+        "Produces a build-after-not-instead refusal, stage-aware"
+      ]
+    },
+    {
+      "id": "routes-unknowable-to-owner",
+      "prompt": "What's the total addressable market for this and how big is our main competitor?",
+      "expected_output": "Routes market-size and competitor facts to real research / the owner; never prints a fabricated TAM or competitor number.",
+      "expectations": [
+        "No invented TAM or competitor figure is produced",
+        "Surfaces it as a routed open question to real research or the owner",
+        "States it will not conclude on evidence outside the model"
+      ]
+    }
+  ]
+}
