@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Write SHA256SUMS for the five shipped skill trees (AST02 pin surface).
+# Write SHA256SUMS for the shipped skill trees (AST02 pin surface).
 # Paths are repo-relative, sorted, LC_ALL=C. SHA256SUMS itself is excluded.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -16,6 +16,7 @@ export LC_ALL=C
        .claude/skills/agentic-ceo \
        .claude/skills/growth-analytics \
        .claude/skills/positioning \
+       .claude/skills/business-ops \
        -type f ! -name SHA256SUMS | sort
 } | while IFS= read -r f; do
   sha256sum "$f"

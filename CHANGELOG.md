@@ -3,6 +3,29 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.42.0] — 2026-09-11
+
+Adds `business-ops` (1.0.0) — the second thin advisory guide (built last) and the
+last of the recommended suite skills. Two clearly separated lanes: Lane A applies
+pricing / unit-economics arithmetic to the user's own numbers with the formula shown
+(never a directive); Lane R routes legal / tax / securities / employment / privacy —
+and fundraising — to a licensed professional (never concludes). Opt-in overlay,
+default off, not in `--full`; install with `--with-business`.
+
+### Added
+- **`business-ops/`** (new skill, 1.0.0) — the asymmetric Lane A / Lane R boundary
+  stated in the frontmatter description (the routing key); standing "educational
+  information, not advice" disclaimer; refusal evals: `shows-formula-not-directive`,
+  `routes-regulation-questions`, `fundraising-is-a-securities-matter`,
+  `no-fabricated-financials`. Never fabricates a figure, statute, rate, or deadline.
+  Frameworks registered by-name in `docs/standards-index.md`.
+- Wired into CI routing, checksums, `recommend-overlays.py` (`REVIEW_ONLY_SKILLS`),
+  `install.sh` (`--with-business`), `CONTRIBUTING.md`, `README.md`, `CLAUDE.md`.
+
+### Changed
+- Lockstep bump to **1.42.0** (deep-code-review, agentic-delivery, idea-critic,
+  plugin). All other skills unchanged.
+
 ## [1.41.0] — 2026-09-11
 
 Adds `positioning` (1.0.0) — the first of two thin advisory guides (highest

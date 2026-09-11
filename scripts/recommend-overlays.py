@@ -67,6 +67,7 @@ REVIEW_ONLY_SKILLS = {
     "product-discovery",
     "growth-analytics",
     "positioning",
+    "business-ops",
     "contribution",
     "communication-structure",
 }

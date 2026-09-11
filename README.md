@@ -93,6 +93,7 @@ cd deep-code-review
 ./install.sh --with-ceo /path/to/your/project      # + agentic-ceo: suite conductor — routing + chaos playbook (default off, not in --full)
 ./install.sh --with-growth /path/to/your/project   # + growth-analytics: North Star + AARRR + event taxonomy (default off, not in --full)
 ./install.sh --with-positioning /path/to/your/project # + positioning: value prop / message house — a hypothesis (default off, not in --full)
+./install.sh --with-business /path/to/your/project  # + business-ops: Lane A pricing/economics apply, Lane R legal/tax route (default off, not in --full)
 ./install.sh --full /path/to/your/project          # review + delivery + critic + comms
 ./install.sh --with-codex /path/to/your/project    # also .codex/skills/
 ./install.sh --with-extra-hosts /path/to/your/project  # Gemini, OpenCode, Copilot, Windsurf, Hermes, Kiro
@@ -165,6 +166,13 @@ And one overlay shapes how you describe it to the market:
   house on your own inputs, produced as a *hypothesis to validate with real buyers*.
   Never fabricates TAM, competitor claims, customer quotes, or trademark clearance —
   those route to you or a professional. Default off; `--with-positioning`.
+
+And one overlay handles money and compliance, in two lanes:
+
+- **`business-ops`** — Lane A applies pricing and unit-economics arithmetic to your
+  own numbers with the formula shown (never a directive); Lane R routes legal, tax,
+  securities, and fundraising to a licensed professional (never concludes). Educational
+  information, not advice; no fabricated figures or statutes. Default off; `--with-business`.
 
 And one overlay improves the skillset itself:
 
@@ -283,7 +291,8 @@ verified** — never a remembered link.
     ├── product-discovery/          # opt-in: worth-building / PMF / prioritization (default off)
     ├── agentic-ceo/                # opt-in: suite conductor — routing + chaos playbook (default off)
     ├── growth-analytics/           # opt-in: North Star + AARRR + event taxonomy (default off)
-    └── positioning/                # opt-in: value prop / message house — a hypothesis (default off)
+    ├── positioning/                # opt-in: value prop / message house — a hypothesis (default off)
+    └── business-ops/               # opt-in: Lane A pricing/economics apply, Lane R legal/tax route (default off)
 ```
 
 `deep-code-review/references/` holds on-demand depth (method, domain
