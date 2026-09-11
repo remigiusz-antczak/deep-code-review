@@ -3,6 +3,35 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.33.0] — 2026-09-11
+
+Stage-aware review + a going-forward roadmap. `deep-code-review` now calibrates
+its *demands* to the project's lifecycle stage (prototype / mvp / growth / mature)
+and ends a FULL review with a stage-sequenced roadmap — what to do now, what to
+defer, and which skillset to adopt going forward — so effort matches the stage
+instead of over-engineering a prototype or under-hardening a live product. Stage
+calibrates **urgency only**; it never rewrites a defect's severity and never
+downgrades a security, secret, or data-loss finding.
+
+### Added
+- **`deep-code-review/SKILL.md`** — a `STAGE` field in the first-response block and
+  a compact **Project stage** section: a four-stage table (what each stage relaxes
+  the *demand* on) plus three guardrails — stage is declared or evidence-named
+  (never guessed; unstated defaults to the stricter reading); security / secret /
+  data-loss findings never relax; stage moves urgency, not intrinsic severity
+  (reusing the latent-findings rule).
+- **`deep-code-review/references/report-format.md`** — a **Going-forward roadmap**
+  (machine + plain-language): sequences the findings already reported by
+  stage-urgency, points at `install.sh --recommend` for the skillset to adopt (no
+  restating), and adds ≤ 3 evidence-grounded development moves — anything needing
+  business context the repo cannot evidence is routed to *Decisions needed (owner)*,
+  not invented.
+
+### Changed
+- Lockstep `VERSION` files, `SKILL.md` stamps, and the plugin manifest → **1.33.0**;
+  independent skills unchanged. Definition of done (a) now requires a FULL review to
+  state `STAGE` and produce the going-forward roadmap. `SHA256SUMS` regenerated.
+
 ## [1.32.0] — 2026-09-11
 
 New review lens: **agent-readiness**. A first-class way to assess whether a repo
