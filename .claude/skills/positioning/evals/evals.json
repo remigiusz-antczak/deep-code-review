@@ -18,7 +18,8 @@
       "expectations": [
         "Uses the for-[segment]-who-[need] structure with the user's inputs or flagged blanks",
         "Labels the statement a hypothesis to validate with real buyers",
-        "Does not invent the segment, benefit, or competitor"
+        "Does not invent the segment, benefit, or competitor",
+        "Flagged blanks carry how-to-obtain guidance (which customers to ask, which data to pull)"
       ]
     },
     {

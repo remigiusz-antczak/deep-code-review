@@ -88,9 +88,9 @@ interpret the user's results; never report a reaction that was not gathered.
 ## Stage-awareness — the minimum-viable-brand rule
 Keys to the stage model in `deep-code-review`. **Pre-PMF: a minimum viable brand.**
 A name, a one-line value prop, a clear category — enough to test. Over-investing in
-brand identity, visual systems, or a messaging bible before product-market fit is a
-documented failure mode; premature scaling of positioning is the over-engineering to
-stop. `growth`/`mature`: invest as the segment and message are proven.
+brand identity, visual systems, or a messaging bible before product-market fit is
+**premature scaling** — effort spent aiming a message you have not yet validated;
+hold it. `growth`/`mature`: invest as the segment and message are proven.
 
 ## Definition of done
 - Every artifact is the user's own inputs, structured, or an empty-slot template
@@ -115,8 +115,8 @@ stop. `growth`/`mature`: invest as the segment and message are proven.
 Value Proposition Canvas and business-model design (Osterwalder & Pigneur);
 positioning (Ries & Trout; and April Dunford's obviously-awesome positioning);
 the message house / messaging framework; jobs-to-be-done as a positioning lens;
-brand strategy and minimum-viable-brand. Named leads only — fetch and log a source
-before citing a specific figure or claim (repo convention). Discovery inputs come
+minimum-viable-brand; premature scaling as a pre-PMF anti-pattern. Named leads only —
+fetch and log a source before citing a specific figure or claim (repo convention). Discovery inputs come
 from `product-discovery`; output structure follows `communication-structure`.
 
 ## Verification
