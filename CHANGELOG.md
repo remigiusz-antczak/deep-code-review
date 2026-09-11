@@ -3,6 +3,25 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.52.0] — 2026-09-11
+
+Decision-hygiene frame for the builder's own hard calls (issue #47, G6).
+
+### Added
+- **`idea-critic/references/decision-hygiene.md`** — a routed reference that
+  structures the owner's *own* high-stakes call (pivot, quit/kill, big
+  irreversible spend) rather than attacking a proposal. Frame: one-way vs
+  two-way door classification; the outside view (reference-class / base rate);
+  sunk-cost, confirmation, and escalation-of-commitment surfaced; and
+  kill/quit/pivot criteria pre-committed *before* the bet. It reuses the
+  `kill-criteria` premortem instead of restating it, and it **structures** the
+  decision for the owner — it never makes the call and never fabricates a
+  probability (an ungroundable number is labeled `assumption`).
+
+### Changed
+- Lockstep bump to **1.52.0** (deep-code-review, agentic-delivery, idea-critic,
+  plugin). Only `idea-critic` gained content (a reference + its routing pointer).
+
 ## [1.51.0] — 2026-09-11
 
 Routing-eval coverage for the conductor (issue #63, offline half).
