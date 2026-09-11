@@ -223,6 +223,26 @@ template). It does **not** install delivery. Delivery is a separate opt-in:
 yes. Mention `agentic-delivery` in the imprinted `AGENTS.md` only when that
 skill is already present in the tree.
 
+## Persisted knowledge hygiene — store the query, not the answer
+
+A durable doc, memory, or imprint that records a **fact derived from live state**
+— an open-issue count, "the current version is X", "there are N services" — rots
+the moment the state moves, and a stale fact read as current is worse than none.
+When a standard or memory captures something re-derivable, **store the query, not
+the answer**: the command, path, or check that regenerates the fact, so the reader
+re-runs it instead of trusting a frozen number. Verify at source; the cache is a
+lead, not the truth.
+
+**Audit persisted knowledge** (a memory store, an `AGENTS.md`, a runbook) for
+three decay modes — each a finding:
+
+- **Dead paths** — a referenced file, symbol, or flag that no longer exists.
+- **Status without a command** — a claim of current state ("deployed", "passing",
+  "6 open") with no query to re-verify it; replace the answer with the query.
+- **Embedded credentials** — a secret, token, or private identifier committed into
+  the stored knowledge. This is a privacy/secret finding (cross-ref
+  `privacy-compliance.md`), not a style nit.
+
 ## Spec Kit / constitution compatibility (review, do not install)
 
 If the target already has Spec Kit artifacts — `.specify/`,

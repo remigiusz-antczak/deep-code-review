@@ -3,6 +3,34 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.56.0] — 2026-09-11
+
+Adopt the two additive principles that were not yet codified (issue #37).
+
+### Added
+- **`deep-code-review/references/docs-and-dx.md`** — a "Persisted knowledge
+  hygiene — store the query, not the answer" lens (domain O): a durable doc/memory
+  that records a fact derived from live state (an issue count, a current version)
+  rots; store the *query* that regenerates it. Audits a memory store / `AGENTS.md`
+  / runbook for three decay modes — dead paths, status-without-a-command, and
+  embedded credentials (cross-ref `privacy-compliance.md`) — each a finding.
+- **`agentic-delivery/SKILL.md`** — a **work-item contract** beside the output
+  contract: a work item is specified as **Where / Done-when / Verify / Why**, and
+  one missing *Done-when* or *Verify* is underspecified and sent back to be scoped,
+  not started (the input the output contract is graded against).
+
+### Notes
+- The third sub-item (a — the suite map as a *registry that describes access, never
+  copies*) was already adopted: `agentic-ceo/SKILL.md` frames the registry as "a
+  map, not a bundle" and its anti-rationalization table rejects restating a skill's
+  steps. No change needed there; verified before closing.
+- No duplication introduced (the memory-audit's secret check cross-refs the privacy
+  reference rather than restating it; the work-item contract has no prior home).
+
+### Changed
+- Lockstep bump to **1.56.0** (deep-code-review, agentic-delivery, idea-critic,
+  plugin).
+
 ## [1.55.0] — 2026-09-11
 
 Design-time regulated-domain obligation triage (issue #43, G2) — business-ops.
