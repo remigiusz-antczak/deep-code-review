@@ -70,6 +70,32 @@ Plus a dedicated **adversarial / red-team pass** and a **useless-work audit**
 
 ---
 
+## Which skill when
+
+One map, ten skills — pick by the need in front of you. Each is opt-in and
+default-off except the review bar; depth lives in each skill, so this only says
+which to reach for.
+
+| Your need | Skill | Install |
+|---|---|---|
+| Review / harden / quality-gate a repo, PR, or diff | `deep-code-review` | default (always installed) |
+| Build a feature or migration under gated, multi-role delivery | `agentic-delivery` | `--with-delivery` |
+| Attack a plan or a "we should" before it reaches you | `idea-critic` | `--with-critic` |
+| Decide if it's worth building, what to build first, or if it's working | `product-discovery` | `--with-discovery` |
+| Decide what to measure — North Star, funnel, retention | `growth-analytics` | `--with-growth` |
+| Shape how you describe it to the market | `positioning` | `--with-positioning` |
+| Price it, or tell an arithmetic question from a legal / tax / securities one | `business-ops` | `--with-business` |
+| Route a multi-skill session and stay strategic under pressure | `agentic-ceo` | `--with-ceo` |
+| Write a clean, no-slop PR body, status, or deliverable | `communication-structure` | `--with-comms` |
+| Feed a reusable lesson back upstream, privacy-safe | `contribution` | `--with-contribution` |
+
+Every advisory skill works on **your own inputs and evidence** and never fabricates
+market, financial, or security facts — it structures your reasoning and routes what
+it cannot know to you or a professional. `./install.sh --recommend <project>` prints
+this map, tuned to your repo.
+
+---
+
 ## How to use it
 
 **Install into a project** (agent-agnostic — copies skills into the skill
