@@ -3,6 +3,31 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.53.0] — 2026-09-11
+
+Operational-readiness lens — incident response + continuity (issue #45, G4).
+
+### Added
+- **`agentic-delivery/references/incident-response.md`** — the "system on fire
+  OR the operator is gone" binder for bus factor = 1. Incident runbook
+  (detect→triage→contain→eradicate→recover→blameless review), severity-level and
+  status/comms templates, a break-glass access path, a credential/renewal
+  inventory (domain, TLS, card, DNS, secrets) with **dead-man** reminders, a
+  restore-drill schedule, and a solo-operator succession note. It reuses the
+  blameless `template-postmortem.md` / `retrospective.md` for the review step and
+  points restore/observability depth at `deep-code-review` rather than restating
+  it. **Boundary:** breach-notification *timing* routes to G2 + counsel and is
+  never asserted here; executing notification/succession is the owner's; no
+  invented SLA, deadline, or renewal date. New eval: a planted expired TLS
+  credential is surfaced, a restore-drill schedule is present, and the breach
+  deadline is routed, not fabricated.
+
+### Changed
+- Lockstep bump to **1.53.0** (deep-code-review, agentic-delivery, idea-critic,
+  plugin). Only `agentic-delivery` gained content (a reference + a minimal
+  routing pointer + one eval); the routing pointer keeps the allowlisted
+  SKILL.md's growth to routing, not depth.
+
 ## [1.52.0] — 2026-09-11
 
 Decision-hygiene frame for the builder's own hard calls (issue #47, G6).

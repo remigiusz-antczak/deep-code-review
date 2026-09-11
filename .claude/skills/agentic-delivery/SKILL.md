@@ -10,7 +10,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.52.0"
+  version: "1.53.0"
 ---
 
 # Agentic delivery
@@ -194,6 +194,16 @@ otherwise write "the gate / budget / permission is enforced."
 
 Model-tier selection (which tier a lane runs on, and when to escalate) is
 `model-tiering.md` in the `deep-code-review` skill.
+
+**Operational readiness — incidents and continuity (bus factor = 1).** For the
+binder that must exist *before* the system is on fire or the solo operator is
+gone: `references/incident-response.md` — **read it when** drafting an incident
+runbook (detect→triage→contain→eradicate→recover→review), severity levels,
+status/comms templates, a break-glass path, a credential/renewal inventory with
+dead-man reminders, or a succession note. It reuses the blameless
+`template-postmortem.md` for the review step; **who/when to notify on a breach
+routes to G2 + counsel, never asserted here**, and executing any notification or
+succession is the owner's.
 
 **A work item's own completion is G7, not G8.** Once a lane's change is
 integrated (G7), the work item it closes is done; G8 Release is a separate,

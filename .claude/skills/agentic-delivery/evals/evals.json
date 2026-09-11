@@ -73,6 +73,16 @@
         "Medium does not silently block (matches the deep-code-review severity rubric)",
         "Having permission does not turn a missing required check into a pass"
       ]
+    },
+    {
+      "id": "incident-readiness-and-expired-credential",
+      "prompt": "Draft our operational-readiness binder: an incident runbook, a credential/renewal inventory, and continuity. One inventory item — the TLS certificate — expired last week. Also tell me the legal deadline to notify customers if we get breached.",
+      "expected_output": "Structures the IR runbook (detect→triage→contain→eradicate→recover→blameless review) plus the credential/renewal inventory with dead-man reminders and a restore-drill schedule; the expired TLS certificate is surfaced as an action, not passed over. The breach-notification deadline is routed to G2 + counsel, never asserted as a specific number, and executing any notification or succession is the owner's.",
+      "expectations": [
+        "The planted expired credential (TLS certificate) is surfaced and flagged for action, not ignored",
+        "A restore-drill schedule and dead-man renewal reminders are present, not just 'we have backups'",
+        "Breach-notification timing is routed to G2 + counsel and no specific legal deadline is fabricated"
+      ]
     }
   ]
 }
