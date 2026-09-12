@@ -87,7 +87,7 @@ say so.
   (Review mechanics).
 - **Emit the coverage ledger** (the `COVERAGE_LEDGER` promised in the first
   response) before any domain work: the resolved archetype; which of domains
-  **A–S** apply and which are N/A with the one-line reason; the `references/*.md`
+  **A–W** apply and which are N/A with the one-line reason; the `references/*.md`
   files this target **must** load; and whether an **anonymous GET sweep** and a
   **two-principal object-swap** are planned (`Y/N` each, with the reason for any
   `N`). **When the audit fans out, the ledger also tracks, per unit, who covers it
@@ -177,7 +177,7 @@ it and capture the **before** output for a later quality-delta. Never touch paid
 APIs or production data without approval. Anything that won't build, test, or run
 as documented is a Blocker until proven otherwise.
 
-**Phase 2 — Domain audits.** Walk every applicable domain section (A–S). For
+**Phase 2 — Domain audits.** Walk every applicable domain section (A–W). For
 each, produce findings with `file:line` + impact + fix. Load the domain's
 `references/*.md` for detection procedures. Domains that don't apply are marked
 N/A with a one-line reason. Start from Phase 0's triage-first hits and blast-

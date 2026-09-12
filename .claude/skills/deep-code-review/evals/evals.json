@@ -149,6 +149,26 @@
         "Declines the external version badge for the external-dependency/privacy/availability reason (links releases instead)",
         "Does not fabricate the unconfirmed Homebrew install or --daemon flag; documents only verified commands/flags"
       ]
+    },
+    {
+      "id": "cross-tenant-cache-key-leak-survives-authz-review",
+      "prompt": "This multi-tenant SaaS checks the authenticated tenant on every request handler — the authorization is clean. It caches each org's dashboard under a key built only from the report id (`report:{report_id}`), shared across all tenants. Access control passes review, so we're good to ship?",
+      "expected_output": "Applies the multi-tenancy & isolation lens (domain T): flags a cross-tenant leak that the clean access-control review misses — a cache key without the tenant id serves one tenant's cached dashboard to another on a hit, and the authz layer never runs on a cache hit. Names the seam explicitly (this is T, not B/A01: no IDOR and no missing authz check is involved) and prescribes putting the tenant id in the cache key (and every derived-store/index/rate-limit key). Nothing outside the described defect is invented.",
+      "expectations": [
+        "Flags the tenant-less cache key as a cross-tenant leak despite the clean authorization review",
+        "Names the seam: this is domain T (shared-infrastructure isolation), not a B/A01 IDOR or missing authz",
+        "Prescribes including the tenant id in the cache/derived-store key; invents no other finding"
+      ]
+    },
+    {
+      "id": "at-least-once-job-needs-idempotent-effect-and-liveness",
+      "prompt": "Review our nightly billing job: it runs on a cron at '2:30am' (server local time), pulls a queue with at-least-once delivery, and for each item sends a receipt email and increments a revenue counter. There's no dedup and no alert if the job stops. Deploy config is fine — ready?",
+      "expected_output": "Applies the workflows/jobs & scheduling lens (domain W): flags (1) the non-idempotent effect on an at-least-once queue plus a potentially overlapping/duplicated run — redelivery double-sends receipts and double-counts revenue, so the effect must be idempotent (dedup key / processed-set) or single-runner-locked, designing for exactly-once EFFECT not delivery; (2) no liveness/heartbeat alert — a job that silently stops is invisible; (3) the implicit local-timezone cron, which shifts or double-fires on a DST boundary. Names the seam (this is W orchestration, not F single-call handling or G in-process races) and does NOT treat this as a one-time migration (E) or a deploy/rollout (K). Invents no revenue figure or tax detail.",
+      "expectations": [
+        "Flags the non-idempotent effect on at-least-once delivery and prescribes exactly-once effect (dedup/lock), not 'exactly-once delivery'",
+        "Flags the missing liveness/heartbeat alert and the implicit-local-timezone cron (DST hazard)",
+        "Names the seam as domain W orchestration (not F/G) and does not conflate it with a one-time migration (E) or deploy (K); fabricates no figure"
+      ]
     }
   ]
 }

@@ -180,7 +180,7 @@ Once installed, **run it** on slash-skill hosts, or just ask in plain words:
 ```
 
 Also usable **as a one-shot prompt** (paste the installed `SKILL.md`, name the
-target and scope) or **as a human checklist** (walk the domain sections A–S
+target and scope) or **as a human checklist** (walk the domain sections A–W
 directly). Chat voice is not vendored — if you want compressed assistant prose,
 add [JuliusBrussee/caveman](https://github.com/JuliusBrussee/caveman) separately;
 code, PR bodies, and docs stay normal English.
@@ -192,7 +192,7 @@ code, PR bodies, and docs stay normal English.
 ```mermaid
 flowchart LR
   P0["Phase 0<br/>Pin ref · map · triage-first"] --> P1["Phase 1<br/>Ground truth<br/>build · test · lint"]
-  P1 --> P2["Phase 2<br/>Domain audits A–S"]
+  P1 --> P2["Phase 2<br/>Domain audits A–W"]
   P2 --> P3["Phase 3<br/>Adversarial<br/>red-team pass"]
   P3 --> P4["Phase 4<br/>Synthesize and rank severity"]
   P4 --> P5["Phase 5<br/>Report — file:line + fixes"]
@@ -210,13 +210,13 @@ skill's `SKILL.md`.
 
 ## What it checks
 
-Nineteen domains (A–S), each with a red-flag list in `SKILL.md` and a deep
-detection playbook in `references/` — plus a dedicated **adversarial / red-team
-pass** and a **useless-work audit** (cost with no value: repeated identical
-API/LLM/DB calls, over-fetching, "call it every run" patterns).
+Twenty-one domains, lettered A through W, each with a red-flag list in `SKILL.md`
+and a deep detection playbook in `references/` — plus a dedicated **adversarial /
+red-team pass** and a **useless-work audit** (cost with no value: repeated
+identical API/LLM/DB calls, over-fetching, "call it every run" patterns).
 
 <details>
-<summary><b>The nineteen domains</b></summary>
+<summary><b>The twenty-one domains</b> (A–W)</summary>
 
 | Domain | Covers | Deep reference |
 |---|---|---|
@@ -239,7 +239,13 @@ API/LLM/DB calls, over-fetching, "call it every run" patterns).
 | Q Privacy & licensing | minimization, retention/erasure, consent flags, license compat | `privacy-compliance.md`, `privacy-by-design.md` |
 | R i18n & encoding | locale-aware formatting, Unicode normalization | — |
 | S Branches & open-work triage | branching model, merge/PR/rebase per branch, safe cleanup | `branch-and-merge-hygiene.md` |
+| T Multi-tenancy & isolation | tenant-scoped queries, cache/index keys, per-tenant lifecycle | — |
+| W Workflows, jobs & scheduling | cron liveness, exactly-once effect, dead-letter, saga state | — |
 | + | per-language grep-able footguns | `language-stack-redflags.md` |
+
+> **A to Z?** Not yet — and that's the point. U, V and X–Z are unassigned; a
+> domain earns its letter, so the map grows only when a genuinely new class of
+> defect does, never to pad the alphabet.
 
 </details>
 

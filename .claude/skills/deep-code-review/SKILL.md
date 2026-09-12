@@ -11,7 +11,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.59.0"
+  version: "1.60.0"
 ---
 
 # Deep Code Review
@@ -70,7 +70,7 @@ Batch-mark untouched domains N/A; escalate on any blast-radius 🚩. Procedure:
 Domains outside the default set: **N/A with a one-line reason**. `other` has
 no default — derive from Phase 0 entry points.
 
-**Role overlay (optional lens).** Orders and assigns the same A–S domains; it
+**Role overlay (optional lens).** Orders and assigns the same A–W domains; it
 never adds or drops one. Full per-role checklists, colour model, and
 architecture / product-planning / SLO / release-sign-off lists:
 `references/role-coverage.md` — **read it when** the request is framed by
@@ -82,9 +82,9 @@ delivery role or security-team colour.
 | Product | A O J + lightweight product planning |
 | UX & UI | P R |
 | Frontend | P · A · B · N |
-| Backend | B I E A G |
+| Backend | B I E A G T |
 | Data & AI | D C E J Q |
-| Platform / SRE | L K M N F + SLI/SLO |
+| Platform / SRE | L K M N F W + SLI/SLO |
 | QA | J E P |
 | Release & docs | S O K + release sign-off |
 | Agent-readiness | C J K M N F O H + agent-readiness lens |
@@ -166,7 +166,7 @@ review after the first-response block.
 |---|---|---|
 | 0 Map | Pin `START_SHA`, worktree, history depth, trust boundaries, banned remedies, coverage ledger | `method.md`, `branch-and-merge-hygiene.md` on FULL |
 | 1 Ground truth | Documented setup, aggregate gate by name + exit code, per-subtree coverage, planted-defect probe (missing / empty / wrong / path-excluding config) | `method.md`, `testing-and-evals.md`, `language-stack-redflags.md` |
-| 2 Domain audits | Walk applicable A–S with `file:line`; fan-out under `parallel-audit.md` | `domain-checklists.md` + per-domain refs |
+| 2 Domain audits | Walk applicable A–W with `file:line`; fan-out under `parallel-audit.md` | `domain-checklists.md` + per-domain refs |
 | 3 Adversarial | Hostile user **and** hostile upstream; networked openers: anon GET, two-principal swap, dual-surface, then injection/SSRF | `security-appsec.md`, `security-ai-agents.md`, `security-agent-skills.md` |
 | 4 Synthesize | Dedup, compounds, snippet-or-drop at `START_SHA`, fail-open vs fail-closed, **anti-slop** | `method.md` |
 | 5 Report | Chat BLUF ≤30 lines + full table out-of-tree; in-repo `code-review/` only on confirmation | `report-format.md`, `example-review-report.md` |
@@ -178,10 +178,11 @@ owner's yes.
 
 ---
 
-## Domain map (A–S)
+## Domain map (A–W)
 
-One-line each. **Checklists:** `references/domain-checklists.md` — **read
-when** walking a domain. Per-item detection in the linked file. Language
+One-line each; twenty-one domains span A–W (**U, V and X–Z are unassigned — a
+domain earns its letter**). **Checklists:** `references/domain-checklists.md` —
+**read when** walking a domain. Per-item detection in the linked file. Language
 footguns: `references/language-stack-redflags.md`.
 
 | | Domain | Depth |
@@ -205,6 +206,8 @@ footguns: `references/language-stack-redflags.md`.
 | Q | Privacy, compliance, licensing | `privacy-compliance.md` (code layer), `privacy-by-design.md` (pre-code product artifacts) |
 | R | i18n, encoding, localization | `domain-checklists.md` |
 | S | Branches, merges, open-work triage | `branch-and-merge-hygiene.md` |
+| T | Multi-tenancy & isolation | `domain-checklists.md` (when one deployment serves multiple tenants) |
+| W | Workflows, jobs & scheduling | `domain-checklists.md` (when the target runs cron, queues, or multi-step workflows) |
 
 **Skills as targets.** When the repo ships or installs agent skills, review them
 for leanness and progressive disclosure (a thin core + routed `references/` + a

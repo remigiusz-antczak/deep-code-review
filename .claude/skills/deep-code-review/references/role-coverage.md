@@ -10,7 +10,7 @@ quality**, **lightweight product planning**, **SLI/SLO error-budget & burn-rate*
 and **release owner sign-off**. Expands the compact overlay in `SKILL.md`.
 
 **The overlay never changes *what* is reviewed — only who leads and in what
-order.** Every role and colour is a lens over the same A–S domains and the same
+order.** Every role and colour is a lens over the same A–W domains and the same
 evidence rules (principle 1: `file:line` or it didn't happen; principle 3: no
 fabrication). A role that "owns" a domain does **not** get to skip the others — it
 gets first read and the deepest checklist there, and the coverage ledger still
@@ -22,15 +22,15 @@ orphaned, or (c) make several role-reviewers add up to one whole-target audit.
 
 ## Role → domain map (who leads on what)
 
-| Role | Leads on (domains A–S) | Deep refs | Extra lens (below) |
+| Role | Leads on (domains A–W) | Deep refs | Extra lens (below) |
 |---|---|---|---|
 | **Architect** | A E G H I | — (structure is cross-cutting) | **Architecture quality** |
 | **Product & requirements** | A O J | `docs-and-dx.md` | **Lightweight product planning** |
 | **UX & UI** | P R | `frontend-a11y.md` | — |
 | **Frontend** | P · A (client logic) · B (client-side authz/XSS) · N (no secrets in bundle) | `frontend-a11y.md`, `security-appsec.md` | — |
-| **Backend (API & DB)** | B I E A G | `security-appsec.md`, `api-contracts.md`, `performance-db-cost.md` | — |
+| **Backend (API & DB)** | B I E A G T | `security-appsec.md`, `api-contracts.md`, `performance-db-cost.md` | — |
 | **Data & AI** | D C E J Q | `data-quality.md`, `security-ai-agents.md`, `privacy-compliance.md` | — |
-| **Platform / DevOps / SRE** | L K M N F | `infra-iac-containers.md`, `observability.md`, `reliability-error-handling.md` | **SLI/SLO, error budget & burn-rate** |
+| **Platform / DevOps / SRE** | L K M N F W | `infra-iac-containers.md`, `observability.md`, `reliability-error-handling.md` | **SLI/SLO, error budget & burn-rate** |
 | **QA / performance / a11y** | J E P | `testing-and-evals.md`, `performance-db-cost.md`, `frontend-a11y.md` | — |
 | **Release & docs** | S O K | `branch-and-merge-hygiene.md`, `docs-and-dx.md` | **Release owner sign-off** |
 | **Agent-readiness** | C J K M N F O H | `security-ai-agents.md`, `security-agent-skills.md`, `observability.md`, `testing-and-evals.md` | **Agent-readiness lens** |
@@ -46,7 +46,7 @@ both returns.
 
 ## Per-role lenses (the depth `SKILL.md` doesn't hold)
 
-Domains already have their own references; this section adds only what the A–S
+Domains already have their own references; this section adds only what the A–W
 checklists do **not** cover. For UX/UI, frontend, backend, data & AI, and
 QA/perf/a11y the lens **is** the linked domain refs above — no new checklist, just
 first-read ownership.
@@ -221,7 +221,7 @@ and the naming keeps the consultancy reading out.
 
 ## Security-team colours (a lens over the same evidence)
 
-The colours re-package the same A–S work by adversarial stance. They add **no new
+The colours re-package the same A–W work by adversarial stance. They add **no new
 findings rules** — Red still needs `file:line`, Blue still fails closed, every
 claim is still snippet-or-drop at `START_SHA`.
 
