@@ -3,6 +3,40 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.60.0] — 2026-09-12
+
+Two new review domains — the taxonomy grows from A–S (19) to A–W (21): **T
+Multi-tenancy & isolation** and **W Workflows, jobs & scheduling** (issue #96).
+
+### Added
+- **Domain T — Multi-tenancy & isolation** (`deep-code-review`): the cross-tenant
+  leak that survives a clean access-control review — a cache / index / pool / job
+  that forgot the tenant key, tenant context outliving its request, per-tenant
+  lifecycle (export & deletion across every store), noisy-neighbour fairness, and
+  the isolation model (row-level / schema / silo-per-tenant). Checklist-only in
+  `references/domain-checklists.md` (like A/H/N/R); the seam is stated explicitly
+  against **B/A01** (authz / IDOR) and **G** (races). New eval: a tenant-less
+  cache key leaks across tenants even though the authorization review is clean.
+- **Domain W — Workflows, jobs & scheduling** (`deep-code-review`): orchestration
+  correctness for cron, queues, and multi-step workflows — never-runs (liveness),
+  runs-twice (exactly-once *effect* on at-least-once delivery), dead-letter and
+  retry caps, cron timezone / DST, ordering, durable long-running / saga state
+  with compensation, and backpressure. Checklist-only; the seam is stated against
+  **F** (single-call handling) and **G** (races), and scoped **out** of **E**
+  (one-time migrations) and **K** (deploy / rollout). New eval: an at-least-once
+  billing job needs an idempotent effect, a liveness alert, and an explicit
+  timezone.
+
+### Changed
+- **Taxonomy A–S → A–W (21 domains).** Propagated the range through `SKILL.md`
+  (domain map, phases, both role tables), `domain-checklists.md`, `method.md`,
+  `role-coverage.md` (T assigned to the Backend lead, W to Platform / DevOps / SRE
+  so no domain is orphaned), and `README.md`. **U, V and X–Z remain unassigned** —
+  a domain earns its letter; the map grows only when a genuinely new class of
+  defect does, never to pad the alphabet.
+- Lockstep bump to **1.60.0** (deep-code-review, agentic-delivery, idea-critic,
+  plugin). Only `deep-code-review` gained content.
+
 ## [1.59.0] — 2026-09-11
 
 README-authoring method — so the skillset produces onboarding READMEs for any

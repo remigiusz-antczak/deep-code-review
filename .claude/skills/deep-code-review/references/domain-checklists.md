@@ -1,8 +1,8 @@
-# Domain audit checklists (A–S)
+# Domain audit checklists (A–W)
 
 Read this when walking a domain in Phase 2 (or a DIFF quick-path that touches that domain). Each section expands the one-line map in `SKILL.md`. Load the linked per-domain `references/*.md` for detection procedures.
 
-## Domain audit checklists (A–S)
+## Domain audit checklists (A–W)
 
 > Each item folds in the *why*. A "🚩" line lists patterns to grep/scan for.
 > Load the linked reference for per-item detection procedures. To turn any red
@@ -532,6 +532,97 @@ do with it*; the one seam ("must this merge go through a PR?") reads O's posture
   "merge this" recommendation for a branch the forge already squash-merged;
   `git push --force` near a shared branch; "just delete the branch" offered as the
   fix for a committed secret.
+
+### T. Multi-tenancy & isolation
+Apply when one deployment serves multiple tenants (customers, orgs, workspaces)
+from shared infrastructure. **N/A by scope** on a single-tenant app or a personal
+CLI. Distinct from **B/A01**, which owns whether *this request* is authorized for
+*this object* (IDOR, missing authz), and from **G**, which owns races on shared
+mutable state — **T owns whether the tenant boundary holds across shared
+infrastructure**. Its distinctive leaks occur *even when the request-level authz
+gate passes and no race exists* — a cache or index keyed without the tenant,
+context bleeding between requests — because a shared component, not the request
+handler, forgot the tenant. A missing tenant *predicate* on a query shares the
+defect class with **B/A01** (data-level access control); what T owns there is the
+**systemic** fix — scoping enforced in one place, not re-typed per caller.
+- **Every tenant-scoped query carries the tenant predicate — enforced in one
+  place, not remembered per caller.** A `WHERE tenant_id = ?` re-typed at each call
+  site is one forgotten clause away from a full-table cross-tenant read; push it
+  into row-level security, a session variable the DB enforces, or a scoped
+  repository/query builder that **fails closed when the scope is absent**. The
+  classic breach is a missing tenant filter on a **background job, admin, export,
+  or report path** — the routes nobody views by hand (cross-ref B/A01, W jobs).
+- **Cache, index and derived-store keys include the tenant.** A cache key, memo,
+  search index, vector namespace, materialized view, or rate-limit bucket keyed
+  *without* the tenant id serves one tenant's data to another **on a hit** — and
+  the authz layer never runs, so B's checks never see the request. This is the
+  leak that survives a perfect access-control review.
+- **Per-request tenant context does not outlive its request** (cross-ref G,
+  lifetime): a tenant id cached on a singleton, thread-local, module global, or a
+  connection handed back to a cross-tenant pool bleeds into the next tenant's
+  request **even with perfect locking**. Reset or thread the tenant per unit of
+  work; never derive it from anything but the authenticated principal.
+- **The isolation model is explicit and matches the data's sensitivity**:
+  shared-row (RLS), shared-schema, or database/silo-per-tenant — each trades blast
+  radius against cost; name which one is in use and why. Where a tenant is promised
+  its own encryption key or data residency, a shared-pool default silently
+  violates it (cross-ref Q privacy, L infra).
+- **Noisy-neighbour fairness**: one tenant's request rate, query cost, or job
+  volume must not starve the rest — per-tenant quotas/limits and bounded work per
+  tenant (cross-ref E cost, W jobs).
+- **Cross-tenant lifecycle is complete**: tenant export and deletion cover *every*
+  store — primary, cache, search index, blobs, logs, backups; a half-deleted
+  tenant is both a privacy breach (Q) and a future cross-tenant leak.
+- 🚩 a tenant-scoped table queried with no tenant predicate on any path (job,
+  admin, export, report); a cache/index/rate-limit key missing the tenant id;
+  tenant context on a singleton/thread-local/pooled connection; an admin "see
+  everything" query reachable by a tenant principal; per-tenant deletion that
+  skips the cache/index/backups.
+
+### W. Workflows, jobs & scheduling
+Apply when the target runs scheduled jobs (cron), background queues/workers, or
+multi-step/long-running workflows. **N/A by scope** on a purely synchronous
+request/response app with no async work. Distinct from **F**, which owns whether
+*one* call handles its own failure (timeout, retry, idempotent, circuit-break),
+and from **G**, which owns races on shared state — **W owns the orchestration**:
+whether scheduled, queued, and multi-step work runs correctly *as a system*.
+(One-time schema/data migrations are **E**; deploy/rollout is **K** — not here.)
+- **Never-runs**: a scheduled job that silently stops is invisible. Assert
+  **liveness** — a heartbeat, a last-success timestamp, a dead-man alert — not just
+  that the scheduler is "configured". A cron that never fired and a job that ran
+  and did nothing are indistinguishable without it (cross-ref M observability).
+- **Runs-twice / exactly-once**: overlapping runs (a slow job re-triggered before
+  it finishes), at-least-once queue redelivery, and retries all fire the effect
+  more than once. "Exactly-once *delivery*" is a myth — design for exactly-once
+  **effect** on at-least-once delivery: make the effect **idempotent** (dedup key,
+  upsert, processed-set) or guard it with a single-runner lock that has an expiry
+  (cross-ref F idempotent retry, I webhook idempotency).
+- **Failure escalates from the item (F) to the batch as a whole**: beyond F's
+  per-item try/continue and cursor-resumability (cross-ref F), the job needs a
+  **dead-letter / parking** path for items that keep failing and a **retry cap**
+  so a poison message doesn't retry forever instead of quietly wedging the queue.
+- **Schedule time is handled correctly**: cron runs in an **explicit timezone** —
+  a local-time schedule shifts under DST, and a job "at 02:30" can run twice or
+  zero times on a DST boundary; the **catch-up policy** on a missed window is
+  deliberate (run-once vs backfill-each-miss), not accidental. (The clock
+  primitives themselves — monotonic durations, UTC storage — are domain A.)
+- **Ordering and dependencies are explicit** where relied on: a queue is not FIFO
+  under retry, and a downstream job that assumes an upstream finished needs a real
+  dependency/trigger, not a `sleep`. Fan-out/fan-in joins wait for actual
+  completion, not an elapsed timer.
+- **Long-running workflow state is durable and recoverable**: a multi-step saga
+  persists each step's outcome and defines **compensation** for a step that fails
+  *after* earlier steps committed; a process crash **resumes** the workflow — it
+  does not double-apply a committed step or strand the workflow half-done
+  (cross-ref F, G).
+- **Backpressure and bounds**: queue depth is monitored and bounded; a producer
+  faster than its consumer degrades deliberately (shed load, buffer-with-cap),
+  never unbounded memory or spend growth (cross-ref E cost, M).
+- 🚩 a cron with no liveness/heartbeat alert; a non-idempotent effect on an
+  at-least-once queue or an overlapping schedule; no dead-letter path or retry cap
+  (poison retries forever); cron in an implicit/local timezone; a downstream step
+  that `sleep`s to wait for an upstream; a multi-step workflow with no persisted
+  state or compensation; an unbounded queue or producer.
 
 ---
 
