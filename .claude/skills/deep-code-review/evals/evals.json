@@ -169,6 +169,17 @@
         "Flags the missing liveness/heartbeat alert and the implicit-local-timezone cron (DST hazard)",
         "Names the seam as domain W orchestration (not F/G) and does not conflate it with a one-time migration (E) or deploy (K); fabricates no figure"
       ]
+    },
+    {
+      "id": "agent-context-lifecycle-constraint-survives-compaction",
+      "prompt": "Review this long-running agent. To stay under the context window it summarizes/compacts old turns and clears the oldest tool results once a token threshold trips; the summary uses a custom instruction focused on 'preserving code snippets'. An earlier tool result recorded the user's approval scope ('only the staging database, never production'), with no exemption from clearing. Its persistent memory store has no write-validation and no expiration, and on resume it restores the prior authority grant without rechecking. Ship it?",
+      "expected_output": "Applies the context/memory lifecycle lens (domain C): flags that the 'staging only' approval scope can be silently lost — the compaction summary instruction replaces the default and does not preserve the constraint, and tool-result clearing has no exemption for the constraint-bearing result, so after the threshold the agent may act on production with no attacker (not ASI06 poisoning) and no crash (not F recovery). Also flags memory with no write-validation/expiry (a stale memory can override a current instruction) and the resume path trusting a stale authority grant. Prescribes: preserve/re-assert constraints across compaction, exempt the constraint/authority-bearing tool result from clearing, validate memory writes and set an expiry, and revalidate authority on resume. Invents no specific product or API identifier.",
+      "expectations": [
+        "Flags that the approval-scope constraint can be silently dropped by compaction/summarization or tool-result clearing — a non-adversarial lifecycle defect, distinct from ASI06 poisoning and an F crash",
+        "Prescribes preserving/re-asserting constraints across compaction and exempting the constraint-bearing tool result from clearing",
+        "Flags memory with no write-validation/expiry and a resume that trusts a stale authority grant instead of revalidating",
+        "Invents no specific vendor product or API identifier"
+      ]
     }
   ]
 }
