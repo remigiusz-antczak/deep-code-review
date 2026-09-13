@@ -2,7 +2,7 @@
   "name": "deep-code-review",
   "description": "Perun — bring the thunder to your codebase. A portable, evidence-grounded quality bar for building with AI agents: the flagship deep-code-review skill (default install is review-only), plus opt-in overlays — gated delivery, an idea critic, a suite conductor, and stage-aware product, growth, positioning, business-ops, and output-safety specialists.",
   "skills": "./.claude/skills",
-  "version": "1.60.0",
+  "version": "1.61.0",
   "author": {
     "name": "deep-code-review contributors"
   },

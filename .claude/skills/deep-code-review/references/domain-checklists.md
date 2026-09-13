@@ -158,7 +158,10 @@ skill**, also walk AST01–AST10 in `references/security-agent-skills.md`.
   confirmation, secrets/authz in the system prompt, a safety param asserted at
   the call site but dropped downstream, a same-owner ask written to a
   many-audience board/mesh, inter-agent messages keyed on a display name
-  instead of a tenant/uid, an approval prompt that does not name the audience.
+  instead of a tenant/uid, an approval prompt that does not name the audience, a
+  long-running agent whose compaction/memory can silently drop a safety
+  constraint or whose sub-agents run without the parent's cap (context/memory
+  lifecycle — depth in `references/security-ai-agents.md`).
 
 ### D. Data integrity & data quality → `references/data-quality.md`
 Apply to any pipeline, ETL, enrichment, scraping, or dataset producer. Judge the
