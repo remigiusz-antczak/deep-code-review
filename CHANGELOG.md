@@ -3,6 +3,33 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.62.0] — 2026-09-13
+
+Status-claim honesty (issue #102) — closes a trust gap surfaced by a real
+over-claim: an agent marked a rebuilt UI "✅ exact" after checking a mock and a
+hand-picked view, not the default state a user lands on, and kept the ✅ despite a
+noted caveat. The status-reporting discipline already existed (`report-format.md`,
+`product-ux-quality.md`); this closes the two holes the failure fell through.
+
+### Changed
+- **`report-format.md`** — a status names the **surface** its evidence came from
+  and holds at its **strongest reading**: a `✅` / done / exact / matches / verified
+  the author can immediately qualify is **downgraded** (⚠️ / partial / ❌), never a
+  green label beside a caveat ("caveat-exact isn't exact"). For a UI/parity claim
+  the canonical surface is the **default served state**.
+- **`product-ux-quality.md`** — new "Parity claims: the default state is the
+  canonical surface" section + checklist items: verify the **default landing
+  state** (signed-out / no-role / default route / local default), not only a mock
+  or a hand-picked persona view; a claim resting on a non-default surface must name
+  it; no status green-with-a-caveat. "More than the happy-path state" is necessary
+  but not sufficient — the default must be among the states checked.
+- **Principle 2** (`SKILL.md`) — a status you emit names its evidence surface,
+  holds at its strongest reading, downgrades on a caveat, and takes the default
+  served state as canonical for a UI/parity claim.
+- New eval `ui-parity-claim-checks-default-state-not-mock`. Lockstep bump to
+  **1.62.0** (deep-code-review, agentic-delivery, idea-critic, plugin); only
+  `deep-code-review` gained content.
+
 ## [1.61.0] — 2026-09-13
 
 Domain-C review lens for **agent context/memory lifecycle** — the one genuine gap

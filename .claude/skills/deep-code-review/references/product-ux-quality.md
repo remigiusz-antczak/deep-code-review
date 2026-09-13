@@ -239,8 +239,29 @@ human edit (change-history / silent AI edit).
 - [ ] One shared component per concept — reused/extended, not reimplemented per page; a fix landed in the shared component, not one caller?
 - [ ] Interaction loops close — read-back on every input (no write-only), WYSIWYG not raw markup, no dead controls — checked on the route that actually renders?
 - [ ] Drawers overlay (don't navigate away); collapse scope correct; no dead controls?
-- [ ] Verified live in the running product, in more than the happy-path state?
+- [ ] Verified live in the running product, in more than the happy-path state — **including the default state a user lands on** (signed-out / no-role / default route / local default), not only a mock or a hand-picked persona view?
+- [ ] Any "matches / exact / parity" claim checked against the **default served state** as the canonical surface — and if it rests on a non-default surface, does it **name** that surface and say the default was not checked?
+- [ ] No status is green-with-a-caveat — a status the author can immediately qualify is **downgraded**, not asserted beside a hedge (`report-format.md`)?
 - [ ] UI change: headed-browser receipt on the exact route after the action (screenshot or equivalent)? Unit tests alone are not this box.
+
+## Parity claims: the default state is the canonical surface
+
+A "matches / exact / parity with `<reference>`" claim is only as good as the
+**surface** it was checked against. The canonical surface is the **default state
+a user lands on** — signed-out / no-role / no-persona / default route / local
+default — because it is the state a user is served **by default**, before any role
+or persona is chosen: the entry state every user passes through. A mock, or a
+hand-selected persona/role view, is a **secondary** surface: a parity claim
+resting only on it verifies the wrong state (a first-time user never sees it). "More than the
+happy-path state" (checklist above) is necessary but not sufficient — the
+**default state must be among the states checked**, and a claim that rests on a
+non-default surface must **name that surface** and say the default was not
+verified.
+
+The general rule that a status is **downgraded the moment it carries a caveat**
+(and names the surface its evidence came from) is defined once in
+`report-format.md` and applies to a parity claim unchanged — the UI-specific case
+is that a parity ✅ resting on a **non-default surface** is not green.
 
 ## Enforcing gate (Phase 6 imprint)
 

@@ -55,6 +55,17 @@ browser-verified change — report that state honestly, not as progress toward
 done. Completion language ("fixed", "done", "shipped") with no citation (a PR
 link, a run URL, a commit SHA, a screenshot) in the same message is the smell.
 
+**A status names its evidence surface and holds at its strongest reading.** A
+✅ / "done" / "exact" / "matches" / "verified" that the author can immediately
+qualify is **downgraded** to the honest weaker status (⚠️ / partial / ❌) — never
+a green label sitting beside a caveat ("caveat-exact isn't exact") — when a target
+genuinely has two distinct risk surfaces, use the **scoped two-status verdict**
+above rather than one green label with a footnote. And a status
+names the **surface** its evidence came from; for a UI / product parity claim the
+canonical surface is the **default served state** a user lands on (signed-out /
+no-role / default route / local default), not only a mock or a hand-picked state
+(`product-ux-quality.md`).
+
 ## Invariants verified to hold (affirmative — co-equal with Findings)
 | Invariant | Where proven | What proves it | Confidence |
 |-----------|--------------|----------------|------------|
