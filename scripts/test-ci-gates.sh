@@ -687,6 +687,39 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# deep-code-review status-claim checker ("a ✅ that needs an asterisk is a ✗")
+# ---------------------------------------------------------------------------
+
+STATUSCHK="$ROOT/.claude/skills/deep-code-review/scripts/validate_status_claims.py"
+if [ ! -f "$STATUSCHK" ]; then
+  record 1 "deep-code-review: status-claim checker present"
+else
+  record 0 "deep-code-review: status-claim checker present"
+  # Planted RED: a green status true only after a non-default action.
+  printf '%s\n' '| Home | done exact | matches the ref, but only after you select a persona |' >"$WORK/status.bad.md"
+  if python3 "$STATUSCHK" --file "$WORK/status.bad.md" >/dev/null 2>&1; then
+    record 1 "status-claim: flags a hedged green status (planted RED)"
+  else
+    record 0 "status-claim: flags a hedged green status (planted RED)"
+  fi
+  # Honest downgrade: a positive word + a hedge but a downgrade marker present
+  # is the CORRECT shape (condition surfaced), not the failure — must not flag.
+  printf '%s\n' '| Weekly | ⚠️ | done only after you select a persona |' >"$WORK/status.downgraded.md"
+  if python3 "$STATUSCHK" --file "$WORK/status.downgraded.md" >/dev/null 2>&1; then
+    record 0 "status-claim: an honest partial/downgrade is not flagged"
+  else
+    record 1 "status-claim: an honest partial/downgrade is not flagged"
+  fi
+  # Clean: a completion status on the default surface, no hedge.
+  printf '%s\n' '| Ask | done | verified on the default view |' >"$WORK/status.clean.md"
+  if python3 "$STATUSCHK" --file "$WORK/status.clean.md" >/dev/null 2>&1; then
+    record 0 "status-claim: a clean status table passes"
+  else
+    record 1 "status-claim: a clean status table passes"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 # Agent Skills frontmatter — description ≤1024
 # ---------------------------------------------------------------------------
 

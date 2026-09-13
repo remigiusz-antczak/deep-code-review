@@ -3,6 +3,32 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.63.0] — 2026-09-13
+
+Completes the completion-claim discipline (issue #101) — the proxy trap, the
+completion record, and a mechanical checker. Builds on 1.62.0 (which shipped the
+default-state-canonical + caveat-downgrade core).
+
+### Added
+- **`deep-code-review/scripts/validate_status_claims.py`** — a heuristic checker
+  ("a ✅ that needs an asterisk is a ✗"): given a status table it flags a positive
+  status (✅ / done / exact / matches / verified / complete) co-occurring with a
+  hedge (if / only / once / unless / requires / caveat / mostly …) and no
+  downgrade marker (⚠️ / ❌ / partial / blocked / unverified). Exit 1 = candidates
+  to re-check, 0 = clean, 2 = usage. A lead for judgement, not an automatic
+  defect. Ships beside the skill (copied by `install.sh`), routed from
+  `report-format.md`, with a self-test in `test-ci-gates.sh` (planted hedged-green
+  flagged; an honest downgrade not flagged; a clean table passes).
+- New eval `completion-claim-proxy-not-user-outcome`.
+
+### Changed
+- **`report-format.md`** — the **proxy trap** named explicitly (a passing test /
+  green build / merged PR / hand-configured render is a proxy for the user's
+  outcome, not the outcome) and the **completion record** (a status carries
+  `(surface · default-state observed · reference checked) + what was not checked`).
+- Lockstep bump to **1.63.0** (deep-code-review, agentic-delivery, idea-critic,
+  plugin). Only `deep-code-review` gained content. Closes #101.
+
 ## [1.62.0] — 2026-09-13
 
 Status-claim honesty (issue #102) — closes a trust gap surfaced by a real

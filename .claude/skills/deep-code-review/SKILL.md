@@ -11,7 +11,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.62.0"
+  version: "1.63.0"
 ---
 
 # Deep Code Review
@@ -325,6 +325,10 @@ Two checklists; they fail independently.
 - On a FULL review, `STAGE` is stated (or `UNVERIFIED`, defaulting stricter) and a
   stage-calibrated going-forward roadmap is produced (`report-format.md`); stage
   never downgraded a security, secret, or data-loss finding.
+- Every status emitted (`✅`/done/exact/matches) names its evidence surface and
+  holds at its strongest reading — no `✅` beside a caveat, and a UI/parity claim
+  is checked on the **default served state**; screen the status table with
+  `scripts/validate_status_claims.py` (`references/report-format.md`).
 - Gate self-test claimed only when run.
 - Coverage ledger reconciled; fan-out units attributed (finder + lead-read);
   incomplete finder = `unverified`.

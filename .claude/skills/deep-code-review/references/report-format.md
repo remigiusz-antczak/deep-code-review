@@ -66,6 +66,19 @@ canonical surface is the **default served state** a user lands on (signed-out /
 no-role / default route / local default), not only a mock or a hand-picked state
 (`product-ux-quality.md`).
 
+**Beware the proxy.** A passing test, a green build, a merged PR, or a
+hand-configured render is a **proxy** for the user's outcome, not the outcome —
+verifying the proxy and asserting the user-facing result is the specific move to
+refuse; the proxy is evidence about the proxy. So a completion status carries a
+**one-line record — (surface · default-state observed · reference/spec checked
+against) — and states what was *not* checked** in the same breath. A heuristic
+checker for the "✅ that needs an asterisk" ships at
+`scripts/validate_status_claims.py` (`--file <status-table>`): it flags a positive
+status co-occurring with a hedge and no downgrade marker (exit 1 = candidates to
+re-check, exit 0 = clean). A flag is a lead for judgement — downgrade, or split
+into a two-status verdict — not an automatic defect. It ships beside the skill and
+is copied by `install.sh`.
+
 ## Invariants verified to hold (affirmative — co-equal with Findings)
 | Invariant | Where proven | What proves it | Confidence |
 |-----------|--------------|----------------|------------|
