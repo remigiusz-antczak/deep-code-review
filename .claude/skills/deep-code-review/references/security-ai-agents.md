@@ -221,9 +221,33 @@ LLM-backed feature, add cases that assert the guardrail holds:
   prompt) is a soft stop that overshoots by ≥1 turn, not a cap checked *before*
   dispatch. An agent loop written `while (true)` and bounded only by an external
   caller is a red flag. Prefer capping four axes together — calls/turns, tokens,
-  wall-clock, and dollars — and reporting which one tripped.
+  wall-clock, and dollars — and reporting which one tripped. **Bound the tree,
+  not just the call:** in a recursive or multi-agent system the cap (depth /
+  steps / spend) must be **propagated to every spawned sub-agent** — a parent cap
+  not forwarded leaves each child on the framework default and the whole tree
+  unbounded.
 - **Provenance & grounding**: citations/sources for claims that reach users;
   confidence surfaced; unverifiable claims flagged, not shipped as fact.
+- **Context & memory lifecycle — a constraint must survive compaction.** A
+  long-running agent that summarizes/compacts old turns, evicts old tool results,
+  or persists memory to stay under the context window can **silently lose a
+  safety-relevant instruction** — an approval scope, a "never touch prod", an
+  authority grant — with **no attacker** (unlike ASI06 poisoning) and **no crash**
+  (unlike F recovery). Walk the lifecycle: **(1) compaction/summarization**
+  preserves or re-asserts the constraints — a custom summary instruction that
+  *replaces* the default must still carry them; never assume they survive a
+  summary; **(2) tool-result eviction/clearing** exempts the item that holds the
+  constraint/authority (a never-clear allowlist), not just the newest N; **(3)
+  persistent memory** validates on write (no secret/PII, no unvetted instruction
+  entering the store) and has an **expiry/staleness** policy, so a stale memory
+  cannot override a current instruction (the adversarial case is ASI06); **(4)
+  cross-agent handoff** carries the decisions/constraints (the full trace), not
+  only the latest message, or the downstream agent acts without them; **(5)
+  resume** revalidates authority instead of trusting a stale saved grant. The
+  delivering-agent runbook for this is
+  `agentic-delivery/references/project-state.md`; **here it is a review check over
+  the target.** Memory/retrieval stores also enforce tenant isolation (LLM09;
+  domain T).
 - **Falsify asserted-but-unenforced safety properties.** A safety parameter set
   at a call site but silently **dropped or overridden by the layer below** — so
   the code (and often a comment) *claims* a property that is not in force. Worse
@@ -252,4 +276,8 @@ check; a confirm/approve gate that defaults to *allow* when non-interactive;
 `Popen` / `spawn` / `child_process` / `ipython` running model-generated
 commands with no sandbox around the spawn; non-prompt content concatenated into
 a prompt with no delimiter; token caps present but **no** `budget` /
-`costLimit` / `maxSpend`.
+`costLimit` / `maxSpend`; a compaction/summarization or tool-result-clearing step
+with no exemption for the constraint/authority-bearing context; a persistent
+agent-memory store with no write-validation or expiry; a multi-agent handoff
+passing only the latest message, not the decisions/constraints; a sub-agent
+spawned without the parent's depth/step/spend cap.

@@ -3,6 +3,40 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.61.0] — 2026-09-13
+
+Domain-C review lens for **agent context/memory lifecycle** — the one genuine gap
+found by a verify-grounded scan of the 2026 agent-building frontier (context/
+memory management, recursive & multi-agent orchestration, agent security). The
+scan's headline was that the bar is **current** (OWASP LLM/Agentic/Agentic-Skills
+all on their latest 2026 editions; 11 of 15 frontier concepts already owned); this
+ships the single lens that was missing.
+
+### Added
+- **`security-ai-agents.md` — "Context & memory lifecycle" defensive lens** (domain
+  C): a long-running agent that summarizes/compacts context, evicts old tool
+  results, or persists memory can **silently drop a safety constraint** (approval
+  scope, authority grant) with **no attacker and no crash** — so ASI06 (adversarial
+  poisoning) and F (crash recovery) miss it by construction. Reviews the lifecycle:
+  compaction preserves/re-asserts constraints; tool-result clearing exempts the
+  constraint/authority-bearing item; persistent memory validates on write and
+  expires; cross-agent handoff carries the full trace; resume revalidates authority.
+  Cross-refs `agentic-delivery/references/project-state.md` (the delivering-agent
+  runbook — here it is a review check over the *target*), ASI06, LLM09, and domain
+  T. New eval `agent-context-lifecycle-constraint-survives-compaction`; 🚩 tells
+  added to the C checklist in `domain-checklists.md`.
+- **LLM06 "bound the tree, not just the call" clause** — in a recursive/multi-agent
+  system the depth/step/spend cap must be propagated to every spawned sub-agent, or
+  a parent cap not forwarded leaves the tree unbounded (a real filed bug class).
+
+### Changed
+- `docs/standards-index.md` — six sources verified by direct fetch this session
+  (2026-09-13): Anthropic long-running-agents (2025-11-26), context-editing,
+  compaction, and memory-tool docs; Cognition "Don't Build Multi-Agents"
+  (2025-06-12); langchain-ai/deepagents #1698.
+- Lockstep bump to **1.61.0** (deep-code-review, agentic-delivery, idea-critic,
+  plugin). Only `deep-code-review` gained content.
+
 ## [1.60.0] — 2026-09-12
 
 Two new review domains — the taxonomy grows from A–S (19) to A–W (21): **T
