@@ -11,7 +11,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.63.0"
+  version: "1.64.0"
 ---
 
 # Deep Code Review
@@ -419,4 +419,6 @@ Sheet Series; MITRE CWE/CVE and ATLAS; NIST SSDF and AI RMF; SLSA; CIS
 Benchmarks; ISO/IEC 25010; Twelve-Factor; Conventional Commits; Nielsen's
 usability heuristics (named, no URL). Domain P design half:
 `references/product-ux-quality.md` — **read it when** the target renders a
-product UI a human operates (dashboard, table, form, chart, metric).
+product UI a human operates (dashboard, table, form, chart, metric), or the task
+is visual/design **parity** ("make X look like Y", a port/restyle/redesign) — the
+claim is about **rendered appearance**, not structure, tests, or data.

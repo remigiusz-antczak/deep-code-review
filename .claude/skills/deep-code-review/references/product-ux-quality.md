@@ -241,6 +241,10 @@ human edit (change-history / silent AI edit).
 - [ ] Drawers overlay (don't navigate away); collapse scope correct; no dead controls?
 - [ ] Verified live in the running product, in more than the happy-path state — **including the default state a user lands on** (signed-out / no-role / default route / local default), not only a mock or a hand-picked persona view?
 - [ ] Any "matches / exact / parity" claim checked against the **default served state** as the canonical surface — and if it rests on a non-default surface, does it **name** that surface and say the default was not checked?
+- [ ] "Looks the same" backed by a **rendered-appearance** diff of the default state vs the reference (screenshot / computed styles), **not** section-presence, DOM order, a passing test, or loaded data — and stating **which axis** (structure / styling / content / data) the evidence covers, without "fixing" data to answer a styling complaint?
+- [ ] Did **not reconfigure the default** (persona / seed / flag / env) and then claim "verified on the default" — checked the pre-existing default and disclosed any change to it?
+- [ ] Every styling / placement delta enumerated in **one** side-by-side pass and fixed against that inventory — not piecemeal-fix-then-redeclare-done?
+- [ ] Told "not the same" → **asked which axis** before acting (after one wrong guess, asked not guessed), and compared the **reference itself** at the element × breakpoint × theme, not from memory?
 - [ ] No status is green-with-a-caveat — a status the author can immediately qualify is **downgraded**, not asserted beside a hedge (`report-format.md`)?
 - [ ] UI change: headed-browser receipt on the exact route after the action (screenshot or equivalent)? Unit tests alone are not this box.
 
@@ -262,6 +266,71 @@ The general rule that a status is **downgraded the moment it carries a caveat**
 (and names the surface its evidence came from) is defined once in
 `report-format.md` and applies to a parity claim unchanged — the UI-specific case
 is that a parity ✅ resting on a **non-default surface** is not green.
+
+## "Looks the same" is about rendered appearance — four axes, and a structural check is not a visual one
+
+"Make X look like reference Y" is a task that frequently earns a false ✅. These
+rules sit **on top of** the default-state rule above (never restating it); each
+names a distinct evasion that passes a default-state check yet still ships a UI
+that does not look like Y.
+
+**Four axes — name which one a claim covers; never conflate them.** A UI compares
+on four independent axes:
+- **structure** — which sections exist, in what order, nesting / DOM;
+- **styling** — font size / weight, colour, spacing, radius, shadow; chrome
+  present or absent; each affordance's presence and **glyph** (a star, a caret, a
+  control); overall layout dimensions;
+- **content** — the words / copy;
+- **data** — the numbers / rows / entities.
+
+A "looks the same" task is almost always **structure + styling**, with content and
+data allowed to differ. "Same sections in the same order" is a **structure** claim —
+it is **not** evidence of styling parity and must never be reported as "matches" /
+"looks the same." And do not "fix" the **data** (swap a persona, seed rows) to
+answer a **styling** complaint: that changes an axis the user did not raise and
+leaves the one they did.
+
+**A structural / proxy check is not visual evidence.** A section-presence check, an
+"element-by-element" DOM / heading diff, a passing test, or loaded data are all
+**proxies** for rendered appearance, not the appearance itself (`report-format.md`,
+the proxy trap — *structure / DOM order / section-presence* is its UI instance). To
+claim rendered parity, diff the **rendered appearance of the default state** against
+Y: a screenshot and/or **computed styles** — the styling-axis properties above,
+side by side. Anything less names its proxy and says the render was not checked.
+Beware the specific dodge **"I diffed the *rendered* structure"**: "rendered
+structure" is still the **structure** axis — it proves the sections rendered, in
+order, not that they *look* like Y. Opening the page confirms structure rendered;
+rendered **appearance** is the styling properties, and only a styling diff shows it.
+
+**Do not move the goalpost you measure against.** If the work changed the
+configuration that *defines* the default surface — the env default, a seed, a
+feature flag, the demo persona, a local default — that change is itself part of the
+artifact under review. Disclose it, and check parity against the **pre-existing**
+default, not the one you just authored. "Verified on the default state" *after*
+reconfiguring what "default" means is a claim about a surface you wrote, not the one
+the user is served (general form: `report-format.md`, a self-reconfigured surface is
+a proxy).
+
+**Enumerate every diff in one pass before fixing any.** Finding diffs one at a time —
+fix, re-declare "done," the user finds the next — is the loop that burns trust and
+manufactures the repeated false ✅. Start with the single fastest discriminator: a
+**gross-dimension diff** — the total height / width of the compared surface. A large
+delta (one surface markedly taller or wider than Y) is by itself evidence styling
+parity does **not** hold, before any element-level work. Then do a **full
+side-by-side of the whole surface**, list every styling / placement delta at once,
+and fix against that inventory; the parity claim is made only when every row is
+closed or owner-accepted.
+
+**Told "not the same" → disambiguate the axis before acting.** One question — "the
+layout / structure, the styling (fonts / spacing / colour / chrome), the copy, or the
+data?" — costs one turn; guessing wrong costs many. After **one** wrong guess, **ask,
+do not guess again** (the multi-hour chase is: guess the data is sparse → guess a
+contrast number → guess the persona → the user finally says "styling").
+
+**The reference is the source of truth for styling, not your memory of it.** Re-open
+Y and compare the **specific element, at the specific breakpoint, in the specific
+theme** — styling differs by all three; a remembered impression of Y is not a
+comparison.
 
 ## Enforcing gate (Phase 6 imprint)
 

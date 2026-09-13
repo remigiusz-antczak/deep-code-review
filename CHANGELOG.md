@@ -3,6 +3,44 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.64.0] — 2026-09-13
+
+Sharpens the visual/design-parity discipline (issue #105). The 1.62.0/1.63.0 work
+made the **default served state** the canonical parity surface and named the proxy
+trap; a real dogfood run still shipped a false "looks the same" ✅ by walking
+*around* that rule — offering a **structural** check as visual evidence,
+**reconfiguring** what "default" means and then verifying it, conflating the four
+axes, and **guessing** the axis instead of asking. This closes those gaps.
+
+### Added
+- **`product-ux-quality.md` — new section "'Looks the same' is about rendered
+  appearance — four axes, and a structural check is not a visual one."** Names the
+  four independent axes (**structure / styling / content / data**) and forbids
+  conflating them (a section-order/DOM diff is a *structure* claim, never "looks the
+  same"; do not "fix" data to answer a styling complaint); a
+  structural/DOM-order/section-presence check (or a passing test / loaded data) is a
+  **proxy** for rendered appearance — claim parity only from a computed-style and/or
+  screenshot diff of the default state; **do not move the goalpost** (reconfiguring
+  the default persona/seed/flag then verifying "the default" measures a surface you
+  authored); **enumerate every diff in one pass** before fixing (piecemeal-fix-then-
+  redeclare is the repeated-false-✅ loop); **disambiguate the axis** when told "not
+  the same" (after one wrong guess, ask not guess); the **reference** is truth for
+  styling — compare element × breakpoint × theme, not memory. Four new pre-ship
+  checklist items.
+- Three new evals: `visual-parity-structure-not-styling`,
+  `visual-parity-default-not-reconfigured`, `visual-parity-ask-axis-not-guess`.
+
+### Changed
+- **`report-format.md` — proxy trap widened.** A **structure/DOM-order or
+  section-presence match** and a **self-reconfigured surface** (switching the
+  default, then verifying "the default") are named as proxies alongside the passing
+  test / green build / merged PR / hand-configured render.
+- **`SKILL.md`** — domain-P routing trigger now fires on visual/design-**parity**
+  work ("make X look like Y", a port/restyle/redesign), where the claim is about
+  rendered appearance, not structure/tests/data.
+- Lockstep bump to **1.64.0** (deep-code-review, agentic-delivery, idea-critic,
+  plugin). Only `deep-code-review` gained content. Closes #105.
+
 ## [1.63.0] — 2026-09-13
 
 Completes the completion-claim discipline (issue #101) — the proxy trap, the
