@@ -3,6 +3,45 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.66.0] — 2026-09-14
+
+Five field-learning improvements from a live dogfooding run (issues #109–#113,
+filed from a peer session working a real UI-parity migration), generalized and
+privacy-scrubbed. Extends the visual/design-parity discipline (1.64.0) with the
+measurement root-cause and hardens the delivery overlay for browser-only signals.
+
+### Added — deep-code-review (review lenses + detectors)
+- **`product-ux-quality.md`** — "match by measured device-pixels, not user-space
+  units — equal user-units ≠ equal pixels"; same-axis oscillation of one property is
+  the tell of a duplicated implementation at a different render scale (measure the
+  scale ratio and derive, don't tune; validate you measured the visible ink, not an
+  overlay/focus path). Cross-refs the stop-tuning discipline (#109).
+- **`product-ux-quality.md`** — cross-file UI duplication is invisible to a
+  diff-scoped review; the duplicated visible literal string/heading is the search key
+  that surfaces the twin the user renders (#112).
+- **`domain-checklists.md` (domain P)** — an SSR/hydration restricted-content-model
+  nesting detector (a block-level element or `<p>` inside a `<p>`, nested
+  `<button>`/`<a>`): the browser auto-corrects it, so it is absent from the hydrated
+  DOM and can be state-specific — scan the SSR/static output in the specific state,
+  not the live DOM (#111). Grep hook added.
+- Three new evals: `visual-parity-measure-pixels-not-user-units`,
+  `ssr-hydration-restricted-nesting-scan-static`, `duplicate-ui-twin-across-files`.
+
+### Added — agentic-delivery (delivery overlay)
+- **`fast-agentic-delivery.md`** — draft-gated heavy/browser gates hide a
+  UI-regression wave: fast-tier-green is not UI-correct; run heavy gates on the
+  integration branch periodically while the draft is open (or budget the wave), and
+  verify browser-only signals centrally (#110).
+- **`fast-agentic-delivery.md`** — delegate visual/parity work by measured number,
+  not adjective: numeric acceptance targets up front; the lane returns a measurement
+  table the coordinator confirms against the reference (#113).
+- Two new evals: `draft-gated-heavy-checks-hide-ui-regressions`,
+  `delegated-visual-work-needs-numeric-targets`.
+
+### Changed
+- Lockstep bump to **1.66.0** (deep-code-review, agentic-delivery, idea-critic,
+  plugin). Content changed: deep-code-review + agentic-delivery. Closes #109–#113.
+
 ## [1.65.0] — 2026-09-14
 
 Trims `agentic-delivery/SKILL.md` back under the 24,000-byte size budget

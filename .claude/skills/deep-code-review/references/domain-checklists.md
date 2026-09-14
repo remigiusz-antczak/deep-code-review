@@ -450,11 +450,21 @@ it when the target renders a product UI a human operates).
   contrast ≥ 4.5:1 (3:1 large/UI); labels + announced errors; WCAG 2.2 additions
   (target size 24px, dragging alternative, accessible authentication, redundant
   entry). Core Web Vitals (LCP/INP/CLS). **No secrets/keys in the client bundle.**
+- **SSR / hydration nesting** (server-rendered or static frameworks): a
+  restricted-content-model element placed where its parent forbids it — a
+  block-level element or a `<p>` inside a `<p>`, nested `<button>`/`<a>`, or
+  misplaced table elements — logs a hydration mismatch, but **the browser silently
+  auto-corrects it, so it is absent from the hydrated DOM** and may render in only
+  one auth/data state. Check each call site's wrapper against the component's root
+  element, and reproduce against the **SSR/static HTML in the specific state** (e.g.
+  signed-out), not the convenient live DOM.
 - 🚩 `<div onClick>` with no keyboard handler, missing labels, contrast failures,
   no loading/error state, secrets in the bundle, `localStorage` for tokens, an
   a11y/UX gate that computes accessible names from `innerText`/`textContent`
   instead of the accessibility tree, a name check that tests presence
-  (`if (!name)`) but never shape.
+  (`if (!name)`) but never shape, a `<p>`-rooted or block-level component mounted
+  inside a `<p>` wrapper (or nested `<button>`/`<a>`) — a hydration error checked
+  in SSR/static output, not the auto-corrected live DOM.
 
 ### Q. Privacy, compliance & licensing → `references/privacy-compliance.md`
 Load the reference when the target stores, exports, or logs personal data, or when

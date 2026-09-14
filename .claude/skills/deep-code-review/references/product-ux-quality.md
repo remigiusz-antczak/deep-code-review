@@ -154,7 +154,11 @@ domain H) with a UX consequence, so it is ruled on here too.
   existing component or pattern that already does it and **reuse or extend it** —
   never reimplement per page. A duplicated UI string or markup block across files
   is the red flag (cross-ref H's duplicate-source-drift: byte-identical lockstep
-  copies need a single source or a parity test).
+  copies need a single source or a parity test). **Cross-file duplication is
+  invisible to a diff-scoped review** — you see the file you changed, not its twin —
+  so on any "unify" or "fix this component" task, grep the **duplicated visible
+  literal string or section heading** across the whole tree as the search key that
+  surfaces the twin, before claiming the concept unified.
 - **A fix to a shared concept lands in the shared component**, not in one caller —
   otherwise the same defect survives in every other caller, and whoever checked
   only the screen they were shown signs off a still-broken app.
@@ -218,9 +222,10 @@ descriptions of marks rather than the marks (self-evident) · a "drawer"/"detail
 that pushes a route change or unmounts the list, or an `onClick` that is a
 no-op / `// TODO` (drawers / dead controls) · `>1` font-size/spacing value for one
 role, or column numbers interpolated without `toLocaleString`/tabular figures
-(consistency) · the same UI string or markup block duplicated across ≥2
-component files, or a second hand-rolled copy of a row/card/field a shared
-component already renders (one concept built more than once) · a text input that
+(consistency) · the same UI string, section heading, or markup block
+duplicated across ≥2 component files, or a second hand-rolled copy of a
+row/card/field a shared component already renders (one concept built more than
+once) · a text input that
 persists markup while rendering its raw `**`/`*`/`<u>` tokens back to the user
 (not WYSIWYG) · an add/create/edit handler that writes to a store with no path
 that reads the value back into the same view (write-only input) · an editable
@@ -236,7 +241,7 @@ human edit (change-history / silent AI edit).
 - [ ] Matches a **named** top-product pattern; convention gaps surfaced to the owner, not silently redesigned?
 - [ ] If the owner has rejected this element **twice**, stopped tuning — structural flaw named, two or three comparables researched, concrete options surfaced for the owner to choose?
 - [ ] Consistent type scale / spacing / components / number format with sibling views (tabular figures in columns)?
-- [ ] One shared component per concept — reused/extended, not reimplemented per page; a fix landed in the shared component, not one caller?
+- [ ] One shared component per concept — reused/extended, not reimplemented per page; a fix landed in the shared component, not one caller; **searched the tree for a duplicate twin (a duplicated visible string/heading) a diff-scoped review would miss**?
 - [ ] Interaction loops close — read-back on every input (no write-only), WYSIWYG not raw markup, no dead controls — checked on the route that actually renders?
 - [ ] Drawers overlay (don't navigate away); collapse scope correct; no dead controls?
 - [ ] Verified live in the running product, in more than the happy-path state — **including the default state a user lands on** (signed-out / no-role / default route / local default), not only a mock or a hand-picked persona view?
@@ -245,6 +250,7 @@ human edit (change-history / silent AI edit).
 - [ ] Did **not reconfigure the default** (persona / seed / flag / env) and then claim "verified on the default" — checked the pre-existing default and disclosed any change to it?
 - [ ] Every styling / placement delta enumerated in **one** side-by-side pass and fixed against that inventory — not piecemeal-fix-then-redeclare-done?
 - [ ] Told "not the same" → **asked which axis** before acting (after one wrong guess, asked not guessed), and compared the **reference itself** at the element × breakpoint × theme, not from memory?
+- [ ] Parity target expressed in **measured device-pixels at the actual render scale** (not user-space units — equal user-units ≠ equal pixels), and same-axis oscillation treated as a **duplicate-implementation-at-different-scale** signal (measure the ratio, don't tune)?
 - [ ] No status is green-with-a-caveat — a status the author can immediately qualify is **downgraded**, not asserted beside a hedge (`report-format.md`)?
 - [ ] UI change: headed-browser receipt on the exact route after the action (screenshot or equivalent)? Unit tests alone are not this box.
 
@@ -331,6 +337,22 @@ contrast number → guess the persona → the user finally says "styling").
 Y and compare the **specific element, at the specific breakpoint, in the specific
 theme** — styling differs by all three; a remembered impression of Y is not a
 comparison.
+
+**Match by measured device-pixels, not user-space units — equal user-units ≠ equal
+pixels.** When two renderers apply different transforms or zoom (a thumbnail beside a
+full view; an SVG drawn at ~1.4× device scale beside one that fills its container at
+~9.6×), identical user-space values — stroke widths, font sizes, gaps — render at
+wildly different pixel sizes, so tuning one to match at a single zoom breaks it at
+another. Express a parity target as **measured device-pixels at the actual render
+scale**, compute the **scale ratio** between the two renderers, and derive the second
+implementation's values from the first × that ratio (or unify to one component).
+Persistent **oscillation of one property on the same axis** — too thick → too thin →
+too thick, each "fix" trading one mismatch for another — is the tell that the same
+visual concept is implemented **twice at different scales**, not that the parameter is
+wrong: stop tuning and measure (the stop-tuning discipline is *Repeated owner
+rejection* above). And validate the **measurement target itself** — measure the
+visible ink, not a transparent overlay or focus-indicator path a DOM query happens to
+return first.
 
 ## Enforcing gate (Phase 6 imprint)
 

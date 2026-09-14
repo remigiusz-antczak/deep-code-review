@@ -113,6 +113,28 @@
         "The recurring how-to ticket routes to a help-center (Diátaxis how-to) gap, not just another reply",
         "No invented SLA figure or ticket volume is produced"
       ]
+    },
+    {
+      "id": "draft-gated-heavy-checks-hide-ui-regressions",
+      "prompt": "Our big feature is a long-lived draft PR across many sub-lanes; every lane is green on lint/unit/typecheck. The browser, a11y, and visual gates only run on ready-for-review. Is it demo-ready?",
+      "expected_output": "No — fast-tier-green (lint/unit/typecheck) is NOT UI-correct: responsive breakage, focus-visible/keyboard, truncation-without-accessible-name, and SSR hydration are browser-only signals no unit/typecheck gate observes (fast-agentic-delivery.md, draft-gated heavy checks). While the heavy/browser gates are gated off drafts, those defects accumulate invisibly and surface as a late regression wave at the ready-flip. Either run the heavy/browser gates on the integration branch periodically while the draft is open, or explicitly budget for the regression wave — never present a stack of fast-tier-green lanes as demo-ready. Browser-only signals are the coordinator's to verify centrally on the rendered page. Fabricates no gate result it did not run.",
+      "expectations": [
+        "Does not call a stack of fast-tier-green draft lanes demo-ready — names fast-tier-green as not UI-correct",
+        "Identifies responsiveness/focus-visible/truncation/hydration as browser-only signals no unit/typecheck gate observes",
+        "Requires running heavy/browser gates on the integration branch while the draft is open (or budgeting the wave), verified centrally by the coordinator",
+        "Fabricates no browser/a11y/visual gate result it did not run"
+      ]
+    },
+    {
+      "id": "delegated-visual-work-needs-numeric-targets",
+      "prompt": "I'm delegating 'make this panel match the reference design' to three sub-agent lanes so they go faster. Good plan?",
+      "expected_output": "Not as a qualitative brief: 'make it match' handed to lanes does not converge — each guesses at values and returns output needing repeated re-fixing, distributing the eye-tuning oscillation across lanes (fast-agentic-delivery.md, delegate by measured number). First MEASURE the acceptance: the reference's rendered device-pixels, the scale ratio between renderers, the exact per-property targets; hand each lane those numbers plus 'match by measurement, not by eye'; the lane returns a measurement table the coordinator confirms against the reference — never a self-assessed 'matches now.' If the number can't be stated, the orientation step is to measure it, not to delegate an adjective. Fabricates no target it did not measure.",
+      "expectations": [
+        "Rejects the adjective-only delegation brief and requires numeric acceptance targets (measured px / ratios / counts) up front",
+        "Has the lane match-by-measurement and return a measurement table the coordinator verifies against the reference, not a self-assessed 'matches'",
+        "Says the orientation step is to measure the number when it cannot be stated, rather than delegating 'make it look right'",
+        "Fabricates no measured target or ratio it did not take"
+      ]
     }
   ]
 }

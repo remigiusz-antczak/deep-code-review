@@ -234,6 +234,39 @@
         "Compares the reference at the specific element, breakpoint, and theme rather than from memory",
         "Fabricates no fix or verification for an axis the user has not confirmed"
       ]
+    },
+    {
+      "id": "visual-parity-measure-pixels-not-user-units",
+      "prompt": "The thumbnail diagram should look like a scaled copy of the big one — they share the same stroke widths in the source, but reviewers keep saying the thumbnail's lines look too thick, then too thin, then too thick again as I nudge the value. What's the fix?",
+      "expected_output": "Stops tuning the parameter: persistent oscillation of one property on the same axis is the tell that the same visual concept is rendered twice at DIFFERENT scales, so equal user-space units render at unequal device-pixels (product-ux-quality.md, 'match by measured device-pixels, not user-space units'). The fix is to MEASURE the reference's rendered device-pixels, compute the scale ratio between the two renderers, and derive the thumbnail's value from the reference × that ratio (or unify to one component) — not to keep nudging. Also validates the measurement target itself: measure the visible ink, not a transparent overlay or focus-indicator path a DOM query returns first. Cross-refs the stop-tuning-after-repeated-rejection discipline; fabricates no measurement it did not take.",
+      "expectations": [
+        "Identifies same-axis oscillation as a duplicated-implementation-at-different-scale signal, not a bad parameter value",
+        "Requires measuring rendered device-pixels + the scale ratio (equal user-units != equal pixels), deriving the value rather than tuning by eye",
+        "Flags the measurement-target trap: confirm the measured pixels are the visible ink, not an overlay/focus path",
+        "Fabricates no pixel measurement or ratio it did not actually take"
+      ]
+    },
+    {
+      "id": "ssr-hydration-restricted-nesting-scan-static",
+      "prompt": "A signed-out note component (its root element is a <p>) sits inside a wrapper <p>. In my signed-in dev session the live DOM looks fine and I see no error. Is there a problem?",
+      "expected_output": "Yes — a block-level or <p> element inside a <p> violates the HTML content model and logs a hydration mismatch, but the browser silently AUTO-CORRECTS the nesting client-side, so it is absent from the hydrated DOM (inspecting the live DOM finds nothing), and it may render in only ONE state — here the signed-OUT branch, which a signed-in session never reproduces (domain P, SSR/hydration nesting). Verify against the SSR/static HTML in the specific (signed-out) state, not the convenient live DOM; the detector is static-source analysis (a <p>-rooted component wrapped by a <p>), and the fix is typically a one-token wrapper change. Does not conclude 'no problem' from a clean live DOM in a convenient auth state.",
+      "expectations": [
+        "Does not accept 'no problem' from a clean hydrated DOM in a convenient (signed-in) state",
+        "Explains the browser auto-corrects the nesting so it is invisible in the hydrated DOM, and that it can be state-specific",
+        "Requires checking the SSR/static output in the specific state, via static-source analysis of call-site wrappers vs component roots",
+        "Fabricates no error log or state it did not observe"
+      ]
+    },
+    {
+      "id": "duplicate-ui-twin-across-files",
+      "prompt": "I unified the comment composer — fixed the component and it looks right on the screen I tested. Mark the 'unify the composer' task done?",
+      "expected_output": "Not from one screen: the same UI concept is often implemented more than once across files (a second composer/row/string), and cross-file duplication is invisible to a diff-scoped review — you see the file you changed, not its twin, and the user renders whichever copy mounts on their route (product-ux-quality.md, 'one component per concept'). Before claiming unified, grep the duplicated visible literal string or section heading across the whole tree to surface the twin, then trace route -> render tree to confirm which copy actually mounts on each target screen and that the fix landed there. Does not accept 'done' from a single tested screen; fabricates no coverage of routes it did not check.",
+      "expectations": [
+        "Does not accept 'done' from one tested screen for a unify/one-implementation task",
+        "Requires searching the whole tree for a duplicate implementation (duplicated literal string/heading) before claiming unified",
+        "Traces route -> render tree to confirm which copy mounts, so the fix does not land on a twin the user never sees",
+        "Fabricates no route coverage it did not verify"
+      ]
     }
   ]
 }

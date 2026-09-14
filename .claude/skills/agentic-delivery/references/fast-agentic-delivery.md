@@ -163,6 +163,23 @@ every lane to the light tier is the actual concurrency unlock — it is what
 lets several lanes run inside the RAM budget one full-gate lane alone would
 otherwise consume — not a smarter resource-gate formula (previous section).
 
+## Draft-gated heavy checks hide a UI-regression wave — run them somewhere while the draft is open
+
+The section above offloads the heavy gate to CI — but CI commonly runs those
+expensive jobs (headless-browser, a11y, visual/hydration, UX audit) only on
+ready-for-review or a label, with drafts running the fast tier alone. When a large
+change lives as a long-lived **draft** across many sub-lanes, every lane reads
+fast-tier-green (lint / unit / type-check) while a whole class of **browser-only**
+defects — responsive breakage, focus-visible / keyboard, truncation without an
+accessible name, SSR hydration mismatches — accumulates unobserved. Flipping to ready
+then surfaces the whole wave at once, late, as a regression. Fast-tier-green is **not
+UI-correct**; no unit/typecheck gate observes those signals. Two fixes: (a) run the
+heavy/browser gates on the **integration branch periodically** while the draft is
+open, or (b) explicitly **budget for a late regression wave** and never present a
+stack of fast-tier-green lanes as demo-ready. Browser-only signals are the
+**coordinator's** to verify centrally on the rendered page, not delegated to lanes
+whose own gates cannot observe them.
+
 ## A worktree's own gate can fire on a file it does not own
 
 A definitions- or content-only change can rebuild a generated artifact that
@@ -179,6 +196,21 @@ generated mirror at all, letting a downstream build step regenerate it. This
 is a **provisioning gap, not a defect in either gate** — each gate does
 exactly what it is supposed to; the worktree was simply not fully set up for
 the one it tripped.
+
+## Delegate visual / parity work by measured number, not adjective
+
+A qualitative brief for visual/parity work handed to sub-agents ("make this match
+that") does not converge: each lane guesses at values and returns output that needs
+repeated re-fixing — the same eye-tuning oscillation a single reviewer would have had,
+now distributed across lanes. Convert the acceptance criterion to **measured numbers
+up front** — the reference's rendered device-pixels, the scale ratio between the two
+renderers, the exact target per property (cross-ref `deep-code-review`'s
+`product-ux-quality.md`, "match by measured device-pixels, not user-space units").
+Hand the lane those numbers plus the instruction to **match by measurement, not tune
+by eye**; the lane derives values deterministically and returns a measurement table.
+The coordinator confirms that table against the reference's rendered output — never a
+lane's self-assessed "matches now." If you cannot state the number, the orientation
+step is to **measure it**, not to delegate "make it look right."
 
 ---
 
