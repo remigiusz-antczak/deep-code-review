@@ -1,23 +1,68 @@
 # Fast agentic delivery: concurrency, scheduling & merge cadence
 
-Read this when: sizing a heavy-lane fan-out on a shared machine beyond a
-single spawn decision, choosing between a merge cascade and a merge train for
-a queue of already-green PRs, diagnosing a fleet-wide red that no single diff
-caused, or reviewing (domain K/S in the sibling `deep-code-review` skill)
-whether a target project's own fleet-scale CI/merge behavior holds up under
-N-agent load. Complements — and does not restate — the environment probe's
-composite predicate, the Conductor's event-driven rhythm, gate-epistemology
-principles 3 and 6, and the worktree/occupancy rules already in `SKILL.md`.
+Read this when: sizing a heavy-lane fan-out on a shared machine (the full
+environment-probe procedure and the fan-out tiers live here), choosing between
+a merge cascade and a merge train for a queue of already-green PRs, diagnosing
+a fleet-wide red that no single diff caused, or reviewing (domain K/S in the
+sibling `deep-code-review` skill) whether a target project's own fleet-scale
+CI/merge behavior holds up under N-agent load. `SKILL.md` holds the act-on
+predicate (free RAM + swap trend), the Conductor's event-driven rhythm and
+drift rule, gate-epistemology principles 3 and 6, and the worktree/occupancy
+rules; this file holds the procedure, mechanism, and worked examples behind
+them, each section opening with a one-line anchor to the rule it expands.
 
 ---
 
+## Environment probe procedure (host sizing before fan-out)
+
+`SKILL.md` **Environment probe** states the act-on rule — probe before sizing,
+and gate on free RAM and the swap trend. This is the full procedure it points
+to.
+
+- **Probe:** free RAM and CPU cores (`memory_pressure`/`vm_stat` or `free -h`;
+  `nproc` or `sysctl -n hw.ncpu`), disk (`df -h`), and which tools/connectors
+  this session actually has usable auth for. A lane dispatched against a
+  connector that needs an auth flow it cannot complete fails at the worst
+  point — after it already holds a worktree slot.
+- **Decide from the probe, not from habit:** how many HEAVY lanes (a real
+  build, browser test, or compute process) this run supports — tighten under
+  memory pressure even where a core-count formula would allow more, since a
+  machine can exhaust RAM before it exhausts CPU slots; which model tier a lane
+  needs (`model-tiering.md` in the `deep-code-review` sibling) — frontier only
+  where the blast radius already calls for decorrelation, not by default; and
+  whether a heavy gate runs locally at all or waits for CI/a shared runner when
+  local capacity is short.
+- **Shell semantics belong to the probe, not to guesswork mid-script.** Know
+  which shell will actually run a script before writing a list-membership or
+  exclusion check in it — `branch-and-merge-hygiene.md` §6 has the concrete
+  failure mode and the portable fix; this step only says *check*, not what to
+  write.
+- A **failure that only appears under heavy fan-out concurrency is contention,
+  not a defect, until reproduced at low concurrency** (`parallel-audit.md` §0) —
+  probing capacity first is what keeps that distinction from being made after
+  the fact, on a report already full of false timeouts.
+
+## Size the fan-out to the decomposition, not to available concurrency
+
+`SKILL.md` states the rule — never more lanes than there are
+independently-verifiable objectives, and pilot before full fan-out. The
+detail: a lead that hands out vague, overlapping instructions gets duplicated
+work, not more coverage — subagents given no clear boundary have been observed
+independently re-investigating the same ground (Anthropic, multi-agent research
+system). Default tiers: a single fact/lookup needs one lane; a bounded
+comparison needs 2-4; only a genuinely decomposable task graph justifies 10+,
+and each of those needs its own objective, output format, and explicit boundary
+against its siblings — spawning dozens of subagents for a simple query is a
+named failure mode, not a hypothetical one. **Pilot before full fan-out:** on a
+wide, mechanical batch, run a handful of lanes first, fix what the pilot
+exposes, then commit the rest of the width — cheaper than discovering a bad task
+boundary after the full width is already running.
+
 ## Gate on free RAM and the swap trend — `load1` is not a reliable signal alone
 
-The environment probe's composite predicate used to include `load1 < cores ×
-1.3` as a primary term. **That bullet is now corrected directly in
-`SKILL.md`** — free RAM and the swap trend primary, CPU idle secondary,
-`load1` a weak corroborating signal at most; this section is the mechanism
-and the worked example behind that fix, not a second, competing rule.
+`SKILL.md`'s environment probe states the act-on predicate — free RAM and the
+swap trend primary, CPU idle secondary, `load1` a weak corroborating signal at
+most. This section is the mechanism and the worked example behind it.
 Linux/macOS load averages count threads in uninterruptible I/O-wait, not only
 CPU-runnable ones — "adding the uninterruptible state means that Linux load
 averages can increase due to a disk (or NFS) I/O workload, not just CPU
@@ -171,10 +216,11 @@ Fetched fresh for this file, verified 2026-09-09:
 
 ## Cross-references
 
-- `SKILL.md` **Environment probe** — the composite resource predicate this
-  file's load-average section refines; not restated here.
-- `SKILL.md` **Conductor operating rhythm** — the event-driven attention
-  model this file's queue-sweep section extends.
+- `SKILL.md` **Environment probe** — states the act-on predicate (free RAM +
+  swap trend); this file holds the full probe procedure and the load-average
+  mechanism.
+- `SKILL.md` **Conductor operating rhythm** — the event-driven attention model
+  this file's queue-sweep and fan-out-sizing sections extend.
 - `SKILL.md` **Gate epistemology**, principles 3 and 6 — the two existing
   cases this file adds a third case to, and the union-proof rule the cascade
   section stays subordinate to.

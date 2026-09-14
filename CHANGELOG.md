@@ -3,6 +3,29 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.65.0] — 2026-09-14
+
+Trims `agentic-delivery/SKILL.md` back under the 24,000-byte size budget
+(28,049 → 23,954 B) by relocating operational depth to its routed reference —
+the skill's own progressive-disclosure rule applied to itself. No rule, gate, or
+principle removed. The `agentic-delivery` size-allowlist pin in `ci-gates.sh` is
+now droppable (routing reports plain `ok`, no `SIZE ALLOWED`); removing the pin
+itself is left as a separate owner call.
+
+### Changed
+- **`agentic-delivery/SKILL.md`** slimmed: the fan-out-sizing tiers + pilot
+  procedure and the environment-probe procedure (probe commands,
+  decide-from-probe, shell-semantics, contention-vs-defect) moved to
+  `references/fast-agentic-delivery.md`; the act-on predicate (free RAM + swap
+  trend), the Conductor's event-driven rhythm, the drift rule, and
+  escalate-after-two-failures stay in the core. Prose compressed throughout.
+- **`agentic-delivery/references/fast-agentic-delivery.md`** gains the relocated
+  **Environment probe procedure** and **Size the fan-out** sections; its framing
+  (read-when, the load-average section's opener, and the cross-references)
+  updated so it no longer claims the probe procedure lives in `SKILL.md`.
+- Lockstep bump to **1.65.0** (deep-code-review, agentic-delivery, idea-critic,
+  plugin). Only `agentic-delivery` changed content.
+
 ## [1.64.0] — 2026-09-13
 
 Sharpens the visual/design-parity discipline (issue #105). The 1.62.0/1.63.0 work
