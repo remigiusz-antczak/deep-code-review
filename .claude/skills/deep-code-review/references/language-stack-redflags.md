@@ -125,6 +125,15 @@ grep -rInE 'console\.log|print\(|dbg!|System\.out\.print|fmt\.Print' .
   delete) built this way silently stops excluding anything the moment it runs
   under a non-word-splitting shell. Use `case "$x" in id1|id2) … ;; esac` or a
   line-based `grep -qxF` instead — depth: `branch-and-merge-hygiene.md` §6.
+- **`set -u` + `"${arr[@]}"` on an *empty* array is a fatal `unbound variable`
+  under bash 3.2 — still macOS's default `/bin/bash` (verified `3.2.57`).** A
+  script that conditionally builds an array (flags, a discovered file list,
+  cleanup targets) and expands it under `set -u` aborts the instant the array is
+  empty; this most often sits in **trap / cleanup / reporting** code on the error
+  path, where it **masks the real failure** it was meant to report. Guard the
+  expansion (`${arr[@]+"${arr[@]}"}`) or seed the array — and run the script
+  against the **actual `/bin/bash` on the target**, since a dev box's
+  newer/homebrew bash can behave differently and hide it.
 
 ### The reviewer's own verification shell (measuring, not reviewing)
 

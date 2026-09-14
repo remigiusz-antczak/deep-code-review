@@ -3,6 +3,42 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.67.0] — 2026-09-14
+
+Four more field-learning lenses (issues #114–#117), continuing the same
+dogfooding run. All land in deep-code-review; each verified from source (the
+bash-3.2 footgun reproduced live on macOS's `/bin/bash`) and privacy-scrubbed.
+
+### Added — deep-code-review (review lenses + detectors)
+- **`security-ai-agents.md` + `domain-checklists.md` (domain C)** — anchor
+  relative time deterministically (the time instance of deterministic-first): a
+  prompt resolving *today* / *last quarter* must be handed an authoritative
+  current date by code — the model never authors *now*, or it ships a plausible
+  wrong date as fact (LLM07). Inject the anchor into the **trusted** region,
+  never untrusted/RAG context (LLM01 indirect injection); **fail closed** on a
+  missing/unparseable anchor — no silent `now()` default. Grep hook added (#114).
+- **`language-stack-redflags.md` (Shell / Bash)** — `set -u` + `"${arr[@]}"` on
+  an *empty* array is a fatal `unbound variable` under bash 3.2 (still macOS's
+  default `/bin/bash`); guard with `${arr[@]+"${arr[@]}"}`. Most dangerous in
+  trap/cleanup/reporting code, where it masks the real failure (#115).
+- **`SKILL.md` principle 2 + `method.md` Phase 1** — an enforcement artifact (a
+  gate / CI / privacy / lint / hook / checksum script) changed in the diff it
+  gates is self-certified: green CI ran the shipped copy grading itself. Re-run
+  the **base** version (`git show <base>:`) independently; a change that narrows
+  what the gate catches while staying green is a Blocker (#116).
+- **`reliability-error-handling.md`** — the converse retry/timeout lens: grep the
+  project's **own** retry/backoff/timeout primitive and confirm every
+  external-I/O site on the critical path routes **through** it; an
+  existing-but-bypassed site is the finding, and the fix is to route it through
+  the existing primitive, not add a second. Grep lead added (#117).
+- Three new evals: `prompt-resolves-relative-date-needs-injected-anchor`,
+  `gate-changed-in-diff-rerun-base-version`,
+  `reliability-confirm-uniform-primitive-routing`.
+
+### Changed
+- Lockstep bump to **1.67.0** (deep-code-review, agentic-delivery, idea-critic,
+  plugin). Content changed: deep-code-review only. Closes #114–#117.
+
 ## [1.66.0] — 2026-09-14
 
 Five field-learning improvements from a live dogfooding run (issues #109–#113,

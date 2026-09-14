@@ -41,10 +41,22 @@ the checklist.
   spend and load; surface a clear "paused" state.
 - **Check status before body.** `res.json()` on a 500 HTML page, or treating
   transport success as business success, hides outages as parse bugs.
+- **Find the house primitive; confirm *uniform* routing (the converse lens).**
+  Don't only ask "does each I/O site have *some* handling?" — grep the project's
+  **own** retry/backoff/timeout wrapper (`withRetry`, `fetchWithTimeout`, a
+  pre-configured client, an `@retry`/`tenacity` decorator, a `p-retry` import) and
+  confirm **every** external-I/O site on the critical / delivery path goes
+  **through it**. A site that hand-rolls its own handling — or has none — while
+  the primitive exists is the finding: the inconsistency proves the bypass is an
+  oversight, not policy (same logic as inconsistent spotlighting in domain C). The
+  fix is to **route the outlier through the existing primitive**, not to add a
+  second one — two retry helpers become a future drift bug.
 
 **Grep leads (tune to language):** empty `catch` / `except: pass` / `rescue nil`;
 `retry` without sleep/jitter; `axios`/`fetch`/`got` without timeout; `setTimeout`
-as the only cancel; `while (true)` around a paid call.
+as the only cancel; `while (true)` around a paid call; a raw `fetch`/SDK call
+sitting beside the project's own retry/timeout wrapper that every other call
+uses.
 
 ---
 

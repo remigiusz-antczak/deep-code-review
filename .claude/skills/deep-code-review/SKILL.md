@@ -11,7 +11,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.66.0"
+  version: "1.67.0"
 ---
 
 # Deep Code Review
@@ -127,7 +127,9 @@ tree. Skip of the planted-defect probe caps only the gate-self-test claim.
    invisible-character claims at the byte level; an absence is evidence only
    after a positive control fires; prefer the canonical instrument; what a
    project *enforces* is verified against the enforcement artifact, not the
-   doc. A **status you emit** (`✅`/done/exact/matches/verified) names the surface
+   doc — and an enforcement artifact **in the diff it gates** self-certifies (CI
+   ran the shipped copy), so re-run its **base** version (`git show <base>:`).
+   A **status you emit** (`✅`/done/exact/matches/verified) names the surface
    its evidence came from and holds at its strongest reading — a caveat downgrades
    it, and a UI/parity claim's canonical surface is the **default served state**
    (`references/report-format.md`). Depth: `references/method.md` Phase 1.

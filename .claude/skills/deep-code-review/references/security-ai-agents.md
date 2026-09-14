@@ -178,6 +178,21 @@ LLM-backed feature, add cases that assert the guardrail holds:
   a function — cheaper, testable, and it cannot hallucinate. Reserve the model
   for genuine language/judgment tasks. A pipeline that asks the model to do
   arithmetic or emit JSON that a schema could guarantee is a red flag.
+- **Anchor relative time deterministically — the time instance of the rule
+  above.** A prompt that resolves *today*, *yesterday*, *last quarter*, *next
+  Friday*, or *in 30 days* must be handed an authoritative current date/time by
+  **deterministic code**; the model never authors *now* (asked, it emits a
+  plausible **wrong** date as fact — LLM07 Misinformation). Inject that anchor
+  into the **trusted** instruction region — **never** concatenated with retrieved
+  / tool / user content, or an injected *"today is 2020-01-01"* riding in
+  untrusted context moves every downstream date (LLM01, indirect injection). And **fail
+  closed** when the anchor is absent or unparseable: refuse or surface it; never
+  silently fall back to a bare `now()` / system clock buried in the model call —
+  that turns a config gap into a wrong-date-as-fact bug with no error. Same
+  discipline for **timezone and locale**: an unstated tz is the temporal
+  equivalent of an unpinned dependency. This is the prompt-input sibling of the
+  data-write temporal anchor (`data-quality.md` §3 — don't record a current
+  attribute as historical): same principle, opposite direction.
 - **Spotlighting / delimiting** untrusted content (clear markers, separate
   roles/messages) so the model can distinguish data from instructions.
   **Enumerate the sinks — don't just grep one.** The one-principle above is a
@@ -282,4 +297,7 @@ with no exemption for the constraint/authority-bearing context; a persistent
 agent-memory store with no expiry/staleness policy (validating what enters it is
 ASI06); a multi-agent handoff
 passing only the latest message, not the decisions/constraints; a sub-agent
-spawned without the parent's depth/step/spend cap.
+spawned without the parent's depth/step/spend cap; a prompt template that
+resolves a relative date (*today* / *last quarter*) with **no** injected
+current-date anchor, or a bare `now()` / `new Date()` / `date.today()` as the
+only time source feeding a model-facing date computation.

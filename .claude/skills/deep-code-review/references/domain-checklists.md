@@ -139,9 +139,10 @@ skill**, also walk AST01–AST10 in `references/security-agent-skills.md`.
   **Prove the re-check fires at runtime** — a self-proof / health check that
   exercises it — not merely that the code path exists; an unproven tool-authz gate
   must fail closed, or it is a finding (the runtime-proven-gate lens, domain B).
-- **Deterministic-first**: the model never authors a number, score, status, or
-  gate — deterministic code does; the model only phrases/adjudicates behind hard
-  gates, with a deterministic fallback and a counter for how often it fires. Use
+- **Deterministic-first**: the model never authors a number, score, status,
+  gate, **or the current date/time** — deterministic code does; the model only
+  phrases/adjudicates behind hard gates, with a deterministic fallback and a
+  counter for how often it fires. Use
   **temperature 0** for judges/verifiers. Ground claims to the input;
   **log a redacted fingerprint** of output, never the raw text.
 - **Bound consumption** (LLM06:2026, was LLM10:2025): token/cost/rate caps enforced *before* each

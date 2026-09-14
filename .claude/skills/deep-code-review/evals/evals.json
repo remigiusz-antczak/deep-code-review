@@ -267,6 +267,39 @@
         "Traces route -> render tree to confirm which copy mounts, so the fix does not land on a twin the user never sees",
         "Fabricates no route coverage it did not verify"
       ]
+    },
+    {
+      "id": "prompt-resolves-relative-date-needs-injected-anchor",
+      "prompt": "Our reporting agent builds a prompt like 'summarize deals closed last quarter' and lets the model figure out the dates from that. It works in my tests. Ship it?",
+      "expected_output": "Not as-is. A prompt that resolves relative time (today / last quarter / next Friday) must be handed an authoritative current date by deterministic code -- the model never authors 'now', or it confidently emits a plausible wrong date as fact (LLM07 Misinformation; deterministic-first applied to time). Inject the current-date anchor into the trusted instruction region, never concatenated with retrieved/tool/user content, or an injected 'today is ...' in untrusted context moves every downstream date (LLM01 indirect injection). Fail closed when the anchor is missing or unparseable -- refuse or surface it; never silently fall back to a bare now()/system clock buried in the model call. Also pin timezone/locale. (security-ai-agents.md deterministic-first; domain C.)",
+      "expectations": [
+        "Requires a deterministic, injected current-date anchor instead of letting the model author 'now'",
+        "Places the anchor in the trusted region, outside retrieved/tool/user (untrusted) context, citing prompt-injection risk (LLM01 indirect injection)",
+        "Requires fail-closed on a missing/unparseable anchor -- no silent now()/system-clock default",
+        "Fabricates no dates and flags timezone/locale as part of the same discipline"
+      ]
+    },
+    {
+      "id": "gate-changed-in-diff-rerun-base-version",
+      "prompt": "This PR edits our privacy-scan gate script and also adds application code. CI is green. Good to merge?",
+      "expected_output": "Green here is self-certification: CI ran the shipped (possibly weakened) copy of the gate to grade the same diff that changed it. Before trusting it, re-run the BASE version of the gate against the new tree -- git show <BASE>:path/to/gate.sh > /tmp/base-gate.sh && bash /tmp/base-gate.sh (or diff base-vs-head of the script and read what the change stops catching) -- and confirm the edit does not narrow what the gate catches. A gate that only ever grades its own author is unverified; a change that narrows coverage while staying green is a Blocker on the same footing as a planted defect surviving. (method.md Phase 1; principle 2.)",
+      "expectations": [
+        "Recognizes that a gate modified in the same diff self-certifies -- green does not discharge verification",
+        "Re-runs the base/pre-change version of the gate independently (git show <base>:) against the new tree",
+        "Treats a change that narrows what the gate catches (while staying green) as a Blocker",
+        "Does not accept 'CI green' as proof for a diff that edits the enforcement artifact itself"
+      ]
+    },
+    {
+      "id": "reliability-confirm-uniform-primitive-routing",
+      "prompt": "Every network call in our service has error handling of some kind -- can you sign off that retries and timeouts are covered?",
+      "expected_output": "'Some handling per site' is not the check. Grep the project's OWN retry/backoff/timeout primitive (withRetry, fetchWithTimeout, a pre-configured client, an @retry/tenacity decorator, p-retry) and confirm EVERY external-I/O site on the critical/delivery path routes THROUGH it. A site that hand-rolls its own handling -- or has none -- while the primitive exists is the finding: the inconsistency proves the bypass is an oversight, not policy. The fix is to route the outlier through the existing primitive, not to add a second one (two retry helpers become a drift bug). Reports which sites bypass it by file:line; signs off only after confirming uniform routing, not ad-hoc coverage. (reliability-error-handling.md.)",
+      "expectations": [
+        "Rejects 'some handling everywhere' and locates the project's own retry/timeout primitive",
+        "Confirms every critical/delivery-path I/O site routes through that one primitive",
+        "Flags an existing-but-bypassed site (hand-rolled or none) as the finding, by file:line",
+        "Recommends routing the outlier through the existing primitive rather than adding a second one; fabricates no coverage"
+      ]
     }
   ]
 }

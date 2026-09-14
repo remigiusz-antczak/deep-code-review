@@ -133,6 +133,16 @@ and any wired security/dependency scanners. Then, before trusting "green":
   are a common silent green. Trace which test files the gate actually invokes;
   tests present but unwired are "decorative" (procedures:
   `references/testing-and-evals.md`).
+- **A gate changed in the diff it gates is self-certified — re-run its base
+  version.** When the diff touches an **enforcement artifact** (a gate / CI /
+  privacy / lint / hook / checksum script that decides pass-fail), the green run
+  used the **shipped, possibly-weakened** copy grading itself. Judge the change
+  with the **base** copy instead: `git show <BASE>:path/to/gate.sh >
+  /tmp/base-gate.sh && bash /tmp/base-gate.sh` against the new tree (or diff
+  base-vs-head of the script and read what the change stops catching). A gate
+  that only ever grades its own author is `unverified`; a change that **narrows**
+  what it catches while staying green is a Blocker on the same footing as a
+  planted defect that survives.
 - **Check a firing gate against its own standard first.** A gate *stricter* than
   the spec it implements (e.g. a contrast gate flagging disabled controls, which
   WCAG 2.2 SC 1.4.3 exempts) yields a "fix" that regresses another axis
