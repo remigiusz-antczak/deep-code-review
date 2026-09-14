@@ -169,6 +169,14 @@ delivery + critic + comms); add each with its flag. `install.sh` **copies** the
 skills — it never symlinks — so re-run it after a `git pull` to update. It's the
 air-gapped, SHA-stamped path; see [`SECURITY.md`](SECURITY.md).
 
+To check whether an already-installed copy has fallen behind upstream `main`,
+run `scripts/skill-drift-check.sh` — a read-only helper (needs the `gh` CLI,
+authenticated) that compares the installed `deep-code-review` VERSION against the
+repository's `main`. It exits `0` when in sync **or** when it cannot check
+(printing why), and `1` only on a genuine mismatch, so it is safe to drop into a
+warn-only hook or a `make` target; it is intentionally not wired into anything by
+default.
+
 </details>
 
 Once installed, **run it** on slash-skill hosts, or just ask in plain words:
