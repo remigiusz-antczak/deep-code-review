@@ -95,6 +95,33 @@ in the finding, so a downstream implementer does not read it as a cut order. Bef
 recommending any structural change to a real surface from a mockup, confirm the
 difference is **treatment** (reproducible on **equal** data), not volume.
 
+## Match the chrome, never the mock's data — copying a sample value is fabrication
+
+Separate **chrome** (layout, colour, geometry, tab set, headers, control
+affordances — **must match**) from **data** (values, counts, denominators, series —
+**must stay real**). A mock is built to *look* complete, so it fills every number
+with plausible sample values; those are the one thing that must **not** cross into
+the product. **Copying a mock's number into the real product is fabrication**
+(principle 3) — a Blocker-class data-integrity defect that surfaces weeks later when
+someone trusts a value lifted from an illustration, not computed. This is the
+**inverse** of the treatment-not-volume smell above: there the mock's *sparse* data
+tempts a wrong cut, here its *invented* values tempt a wrong copy — a design mockup
+is neither a feature spec nor a data spec.
+
+- **Read the prototype's own disclaimers first.** Mocks routinely label their
+  sample numbers ("values marked *sample* are illustrative until the backend is
+  wired"); that label is the boundary between chrome-to-match and data-to-ignore.
+- **Brief the chrome-vs-data split into every parallel worker.** A lane without the
+  caveat will "helpfully" reconcile the numbers and inject fabricated data, invisible
+  to the coordinator until it ships (`agentic-delivery`).
+- **This is why the parity differ ignores text values entirely** — the differ's
+  rule follows from this one; see the Phase-6 parity-differ gate (which owns the
+  differ's exact scope) in `product-ux-quality.md`.
+
+**Acceptance:** every number in the matched product traces to a real computation or
+an honest empty state; no value present in the product originates from the design
+mock.
+
 ## Flow-cost — navigation cost, scroll burden, and cognitive load are first-class
 
 Structural and pixel parity are necessary but not sufficient: a UI can match the
@@ -163,6 +190,13 @@ a separate move: `product-ux-quality.md`, *Match a named standard*.)
 
 - A parity claim ("matches the reference") backed only by a structural audit, a
   green suite, or seed-data screenshots — with no surface-by-surface real-data pass.
+- A **"matches"** claim on a parity task with **no mechanical differ** — no diff
+  image or structured mismatch list attached, only an assertion.
+- A **structural** divergence (different columns / grouping / composition)
+  characterised as **"close" / "1:1" / "mostly there"** — a category error; a
+  different structure is a different screen.
+- A number in the matched product **copied from the design mock's *sample* value** —
+  present in the product but tracing to the mock, not a real computation.
 - A recommendation to **drop / remove / replace** a surface or its content to match
   a **prototype / mockup** reference (real data → progressive disclosure, not
   deletion).

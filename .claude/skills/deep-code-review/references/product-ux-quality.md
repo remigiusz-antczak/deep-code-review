@@ -61,6 +61,16 @@ surface it, don't impose it*).
   arrows moved). Re-tuning after a second identical rejection is the failure this
   rule names — the design-half form of principle 9 (*root-cause, not symptom*):
   after the same failure twice, change the approach, do not repeat the fix.
+- **The same move for a *verification* claim: repeated correction means your
+  method is broken, not their patience.** If a stakeholder repeatedly corrects your
+  "it matches / it's the same," that is evidence your **verification method** is
+  wrong — not a cue to ask them for more examples. Change the method: build the
+  comparator (the **parity differ**, Phase-6 *Enforcing gate* below) and show its
+  diff, rather than outsourcing your verification back to the person reviewing you.
+  Report only what you actually inspected on the target ("the nav now reads A · B ·
+  C, I looked at it"), never a blanket "it matches"; an honest "not yet verified"
+  beats a false positive (principle 9 again — after the second false "matches",
+  change the instrument, do not re-assert).
 - **Name the structural flaw in one line**, then research how **two or three
   comparable products** (named, per *Match a named standard* below) solve the same
   problem — the muscle memory the new direction should borrow.
@@ -323,6 +333,7 @@ confidence number published as precision (confidence tier).
 - [ ] Verified live in the running product, in more than the happy-path state — **including the default state a user lands on** (signed-out / no-role / default route / local default), not only a mock or a hand-picked persona view?
 - [ ] Any "matches / exact / parity" claim checked against the **default served state** as the canonical surface — and if it rests on a non-default surface, does it **name** that surface and say the default was not checked?
 - [ ] "Looks the same" backed by a **rendered-appearance** diff of the default state vs the reference (screenshot / computed styles), **not** section-presence, DOM order, a passing test, or loaded data — and stating **which axis** (structure / styling / content / data) the evidence covers, without "fixing" data to answer a styling complaint?
+- [ ] Parity task: differences classified **structural vs cosmetic** (structural parity first; a structural divergence **never** called "close / 1:1"); every "matches" claim gated on a **mechanical differ** (diff image + structured mismatch list attached, not an assertion); reference read at its **highest fidelity** (running build > source > screenshot); and **no mock sample value copied** into the product?
 - [ ] Did **not reconfigure the default** (persona / seed / flag / env) and then claim "verified on the default" — checked the pre-existing default and disclosed any change to it?
 - [ ] Every styling / placement delta enumerated in **one** side-by-side pass and fixed against that inventory — not piecemeal-fix-then-redeclare-done?
 - [ ] Told "not the same" → **asked which axis** before acting (after one wrong guess, asked not guessed), and compared the **reference itself** at the element × breakpoint × theme, not from memory?
@@ -352,15 +363,27 @@ is that a parity ✅ resting on a **non-default surface** is not green.
 ## "Looks the same" is about rendered appearance — four axes, and a structural check is not a visual one
 
 "Make X look like reference Y" is a task that frequently earns a false ✅. These
-rules sit **on top of** the default-state rule above (never restating it); each
-names a distinct evasion that passes a default-state check yet still ships a UI
-that does not look like Y.
+rules sit **on top of** the default-state rule above (never restating it); each is
+a distinct fidelity rule, or names an evasion that passes a default-state check yet
+still ships a UI that does not look like Y.
+
+**Read the reference at its highest available fidelity — this is the *reference*
+side, not your output's.** The reference exists in three forms; prefer the highest
+present: a **running build** you launch and diff against > the design **source**
+(HTML/CSS, which states the column model, tokens, and spacing exactly) you read
+property-by-property > a **screenshot** (a lossy picture — last-resort sanity check
+only). Never reverse-engineer the source when a running build of the design
+already exists in the repo, and never eyeball a picture when the source or build
+states the spec precisely. This governs how you read **Y**; it does not soften the
+rule below that *your implementation's* evidence must be the **render**, not the
+DOM — opposite sides of the comparison.
 
 **Four axes — name which one a claim covers; never conflate them.** A UI compares
 on four independent axes:
-- **structure** — which sections exist, in what order, nesting / DOM;
-- **styling** — font size / weight, colour, spacing, radius, shadow; chrome
-  present or absent; each affordance's presence and **glyph** (a star, a caret, a
+- **structure** — which sections / components / chrome / affordances are
+  **present** (vs absent), in what order, grouping, nesting / DOM;
+- **styling** — the rendered *look* of what is present: font size / weight,
+  colour, spacing, radius, shadow; each affordance's **glyph** (a star, a caret, a
   control); overall layout dimensions;
 - **content** — the words / copy;
 - **data** — the numbers / rows / entities.
@@ -371,6 +394,21 @@ it is **not** evidence of styling parity and must never be reported as "matches"
 "looks the same." And do not "fix" the **data** (swap a persona, seed rows) to
 answer a **styling** complaint: that changes an axis the user did not raise and
 leaves the one they did.
+
+**Classify every diff structural vs cosmetic — and get structural parity first.**
+Structural = different components, a different grouping / column / tab model, a
+different page composition — the **structure** axis above (presence, grouping,
+composition); cosmetic = colour, radius, spacing, glyph — the **styling** axis.
+(Same two axes, renamed for the parity decision: presence/composition is
+structural; the rendered look of what is present is cosmetic.) Establish
+structural parity first (same components, same grouping, same composition), then
+pursue cosmetic. **Never characterise a structural divergence as "close", "mostly
+there", or "1:1"** 🚩: a board whose columns are `[Unclassified, Manual, Planned,
+In progress]` when the design's are `[Up next, In progress, In review, Live]`, or a
+flat filtered list where the design groups by team, is not "nearly there" — it is a
+**different screen**, a rebuild, and calling it close is a category error that
+destroys stakeholder trust. If the structure differs, say so plainly and size it as
+a rebuild, not a tweak.
 
 **A structural / proxy check is not visual evidence.** A section-presence check, an
 "element-by-element" DOM / heading diff, a passing test, or loaded data are all
@@ -438,8 +476,9 @@ ships a UI, pair this reference with a UX-evidence gate — held to the skill's 
 gate discipline: **a gate must tell "could not check" from "found a problem,"
 fail *open* on the former, and never be stricter than the standard**
 (`frontend-a11y.md`, the `innerText` and disabled-contrast traps; SKILL.md
-Phase 1, gate-vs-standard). Three gates, in descending confidence of what they
-can prove:
+Phase 1, gate-vs-standard). Three gates for any UI change, in descending
+confidence of what they can prove — plus a fourth that fires only on a parity
+task:
 
 1. **Screens-changed evidence (proves a look happened).** On any diff that can
    change a rendered page, require a screenshot of each affected route at a narrow
@@ -460,5 +499,25 @@ can prove:
    `unverified`, not as clean. Model: a renderer-tolerant ratchet — a pinned
    exception is *allowed*, never *required* to exhibit.
 
-Ship all three **idempotent and additive**, per Phase 6 — detect-and-stop if
-present, add only what is missing, defer to an existing style guide.
+4. **Parity differ (parity tasks only — proves *equivalence*, not just that a human
+   looked).** For a "make X match reference Y" task, build a mechanical differ
+   **before** any pixel-matching and gate every "matches" claim on it. The differ
+   drives both the reference and the target for each screen and emits (a) a
+   side-by-side + pixel-diff **image** and (b) a **structured** mismatch list — which
+   nav / tab labels are present or absent on each side, the header strings, and
+   bounding-box geometry deltas for key elements. **The artifact shown to a reviewer
+   is the diff image, never a sentence.** Load a no-routing prototype **once and
+   click-navigate** its in-page tabs (it has no per-screen URL to fetch), and diff
+   against an existing **running build** of the design if one is in the repo rather
+   than reverse-engineering its source (reference-fidelity order, "Looks the same"
+   above). It diffs **chrome / structure / styling, not text values** — diffing the
+   numbers would flag real data as a mismatch and tempt the fix that fabricates
+   (`migration-parity.md`). What it **cannot** prove: an intentional improvement from
+   a regression, and its pixel threshold is **agreed, not derived** — a human still
+   owns the ship call. *Done* on a parity task = the differ reports zero structural
+   mismatches and a pixel delta under the agreed threshold for every screen in the
+   correspondence table, with those diff images attached — never an assertion.
+
+Ship these **idempotent and additive**, per Phase 6 — detect-and-stop if
+present, add only what is missing, defer to an existing style guide (the parity
+differ only when the task is a parity task).

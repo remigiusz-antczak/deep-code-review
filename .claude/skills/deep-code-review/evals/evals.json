@@ -625,6 +625,38 @@
         "Requires distinguishing no-data-collected/covered from collected-and-genuinely-none",
         "Requires the empty state to name coverage (was the source actually probed), not imply a false all-clear"
       ]
+    },
+    {
+      "id": "parity-claim-gated-on-mechanical-differ",
+      "prompt": "The approved design ships in the repo as a runnable prototype. The agent rebuilt each screen to match it and reports 'pixel-1:1, matches' after glancing at a screenshot. The reviewer keeps replying that screens still look different. Sign off?",
+      "expected_output": "No -- a 'matches' from a screenshot glance is an assertion, not verification, and repeated correction means the verification METHOD is broken, not that the reviewer needs to point at more examples. Build a mechanical differ before further pixel-matching and gate every 'matches' claim on it: it drives both reference and target per screen and emits a side-by-side + pixel-diff image plus a structured mismatch list (nav/tab labels present or absent each side, header strings, bounding-box deltas) -- the artifact shown is the diff image, never a sentence. Read the reference at its highest fidelity: diff against an existing running build of the design if one is in the repo, else read its source element-by-element; a screenshot of the design is last-resort. Report only what was actually inspected on the target ('the nav now reads Overview, Pipeline, Settings -- I looked at it'), never a blanket 'it matches'; 'not yet verified' beats a false positive. Done = the differ reports zero structural mismatches and a pixel delta under the agreed threshold for every screen, diff images attached. (product-ux-quality.md.)",
+      "expectations": [
+        "Rejects a 'matches / pixel-1:1' claim resting on a screenshot glance or any proxy",
+        "Requires building a mechanical differ and gating every 'matches' claim on its diff artifact",
+        "Treats repeated stakeholder correction as a broken verification method to change, not more examples to request",
+        "Reads the reference at highest fidelity (running build > source > screenshot), not a lossy picture"
+      ]
+    },
+    {
+      "id": "match-chrome-never-copy-mock-sample-data",
+      "prompt": "Our app's metric counts differ from the approved design prototype's (its columns show different tallies and denominators). Should we reconcile our numbers to match the prototype so it's pixel-identical?",
+      "expected_output": "No -- match the chrome, never the data. Chrome (layout, colour, geometry, tab set, headers) must match; data (values, counts, denominators) must stay real. A prototype fills every number with plausible SAMPLE values to look complete, and copying one into the real product is fabrication (principle 3) -- a Blocker-class data-integrity defect that surfaces weeks later when someone trusts a value lifted from an illustration. Read the prototype's own disclaimer first (mocks routinely mark numbers 'sample / illustrative until the backend is wired') -- that label is the boundary. The parity differ therefore diffs structure and style, not text values, or it flags real data as a mismatch and tempts the copy. Every number in the matched product must trace to a real computation or an honest empty state. (migration-parity.md.)",
+      "expectations": [
+        "Refuses to change a real computed value to a mock's sample value",
+        "Frames copying a mock's number into the product as fabrication / a data-integrity defect, not a styling fix",
+        "Reads the prototype's own sample/illustrative disclaimer as the chrome-vs-data boundary",
+        "Keeps chrome matching while every product number traces to a real computation or honest empty state"
+      ]
+    },
+    {
+      "id": "structural-divergence-is-not-close-to-parity",
+      "prompt": "The board I built has columns [Unclassified, Manual, Planned, In progress]; the design's are [Up next, In progress, In review, Live]. I'd call it close to 1:1, just needs a little polish. Fair?",
+      "expected_output": "Not close -- that is a category error. A different column / tab model (or a flat list where the design groups by team, or a different page composition) is a STRUCTURAL divergence, not a cosmetic one: it is a different screen, a rebuild, not a polish pass. Classify every difference as structural (components, grouping, column/tab model, composition) vs cosmetic (colour, radius, spacing), establish structural parity FIRST, and only then pursue cosmetic. Never characterise a structural divergence as 'close', 'mostly there', or '1:1' -- say plainly that the structure differs and size it as a rebuild. (product-ux-quality.md.)",
+      "expectations": [
+        "Rejects calling a structural (column/tab-model/grouping) divergence 'close' or '1:1'",
+        "Classifies the difference as structural vs cosmetic and requires structural parity first",
+        "Sizes a structural divergence as a rebuild, not a tweak/polish"
+      ]
     }
   ]
 }

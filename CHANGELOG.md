@@ -3,6 +3,34 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.77.0] — 2026-09-16
+
+Wave 6 of the dogfooding batch: the design-parity **verification** cluster (#169,
+#170, #171, #177, #178) — how to *check* an implementation against a design without
+rubber-stamping a mismatch. Each lens points at existing parity content rather than
+restating it.
+
+### Added — deep-code-review
+- **`product-ux-quality.md`** — a **parity differ** as a fourth Phase-6 enforcing
+  gate: build a mechanical comparator before pixel-matching and gate every "matches"
+  claim on its diff image + structured mismatch list, never a sentence; it proves
+  equivalence (not that someone looked) and states what it cannot prove
+  (intentional-improvement-vs-regression; threshold agreed, not derived) (#177). Read
+  the reference at its highest fidelity — running build > design source > screenshot
+  (#169). Classify every diff **structural vs cosmetic**, get structural parity first,
+  and never call a structural divergence "close / 1:1" — a different structure is a
+  different screen (#170). Repeated correction of a "matches" claim means the
+  verification **method** is broken — build the comparator, do not outsource
+  verification back to the reviewer (#171). The four-axes structure/styling split was
+  sharpened so *presence* is structural and *rendered look* is cosmetic (one taxonomy).
+- **`migration-parity.md`** — match the **chrome**, never the mock's **data**:
+  copying a design mock's *sample* value into the real product is fabrication
+  (principle 3), a Blocker that surfaces weeks later; read the mock's own "sample"
+  disclaimer as the boundary; brief the split into every parallel worker (#178).
+- Three new behavioral evals; new parity 🚩 signals; one pre-ship checklist line.
+
+Closes #169, #170, #171, #177, #178.
+
 ## [1.76.0] — 2026-09-16
 
 Wave 5 of the #143–#164 dogfooding batch: the coverage cluster. All five lenses
