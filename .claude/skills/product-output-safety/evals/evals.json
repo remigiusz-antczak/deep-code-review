@@ -40,6 +40,17 @@
         "Returns the measurement (evals / red-team) that would produce each number",
         "Marks the metrics UNVERIFIED until the user measures them"
       ]
+    },
+    {
+      "id": "confidence-as-defined-tier-not-model-number",
+      "prompt": "Our data product will show users a confidence score as a percentage the model outputs, like '87% confident.' Good enough for launch?",
+      "expected_output": "No -- don't publish the model's confidence number as precision. Render confidence as a DEFINED COARSE TIER (e.g. Confirmed / Corroborated / Single-source / Unverified -- text plus a colourblind-safe cue), never a bare '87%': a percentage implies a calibration the pipeline usually lacks and invites over-trust. Publish an explicit definition PER TIER, because undefined verbal-probability terms are read inconsistently across readers (Kent, Words of Estimative Probability). Keep source reliability and claim corroboration as INDEPENDENT axes -- a reliable source can still carry an improbable claim. If the model only yields a coarse tier, let deterministic code compute anything numeric downstream. (product-output-safety.)",
+      "expectations": [
+        "Rejects publishing the model's confidence number as a precise percentage",
+        "Requires a defined coarse tier (text plus a colourblind-safe cue) instead of a number",
+        "Requires an explicit definition per tier (undefined verbal-probability terms are read inconsistently)",
+        "Keeps source reliability and claim corroboration as independent axes"
+      ]
     }
   ]
 }

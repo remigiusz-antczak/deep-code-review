@@ -17,7 +17,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # Product output safety
@@ -78,8 +78,19 @@ empty inventory is not a pass — it is an unfilled inventory.
   `deep-code-review` reviews in the agent's code — its security-ai-agents reference
   covers Excessive Agency (high-impact / irreversible actions require human
   confirmation) — and it mirrors `agentic-delivery`'s human approval on push/deploy.
-- **Show uncertainty and offer an override.** Surface confidence/limits; make the
-  machine output correctable and reversible where the stakes warrant.
+- **Show uncertainty as a defined tier, not a false-precision number — and offer an
+  override.** Surface confidence/limits and make the output correctable and
+  reversible where the stakes warrant. Render confidence as a **defined coarse
+  tier** (e.g. Confirmed / Corroborated / Single-source / Unverified — text plus a
+  colourblind-safe cue), never a bare "87%": a percentage implies a calibration the
+  pipeline usually does not have and invites over-trust. Publish an explicit
+  **definition per tier**, because undefined verbal-probability terms are read
+  inconsistently across readers (Kent, *Words of Estimative Probability*). Keep
+  **source reliability** and **claim corroboration** as independent axes (the
+  reliability × credibility split used in intelligence analysis, e.g. the Admiralty
+  Code) — a reliable source can still carry an improbable claim. If the model yields
+  only a coarse tier, let deterministic code compute anything numeric downstream;
+  never publish the model's own confidence number as precision.
 - **Disclose where it matters.** Recommend an AI-generated / automated-decision
   disclosure to the user; whether one is *legally required* is a Lane-R question
   (below), not a claim this skill makes.
@@ -137,7 +148,12 @@ higher-stakes actions, the MEASURE and GOVERN layers deepen → then, not before
 NIST AI Risk Management Framework — core functions **Govern, Map, Measure, Manage**
 (function names verified this session; see `docs/standards-index.md`) — and the NIST
 AI RMF **Generative AI Profile (AI 600-1)** by name only, no control specifics
-asserted. Human-in-the-loop / human oversight of high-stakes automation. Named
+asserted. Human-in-the-loop / human oversight of high-stakes automation. Sherman Kent,
+*Words of Estimative Probability* (undefined verbal-probability terms are read
+inconsistently across readers; the case for a few consistently-defined estimative
+terms) and the Admiralty Code / NATO reliability × credibility scale (source
+reliability and information credibility rated as independent axes) — both logged in
+`docs/standards-index.md`. Named
 leads only — fetch and log a source before citing a specific figure or control
 (repo convention). Boundary cross-references: `deep-code-review` — the code's security, including the
 shared Excessive-Agency / HITL and hallucination-grounding controls in its

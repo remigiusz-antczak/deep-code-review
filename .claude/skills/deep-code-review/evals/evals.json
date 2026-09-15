@@ -573,6 +573,17 @@
         "Refuses to pull per-row sensitive values into the agent/model context when an aggregate query would do",
         "Frames per-row sensitive data in context as an exfiltration surface (aggregate-only reads by default)"
       ]
+    },
+    {
+      "id": "confidence-as-tier-not-bare-number",
+      "prompt": "Our dashboard shows each lead's confidence as '87%' next to the name -- precise, and users like a number. Ship?",
+      "expected_output": "Flag it -- a confidence surfaced as a raw number ('87%', or 'score: 0.92') claims a calibration the pipeline usually doesn't have and invites over-trust. Put confidence on a small set of LABELED TIERS instead -- text plus a colourblind-safe cue (not colour alone), not a percentage or an opaque point score. Also flag a model-authored number published as precision. How to DEFINE the tiers (and why source reliability and corroboration stay independent axes) is a data-product-output rule -- product-output-safety's -- not a UI concern. (product-ux-quality.md.)",
+      "expectations": [
+        "Flags confidence rendered as a raw number or percentage as false precision",
+        "Requires a small set of labeled tiers (text plus a colourblind-safe cue, not colour alone) instead",
+        "Flags a model-authored number published as precision",
+        "Treats it as a UI-display defect distinct from how the tiers are defined"
+      ]
     }
   ]
 }

@@ -128,6 +128,18 @@ Amplitude, Robinhood, Linear, Material) — inventing a novel one here is a cost
 - muted **`—`** when flat; anchor the delta to its period ("vs last month") in
   the tooltip/`aria`.
 
+## Confidence shown as a bare number is false precision — flag it
+
+A confidence, priority, or match score surfaced as a **raw number** ("87%",
+"score: 0.92") claims a calibration the pipeline usually does not have, and invites
+over-trust. It belongs on a **small set of labeled tiers** — text plus a
+colourblind-safe cue (see *Never colour alone*) — not a percentage or an opaque
+point score. **🚩**: a `confidence` / `score` / `priority` value rendered directly
+as `{n}%` or a raw float in the UI with no defined tier label beside it; a
+model-authored number published as precision. (How to *define* the tiers, and why
+source reliability and claim corroboration stay independent axes, is a
+data-product-output rule — `product-output-safety`'s — not restated here.)
+
 ## Self-evident over explained — progressive disclosure
 
 Layout + labels + standard components make meaning obvious **without** inline
@@ -281,13 +293,16 @@ persists markup while rendering its raw `**`/`*`/`<u>` tokens back to the user
 that reads the value back into the same view (write-only input) · an editable
 record's write path with no history/log table behind it, or an
 agent/model-authored value merged in with no field distinguishing it from a
-human edit (change-history / silent AI edit).
+human edit (change-history / silent AI edit) · a `confidence`/`score`/`priority`
+rendered as a raw `{n}%` or float with no defined tier label beside it, or a model
+confidence number published as precision (confidence tier).
 
 ## Pre-ship checklist (mirror SKILL.md's report discipline)
 - [ ] Does it need explaining? If yes, redesign until it doesn't (or demote the text to progressive disclosure).
 - [ ] All five data states handled and honest — empty / loading / error / partial / overflow?
 - [ ] One channel per dimension; nothing colour-only; reads correctly in greyscale?
 - [ ] Deltas are caret + magnitude, coloured by sentiment; flat is a muted `—` with a period anchor?
+- [ ] Confidence / score / priority shown as a **defined labeled tier** (text + a colourblind-safe cue), not a raw `%` or point score, and no model-authored number published as precision?
 - [ ] Matches a **named** top-product pattern; convention gaps surfaced to the owner, not silently redesigned?
 - [ ] If the owner has rejected this element **twice**, stopped tuning — structural flaw named, two or three comparables researched, concrete options surfaced for the owner to choose?
 - [ ] Consistent type scale / spacing / components / number format with sibling views (tabular figures in columns)?

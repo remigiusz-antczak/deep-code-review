@@ -3,6 +3,32 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.75.0] — 2026-09-16
+
+Wave 4 of the #143–#164 dogfooding batch: confidence as a defined tier, not a
+false-precision number (#155) — spanning the product-output-safety skill (the rule)
+and deep-code-review (the review detector).
+
+### Changed — product-output-safety (1.1.0)
+- **`SKILL.md`** — MANAGE's "show uncertainty" rule sharpened: render confidence as
+  a defined coarse tier (Confirmed / Corroborated / Single-source / Unverified; text
+  plus a colourblind-safe cue), never a false-precision number; publish a definition
+  per tier (undefined verbal-probability terms are read inconsistently — Kent,
+  *Words of Estimative Probability*); keep source reliability and claim corroboration
+  as independent axes; never publish the model's own confidence number as precision
+  (#155). One new eval.
+
+### Added — deep-code-review
+- **`product-ux-quality.md`** — a review detector: confidence surfaced as a bare
+  number ("87%", a raw score) is false precision — flag it and require labeled tiers;
+  the tier-definition rule is product-output-safety's, not restated here (#155). One
+  new eval.
+
+### Docs
+- `docs/standards-index.md` — logged Kent, *Words of Estimative Probability* (read
+  from the declassified CIA primary source this session) and the Admiralty Code
+  (Wikipedia-verified, cited by name only).
+
 ## [1.74.0] — 2026-09-16
 
 Wave 3 of the #143–#164 dogfooding batch: four delivery / observability / privacy
