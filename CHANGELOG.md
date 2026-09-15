@@ -3,6 +3,17 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.70.1] — 2026-09-15
+
+Patch: sharpen the #135 lens (`agentic-delivery/references/fast-agentic-delivery.md`)
+with the reconciled mechanism from the peer session. A monitor-armed subagent cycles
+stop→wake and can emit "completed" more than once for the same task-id, so a single
+"completed" is **not proof of terminal completion**. Added the detection **tell** (a
+repeated "completed" for the same task-id, or the agent's own last report still
+"waiting") and de-hedged the mechanism to what the harness documents (conditioned on
+that harness design, kept host-neutral). Eval updated to match. Lockstep bump 1.70.1
+(deep-code-review, agentic-delivery, idea-critic, plugin); content: agentic-delivery.
+
 ## [1.70.0] — 2026-09-15
 
 Three more field learnings (#133–#135) from a per-surface UI migration + a

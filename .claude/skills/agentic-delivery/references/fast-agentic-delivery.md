@@ -225,17 +225,20 @@ waiting on a background task whose completion notifies only the exited turn. A
 machine-readable last-run status file (some runners write one) lets the parent read
 the verdict without re-running.
 
-## Confirm a subagent is idle before dispatching a duplicate — a not-yet-final signal can read as final
+## Confirm a subagent is idle before dispatching a duplicate — a "completed" is not proof of terminal completion
 
 The watcher-side complement to the foreground rule above. A coordinator that
 dispatches lanes off task-"completed" notifications can be told a subagent finished
-**while it is still running** — observed with a subagent that had armed a background
-monitor/watch and kept working. (The exact notification semantics are unsettled and
-platform-specific — the firing rule may depend on whether the agent still has live
-background children of its own — so treat the mechanism as a field observation, not a
-guarantee.) The **defensive invariant** holds regardless: before dispatching a
-duplicate lane for the "remaining" work, **confirm the agent is actually idle** —
-check its live state, not merely that a "completed" arrived — especially when the
+**while it is still running**. The mechanism is concrete, not mysterious: on a harness
+that fires "completed" **each time an agent stops with no live background children of
+its own** — and can notify the **same task-id more than once** — a subagent that has
+armed a background **monitor/watch** cycles stop→wake and emits "completed" on **each**
+stop, none of them terminal until the agent truly exits. A single "completed" is
+therefore **one of several**, not proof the work is done. **The tell:** a
+repeated/duplicate "completed" for the **same task-id**, or the agent's own last report
+still saying "waiting." The **defensive invariant**: before dispatching a duplicate
+lane for the "remaining" work, **confirm the agent is actually idle** — check its live
+state and those tells, not merely that a "completed" arrived — especially when the
 duplicate would write into the **same worktree**, where a collision corrupts the run.
 This is the dispatcher mirror of "a backgrounded gate loses its verdict": there the
 *doer* drops a result; here the *watcher* acts on a not-yet-final one.

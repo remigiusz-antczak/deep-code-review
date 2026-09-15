@@ -161,12 +161,12 @@
     {
       "id": "confirm-subagent-idle-before-duplicate-dispatch",
       "prompt": "A subagent I dispatched just sent a task-'completed' notification, but it had armed a background monitor. There's remaining work, so I'll immediately dispatch a second lane into the same worktree to finish it. OK?",
-      "expected_output": "Confirm the subagent is actually IDLE first -- a 'completed' notification from an agent that armed a background monitor/watch can arrive while it is still running, and dispatching a duplicate into the SAME worktree risks a collision that corrupts the run. Check its live state (not just that a 'completed' arrived) before dispatching. Treat the notification's exact firing semantics as unsettled/platform-specific; the defensive invariant holds regardless. This is the dispatcher mirror of 'a backgrounded gate loses its verdict' -- there the doer drops a result, here the watcher acts on a not-yet-final one. (fast-agentic-delivery.md.)",
+      "expected_output": "Confirm the subagent is actually IDLE first. A 'completed' notification is not proof of terminal completion: on a harness that fires 'completed' each time an agent stops with no live background children of its own (and can notify the same task-id more than once), a subagent that armed a background monitor/watch cycles stop->wake and emits 'completed' on each stop -- so a single 'completed' is one of several, not done. The tell: a repeated 'completed' for the same task-id, or the agent's own last report still saying 'waiting.' Check its live state and those tells before dispatching a duplicate into the SAME worktree, where a collision corrupts the run. This is the dispatcher mirror of 'a backgrounded gate loses its verdict' -- there the doer drops a result, here the watcher acts on a not-yet-final one. (fast-agentic-delivery.md.)",
       "expectations": [
         "Does not treat a 'completed' notification as proof the subagent is idle, especially with a background monitor armed",
         "Requires confirming the agent's live idle state before dispatching a duplicate",
-        "Flags the same-worktree collision risk",
-        "Does not assert the notification's internal mechanism as certain; relies on the defensive invariant"
+        "Uses the tell -- a repeated 'completed' for the same task-id, or the agent's report still 'waiting' -- to detect a not-yet-final signal",
+        "Flags the same-worktree collision risk"
       ]
     }
   ]
