@@ -152,6 +152,10 @@ up**: a regression gate stops backsliding, generalized eval cases raise the floo
 and a human authorizes every landing. The fuel is verified eval cases and
 citations — not hoarded user data.
 
+**Operational runbook:** [How Perun improves itself](self-improvement.md) makes this
+loop executable — the concrete 8 steps, the tool each one uses, and the built-vs-planned
+state of the split rubric.
+
 ## Additive principles (generalized from field practice and research)
 - **Registry, not a bundle** — describe how to reach things; never duplicate them.
 - **Store the query, not the answer; audit memory automatically** — a stored status

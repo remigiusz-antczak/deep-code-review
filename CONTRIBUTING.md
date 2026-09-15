@@ -39,6 +39,8 @@ bash scripts/ci-gates.sh routing --max-bytes 24000 .claude/skills/business-ops
 bash scripts/ci-gates.sh routing --max-bytes 24000 .claude/skills/product-output-safety
 bash scripts/ci-gates.sh version .
 bash scripts/ci-gates.sh privacy --banlist .banlist.txt .
+bash scripts/ci-gates.sh enumeration .
+python3 scripts/eval_predicates.py --selftest
 bash -n install.sh
 ```
 

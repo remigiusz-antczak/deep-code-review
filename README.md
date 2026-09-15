@@ -261,7 +261,9 @@ identical API/LLM/DB calls, over-fetching, "call it every run" patterns).
 
 ## Trust & safety
 
-Perun is built to be trusted with your code, and it dogfoods its own rules.
+Perun is built to be trusted with your code, and it dogfoods its own rules — the
+end-to-end loop it uses to improve itself is written down in
+[docs/self-improvement.md](docs/self-improvement.md).
 
 - **No fabrication.** Skip or flag rather than guess — no invented findings, data,
   sources, metrics, CWEs, or line numbers.
