@@ -218,6 +218,15 @@ fetched page, the row says so.
 | Cognition — Don't Build Multi-Agents | https://cognition.com/blog/dont-build-multi-agents | By Walden Yan, dated 2025-06-12 on the page. Verbatim: "Share context, and share full agent traces, not just individual messages"; parallel subagents that "cannot see what the other was doing … end up being inconsistent." Basis for "handoff carries the full trace, not just the latest message." |
 | langchain-ai/deepagents #1698 | https://github.com/langchain-ai/deepagents/issues/1698 | Filed issue (open, labeled a bug); issue date not separately confirmed on this fetch. Title verbatim: "`SubAgentMiddleware` does not propagate `recursion_limit` to subagent graphs — subagents silently use default limit of 25" (root cause: `ainvoke` called without a `config`). Basis for the "bound the tree, not just the call — propagate the cap to spawned sub-agents" clause under LLM06. |
 
+## Verified by direct fetch (2026-09-15) — usability heuristics
+
+Verification date for the row below: **2026-09-15**. Added for the cited
+design-quality checklist in `references/migration-parity.md` (#124).
+
+| Standard / source | URL | What was confirmed |
+|---|---|---|
+| Nielsen Norman Group — 10 Usability Heuristics for User Interface Design | https://www.nngroup.com/articles/ten-usability-heuristics/ | By Jakob Nielsen; published 1994-04-24, last reviewed 2024-01-30. The 10 heuristic names (wording and order verbatim; the source renders them in Title Case): 1 Visibility of system status; 2 Match between the system and the real world; 3 User control and freedom; 4 Consistency and standards; 5 Error prevention; 6 Recognition rather than recall; 7 Flexibility and efficiency of use; 8 Aesthetic and minimalist design; 9 Help users recognize, diagnose, and recover from errors; 10 Help and documentation. Page states the 10 have "remained relevant and unchanged since 1994." |
+
 ## Referenced by name (not fetched this session — verify before citing a URL)
 
 - **OWASP WSTG** — how-to-test companion for each web risk.
@@ -245,9 +254,6 @@ fetched page, the row says so.
   (`CONVENTIONS.md`). The file **names** are corroborated by the verified Claude
   Code memory doc above; per-agent semantics, frontmatter, and size caps were not
   independently fetched — confirm at imprint time.
-- **Nielsen's usability heuristics** — named grounding for domain P's design
-  half (`references/product-ux-quality.md`). No URL cited this session; fetch
-  before quoting a numbered heuristic or year.
 - **Scrum Guide — Definition of Done** — the concept the skill's definition-of-done
   checklist rests on ("the state of the Increment when it meets the quality
   measures required"); cite the Scrum Guide directly if a version-specific claim

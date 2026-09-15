@@ -11,7 +11,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.68.0"
+  version: "1.69.0"
 ---
 
 # Deep Code Review
@@ -207,7 +207,7 @@ footguns: `references/language-stack-redflags.md`.
 | M | Observability | `observability.md` |
 | N | Config, secrets, environments | `domain-checklists.md` |
 | O | Docs & DX | `docs-and-dx.md`, `docs-evolution-by-stage.md` (which-docs-when, by stage), `readme-authoring.md` (writing/reviewing a README for onboarding) |
-| P | Frontend / UI / a11y | `frontend-a11y.md`, `product-ux-quality.md` |
+| P | Frontend / UI / a11y | `frontend-a11y.md`, `product-ux-quality.md`, `migration-parity.md` |
 | Q | Privacy, compliance, licensing | `privacy-compliance.md` (code layer), `privacy-by-design.md` (pre-code product artifacts) |
 | R | i18n, encoding, localization | `domain-checklists.md` |
 | S | Branches, merges, open-work triage | `branch-and-merge-hygiene.md` |
@@ -418,9 +418,13 @@ hygiene (`references/branch-and-merge-hygiene.md`).
 
 By name (fetch before citing version-specific detail): OWASP WSTG; Cheat
 Sheet Series; MITRE CWE/CVE and ATLAS; NIST SSDF and AI RMF; SLSA; CIS
-Benchmarks; ISO/IEC 25010; Twelve-Factor; Conventional Commits; Nielsen's
-usability heuristics (named, no URL). Domain P design half:
-`references/product-ux-quality.md` — **read it when** the target renders a
+Benchmarks; ISO/IEC 25010; Twelve-Factor; Conventional Commits. Domain P design
+half: `references/product-ux-quality.md` — **read it when** the target renders a
 product UI a human operates (dashboard, table, form, chart, metric), or the task
 is visual/design **parity** ("make X look like Y", a port/restyle/redesign) — the
-claim is about **rendered appearance**, not structure, tests, or data.
+claim is about **rendered appearance**, not structure, tests, or data. Domain P
+migration half: `references/migration-parity.md` — **read it when** the reference
+you match is a **prototype / mockup / design export** (seed data) or the task is a
+**port / migration to a reference design**: the traps are over-claiming parity from
+a structural or seed-data audit and recommending deletion of real features to match
+a sparse mockup.

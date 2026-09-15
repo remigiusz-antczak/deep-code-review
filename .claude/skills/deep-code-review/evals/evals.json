@@ -355,6 +355,50 @@
         "Requires rendering the real split to confirm; names the DOM stringified-proxy tell",
         "Recommends moving shared plain values into a boundary-neutral module (client modules export only components/hooks across the boundary)"
       ]
+    },
+    {
+      "id": "prototype-reference-anchor-treatment-not-data-volume",
+      "prompt": "We're matching our production dashboard to an approved Figma mockup. The mockup shows 4 cards; our page renders 40 real rows and looks way denser/taller. Recommend we cut the list down and drop the extra dashboard to match the reference?",
+      "expected_output": "No -- don't recommend deleting real features/content to match a sparse reference. The mockup is a prototype on seed data; much of the 'gap' is a data-volume artifact, not a design difference. Anchor findings on TREATMENT (layout, spacing scale, component choice, hierarchy, chrome/nav, default view, empty/overflow handling), not absolute row count or page height. Separate three gaps with opposite fixes: (a) genuine treatment difference -> restyle; (b) data-volume artifact -> progressive disclosure / capping / pagination, never deletion; (c) a real extra feature the mockup lacks -> preserve it (a mockup is a look reference, not a feature spec). 'Drop/remove X to match the reference' is a review smell for a surface with real data (violates do-no-harm / never-remove-a-working-feature). A page-height/row-count delta vs a seed mockup is a notice, not a defect. Confirm any treatment difference on EQUAL data before recommending a structural change. (migration-parity.md.)",
+      "expectations": [
+        "Refuses to recommend deleting real features/content to match a sparse prototype/mockup",
+        "Anchors on treatment (layout/spacing/hierarchy/default view), not absolute row count or page height",
+        "Separates data-volume artifact (-> progressive disclosure) from genuine treatment difference (-> restyle) from a real extra feature (-> preserve)",
+        "Treats a height/count delta vs a seed mockup as a notice, not a defect; confirms differences on equal data"
+      ]
+    },
+    {
+      "id": "parity-verified-surface-by-surface-on-real-data",
+      "prompt": "The migration to the reference design is done -- I confirmed it with a component-structure audit, a green test suite, and a section-by-section screenshot comparison against the prototype. Report it as matching?",
+      "expected_output": "Not yet -- a structural audit + green suite + seed-data screenshots OVER-report parity and miss what only shows on real data and real use: which view each route DEFAULTS to, whether a composer has every field the reference has, whether shared components are truly unified or reimplemented per page, whether a sub-view was dropped, whether live data is populated. Verify parity surface-by-surface, interactively, on REAL data: for each surface drive the real control and diff against the reference's actual rendered behaviour (default state, every field, every sub-view/mode, data population), not its static screenshot. Treat every 'matches well' as unverified until the real surface is exercised against the real reference. (migration-parity.md; the structural/green/seed stand-ins are the report-format.md proxy trap.)",
+      "expectations": [
+        "Rejects a parity claim backed only by a structural audit, green suite, or seed-data screenshots",
+        "Requires surface-by-surface interactive verification on real data (default view, every field, sub-views, data population)",
+        "Names specific divergences that only appear on real use (route default, missing composer field, per-page reimplementation, dropped sub-view)",
+        "Treats 'matches well' as unverified until the real surface is exercised; fabricates no coverage"
+      ]
+    },
+    {
+      "id": "ux-flow-cost-navigation-and-cognitive-load",
+      "prompt": "Every component on the page matches the reference and passes its per-screen check. But clicking a top nav item scrolls you far down, and to switch sections you scroll all the way back up to the nav. Structurally it's parity -- ship it?",
+      "expected_output": "Structural/pixel parity is necessary but not sufficient; run a flow-cost pass, because the failure is in the interaction flow a per-screen diff can't see. Navigation cost: count clicks + scroll distance to complete a task AND to reverse/switch -- 'must scroll back up to the top nav to change section' is a defect (fix: sticky nav or tabbed sections). Cognitive load: simultaneous choices, instructional prose that could be a tooltip, competing primary actions (N interchangeable variants of one thing is variant bloat). The completion bar for UI work is the felt flow, exercised, not 'the components match.' Don't ship on structural parity alone. (migration-parity.md, flow-cost.)",
+      "expectations": [
+        "Rejects 'components match' as sufficient; runs a flow-cost pass distinct from structural correctness",
+        "Measures navigation cost including the reverse/switch path (scroll-back-to-nav flagged, sticky/tabbed fix)",
+        "Checks cognitive load (simultaneous choices, removable instructional prose)",
+        "States the completion bar is the felt, exercised flow, not structural match"
+      ]
+    },
+    {
+      "id": "ui-review-cites-heuristic-not-taste",
+      "prompt": "Reviewing a redesigned screen. It feels a bit off but I can't put my finger on it -- can I just note 'hierarchy looks weak, spacing inconsistent, feels unpolished' and move on?",
+      "expected_output": "Ground the critique in a cited heuristic and NAME the principle each point comes from -- a review cites the principle, it doesn't just assert 'looks off.' Use NN/g's 10 Usability Heuristics (e.g. #8 Aesthetic and minimalist design for hierarchy/de-emphasis, #4 Consistency and standards for one spacing/type scale, #1 Visibility of system status for empty/loading/error states) plus Refactoring UI (one spacing scale, one type scale, semantic colour, intentional empty states, motion with reduced-motion) and the target's own design system. So 'weak hierarchy' becomes 'NN/g #8 / Refactoring UI: no clear size+weight+colour hierarchy; the primary action doesn't dominate'; 'inconsistent spacing' becomes 'not on one spacing scale.' A 'does this feel premium?' pass is a prompt to find the violated heuristic, never a substitute for naming it. (migration-parity.md; docs/standards-index.md.)",
+      "expectations": [
+        "Requires naming the specific heuristic/principle behind each critique, not ad-hoc taste",
+        "Cites NN/g usability heuristics and Refactoring UI (and the target's own design system) as the grounding",
+        "Rewrites vague notes ('weak hierarchy', 'inconsistent spacing') into principle-named findings",
+        "Treats 'feels premium?' as a prompt to locate the violated heuristic, not a standalone verdict; fabricates no source"
+      ]
     }
   ]
 }

@@ -3,6 +3,40 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.69.0] — 2026-09-15
+
+Wave 2 of the dogfooding batch (#122, #124, #129, #130.1) — the migration /
+prototype-reference cluster — landed as a new routed reference under domain P
+(`migration-parity.md`), per the owner's structure decision (a reference, not a new
+domain). Content in deep-code-review.
+
+### Added — deep-code-review
+- **`references/migration-parity.md` (new, routed from domain P)** — the port /
+  prototype-reference half of domain P, alongside `frontend-a11y.md` and
+  `product-ux-quality.md`. Four lenses:
+  - Verify parity **surface-by-surface, on real data**, never from a structural or
+    seed-data audit — the latter over-reports parity and misses route defaults,
+    missing fields, per-page reimplementations, dropped sub-views (#130.1).
+  - Anchor findings on **treatment, not data-volume**: a sparse mockup is not a
+    feature spec; separate treatment differences (restyle) from data-volume
+    artifacts (progressive disclosure, never deletion) from real extra features
+    (preserve). "Drop/remove X to match the reference" is a review smell; a
+    height/count delta versus a seed mockup is a notice, not a defect (#129).
+  - **Flow-cost** pass — navigation cost (clicks + scroll to complete and to
+    reverse/switch) and cognitive load — is first-class, beyond structural/pixel
+    parity (#122).
+  - A **cited** per-screen craft checklist grounded in NN/g's 10 usability
+    heuristics (fetched + logged), Refactoring UI (by name), and the target's own
+    design system — a review names the principle, not "looks off" (#124).
+- Routed from `SKILL.md` (domain-P table + read-when trigger) and
+  `domain-checklists.md` domain P. NN/g moved from by-name to **verified by direct
+  fetch** in `docs/standards-index.md` (2026-09-15).
+- Four new evals.
+
+### Changed
+- Lockstep bump to **1.69.0** (deep-code-review, agentic-delivery, idea-critic,
+  plugin). Content: deep-code-review only. Closes #122, #124, #129, #130.
+
 ## [1.68.0] — 2026-09-15
 
 Wave 1 of a large dogfooding batch (#120–#130, from the peer migration run). Seven

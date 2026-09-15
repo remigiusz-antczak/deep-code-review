@@ -438,10 +438,12 @@ outcome distinction live there.
   files,  a public repo with no LICENSE/SECURITY.md, a default branch mergeable with no
   review, a standards doc no gate enforces.
 
-### P. Frontend / UI / UX / accessibility → `references/frontend-a11y.md` + `references/product-ux-quality.md`
-Apply if the code produces UI. Target **WCAG 2.2 AA**. Two halves: `frontend-a11y.md`
-owns a11y **correctness**; `product-ux-quality.md` owns the **design half** (read
-it when the target renders a product UI a human operates).
+### P. Frontend / UI / UX / accessibility → `references/frontend-a11y.md` + `references/product-ux-quality.md` + `references/migration-parity.md`
+Apply if the code produces UI. Target **WCAG 2.2 AA**. Three references:
+`frontend-a11y.md` owns a11y **correctness**; `product-ux-quality.md` owns the
+**design half** (read it when the target renders a product UI a human operates);
+`migration-parity.md` owns the **port / prototype-reference half** (read it when the
+reference is a prototype/mockup or the task is a migration to a reference design).
 - **Respect the existing design** (principle 5): fix accessibility/usability
   **defects** in place (contrast, labels, keyboard traps, focus, target size);
   treat a change that alters layout/typography/brand as an **owner decision** and
