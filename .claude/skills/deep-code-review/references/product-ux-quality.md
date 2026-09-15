@@ -192,6 +192,31 @@ domain H) with a UX consequence, so it is ruled on here too.
   find, and retrofitting unification while the owner watches is far slower and
   noisier than building it once up front.
 
+## One component at two scopes — single-entity vs aggregate needs scope-aware copy
+
+A shared component reused at **two scopes** — a single entity vs an all-entities
+**aggregate/rollup** — but with labels and empty-states that **hardcode the
+single-entity phrasing** ("the items *this* owner has", "nothing here for this owner
+yet") reads wrong or misleading at the aggregate scope. Related forms: the aggregate
+view **drops** a section the single-entity view shows, or lists an unbounded union of
+rows with **no attribution** of which entity each row belongs to — so the rollup is
+unreadable and the two scopes feel inconsistent.
+
+- **Make copy and empty-states scope-aware** — interpolate the scope (the entity name
+  at single scope, "all …" at aggregate), don't hardcode one.
+- **At aggregate scope, label each row with its owning entity** and **cap/paginate**
+  the union (the overflow state).
+- **Keep the section set consistent across scopes** unless a per-scope variant is
+  deliberate and stated — and at aggregate scope specifically, **hide a view whose
+  number would be a *misleading aggregate*** (a rate or total that is meaningless
+  across heterogeneous entities): computed-not-fabricated (principle 4) beats
+  symmetry, exactly as in `migration-parity.md`'s misleading-aggregate exception.
+
+A **different axis** from the neighbours: not the *prop* axis (#123 above — one
+component, a feature prop present at one mount site and absent at another) and not the
+*section-set superset* across **sibling per-entity** surfaces (`migration-parity.md`),
+but the **single-vs-aggregate scope** of one component's copy and attribution.
+
 ## Interaction-completeness — the loop must close
 
 A control is a defect until its whole loop works in the running product, not just

@@ -197,6 +197,32 @@ is a **provisioning gap, not a defect in either gate** — each gate does
 exactly what it is supposed to; the worktree was simply not fully set up for
 the one it tripped.
 
+## Out-of-tree shared scratch crosses commit metadata — worktree-per-lane doesn't cover it
+
+Concurrent write-lanes that each generate per-lane content — a commit-message file, a
+plan/notes file — and write it to the **same hardcoded path in a shared temp/scratch
+directory** collide: lane B overwrites lane A's file before lane A consumes it, so
+lane A commits with **B's message** (`git commit -F <shared-path>`) or attaches the
+wrong note. Each branch's **code diff is correct**; only the **metadata** is crossed —
+and metadata crossing is **invisible to a diff-scoped review**, which reads the tree,
+not the message the tree ships under. The usual mitigations miss it: a git **worktree
+per lane** isolates the branch, index, and deps, but a scratch path in a shared temp
+dir is **not part of any worktree**, and the collision travels through
+`git commit -F <path>`, so "stage explicit paths, never `git add -A`" doesn't reach it
+either.
+
+- **Give every lane a unique scratch path** (suffix by lane id / worktree / PID), or
+  keep per-lane content **inside the lane's own worktree**.
+- **Verify metadata ownership, not just the diff** — before finalizing a lane, confirm
+  the committed message/note belongs to *that* lane.
+- **🚩 grep:** `git commit -F <path>` / `--file=<path>` where `<path>` is **fixed
+  across lanes** (no lane-unique component), or multiple lanes referencing one
+  hardcoded scratch/temp path for per-lane content.
+
+Same root cause as `deep-code-review`'s `concurrency-shared-state.md` (two writers, one
+path) but where its mitigations don't reach: **out-of-tree** scratch, and the
+corrupted thing is **commit metadata** a diff review never sees.
+
 ## Delegate visual / parity work by measured number, not adjective
 
 A qualitative brief for visual/parity work handed to sub-agents ("make this match

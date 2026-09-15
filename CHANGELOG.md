@@ -3,6 +3,33 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.71.0] — 2026-09-15
+
+Three more field learnings (#138–#140) from the peer dogfooding run, each
+pre-distinguished from a shipped lens. Content in deep-code-review + agentic-delivery.
+
+### Added — deep-code-review
+- **`method.md`** — fix the failing **LAYER**, not the first plausible one: a
+  missing-value symptom is often a data/config/mapping gap, not a render bug; localize
+  the layer before patching (a view fallback masks it), name the proven layer, and
+  handle the **two-layer** case (correct default forward + backfill existing records).
+  The high-frequency instance of principle 9 (#139).
+- **`product-ux-quality.md`** — one component at **two scopes** (single-entity vs
+  aggregate/rollup) needs scope-aware copy + per-row attribution + a capped union; a
+  distinct axis from #123 (prop) and migration-parity's section-set superset (#140).
+- Two new evals.
+
+### Added — agentic-delivery
+- **`fast-agentic-delivery.md`** — parallel lanes sharing one **out-of-tree scratch
+  path** cross **commit metadata** (lane A commits with lane B's message): invisible to
+  a diff-scoped review and not covered by worktree-per-lane; give each lane a unique
+  scratch path and verify metadata ownership, not just the diff. 🚩 grep
+  `git commit -F <fixed-path>`. Complements `concurrency-shared-state.md` (#138).
+
+### Changed
+- Lockstep bump to **1.71.0** (deep-code-review, agentic-delivery, idea-critic,
+  plugin). Content: deep-code-review + agentic-delivery. Closes #138, #139, #140.
+
 ## [1.70.1] — 2026-09-15
 
 Patch: sharpen the #135 lens (`agentic-delivery/references/fast-agentic-delivery.md`)

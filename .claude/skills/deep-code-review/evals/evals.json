@@ -410,6 +410,28 @@
         "Aligns the outlier family to the majority (fix the few), not rebuilding all N",
         "Keeps a sub-view hidden when it would render a misleading aggregate (computed-not-fabricated over tab-count symmetry); unifies a two-behavior control as styling primitive + wrappers, not a dual-mode prop"
       ]
+    },
+    {
+      "id": "fix-the-failing-layer-not-presentation",
+      "prompt": "A field renders blank on the dashboard. I patched the view component to show a fallback and now it displays a value -- fixed?",
+      "expected_output": "Probably not fixed -- you may have masked it. A 'missing value/blank field' symptom is not automatically a render bug; localize the failing LAYER first: is the value present at the source? does the config/derivation/mapping step run? or is it purely a render bug? If the gap is in data/config/mapping, a view-level fallback is a no-op or a masking hack that hides the real gap and reads as resolved. Fix the proven-failing layer and NAME it in the finding. Watch the two-layer case: a durable fix usually needs both a correct default going forward AND a backfill of existing records that already carry the gap -- fix only the default and old data stays broken; fix only the backfill and new data re-breaks. (method.md; sharpens principle 9.)",
+      "expectations": [
+        "Rejects a presentation/fallback 'fix' for a missing-value symptom without proving the layer beneath supplies the value",
+        "Localizes the failing layer (source / config / derivation-mapping / render) before patching, and names it",
+        "Flags a hard-coded view fallback as masking the real gap",
+        "Raises the two-layer case: correct default going forward AND backfill of existing records"
+      ]
+    },
+    {
+      "id": "shared-component-scope-aware-copy-single-vs-aggregate",
+      "prompt": "We reuse one Section component for a single owner's page and for the all-owners rollup. It says 'items this owner has' and 'nothing here for this owner yet' in both. Both render fine -- ship the rollup?",
+      "expected_output": "Not as-is -- the copy hardcodes single-entity phrasing that reads wrong at aggregate scope, and a rollup usually also needs per-row attribution. Make copy and empty-states scope-aware (interpolate: the owner name at single scope, 'all owners' at aggregate). At aggregate scope, label each row with its owning entity and cap/paginate the unbounded union. Keep the section set consistent across scopes unless a per-scope variant is deliberate and stated. This is a distinct axis from #123 (a feature prop present at one mount site, absent at another) and from the section-set superset across sibling per-entity surfaces (migration-parity.md) -- it's the single-vs-aggregate scope of one component's copy and attribution. (product-ux-quality.md.)",
+      "expectations": [
+        "Flags hardcoded single-entity copy/empty-states reused verbatim at aggregate scope as a defect",
+        "Requires scope-aware copy (interpolate the scope) rather than one hardcoded phrasing",
+        "Requires per-row owning-entity attribution and capping/paginating the union at aggregate scope",
+        "Distinguishes the single-vs-aggregate scope axis from a feature-prop-present-at-one-mount-site axis, and from a section-set superset across sibling per-entity surfaces"
+      ]
     }
   ]
 }

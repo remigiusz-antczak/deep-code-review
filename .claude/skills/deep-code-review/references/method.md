@@ -295,6 +295,21 @@ to deliver. **The two-artifact report is owed on `FULL`;** on a `DIFF`/`FILE` yo
 are also fixing, a compact `found → root cause → fix → re-gate` trail may stand in
 for the out-of-tree report (snippet-or-drop still applies).
 
+**Fix the failing layer, not the first plausible one.** A "missing value / blank
+field / missing tag" symptom on a rendered surface is not automatically a *render*
+bug — the render path is often already correct and the gap is one layer down: the
+field is empty **at the source**, or a **config / derivation / mapping** step never
+ran. **Localize before patching** — prove which layer fails (*is the value present at
+the source? does the derivation/mapping run? is it purely a render bug?*) and fix
+**that** one; a presentation "fix" over a data gap is a no-op at best, and a
+hard-coded view fallback is worse — it **masks** the gap and reads as resolved.
+**Name the proven-failing layer in the finding** so a downstream implementer doesn't
+re-patch the wrong one. And watch the **two-layer** case: a durable fix usually needs
+both a **correct default going forward** *and* a **backfill of the existing records**
+that already carry the gap — fix only the default and old data stays broken; fix only
+the backfill and new data re-breaks. (The specific, high-frequency instance of
+principle 9, *root-cause not symptom*.)
+
 **Writing into the repo's `code-review/` directory is opt-in.** It requires the
 user's explicit confirmation (or an explicit `--write-report`), *and* an unshared,
 idle checkout; on an incident day or with a hotfix in flight, stay out-of-tree and
