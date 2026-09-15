@@ -62,6 +62,16 @@ failure paths that *produce* these signals are section F /
   verify before citing). Key-value logging avoids this by construction.
 - Correlation/request id propagated across services and present on every line so
   an incident can be reassembled; log levels used meaningfully.
+- **Audit the logs a platform injects, not only your app's log statements.** A
+  managed platform often runs an nginx / auth-proxy **sidecar** in front of each
+  app that logs, on **every authenticated request**, per-request user PII and the full
+  permission-scope list — an authz dump the app itself never writes — to the
+  platform's **shared** log store, while the application container logs none of it,
+  so a review scoped to the app's own code misses it entirely. Read the **runtime**
+  logs as actually emitted (app **and** the injected proxy), flag per-request PII /
+  token material / authz-scope dumps to the platform owner as a log-hygiene issue
+  (drop or redact), and treat a shared platform log store as a data-egress surface
+  for user PII.
 
 **Grep leads (tune to language):** `log`/`logger`/`console.log`/`print` followed
 by `req`, `request`, `body`, `headers`, `user`, `token`, `password`, `secret`,

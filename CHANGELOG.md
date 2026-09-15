@@ -3,6 +3,28 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.74.0] — 2026-09-16
+
+Wave 3 of the #143–#164 dogfooding batch: four delivery / observability / privacy
+lenses across four references, each pre-distinguished from the section it extends.
+
+### Added — deep-code-review
+- **`infra-iac-containers.md`** — the deploy-contract preflight gains two lenses:
+  deploy artifact size is a first-class budget — externalize heavy, slow-changing
+  assets to object storage / a CDN and fetch large data at runtime; a size-rejected
+  upload fails silently while the old pod keeps serving (#147); and a deploy upload's
+  HTTP status is not the deploy's outcome on a synchronous-build platform — verify by
+  effects (a new deployment id / booted pod / changed served version), and read
+  409-vs-timeout before re-uploading (#148).
+- **`observability.md`** — audit the logs a platform injects (an auth-proxy sidecar
+  dumping per-request PII and an authz-scope list to a shared store), not only your
+  app's own log statements (#150).
+- **`privacy-compliance.md`** + **`security-ai-agents.md`** — gate a sensitive derived
+  value at the source: the exact value stays in a local gitignored cache, only a
+  coarse band crosses a boundary (behind an off-by-default flag), and never pull the
+  per-row values into a model's context when an aggregate query would do (#154).
+- Four new evals (deep-code-review 51 → 55).
+
 ## [1.73.0] — 2026-09-16
 
 Wave 2 of the #143–#164 dogfooding batch: six data-quality review lenses, all in

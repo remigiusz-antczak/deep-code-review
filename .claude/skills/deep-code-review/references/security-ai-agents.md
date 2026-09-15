@@ -178,6 +178,13 @@ LLM-backed feature, add cases that assert the guardrail holds:
   a function — cheaper, testable, and it cannot hallucinate. Reserve the model
   for genuine language/judgment tasks. A pipeline that asks the model to do
   arithmetic or emit JSON that a schema could guarantee is a red flag.
+- **Aggregate-only reads by default — never pull per-row sensitive values into the
+  model's context when an aggregate query would do.** Compute statistics in SQL and
+  hand the model the **aggregate**, not the rows; per-row sensitive financials (or
+  PII) in context are an **exfiltration surface** — a later injection, a logged
+  prompt, or a tool call can carry them out. This is the model-context sibling of
+  `privacy-compliance.md`'s gate-a-sensitive-derived-value-at-the-source rule:
+  minimize sensitive data **in the context**, not only in the store.
 - **Anchor relative time deterministically — the time instance of the rule
   above.** A prompt that resolves *today*, *yesterday*, *last quarter*, *next
   Friday*, or *in 30 days* must be handed an authoritative current date/time by

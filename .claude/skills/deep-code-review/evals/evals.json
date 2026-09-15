@@ -529,6 +529,50 @@
         "Explains the constructs imply opposite actions, so a blended number hides which is warranted",
         "Requires scoring each construct separately and deriving the action from the combination (a 2x2 or tiering)"
       ]
+    },
+    {
+      "id": "externalize-heavy-assets-not-bake-into-deploy-image",
+      "prompt": "Our deploy started failing -- the upload streams the whole body then dies at ~60s with a 504 and no response body, and the app keeps serving the old version. The artifact grew from ~3MB to ~19MB after we baked in a big JSON dataset and pre-cached media. What's wrong and the fix?",
+      "expected_output": "The oversized artifact is being silently rejected past a size limit -- the stream sends the full body, the gateway kills it at ~60s (504 / HTTP/2 framing error, no body), and the old pod keeps serving, so 'the latest deploy didn't ship.' Confirm by bisecting: a lean artifact lands where the heavy one fails. Fix: treat deploy artifact size as a first-class budget and flag growth past the last-known-good by a large factor; externalize the heavy, slow-changing assets -- serve media from object storage / a CDN and fetch the large data at runtime rather than baking either into the image. Baking a large data bundle also couples data-freshness to a full redeploy, a second reason to externalize. (infra-iac-containers.md.)",
+      "expectations": [
+        "Identifies the oversized artifact silently rejected at a size limit (not an app bug) as the cause",
+        "Treats deploy artifact size as a first-class budget flagged against last-known-good",
+        "Externalizes heavy slow-changing assets (media to object storage/CDN, large data fetched at runtime) instead of baking them into the image",
+        "Notes that baking large data also couples freshness to a full redeploy"
+      ]
+    },
+    {
+      "id": "verify-deploy-by-effects-not-http-status",
+      "prompt": "Our deploy platform builds the image synchronously inside the upload request, so every deploy returns a 504 at ~60s. My script reads that 504 as 'deploy failed' and re-uploads. Right approach?",
+      "expected_output": "No -- on a synchronous-build platform the upload's HTTP status is useless: it returns a 504 (or a stream reset) at ~60s whether the build later succeeds OR fails, so reading it as 'failed' is wrong, and a blind re-upload can hit a 'deploy already in progress' 409 lock. Verify by the EFFECTS instead: does a new build/deployment id appear, does a new pod/replica boot, does the served version change? That is the source of truth. Read the returned code before re-uploading -- a 409 means wait, a timeout means it was likely accepted -- and prefer a deploy API that returns a durable deployment id plus async status over one that blocks on the build inside the gateway window. (infra-iac-containers.md.)",
+      "expectations": [
+        "Rejects the deploy upload's HTTP status as a success/failure signal on a synchronous-build platform",
+        "Verifies by effects (a new deployment id, a booted pod, a changed served version) as the source of truth",
+        "Reads the code before re-uploading (409 lock means wait, timeout means likely accepted) rather than blindly re-uploading",
+        "Prefers an async deploy API that returns a durable id and status"
+      ]
+    },
+    {
+      "id": "audit-platform-injected-proxy-logs-for-pii",
+      "prompt": "I reviewed our app's logging code and it never logs PII -- clean. The app runs on a managed platform that puts an nginx auth-proxy in front of it. Are we good on log hygiene?",
+      "expected_output": "Not necessarily -- the app's own code is only half the trust boundary. A managed platform's injected auth-proxy sidecar often logs, on every authenticated request, the signed-in user's email in plaintext, partial token material, and the full permission-scope list, to the platform's shared log store -- none of which appears in the app's code. Read the RUNTIME logs as actually emitted (app AND the injected proxy), not just the app's log statements. Flag per-request PII, token material, and authz-scope dumps to the platform owner as a log-hygiene issue (drop or redact), and treat the shared platform log store as a data-egress surface for user PII. (observability.md.)",
+      "expectations": [
+        "Does not conclude 'clean' from the app's own logging code alone",
+        "Includes platform-injected sidecars/proxies in the logging/PII trust boundary",
+        "Reads the runtime logs as actually emitted (app plus the injected proxy)",
+        "Treats the shared platform log store as a PII data-egress surface"
+      ]
+    },
+    {
+      "id": "gate-sensitive-derived-value-at-source",
+      "prompt": "We compute an exact cash-runway figure per company and write it to a shared sheet the whole team sees, and our enrichment agent pulls the per-row runway values into its context to summarize. Fine?",
+      "expected_output": "Gate the sensitive derived value at the source. (1) The exact runway should live only in a local, gitignored cache; emit only a COARSE BAND to the shared sheet, and even that behind an off-by-default flag pending sign-off -- writing an exact sensitive derived value (runway, valuation, cash) to a shared or wide surface is the finding. (2) Don't pull per-row runway values into the agent's context: compute statistics in SQL and hand the model the AGGREGATE, not the rows -- per-row sensitive financials in context are an exfiltration surface (a later injection, a logged prompt, or a tool call can carry them out). Aggregate-only reads by default. (privacy-compliance.md + security-ai-agents.md.)",
+      "expectations": [
+        "Keeps the exact sensitive derived value local/gitignored and emits only a coarse band to shared surfaces, behind an off-by-default flag",
+        "Flags writing an exact sensitive derived value to a shared or wide surface as the defect",
+        "Refuses to pull per-row sensitive values into the agent/model context when an aggregate query would do",
+        "Frames per-row sensitive data in context as an exfiltration surface (aggregate-only reads by default)"
+      ]
     }
   ]
 }

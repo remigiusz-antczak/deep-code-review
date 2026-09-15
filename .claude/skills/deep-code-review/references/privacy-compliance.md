@@ -40,6 +40,16 @@ legal advice — jurisdiction and scope are owner decisions.
 - Secondary uses (model training, enrichment, marketing exports) are their own
   purpose — reuse of data collected for a different one is a design finding until
   the owner confirms scope. Free text and uploads are personal data too.
+- **Gate a sensitive derived value at the source — exact stays local, only a
+  coarse band crosses a boundary.** For a sensitive derived metric (runway,
+  valuation, cash position), compute the **exact** value only in a **local,
+  gitignored** cache and emit only a **coarse band** to any shared sheet / export /
+  wide surface — and even the band behind an **off-by-default flag** pending
+  sign-off. Any code path that writes an exact sensitive derived value to a shared
+  or wide surface is the finding (a column deleted after it leaked outside its
+  boundary is that fix stated in hindsight). The agent-context sibling — never
+  pull the per-row values into a model's context when an aggregate query would do
+  — lives in `security-ai-agents.md`.
 
 ---
 
