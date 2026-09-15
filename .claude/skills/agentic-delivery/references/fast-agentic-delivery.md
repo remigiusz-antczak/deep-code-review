@@ -225,19 +225,44 @@ waiting on a background task whose completion notifies only the exited turn. A
 machine-readable last-run status file (some runners write one) lets the parent read
 the verdict without re-running.
 
+## Confirm a subagent is idle before dispatching a duplicate — a not-yet-final signal can read as final
+
+The watcher-side complement to the foreground rule above. A coordinator that
+dispatches lanes off task-"completed" notifications can be told a subagent finished
+**while it is still running** — observed with a subagent that had armed a background
+monitor/watch and kept working. (The exact notification semantics are unsettled and
+platform-specific — the firing rule may depend on whether the agent still has live
+background children of its own — so treat the mechanism as a field observation, not a
+guarantee.) The **defensive invariant** holds regardless: before dispatching a
+duplicate lane for the "remaining" work, **confirm the agent is actually idle** —
+check its live state, not merely that a "completed" arrived — especially when the
+duplicate would write into the **same worktree**, where a collision corrupts the run.
+This is the dispatcher mirror of "a backgrounded gate loses its verdict": there the
+*doer* drops a result; here the *watcher* acts on a not-yet-final one.
+
 ## Boot-the-dev-server lanes need a copy, not a symlink, of the dependencies dir
 
-To share one installed-dependencies directory across throwaway worktrees, lanes
-sometimes **symlink** it. Edit-only checks (typecheck/lint/unit) tolerate the
-symlink, but any command that boots the **modern dev bundler** fails hard: the
-bundler rejects a dependency path that resolves *outside* its inferred project root
-("points out of the filesystem root"), so the dev server never starts and the
-browser/UX gate reports a **false** "could not run." For lanes that boot the dev
-server, use a **copy-on-write clone** (a real directory on the same volume), not a
-symlink; reserve the symlink for edit-only fast-tier lanes. And a gate must
-distinguish **"could not run" (infra)** from **"found a problem"** — a bundler-boot
-failure is the former, never a content finding (the gate-epistemology distinction,
-principle 3 above).
+Any worktree that runs the **heavy gates** needs its own real install — run
+`npm ci` in it (or a **copy-on-write clone** of a real `node_modules` on the same
+volume). To share one installed-dependencies directory across throwaway worktrees,
+lanes sometimes **symlink** it; edit-only checks (typecheck/lint/unit) *seem* to
+tolerate the symlink, but it breaks the heavy gates three ways:
+- **Under-install** — a dep present in the lockfile but absent from the shared tree
+  makes `tsc` fail with **TS2307** ("cannot find module") — a false type error, not
+  a real one.
+- **Bundler boot** — the **modern dev bundler** rejects a dependency path that
+  resolves *outside* its inferred project root ("points out of the filesystem
+  root"), so the dev server never starts and the browser/UX gate reports a **false**
+  "could not run."
+- **Warning drift** — a symlinked tree yields phantom lint warnings, so a
+  `--max-warnings` ratchet false-fails on a count that isn't real.
+
+The tell is **local QA red where CI is green**; `npm ci` on the same tree settles all
+three — the fix is mechanical (install, don't link). Reserve the symlink for
+edit-only fast-tier lanes. And a gate must distinguish **"could not run" (infra)**
+from **"found a problem"** — a bundler-boot failure, or a TS2307 from an
+under-installed symlink, is the former, never a content finding (the gate-epistemology
+distinction, principle 3 above).
 
 ## Acknowledge a live-feedback burst before dispatching — silent throughput reads as ignoring
 

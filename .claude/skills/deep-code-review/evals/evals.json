@@ -399,6 +399,17 @@
         "Rewrites vague notes ('weak hierarchy', 'inconsistent spacing') into principle-named findings",
         "Treats 'feels premium?' as a prompt to locate the violated heuristic, not a standalone verdict; fabricates no source"
       ]
+    },
+    {
+      "id": "unify-chrome-shell-before-porting-surfaces",
+      "prompt": "Migrating our app to the reference design. I ported the sidebar and top bar to a shared component. Now reviewers keep flagging per-page differences -- this header's a different size, that section strip won't stick, this dashboard has fewer tabs -- and I fix each as it comes. Am I converging?",
+      "expected_output": "Probably not -- a per-surface migration with no unified INNER chrome is an unbounded defect stream: those complaints are one divergence per surface, downstream of a structural split, not independent nits. Porting the outer frame doesn't unify the inner chrome (per-page header, tab/section strip, stat-tile, sub-nav, and the which-tabs rule). Enumerate the chrome primitives and confirm every surface renders through the SHARED ones before porting more screens; a surface that reimplements a primitive is a structural defect. Align the outlier family TO the consistent majority (fix the 2, don't rebuild the 13). Render the same sub-view superset across structurally-similar surfaces with honest-empty states -- unless a hidden view would show a misleading aggregate at that scope, which stays hidden (computed-not-fabricated, principle 4, beats tab symmetry). And unify a two-behavior control (nav link vs toggle) as one styling primitive + two thin wrappers, never one dual-mode-prop component (it breaks aria-current/pressed, focus, keyboard). (migration-parity.md.)",
+      "expectations": [
+        "Identifies the unbounded per-surface defect stream as downstream of an un-unified inner chrome (structural, not per-screen)",
+        "Requires enumerating chrome primitives and routing every surface through the shared ones before porting more screens",
+        "Aligns the outlier family to the majority (fix the few), not rebuilding all N",
+        "Keeps a sub-view hidden when it would render a misleading aggregate (computed-not-fabricated over tab-count symmetry); unifies a two-behavior control as styling primitive + wrappers, not a dual-mode prop"
+      ]
     }
   ]
 }

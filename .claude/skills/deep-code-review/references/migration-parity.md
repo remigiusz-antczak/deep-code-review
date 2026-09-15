@@ -5,11 +5,52 @@ export** (a static page, a design-tool frame, a clickable prototype — typicall
 built on a handful of seed rows), or the task is a **port / migration to a
 reference design**. Expands section P of `SKILL.md`, alongside `frontend-a11y.md`
 (a11y correctness) and `product-ux-quality.md` (the design half). The failures this
-file prevents: over-claiming parity from the wrong evidence, recommending the
-**deletion of real features** to match a sparse reference, and shipping a UI that
+file prevents: porting a migration screen-by-screen with **no unified chrome** (an
+unbounded defect stream), over-claiming parity from the wrong evidence, recommending
+the **deletion of real features** to match a sparse reference, and shipping a UI that
 matches structurally yet feels poor to use.
 
 ---
+
+## Unify the chrome/shell before porting screens — one level above component unification
+
+The unification precondition (`product-ux-quality.md`, one component per concept)
+has a level **above** individual components: the **chrome/shell** — per-page header,
+tab/section strip, stat-tile frame, sub-nav, and the rule that decides which tabs a
+surface shows. Porting the *outer* frame (sidebar, top bar) to a shared component
+does **not** unify the *inner* chrome: it can still split into independently-authored
+families — one composing the shared header + nav-link tabs, a sibling bypassing it
+with a bespoke inline header (a raw font-size, not the token) + a hand-rolled
+local-state pill strip. When it does, every downstream "why is this styled
+differently / this has fewer sections / the strip won't stick" complaint is one
+divergence per surface, "fixed" per-surface without converging. **A per-surface
+migration with no unified chrome is an unbounded defect stream** — the tell that the
+divergence is structural, not per-screen.
+
+- **Enumerate the chrome primitives first, and confirm every surface renders through
+  the shared ones *before* porting individual screens.** A surface that reimplements
+  a chrome primitive is a **structural defect**, not a nit.
+- **Align the outlier family *to* the consistent majority**, not the reverse — if two
+  surfaces diverge and thirteen agree, fix the two; don't rebuild all fifteen.
+- **Render the same sub-view *superset* across structurally-similar surfaces**
+  (per-entity dashboards) with honest-empty states — not a hand-picked per-entity
+  subset — so absence reads as "nothing here yet," not "this entity is different."
+  **The one exception is load-bearing:** if a view would render a **misleading
+  aggregate** at that scope (a rate/total that is wrong or meaningless for this
+  entity), keep it **hidden** — **computed-not-fabricated (principle 4) beats
+  tab-count symmetry**. Symmetry is the default; a hidden view is justified only by
+  "the number it would show is wrong here," stated in the finding.
+- **Unify a control that exists in two *behaviors* by its styling, not by one
+  dual-mode component.** A navigation link and a local-state toggle can look
+  identical yet carry **different semantics** — `aria-current` for the nav location
+  vs `aria-pressed`/expanded for the toggle. Extract the **styling** into one shared
+  primitive and wrap it in two thin behavior wrappers; do **not** collapse them into
+  a single component with two mutually-exclusive prop modes, which breaks a11y (the
+  unwired mode emits the wrong role, focus, and keyboard order — `frontend-a11y.md`).
+  This is the **complement** of the feature-flag rule, not a contradiction of it: a
+  feature that is *present-or-absent with the same semantics* belongs **inside** the
+  component (`product-ux-quality.md`, one component per concept, #123); two
+  *different behaviors* stay **separate wrappers over one shared style**.
 
 ## Verify parity surface-by-surface, on real data — never from a structural or seed-data audit
 

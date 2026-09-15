@@ -157,6 +157,17 @@
         "Explains that silent throughput reads as not listening",
         "Orders: acknowledge + plan first, dispatch second"
       ]
+    },
+    {
+      "id": "confirm-subagent-idle-before-duplicate-dispatch",
+      "prompt": "A subagent I dispatched just sent a task-'completed' notification, but it had armed a background monitor. There's remaining work, so I'll immediately dispatch a second lane into the same worktree to finish it. OK?",
+      "expected_output": "Confirm the subagent is actually IDLE first -- a 'completed' notification from an agent that armed a background monitor/watch can arrive while it is still running, and dispatching a duplicate into the SAME worktree risks a collision that corrupts the run. Check its live state (not just that a 'completed' arrived) before dispatching. Treat the notification's exact firing semantics as unsettled/platform-specific; the defensive invariant holds regardless. This is the dispatcher mirror of 'a backgrounded gate loses its verdict' -- there the doer drops a result, here the watcher acts on a not-yet-final one. (fast-agentic-delivery.md.)",
+      "expectations": [
+        "Does not treat a 'completed' notification as proof the subagent is idle, especially with a background monitor armed",
+        "Requires confirming the agent's live idle state before dispatching a duplicate",
+        "Flags the same-worktree collision risk",
+        "Does not assert the notification's internal mechanism as certain; relies on the defensive invariant"
+      ]
     }
   ]
 }

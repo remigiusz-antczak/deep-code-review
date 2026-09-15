@@ -3,6 +3,39 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.70.0] — 2026-09-15
+
+Three more field learnings (#133–#135) from a per-surface UI migration + a
+merge-train run, sent by the peer dogfooding session. Content in deep-code-review +
+agentic-delivery.
+
+### Added — deep-code-review
+- **`migration-parity.md`** — unify the **chrome/shell** (per-page header, tab strip,
+  stat-tile, sub-nav, the which-tabs rule) **before** porting screens: the scaffold
+  level above component unification; a surface that reimplements a chrome primitive is
+  a structural defect; align the outlier family to the majority; render the same
+  sub-view superset with honest-empty states, keeping a view hidden only when it would
+  show a **misleading aggregate** (computed-not-fabricated over tab-count symmetry);
+  unify a two-behavior control (nav link vs toggle) as one styling primitive + two
+  thin wrappers, never a dual-mode-prop component (#133).
+- **`frontend-a11y.md`** — "one control, one role": a dual-mode nav/toggle component
+  emits the wrong role/focus/keyboard semantics for the unwired mode; share styling,
+  wrap behavior (the a11y half of #133).
+- One new eval.
+
+### Added — agentic-delivery
+- **`fast-agentic-delivery.md`** — a symlinked `node_modules` breaks the heavy gates
+  three ways (`tsc` TS2307 from under-install, dev-bundler boot, `--max-warnings`
+  drift); run `npm ci` in the worktree — local-QA-red / CI-green is the tell (#134,
+  generalizing #127's symlink note). And confirm a subagent is **idle** before
+  dispatching a duplicate lane — a monitor-armed subagent's "completed" can arrive
+  while it still runs; the watcher-side complement to #127.1 (#135).
+- One new eval.
+
+### Changed
+- Lockstep bump to **1.70.0** (deep-code-review, agentic-delivery, idea-critic,
+  plugin). Content: deep-code-review + agentic-delivery. Closes #133, #134, #135.
+
 ## [1.69.0] — 2026-09-15
 
 Wave 2 of the dogfooding batch (#122, #124, #129, #130.1) — the migration /

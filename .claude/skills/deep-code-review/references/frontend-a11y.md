@@ -85,6 +85,12 @@ automated score alone.
 - Destructive actions are confirmable/undoable; nothing irreversible on a single
   mis-click.
 - Copy is clear; errors say what happened and how to fix it.
+- **One control, one role.** A visual control that must behave two ways — a
+  navigation link (`aria-current` marks the current location) versus a local-state
+  toggle (`aria-pressed`/expanded marks state) — cannot be **one component with two
+  mutually-exclusive prop modes**: the mode that isn't wired emits the wrong role,
+  focus, and keyboard semantics. Share the **styling** in one primitive and wrap it
+  in two thin behavior components (the unification pattern: `migration-parity.md`).
 
 ## Cross-view consistency (multi-route apps)
 
