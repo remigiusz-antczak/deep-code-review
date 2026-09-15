@@ -269,6 +269,27 @@ duplicate would write into the **same worktree**, where a collision corrupts the
 This is the dispatcher mirror of "a backgrounded gate loses its verdict": there the
 *doer* drops a result; here the *watcher* acts on a not-yet-final one.
 
+## A transcript's size or mtime is not a liveness signal — never kill a lane on staleness
+
+The **inverse** error to the section above, with a worse blast radius. Judging whether a
+background subagent is alive, stalled, or dead from the **`stat` of its transcript/output
+file** (bytes unchanged for N seconds, mtime older than a threshold) reads a signal that is
+not there: a transcript can lag the working agent by **many minutes** — a long tool call, a
+quiet reasoning stretch, buffered/flushed-late output — and can look equally "recent" for an
+agent that has already exited. Acting on the stat cuts both ways — it **kills a still-working
+lane** (destructive: its in-flight work and worktree state are gone) or **trusts a dead one**
+and waits forever / dispatches onto a corpse. Judge liveness from the agent's **actual
+product**: a fresh work-tree diff or new commit, a live child process, an owned port/PID, or
+a direct **ping it answers** — never from the transcript file's size or age. Killing a lane
+is a **destructive, shared-state action** (principle 9 — closing or deleting shared state
+needs evidence, not presumption): confirm the agent is genuinely idle by a *positive* signal
+before terminating. If nothing but the transcript is observable, the
+honest state is **`UNVERIFIED`**, not "dead." Distinct from the Conductor's context-isolation
+rule ("read status, not the raw transcript" — do not consume the transcript as *context*):
+this is not reading its **file stat** as *liveness*. And distinct from the idle-before-
+duplicate section above: that is a false-**positive** "completed" leading to a duplicate
+dispatch; this is a false-**negative** liveness read leading to a destructive **kill**.
+
 ## Boot-the-dev-server lanes need a copy, not a symlink, of the dependencies dir
 
 Any worktree that runs the **heavy gates** needs its own real install — run
@@ -292,6 +313,23 @@ edit-only fast-tier lanes. And a gate must distinguish **"could not run" (infra)
 from **"found a problem"** — a bundler-boot failure, or a TS2307 from an
 under-installed symlink, is the former, never a content finding (the gate-epistemology
 distinction, principle 3 above).
+
+## Serve and commit from separate trees — a long-running process dirties a gate-asserted config
+
+A long-running process — a dev server, a codegen/asset watcher — that **rewrites a tracked
+config file on boot** (regenerates or normalizes in place a config the toolchain owns)
+deadlocks the commit workflow when both share **one working tree**: a test or pre-commit gate
+that pins that file's **exact content** sees it dirty for the process's **entire lifetime**,
+so every commit from that tree fails on a "modified config" nobody edited — or forces a
+stop-server / restore-file / re-commit dance. **Serve from a different tree than you commit
+from** (a dedicated worktree/checkout for the running stack, so the commit tree stays clean);
+if one tree is unavoidable, make the process write to a **gitignored/untracked** path, or stop
+it and restore the file before committing. Where a legitimate tool rewrites the file, prefer a
+gate that asserts its **shape/schema** over its exact bytes. Distinct from "never `build`
+against a directory a running server is serving" (a stale-asset *ship* failure — wrong build
+output) and from the out-of-tree-scratch metadata-crossing section above: this is a single-tree
+**serve-vs-commit deadlock** where a running process dirties a **tracked, gate-asserted** file
+so the commit gate itself fails.
 
 ## Acknowledge a live-feedback burst before dispatching — silent throughput reads as ignoring
 

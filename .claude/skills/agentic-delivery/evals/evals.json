@@ -168,6 +168,28 @@
         "Uses the tell -- a repeated 'completed' for the same task-id, or the agent's report still 'waiting' -- to detect a not-yet-final signal",
         "Flags the same-worktree collision risk"
       ]
+    },
+    {
+      "id": "transcript-stat-is-not-a-liveness-signal",
+      "prompt": "A background subagent's transcript file hasn't grown in four minutes. I'm going to treat the lane as hung, kill it, and re-dispatch the work. Reasonable?",
+      "expected_output": "No -- a transcript's size or mtime is not a liveness signal, and killing the lane is a destructive, shared-state action. A transcript can lag a working agent by many minutes (a long tool call, a quiet reasoning stretch, buffered/flushed-late output) and can look equally 'recent' for an agent that already exited -- so a stat-based 'hung' inference cuts both ways: it kills a still-working lane (losing its in-flight work and worktree state) or trusts a dead one. Judge liveness from the agent's ACTUAL product -- a fresh work-tree diff or new commit, a live child process, an owned port/PID, or a direct ping it answers -- not the transcript file's age. Confirm the agent is genuinely idle by a positive signal before terminating (principle 9 -- closing or deleting shared state needs evidence, not presumption). If nothing but the transcript is observable, the honest state is UNVERIFIED, not 'dead.' This is the inverse of the idle-before-duplicate case: a false-negative liveness read leading to a destructive kill, not a false-positive 'completed' leading to a duplicate dispatch. (fast-agentic-delivery.md.)",
+      "expectations": [
+        "Rejects transcript/output-file size or mtime as a liveness signal in either direction",
+        "Requires a positive liveness signal (work-tree diff, new commit, live process, owned port/PID, answered ping) before judging the lane",
+        "Treats killing a lane as a destructive shared-state action to confirm before, and labels a transcript-only state UNVERIFIED not dead",
+        "Distinguishes the destructive false-negative-kill error from the false-positive-completed duplicate-dispatch error"
+      ]
+    },
+    {
+      "id": "serve-and-commit-from-separate-trees",
+      "prompt": "Our dev server rewrites a tracked config file on boot, and a pre-commit gate asserts that file's exact contents, so every commit fails while the server runs. I keep stopping the server to commit. Better pattern?",
+      "expected_output": "Serve and commit from separate trees. A long-running process (dev server, codegen/asset watcher) that rewrites a tracked, gate-asserted file on boot keeps that file dirty for its whole lifetime, so every commit from the same working tree fails on a 'modified config' nobody edited -- the stop-server/restore/re-commit dance is the symptom. Give the running stack its own worktree/checkout so the commit tree stays clean; if one tree is unavoidable, make the process write to a gitignored/untracked path, or stop it and restore the file before committing. Where a legitimate tool rewrites the file, prefer a gate that asserts its shape/schema over its exact bytes. This is a single-tree serve-vs-commit deadlock -- distinct from 'never build against a directory a running server is serving' (a stale-asset ship failure) and from out-of-tree scratch crossing commit metadata between lanes. (fast-agentic-delivery.md.)",
+      "expectations": [
+        "Identifies the shared single tree as the root: a running process dirties a tracked, gate-asserted file so the commit gate fails",
+        "Recommends serving from a separate worktree/checkout from the one you commit from",
+        "Offers the one-tree fallbacks -- gitignore/untrack the rewritten path, or stop-and-restore before commit -- and prefers a schema/shape assertion over exact bytes",
+        "Distinguishes the serve-vs-commit deadlock from build-against-served-dir and from out-of-tree-scratch metadata crossing"
+      ]
     }
   ]
 }

@@ -3,6 +3,35 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.72.0] — 2026-09-15
+
+Wave 1 of a new dogfooding batch (#143–#164): five field lenses from peer
+dogfooding and live-build runs, each pre-distinguished from a shipped neighbor.
+Content in deep-code-review + agentic-delivery.
+
+### Added — deep-code-review
+- **`frontend-a11y.md`** — a global focus/scroll-into-view correction handler
+  (the WCAG 2.2 *Focus Not Obscured* remedy) must yield to an open overlay and
+  scope to the focused element's own scroll container, or it scrolls the
+  background out from under an open modal — the a11y remedy silently breaking
+  `product-ux-quality.md`'s rule that a drawer overlays so "the user keeps their
+  place" (#143).
+- **`method.md`** — reproduce a gate's finding with the gate's **own detector**,
+  not a hand-rolled probe that can "reproduce" a passing state (a repro-fidelity
+  axis distinct from the gate being wrong or unrun) (#146); and an **input
+  reference is stale until you check its revision + completeness** before building
+  on it — the build-time analog of verify-before-you-report (#160).
+- Three new evals.
+
+### Added — agentic-delivery
+- **`fast-agentic-delivery.md`** — a subagent's transcript size or mtime is
+  **not a liveness signal**: never kill (a destructive, shared-state action —
+  principle 9) or trust a lane on transcript staleness; judge liveness from the
+  agent's actual product (#144); and **serve and commit from separate trees** —
+  a long-running process that rewrites a tracked, gate-asserted config dirties
+  every commit from the same tree (#145).
+- Two new evals.
+
 ## [1.71.0] — 2026-09-15
 
 Three more field learnings (#138–#140) from the peer dogfooding run, each

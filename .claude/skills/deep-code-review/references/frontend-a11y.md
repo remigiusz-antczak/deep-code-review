@@ -48,6 +48,28 @@ without regressing a deliberate design.
   (2.2 new: Focus Not Obscured).
 - Focus is managed on route change, modal open/close (trap + restore), and
   async content insertion.
+- A **global focus/scroll-into-view correction** handler (the *Focus Not
+  Obscured* remedy) must yield to an open overlay and scope to the focused
+  element's own scroll container — detector below.
+
+**Global focus-correction vs. an open overlay**
+
+A **document-level focus/scroll-into-view correction** handler — the common remedy
+for *Focus Not Obscured* (nudge the scroll so a focused control clears sticky
+chrome) — must **bail while an overlay is open** (gate on the open-dialog state, the
+`:modal` element / `aria-modal`, or a focus-trap boundary) and **scope its scroll to
+the focused element's own scroll container**, never a page-level one. A global handler
+missing both guards fires for a control *inside* an open modal/drawer, measures it
+against the **background** chrome, and scrolls the background out from under the
+overlay — the a11y remedy for one rule silently breaks `product-ux-quality.md`'s rule
+that a detail drawer overlays so "the user keeps their place", never moving the
+background. Container scoping is the more general fix (it also covers any nested scroll
+region).
+
+**🚩 grep**: a `document`/`window`-level `focusin`/`focus` listener or a
+`scrollIntoView`/`scrollTo`/`scrollBy` correction with no open-overlay guard and no
+scroll-container scoping; exercise it — focus a field inside an open overlay and
+confirm the background does not move.
 
 **New in WCAG 2.2 — verify explicitly**
 - **Target Size (Minimum) 24×24 CSS px** for pointer targets (or adequate

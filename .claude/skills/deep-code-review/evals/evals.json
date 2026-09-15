@@ -432,6 +432,39 @@
         "Requires per-row owning-entity attribution and capping/paginating the union at aggregate scope",
         "Distinguishes the single-vs-aggregate scope axis from a feature-prop-present-at-one-mount-site axis, and from a section-set superset across sibling per-entity surfaces"
       ]
+    },
+    {
+      "id": "overlay-guard-for-global-focus-handler",
+      "prompt": "To satisfy WCAG 'Focus Not Obscured' I added a document-level focusin handler that scrolls the focused control clear of our sticky header. It works. Anything to flag?",
+      "expected_output": "Yes -- a global focus/scroll-correction handler needs an open-overlay guard and scroll-container scoping, or it scrolls the background out from under an open modal. When a dialog/drawer is open, the same document-level handler fires for a control INSIDE the overlay, measures it against the still-present background chrome, and scrolls the background -- moving the page out from under an overlay meant to keep the user in place. Bail while an overlay is open (gate on the open-dialog state, the :modal element / aria-modal, or a focus-trap boundary) AND scope the scroll to the focused element's own scroll container, never a page-level one (container scoping also covers nested scroll regions). The Focus-Not-Obscured remedy then stops violating the product rule that a detail drawer overlays so the user keeps their place -- the background never moves out from under it. Exercise it: focus a field inside an open overlay and confirm the background does not move. (frontend-a11y.md.)",
+      "expectations": [
+        "Flags a document-level focus/scroll-correction handler with no open-overlay guard",
+        "Requires bailing while a modal/dialog/drawer is open, keyed on the open-overlay state rather than a heuristic",
+        "Requires scoping the scroll to the focused element's own scroll container rather than a page-level container",
+        "Names the conflict -- the Focus-Not-Obscured remedy violating the overlay-never-scrolls-the-background invariant -- and requires exercising a field inside an open overlay"
+      ]
+    },
+    {
+      "id": "reproduce-gate-finding-with-gates-own-detector",
+      "prompt": "A CI schema-validator gate failed on our config. I wrote a quick grep that checks the field it complained about, the grep passes now, so the fix is verified -- right?",
+      "expected_output": "Not verified -- your probe observes a different thing than the gate, so a passing grep can 'reproduce' a passing state while the gate stays red. A hand-rolled approximation of an automated gate (linter, schema/contract validator, audit/policy gate) can target the wrong cause: the gate stays red next run, or goes green for an unrelated reason and the real defect ships. Read the gate's own detection source (its rule, query, or script) and replicate it exactly -- same matcher, inputs, config, and file/state -- or better, run the actual gate against the change. Reproduce the gate's RED for the same reason first, then confirm the fix turns both green. A bespoke probe is a fallback only when the gate cannot run, and must mirror its mechanism. This is repro fidelity w.r.t. the detector -- distinct from the gate being wrong or unrun, from reproducing at low concurrency, and from a fix you could not reproduce at all. (method.md.)",
+      "expectations": [
+        "Rejects a hand-rolled probe that approximates rather than replicates the gate's detection as proof of a fix",
+        "Requires reading the gate's own detection source and replicating it exactly, or running the actual gate",
+        "Requires reproducing the gate's red for the same reason before confirming the fix turns it green",
+        "Distinguishes probe-fidelity-w.r.t.-the-detector from the gate being wrong or unrun and from a fix that could not be reproduced"
+      ]
+    },
+    {
+      "id": "verify-input-reference-fresh-and-complete",
+      "prompt": "I'm building a mirror of our design system from an exported spec bundle a teammate handed me. The build passes all its own checks. Good to ship the mirror?",
+      "expected_output": "Check the export is current and complete first -- the build passes its own gates on whatever the export contains, so a stale or partial export yields a confidently-wrong mirror that still 'passes.' Before building on any exported reference (a design export, a spec bundle, a data snapshot), confirm its revision/timestamp and its completeness (actual vs expected item count) against the authoritative source; an export that silently lost half its items produces a mirror that faithfully reproduces the loss. This is the build-time analog of verify-before-you-report -- a cheap up-front freshness/completeness check is owed by any build-against-a-reference workflow. (method.md.)",
+      "expectations": [
+        "Does not accept 'the build passed its own checks' as sufficient when the input is an exported reference",
+        "Requires verifying the export's revision/timestamp and completeness against the authoritative source before building",
+        "Explains that a stale or partial reference yields confidently-wrong output that still passes its own gates",
+        "Frames the check as the build-time analog of verify-before-you-report"
+      ]
     }
   ]
 }

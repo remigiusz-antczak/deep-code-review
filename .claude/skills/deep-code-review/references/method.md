@@ -149,6 +149,23 @@ and any wired security/dependency scanners. Then, before trusting "green":
   (principle 4): record the citation and **narrow the gate, saying so in writing**
   — narrowing an over-strict rule and weakening a real one look identical in the
   diff and are opposite acts.
+- **Reproduce a gate's finding with the gate's own detector, not a hand-rolled
+  probe.** Validating a fix aimed at an automated gate (linter, schema/contract
+  validator, audit/policy gate) with a **bespoke approximation** ("I grep for
+  X") that observes a *different thing* than the gate can "reproduce" a
+  **passing** state (or a different failure): the fix targets the wrong cause,
+  the gate stays red next run — or goes green for an unrelated reason and the
+  real defect ships. **Read the gate's own detection source** (its rule, query,
+  or script) and replicate it exactly — same matcher, inputs, config, and
+  file/state — or better, **run the actual gate**; a probe is a fallback only
+  when the gate cannot run, and must mirror its mechanism (reproduce the gate's
+  **red** for the same reason first, then confirm the fix turns both green).
+  This is repro fidelity w.r.t. the **detector** — distinct from the gate itself
+  being wrong or unrun (the bullets above and `domain-checklists.md`'s "a
+  non-empty result is not proof the layer ran"), from repro-fidelity w.r.t.
+  **conditions** (`parallel-audit.md`'s reproduce-at-low-concurrency), and from
+  `report-format.md`'s `mechanism-unproven` (a fix you *could not* reproduce;
+  this is a repro you *did* run, with the wrong mechanism).
 - **Read the host CI, not only your own shell.** Fetch the base branch's latest
   pipeline conclusion (`gh run list --branch <base> --limit 5`, or the forge
   equivalent); "green locally" is not "green in CI" (different OS image, browser
@@ -174,6 +191,18 @@ count a script emits, grep the script for a `limit`/`slice`/`head`/`take`/`break
 or early return on that collection and label the number `>= n` when one exists —
 an instrument that stops recording at six reports six, not the total (distinct
 from the caps *you* impose).
+
+**An input reference is stale until you check its revision and completeness.** A
+build/mirror/import task that consumes an **exported reference** — a design export, a
+spec bundle, a data snapshot — is only as current and complete as that export: confirm
+its **revision/timestamp** and **completeness** (actual vs expected item count) against
+the authoritative source *before* building on it, or the output is confidently wrong and
+still passes its own gates (the build-time analog of verify-before-you-report — an export
+that silently lost half its items yields a mirror that faithfully reproduces the loss;
+distinct from `data-quality.md`'s freshness/completeness *scoring dimensions* for a target's
+own pipeline — this is input-export hygiene before you build). A cheap up-front
+freshness/completeness check is owed by any "build against a reference"
+workflow.
 
 **Memory-unsafe code raises the floor.** If the target contains native C/C++ or
 `unsafe` Rust on a reviewed path, a plain green test run is not ground truth: run
