@@ -3,6 +3,53 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.68.0] — 2026-09-15
+
+Wave 1 of a large dogfooding batch (#120–#130, from the peer migration run). Seven
+self-contained lenses that each extend an existing section; the migration/prototype
+cluster (#122, #124, #129, #130.1) follows in a later release pending a structure
+decision. Content in deep-code-review + agentic-delivery.
+
+### Added — deep-code-review (review lenses + detectors)
+- **`reliability-error-handling.md`** — fail closed to LAST-GOOD, not to abort, when
+  a preflight's live-read failure is stricter than the system's own downstream
+  staleness gate; degrade to a snapshot the downstream already trusts, fail closed
+  only when none is valid. Distinct from retry (#120). 🚩 added.
+- **`testing-and-evals.md`** — testing an outbound alert/webhook from a spawned job
+  needs async `spawn` + a localhost listener (`spawnSync` deadlocks the in-process
+  capture); assert one POST with a privacy-safe body (#121).
+- **`product-ux-quality.md`** — one shared component rendered with a feature-bearing
+  optional prop defaulted off at some mount sites is a consistency defect the
+  twin-search misses; enumerate every mount site and diff the props (#123). Plus:
+  variant/option bloat (N interchangeable ways to view one thing) is a simplicity
+  smell — cut to one default, don't tune the set (#125); and unification is a
+  **precondition** of a port, not a cleanup pass (#130.2).
+- **`report-format.md`** — the "Beware the proxy" passage widened once to name two
+  more proxies: a green typecheck/unit suite for a surface that only renders across
+  a framework boundary, and merge-state/structural-match standing in for subjective
+  UX quality (the felt in-flow experience is the bar) (#126, #128 completion side).
+- **`frontend-a11y.md` + domain P** — server/client-boundary lens: a plain
+  non-component value exported from a `"use client"` module and imported by a server
+  component is silently replaced with a client-reference proxy — an unstyled/empty
+  render that passes typecheck, lint, and unit tests; caught only across the real
+  split. Lint-shaped static check + fix pattern + debugging heuristic (#128).
+- Five new evals.
+
+### Added — agentic-delivery (delivery overlay)
+- **`fast-agentic-delivery.md`** — run verification in the **foreground**: a
+  sub-agent's backgrounded gate loses its verdict (the parent isn't reliably
+  notified after the sub-agent exits) (#127.1). Boot-the-dev-server lanes need a
+  copy-on-write clone, not a symlink, of the dependencies dir (the modern bundler
+  rejects a path outside its root); a gate must distinguish "could not run" from
+  "found a problem" (#127.2). Acknowledge a live-feedback burst before dispatching —
+  silent throughput reads as ignoring (#130.3).
+- Two new evals.
+
+### Changed
+- Lockstep bump to **1.68.0** (deep-code-review, agentic-delivery, idea-critic,
+  plugin). Content: deep-code-review + agentic-delivery. Closes #120, #121, #123,
+  #125, #126, #127, #128. (#122, #124, #129, and #130's remaining part .1 are wave 2.)
+
 ## [1.67.0] — 2026-09-14
 
 Four more field-learning lenses (issues #114–#117), continuing the same

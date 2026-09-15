@@ -69,11 +69,23 @@ no-role / default route / local default), not only a mock or a hand-picked state
 **Beware the proxy.** A passing test, a green build, a merged PR, or a
 hand-configured render is a **proxy** for the user's outcome, not the outcome —
 verifying the proxy and asserting the user-facing result is the specific move to
-refuse; the proxy is evidence about the proxy. Two proxies recur in UI-parity
+refuse; the proxy is evidence about the proxy. Several proxies recur. In UI-parity
 work: a **structure / DOM-order or section-presence match** (a proxy for how it
 *renders*), and a surface you **reconfigured to satisfy the check** (switching the
 default persona / seed / flag, then verifying "the default" — a proxy for the
-served surface). So a completion status carries a
+served surface). Two more bite the moment a **framework boundary** or **subjective
+quality** is in play: a **green typecheck / unit suite for a surface that only
+truly renders across a server/client (or SSR/CSR, build/run) split** — the unit
+imports the module in the non-boundary context where the value is real, so it
+passes while the boundary silently proxies that value away at render
+(`frontend-a11y.md`, server/client boundary); and **merge-state /
+all-subtasks-green / structural-match standing in for subjective quality** — a gate
+proves the code did not regress a *known assertion*, never that a UX is good to
+use, so for UI/UX work the bar is the **felt, in-flow experience** exercised across
+the real screens (navigation, consistency, density, motion), and a "done" keyed to
+a proxy over-claims (before you call it: have I used this the way the user will,
+across the relevant screens — and what would they still call poor?). So a
+completion status carries a
 **one-line record — (surface · default-state observed · reference/spec checked
 against) — and states what was *not* checked** in the same breath. A heuristic
 checker for the "✅ that needs an asterisk" ships at

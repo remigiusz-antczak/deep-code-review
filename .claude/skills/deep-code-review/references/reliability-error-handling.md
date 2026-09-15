@@ -73,6 +73,19 @@ uses.
   "user said no" or silent skip.
 - Fail **closed** on authz/crypto/integrity errors; degrade cleanly on optional
   enrichments.
+- **Fail closed to last-good, not to abort, when the abort is stricter than the
+  downstream trust model.** A preflight that does a **live** external read (refresh
+  a mirror, pull shared state, resolve a known-set) and aborts the whole job on any
+  failure — a 5xx, a rotated credential, a half-set env — looks prudent, but is a
+  brittleness bug when the *same* data is consumed downstream through a
+  **staleness-tolerant** gate (e.g. "accept a ≤48h snapshot"): a transient blip or
+  a key rotation kills the run while a valid recent local snapshot the downstream
+  would happily use sits unused. On a preflight read failure, **degrade to the
+  last-good snapshot iff it passes the system's own downstream staleness gate**;
+  fail closed only when none is valid (preserving "never operate on absent/stale
+  data"). Reuse the exact downstream gate/`check` path so the two can't diverge.
+  Distinct from retry — a persistent failure like a rotated key survives every
+  retry; a valid cached snapshot does not.
 
 ---
 
@@ -107,4 +120,6 @@ subsystem never executing in production while local runs look fine.
 retry; work lost on crash; status not checked before body read; emergency stop
   behind the rate limiter; missing-key path that corrupts state instead of clean
   no-op; missing-key path that **writes empty artifacts** over last-good data;
-  `finally`-only cleanup on a process that calls `exit`.
+  `finally`-only cleanup on a process that calls `exit`; a fail-closed preflight
+  doing a **live** read that aborts on any failure while the same data feeds a
+  **staleness-tolerant** downstream gate (degrade to last-good instead).

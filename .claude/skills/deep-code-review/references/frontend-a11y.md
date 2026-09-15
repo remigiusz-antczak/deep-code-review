@@ -137,6 +137,42 @@ lives only in `useState`/component memory, with no corresponding
 `useSearchParams`/`router.query` read or write nearby. Confirm live: open the
 state, reload the page, verify it survives.
 
+## Server/client boundary — a plain value proxied across it
+
+In a framework with a server/client split (React Server Components / the Next.js
+App Router being the common case), a module marked client-only (`"use client"`)
+can still export **plain, non-component values** — a string of utility classes, a
+config object, a lookup table. When a **Server Component** imports one of those,
+the framework does not hand it the value: it substitutes a **client-reference
+proxy** (a stub for a client export). Used as data on the server — concatenated
+into a `className`, spread into props — the proxy does **not** reliably throw; it
+yields a **broken-but-not-crashing** result (an unstyled element, an empty string,
+a control with no padding) that reads as a *styling* bug, not a boundary bug.
+
+**Every static gate misses it.** The export's type is correct → **typecheck
+passes**. No lint rule → **lint passes**. Unit tests import the module in a plain
+(non-RSC) context where the value *is* the real value → **unit tests pass**, often
+asserting the exact string that is proxied away at render. It is visible only by
+rendering the real route through a real server/client split (a browser against a
+production-like server).
+
+- **Static check (cheap, mechanical, lint-rule-shaped):** enumerate client-boundary
+  modules, list their **plain non-component / non-hook exports**, and flag any
+  imported by a module that **lacks** the client directive. The fix is always the
+  same: move shared plain values into a **boundary-neutral** module (no directive)
+  both sides import — a client module should export only components/hooks across the
+  boundary, never plain data.
+- **Debugging heuristic:** an element present and correctly structured but
+  **unstyled** (missing padding/gap/color the source clearly specifies) on a
+  server-rendered route, with the styling defined in or re-exported from a client
+  module — suspect the **boundary** before the CSS. The proxy's stringified form in
+  the DOM (a function body / thrown-error text where a class string belongs) is the
+  tell.
+- **Completion bar:** "types + unit green" is **not** evidence a shared surface
+  renders across the boundary — the rendered output must be exercised in the real
+  split before "done" (the framework-boundary proxy in `report-format.md`, "Beware
+  the proxy").
+
 ## Reliability & performance (Core Web Vitals)
 
 - **LCP** (loading) ≤ 2.5 s, **INP** (interactivity — replaced FID in 2024)

@@ -212,6 +212,44 @@ The coordinator confirms that table against the reference's rendered output — 
 lane's self-assessed "matches now." If you cannot state the number, the orientation
 step is to **measure it**, not to delegate "make it look right."
 
+## Run verification in the foreground — a backgrounded gate loses its verdict
+
+A sub-agent told to run the gate suite that launches the long command **in the
+background** and then ends its turn "waiting for it to finish" loses the result: a
+sub-agent's own background task does not reliably notify the **parent** once the
+sub-agent has exited, and the turn ended before the run completed — the verdict
+lands in a buffer nobody reads. Run gate/verification commands in the **foreground
+(blocking)** so the result is in the agent's own report, or redirect output to a
+file the parent **explicitly reads after** the process ends. Never end a turn
+waiting on a background task whose completion notifies only the exited turn. A
+machine-readable last-run status file (some runners write one) lets the parent read
+the verdict without re-running.
+
+## Boot-the-dev-server lanes need a copy, not a symlink, of the dependencies dir
+
+To share one installed-dependencies directory across throwaway worktrees, lanes
+sometimes **symlink** it. Edit-only checks (typecheck/lint/unit) tolerate the
+symlink, but any command that boots the **modern dev bundler** fails hard: the
+bundler rejects a dependency path that resolves *outside* its inferred project root
+("points out of the filesystem root"), so the dev server never starts and the
+browser/UX gate reports a **false** "could not run." For lanes that boot the dev
+server, use a **copy-on-write clone** (a real directory on the same volume), not a
+symlink; reserve the symlink for edit-only fast-tier lanes. And a gate must
+distinguish **"could not run" (infra)** from **"found a problem"** — a bundler-boot
+failure is the former, never a content finding (the gate-epistemology distinction,
+principle 3 above).
+
+## Acknowledge a live-feedback burst before dispatching — silent throughput reads as ignoring
+
+When the owner is present and firing many separate pieces of feedback, silently
+dispatching background work — producing no acknowledgement — reads as *not
+listening* and escalates frustration, even when work is in fact running in
+parallel. Throughput without a reply is indistinguishable from ignoring them. On
+each burst, the **first** action is to capture every item into a visible tracked
+list and reply with the ordered plan plus what is already in flight; **dispatch
+second**. One honest "captured all N, here is the order, these three are already
+running" beats silent parallelism. Acknowledge first, optimise throughput second.
+
 ---
 
 ## Sources

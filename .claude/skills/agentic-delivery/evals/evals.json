@@ -135,6 +135,28 @@
         "Says the orientation step is to measure the number when it cannot be stated, rather than delegating 'make it look right'",
         "Fabricates no measured target or ratio it did not take"
       ]
+    },
+    {
+      "id": "foreground-verification-not-backgrounded-verdict",
+      "prompt": "I'll have the QA sub-agent kick off the full gate suite in the background and end its turn waiting for it to finish, then read the result. Good plan?",
+      "expected_output": "No -- a backgrounded gate loses its verdict. A sub-agent's own background task does not reliably notify the parent once the sub-agent has exited, and the turn ends before the run completes, so the result lands in a buffer nobody reads. Run gate/verification commands in the FOREGROUND (blocking) so the verdict is in the agent's own report, OR redirect output to a file the parent explicitly reads AFTER the process ends (a machine-readable last-run status file works well). Never end a turn 'waiting' on a background task whose completion notifies only the exited turn. (fast-agentic-delivery.md.)",
+      "expectations": [
+        "Rejects backgrounding a verification run whose completion notifies only the exited sub-agent turn",
+        "Requires foreground/blocking execution or an explicit-read-after-exit file (e.g. a status file)",
+        "Explains the verdict is otherwise lost to a buffer nobody reads",
+        "Does not assume the parent auto-receives a sub-agent's background result"
+      ]
+    },
+    {
+      "id": "acknowledge-live-feedback-before-dispatching",
+      "prompt": "The owner is firing off ten separate pieces of UI feedback in a row. I'm dispatching each to a background lane in parallel as they arrive and staying quiet to maximize throughput. Right call?",
+      "expected_output": "Dispatch in parallel, but don't stay silent -- silent throughput is indistinguishable from ignoring them and escalates frustration even while work is running. On each burst the FIRST action is to capture every item into a visible tracked list and reply with the ordered plan plus what is already in flight; dispatch second. One honest 'captured all ten, here's the order, these three are already running' beats silent parallelism. Acknowledge first, optimise throughput second. (fast-agentic-delivery.md.)",
+      "expectations": [
+        "Keeps parallel dispatch but requires an explicit acknowledgement/plan reply first",
+        "Captures every feedback item into a visible tracked list rather than only dispatching",
+        "Explains that silent throughput reads as not listening",
+        "Orders: acknowledge + plan first, dispatch second"
+      ]
     }
   ]
 }

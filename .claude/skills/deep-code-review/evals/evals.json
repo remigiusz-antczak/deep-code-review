@@ -300,6 +300,61 @@
         "Flags an existing-but-bypassed site (hand-rolled or none) as the finding, by file:line",
         "Recommends routing the outlier through the existing primitive rather than adding a second one; fabricates no coverage"
       ]
+    },
+    {
+      "id": "preflight-degrade-to-last-good-not-abort",
+      "prompt": "Our weekly job has a required preflight that live-refreshes a data mirror and aborts the whole run if the refresh fails (5xx, rotated key, whatever). Fail-closed = safe, right? Sign off?",
+      "expected_output": "Fail-closed is right only if the abort isn't stricter than the system's own downstream trust model. Check whether the SAME mirror data is consumed downstream through a staleness-tolerant gate (e.g. 'accept a <=48h snapshot'). If it is, a preflight that demands a fresh live read turns every transient blip AND every credential rotation into a total outage while a valid recent local snapshot the downstream would happily use sits unused. Fix: on a preflight read failure, degrade to the last-good snapshot iff it passes the system's own downstream staleness gate; fail closed only when none is valid (preserving 'never operate on absent/stale data'). Reuse the exact downstream gate/check path so preflight and downstream can't diverge. Distinct from retry -- a rotated key survives every retry; a cached snapshot doesn't. (reliability-error-handling.md.)",
+      "expectations": [
+        "Does not rubber-stamp 'abort on any failure' as safe; compares the preflight strictness to the downstream staleness gate",
+        "Recommends degrading to last-good iff it passes the system's own downstream staleness gate, failing closed only when none is valid",
+        "Reuses the exact downstream gate path so the two can't diverge; notes this is distinct from retry",
+        "Fabricates no snapshot ages or gate thresholds beyond what the target defines"
+      ]
+    },
+    {
+      "id": "shared-component-divergent-props-across-mount-sites",
+      "prompt": "We use one shared Tile component everywhere -- it's fully DRY, one implementation. The votes chip shows on the main listing but not in the sidebar embedding. Both call sites are individually correct. Nothing to fix?",
+      "expected_output": "It's a consistency defect even though it's one component. A feature-bearing optional prop that defaults off, omitted at one mount site, makes the same concept render two ways -- the user reads it as cheap/inconsistent ('why here and not there?'), and the twin-search for duplicate implementations won't catch it because it IS one component. Enumerate EVERY mount site of the shared component and diff the props; a feature that should be universal belongs INSIDE the component (on wherever its data exists), not behind an opt-in a caller can forget. Review question: does this concept render identically at all its mount sites? Don't stop at 'it's one component.' (product-ux-quality.md, one component per concept.)",
+      "expectations": [
+        "Recognizes divergent optional-prop config across mount sites as a consistency defect despite a single shared component",
+        "Requires enumerating every mount site and diffing the props, not per-file review",
+        "Recommends moving a should-be-universal feature inside the component rather than leaving it an opt-in prop",
+        "Does not accept 'it's one component / DRY' as sufficient"
+      ]
+    },
+    {
+      "id": "variant-bloat-cut-to-one-default",
+      "prompt": "A diagram in our app exposes seven interchangeable style-toggle tabs so users can pick the look they like. More options = more powerful. Keep all seven?",
+      "expected_output": "N interchangeable ways to view/style one thing is a simplicity smell, not power -- the CHOICE is the defect, so the fix is cut to one strong default, not tune the set. Optionality reads as unfinished; strong products ship one good default and hide power behind progressive disclosure. Test: would a first-time user know why to pick one tab over another? If not, it's bloat. Distinguish redundant variants (overlapping style toggles) from genuinely different tools (a diagram vs a table serve different tasks -- keep both). Recommendation: pick one default treatment, move any genuinely-useful alternate behind progressive disclosure (a menu/setting), off the default surface. (product-ux-quality.md, stop-tuning / simplicity.)",
+      "expectations": [
+        "Flags N interchangeable variants of one thing as a simplicity smell (cut to one default), not as flexibility",
+        "Applies the first-time-user test to separate redundant variants from genuinely different tools",
+        "Recommends progressive disclosure for any retained alternates, off the default surface",
+        "Does not recommend tuning the individual variants"
+      ]
+    },
+    {
+      "id": "ux-completion-bar-is-felt-experience-not-gates",
+      "prompt": "UI milestone report: all sub-tasks merged, unit + headless-browser suites green, structural parity with the reference confirmed. Can I tell the owner the UI work is done?",
+      "expected_output": "Not on those proxies. Merged + tests-green + structural-match prove the code didn't regress a KNOWN assertion; they say nothing about whether the product is good to use. For UI/UX work the completion bar is the felt, in-flow experience -- exercised across the real screens (navigation cost, consistency, density, motion) -- not merge state or a passing suite. Don't emit 'done'/'milestone' keyed to proxies for subjective quality; state the specific rung instead ('merged + gates green' != 'the product is good'). Pre-'done' self-check: have I used this the way the user will, across the relevant screens, and what would they still call poor? If unanswered, it isn't done. (report-format.md, 'Beware the proxy.')",
+      "expectations": [
+        "Refuses 'done' claimed from merge-state / green suites / structural parity for subjective-quality UI work",
+        "Names the felt, in-flow experience (exercised across real screens) as the actual completion bar",
+        "Requires the pre-done self-check (used it as the user will, across screens; what would they still call poor)",
+        "States the specific rung reached instead of over-claiming a milestone"
+      ]
+    },
+    {
+      "id": "server-client-boundary-proxied-plain-value",
+      "prompt": "A tab strip renders as run-together unstyled text on a couple of routes, but typecheck, lint, and thousands of unit tests are all green and assert the right class string. The class tokens come from a shared module that has 'use client' at the top, imported by a server component. Is this just a CSS bug?",
+      "expected_output": "Suspect the server/client boundary before the CSS. A plain non-component value (here a class-string) exported from a 'use client' module and imported by a Server Component is silently replaced with a client-reference proxy: used as data on the server it yields a broken-but-not-crashing render (unstyled/empty), not a loud error. Every static gate misses it -- types are correct (typecheck passes), no lint rule (lint passes), and unit tests import the module in a plain non-RSC context where the value is real (they pass while asserting the very string proxied away at render). Confirm by rendering the real route through a real server/client split; the proxy's stringified form in the DOM (a function body where a class string belongs) is the tell. Fix: move shared plain values into a boundary-neutral module (no directive) both sides import; a client module should export only components/hooks across the boundary. (frontend-a11y.md, server/client boundary.)",
+      "expectations": [
+        "Identifies the server/client boundary (plain value proxied across it), not a CSS bug, as the root cause",
+        "Explains why typecheck/lint/unit all pass yet the surface renders broken -- gate-green is not evidence it renders across the boundary",
+        "Requires rendering the real split to confirm; names the DOM stringified-proxy tell",
+        "Recommends moving shared plain values into a boundary-neutral module (client modules export only components/hooks across the boundary)"
+      ]
     }
   ]
 }

@@ -68,6 +68,15 @@ surface it, don't impose it*).
   of two or three real directions is a decision the owner makes in seconds; a
   paragraph describing them is not. Product/redesign choices are owner decisions
   and never carry Blocker/Critical gate language (SKILL.md Phase 5).
+- **Variant/option bloat is the supply-side of the same smell.** N interchangeable
+  ways to view or style one thing — seven style-toggle tabs on one diagram, eight
+  overlapping list modes — reads as unfinished, not powerful: the *choice* is the
+  defect, so the fix is **cut to one strong default**, not tune the set. Test:
+  would a first-time user know why to pick one over another? If not it is bloat,
+  not flexibility. Distinguish redundant variants (overlapping modes, decorative
+  toggles) from genuinely different tools (a diagram vs a table serve different
+  tasks — keep both), and keep the power path reachable behind **progressive
+  disclosure**, off the default surface.
 
 ---
 
@@ -166,6 +175,22 @@ domain H) with a UX consequence, so it is ruled on here too.
   file the target route never renders; trace route → component and confirm the
   component is actually shown on that screen before editing it. Grep finds
   candidates; the render trace confirms (cross-ref `parallel-audit.md` §5).
+- **One component, divergent props, is the other half of inconsistency.** Even a
+  correctly-unified shared component reads as inconsistent when a **feature-bearing
+  optional prop defaults off** and some mount sites omit it — one listing passes
+  `votes` (the chip shows), a second embedding doesn't (no chip). Each render is
+  individually correct; together they look cheap, and the twin-search above won't
+  catch it because it *is* one component. For any shared component with a
+  feature-bearing optional prop, **enumerate every mount site and diff the props**;
+  a feature that should be universal belongs **inside** the component (on wherever
+  its data exists), not behind an opt-in a caller can forget. Review question:
+  "does this concept render identically at *all* its mount sites?" — don't stop at
+  "it's one component."
+- **In a port or migration, unification is a precondition, not a cleanup pass.**
+  Enumerate the shared concepts and adopt exactly one component per concept
+  **before** porting screens — a duplicated concept is a defect a reviewer *will*
+  find, and retrofitting unification while the owner watches is far slower and
+  noisier than building it once up front.
 
 ## Interaction-completeness — the loop must close
 

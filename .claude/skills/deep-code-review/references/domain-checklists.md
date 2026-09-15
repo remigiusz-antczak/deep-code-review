@@ -459,13 +459,21 @@ it when the target renders a product UI a human operates).
   one auth/data state. Check each call site's wrapper against the component's root
   element, and reproduce against the **SSR/static HTML in the specific state** (e.g.
   signed-out), not the convenient live DOM.
+- **Server/client boundary** (RSC / App Router and similar): a **plain
+  non-component value** exported from a `"use client"` module and imported by a
+  server component is silently replaced with a **client-reference proxy** — an
+  unstyled/empty render that passes typecheck, lint, and unit tests, caught only by
+  rendering the real split. Depth + the lint-shaped static check:
+  `frontend-a11y.md`.
 - 🚩 `<div onClick>` with no keyboard handler, missing labels, contrast failures,
   no loading/error state, secrets in the bundle, `localStorage` for tokens, an
   a11y/UX gate that computes accessible names from `innerText`/`textContent`
   instead of the accessibility tree, a name check that tests presence
   (`if (!name)`) but never shape, a `<p>`-rooted or block-level component mounted
   inside a `<p>` wrapper (or nested `<button>`/`<a>`) — a hydration error checked
-  in SSR/static output, not the auto-corrected live DOM.
+  in SSR/static output, not the auto-corrected live DOM; a plain value
+  (class-string / config / lookup) exported from a `"use client"` module and
+  imported by a server component (proven by rendering the real split, not by types).
 
 ### Q. Privacy, compliance & licensing → `references/privacy-compliance.md`
 Load the reference when the target stores, exports, or logs personal data, or when

@@ -93,6 +93,18 @@ explicit third choice), not which one this review prefers.
   mutates the operator's machine). Fix pattern: inject a store root, default
   tests to an OS temp dir, make cleanup signal-safe or use unique per-run dirs
   the OS reaps. Cross-ref domain G when the path is also a concurrent writer.
+- **Testing an outbound alert/webhook from a spawned job needs async spawn + a
+  localhost listener.** The natural test — run a scheduled/unattended job to a
+  failure and assert its alert fired with a privacy-safe body — deadlocks under
+  `spawnSync`: the blocking call freezes the test's event loop, so an in-process
+  `http.createServer` can't accept the child's POST *during* the run and the
+  request is never captured. Use async `child_process.spawn` (await `close`) so the
+  loop services child and listener concurrently; collect requests into an array and
+  assert after close. Keep it localhost (`127.0.0.1:0`, random port — no external
+  traffic) and assert the body carries only aggregate/privacy-safe fields (terminal
+  state, exit code, failed step *names*), **not** the failing command's output.
+  Pairs with domain W's liveness-alert requirement — the alert must exist; this
+  proves it fires, correctly and safely.
 - **Coherence test for necessarily-duplicated logic.** Where logic is mirrored
   (a port, a re-implementation, a circular-import copy), link the source of
   truth in a comment **and** add a test that runs one fixture through both paths
