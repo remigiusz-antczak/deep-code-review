@@ -166,6 +166,26 @@ and any wired security/dependency scanners. Then, before trusting "green":
   **conditions** (`parallel-audit.md`'s reproduce-at-low-concurrency), and from
   `report-format.md`'s `mechanism-unproven` (a fix you *could not* reproduce;
   this is a repro you *did* run, with the wrong mechanism).
+- **A green gate clears only the surface it enumerated — not one it never
+  visited.** A gate that ran and passed proves something about the routes,
+  states, and inputs its coverage set actually reached; a surface it never
+  enumerated (a route the sweep never requested, a state no fixture constructed,
+  a branch no test input exercises) is `unverified` under that green, not clean.
+  (A gate the config *declares* excluded is a different gap — enumerate those per
+  the gate-exclusion bullet above; this is the surface nothing pointed at.) Read
+  the gate's coverage set and confirm it **includes** the surface in question
+  before reading its pass as a clearance — SKILL.md principle 2 (*an absence is
+  evidence only after a positive control fires*) at gate-coverage scope. This is
+  the **unvisited** surface: distinct from a gate that cannot fail (above) and
+  from a probe that observed the wrong thing (detector fidelity, above) — here
+  the gate fails correctly, it was simply never pointed here.
+- **Lanes that pass in isolation do not clear their union.** Per-module,
+  per-lane, or per-flag gates each green on their own say nothing about the
+  integrated path they compose: a regression can live only in the combination —
+  a shared resource, an ordering, a flag interaction — that no single-lane run
+  exercises. Gate the **union that actually ships**, not only the parts; a suite
+  that only ever runs the parts has left the combination surface unenumerated
+  (same principle-2 scope: the union is a positive control no lane fired).
 - **Read the host CI, not only your own shell.** Fetch the base branch's latest
   pipeline conclusion (`gh run list --branch <base> --limit 5`, or the forge
   equivalent); "green locally" is not "green in CI" (different OS image, browser

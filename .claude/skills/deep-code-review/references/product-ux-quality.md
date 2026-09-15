@@ -97,6 +97,17 @@ visibility of system status; help users recover from errors.) `frontend-a11y.md`
 owns the *phrasing/consistency* of empty states across routes; this owns whether
 each state **exists and is honest**.
 
+**An empty state must not imply a conclusion it hasn't earned.** "No rows shown"
+is not "nothing happened": an empty activity feed, an all-green board with no
+data behind it, or a zero-count that is really an *uncollected* count all read to
+the user as "all clear / no risk / no activity" when the truth may be that the
+source was never queried. The empty state must distinguish *no data collected or
+covered* from *collected, and genuinely none* — SKILL.md principle 2 (*an absence
+is evidence only after a positive control fires*) at the UI layer. Name the
+coverage, not only the remedy: a bare "Nothing here" over an unprobed source is a
+false all-clear, not an honest empty. (`data-quality.md` §8 owns the same rule
+where the number is *scored* rather than *shown*.)
+
 ## Encoding hygiene — one visual channel per dimension
 
 Never make **one channel carry two meanings**. The classic bug: colour encoding
@@ -299,7 +310,7 @@ confidence number published as precision (confidence tier).
 
 ## Pre-ship checklist (mirror SKILL.md's report discipline)
 - [ ] Does it need explaining? If yes, redesign until it doesn't (or demote the text to progressive disclosure).
-- [ ] All five data states handled and honest — empty / loading / error / partial / overflow?
+- [ ] All five data states handled and honest — empty / loading / error / partial / overflow — and an empty state names its **coverage** (no-data-collected vs collected-and-genuinely-none), never implying a false all-clear?
 - [ ] One channel per dimension; nothing colour-only; reads correctly in greyscale?
 - [ ] Deltas are caret + magnitude, coloured by sentiment; flat is a muted `—` with a period anchor?
 - [ ] Confidence / score / priority shown as a **defined labeled tier** (text + a colourblind-safe cue), not a raw `%` or point score, and no model-authored number published as precision?

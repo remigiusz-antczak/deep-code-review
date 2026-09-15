@@ -199,6 +199,14 @@ rate), validity (schema/format/range). For each:
   delivers nothing, and unit tests pass because they feed the map the literals it
   expects. `SELECT DISTINCT` the real values and test against them before trusting
   the map.
+- **Carry a per-row coverage flag; keep each score glass-box.** A score computed
+  on partial inputs is a weaker claim than one computed on full inputs — stamp
+  each row with which inputs were actually present (a coverage / provenance flag)
+  so a consumer never reads a thin-input score as equal-confidence to a
+  fully-covered one, and keep the derivation inspectable (the inputs that drove
+  this row's number are recoverable), never an opaque scalar. Principle 2 at row
+  scope: a missing input is not a low input. (The *interpretation* rule — an
+  absent window is not a decline — is in §8; this owns the per-row mechanism.)
 
 ## 8. Measuring the outcome honestly
 
@@ -224,6 +232,15 @@ rate), validity (schema/format/range). For each:
   point estimate, when MAE is large relative to the decision range, and reject a
   self-refuting "±N" band — a band wider than the decision range is noise on
   screen.
+- **An absent window is not a decline — and recency must be monotone in elapsed
+  time.** A time/activity score must not read a coverage gap (no observation in a
+  window, a source that went quiet, a period not yet collected) as a substantive
+  low value ("declining", "churned", "at risk"): distinguish *observed-low* from
+  *unobserved* before the number implies a trend. And a recency/freshness score
+  must be **monotone in elapsed time** — more time since the last event can only
+  lower freshness, never raise it; a non-monotone recency curve manufactures false
+  "re-activation". Principle 2 again: the quiet window is evidence only once a
+  positive control confirms the source was actually read for it.
 
 ## 9. The model's role in a data pipeline (if any)
 
@@ -284,4 +301,6 @@ constructs; a ranker validated with **MAE** instead of concordance, or a "±N"
 band wider than the decision range; a config/enum map never tested against a
 `SELECT DISTINCT` of real source values; a fanout/uniqueness gate that
 blanket-blocks a newly-shared standing value; new enrichment scoped before
-existing-source coverage was measured.
+existing-source coverage was measured; a per-row score with no coverage/provenance
+flag or no recoverable derivation; a time/activity score that reads an unobserved
+window as a decline; a non-monotone recency curve.

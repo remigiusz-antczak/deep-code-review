@@ -3,6 +3,33 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.76.0] — 2026-09-16
+
+Wave 5 of the #143–#164 dogfooding batch: the coverage cluster. All five lenses
+apply one existing canonical kernel — principle 2, *"an absence is evidence only
+after a positive control fires"* (`SKILL.md`) — at five different scopes, and each
+**references** it rather than restating it (the anti-duplication thesis).
+
+### Added — deep-code-review
+- **`method.md`** — two gate-coverage axes. A green gate clears only the surface it
+  enumerated, not one it never visited: an unvisited route / state / branch is
+  `unverified` under that green, not clean, and is distinct from a config-declared
+  exclusion (#159). And per-lane / per-flag passes in isolation do not clear the
+  shipped union — a regression can live only in the combination no single-lane run
+  exercises (#158).
+- **`data-quality.md`** — §8: an absent activity window is not a decline (distinguish
+  observed-low from unobserved before a number implies a trend), and recency must be
+  monotone in elapsed time (#163). §7: carry a per-row coverage / provenance flag and
+  keep each score glass-box, so a thin-input score is not read as equal-confidence to
+  a fully-covered one (#164).
+- **`product-ux-quality.md`** — an empty state must name its coverage
+  (no-data-collected vs collected-and-genuinely-none), never imply a false all-clear
+  over an unprobed source (#156).
+- Four new behavioral evals: gate-coverage, lanes-vs-union, activity-absence,
+  empty-state-coverage.
+
+Closes #156, #158, #159, #163, #164.
+
 ## [1.75.0] — 2026-09-16
 
 Wave 4 of the #143–#164 dogfooding batch: confidence as a defined tier, not a

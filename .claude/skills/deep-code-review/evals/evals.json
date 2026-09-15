@@ -584,6 +584,47 @@
         "Flags a model-authored number published as precision",
         "Treats it as a UI-display defect distinct from how the tiers are defined"
       ]
+    },
+    {
+      "id": "gate-green-covers-only-enumerated-surface",
+      "prompt": "Our security gate and test suite are green on this release. Clear to ship the new admin route?",
+      "expected_output": "Green proves clearance only for the surface the gate actually enumerated -- confirm the new admin route was in the gate's coverage set. A route the sweep never requested, a state no fixture built, or a path a CI filter excluded is unverified under that green, not clean. Read the gate's coverage set and check it includes the admin route before reading the pass as a clearance; an absence is evidence only after a positive control fires (principle 2), at gate-coverage scope. This is the unvisited surface -- distinct from a gate that cannot fail and from a probe that observed the wrong thing. (method.md.)",
+      "expectations": [
+        "Does not accept a green gate as clearance for a surface the gate never enumerated",
+        "Requires confirming the specific route/state is in the gate's coverage set (CI path-filters, fixtures, sweep targets)",
+        "Marks an unenumerated surface unverified, not clean; fabricates no coverage it did not check"
+      ]
+    },
+    {
+      "id": "isolated-lanes-pass-union-untested",
+      "prompt": "Every module's unit tests pass in isolation and each feature flag works on its own. Good enough to ship the combined build?",
+      "expected_output": "Lanes green in isolation say nothing about the integrated path they compose -- a regression can live only in the combination (a shared resource, an ordering, a flag interaction) that no single-lane run exercises. Gate the union that actually ships, not only the parts; a suite that only ever runs the parts has left the combination surface unenumerated. Same coverage principle: the union is a positive control no lane fired. (method.md.)",
+      "expectations": [
+        "Does not accept isolated per-module/per-flag passes as clearing the integrated build",
+        "Names the combination (shared state, ordering, flag interaction) as the untested surface",
+        "Requires gating the shipped union, not only the parts"
+      ]
+    },
+    {
+      "id": "activity-absence-not-decline-per-row-coverage",
+      "prompt": "We score each account's engagement from activity signals. Accounts with no events in the last quarter get a low score and we surface them as 'declining.' Ship it?",
+      "expected_output": "Distinguish observed-low from unobserved before the number implies a trend -- no events in a window can mean the account declined OR that the source was never collected for that window, and reading a coverage gap as 'declining' manufactures a false trend (an absence is evidence only after a positive control fires, principle 2). Keep the recency component monotone in elapsed time -- more time since the last event can only lower freshness, never raise it, so a non-monotone curve fakes 're-activation.' And stamp each row with which inputs were actually present (a per-row coverage/provenance flag) so a thin-input score is not read as equal-confidence to a fully-covered one, keeping the derivation glass-box (the inputs that drove the number are recoverable). (data-quality.md.)",
+      "expectations": [
+        "Distinguishes observed-low from unobserved -- a coverage gap is not a decline",
+        "Requires the recency/freshness component to be monotone in elapsed time",
+        "Requires a per-row coverage/provenance flag so thin-input scores are not read as equal-confidence",
+        "Keeps the score glass-box (derivation recoverable); fabricates no trend from missing data"
+      ]
+    },
+    {
+      "id": "empty-state-names-coverage-not-false-all-clear",
+      "prompt": "The risk dashboard shows no flagged items and the activity feed is empty, so the board can report all-clear this quarter, right?",
+      "expected_output": "An empty view is not 'nothing happened' -- 'no rows shown' can mean the source was never queried, not that there is genuinely nothing. Distinguish no-data-collected-or-covered from collected-and-genuinely-none before anyone reads all-clear; a bare empty over an unprobed source is a false all-clear, not an honest empty (an absence is evidence only after a positive control fires, principle 2, at the UI layer). The empty state names its coverage, not only the remedy. (product-ux-quality.md.)",
+      "expectations": [
+        "Rejects reading an empty dashboard/feed as a substantive all-clear conclusion",
+        "Requires distinguishing no-data-collected/covered from collected-and-genuinely-none",
+        "Requires the empty state to name coverage (was the source actually probed), not imply a false all-clear"
+      ]
     }
   ]
 }
