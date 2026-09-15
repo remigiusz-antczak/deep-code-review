@@ -11,7 +11,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.71.0"
+  version: "1.72.0"
 ---
 
 # Deep Code Review
@@ -51,6 +51,8 @@ non-file-capable model also paste the `references/*.md` for the archetype.
   `.gitignore`**, a **loosened `Cache-Control`** on an identity-bearing
   response.
 - `FILE <paths>` — named files.
+- `PRIOR <path>` (modifier) — re-verify an earlier machine report first
+  (fixed / still-open / changed), then hunt: `references/machine-report.md`.
 
 **DIFF quick-path** — small self-contained diff you will fix immediately.
 Batch-mark untouched domains N/A; escalate on any blast-radius 🚩. Procedure:
@@ -174,7 +176,7 @@ review after the first-response block.
 | 2 Domain audits | Walk applicable A–W with `file:line`; fan-out under `parallel-audit.md` | `domain-checklists.md` + per-domain refs |
 | 3 Adversarial | Hostile user **and** hostile upstream; networked openers: anon GET, two-principal swap, dual-surface, then injection/SSRF | `security-appsec.md`, `security-ai-agents.md`, `security-agent-skills.md` |
 | 4 Synthesize | Dedup, compounds, snippet-or-drop at `START_SHA`, fail-open vs fail-closed, **anti-slop** | `method.md` |
-| 5 Report | Chat BLUF ≤30 lines + full table out-of-tree; in-repo `code-review/` only on confirmation | `report-format.md`, `example-review-report.md` |
+| 5 Report | Chat BLUF ≤30 lines + full table + machine report (coverage row per domain) out-of-tree; in-repo `code-review/` only on confirmation | `report-format.md`, `example-review-report.md`, `machine-report.md` |
 | 6 Imprint | Opt-in `AGENTS.md` + gates; detect-and-stop if present; pair each standard with a gate | `docs-and-dx.md` |
 
 Phase 6 imprints **this project's review bar**. It does **not** install

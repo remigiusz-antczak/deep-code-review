@@ -3,6 +3,45 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.72.0] — 2026-09-15
+
+Consumability: the review says what it did **not** look at as loudly as what it
+found, and its output can be read by a program. Distilled from field runs where
+this skill fed a multi-tool evaluation pipeline as one scanner beside a
+repo-readiness method and two deterministic instruments: no per-domain coverage
+in the output, no machine shape (each run hand-ported the table), no cross-run
+identity (the "none of the prior Criticals were fixed" result was a hand-written
+table), and fan-out output that drifted per run. No change to phases, domains,
+or the severity rubric.
+
+### Added — deep-code-review
+- **`references/machine-report.md`** — one YAML file per run beside the full
+  table (same ids and severities): per-finding `area`, `severity`, `polarity`
+  (gap / strength — the "Invariants verified to hold" rows), `confidence`
+  (`CONFIRMED` / `CORROBORATED` / `PLAUSIBLE` / `unverified`), `latent`,
+  `mechanism_unproven`, `compounds`, evidence, fix; a **coverage row for every
+  domain A–W** (the Phase-0 ledger reconciled at Phase 5, with finder +
+  lead-read on a fan-out); ground truth with what was not run and why; and
+  `prior_id` / `prior_status` / `prior_not_rechecked`. Same disclosure rule as
+  the report (out-of-tree by default; ids/severities/areas/coverage only on a
+  public remote). Routed from the scope modes, Phase 5, `report-format.md`,
+  `method.md`, and `parallel-audit.md` §3.
+- **`PRIOR <path>`** scope modifier — re-verify every finding of an earlier
+  machine report first (fixed / still-open / changed at `START_SHA`), list what
+  was not re-checked, then hunt.
+
+### Changed — deep-code-review
+- **`report-format.md`** — the findings report gains a `## Coverage` table
+  (one row per domain) and a `## Re-verification` table; the human-readable
+  scorecard gains a ⚪ "not checked this time" status so a traffic light never
+  implies coverage that did not happen.
+- **`method.md`** Phase 5 — emit the machine report with the full table; fill
+  coverage from the ledger; the `PRIOR` procedure.
+- **`parallel-audit.md`** §3 — units return findings and `checked_sound` as rows
+  in the machine-report shape; the lead merges into one report and one file.
+- Lockstep bump to **1.72.0** (deep-code-review, agentic-delivery, idea-critic,
+  plugin). Content: deep-code-review only.
+
 ## [1.71.0] — 2026-09-15
 
 Three more field learnings (#138–#140) from the peer dogfooding run, each

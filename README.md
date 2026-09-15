@@ -71,6 +71,12 @@ it more than a checklist:
   human-readable summary — a traffic-light health scorecard, the top risks in
   plain terms, and the decisions that need an owner — so a founder or lead can act
   without reading the diff.
+- **A machine report and a coverage row per domain.** Beside the table, a
+  YAML file a dashboard, an aggregator, or a CI gate can read: the same findings
+  with stable ids, plus, for every domain, whether it was scanned, partially
+  scanned, not scanned, or not applicable — so "nothing found" is never confused
+  with "never looked". Re-run with `PRIOR <file>` and every earlier finding is
+  re-verified first (fixed / still-open / changed).
 - **A durable bar (opt-in).** The imprint phase leaves standards + gates in the
   repo so quality holds on the *next* change, not just this one.
 

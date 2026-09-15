@@ -295,6 +295,17 @@ to deliver. **The two-artifact report is owed on `FULL`;** on a `DIFF`/`FILE` yo
 are also fixing, a compact `found → root cause → fix → re-gate` trail may stand in
 for the out-of-tree report (snippet-or-drop still applies).
 
+**Emit the machine report with the full table** (`references/machine-report.md`):
+the same findings and ids, plus **one coverage row per domain A–W** — the Phase-0
+ledger as reconciled here (`scanned` / `partial` / `not-scanned` /
+`not-applicable`, a note on every non-scanned row, finder + lead-read on a
+fan-out) — and the ground-truth results with what was not run and why. A domain
+with no row is not clean. Under `PRIOR <path>`, re-verify every prior finding
+first (fixed / still-open / changed at `START_SHA`), list what was not
+re-checked, then hunt; the report gains the `## Re-verification` table
+(`report-format.md`). Disclosure is the report's: out-of-tree by default; a copy
+committed on a public remote keeps ids, severities, areas, and coverage only.
+
 **Fix the failing layer, not the first plausible one.** A "missing value / blank
 field / missing tag" symptom on a rendered surface is not automatically a *render*
 bug — the render path is often already correct and the gap is one layer down: the

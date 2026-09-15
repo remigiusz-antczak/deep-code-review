@@ -1,6 +1,6 @@
 # Findings report — exact format
 
-Read this when writing Phase 5 artifacts (chat BLUF, full technical table, plain-language report). Templates and rules live here so `SKILL.md` stays the map.
+Read this when writing Phase 5 artifacts (chat BLUF, full technical table, plain-language report, and the machine report — `machine-report.md` holds that file's shape). Templates and rules live here so `SKILL.md` stays the map.
 
 ## Findings report — exact format
 
@@ -28,7 +28,26 @@ Counts: Blocker N · Critical N · High N · Medium N · Low N · Nit N
   `unverified`/skipped with reason — skip caps self-test only>
 - Lint/type/scan: <results>
 - Authz posture: <N entry points · anon probed N · cross-account M · untested: …>
-- Pipeline/app run: <before-state metrics, or N/A>
+- Pipeline/app run: <before-state metrics, or not-run + why>
+
+## Coverage
+| Domain | Status | Note |
+|---|---|---|
+| A | scanned | |
+| B | partial | mutating routes + webhook handlers only |
+| L | not-applicable | no IaC/containers in the tree |
+| P | not-scanned | outside the engagement's slices |
+<one row per domain A–W — the Phase-0 ledger reconciled at Phase 5; every
+non-`scanned` row carries a note; on a fan-out add finder id + lead-read. The
+same rows go into the machine report (`machine-report.md`). No findings in a
+domain means nothing until its row says `scanned`.>
+
+## Re-verification (when `PRIOR` is set)
+| Prior ID | Status | Now | Evidence |
+|---|---|---|---|
+| F1 | still-open | F1 | src/lib/aggregate.ts:486 |
+| F4 | fixed | F9 (invariant) | src/api/csv/route.ts:231 |
+Not re-checked: <prior ids, or "none">
 
 ## Findings
 | ID | Sev | Area | Location | Issue | Impact | Fix |
@@ -145,6 +164,16 @@ Sequence the findings **already listed above** by what to do for the current
 - <what was added/merged into AGENTS.md (and peer pointers) / gates / templates,
   or "not requested">
 
+## Machine report (rides with the full table)
+
+The same findings for a program: `findings-YYYY-MM-DD.yaml` beside the full
+table wherever that goes (out-of-tree by default; `code-review/` on the same
+confirmation), same ids and severities, plus the coverage row per domain and
+the ground-truth results including what was not run and why. Shape, field
+rules, the `PRIOR` re-verification linkage, and what a consumer may infer:
+`machine-report.md`. On a public remote a committed copy keeps ids, severities,
+areas, and coverage only — the same disclosure limit as the report.
+
 ## Human-readable report (default out-of-tree; in-repo on request)
 
 Alongside the machine-actionable report above, produce a **plain-language report a
@@ -192,7 +221,7 @@ part), give one status for each — e.g. "🟡 what runs today · 🔴 before tu
 ## Health at a glance
 | Area | Status | In plain words |
 |---|---|---|
-| Security | 🟢/🟡/🔴 | <e.g. "Strangers cannot reach other people's data" or "…they can — fix first"> |
+| Security | 🟢/🟡/🔴/⚪ | <e.g. "Strangers cannot reach other people's data" or "…they can — fix first"; ⚪ = not checked this time, say why> |
 | Correctness | 🟢/🟡/🔴 | <does it produce the right results?> |
 | Data quality | 🟢/🟡/🔴 | <is the data real, and never overwritten with something worse?> |
 | Speed & cost | 🟢/🟡/🔴 | <fast enough, and not paying for repeated/needless work?> |
@@ -229,7 +258,8 @@ short "clean up / finish / decide" list, not the technical commands.>
 bill, users blocked>
 
 ## How to read this
-🟢 fine · 🟡 improve soon · 🔴 fix before shipping. The full technical report,
+🟢 fine · 🟡 improve soon · 🔴 fix before shipping · ⚪ not checked this time
+(no news there is not good news). The full technical report,
 with exact file locations and fixes, is in <the findings above / the PR / link>.
 ```
 

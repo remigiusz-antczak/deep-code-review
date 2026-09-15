@@ -294,6 +294,12 @@ hand back a hundred confident inventions.
   a defect to look thorough. An affirmative claim must be as falsifiable as a
   defect claim — the lead re-verifies it (section 4), and it is the primary
   deliverable on a hardened target (SKILL Phase 5, "Invariants verified to hold").
+- **Return findings and `checked_sound` as rows in the machine-report shape**
+  (`machine-report.md` §2) for the unit's owned paths — never a verdict, a count
+  line, or report sections of the unit's own. The lead merges into **one** report
+  and **one** machine file and fills the coverage rows from the unit manifest;
+  per-unit reports concatenated end to end carry N verdicts and no run-level
+  coverage.
 
 ---
 
