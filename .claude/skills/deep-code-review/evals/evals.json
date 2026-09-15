@@ -465,6 +465,70 @@
         "Explains that a stale or partial reference yields confidently-wrong output that still passes its own gates",
         "Frames the check as the build-time analog of verify-before-you-report"
       ]
+    },
+    {
+      "id": "fanout-gate-distinguishes-corruption-from-shared-value",
+      "prompt": "Our field-integrity gate fails closed when a unique-per-company handle appears on two records. This refresh it flagged 33 violations, about 32 of them sub-teams that legitimately now share their parent org's handle, and blocked the publish. Lower the gate's strictness?",
+      "expected_output": "Don't lower or disable it -- refine what it hard-blocks. The gate is right that a unique-to-one value on two entities CAN be corruption, but it false-positives during legitimate coverage expansion: many related entities newly and correctly sharing one value (sub-teams adopting a parent org's handle -- co-branding) each trip the fanout arm. Distinguish the shapes: hard-block only a value ABSORBED from a now-departed distinct record (two records collapsed into one); for a newly-shared STANDING value among related entities, keep a human at the gate or a small reviewed allowlist, and stop re-refusing an unchanged standing shared value every run (that just gets the gate switched off). Never 'green' the run by lowering the baseline -- acknowledge the intended shared values explicitly, per field, with a reason. (data-quality.md.)",
+      "expectations": [
+        "Refuses to lower or disable the gate or its baseline to pass the run",
+        "Distinguishes corruption (a value absorbed from a now-departed distinct record) from a legitimately newly-shared standing value among related entities",
+        "Hard-blocks only the corruption shape; routes legitimate shared values to a human or a reviewed allowlist",
+        "Flags re-refusing an unchanged standing shared value every run as what gets the gate disabled"
+      ]
+    },
+    {
+      "id": "measure-existing-coverage-before-new-enrichment",
+      "prompt": "We're scoping a set of paid scrapers and enrichment APIs to hit a coverage target for our company list. The plan is ready -- greenlight the spend?",
+      "expected_output": "Measure existing-source coverage for that exact list first -- re-querying your internal warehouse is frequently the largest, cheapest lever and can match a from-scratch enrichment plan's target at zero marginal cost, often surfacing already-reconciled fields (a stable entity id, dated events, location) the working copy lacks. Scope the external, paid acquisition to the measured RESIDUAL only. A plan that adds scrapers before measuring what you already have over-scopes -- and paid calls sit behind free/keyless pre-gates and the usual spend caps regardless. (data-quality.md.)",
+      "expectations": [
+        "Requires measuring existing-source (warehouse) coverage for the target set before scoping new acquisition",
+        "Identifies re-querying existing data as the largest and cheapest coverage lever",
+        "Scopes external or paid enrichment to the measured residual only",
+        "Treats the pre-measurement plan as over-scoped"
+      ]
+    },
+    {
+      "id": "no-name-join-and-test-config-maps-vs-real-values",
+      "prompt": "Two data-integrity things in this pipeline: (a) we resolve companies by matching on the name string, and (b) we have a geography-to-multiplier lookup. Unit tests for both pass. Ship?",
+      "expected_output": "Both are traps that pass unit tests while failing in production. (a) Never resolve identity on a bare name string -- namesake collisions merge distinct records, and a wrong merge is worse than a missed one. Resolve by stable id, then normalized domain/handle, then a name only as a last resort behind a collision (namesake) guard, and surface the unresolved/ambiguous count as a first-class output. (b) Test the geography-to-multiplier map against the source's REAL value distribution: if it's keyed on region names while the source emits ISO-3166 alpha-2 codes (plus lowercase and placeholders), it silently no-ops -- carrying its cost, delivering nothing -- and unit tests pass because they feed it the literals it expects. SELECT DISTINCT the real values and test against those. (data-quality.md.)",
+      "expectations": [
+        "Rejects name-string identity joins; requires stable id then normalized domain then name-behind-a-collision-guard, with the unresolved count surfaced",
+        "Requires testing the enum/config map against the source's real value distribution (SELECT DISTINCT), not chosen literals",
+        "Explains that a mis-keyed map silently no-ops while unit tests still pass",
+        "Treats a passing unit test as insufficient for either trap"
+      ]
+    },
+    {
+      "id": "backtest-proxy-metric-vs-ground-truth",
+      "prompt": "We built a runway estimate from public proxies (last-round size / headcount x burn). Unit tests pass and the formula looks sound. Ship it as a ranking signal?",
+      "expected_output": "Not until you backtest it against ground truth -- a plausible proxy formula that passes unit tests can be near-useless for its actual job. For any derived or scored value from indirect proxies, require a validation step in review that reports MAE / correlation / base-rate against real self-reported actuals. Unit tests prove the math; only a backtest proves the value. If it can't rank (large MAE, weak correlation, a base rate far off the real one), demote or gate it -- a coarse band plus 'corroboration-required' -- rather than shipping it as a ranker. (data-quality.md.)",
+      "expectations": [
+        "Requires a ground-truth backtest (MAE / correlation / base-rate vs actuals) before shipping a proxy-derived metric",
+        "Distinguishes unit tests proving the math from a backtest proving the value",
+        "Demotes or gates a metric that fails the backtest instead of shipping it as a ranker"
+      ]
+    },
+    {
+      "id": "ordinal-rank-validated-by-concordance-not-mae",
+      "prompt": "Our score correlates with the target at about r=0.34 -- weak but real. MAE is too big to show a point estimate on the 0-24 month runway we're predicting, so we'll publish the estimate with a +/-22 month band. Validate it with MAE and ship?",
+      "expected_output": "Don't publish a point estimate or a +/-22-month band -- on a 0-24-month decision range that band is self-refuting noise on screen. A weak-but-nonzero predictor can still be useful as an ORDINAL RANK. Validate the ranking with concordance / a C-index against an OBSERVABLE binary event ('raised within 6 months', 'shut down within 6 months') -- not MAE on the noisy latent quantity, which measures the wrong thing. Emit an ordinal tier, not a number, when MAE is large relative to the decision range. Match the validation metric to the claim the score actually makes. (data-quality.md.)",
+      "expectations": [
+        "Rejects the point estimate and the band when the band is wide relative to the decision range",
+        "Requires validating rank quality with concordance / a C-index against an observable binary event, not MAE",
+        "Outputs an ordinal tier rather than a point estimate when MAE is large relative to the decision range",
+        "Frames it as matching the validation metric to the claim the score makes"
+      ]
+    },
+    {
+      "id": "split-composite-score-never-sum-heterogeneous",
+      "prompt": "We're rolling raise-timing and financial-distress into one 'urgency' score by summing them, so a high number means 'act now.' Good?",
+      "expected_output": "Don't sum them -- they're heterogeneous constructs that imply OPPOSITE actions, so one blended number manufactures false positives and hides which action is warranted. Raise-timing overdue means 'introduce to investors'; distress/contraction means 'triage or support.' A record high on one and low on the other averages to a middling 'urgency' that tells you nothing. Score each construct separately and derive the action from the combination -- a 2x2 or tiering -- never from one summed number. (data-quality.md.)",
+      "expectations": [
+        "Refuses to sum heterogeneous constructs into one composite score",
+        "Explains the constructs imply opposite actions, so a blended number hides which is warranted",
+        "Requires scoring each construct separately and deriving the action from the combination (a 2x2 or tiering)"
+      ]
     }
   ]
 }

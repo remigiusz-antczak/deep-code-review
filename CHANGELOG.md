@@ -3,6 +3,30 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.73.0] — 2026-09-16
+
+Wave 2 of the #143–#164 dogfooding batch: six data-quality review lenses, all in
+`deep-code-review/references/data-quality.md`, each pre-distinguished from the
+section it extends.
+
+### Added — deep-code-review
+- **`data-quality.md`** — six lenses:
+  - a fanout/uniqueness gate false-blocks legitimate coverage expansion — hard-block
+    only a value *absorbed from a now-departed distinct record*, not a newly-shared
+    *standing* value among related entities (#149);
+  - the resolution order when no stable id exists, and surfacing the unresolved
+    count as a first-class output (#153a);
+  - never sum heterogeneous constructs into one composite score (#162);
+  - test every enum/config mapping against the source's real value distribution,
+    not the literals a unit test feeds it (#153b);
+  - backtest a proxy-derived metric against ground truth before shipping, and match
+    the validation metric to the claim — an ordinal rank validated by concordance /
+    a C-index, not MAE (#151, #161);
+  - measure existing-source coverage before scoping new enrichment/scrapers, and
+    scope to the measured residual (#152).
+  - Plus new 🚩 red-flag detectors and a Cyrillic-to-Latin typo fix.
+- Six new evals (deep-code-review 45 → 51).
+
 ## [1.72.0] — 2026-09-15
 
 Wave 1 of a new dogfooding batch (#143–#164): five field lenses from peer
