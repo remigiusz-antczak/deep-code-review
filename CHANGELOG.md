@@ -3,6 +3,37 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.95.0] — 2026-09-16
+
+Wave 16 of the dogfooding batch: resource-aware fan-out and lane discipline — an
+orchestrator that scales a write fan-out by lane count burns hours of spend while the
+integration head never moves (#235, #236, #237, #238). All in agentic-delivery.
+
+### Added — agentic-delivery
+- **`fast-agentic-delivery.md` — cap in-flight write lanes by landed artifacts**
+  (#235). Lane progress is a durable artifact (pushed branch / PR / committed diff),
+  never a running transcript; status is "M landed, K in flight, head at `<sha>`", not
+  "N lanes running"; admission is earned by completion (a WIP limit, a delivery-ratio
+  drain), not by machine headroom.
+- **`fast-agentic-delivery.md` — gate a fan-out on the swap trend, not a free-RAM
+  reading** (#237). Sharpens the existing swap section: free-RAM% fails open under
+  thrash (a post-mitigation number, healthiest under worst load), so sample swap twice
+  for direction, let free RAM corroborate a stop but never authorize a spawn, add free
+  disk and live-lane count to the probe, and treat a collapse in work rate as the
+  resource signal.
+- **`fast-agentic-delivery.md` — a worktree is a resource with a lifecycle** (#236).
+  Teardown is part of the lane contract; the orchestrator owns garbage collection, but
+  GC is advisory and approval-gated (proposes removals, refuses uncommitted-work
+  candidates), never an autonomous destructive sweep; free disk and worktree count are
+  ceilings the spawn probe enforces.
+- **`fast-agentic-delivery.md` — queue new requirements to a file, don't interrupt a
+  running lane** (#238). Extends the acknowledge-the-burst rule: new scope goes to a
+  durable file the lane polls at its checkpoints; interrupts are reserved for
+  stop/redirect; scope is frozen per deliverable; repeated re-briefs mean split the
+  lane, not send a third.
+
+Two new agentic-delivery evals (22 total). Lockstep bump to 1.95.0.
+
 ## [1.94.0] — 2026-09-16
 
 Wave 15 of the dogfooding batch: an export / print / share-image feature is a second

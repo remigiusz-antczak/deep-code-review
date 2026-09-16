@@ -58,6 +58,30 @@ wide, mechanical batch, run a handful of lanes first, fix what the pilot
 exposes, then commit the rest of the width — cheaper than discovering a bad task
 boundary after the full width is already running.
 
+## Cap in-flight write lanes by landed artifacts, not lane count or headroom
+
+The decomposition rule above sizes the *total* lanes against objectives; this caps
+the *in-flight* write lanes against what has actually **landed**. Its failure is
+**hours of real spend with the integration head unchanged** — many concurrent write
+lanes spawned and re-prompted, yet only a fraction ever reach the remote. "N lanes
+running" is the orchestrator's own activity, not delivery, and it worsens with
+concurrency: each write lane pays env-setup + install + boot + (for UI) a browser
+gate largely **serial on the machine**, so past a point a new lane delays every lane;
+and routing/dedup/reconcile of N lanes consumes the coordinator — the only actor that
+integrates.
+
+- **Lane progress is a durable artifact** — a pushed branch, an opened PR, a committed
+  diff on the integration branch — **never a running transcript** (the
+  transcript-is-not-liveness rule below, applied to delivery rather than health). A
+  lane with no artifact has produced nothing, however busy it looks.
+- **Report the artifact, not the activity** — the status is "**M landed, K in flight,
+  head at `<sha>`**", never "N lanes running."
+- **Admission is earned by completion** — hold write lanes to a small WIP limit
+  (default low; a WIP limit is an *enabling* constraint, Sources) and don't spawn lane
+  N+1 while N are in flight with zero artifacts. Check the delivery ratio (landed ÷
+  spawned) each interval; near-zero for a full interval means **stop spawning and
+  drain** (finish or kill what's in flight and integrate what exists), never add lanes.
+
 ## Gate on free RAM and the swap trend — `load1` is not a reliable signal alone
 
 `SKILL.md`'s environment probe states the act-on predicate — free RAM and the
@@ -88,6 +112,52 @@ signal, never the deciding term, because it cannot distinguish CPU
 contention from disk I/O. Whatever the exact predicate, **spawn one heavy
 lane at a time, re-sample after a settle window, then decide on the next** —
 never compute a ceiling and dispatch straight up to it.
+
+**Sharpenings from a later thrash — 84% free RAM while swap sat ~76% consumed and
+nothing landed for hours.** The ~15%-free-RAM floor above is a **veto, not a licence**:
+free RAM may *corroborate a stop* but must **never authorize a spawn** — it is a
+post-mitigation number (paging, cache eviction, and compression have already run), so
+under this kind of thrash, where dying lanes release RAM as the machine fails, it can
+read healthiest exactly as delivery collapses. The swap trend (sampled twice for
+direction, as above) stays the primary gate. Add to the probed predicate **free disk,
+worktree count, and live-lane count** — a fan-out sized against memory alone dies of
+disk (worktree lifecycle, below). And treat a collapse in observable **work rate** —
+lanes not completing, tool calls timing out, nothing landing — as itself the resource
+signal, outranking any green metric (distinct from the delivery-ratio drain above:
+that asks whether lanes convert to artifacts, this asks whether the machine can still
+run them; a nothing-landing stretch trips both).
+
+## A worktree is a resource with a lifecycle — creation without teardown leaks it
+
+Worktree-per-lane is the right isolation, but a worktree is a **resource with a
+lifecycle**, and nothing in the fan-out pattern ends it. The failure is **disk
+exhaustion that halts every lane at once — including the integration lane that would
+have landed the work** — arriving without warning after a per-lane-creates,
+nobody-destroys run accumulates hundreds of worktrees and tens of GB. Checkout and
+status degrade as the registry grows; stale worktrees masquerade as in-flight work (an
+entry in `worktree list` proves only that something *once* ran — cross-check a real
+liveness signal, the transcript-is-not-liveness rule below); and worktree-held
+branches escape the usual merged-branch cleanup.
+
+- **Teardown is part of the lane contract, stated at spawn** — on success, after the
+  artifact is pushed, the lane removes its worktree; on failure/abandonment it removes
+  the worktree only after **capturing any uncommitted work** (the non-destructive rule
+  below — committed work survives on the branch ref, but truly-uncommitted work is lost
+  to `git worktree remove`). A lane that cannot guarantee teardown runs under a
+  supervisor that does.
+- **The orchestrator owns garbage collection**, because lanes die in ways that skip
+  their own cleanup — but GC is **advisory and approval-gated, never an autonomous
+  destructive sweep** (the same confirm-before-shared-state bar as any delete). At an
+  interval it **proposes** removals with the exact command — registry entries whose
+  directory is gone; worktrees whose branch is merged, whose PR is closed, or idle
+  past a threshold **and** holding no uncommitted changes — and executes only on
+  explicit approval.
+- **GC is non-destructive toward uncommitted work** — a candidate holding uncommitted
+  changes is refused (or its diff archived and reported first). Reclaiming space must
+  never become the mechanism that loses a lane's only copy of its work.
+- **Scratch is a probed resource** — free disk and worktree count are ceilings the
+  spawn probe enforces (the swap-trend section above); this section keeps that term
+  from going red, it does not re-specify how to read it.
 
 ## Sweep the whole ready queue on every trigger, not just the triggering item
 
@@ -341,6 +411,31 @@ each burst, the **first** action is to capture every item into a visible tracked
 list and reply with the ordered plan plus what is already in flight; **dispatch
 second**. One honest "captured all N, here is the order, these three are already
 running" beats silent parallelism. Acknowledge first, optimise throughput second.
+
+## Queue new requirements to a file the lane polls — interrupt only to stop or redirect
+
+The burst rule above captures incoming feedback to a tracked list; when that feedback
+is **new scope for a running lane**, the list must be a **durable file the lane polls
+at its own checkpoints**, not an interrupt. The failure it prevents is **a lane busy
+for hours that ships nothing** — a single implementation lane interrupted and
+re-briefed a half-dozen times, each ask legitimate, each landing mid-orient so the
+lane restarts its orientation and never reaches a commit; and each message *grows*
+scope while retiring none, so the definition of done recedes faster than the lane
+implements.
+
+- **New scope goes to a file, not a message** — a checklist in the repo or an agreed
+  scratch path the lane reads at its checkpoints, finishing the unit it is on before
+  picking up the queue. A requirement buried in a transcript is only as durable as the
+  lane.
+- **Interrupt only for a genuine control signal** — stop, abandon, or a correction
+  that invalidates work in progress. "Also do X" is not a control signal.
+- **Freeze scope per deliverable** — a lane ships against the scope it was given;
+  later asks are the next increment. Prefer a **shippable slice that then stops** over
+  a consolidated deliverable with no stopping point — the slice lands artifacts under
+  exactly the conditions where the growing lane lands none.
+- **Count the re-briefs** — more than one or two scope-extending messages to the same
+  in-flight lane is the signal that the scope was mis-sized: **split it**, don't send a
+  third.
 
 ## An ownership map blocks a dual *write*, not dual *work* — and "assigned" is not "in progress"
 

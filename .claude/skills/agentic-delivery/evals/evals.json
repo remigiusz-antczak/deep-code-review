@@ -201,6 +201,28 @@
         "Requires checking for an active lane on the objective before starting, not just file ownership",
         "Requires announce-then-take: claim the objective before opening the worktree, not after"
       ]
+    },
+    {
+      "id": "free-ram-percentage-fails-open-under-thrash",
+      "prompt": "I'm sizing a heavy write fan-out on a shared machine. My probe reads 84% free RAM -- comfortable -- so I'm about to spawn three more lanes. (Swap is ~76% consumed but I only glanced once; the session has felt slow and nothing has landed in a while.) Green light?",
+      "expected_output": "No -- don't spawn. Free-RAM percentage fails open under thrash: it is a post-mitigation number (the OS has already paged out, evicted caches, and compressed memory to relieve pressure), so it reads healthiest exactly when the machine is most degraded. 84% free with swap ~76% consumed and nothing landing is a machine already shedding load. Gate on the SWAP TREND, sampled at least twice seconds apart, on its computed DIRECTION not its level -- swap that is climbing stops the spawn even at high free RAM. Free RAM may corroborate a STOP but must never on its own authorize a SPAWN. And the other two signals here already say stop: the session is slow and nothing has landed -- an observed collapse in work rate IS the resource signal and outranks any green metric. Probe free disk, worktree count, and the live-lane count too (a fan-out sized against memory alone dies of disk), and re-probe before each spawn -- never compute a ceiling once and burst up to it. (fast-agentic-delivery.md.)",
+      "expectations": [
+        "Refuses the spawn despite 84% free RAM; names free-RAM% as a post-mitigation figure that fails open under thrash",
+        "Gates on the swap TREND sampled twice (direction, not level); free RAM may corroborate a stop but never authorize a spawn",
+        "Treats the slow session / nothing-landing as a work-rate-collapse resource signal that outranks the green metric",
+        "Adds free disk, worktree count, and live-lane count to the probe and re-probes before each spawn"
+      ]
+    },
+    {
+      "id": "queue-requirements-dont-interrupt-a-running-lane",
+      "prompt": "I have one implementation lane running a consolidated deliverable. The owner keeps sending new requirements -- this is the fifth 'also add X' in a couple hours. My instinct is to interrupt the lane and re-brief it each time so its scope stays current. It hasn't produced a branch or commit yet. Right approach?",
+      "expected_output": "No -- interrupt-and-re-brief is why it has shipped nothing. Each interrupt lands mid-orient and that partial state isn't resumable, so the lane restarts its orientation every time; and each 'also add X' grows scope while retiring nothing, so its definition of done recedes faster than it can implement. Queue new requirements to a durable FILE the lane polls at its own checkpoints (a checklist in the repo or an agreed scratch path), not into an interrupt -- it finishes the unit it's on, then picks up the queue. Reserve interrupts for genuine control signals: stop, abandon, or a correction that invalidates work in progress; 'also do X' is not one. Freeze the scope per deliverable -- later asks are the next increment -- and prefer a shippable slice that then stops over a consolidated deliverable with no stopping point. Finally, the fifth re-brief is itself the signal: more than one or two scope-extending messages means the scope was mis-sized -- split it, don't send a sixth. (fast-agentic-delivery.md.)",
+      "expectations": [
+        "Rejects interrupt-and-re-brief; explains each interrupt restarts orientation and each ask grows scope so done recedes",
+        "Queues new scope to a durable file the lane polls at checkpoints, not an interrupt",
+        "Reserves interrupts for control signals (stop/abandon/invalidating correction); freezes scope per deliverable, later asks = next increment",
+        "Reads the repeated re-briefs as a mis-sized-scope signal -- split the lane, don't send another"
+      ]
     }
   ]
 }
