@@ -183,7 +183,29 @@ and any wired security/dependency scanners. Then, before trusting "green":
   non-empty result is not proof the layer ran"), from repro-fidelity w.r.t.
   **conditions** (`parallel-audit.md`'s reproduce-at-low-concurrency), and from
   `report-format.md`'s `mechanism-unproven` (a fix you *could not* reproduce;
-  this is a repro you *did* run, with the wrong mechanism).
+  this is a repro you *did* run, with the wrong mechanism), and from repro-fidelity
+  w.r.t. the **build environment** (the production-build bullet next).
+- **Reproduce a built-artifact finding against the build it audits, not the dev
+  server.** The same rule at the environment axis: an audit gate that scores the
+  **production build** (a bundled/minified deploy artifact) can surface a real defect
+  — a control obscured by a sticky header, a WCAG focus-not-obscured failure — that
+  the **dev server never shows**, because minification, CSS ordering, hydration
+  timing, and asset paths differ between them. A dev-server "I can't reproduce it"
+  does **not** refute a production-build finding; reproduce against the same artifact
+  the gate scored (build it, or hit the deployed/preview URL), the way the local≠CI
+  rule names the divergent axis (below). Chasing it on the dev server fixes the wrong
+  tree, or dismisses a live defect.
+- **Re-validate a carried-forward finding before repeating it — a finding without a
+  re-run is a hypothesis.** A finding captured at one SHA (the report's `START_SHA`,
+  `report-format.md`) is current only for that tree; before repeating it in a later
+  session, re-check the `file:line` still exists at HEAD **and** re-run the gate or
+  probe that surfaced it. Carried forward unchecked it is `unverified`, not
+  still-open, and the report's `START_SHA` is what tells a follow-up what to re-check
+  against. It prevents two failures: repeating a finding **already fixed** in the
+  intervening commits (a false positive that spends the owner's trust), and — worse —
+  repeating one that **changed or worsened** as if unchanged, which over-claims a
+  **trust-critical** status (rate that *claim*, not the staleness). A "still open"
+  status holds only at the current SHA.
 - **A green gate clears only the surface it enumerated — not one it never
   visited.** A gate that ran and passed proves something about the routes,
   states, and inputs its coverage set actually reached; a surface it never

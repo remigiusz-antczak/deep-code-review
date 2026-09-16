@@ -3,6 +3,34 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.91.0] — 2026-09-16
+
+Wave 12c of the dogfooding batch: evidence freshness — reproduce a finding against the
+build and SHA it came from, and validate the receipt (#206, #209, #217).
+
+### Added — deep-code-review
+- **`method.md` — reproduce a built-artifact finding against the build it audits, not the
+  dev server (#206).** The environment axis of reproduction fidelity (sibling of the
+  gate's-own-detector and local≠CI rules): a production-build audit finding (a control obscured
+  under a sticky header, a WCAG focus-not-obscured failure) often will not appear on the dev
+  server — minification, CSS order, hydration, asset paths differ. A dev-server "can't reproduce"
+  does not refute it; reproduce against the built artifact or the deployed/preview URL.
+- **`method.md` — re-validate a carried-forward finding before repeating it (#217).** A finding
+  captured at an earlier `start_sha` is a hypothesis until re-checked: confirm the `file:line`
+  still exists at HEAD and re-run the surfacing gate before repeating it. Repeating an
+  already-fixed finding is a false positive; reporting a worsened one as unchanged over-claims a
+  trust-critical status (rate the claim). A "still open" status holds only at the current SHA.
+- **`report-format.md` — the report records its capture SHA (#217).** A `Reviewed at (start_sha)`
+  line in the ground-truth block, matching the machine report's field, so a later session knows
+  what to re-verify each finding against.
+- **`product-ux-quality.md` — the UI receipt must be a valid non-empty image (#209).** A
+  proxy/504-wiped screenshot stub passes a bare existence check but proves nothing (existence is
+  not content — principle 2); and capture from a clean or separate tree, since a shots script
+  that stashes discards the diff under review.
+- Two new evals (88 total). Lockstep bump to 1.91.0.
+
+Closes #206, #209, #217.
+
 ## [1.90.0] — 2026-09-16
 
 Wave 12b of the dogfooding batch: coordination and stacked-PR hygiene — an ownership map

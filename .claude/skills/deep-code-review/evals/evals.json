@@ -908,6 +908,28 @@
         "Requires the second PR to rebase onto the merged first and rebuild from combined source (superset fold), not layer a partial build",
         "Flags generated-artifact PRs as superset-fold-required while a sibling source PR is open"
       ]
+    },
+    {
+      "id": "revalidate-carried-forward-finding-before-repeating",
+      "prompt": "A follow-up review session. The prior report (captured at SHA a1b2c3) lists a Blocker: a missing authz check at api/orders.ts:88. The branch has since advanced 20 commits. Can I carry that Blocker into the new report as still-open?",
+      "expected_output": "Not without re-validating it -- a finding carried forward from an earlier SHA without a re-run is a hypothesis, not a confirmed defect. The prior report resolves at its START_SHA (a1b2c3); the tree is now 20 commits ahead, so before repeating the Blocker: (1) re-check that api/orders.ts:88 still exists and still has the gap at HEAD (the line may have moved or the code may be gone), and (2) re-run the gate or probe that surfaced it. Carried forward unchecked it is unverified, not still-open. Two things go wrong if you skip this: the finding may already be FIXED in the 20 commits (repeating it is a false positive that spends the owner's trust), or it may have CHANGED or worsened while you report it unchanged -- reporting a worsened finding as still-open over-claims a trust-critical status; rate that claim, not the staleness. A 'still open' status is only valid at the current SHA -- so record the new report's START_SHA and re-verify each carried finding against it. (method.md.)",
+      "expectations": [
+        "Refuses to carry the finding forward as still-open without re-running it; a carried finding without a re-run is a hypothesis (unverified)",
+        "Requires re-checking the file:line exists at HEAD AND re-running the surfacing gate before repeating",
+        "Names both failure modes: repeating an already-fixed finding (false positive) and reporting a worsened one as unchanged (trust-critical over-claim)",
+        "Grounds validity at the current SHA and records the report's start_sha for the next re-verification"
+      ]
+    },
+    {
+      "id": "reproduce-audit-finding-against-production-build",
+      "prompt": "A layout-audit gate that runs against our production build flags a focused control as fully obscured under the sticky header (WCAG focus-not-obscured), at several viewports. I ran the dev server and the control looks fully visible every time -- I can't reproduce it. Is the gate finding a false alarm I can dismiss?",
+      "expected_output": "No -- don't dismiss a production-build finding because the dev server can't reproduce it. The gate scored the PRODUCTION build (bundled, minified, deployed-style); the dev server is a different artifact -- minification, CSS ordering, hydration timing, and asset paths differ, so a sticky-header overlap real in the built output often does not appear in dev. This is repro fidelity at the ENVIRONMENT axis (the sibling of reproducing with the gate's own detector, and of the local-vs-CI divergence rule): reproduce against the same artifact the gate scored -- build the production bundle and inspect it, or hit the deployed/preview URL -- not the dev server. A dev-server 'looks fine' is unverified against the built surface, not a refutation. Chasing it on the dev server either fixes the wrong tree or dismisses a live accessibility defect. (method.md.)",
+      "expectations": [
+        "Refuses to dismiss the production-build finding on a dev-server non-repro; the dev server is a different artifact",
+        "Names why they diverge (minification, CSS order, hydration, asset paths) -- the environment axis of reproduction fidelity",
+        "Requires reproducing against the same artifact the gate scored (production build or deployed/preview URL)",
+        "Treats the dev-server 'looks fine' as unverified against the built surface, not a refutation"
+      ]
     }
   ]
 }
