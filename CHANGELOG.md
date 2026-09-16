@@ -3,6 +3,42 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.90.0] — 2026-09-16
+
+Wave 12b of the dogfooding batch: coordination and stacked-PR hygiene — an ownership map
+locks writes, not work; a shared generated artifact needs a superset fold (#210, #212,
+#213, #214).
+
+### Added — deep-code-review
+- **`branch-and-merge-hygiene.md` — attribute a stacked PR's CI failure to the commit that
+  owns it (#210).** A PR stacked on another runs its base's commits too, so a base-introduced
+  failure turns the downstream red for nothing. Find which commit the failing step is in
+  (`git log <merge-base>..<head>` is the PR's own diff; an ancestor commit is the base PR's
+  defect) — attribute it to the base PR and never commit the fix downstream (it double-patches
+  once the base merges). Composes with 12a's "a run names the SHA it graded."
+- **`branch-and-merge-hygiene.md` — a shared generated artifact needs a superset fold, not two
+  independent writes (#212).** The existing regenerate-don't-hand-splice rule fires on a
+  conflict; the worse case fires on none — two open PRs each rebuild a derived artifact
+  (`out/`, a lockfile, `app/data/`) from a shared source, both merge cleanly, and the second
+  silently drops the first's regeneration. Trigger: a PR regenerates an artifact while another
+  open PR touches the same source (found via `gh pr list --limit 500`). Fix: rebase onto the
+  merged first and rebuild (superset fold).
+
+### Added — agentic-delivery
+- **`fast-agentic-delivery.md` — an ownership map blocks a dual *write*, not dual *work* (#213).**
+  Sharpens the SKILL.md occupancy rule: a module-ownership map answers who may write where, not
+  whether a lane is already building the objective; a forge assignment is intent, not progress
+  (`assigned` ≠ `in-progress`). Check for an active lane on the objective, and announce-then-take
+  (claim before opening the worktree).
+- **`fast-agentic-delivery.md` — a fan-out ETA states its parallelism assumption (#214).** A
+  serial ETA on parallel lanes (or the reverse) is off by ~N×; state the parallelism assumption,
+  the constraint that caps it, and both parallel/serial numbers when uncertain. A one-number ETA
+  with an unstated assumption is unearned precision — prefer a stated appetite (G0).
+
+Two new evals (deep-code-review 86, agentic-delivery 20). Lockstep bump to 1.90.0.
+
+Closes #210, #212, #213, #214.
+
 ## [1.89.0] — 2026-09-16
 
 Wave 12a of the dogfooding batch: a gate is only *run* when its enforcing surface can

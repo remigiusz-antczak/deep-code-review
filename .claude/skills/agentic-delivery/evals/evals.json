@@ -190,6 +190,17 @@
         "Offers the one-tree fallbacks -- gitignore/untrack the rewritten path, or stop-and-restore before commit -- and prefers a schema/shape assertion over exact bytes",
         "Distinguishes the serve-vs-commit deadlock from build-against-served-dir and from out-of-tree-scratch metadata crossing"
       ]
+    },
+    {
+      "id": "ownership-map-is-write-lock-not-work-lock",
+      "prompt": "An agent is about to start on a feature. The repo's module-ownership map says its lane owns api/, and the GitHub issue for the feature is assigned to it. No draft PR exists, no worktree is open, and there are no commits yet. Is it clear to open a worktree and start building?",
+      "expected_output": "Not on that evidence alone. The ownership map is a write-lock, not a work-lock: 'this lane owns api/' says who may WRITE api/, not whether someone is already BUILDING this feature (possibly from other files, like web/ or a shared lib). And a forge assignment is intent, not progress -- an assigned issue with no draft PR, no worktree, and no commits is unclaimed in practice (assigned != in-progress). Before opening the worktree, check for an active lane on the OBJECTIVE (not just file ownership): running workers, open/draft PRs, git worktree list. Then announce-then-take -- claim the objective with a draft PR or a posted 'taking this' BEFORE opening the worktree, never after; take-then-announce races two lanes onto the same work. (fast-agentic-delivery.md.)",
+      "expectations": [
+        "Distinguishes the ownership map (write-lock on a file) from a work-lock on the objective",
+        "Treats the assignment as intent not progress (assigned != in-progress) given no draft PR/worktree/commits",
+        "Requires checking for an active lane on the objective before starting, not just file ownership",
+        "Requires announce-then-take: claim the objective before opening the worktree, not after"
+      ]
     }
   ]
 }

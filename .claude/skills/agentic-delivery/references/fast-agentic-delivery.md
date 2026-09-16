@@ -342,6 +342,35 @@ list and reply with the ordered plan plus what is already in flight; **dispatch
 second**. One honest "captured all N, here is the order, these three are already
 running" beats silent parallelism. Acknowledge first, optimise throughput second.
 
+## An ownership map blocks a dual *write*, not dual *work* — and "assigned" is not "in progress"
+
+The *Worktrees and occupancy* rule in `SKILL.md` (claim the work before starting,
+one writer per worktree) prevents two lanes **writing the same file**. It does not
+prevent two lanes **working the same objective** from different files: a module-
+ownership map saying "lane A owns `api/`, lane B owns `web/`" answers *who may write
+where*, not *is anyone already building this*. Read as a work-lock, it spawns a
+duplicate lane on a feature already in flight. Before starting, check for an
+**active lane on the objective**, not just file ownership — and treat a forge
+**assignment as intent, not progress**: an assigned issue with no draft PR, no
+worktree, and no commits is unclaimed in practice (`assigned` ≠ `in-progress`).
+**Announce-then-take:** claim the objective (a draft PR, or a posted "taking this")
+**before** opening the worktree, never after — take-then-announce races two lanes
+onto the same work.
+
+## An ETA on a fan-out states its parallelism assumption — a serial estimate on parallel lanes is a fabrication
+
+An estimated completion time for a multi-lane plan is meaningless without the
+assumption under it: "done in 20 minutes" assuming N lanes run in parallel is off by
+about N× when a resource cap (RAM, token budget, one CI slot — the same ceilings
+that size the fan-out above) forces them serial. State three things with any
+fan-out ETA — the **parallelism assumption** (N in parallel, or sequential), the
+**constraint that caps it**, and, when that constraint is uncertain, both the
+**parallel-optimal and serial-fallback** numbers. A one-number ETA with an unstated
+parallelism assumption is unearned precision: the owner schedules against it and is
+wrong, the same over-claim as a status that names no surface. Prefer a stated
+**appetite** — a time-box the work is shaped to fit (`SKILL.md` G0) — over a bare
+estimate wherever the work can be shaped.
+
 ---
 
 ## Sources

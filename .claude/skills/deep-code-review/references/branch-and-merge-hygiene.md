@@ -254,6 +254,20 @@ Read the check's **conclusion**, never the bare colour; a required check with no
 for this PR is a **High** merge-blocker in its own right — name it a config gap (the
 check is unsatisfiable as wired), not a flake to wait out.
 
+### On a stacked PR, attribute a CI failure to the commit that owns it
+
+A PR stacked on another (B's base is A's branch, not the mainline) contains A's
+commits, so B's own CI runs them too — and a failure A introduced turns B red
+without B changing anything. Before diagnosing (or "fixing") a red on a stacked PR,
+find which commit the failing step belongs to: `git log <merge-base>..<head>` is the
+PR's **own** diff, and a failing step in an **ancestor** commit from the base branch
+is the **base PR's** defect, not this one's. (Knowing which *run* the red is even
+for is the companion rule — a run's conclusion names the SHA it graded, `method.md`.)
+Attribute it to the base PR and let it fix there; **never commit the fix onto the
+downstream PR** — once the base merges the same fix lands twice, a double-patch or a
+conflict. A stacked PR is only truly green once its base has merged and it has been
+re-run on the mainline.
+
 ## 6 — Safety rails (acting on the triage is destructive / shared-state)
 
 Triage is **advice**; carrying it out mutates shared state. Under `SKILL.md`
@@ -285,6 +299,18 @@ explicit approval** — the same opt-in bar as the Phase 6 imprint.
   until a much later read (cross-ref domain H: a generated/source pair needs a
   parity test or a single generated source so this doesn't drift over time —
   this is the same failure at the moment of a merge conflict, not over time).
+- **Two PRs regenerating the same artifact can both be valid with *no* conflict — a
+  silent regression, not a merge error.** The rule above fires on a conflict; the
+  worse case fires on none. When two open PRs each rebuild a derived artifact
+  (`out/`, a lockfile, a compiled index, `app/data/`) from a shared source tree,
+  each writes a valid file from its **own** base, git merges both cleanly, and
+  whichever lands second **silently drops the first's regeneration** — nothing marks
+  it. Trigger to watch: this PR regenerates an artifact **and another open PR touches
+  the same source** that produces it (`gh pr list --state open --limit 500` — the
+  `--limit` matters, §1). Fix: the second PR **rebases onto the merged first and
+  rebuilds** from the combined source (a superset fold), never layering its own
+  partial build. Flag a generated-artifact PR as **superset-fold-required** while a
+  sibling source PR is open.
 - **Never rewrite shared history.** Rebase/force-push only branches that are
   personal and undepended-on. When a force is genuinely needed, it is
   **`git push --force-with-lease`** (refuses if the remote moved under you), never

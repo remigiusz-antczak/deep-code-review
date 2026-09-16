@@ -897,6 +897,17 @@
         "Identifies the config gap: a path-filtered required check must emit a conclusive status for out-of-scope paths (or not be required for that PR class)",
         "Rates it a High merge-blocker config gap; generalizes to trigger-event gaps (labeled-only, workflow_dispatch rollup)"
       ]
+    },
+    {
+      "id": "sibling-prs-shared-artifact-superset-fold",
+      "prompt": "Two open PRs both rebuild out/registry.json (a compiled artifact) from source files under units/. Each was branched off main independently and each committed its own rebuilt registry.json. They merge with no conflict. Is that safe?",
+      "expected_output": "No -- this is the silent-regression case, worse than a conflict. Each PR rebuilt out/registry.json from its OWN base, so each file is valid on its own; git merges both cleanly (no conflict marks), and whichever lands second silently drops the first PR's regeneration -- the first's units/ changes vanish from the compiled artifact with nothing to flag it. The trigger to catch it in review: a PR regenerates a derived artifact (out/, a lockfile, a compiled index, app/data/) AND another open PR touches the same source that produces it -- find the siblings with `gh pr list --state open --limit 500` (the --limit matters; a default page truncates). Fix: the second PR rebases onto the merged first and REBUILDS from the combined source (a superset fold), never layering its own partial build. Flag any generated-artifact PR as superset-fold-required while a sibling source PR is open. (branch-and-merge-hygiene.md.)",
+      "expectations": [
+        "Identifies the silent no-conflict regression: the second merge drops the first's regeneration of the shared artifact",
+        "Names the trigger -- a PR regenerating an artifact while another open PR touches the same source -- and finds siblings with gh pr list --limit 500",
+        "Requires the second PR to rebase onto the merged first and rebuild from combined source (superset fold), not layer a partial build",
+        "Flags generated-artifact PRs as superset-fold-required while a sibling source PR is open"
+      ]
     }
   ]
 }
