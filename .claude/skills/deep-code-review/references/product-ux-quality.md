@@ -344,7 +344,7 @@ confidence number published as precision (confidence tier).
 - [ ] Verified live in the running product, in more than the happy-path state — **including the default state a user lands on** (signed-out / no-role / default route / local default), not only a mock or a hand-picked persona view?
 - [ ] Any "matches / exact / parity" claim checked against the **default served state** as the canonical surface — and if it rests on a non-default surface, does it **name** that surface and say the default was not checked?
 - [ ] "Looks the same" backed by a **rendered-appearance** diff of the default state vs the reference (screenshot / computed styles), **not** section-presence, DOM order, a passing test, or loaded data — and stating **which axis** (structure / styling / content / data) the evidence covers, without "fixing" data to answer a styling complaint?
-- [ ] Parity task: differences classified **structural vs cosmetic** (structural parity first; a structural divergence **never** called "close / 1:1"); every "matches" claim gated on a **mechanical differ** (diff image + structured mismatch list attached, not an assertion); reference read at its **highest fidelity** (running build > source > screenshot); and **no mock sample value copied** into the product?
+- [ ] Parity task: differences classified **structural vs cosmetic** (structural parity first; a structural divergence **never** called "close / 1:1"); every "matches" claim gated on a **mechanical differ** (diff image + structured mismatch list attached, not an assertion); reference read at its **highest fidelity** (running build > source > screenshot); **no mock sample value copied** into the product; and the differ run **both ways** (design→app and app→design), both lists empty (an app-only element is a defect, not a bonus)?
 - [ ] Did **not reconfigure the default** (persona / seed / flag / env) and then claim "verified on the default" — checked the pre-existing default and disclosed any change to it?
 - [ ] Every styling / placement delta enumerated in **one** side-by-side pass and fixed against that inventory — not piecemeal-fix-then-redeclare-done?
 - [ ] Told "not the same" → **asked which axis** before acting (after one wrong guess, asked not guessed), and compared the **reference itself** at the element × breakpoint × theme, not from memory?
@@ -525,9 +525,28 @@ task:
    numbers would flag real data as a mismatch and tempt the fix that fabricates
    (`migration-parity.md`). What it **cannot** prove: an intentional improvement from
    a regression, and its pixel threshold is **agreed, not derived** — a human still
-   owns the ship call. *Done* on a parity task = the differ reports zero structural
-   mismatches and a pixel delta under the agreed threshold for every screen in the
-   correspondence table, with those diff images attached — never an assertion.
+   owns the ship call. **Parity is *set equality*, not containment — run the
+   present-or-absent list above in *both* directions.** Produce it per screen as
+   **design → app** (what the design has that the app lacks) *and* **app → design**
+   (what the app renders that the design does not); an element on exactly one side is
+   a finding **regardless of which side**, and the app→design half is the one that
+   gets skipped. The **operative test** for an app-only element — *does removing it
+   lose a user capability?* If **no**, it is pure **chrome** (an extra header, a
+   "Showing N of N" line, a duplicated label): default **remove-to-match**, and
+   "intentional extra" is the rationalisation that ships the mismatch. If **yes** (a
+   per-card upvote, a filter bar, a view tab, a deep-link button — removing it removes
+   upvoting, filtering, navigating), it is a **feature**: **escalate to the owner**,
+   never self-certify either way, and `migration-parity.md`'s
+   *preserve-a-real-extra-feature* rule governs the call (a mockup is a look
+   reference, not a feature spec — don't self-cut a working feature to match one).
+   Scope all of this to **chrome / features**; **data** (values, counts, series)
+   legitimately differs (`migration-parity.md`). *Done* on a parity task = the
+   design→app list is empty; the app→design list is empty **or every entry is an
+   owner-adjudicated feature** (a bare app→design list is not an automatic differ
+   fail — the differ can't tell an intentional improvement from a regression, so that
+   half routes to human adjudication); and the pixel delta is under the agreed
+   threshold for every screen in the correspondence table, with those diff images
+   attached — never an assertion.
 
 Ship these **idempotent and additive**, per Phase 6 — detect-and-stop if
 present, add only what is missing, defer to an existing style guide (the parity

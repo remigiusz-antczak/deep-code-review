@@ -3,6 +3,24 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.82.0] — 2026-09-16
+
+Wave 10 of the dogfooding batch: design parity is bidirectional (#189).
+
+### Added — deep-code-review
+- **`product-ux-quality.md`** — the parity differ must check **set equality, not
+  containment**: run the mismatch list in both directions per screen (design→app AND
+  app→design), and don't wave through app-only elements as "intentional extras". The
+  operative test for an app-only element is *does removing it lose a user capability?*
+  — pure shell (an extra header, a "Showing N of N" line) defaults to
+  remove-to-match; a capability-bearing element (a filter bar, view tabs, per-card
+  upvote arrows) is a feature that **escalates to the owner** (never self-cut to match
+  a look reference — `migration-parity.md`'s preserve-a-real-feature rule). The
+  app→design list routes to owner adjudication, not an automatic differ fail. One new
+  eval (#189).
+
+Closes #189.
+
 ## [1.81.0] — 2026-09-16
 
 Wave 9 of the dogfooding batch: assert the property, not its proxy (#187, #188).

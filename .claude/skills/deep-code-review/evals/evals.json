@@ -765,6 +765,17 @@
         "Runs the identical reduced config on the merge-base as the baseline axis",
         "Names which config and which baseline the failure belongs to"
       ]
+    },
+    {
+      "id": "parity-is-set-equality-flag-app-only-elements",
+      "prompt": "Our differ confirmed every element and control in the design is present in the app, so we signed off parity. (The app also renders an extra header, view tabs, a filter bar, a 'Showing N of N' line, and per-card upvote arrows the design doesn't have -- but those are intentional extra functionality.) Good?",
+      "expected_output": "No -- that checked only one direction (design subset of app) and missed the other (app subset of design). Visual parity is SET EQUALITY, not containment: an element present on exactly one side is a finding regardless of which side, and 'intentional extra functionality' is the rationalization that ships the mismatch. Diff both ways per screen, list what the app renders that the design doesn't, then apply the operative test to each app-only item -- does removing it lose a user capability? Pure shell loses none: the extra header and the 'Showing N of N' line default to remove-to-match. Capability-bearing chrome IS a feature, not a bonus: the view tabs (navigating), the filter bar (filtering), and the per-card upvote arrows (upvoting) each escalate to the design owner -- never self-certify, and don't self-cut a working feature to match a look reference (migration-parity's preserve-a-real-feature rule). Scope this to chrome/features; data (values, counts, series) legitimately differs. Sign-off needs the design->app list empty and the app->design list empty or every entry an owner-adjudicated feature. (product-ux-quality.md.)",
+      "expectations": [
+        "Rejects a one-directional (design subset of app) check; requires diffing app->design too",
+        "Applies the operative test -- does removing an app-only element lose a user capability?",
+        "Classifies the filter bar, view tabs, and per-card upvote arrows as capability-bearing features to escalate, not shell to delete",
+        "Removes pure shell (extra header, 'Showing N of N' line) to match, but escalates features to the owner rather than self-cutting or self-certifying"
+      ]
     }
   ]
 }
