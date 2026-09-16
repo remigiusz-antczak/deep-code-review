@@ -400,7 +400,9 @@ turns "we have the rules" into "we applied them everywhere."
 
 1. **Enumerate every route** — from the router tree **and** the nav manifest (a
    route in one but not the other is itself a finding), including detail overlays
-   and tabbed sub-views.
+   and tabbed sub-views — **and every export path** (download / print /
+   copy-as-image): each is a second render surface, ruled as its own surface
+   (below), not across this route matrix.
 2. **Render each across the matrix** — this is the matrix the layout-invariant
    checks (Enforcing gate, below) refer to: **{~390px, ~1440px} × {light, dark} ×
    {top, mid-scroll}**, plus any **state transition** a route has (loading→loaded,
@@ -419,6 +421,35 @@ turns "we have the rules" into "we applied them everywhere."
    them (`migration-parity.md`, *Scope a parity claim to the correspondence table*).
    Group findings by root
    cause: a class spanning many routes is **one** systemic finding, not forty.
+
+## Export / print / share is a second render surface
+
+A **download / print / copy-as-image** feature emits the view through a *different*
+code path than the screen — canvas/`toDataURL`, SVG serialisation, a `@media print`
+stylesheet — so a green on-screen render says nothing about the artifact the user
+actually walks away with. It silently **clips** content past the viewport, **drops**
+axis/legend/labels that lived only in interactive chrome, ignores the current
+**theme**, or exports an empty/partial view as a blank image. Treat each export path
+as a review surface in domain P (the sweep above already enumerates them):
+
+- **Find the export paths** — grep `toDataURL`/canvas capture, SVG
+  serialisation, `@media print`, and `download`/`export`/`copy image` handlers.
+- **Produce the artifact and inspect it like a route** — no clip of content that
+  extended past the viewport; **axis / scale / legend / labels baked in** (an
+  interactive-only readout — the hover value+date the *Data visualization* rule
+  above requires — needs a *static* equivalent in the export); **theme** honored or
+  explicitly normalised; and enough **title / as-of / context** that the artifact is
+  self-describing out of its app.
+- **Every data state exports honestly** — an empty or partial view exports with its
+  honest label, never a blank canvas (*Every data state*, applied to the export).
+- **Mechanise where you can** — snapshot the exported artifact's dimensions and the
+  presence of its key elements (axis text, legend), held to the same
+  could-not-check-vs-found-nothing discipline as the enforcing gate's heuristics.
+
+This is a *different* axis from reproducing an audit finding against the production
+build (`method.md` verifies *which build the reviewer reads*; this inspects an
+artifact the *product emits*), and it is where the data-viz checklist above is most
+often lost — the on-screen chart carries axes and a readout the serialiser drops.
 
 ## Pre-ship checklist (mirror SKILL.md's report discipline)
 - [ ] Does it need explaining? If yes, redesign until it doesn't (or demote the text to progressive disclosure).
@@ -445,6 +476,7 @@ turns "we have the rules" into "we applied them everywhere."
 - [ ] UI change: headed-browser receipt on the exact route after the action (screenshot or equivalent) — and the receipt is a **valid non-empty image**, not a proxy/504-wiped stub that passes a bare existence check (existence is not content — `SKILL.md` principle 2), captured from a **clean or separate tree** (a shots script that stashes uncommitted changes discards the very diff under review)? Unit tests alone are not this box.
 - [ ] **Layout invariants hold across the sweep's matrix** — no content under sticky chrome, gutters present, optional slots reserve space, no reflow on a state change, tabular numerals in columns — checked **mid-scroll and on state transitions**, both themes, not only at the top of a fresh desktop render; and **footprint tracks information** (no empty record at a populated card's size; grid dense enough at the wide viewport)?
 - [ ] **Charts are legible** — a value axis or direct labels, a **keyboard-reachable** hover/focus readout of value + its date/category, real samples marked and no trend implied across sparse points — and **interaction states are consistent per component class** (hover/active/focus parity across instances; every hover affordance also reachable by keyboard and touch; tooltips add information, not a repeat of the label)?
+- [ ] **Every export / print / share path inspected as its own surface** — the downloaded artifact doesn't clip off-viewport content, bakes in the axis/legend/labels that live only in interactive chrome, honors or normalizes the theme, is self-describing (title / as-of), and exports each data state honestly (never a blank canvas)?
 
 ## Parity claims: the default state is the canonical surface
 

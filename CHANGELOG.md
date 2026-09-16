@@ -3,6 +3,23 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.94.0] — 2026-09-16
+
+Wave 15 of the dogfooding batch: an export / print / share-image feature is a second
+render surface, produced by a different code path than the screen and never inspected
+— so the artifact a user downloads clips content, drops the axes/legend that lived
+only in interactive chrome, ignores the theme, or exports a blank image (#232).
+
+### Added — deep-code-review
+- **`product-ux-quality.md` — export / print / share is a second render surface**
+  (#232). Enumerate every download/print/copy-as-image path (`toDataURL`/canvas, SVG
+  serialisation, `@media print`) and inspect the produced artifact like a route: no
+  clip of off-viewport content, axis/legend/labels baked in (an interactive-only
+  readout needs a static equivalent), theme honored or normalised, self-describing,
+  and every data state exported honestly. Folded into the rendered route sweep (#227)
+  as "also render every export path"; a distinct axis from the production-build repro
+  rule. One Pre-ship line and one eval (96 total).
+
 ## [1.93.0] — 2026-09-16
 
 Wave 14 of the dogfooding batch: assembled-product visual review — the domain-P rules

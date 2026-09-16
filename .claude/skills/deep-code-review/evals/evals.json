@@ -1007,6 +1007,17 @@
         "Also rules the chart's legibility: value axis or direct labels, a keyboard-reachable value+date readout, non-visual access to the numbers",
         "Notes gate 1's overlap/colour inspection is structurally blind to chart legibility"
       ]
+    },
+    {
+      "id": "export-artifact-is-a-second-render-surface",
+      "prompt": "Our dashboard has an 'export chart as PNG' button. The on-screen chart looks great -- axes, a hover readout, correct theme, no clipping, all verified in the running app and green in the gate. The export uses a canvas toDataURL path. Do I need to check the downloaded PNG separately, or does the green on-screen render cover it?",
+      "expected_output": "Check the downloaded PNG separately -- an export is a SECOND render surface, emitted by a different code path (canvas/toDataURL, SVG serialisation, or an @media print stylesheet) than the screen, so a green on-screen render says nothing about the artifact the user walks away with. Produce the artifact and inspect it like a route: it commonly CLIPS content past the viewport, DROPS the axis/legend/labels and the hover readout that lived only in interactive chrome (chrome rendered outside the serialised root -- an HTML legend or tooltip -- or, for a canvas capture, anything not painted to the bitmap), ignores the current THEME (a light chart exported on a dark page), or exports an empty/partial view as a blank canvas. Rule the domain-P checklist on the PNG itself: no clip, axis/scale/legend/labels baked in (an interactive-only readout needs a static equivalent in the export), theme honored or explicitly normalised, self-describing title/as-of, and every data state exported honestly (never a blank image). Where mechanizable, snapshot the export's dimensions and the presence of its key elements (axis text, legend), held to the could-not-check-vs-found-nothing discipline. This is distinct from verifying which build the reviewer reads (method.md) -- here you inspect an artifact the product emits. (product-ux-quality.md.)",
+      "expectations": [
+        "Requires inspecting the exported artifact separately -- a green on-screen render does not cover the export's different code path",
+        "Names the failure modes: clip past the viewport, dropped axis/legend/readout chrome, ignored theme, blank-canvas empty state",
+        "Rules the domain-P checklist on the artifact itself (baked-in axes/labels, theme honored/normalised, self-describing, honest data states)",
+        "Distinguishes it from reproducing an audit finding against the production build (this inspects an artifact the product emits)"
+      ]
     }
   ]
 }
