@@ -3,6 +3,29 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.86.0] — 2026-09-16
+
+Wave 11d of the dogfooding batch: budget the CI an agent swarm triggers (#195).
+
+### Added — deep-code-review
+- **`parallel-audit.md` — budget the CI a fan-out triggers (#195).** A write fan-out
+  that opens many small PRs, each re-triggering the full browser/a11y/e2e matrix,
+  multiplies shared runner minutes without improving review. New section: prefer one
+  reviewable PR per concern; keep draft iteration on a cheap, path-filtered gate and
+  reserve the expensive matrices for a `full-ci` label / manual dispatch / the final
+  merge gate; cancel superseded runs with a concurrency group keyed by PR/ref; keep a
+  documented one-command local full suite and require the labelled full run before
+  merging an app change. **Path filters must fail closed** — a filter that skips a gate
+  on an unknown path is a gate exclusion (`method.md`), and privacy/security checks are
+  never path-filtered out. **State the residual risk** — the cheap gate will not catch
+  browser-only regressions until the full run, so an unrun matrix is `unverified`, not a
+  pass (principle 2). The wasted-runner-minutes cost is **Medium**, batched as one
+  finding (`branch-and-merge-hygiene.md` §7); only the fail-open filter carries higher
+  severity.
+- One new eval (80 total). Lockstep bump to 1.86.0.
+
+Closes #195.
+
 ## [1.85.0] — 2026-09-16
 
 Wave 11c of the dogfooding batch: coordinate a parallel restyle fan-out (#194) — own

@@ -831,6 +831,17 @@
         "Requires the shell to land first, with page lanes rebasing onto it",
         "Flags a page lane editing an unowned shared-shell path as a finding even when its diff is correct"
       ]
+    },
+    {
+      "id": "budget-aware-ci-for-agent-swarm",
+      "prompt": "Our agent swarm is restyling 12 screens. Plan: each lane opens its own small PR as it finishes, and CI runs the full browser + a11y matrix on every push to every PR. That's 12 PRs, fast to review individually. Good CI plan?",
+      "expected_output": "No -- 12 fragment PRs each re-triggering the full browser/a11y matrix multiplies shared runner minutes without improving review (the same matrix runs 12 times on work that could review once). Report it ONCE as a cost defect in the fan-out's shape (batched, not one finding per PR), with the staged remedy: prefer one reviewable PR per concern; keep draft iteration on a cheap, path-filtered gate and reserve the browser/a11y matrix for a full-ci label / manual dispatch / the final pre-merge gate; add a concurrency group keyed by PR/ref to cancel superseded runs; keep a one-command local full suite and require the labelled full run before merging an app change. Two hard constraints: path filters must FAIL CLOSED on an unknown path (a filter that skips the gate is a gate exclusion -- a green gate over an unfiltered path is a false pass), and privacy/security checks are never path-filtered out. State the residual risk explicitly -- the cheap gate will NOT catch browser-only regressions until the local or labelled full run, so an unrun matrix is unverified, not a pass. Severity is Medium (recoverable runner cost), not High; only the fail-open filter or a filtered-out security check carries higher severity. (parallel-audit.md.)",
+      "expectations": [
+        "Rejects 12 fragment PRs each triggering the full matrix; reports it once as a batched cost defect, not per-PR",
+        "Prescribes the staged pattern: one PR per concern, cheap path-filtered draft gate, browser/a11y reserved for a full-ci label / dispatch / merge gate, concurrency-group cancellation, local full suite plus labelled full run before merge",
+        "Requires path filters to fail closed (a skip is a gate exclusion) and never path-filters out privacy/security checks",
+        "States the residual risk (cheap gate misses browser-only regressions until the full run; an unrun matrix is unverified) and rates the cost Medium not High"
+      ]
     }
   ]
 }

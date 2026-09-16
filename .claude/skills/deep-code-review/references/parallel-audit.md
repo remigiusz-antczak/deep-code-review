@@ -2,8 +2,9 @@
 
 Read this when the target is large enough to review across **parallel
 subagents** (a `FULL` run of a large repo, or several focused domain passes at
-once). A fan-out is very effective — but without a strict contract it manufactures
-plausible-but-fake findings and re-derives project context N times. Expands the
+once), **or when reviewing how an agent *write* fan-out shapes its PRs and the CI
+budget it spends** (§6). A fan-out is very effective — but without a strict contract it
+manufactures plausible-but-fake findings and re-derives project context N times. Expands the
 "Review mechanics" note in `SKILL.md`; it operationalizes the "a second opinion
 should be decorrelated" principle at scale.
 
@@ -409,6 +410,52 @@ security-critical claims itself:
   target never runs is wasted work that also leaves the real surface — the one
   that does render — still broken. The lead applies this to any finding whose
   severity rests on the cited line being live.
+
+---
+
+## 6. Budget the CI a fan-out triggers — one reviewable PR per concern, staged gates
+
+A write fan-out that opens **many small PRs**, each re-triggering the **full**
+browser / a11y / e2e matrix, multiplies shared runner minutes without improving
+review — the same matrix runs N times on work one PR would have reviewed once. On a
+repo with a shared GitHub Actions (or equivalent) budget, that is a **cost defect in
+the fan-out's *shape***, reported **once** with a remedy — not one finding per PR (the
+*batch routine cleanup as one finding* discipline, `branch-and-merge-hygiene.md` §7):
+
+- **Prefer one reviewable PR per concern** over many fragment PRs. Work that only
+  makes sense reviewed together is one PR; splitting it to parallelize writers just
+  multiplies CI with no review gain. (The security/permission/authz diff still rides
+  its **own** small PR for a decorrelated reviewer — Delivery, below — a *review*
+  split, not a budget one.)
+- **Keep draft iteration on a cheap, path-filtered gate;** reserve the expensive
+  **browser / a11y / e2e matrices** for a readiness signal — a `full-ci` label, manual
+  dispatch, or the final pre-merge gate — not every push to every draft.
+- **Cancel superseded runs** with a concurrency group keyed by PR/ref, so a new push
+  does not leave its predecessor's full matrix running.
+- **Path filters must fail closed.** A filter that **skips** a gate on an
+  *unrecognized* path silently drops it — a **gate exclusion**, and a path filter is
+  exactly the config `method.md`'s *enumerate what the gates exclude* rule tells you to
+  audit separately; its correctness severity is inherited from there, not from this
+  cost section. **Privacy and security checks are never path-filtered out**, on any
+  path.
+- **Keep a documented one-command local full suite,** and require the **labelled full
+  run** before merging an app change — the cheap gate speeds iteration without becoming
+  the merge bar.
+
+**State the residual risk — not optional.** Staged CI trades **coverage for cost**:
+the cheap path-filtered gate **will not catch browser-only regressions** until the
+local or labelled full run executes. A staged-CI recommendation that does **not name
+the uncovered regression class** is incomplete — an unrun matrix is `unverified`, not a
+pass (`SKILL.md` principle 2: an absence is evidence only after a positive control
+fires).
+
+**Severity.** The wasted-runner-minutes cost is **Medium at most**, batched as one
+finding with the staged-pattern remedy. The **fail-open path filter** and a
+**path-filtered-out security check** are separate findings carrying their own, higher
+severity from the gate-coverage and confidentiality canon — not from this cost section.
+Signals: many fragment PRs each triggering the full matrix; a path filter that skips
+(not fails) on an unknown path; a privacy/security check behind a path filter; a "green
+CI" claim resting on a draft gate that never ran the browser matrix.
 
 ---
 
