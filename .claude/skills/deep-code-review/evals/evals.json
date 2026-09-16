@@ -787,6 +787,28 @@
         "Names deleting app-only functionality without a named owner approval as a High do-no-harm finding (blocks unless an owner accepts)",
         "Requires classifying each app-only element (decoration / functionality / owner-approved) via the exception ledger before implementing, citing migration-parity.md"
       ]
+    },
+    {
+      "id": "parity-claim-names-served-tree",
+      "prompt": "I'm reviewing a visual restyle a write lane committed in its own worktree (branch feat/restyle). A dev server is already running on http://localhost:3000 -- but it was launched from the owner's own checkout, which is on main and never pulled feat/restyle. Can I tell the owner 'the restyle is live, open localhost:3000 to see it'?",
+      "expected_output": "No. That URL is serving the owner's tree (main), not the tree under review (feat/restyle) -- the change never rendered there, so 'it's live, open localhost:3000' is a claim about the wrong surface: true about your branch, false on every surface the owner can open. Name the verification surface explicitly -- url-or-port, tree/worktree path, branch, and the sha actually rendered (the VERIFY_SURFACE field) -- and flag that the served tree is NOT the tree under review. Do not say 'it's live' or 'check it locally' until you have served feat/restyle yourself (its own worktree/build) or confirmed the served sha equals feat/restyle's head, the way a deploy is confirmed -- by fetching a byte only the new build serves, not by assuming a rebuild happened. A parity claim that names no URL and no rendered sha is invalid, not merely downgraded. (report-format.md.)",
+      "expectations": [
+        "Refuses to tell the owner 'it's live / check localhost:3000' while the served tree is main, not feat/restyle",
+        "Requires naming the surface (url-or-port, tree/worktree, branch, sha actually rendered) and flagging that the served tree is not the tree under review",
+        "Requires serving the change's tree or confirming served-sha equals feat/restyle head (deploy-confirmation style) before any live claim",
+        "States a parity claim naming no URL and no sha is invalid, not downgraded, citing report-format.md"
+      ]
+    },
+    {
+      "id": "parity-delta-needs-both-sides-same-width",
+      "prompt": "Mirroring an approved design into our app. From a cropped screenshot of the design, I see the app has a stepper with up/down arrows the design doesn't show, and the app is missing a 'filters' control the design has. I'm about to remove the stepper and add a filters control to reach parity. Right?",
+      "expected_output": "Not yet -- a cropped screenshot of one side is a hypothesis, not evidence, and every 'extra'/'missing' call here is one destructive edit away. Before claiming either delta, render BOTH sides at the same viewport width and diff the corresponding region directly. Then confirm each element's state on the other side: the stepper's arrows may be present-but-disabled-by-data (one item, nothing to step to) rather than extra, and the 'filters' control may be present-but-collapsed or present-in-a-menu in the app rather than missing. 'Absent in this crop' is not 'absent in the design'. If a source comment claims an element 'moved', trust the current rendered reference over the comment. Only once a delta is confirmed by same-width renders of both sides does it get classified (decoration / functionality / owner-approved, migration-parity.md) -- a delta that does not exist has no bucket, and removing the stepper or duplicating a control to fix a non-existent delta is the destructive edit to avoid. (product-ux-quality.md.)",
+      "expectations": [
+        "Refuses to remove or add anything based on a one-sided cropped screenshot",
+        "Requires rendering both sides at the same viewport width and diffing the corresponding region",
+        "Requires confirming element state (disabled-by-data / collapsed / in-a-menu) before calling it extra or missing",
+        "Warns the destructive edit would fix a non-existent delta and ties a confirmed delta to the restyle classification"
+      ]
     }
   ]
 }

@@ -717,6 +717,31 @@ else
   else
     record 1 "status-claim: a clean status table passes"
   fi
+  # Planted RED (#192): a green UI/parity status naming no verification surface
+  # (no URL, no sha) is INVALID — the second detector must flag it.
+  printf '%s\n' '| Home | ✅ screen matches the design |' >"$WORK/status.nosurface.md"
+  if python3 "$STATUSCHK" --file "$WORK/status.nosurface.md" >/dev/null 2>&1; then
+    record 1 "status-claim: flags a UI/parity status naming no surface (planted RED)"
+  else
+    record 0 "status-claim: flags a UI/parity status naming no surface (planted RED)"
+  fi
+  # Discrimination: the SAME green parity status WITH a URL + rendered sha names a
+  # surface and must stay clean — proving the surface check, not the downgrade word.
+  printf '%s\n' '| Home | ✅ screen matches the design http://localhost:3000 @ abc1234 |' >"$WORK/status.surface.md"
+  if python3 "$STATUSCHK" --file "$WORK/status.surface.md" >/dev/null 2>&1; then
+    record 0 "status-claim: a parity status naming url+sha passes"
+  else
+    record 1 "status-claim: a parity status naming url+sha passes"
+  fi
+  # Planted RED (#192, invalid-not-downgraded): a surfaceless parity claim carrying a
+  # ⚠️ downgrade is still INVALID — the surface detector must fire regardless of the
+  # downgrade marker (a ⚠️ cannot rescue a claim that named no surface).
+  printf '%s\n' '| Home | ⚠️ screen matches the design, partial |' >"$WORK/status.dg-nosurface.md"
+  if python3 "$STATUSCHK" --file "$WORK/status.dg-nosurface.md" >/dev/null 2>&1; then
+    record 1 "status-claim: flags a downgraded surfaceless parity claim (invalid-not-downgraded)"
+  else
+    record 0 "status-claim: flags a downgraded surfaceless parity claim (invalid-not-downgraded)"
+  fi
 fi
 
 # ---------------------------------------------------------------------------

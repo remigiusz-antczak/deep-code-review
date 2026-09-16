@@ -3,6 +3,37 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.84.0] — 2026-09-16
+
+Wave 11b of the dogfooding batch: name the parity verification surface (#192), and
+prove a design delta before acting on it (#196).
+
+### Added — deep-code-review
+- **`SKILL.md` / `report-format.md` — name the verification surface (#192).** A
+  `VERIFY_SURFACE` first-response field (url-or-port · tree/worktree · branch · sha,
+  or `NONE_RUNNING`), required on a web / port / parity task: `TREE_STATE` is where
+  you edit, `VERIFY_SURFACE` is what a human would see, and the two are routinely
+  different trees. `report-format.md` sharpens the surface rule — when more than one
+  tree can serve the app, "the default served state" is whichever process holds the
+  port, so a parity claim names the running instance built from the tree under review
+  (URL + branch + sha); a parity claim naming no surface is **invalid, not
+  downgraded**; and never direct a human to a URL whose served sha you have not just
+  confirmed (per #182).
+- **`scripts/validate_status_claims.py` — second detector (#192).** Beside the
+  hedged-green detector, flags a positive UI/parity status that names no verification
+  surface (no URL, no sha). The sha test requires >= 7 hex chars with a digit, so an
+  all-letter hex-looking word is not mistaken for a commit.
+- **`product-ux-quality.md` — establish a delta before acting on it (#196).** A
+  cropped screenshot of one side is a hypothesis, not evidence: render **both sides at
+  the same viewport width** and diff the corresponding region; confirm each app-only /
+  design-only element's **state** (present-but-collapsed / disabled-by-data /
+  in-a-menu) before calling it a delta; and trust the current rendered reference over
+  a stale source comment. A delta that does not exist has no bucket (it feeds the #193
+  restyle classification).
+- Two new evals (77 total). Lockstep bump to 1.84.0.
+
+Closes #192, #196.
+
 ## [1.83.0] — 2026-09-16
 
 Wave 11a of the dogfooding batch: reconcile bidirectional parity (#189) with the

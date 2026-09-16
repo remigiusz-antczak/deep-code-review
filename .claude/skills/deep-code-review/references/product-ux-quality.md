@@ -342,9 +342,10 @@ confidence number published as precision (confidence tier).
 - [ ] Interaction loops close — read-back on every input (no write-only), WYSIWYG not raw markup, no dead controls — checked on the route that actually renders?
 - [ ] Drawers overlay (don't navigate away); collapse scope correct; no dead controls?
 - [ ] Verified live in the running product, in more than the happy-path state — **including the default state a user lands on** (signed-out / no-role / default route / local default), not only a mock or a hand-picked persona view?
-- [ ] Any "matches / exact / parity" claim checked against the **default served state** as the canonical surface — and if it rests on a non-default surface, does it **name** that surface and say the default was not checked?
+- [ ] Any "matches / exact / parity" claim checked against the **default served state of the tree under review** as the canonical surface (not whichever tree happens to hold the port — name url · branch · sha, `report-format.md`) — and if it rests on a non-default surface, does it **name** that surface and say the default was not checked?
 - [ ] "Looks the same" backed by a **rendered-appearance** diff of the default state vs the reference (screenshot / computed styles), **not** section-presence, DOM order, a passing test, or loaded data — and stating **which axis** (structure / styling / content / data) the evidence covers, without "fixing" data to answer a styling complaint?
 - [ ] Parity task: differences classified **structural vs cosmetic** (structural parity first; a structural divergence **never** called "close / 1:1"); every "matches" claim gated on a **mechanical differ** (diff image + structured mismatch list attached, not an assertion); reference read at its **highest fidelity** (running build > source > screenshot); **no mock sample value copied** into the product; and the differ run **both ways** (design→app and app→design), both lists **resolved** (design→app empty; each app→design entry restyled into the target language, decoration removed, or owner-adjudicated — an app-only element is a finding to resolve, never a silent bonus)?
+- [ ] Parity **delta** established by rendering **both sides at the same viewport width** (a one-sided crop is a hypothesis, never the evidence), and each app-only / design-only element's **state confirmed on the other side** (present-but-collapsed / disabled-by-data / in-a-menu) before it is called a delta?
 - [ ] Did **not reconfigure the default** (persona / seed / flag / env) and then claim "verified on the default" — checked the pre-existing default and disclosed any change to it?
 - [ ] Every styling / placement delta enumerated in **one** side-by-side pass and fixed against that inventory — not piecemeal-fix-then-redeclare-done?
 - [ ] Told "not the same" → **asked which axis** before acting (after one wrong guess, asked not guessed), and compared the **reference itself** at the element × breakpoint × theme, not from memory?
@@ -385,7 +386,11 @@ present: a **running build** you launch and diff against > the design **source**
 property-by-property > a **screenshot** (a lossy picture — last-resort sanity check
 only). Never reverse-engineer the source when a running build of the design
 already exists in the repo, and never eyeball a picture when the source or build
-states the spec precisely. This governs how you read **Y**; it does not soften the
+states the spec precisely. **A stale source *comment* ranks below even the
+screenshot** — a code comment claiming an element "moved" in some past design
+revision is not the current design; when a comment and the live rendered reference
+disagree, the **current render wins** — verify against it, not the comment. This
+governs how you read **Y**; it does not soften the
 rule below that *your implementation's* evidence must be the **render**, not the
 DOM — opposite sides of the comparison.
 
@@ -517,7 +522,19 @@ task:
    side-by-side + pixel-diff **image** and (b) a **structured** mismatch list — which
    nav / tab labels are present or absent on each side, the header strings, and
    bounding-box geometry deltas for key elements. **The artifact shown to a reviewer
-   is the diff image, never a sentence.** Load a no-routing prototype **once and
+   is the diff image, never a sentence.** **Render both sides at the same viewport
+   width** and diff the corresponding region — a cropped or scaled screenshot of
+   **one** side is a **hypothesis, not evidence**; never infer a present/absent delta
+   from one side alone. Before recording an element as app-only or design-only,
+   **confirm its state on the other side**: present-but-collapsed,
+   present-but-**disabled-by-data** (a stepper bound to one item has nothing to step
+   to), or present-in-a-menu — "absent in this crop" is not "absent in the design".
+   This is the evidence that feeds the classification (`migration-parity.md`,
+   *restyle-an-app-only-feature*): a delta that does not exist has no bucket, and every
+   wrong inference here is one destructive edit — a removed control, a duplicated
+   element — away. **🚩** a "missing" / "extra" parity call whose only evidence is a
+   one-sided crop, or made with the other side's state unchecked. Load a no-routing
+   prototype **once and
    click-navigate** its in-page tabs (it has no per-screen URL to fetch), and diff
    against an existing **running build** of the design if one is in the repo rather
    than reverse-engineering its source (reference-fidelity order, "Looks the same"

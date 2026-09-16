@@ -9,6 +9,15 @@ caveat / mostly / but see …) and no downgrade marker (⚠️ / ❌ / ✗ / par
 blocked / unverified) — i.e. a claim that is only true after a non-default action,
 reported green.
 
+A second detector (issue #192) flags a positive status whose row also carries
+parity vocabulary (parity / renders / restyled / screen / "matches the design" …)
+yet names NO verification surface — no URL / port and no rendered sha. When more
+than one tree can serve the app, a parity claim that names no surface is INVALID
+(there is nothing to downgrade): it may be true about the author's tree yet false
+on every surface a human opens, so this detector fires even on a ⚠️-downgraded row.
+The sha test requires >= 7 hex chars with both a hex letter and a digit (so neither
+a hex-looking word nor a plain number passes as a commit).
+
 It is an aid to human judgement, not a proof. It can over-flag a prose line that
 merely contains both a status word and a conditional; a flagged line is a lead to
 re-check — downgrade to partial/blocked with the condition as the headline, or
@@ -23,7 +32,8 @@ no listed pattern matched. Known false negatives:
     ("no partial coverage") can silence a genuine hedged-green on that line;
   * the token lists are fixed — a completion or hedge word not listed slips past.
 
-Exit 0 = no hedged-green lines, 1 = candidate(s) found, 2 = usage/unreadable.
+Exit 0 = no candidate lines (neither detector fired), 1 = candidate(s) found,
+2 = usage/unreadable.
 Stdlib only. Reports line numbers + the tokens matched, not full line content.
 """
 from __future__ import annotations
@@ -50,6 +60,22 @@ HEDGES = (
 DOWNGRADE = (
     "⚠️", "⚠", "❌", "✗", "partial", "blocked", "changes-requested", "unverified",
 )
+# UI / parity vocabulary: marks a status line as a design / parity claim, which
+# must name a verification surface. A positive parity status naming no surface is
+# the failure the second detector catches (issue #192 — "which tree served it?",
+# ambiguous the moment more than one tree can serve the app). A broad single word
+# ("screen" …) can over-flag a non-parity row ("screen-reader"); a flag is a lead.
+SURFACE_VOCAB = (
+    "parity", "renders", "rendered", "restyled", "restyle",
+    "matches the design", "matches the reference", "looks the same", "screen",
+)
+# The detector flags a parity row that names NEITHER a URL / port NOR a rendered
+# sha (either one present = a surface is named → no flag; issue #192's "no URL and
+# no sha"). The sha needs >= 7 hex chars with BOTH a hex letter and a digit, so a
+# hex-looking prose word ("defaced") and a plain number ("1234567") are neither
+# mistaken for a commit; the URL needs a real host, so a time ("12:30") is not a port.
+_URL_RE = re.compile(r"https?://|\blocalhost\b|\b\d{1,3}(?:\.\d{1,3}){3}\b", re.IGNORECASE)
+_SHA_RE = re.compile(r"\b(?=[0-9a-f]*[a-f])(?=[0-9a-f]*[0-9])[0-9a-f]{7,40}\b", re.IGNORECASE)
 
 
 def die(code: int, msg: str) -> NoReturn:
@@ -86,26 +112,47 @@ def main(argv: list[str]) -> int:
     except (OSError, UnicodeError):
         die(2, "unreadable input")
 
-    flagged: list[tuple[int, list[str], list[str]]] = []
+    flagged: list[tuple[int, list[str], list[str]]] = []       # hedged-green
+    surfaceless: list[tuple[int, list[str], list[str]]] = []   # UI/parity, no surface
     for n, line in enumerate(text.splitlines(), start=1):
         low = line.lower()
         pos = find(POSITIVE, low, line)
         if not pos:
             continue
-        if find(DOWNGRADE, low, line):  # already honestly downgraded
+        # Surfaceless-parity detector runs FIRST and regardless of a downgrade
+        # marker: a parity claim that names no surface is INVALID, not merely
+        # downgraded — a ⚠️ does not rescue it (report-format.md), so the downgrade
+        # marker must not suppress this half.
+        surf = find(SURFACE_VOCAB, low, line)
+        if surf and not _URL_RE.search(line) and not _SHA_RE.search(line):
+            surfaceless.append((n, pos, surf))
+        # Hedged-green detector: an honest downgrade already surfaces the caveat, so
+        # a downgraded line is not the failure THIS half catches.
+        if find(DOWNGRADE, low, line):
             continue
         hedge = find(HEDGES, low, line)
         if hedge:
             flagged.append((n, pos, hedge))
 
-    if flagged:
+    if flagged or surfaceless:
         for n, pos, hedge in flagged:
             print(
                 f"L{n}: green status {pos} carries a hedge {hedge} — "
                 "downgrade (partial/blocked, condition as the headline) or split "
                 "into a two-status verdict. A ✅ that needs an asterisk is a ✗."
             )
-        print(f"validate_status_claims: {len(flagged)} hedged-green line(s) to re-check")
+        for n, pos, surf in surfaceless:
+            print(
+                f"L{n}: green UI/parity status {pos} names no verification surface "
+                f"(vocab {surf}) — a parity claim with no URL and no rendered sha is "
+                "INVALID, not downgraded; name url · tree/worktree · branch · sha, or "
+                "make no claim (#192)."
+            )
+        total = len(flagged) + len(surfaceless)
+        print(
+            f"validate_status_claims: {total} line(s) to re-check "
+            f"({len(flagged)} hedged-green, {len(surfaceless)} surfaceless parity)"
+        )
         return 1
     print("validate_status_claims: ok")
     return 0

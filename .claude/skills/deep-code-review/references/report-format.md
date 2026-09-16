@@ -64,7 +64,18 @@ above rather than one green label with a footnote. And a status
 names the **surface** its evidence came from; for a UI / product parity claim the
 canonical surface is the **default served state** a user lands on (signed-out /
 no-role / default route / local default), not only a mock or a hand-picked state
-(`product-ux-quality.md`).
+(`product-ux-quality.md`). **When more than one tree can serve the app** — the
+normal agent topology, each write lane in its own worktree while a human runs a dev
+server from a different (often dirty) checkout — "the default served state" silently
+means *whichever process holds the port*, not the tree that contains the change, and
+a claim can be literally true about the author's tree and false on every surface a
+human can open. So a parity claim names the **running instance built from the tree
+under review**, identified by **URL + branch + sha actually rendered** (the
+`VERIFY_SURFACE` field, `SKILL.md`). A parity claim carrying **no URL and no sha of
+the rendered tree is invalid — not downgraded to ⚠️**, because nothing was named to
+downgrade. And **never direct a human to a URL whose served sha you have not just
+confirmed** — confirm it the way `infra-iac-containers.md` confirms a deploy (#182),
+by fetching a byte only the new build serves, not by assuming a rebuild happened.
 
 **Beware the proxy.** A passing test, a green build, a merged PR, or a
 hand-configured render is a **proxy** for the user's outcome, not the outcome —
@@ -90,8 +101,12 @@ completion status carries a
 against) — and states what was *not* checked** in the same breath. A heuristic
 checker for the "✅ that needs an asterisk" ships at
 `scripts/validate_status_claims.py` (`--file <status-table>`): it flags a positive
-status co-occurring with a hedge and no downgrade marker (exit 1 = candidates to
-re-check, exit 0 = clean). A flag is a lead for judgement — downgrade, or split
+status co-occurring with a hedge and no downgrade marker, and — on a second detector
+— a positive status whose row also carries parity vocabulary (parity / renders /
+restyled / screen / "matches the design") and names **no verification surface** (no
+URL, no sha — this half fires even on a downgraded row, since a surfaceless parity
+claim is invalid, not downgradable) (exit 1 = candidates to re-check, exit 0 =
+clean). A flag is a lead for judgement — downgrade, or split
 into a two-status verdict — not an automatic defect. It ships beside the skill and
 is copied by `install.sh`.
 

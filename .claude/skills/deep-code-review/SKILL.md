@@ -11,7 +11,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.83.0"
+  version: "1.84.0"
 ---
 
 # Deep Code Review
@@ -106,6 +106,7 @@ is incomplete:
 SCOPE: <FULL | DIFF <base> | FILE <paths>>
 START_SHA: <sha | N/A>
 TREE_STATE: <CLEAN | DIRTY | WORKTREE_PATH=<path>>
+VERIFY_SURFACE: <url-or-port · tree/worktree path · branch · sha actually rendered | NONE_RUNNING> (required when ARCHETYPE: web or a port/restyle/parity task; TREE_STATE is where I edit, VERIFY_SURFACE is what a human would see — routinely different trees)
 HISTORY_DEPTH: <git rev-list --count HEAD | N/A>
 REVERTS_CHECKED: <commits | NONE>
 BANNED_REMEDIES: <rejected approaches | NONE>
@@ -131,7 +132,9 @@ tree. Skip of the planted-defect probe caps only the gate-self-test claim.
    ran the shipped copy), so re-run its **base** version (`git show <base>:`).
    A **status you emit** (`✅`/done/exact/matches/verified) names the surface
    its evidence came from and holds at its strongest reading — a caveat downgrades
-   it, and a UI/parity claim's canonical surface is the **default served state**
+   it, and a UI/parity claim's canonical surface is the running instance built from
+   the **tree under review** (URL + branch + sha) — "the default served state" is
+   ambiguous the moment more than one tree can serve it
    (`references/report-format.md`). Depth: `references/method.md` Phase 1.
 3. **No fabrication.** Never invent a defect, metric, CWE, source, or line.
    If you can't verify, say `unverified` and **name the artifact** that would
@@ -321,7 +324,8 @@ Two checklists; they fail independently.
 
 **(a) Review method complete**
 - First-response block printed (`SCOPE`, `START_SHA`, `TREE_STATE`,
-  `HISTORY_DEPTH`, `REVERTS_CHECKED`, `BANNED_REMEDIES`, `ARCHETYPE`, `STAGE`,
+  `VERIFY_SURFACE` on a web / port / restyle / parity task, `HISTORY_DEPTH`,
+  `REVERTS_CHECKED`, `BANNED_REMEDIES`, `ARCHETYPE`, `STAGE`,
   `COVERAGE_LEDGER`); citations re-verified at that ref with a verbatim
   snippet.
 - On a FULL review, `STAGE` is stated (or `UNVERIFIED`, defaulting stricter) and a
@@ -329,8 +333,10 @@ Two checklists; they fail independently.
   never downgraded a security, secret, or data-loss finding.
 - Every status emitted (`✅`/done/exact/matches) names its evidence surface and
   holds at its strongest reading — no `✅` beside a caveat, and a UI/parity claim
-  is checked on the **default served state**; screen the status table with
-  `scripts/validate_status_claims.py` (`references/report-format.md`).
+  is checked on the running instance **built from the tree under review** (URL +
+  branch + sha), not merely "the default served state" when more than one tree can
+  serve it; a parity claim naming no surface is **invalid**, not downgraded. Screen
+  the status table with `scripts/validate_status_claims.py` (`references/report-format.md`).
 - Gate self-test claimed only when run.
 - Coverage ledger reconciled; fan-out units attributed (finder + lead-read);
   incomplete finder = `unverified`.
