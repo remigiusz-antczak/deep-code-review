@@ -743,6 +743,28 @@
         "Flags a non-handler export from a framework route module and moves pure logic to a sibling",
         "Treats the second-run failure as a real finding, not flakiness"
       ]
+    },
+    {
+      "id": "decorative-token-guarded-at-use-not-value",
+      "prompt": "We keep a brand-grey token below AA on purpose ('decorative only') and a unit test asserts its value stays sub-AA. Good enough to prove it's accessible?",
+      "expected_output": "No -- that test pins the wrong end. It proves the token's value stays decorative; it never proves no component paints real, informational TEXT with it. WCAG 1.4.3 holds informational text to 4.5:1 (large text 3:1), so a className/style that colours a visible label, status word, or helper line with the decorative token fails the audit on every route sharing that chrome, while the value-only test stays green (the fast tier can't see it; only the browser/a11y gate can). Add a lint/test that fails when the token colours a real text node -- fail-closed, but with an escape: admit a pinned a11y-exempt marker for text 1.4.3 genuinely exempts (aria-hidden or purely-decorative glyphs, logotypes, large text meeting 3:1), so the gate is narrowed to the standard, not stricter than it. Allow the token freely on non-text (borders, backgrounds, icon fills with an accessible-name sibling), and plant both a real-text use (guard fires) and a pinned-exempt use (guard stays silent). Assert the usage constraint, not just the value. Generally: when a test encodes an intent ('stays decorative', 'stays internal', 'never renders'), verify the property, not the value it is derived from. (frontend-a11y.md.)",
+      "expectations": [
+        "Rejects a value-only test as proof the decorative token is accessible",
+        "Requires a use-site guard that fails when the token colors a text node",
+        "Guards real text use but admits a pinned-exempt marker for genuinely-decorative / aria-hidden / logotype text, so the gate is not stricter than SC 1.4.3",
+        "Generalizes to asserting the property, not the value it is derived from"
+      ]
+    },
+    {
+      "id": "classify-failure-by-config-and-baseline-before-regression",
+      "prompt": "The browser suite OOM-killed at the default worker count, so I ran it with --workers=1 and two specs failed. Should I file those as regressions?",
+      "expected_output": "Not yet -- classify by config and baseline first. Cutting workers to fit memory changes the execution model, not just speed: serial specs sharing one stateful backend can pollute a later spec's precondition, so a failure seen ONLY under --workers=1 can be a harness artifact the sharded CI config never hits, not a product regression. The mirror error is as easy -- a change can genuinely make a suite serial-fragile -- so 'it's just --workers=1' is also unverified. Two cheap runs: (config axis) reproduce the suspect specs under CI's actual worker config (a few specs won't OOM) -- pass there and it is not a gate failure; (baseline axis) run them under the identical reduced config on the merge-base -- pass-baseline + fail-branch is a real code-introduced sensitivity, fail-both is a pre-existing harness artifact. Report which config and which baseline the failure belongs to; 'fails under --workers=1 locally' and 'fails the gate CI runs' are different findings. (method.md.)",
+      "expectations": [
+        "Does not report a --workers=1-only failure as a regression without classifying it",
+        "Reproduces the suspect specs under CI's actual (parallel) worker config as the config axis",
+        "Runs the identical reduced config on the merge-base as the baseline axis",
+        "Names which config and which baseline the failure belongs to"
+      ]
     }
   ]
 }

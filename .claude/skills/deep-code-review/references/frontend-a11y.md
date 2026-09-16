@@ -83,6 +83,25 @@ confirm the background does not move.
 **Perceivable**
 - Contrast: text ≥ 4.5:1 (large text ≥ 3:1); UI components & graphical objects
   ≥ 3:1 (1.4.11). Don't convey meaning by color alone.
+- **Guard a deliberately-decorative / sub-AA token at its point of *use*, not its
+  value.** A token pinned below the text-contrast threshold and documented
+  "decorative only" is only decorative if *no component paints **real, informational
+  text** with it* — WCAG 1.4.3 holds informational text to 4.5:1 (large text 3:1), so
+  a `className`/style that colours a **visible label, status word, or helper line**
+  with it fails the audit on every route sharing that chrome, while a value-only test
+  asserting the token stays sub-AA stays green. Add a lint/test that **fails when the
+  token colours a real text node** — fail-closed, but **with an escape**: admit a
+  pinned `a11y-exempt` marker for the text 1.4.3 genuinely exempts (an `aria-hidden`
+  or purely-decorative glyph, a logotype, large text already meeting 3:1), so the gate
+  is *narrowed to the standard, not stricter than it* — the same gate-vs-standard
+  discipline as the disabled-control exemption note below. Allow the token freely on
+  non-text (borders, backgrounds, icon fills with an accessible-name sibling), and have
+  the self-test plant **both** a real-text use (guard fires) and a pinned-exempt use
+  (guard stays silent). This closes the runtime-binding gap the encoding self-test only
+  *warns* about (`product-ux-quality.md`, the Phase-6 gate). General form: when a test
+  encodes an intent ("stays decorative", "stays internal", "never renders"), assert the
+  **property**, not the value it is derived from — the gap between them is where a
+  green suite ships a regression.
 - All non-text content has a text alternative; decorative images `alt=""`.
 - Content reflows to 320 CSS px wide without loss (1.4.10); works at 200% zoom.
 - Respect `prefers-reduced-motion`; no content flashes > 3×/sec.

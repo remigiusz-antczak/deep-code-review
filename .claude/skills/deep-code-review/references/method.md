@@ -215,6 +215,21 @@ and any wired security/dependency scanners. Then, before trusting "green":
   binaries, gate set). A red, unexplained base is `unverified` ground truth — say
   whether it is a flake, pre-existing and unrelated, or caused by this work — and
   you cannot show a change "regresses no axis" against a baseline already failing.
+- **Classify a failure by *config* and *baseline* before calling it a regression.**
+  A suite OOM-killed at its default parallel fan-out and re-run at `--workers=1` to
+  fit memory changes the **execution model**, not just the speed: serial specs
+  sharing one stateful backend pollute a later spec's precondition, so a failure
+  seen *only* under the reduced config can be a harness artifact the sharded CI
+  config never hits — not a product regression. The mirror error is as easy: a
+  change *can* genuinely make a suite serial-fragile, so "it's just `--workers=1`" is
+  also unverified. Two cheap runs settle it — **config axis:** reproduce the suspect
+  specs under CI's *actual* worker config (a handful of specs won't OOM); pass there
+  and it is not a gate failure. **Baseline axis:** run them under the *identical*
+  reduced config on the merge-base; pass-baseline + fail-branch is a real
+  code-introduced sensitivity worth hardening, fail-both is a pre-existing harness
+  artifact (the baseline half of the unexplained-base rule above). Report which
+  config and which baseline the failure belongs to — "fails under `--workers=1`
+  locally" and "fails the gate CI runs" are different findings.
 - **Deploy-contract preflight** (containerized/serverless targets): lockfile
   committed ↔ install command, entrypoint/CMD file mode, build-time vs runtime
   data dependencies, and **boot the documented-minimal config and hit the

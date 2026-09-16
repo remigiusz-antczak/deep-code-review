@@ -3,6 +3,29 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.81.0] — 2026-09-16
+
+Wave 9 of the dogfooding batch: assert the property, not its proxy (#187, #188).
+
+### Added — deep-code-review
+- **`frontend-a11y.md`** — guard a deliberately-decorative / sub-AA colour token at
+  its point of **use**, not its value: WCAG 1.4.3 holds informational text to 4.5:1,
+  so a value-only test that pins the token sub-AA stays green while a component paints
+  text with it and fails the audit. Add a use-site guard that fails when the token
+  colours a real text node — fail-closed but with a pinned-exempt escape for text
+  1.4.3 genuinely exempts (aria-hidden / decorative / logotype / large text), so the
+  gate is narrowed to the standard, not stricter than it. General form: assert the
+  property a test encodes, not the value it is derived from (#187).
+- **`method.md`** — classify a failure by **config** and **baseline** before calling
+  it a regression: a failure seen only under a memory-mitigated `--workers=1` serial
+  run can be a shared-state harness artifact the parallel CI config never hits.
+  Reproduce under CI's actual worker config (config axis) and under the identical
+  reduced config on the merge-base (baseline axis) before reporting a code defect
+  (#188).
+- Two new behavioral evals.
+
+Closes #187, #188.
+
 ## [1.80.0] — 2026-09-16
 
 The offline half of the live eval harness (#61) — the split-rubric runner, no live
