@@ -111,7 +111,9 @@ headroom. **Do not gate on `load1` alone** — at most a weak corroborating
 signal, never the deciding term, because it cannot distinguish CPU
 contention from disk I/O. Whatever the exact predicate, **spawn one heavy
 lane at a time, re-sample after a settle window, then decide on the next** —
-never compute a ceiling and dispatch straight up to it.
+never compute a ceiling and dispatch straight up to it, and **leave a burst reserve
+even when the predicate says go** — a later spiky lane (a browser gate, a dependency
+install, a test runner) must still fit without paging the box into thrash.
 
 **Sharpenings from a later thrash — 84% free RAM while swap sat ~76% consumed and
 nothing landed for hours.** The ~15%-free-RAM floor above is a **veto, not a licence**:

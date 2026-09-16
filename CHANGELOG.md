@@ -3,6 +3,27 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.96.0] — 2026-09-16
+
+Wave 17 of the dogfooding batch: the admission schedule leaves a reserve, and a
+disabled action explains itself (#239, #240).
+
+### Added — agentic-delivery
+- **`fast-agentic-delivery.md` — leave a safety reserve when admitting lanes**
+  (#239). Sharpens the one-lane-at-a-time admission rule: never fill to 100% of
+  observed headroom — leave a reserve so a later spiky lane (a browser gate, a
+  dependency install, a test runner) still fits, since observed headroom is
+  average-case and the lane that lands the burst is not.
+
+### Added — deep-code-review
+- **`product-ux-quality.md` — a disabled action explains its cause and recovery
+  path** (#240). Beyond looking disabled (gate 1) and reacting consistently (#230): a
+  contextually unavailable action names the unmet prerequisite and a concrete next
+  step, in reachable text (nearby or a focusable wrapper/popover — a native `disabled`
+  element may get no hover/focus events, so its own tooltip is unreachable); a
+  permanently role-unavailable action is hidden or replaced, not a dead end. A
+  Pre-ship line and an eval (97 total).
+
 ## [1.95.0] — 2026-09-16
 
 Wave 16 of the dogfooding batch: resource-aware fan-out and lane discipline — an

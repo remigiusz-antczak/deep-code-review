@@ -315,6 +315,19 @@ until it renders:
   unavailable must *look* unavailable, not merely be inert. Unit-logic tests
   passing is **not** a working UI — exercise the real control in the running app
   (cross-ref the live-verification rule below).
+- **A disabled action explains its cause and its recovery path — not a dead end.**
+  Looking disabled (gate 1's *disabled-looks-disabled*) and disabling the same way at
+  every instance (the *interaction-consistency* bullet below) prove the control's
+  appearance and its cross-instance parity; neither tells the user **why** it is
+  unavailable or **what** unblocks it.
+  A *contextually* unavailable action names the **unmet prerequisite and a concrete
+  next step** — and because a native `disabled` element may receive **no hover or
+  focus events**, that explanation cannot live in the control's own tooltip; put it
+  in **nearby text or a focusable wrapper/popover** the user can actually reach. An
+  action *permanently* unavailable to the current role is **hidden or replaced with
+  an attainable alternative**, not left visibly dead — unless its discoverability is
+  explicitly wanted (`frontend-a11y.md` owns the disabled-control *contrast*
+  exemption; this owns the *recoverability*).
 - **Reviewable change history, and no silent AI edits.** Any surface where an
   edit is itself a decision of record (a value, a target, an assignment, an
   owner) needs a visible who/what/when history behind the current value, not a
@@ -462,6 +475,7 @@ often lost — the on-screen chart carries axes and a readout the serialiser dro
 - [ ] Consistent type scale / spacing / components / number format with sibling views (tabular figures in columns)?
 - [ ] One shared component per concept — reused/extended, not reimplemented per page; a fix landed in the shared component, not one caller; **searched the tree for a duplicate twin (a duplicated visible string/heading) a diff-scoped review would miss**?
 - [ ] Interaction loops close — read-back on every input (no write-only), WYSIWYG not raw markup, no dead controls — checked on the route that actually renders?
+- [ ] Every **disabled action explains its cause and a recovery path** — the unmet prerequisite + a concrete next step, in **reachable** text (nearby or a focusable wrapper/popover, not a tooltip on the disabled element, which may get no hover/focus); an action permanently unavailable to the current role is hidden or replaced, not a dead end?
 - [ ] Drawers overlay (don't navigate away); collapse scope correct; no dead controls?
 - [ ] Verified live in the running product, in more than the happy-path state — **including the default state a user lands on** (signed-out / no-role / default route / local default), not only a mock or a hand-picked persona view?
 - [ ] Any "matches / exact / parity" claim checked against the **default served state of the tree under review** as the canonical surface (not whichever tree happens to hold the port — name url · branch · sha, `report-format.md`) — and if it rests on a non-default surface, does it **name** that surface and say the default was not checked?

@@ -1018,6 +1018,17 @@
         "Rules the domain-P checklist on the artifact itself (baked-in axes/labels, theme honored/normalised, self-describing, honest data states)",
         "Distinguishes it from reproducing an audit finding against the production build (this inspects an artifact the product emits)"
       ]
+    },
+    {
+      "id": "disabled-action-explains-cause-and-recovery",
+      "prompt": "A review of our app checked every disabled button: they all look disabled (greyed, not-allowed cursor) and the same button class disables the same way everywhere -- appearance and consistency both pass. One is a 'Publish' button disabled until two required fields are filled, but the screen gives no hint why it's off or what to do. Ship it?",
+      "expected_output": "No -- looking disabled and disabling the same way everywhere are appearance (gate 1's disabled-looks-disabled) and cross-instance consistency (interaction-consistency); neither tells the user WHY the action is unavailable or WHAT unblocks it, and 'Publish is off with no explanation' is a dead end. A contextually unavailable action must name the unmet prerequisite and a concrete next step ('Publish needs a title and a summary', ideally pointing at the empty fields). Crucially, don't put that in the button's own tooltip: a native `disabled` element may receive no hover or focus events, so a tooltip on it is unreachable -- use nearby text or a focusable wrapper/popover the user can actually reach (keyboard included). Separately, an action permanently unavailable to this user's role should be hidden or replaced with an attainable alternative rather than shown as a permanent dead control, unless its discoverability is explicitly wanted. This is the recoverability axis, distinct from appearance and from the disabled-control contrast exemption frontend-a11y.md owns. (product-ux-quality.md.)",
+      "expectations": [
+        "Refuses to ship: passing disabled-appearance and consistency does not cover reason + recovery",
+        "Requires naming the unmet prerequisite and a concrete next step for a contextually-disabled action",
+        "Flags that a tooltip on the disabled element is unreachable (no hover/focus events) -- put the explanation in nearby text or a focusable wrapper/popover",
+        "Distinguishes the separate permanent-role case (hidden or replaced with an attainable alternative) from this contextual one"
+      ]
     }
   ]
 }
