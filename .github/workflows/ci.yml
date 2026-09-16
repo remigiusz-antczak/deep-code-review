@@ -70,3 +70,12 @@ jobs:
       # the property under test. The same gate the self-tests pin above.
       - name: Fabrication-refusal predicates discriminate (offline, no model)
         run: python3 scripts/eval_predicates.py --selftest
+
+      # Prove the split-rubric eval RUNNER's own guards, offline: dry-run
+      # enumerates + classifies every eval (hard = a deterministic predicate is
+      # bound; soft = needs the live judge), the decorrelation guard aborts on an
+      # equal-or-missing model id, and the live path refuses without configuration
+      # (its model-call site is an un-built stub). No model, no network, no spend —
+      # the guards are the property under test. The live judge itself is owner-gated.
+      - name: Eval runner guards hold (offline, no model)
+        run: python3 scripts/run-evals.py --selftest

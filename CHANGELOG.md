@@ -3,6 +3,29 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.80.0] — 2026-09-16
+
+The offline half of the live eval harness (#61) — the split-rubric runner, no live
+model call yet.
+
+### Added
+- **`scripts/run-evals.py`** — the execution layer over every skill's `evals.json`.
+  `--dry-run` (default) enumerates and classifies every eval as **hard** (a
+  deterministic `eval_predicates.py` predicate is bound) or **soft** (needs the LLM
+  judge), re-runs the hard-axis golden-pair discrimination, and prints a coverage
+  report as JSON — no model, no network, no spend. `--selftest` proves the runner's
+  guards offline (the decorrelation guard aborts on an equal *or missing* model id;
+  the spend-cap guard aborts on a missing/non-positive cap; the live path refuses
+  without configuration). Wired into CI as an offline gate.
+- The hard/soft split is derived from `eval_predicates.BINDINGS`, so no `evals.json`
+  is tagged and no skill version is forced by it.
+
+### Owner-gated (issue #61 stays open)
+- The live model call is an explicit un-built stub — this ships no model-calling
+  code, so `--live` cannot spend. Filling the model client + per-call spend
+  accounting, the scheduled/dispatch workflow (where the key lives), the committed
+  results-freshness gate, and the axis tag across all evals remain owner steps.
+
 ## [1.79.0] — 2026-09-16
 
 Wave 8 of the dogfooding batch: verify-the-real-thing (#180, #181, #182). Each lens
