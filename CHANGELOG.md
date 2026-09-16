@@ -3,6 +3,44 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.89.0] — 2026-09-16
+
+Wave 12a of the dogfooding batch: a gate is only *run* when its enforcing surface can
+see the artifact it checks — CI/gate-visibility honesty (#207, #208, #211, #215, #216).
+
+### Added — deep-code-review
+- **`method.md` — a skipped gate scope is `unverified`, not clean (#211, #215).** A
+  multi-scope gate that skips a scope whose input is absent (a privacy gate whose
+  *identifier* scan needs a pattern list and, missing it, runs only the *secret* scan
+  yet exits 0) has not cleared the skipped surface. Read which scopes ran, not the bare
+  exit code; a green privacy exit with the identifier scope skipped is not "boundary
+  clean" — a status claiming it over-claims a **trust-critical** surface (rate the
+  *claim* Critical). An instance of principle 2 (a pass is evidence only where the
+  enforcing surface could see the artifact), stated once and referenced.
+- **`method.md` — a CI re-run certifies the SHA it ran, not the PR head (#207).**
+  "Re-run all jobs" re-dispatches the original frozen payload SHA, so a green re-run can
+  certify a stale tree; a status names the commit it graded — a green whose SHA is not
+  the PR head is `unverified` for the head. The moved-tree twin of the self-certifying
+  gate.
+- **`method.md` — name *why* local and CI diverge (#216).** Beyond the gate set:
+  sharding/worker count (the existing config-vs-baseline rule), OS font metrics (a
+  wrap-point differs by host — assert the layout **invariant**, never an absolute width
+  or wrap-point, reinforcing the geometry-not-pixels rule in `testing-and-evals.md`),
+  and dirty local resolution (a stale cache or symlinked `node_modules` resolves
+  different versions than CI's clean `npm ci` — reproduce on a clean install).
+- **`branch-and-merge-hygiene.md` — a required check must be *satisfiable* (#208, #207).**
+  A required check whose name is not backed by a job that runs and concludes for this PR
+  sits pending forever — indistinguishable from a hang, merge-blocked exactly as a
+  failure. A path-filtered skip with no status is not green (fix: emit a conclusive
+  status for out-of-scope paths, or don't require that job for that PR class); a
+  trigger-event gap (labeled-only, or a `workflow_dispatch` run that never attaches to
+  the PR rollup) means the workflow exists but the check never runs. A **High**
+  merge-blocker config gap in its own right (guardrail 3: intrinsic, not "Blocker
+  because CI is red").
+- Two new evals (85 total). Lockstep bump to 1.89.0.
+
+Closes #207, #208, #211, #215, #216.
+
 ## [1.88.0] — 2026-09-16
 
 Wave 11f of the dogfooding batch: one screen verified is not the product — scope a

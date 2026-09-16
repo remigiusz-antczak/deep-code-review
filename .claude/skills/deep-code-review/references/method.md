@@ -133,6 +133,18 @@ and any wired security/dependency scanners. Then, before trusting "green":
   are a common silent green. Trace which test files the gate actually invokes;
   tests present but unwired are "decorative" (procedures:
   `references/testing-and-evals.md`).
+- **A gate reports only on the scopes that actually ran — a skipped scope is
+  `unverified`, not clean.** A pass is evidence only where the enforcing surface
+  could **see** the artifact it checks (`SKILL.md` principle 2). A multi-scope gate
+  that **skips** a scope whose input is absent — a privacy gate whose *identifier*
+  scan needs a pattern list (`.banlist.local.txt`, a `PRIVACY_BANLIST_EXTRA`) and,
+  when it is missing, runs only the *secret* scan yet still exits 0 — has not
+  cleared the skipped surface. Read **which scopes ran**, not the bare exit code; if
+  the gate prints only a pass, missing per-scope reporting is itself the gap. A
+  green privacy exit with the identifier scope skipped is **not** "boundary clean":
+  a status claiming it is over-claims a **trust-critical** surface — rate the
+  *claim* **Critical**, not the gate. Same shape as the empty-banlist silent green
+  above — the check ran, but not over the thing you needed cleared.
 - **A gate changed in the diff it gates is self-certified — re-run its base
   version.** When the diff touches an **enforcement artifact** (a gate / CI /
   privacy / lint / hook / checksum script that decides pass-fail), the green run
@@ -143,6 +155,12 @@ and any wired security/dependency scanners. Then, before trusting "green":
   that only ever grades its own author is `unverified`; a change that **narrows**
   what it catches while staying green is a Blocker on the same footing as a
   planted defect that survives.
+- **A CI re-run certifies the SHA it ran, not the PR head.** "Re-run all jobs" on
+  most forges re-dispatches the **original, frozen payload SHA**, so a re-run that
+  goes green can be certifying a **stale tree** after the head moved on — the
+  moved-tree twin of the self-certifying gate above: a status names the surface it
+  graded, here the **commit**, so a green whose SHA is not the PR's current head is
+  `unverified` for the head. Read the run's commit, not only its colour.
 - **Check a firing gate against its own standard first.** A gate *stricter* than
   the spec it implements (e.g. a contrast gate flagging disabled controls, which
   WCAG 2.2 SC 1.4.3 exempts) yields a "fix" that regresses another axis
@@ -215,6 +233,20 @@ and any wired security/dependency scanners. Then, before trusting "green":
   binaries, gate set). A red, unexplained base is `unverified` ground truth — say
   whether it is a flake, pre-existing and unrelated, or caused by this work — and
   you cannot show a change "regresses no axis" against a baseline already failing.
+- **Name *why* local and CI diverge — sources beyond the gate set.** (a)
+  **Sharding / worker count** (the config-vs-baseline rule below): a spec order or a
+  `--workers=1` fallback that never occurs under CI's sharded config. (b) **OS font
+  metrics** — a CI image rounds glyph advance and line-wrap differently than a
+  laptop, so a label wrapping at one width locally lays out under a tighter cap
+  remotely; this is exactly why a layout assertion must test the **invariant** (does
+  the text overflow its box? do two boxes intersect?), never an **absolute width or
+  wrap-point** (`references/testing-and-evals.md`, geometry-not-pixels) — the
+  invariant holds on both hosts, the pixel does not. (c) **Dirty local resolution** —
+  a stale build cache or a **symlinked `node_modules`** borrowed from another
+  worktree resolves different module versions than CI's clean `npm ci`, so
+  `tsc`/lint/bundler disagree; reproduce a local-only green on a **clean install**
+  before trusting it. "Green locally" stays `unverified` for CI until the divergent
+  axis is named.
 - **Classify a failure by *config* and *baseline* before calling it a regression.**
   A suite OOM-killed at its default parallel fan-out and re-run at `--workers=1` to
   fit memory changes the **execution model**, not just the speed: serial specs

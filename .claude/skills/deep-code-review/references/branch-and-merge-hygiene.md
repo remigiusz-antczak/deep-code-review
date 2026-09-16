@@ -224,6 +224,36 @@ gate that didn't exist when it was authored — extra round-trips for no benefit
 When triaging several ready branches at once, check whether any changes
 required-CI/gate configuration and put it at the back of the landing order.
 
+### A required check must be *satisfiable* — pending forever blocks merge like a red
+
+A branch-protection **required check** gates merges only if some job actually
+reports a conclusion for *this* PR. When the required *name* is not backed by a job
+that runs and concludes here, the check sits **pending forever** — indistinguishable
+from a hang, and merge-blocked exactly as a failure is (its enforcing surface never
+saw this PR — `SKILL.md` principle 2). Two ways it happens:
+
+- **A required check with *no status* blocks merge — but distinguish "never ran"
+  from "ran and reported skipped."** When `on: pull_request: paths:` filters a whole
+  **workflow** out for an out-of-scope PR (only `units/**` changed, so the required
+  `app-browser` workflow never triggers), the check gets **no run at all**; the
+  enforcer reads "no status" as not-green and the PR is unmergeable without an
+  override. Fix: give the required workflow a **pass-through job** that always
+  triggers and exits 0 on out-of-scope paths (so it reports a conclusive Success),
+  or don't name a legitimately-absent workflow in the required list. **Contrast** a
+  **job** skipped by a job-level `if:` inside a workflow that *did* run — the forge
+  reports it **skipped/Success**, which satisfies the required check and needs no
+  pass-through. The trap is the **missing status**, not the skip itself.
+- **Trigger-event gap.** A required job whose workflow omits the event that fires
+  the PR never starts *for this PR*: a `full-ci` job with no `labeled` trigger, in a
+  label-driven flow, never begins; a `workflow_dispatch` run carries its own
+  `run_id` and never attaches to the PR's check rollup, so the preflight never sees
+  it. The workflow **existing** is not the check **running** — verify the required
+  name maps to a job whose triggers include how this PR is actually checked.
+
+Read the check's **conclusion**, never the bare colour; a required check with no run
+for this PR is a **High** merge-blocker in its own right — name it a config gap (the
+check is unsatisfiable as wired), not a flake to wait out.
+
 ## 6 — Safety rails (acting on the triage is destructive / shared-state)
 
 Triage is **advice**; carrying it out mutates shared state. Under `SKILL.md`

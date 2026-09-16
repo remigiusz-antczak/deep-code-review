@@ -875,6 +875,28 @@
         "Caps the verdict below Approve and carries a Parity coverage: N/M line; rates the over-generalization a High communication defect",
         "Flags the changelog page as an unrepresentative (shell-less) sample and names a chrome-bearing, data-dense screen to verify next"
       ]
+    },
+    {
+      "id": "privacy-gate-skipped-scope-not-boundary-clean",
+      "prompt": "Our privacy gate ran in CI and exited 0. The job log shows it scanned for secrets and printed 'clean'. The identifier scan (real names, capital figures on the publish boundary) is driven by a pattern file that is gitignored and absent in CI, so that scan was skipped. Can I mark the publish boundary 'privacy: clean'?",
+      "expected_output": "No -- a green exit covers only the scopes that actually ran (SKILL.md principle 2: a pass is evidence only where the enforcing surface could see the artifact). The secret scan ran and passed; the identifier scan was SKIPPED because its pattern list was absent, so the identifier surface -- real names and capital figures on the publish boundary -- was never checked. Read which scopes ran, not the bare exit code. 'privacy: clean' here is an over-claim on a trust-critical surface: a real identifier leak would not have been caught. Rate the claim Critical, not the gate. To actually clear the boundary, supply the identifier pattern list (the gitignored .banlist.local.txt or the CI secret that feeds it) and re-run so the identifier scope runs; until then the boundary is unverified for identifiers, and the honest status names the skipped scope. (method.md.)",
+      "expectations": [
+        "Refuses 'privacy: clean' when a scope (identifier) was skipped; a pass covers only the scopes that ran",
+        "Names the skipped surface as unverified and cites principle 2 (enforcing surface could not see the artifact)",
+        "Rates the over-claim Critical as a trust-critical claim, distinguishing the claim from the gate",
+        "Requires supplying the pattern list and re-running so the identifier scope actually runs before any clean claim"
+      ]
+    },
+    {
+      "id": "required-check-no-status-is-not-green",
+      "prompt": "A PR that only touches units/ is stuck: the required check 'app-browser' shows no status at all (the job is path-filtered and legitimately didn't run for these paths), and the branch-protection rule won't let it merge. An agent suggested just merging with admin override, or committing an empty change to app/ to make the job run. What's the right call?",
+      "expected_output": "Treat the missing status as what it is -- a required check with no run for this PR, which blocks merge exactly as a red does and is indistinguishable from a hang; it is not a green pass. Don't fake-trigger it by touching app/ (that ships an unrelated change just to satisfy a gate) and don't reach for admin override as the default (that bypasses the protection for everyone). The real defect is a config gap: a path-filtered job that is also a required check must emit a conclusive status for out-of-scope paths -- a pass-through step that exits 0 -- or the required-check list must not name a job that is legitimately absent for a known class of PRs. Fix the workflow (or the required-check list) so the check is satisfiable, then merge normally. Flag it as a High merge-blocker in its own right, a config gap, not a flake to wait out. The same shape appears when a required job's workflow omits the event that fires the PR (a labeled-only trigger, or a workflow_dispatch run that never attaches to the PR rollup): the workflow existing is not the check running. (branch-and-merge-hygiene.md.)",
+      "expectations": [
+        "States a required check with no status is not green -- it blocks merge like a failure and is not a pass",
+        "Rejects fake-triggering the job with an unrelated change and rejects reflexive admin override as the fix",
+        "Identifies the config gap: a path-filtered required check must emit a conclusive status for out-of-scope paths (or not be required for that PR class)",
+        "Rates it a High merge-blocker config gap; generalizes to trigger-event gaps (labeled-only, workflow_dispatch rollup)"
+      ]
     }
   ]
 }
