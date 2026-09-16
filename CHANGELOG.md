@@ -3,6 +3,40 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.88.0] — 2026-09-16
+
+Wave 11f of the dogfooding batch: one screen verified is not the product — scope a
+parity claim to the correspondence table (#200).
+
+### Added — deep-code-review
+- **`migration-parity.md` — the correspondence table is a coverage ledger (#200).** An
+  agent that verified one route (a cheap, shell-less changelog page) reported that *the
+  product* matched — the other screens never rendered, and did not match. Gate 4's
+  correspondence table (`product-ux-quality.md`) is that ledger; the new rule is it
+  **exists before any claim** and each row carries its state (`verified` / `unverified`
+  / `n-a`). A parity status is **scoped to the verified rows and never phrased over the
+  product**; aggregate phrasing ("the app matches," "all pages") is valid only when
+  every row is `verified`, else the honest form is `N of M screens verified — remaining:
+  …`. An unrendered screen is an unprobed surface (`SKILL.md` principle 2). Sample a
+  **chrome-bearing, data-dense** screen first — a static page proves almost nothing about
+  the shell.
+- **`report-format.md` — verdict cap + coverage line (#200).** Mirroring the
+  `Authz posture` cap: the verdict is **capped below Approve** while any in-scope screen
+  is `unverified`, and the ground-truth block carries a `Parity coverage: N/M` line.
+- **`scripts/validate_status_claims.py` — fourth detector (#200).** Flags a positive
+  parity claim carrying a population quantifier (all / every / whole / the app) but no
+  N/M coverage fraction; it requires a parity-context word (so "all tests pass" is
+  spared) and fires even on a downgraded row.
+- **Severity: High, not Blocker.** The issue proposed Blocker; the `SKILL.md` rubric
+  reserves Blocker for "won't build/run/test, live data corruption, live exploited vuln"
+  and Critical for a monotonic-quality breach that *will* ship wrong data. A parity claim
+  generalized past its sample ships neither — it is a serious defect that **blocks unless
+  a named owner accepts** (the High band), because it retires the verification task. Rated
+  High accordingly.
+- One new eval (83 total). Lockstep bump to 1.88.0.
+
+Closes #200.
+
 ## [1.87.0] — 2026-09-16
 
 Wave 11e of the dogfooding batch: a screenshot is an artifact, not an inspection (#198),

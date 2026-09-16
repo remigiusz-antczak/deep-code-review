@@ -102,6 +102,34 @@ screenshot. Treat every "matches well" as **unverified** until the real surface 
 exercised against the real reference. (The structural / green-suite / seed-screenshot
 stand-ins are the "Beware the proxy" completion trap — `report-format.md`.)
 
+## Scope a parity claim to the correspondence table — one screen verified is not the product
+
+`product-ux-quality.md` gate 4 already defines *done* on a parity task as the
+present-or-absent lists empty **"for every screen in the correspondence table."** That
+table **is** the coverage ledger; #200's rule is only that it **exists before any
+claim** and that a claim is **scoped to the rows actually verified**, never phrased over
+the product.
+
+- **Enumerate every in-scope route/screen as a row before claiming parity.** Each row
+  carries its own state: `verified` (rendered and compared, with the evidence) /
+  `unverified` / `n-a (out of scope, reason)`. An unrendered screen is an **unprobed
+  surface** — `unverified`, not matched (`SKILL.md` principle 2: an absence is evidence
+  only after a positive control fires).
+- **A parity status is scoped to the `verified` rows and may never be phrased over the
+  product.** Aggregate phrasing — "the app matches," "parity achieved," "all pages" — is
+  valid **only** when **every** row reads `verified`; otherwise the honest form is
+  `N of M screens verified — remaining: <list>`. Generalizing a claim from a sample to
+  the population is a **High** communication defect: it retires the verification task —
+  the owner stands the lanes down and stops checking — and the mismatch surfaces later
+  as the trust-collapse dynamic (`product-ux-quality.md`'s repeated-owner-rejection
+  rule). The verdict cap lives in `report-format.md` (capped below Approve while any
+  in-scope screen is `unverified`).
+- **Sample the strongest screen first, not the cheapest.** When screens are verified
+  incrementally, verify a **chrome-bearing, data-dense** screen first; a static prose /
+  changelog page is the **weakest** possible sample — it exercises almost none of the
+  shared shell, and this file already puts shell unification ahead of screens, so a
+  screen with no shell proves almost nothing about the shell.
+
 ## Anchor findings on treatment, not data-volume — a sparse mockup is not a feature spec
 
 When the reference is a prototype on seed data, a section-by-section comparison
@@ -272,6 +300,10 @@ a separate move: `product-ux-quality.md`, *Match a named standard*.)
 
 - A parity claim ("matches the reference") backed only by a structural audit, a
   green suite, or seed-data screenshots — with no surface-by-surface real-data pass.
+- A parity / completion claim phrased over **the product / the app / all pages** with
+  **no correspondence table** and no `N/M` coverage fraction — a sample generalized to
+  the population (a **High** communication defect); worse when the one screen verified
+  is a static, shell-less page.
 - A **"matches"** claim on a parity task with **no mechanical differ** — no diff
   image or structured mismatch list attached, only an assertion.
 - A **structural** divergence (different columns / grouping / composition)

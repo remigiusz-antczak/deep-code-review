@@ -28,6 +28,12 @@ substring match will also exempt a row that mentions "disabled"/"contrast" for a
 unrelated reason — the acceptable direction for an exemption set (under-flag, never a
 false alarm on a genuine inspection).
 
+A fourth detector (issue #200) flags a positive parity claim carrying a population
+quantifier (all / every / whole / "the product" / "the app" / "all pages") but no N/M
+coverage fraction — a sample generalized to the whole product. It requires a
+parity-context word (so "all tests pass" is spared) and fires even on a ⚠️-downgraded
+row; the discriminator is the coverage fraction ("1/6", "1 of 6"), not the marker.
+
 It is an aid to human judgement, not a proof. It can over-flag a prose line that
 merely contains both a status word and a conditional; a flagged line is a lead to
 re-check — downgrade to partial/blocked with the condition as the headline, or
@@ -42,8 +48,8 @@ no listed pattern matched. Known false negatives:
     ("no partial coverage") can silence a genuine hedged-green on that line;
   * the token lists are fixed — a completion or hedge word not listed slips past.
 
-Exit 0 = no candidate lines (neither detector fired), 1 = candidate(s) found,
-2 = usage/unreadable.
+Exit 0 = no candidate lines (none of the four detectors fired), 1 = candidate(s)
+found, 2 = usage/unreadable.
 Stdlib only. Reports line numbers + the tokens matched, not full line content.
 """
 from __future__ import annotations
@@ -103,6 +109,33 @@ INSPECT_STEMS = (
     "overlap", "intersect", "clip", "truncat", "contrast", "disabl",
     "bbox", "bounding", "geometr",
 )
+# Population quantifiers + parity context: an aggregate parity claim that names no
+# coverage fraction generalizes a sample to the whole product (issue #200). The fourth
+# detector fires on a positive parity claim carrying a population word but no N/M
+# fraction; it fires regardless of a downgrade marker (⚠️ "the whole app matches" is as
+# unscoped as the green form; the issue's honest example carries ⚠️ AND a fraction). It
+# also requires a parity-context word, so "all tests pass" (no parity claim) is spared.
+POP_QUANTIFIER = (
+    "all", "every", "whole", "entire", "everywhere",
+    "the product", "the app", "all pages", "all screens",
+    # aggregate-completion phrases that generalize without a population word:
+    "parity achieved", "parity complete", "port complete", "migration complete",
+    "restyle complete",
+)
+PARITY_CTX = (
+    "parity", "matches", "match", "prototype", "design", "reference",
+    "screen", "page", "port", "restyle", "renders", "rendered", "looks the same",
+)
+# A coverage fraction (N/M or "N of M", each operand <= 2 digits and N <= M) scopes the
+# claim → exempt. The operand bound and N <= M reject a slash-date ("2026/09", "28/09");
+# an ambiguous small MM/DD like "09/12" can still read as a fraction — an accepted
+# residual for a heuristic aid.
+_FRACTION_RE = re.compile(r"\b(\d{1,2})\s*(?:/|of)\s*(\d{1,2})\b", re.IGNORECASE)
+
+
+def _has_fraction(line: str) -> bool:
+    """A coverage fraction present: N/M or "N of M", each <= 2 digits with N <= M."""
+    return any(int(m.group(1)) <= int(m.group(2)) for m in _FRACTION_RE.finditer(line))
 
 
 def die(code: int, msg: str) -> NoReturn:
@@ -142,6 +175,7 @@ def main(argv: list[str]) -> int:
     flagged: list[tuple[int, list[str], list[str]]] = []       # hedged-green
     surfaceless: list[tuple[int, list[str], list[str]]] = []   # UI/parity, no surface
     uninspected: list[tuple[int, list[str], list[str]]] = []   # screenshot, no inspection
+    overscoped: list[tuple[int, list[str], list[str]]] = []    # parity claim, no N/M scope
     for n, line in enumerate(text.splitlines(), start=1):
         low = line.lower()
         pos = find(POSITIVE, low, line)
@@ -161,6 +195,13 @@ def main(argv: list[str]) -> int:
         shot = find(SHOT_VOCAB, low, line)
         if shot and not any(stem in low for stem in INSPECT_STEMS):
             uninspected.append((n, pos, shot))
+        # Aggregate-scope detector (issue #200), also regardless of a downgrade marker:
+        # a parity claim carrying a population quantifier but no N/M coverage fraction
+        # generalizes a sample to the whole product. The discriminator is the fraction;
+        # a parity-context word is required so "all tests pass" is not a false hit.
+        pop = find(POP_QUANTIFIER, low, line)
+        if pop and find(PARITY_CTX, low, line) and not _has_fraction(line):
+            overscoped.append((n, pos, pop))
         # Hedged-green detector: an honest downgrade already surfaces the caveat, so
         # a downgraded line is not the failure THIS half catches.
         if find(DOWNGRADE, low, line):
@@ -169,7 +210,7 @@ def main(argv: list[str]) -> int:
         if hedge:
             flagged.append((n, pos, hedge))
 
-    if flagged or surfaceless or uninspected:
+    if flagged or surfaceless or uninspected or overscoped:
         for n, pos, hedge in flagged:
             print(
                 f"L{n}: green status {pos} carries a hedge {hedge} — "
@@ -190,11 +231,18 @@ def main(argv: list[str]) -> int:
                 "contrast / disabled-looks-disabled, product-ux gate 1), or it "
                 "is unverified, not verified (#198)."
             )
-        total = len(flagged) + len(surfaceless) + len(uninspected)
+        for n, pos, pop in overscoped:
+            print(
+                f"L{n}: green parity status {pos} generalized over {pop} with no "
+                "coverage fraction — scope it to the screens verified (N/M) or name the "
+                "correspondence table; a claim over the product from a sample is a High "
+                "communication defect (#200)."
+            )
+        total = len(flagged) + len(surfaceless) + len(uninspected) + len(overscoped)
         print(
             f"validate_status_claims: {total} line(s) to re-check "
             f"({len(flagged)} hedged-green, {len(surfaceless)} surfaceless parity, "
-            f"{len(uninspected)} uninspected screenshot)"
+            f"{len(uninspected)} uninspected screenshot, {len(overscoped)} overscoped parity)"
         )
         return 1
     print("validate_status_claims: ok")

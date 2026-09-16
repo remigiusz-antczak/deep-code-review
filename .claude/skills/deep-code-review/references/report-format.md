@@ -15,6 +15,14 @@ subsystem — give a **two-status verdict**, each scoped: e.g. "🟡 running sys
 (On a networked target the verdict is **capped below Approve** while any
 data-bearing entry point is still listed as untested in `Authz posture` —
 unprobed is `unverified`, not clean.)
+(On a UI/parity target the verdict is **capped below Approve** while any in-scope
+screen is still `unverified` in the correspondence table (`migration-parity.md`) — **or
+while no correspondence table exists at all**, since an absent table is *total* absence
+of coverage, not coverage. An unrendered screen is an unprobed surface, `unverified`,
+not matched. A parity or
+completion claim **generalized past the screens actually inspected** is a **High**
+communication defect: unlike a hedged ⚠️ that tells the owner to keep checking, a false
+"the product matches" tells them to **stop**.)
 Counts: Blocker N · Critical N · High N · Medium N · Low N · Nit N
 
 ## Ground truth
@@ -28,6 +36,8 @@ Counts: Blocker N · Critical N · High N · Medium N · Low N · Nit N
   `unverified`/skipped with reason — skip caps self-test only>
 - Lint/type/scan: <results>
 - Authz posture: <N entry points · anon probed N · cross-account M · untested: …>
+- Parity coverage: <N/M screens verified · unverified: …, or N/A> (UI/parity target;
+  the correspondence table's row states, `migration-parity.md`)
 - Pipeline/app run: <before-state metrics, or N/A>
 
 ## Findings

@@ -864,6 +864,17 @@
         "Names the clip (scrollWidth>clientWidth) and disabled-looks-disabled (computed affordance) companions",
         "Refuses an absolute-pixel/exact-width assertion as the fix (renderer flake); asserts non-intersection only"
       ]
+    },
+    {
+      "id": "parity-claim-scoped-to-verified-screens-not-the-product",
+      "prompt": "A visual port: reference design plus six app routes. So far only the changelog page (static prose, almost no shared chrome) has been rendered and compared -- it matches. Can I report 'the app now matches the design'?",
+      "expected_output": "No -- that generalizes one verified screen to the whole product. Scope the claim to the rows actually verified: report '1/6 screens verified' and list the five unverified routes; an unrendered screen is an unprobed surface, unverified, not matched (an absence is evidence only after a positive control fires). Aggregate phrasing ('the app matches', 'parity achieved') is valid only when every row in the correspondence table reads verified. Cap the verdict below Approve while any in-scope screen is unverified, and carry a 'Parity coverage: 1/6' line in the ground-truth block. Generalizing a sample to the population is a High communication defect -- it retires the verification task and the owner stops checking, then the mismatch surfaces later. Also: the changelog page is the weakest possible sample -- it exercises almost none of the shared shell -- so verify a chrome-bearing, data-dense route next, not another static page. (migration-parity.md.)",
+      "expectations": [
+        "Refuses 'the app matches the design'; scopes the claim to 1/6 verified and lists the unverified routes",
+        "Treats an unrendered screen as unprobed/unverified (coverage kernel); aggregate phrasing valid only when every row is verified",
+        "Caps the verdict below Approve and carries a Parity coverage: N/M line; rates the over-generalization a High communication defect",
+        "Flags the changelog page as an unrepresentative (shell-less) sample and names a chrome-bearing, data-dense screen to verify next"
+      ]
     }
   ]
 }

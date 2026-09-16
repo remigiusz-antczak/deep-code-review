@@ -767,6 +767,22 @@ else
   else
     record 1 "status-claim: an inflected inspection citation (overlapping/clipped) passes"
   fi
+  # Planted RED (#200): a parity claim generalized over a population (whole / every /
+  # all) with no N/M coverage fraction -- the aggregate-scope detector must flag it.
+  printf '%s\n' '| A | ✅ every page matches the prototype |' >"$WORK/status.overscoped.md"
+  if python3 "$STATUSCHK" --file "$WORK/status.overscoped.md" >/dev/null 2>&1; then
+    record 1 "status-claim: flags a parity claim generalized past a coverage fraction (planted RED)"
+  else
+    record 0 "status-claim: flags a parity claim generalized past a coverage fraction (planted RED)"
+  fi
+  # Discrimination: the SAME claim scoped with an N/M fraction is clean -- proving the
+  # fraction check, not the population word.
+  printf '%s\n' '| A | ✅ every page matches the prototype, 6/6 done |' >"$WORK/status.scoped.md"
+  if python3 "$STATUSCHK" --file "$WORK/status.scoped.md" >/dev/null 2>&1; then
+    record 0 "status-claim: a parity claim scoped with an N/M fraction passes"
+  else
+    record 1 "status-claim: a parity claim scoped with an N/M fraction passes"
+  fi
 fi
 
 # ---------------------------------------------------------------------------
