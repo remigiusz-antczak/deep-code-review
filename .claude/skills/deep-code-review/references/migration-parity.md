@@ -83,17 +83,64 @@ Separate three kinds of "gap" explicitly — they have **opposite** fixes:
 - **(b) data-volume artifact** — the surface is larger because it holds real data;
   the fix is **progressive disclosure / capping / pagination**, *never* deletion.
 - **(c) a real extra feature** the production surface has and the mockup lacks —
-  **preserve it**; a design mockup is a look reference, not a feature spec.
+  **preserve it**: preserve the *capability* and **restyle it into the target's
+  design language**, never delete it (see *Restyle an app-only feature into the
+  target's design language* below for the classification, its **High** severity, and
+  the ledger). A design mockup is a look reference, not a feature spec.
 
 **"Drop / replace / remove X to match the reference" is a review smell** for any
 surface that renders real data: it is a path to deleting working features and
 violates do-no-harm (principle 4) and the never-remove-a-working-feature-without-
-confirmation bar. Rewrite the recommendation as "adopt the reference's layout and
-default; move the extra content behind progressive disclosure." A page-height or
-item-count delta versus a seed-data mockup is a **notice, not a defect** — say so
+confirmation bar — and when the *X* is app-only **functionality** (removing it loses
+a user capability), deleting it without a named owner approval is not merely a smell
+but a **High**-severity finding (*Restyle an app-only feature into the target's
+design language* below). Rewrite the recommendation as "adopt the reference's layout
+and default; move the extra content behind progressive disclosure" for a data-volume
+gap, or "restyle the feature into the target's design language" for a real app-only
+feature. A page-height or item-count delta versus a seed-data mockup is a
+**notice, not a defect** — say so
 in the finding, so a downstream implementer does not read it as a cut order. Before
 recommending any structural change to a real surface from a mockup, confirm the
 difference is **treatment** (reproducible on **equal** data), not volume.
+
+## Restyle an app-only feature into the target's design language — don't delete it, don't leave it old
+
+`product-ux-quality.md`'s parity differ runs **both ways** and flags an **app-only
+element** (present in the app, absent from the design) as a finding. That rule and
+the *preserve-a-real-extra-feature* rule above read as **opposites** — one says "an
+app-only element is a mismatch," the other says "preserve it" — and when two rules
+collide an implementer reaches for the **harsher** one: *delete it to match.* That is
+the wrong default and the most expensive mistake on a restyle. Resolve the tension by
+**classifying** the app-only element with the differ's operative test — *does
+removing it lose a user capability?* (`product-ux-quality.md` owns that test) — into
+exactly one of three buckets:
+
+- **Decoration / pure shell** (no capability, no real data — an extra header, a
+  "Showing N of N" line, a duplicated label) → **remove-to-match.** This is the only
+  bucket that deletes, and it deletes nothing a user can *do*.
+- **Real functionality** (removing it loses a capability — a filter, a view tab, an
+  upvote, a deep link) → **restyle it into the target's design language.** Re-express
+  the capability in the reference's own primitives (its button, its tab, its filter
+  control) so the **look** reaches parity while the **capability** is preserved.
+  *Preserve* means preserve-the-capability — **not** "leave it in the old visual
+  language," **not** "escalate and wait." The affirmative deliverable is the restyled
+  feature. Only when **no** target primitive fits does that single element escalate to
+  owner adjudication — the **fallback**, never the default.
+- **Owner-approved removal** → a **named decision**: an owner has accepted losing the
+  capability to reach parity. Record who accepted it and where.
+
+**Severity.** Deleting — or recommending the deletion of — app-only **functionality**
+to reach visual parity **without a named owner approval** is **High** (do-no-harm,
+principle 4): a serious defect that **blocks unless a named owner accepts** (`SKILL.md`
+severity rubric). The *owner-approved-removal* bucket **is** that acceptance; absent
+it, the delete blocks. Removing pure **decoration** is not this finding — no
+capability is lost.
+
+**Fill an exception ledger before implementing a restyle** — one row per app-only
+element: `element · bucket (decoration / functionality / owner-approved) · verdict
+(remove / restyle / named-removal) · target primitive it restyles into`. The ledger
+is the artifact that proves each app-only element was **classified**, not silently
+deleted; a restyle that deletes an unledgered element is the do-no-harm finding above.
 
 ## Match the chrome, never the mock's data — copying a sample value is fabrication
 
@@ -200,6 +247,11 @@ a separate move: `product-ux-quality.md`, *Match a named standard*.)
 - A recommendation to **drop / remove / replace** a surface or its content to match
   a **prototype / mockup** reference (real data → progressive disclosure, not
   deletion).
+- An app-only **feature** (removing it loses a capability) **deleted or slated for
+  deletion** to reach visual parity, with **no named owner approval** and **no
+  restyle-into-target attempt** — a **High** do-no-harm finding, not a parity win.
+- A restyle that resolves app-only elements with **no exception ledger** classifying
+  each as decoration / functionality / owner-approved before implementation.
 - A comparison treating **page height / row count** versus a seed-data mockup as a
   defect rather than a notice.
 - "Match the reference and use judgment" with **no cited heuristic** named behind a

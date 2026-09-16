@@ -3,6 +3,32 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.83.0] — 2026-09-16
+
+Wave 11a of the dogfooding batch: reconcile bidirectional parity (#189) with the
+preserve-a-feature rule — restyle an app-only feature, don't delete it (#193).
+
+### Changed — deep-code-review
+- **`migration-parity.md`** — new *Restyle an app-only feature into the target's
+  design language* section resolves the tension between the parity differ's "app-only
+  element is a finding" (#189) and the preserve-a-real-extra-feature rule: classify
+  each app-only element as **decoration** (→ remove-to-match), **real functionality**
+  (→ **restyle into the target's design language**, preserving the capability — the
+  affirmative default, not escalate-and-wait), or **owner-approved removal** (a named
+  decision). Deleting app-only functionality to reach visual parity **without a named
+  owner approval is High** (do-no-harm, principle 4 — blocks unless a named owner
+  accepts). Fill an **exception ledger** (element · bucket · verdict · target
+  primitive) before a restyle; the review-smell paragraph and 🚩 signals carry the
+  severity.
+- **`product-ux-quality.md`** — the bidirectional-parity gate's app-only *feature*
+  verdict changes from "escalate to the owner" to **restyle into the target's design
+  language** (escalation demoted to the fallback when no target primitive fits);
+  *Done* and the parity checklist now read every app→design entry **resolved**
+  (restyled / decoration-removed / owner-adjudicated), not "empty". Refines #189.
+- One new eval; the #189 eval updated to the restyle-default reading (75 total).
+
+Closes #193.
+
 ## [1.82.0] — 2026-09-16
 
 Wave 10 of the dogfooding batch: design parity is bidirectional (#189).
