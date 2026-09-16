@@ -18,6 +18,16 @@ on every surface a human opens, so this detector fires even on a ⚠️-downgrad
 The sha test requires >= 7 hex chars with both a hex letter and a digit (so neither
 a hex-looking word nor a plain number passes as a commit).
 
+A third detector (issue #198) flags a positive status that leans on a screenshot
+(screenshot / screen capture / .png) yet names none of the pixel-defect checklist
+STEMS (overlap / clip / truncat / intersect / contrast / disabl / bbox / geometr) — a
+screenshot proves a render happened, not that the render is correct. It fires even on
+a ⚠️-downgraded row; the discriminator is the inspection stem, matched as a substring
+so an inflected citation ("nothing overlapping / clipped") still exempts. That
+substring match will also exempt a row that mentions "disabled"/"contrast" for an
+unrelated reason — the acceptable direction for an exemption set (under-flag, never a
+false alarm on a genuine inspection).
+
 It is an aid to human judgement, not a proof. It can over-flag a prose line that
 merely contains both a status word and a conditional; a flagged line is a lead to
 re-check — downgrade to partial/blocked with the condition as the headline, or
@@ -76,6 +86,23 @@ SURFACE_VOCAB = (
 # mistaken for a commit; the URL needs a real host, so a time ("12:30") is not a port.
 _URL_RE = re.compile(r"https?://|\blocalhost\b|\b\d{1,3}(?:\.\d{1,3}){3}\b", re.IGNORECASE)
 _SHA_RE = re.compile(r"\b(?=[0-9a-f]*[a-f])(?=[0-9a-f]*[0-9])[0-9a-f]{7,40}\b", re.IGNORECASE)
+# Screenshot / render-artifact vocabulary: marks a UI status leaning on an image. A
+# positive status that cites an image but names no inspection is the failure the third
+# detector catches (issue #198 — a screenshot is an artifact, not an inspection).
+SHOT_VOCAB = (
+    "screenshot", "screen shot", "screencap", "screen capture", ".png",
+)
+# Inspection STEMS: the pixel-defect checklist a UI status cites (product-ux gate 1),
+# matched as SUBSTRINGS (not word-bounded). This is an EXEMPTION set — a row that cites
+# its inspection in any inflection ("no overlapping, nothing clipped") must be spared,
+# and failing toward exempting is the safe direction here (unlike the claim sets, where
+# the word boundary keeps "verified" out of "unverified"). "state" is deliberately NOT
+# here: a shot labelled only with its data state, with no defect attestation, is exactly
+# what #198 catches, so citing the state does not clear the flag.
+INSPECT_STEMS = (
+    "overlap", "intersect", "clip", "truncat", "contrast", "disabl",
+    "bbox", "bounding", "geometr",
+)
 
 
 def die(code: int, msg: str) -> NoReturn:
@@ -114,6 +141,7 @@ def main(argv: list[str]) -> int:
 
     flagged: list[tuple[int, list[str], list[str]]] = []       # hedged-green
     surfaceless: list[tuple[int, list[str], list[str]]] = []   # UI/parity, no surface
+    uninspected: list[tuple[int, list[str], list[str]]] = []   # screenshot, no inspection
     for n, line in enumerate(text.splitlines(), start=1):
         low = line.lower()
         pos = find(POSITIVE, low, line)
@@ -126,6 +154,13 @@ def main(argv: list[str]) -> int:
         surf = find(SURFACE_VOCAB, low, line)
         if surf and not _URL_RE.search(line) and not _SHA_RE.search(line):
             surfaceless.append((n, pos, surf))
+        # Screenshot-without-inspection detector, also regardless of a downgrade
+        # marker: a UI status leaning on an image but citing no pixel-defect checklist
+        # item is unverified (issue #198). The discriminator is the inspection token,
+        # not the marker — a row that cites overlap/clip/contrast/... is exempt.
+        shot = find(SHOT_VOCAB, low, line)
+        if shot and not any(stem in low for stem in INSPECT_STEMS):
+            uninspected.append((n, pos, shot))
         # Hedged-green detector: an honest downgrade already surfaces the caveat, so
         # a downgraded line is not the failure THIS half catches.
         if find(DOWNGRADE, low, line):
@@ -134,7 +169,7 @@ def main(argv: list[str]) -> int:
         if hedge:
             flagged.append((n, pos, hedge))
 
-    if flagged or surfaceless:
+    if flagged or surfaceless or uninspected:
         for n, pos, hedge in flagged:
             print(
                 f"L{n}: green status {pos} carries a hedge {hedge} — "
@@ -148,10 +183,18 @@ def main(argv: list[str]) -> int:
                 "INVALID, not downgraded; name url · tree/worktree · branch · sha, or "
                 "make no claim (#192)."
             )
-        total = len(flagged) + len(surfaceless)
+        for n, pos, shot in uninspected:
+            print(
+                f"L{n}: green UI status {pos} leans on an image {shot} but names no "
+                "inspection — cite the pixel-defect checklist (overlap / clip / "
+                "contrast / disabled-looks-disabled, product-ux gate 1), or it "
+                "is unverified, not verified (#198)."
+            )
+        total = len(flagged) + len(surfaceless) + len(uninspected)
         print(
             f"validate_status_claims: {total} line(s) to re-check "
-            f"({len(flagged)} hedged-green, {len(surfaceless)} surfaceless parity)"
+            f"({len(flagged)} hedged-green, {len(surfaceless)} surfaceless parity, "
+            f"{len(uninspected)} uninspected screenshot)"
         )
         return 1
     print("validate_status_claims: ok")

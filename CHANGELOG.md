@@ -3,6 +3,35 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.87.0] — 2026-09-16
+
+Wave 11e of the dogfooding batch: a screenshot is an artifact, not an inspection (#198),
+and prove a layout claim with geometry, not class names (#199).
+
+### Added — deep-code-review
+- **`product-ux-quality.md` gate 1 — the screenshot's inspection contract (#198).** A
+  screenshot proves a render happened, not that it is correct: "screenshot attached"
+  with no cited inspection is `unverified`, not `verified` (the treatment a parity claim
+  with no named surface gets). Gate 1 now defines a **pixel-defect checklist** once —
+  overlap / clip-truncation / contrast (`frontend-a11y.md`) / disabled-looks-disabled /
+  state — that a UI status must cite. `report-format.md` requires the surface **and** the
+  inspection for a UI claim.
+- **`testing-and-evals.md` — prove a layout claim with geometry, not class names (#199).**
+  A class assertion (`toHaveClass`, `toBeVisible`, a snapshot) passes while two elements
+  render on top of each other. New section: a rendered **bounding-box non-intersection**
+  assertion at each screenshot width (red-before / green-after), with clip
+  (`scrollWidth > clientWidth`) and disabled-looks-disabled (computed affordance)
+  companions. **Scope discipline:** non-intersection and non-clipping only — never
+  absolute pixels / widths (renderer flake). This is the mechanical proof behind gate 1's
+  overlap / clip items.
+- **`scripts/validate_status_claims.py` — third detector (#198).** Flags a positive UI
+  status leaning on a screenshot (`screenshot` / `.png` / `captured`) that names no
+  inspection token (overlap / clip / contrast / disabled / bbox / geometry); it fires even
+  on a downgraded row, exempting a row that cites what it inspected.
+- Two new evals (82 total). Lockstep bump to 1.87.0.
+
+Closes #198, #199.
+
 ## [1.86.0] — 2026-09-16
 
 Wave 11d of the dogfooding batch: budget the CI an agent swarm triggers (#195).

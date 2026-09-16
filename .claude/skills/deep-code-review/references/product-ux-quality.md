@@ -496,11 +496,30 @@ Phase 1, gate-vs-standard). Three gates for any UI change, in descending
 confidence of what they can prove — plus a fourth that fires only on a parity
 task:
 
-1. **Screens-changed evidence (proves a look happened).** On any diff that can
-   change a rendered page, require a screenshot of each affected route at a narrow
-   and a wide width (e.g. 390 / 1440), or an explicit `No UX change: <reason>`
-   line. This proves a human/agent *looked*; it does **not** prove the states are
-   correct.
+1. **Screens-changed evidence — the artifact, plus the inspection it demands.** On
+   any diff that can change a rendered page, require a screenshot of each affected
+   route at a narrow and a wide width (e.g. 390 / 1440), or an explicit `No UX
+   change: <reason>` line. A screenshot proves a human/agent *looked*; it does
+   **not** prove the render is correct — and "screenshot attached" **with no cited
+   inspection** is `unverified`, not `verified` (the treatment a parity claim with no
+   named surface gets, #192). The defects that survive every other gate are the ones
+   only a look at the image catches, so a UI status **names what it inspected** from
+   this checklist (defined once here; a status cites the items):
+   - **overlap** — no two text / interactive elements intersect (mechanical proof:
+     the bounding-box non-intersection assertion, `testing-and-evals.md`);
+   - **clip / truncation** — no unintended ellipsis or cut glyph at the narrow width
+     (`scrollWidth > clientWidth`, same file);
+   - **contrast** — text meets AA against its *painted* background
+     (`frontend-a11y.md`);
+   - **disabled-looks-disabled** — a functionally disabled control is *visibly*
+     disabled (cursor / opacity / painted colour, not only the attribute; the
+     *no-dead-controls* interaction-completeness rule above, seen in the render);
+   - **state named** — which data state the shot is of (empty / loading / error /
+     populated), so an absence reads honestly (gate 2's state coverage; the
+     empty≠all-clear rule above).
+
+   A screenshot with an unstated inspection is an artifact read as the verification
+   it is not.
 2. **State-coverage in tests (proves the branches exist).** A component test that
    renders a data view asserts the **empty and error** branches, not only the
    populated one — extends `testing-and-evals.md`'s "test the failure, not just

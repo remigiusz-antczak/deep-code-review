@@ -75,7 +75,13 @@ under review**, identified by **URL + branch + sha actually rendered** (the
 the rendered tree is invalid — not downgraded to ⚠️**, because nothing was named to
 downgrade. And **never direct a human to a URL whose served sha you have not just
 confirmed** — confirm it the way `infra-iac-containers.md` confirms a deploy (#182),
-by fetching a byte only the new build serves, not by assuming a rebuild happened.
+by fetching a byte only the new build serves, not by assuming a rebuild happened. And
+for a UI claim the **surface and the inspection are both required**: a screenshot is
+the *artifact* (a render happened), the cited **pixel-defect checklist** is the
+*evidence* (`product-ux-quality.md` gate 1 — overlap / clip / contrast /
+disabled-looks-disabled). `✅ route X verified — screenshot attached` with **no
+cited inspection** is downgraded to ⚠️/`unverified` — the image alone is read as a
+verification it is not.
 
 **Beware the proxy.** A passing test, a green build, a merged PR, or a
 hand-configured render is a **proxy** for the user's outcome, not the outcome —

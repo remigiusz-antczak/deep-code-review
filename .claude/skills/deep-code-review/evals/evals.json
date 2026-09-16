@@ -842,6 +842,28 @@
         "Requires path filters to fail closed (a skip is a gate exclusion) and never path-filters out privacy/security checks",
         "States the residual risk (cheap gate misses browser-only regressions until the full run; an unrun matrix is unverified) and rates the cost Medium not High"
       ]
+    },
+    {
+      "id": "screenshot-is-not-inspection-cite-the-checklist",
+      "prompt": "A restyled entity-detail route: unit tests pass (they assert the pill and label render with the right classes), type-check and lint pass, and a screenshot of the route is attached. Status row: 'route X rendered/verified -- screenshot attached'. In the screenshot, the status pill overlaps the entity's own label at the default width. Sign off?",
+      "expected_output": "No. A screenshot proves a render happened, not that it is correct -- 'screenshot attached' with no cited inspection is unverified, not verified. The passing unit tests assert the classes render, not where they land; an overlap is geometric and no class assertion catches it. Inspect the image against the pixel-defect checklist and cite what you found: here the OVERLAP item fails -- the status pill intersects the entity label, so the primary text is unreadable at the default width. Report that as a finding (its mechanical proof is a bounding-box non-intersection assertion, testing-and-evals.md). Also name the other items you checked (clip / contrast / disabled-looks-disabled) and which data state the shot is of. A UI status that leans on the image without naming the inspection is an artifact read as the verification it is not. (product-ux-quality.md.)",
+      "expectations": [
+        "Refuses to sign off 'verified' on the strength of the screenshot plus passing class-assertion tests",
+        "Reports the overlap as a finding, citing the overlap checklist item",
+        "Explains a class assertion cannot catch a geometric overlap; the proof is a bounding-box assertion",
+        "Requires the status to cite the pixel-defect checklist (overlap/clip/contrast/disabled/state), else unverified"
+      ]
+    },
+    {
+      "id": "layout-claim-proven-by-geometry-not-class-assertion",
+      "prompt": "A component test asserts the badge is present and carries the intended utility classes -- it passes. But at the narrow width the badge overlaps its adjacent label. How should the layout be tested, and is the class assertion enough?",
+      "expected_output": "The class assertion is insufficient evidence for a layout claim -- it only proves the author wrote the class they typed; it passes while the two elements render on top of each other. Overlap is geometric, so the test that counts is a rendered bounding-box non-intersection assertion: read both elements' boundingBox() and assert they do not intersect (and neither collapsed to zero width). Run it at EACH width the project screenshots -- an overlap is width-dependent and usually appears only at the narrow one -- and show it red before / green after the fix. Two companions share the mechanism: clip via scrollWidth > clientWidth, and disabled-looks-disabled via the computed affordance (opacity/cursor), not the attribute. Do NOT assert an absolute pixel position or exact width -- those are renderer- and font-metric-dependent and produce cross-OS flake; the invariant is 'these two do not overlap', never 'this is 132px wide'. (testing-and-evals.md.)",
+      "expectations": [
+        "Calls the class assertion insufficient evidence for the layout claim",
+        "Prescribes a rendered bounding-box non-intersection assertion, run at each width, red-before/green-after",
+        "Names the clip (scrollWidth>clientWidth) and disabled-looks-disabled (computed affordance) companions",
+        "Refuses an absolute-pixel/exact-width assertion as the fix (renderer flake); asserts non-intersection only"
+      ]
     }
   ]
 }

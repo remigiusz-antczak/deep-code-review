@@ -113,6 +113,53 @@ explicit third choice), not which one this review prefers.
   checked vs. human-reviewed vs. not-applicable-with-reasoning. Document
   coverage gaps and skipped tests; never claim an assurance you don't have.
 
+## Prove a rendered-layout claim with geometry, not class names
+
+A UI test that asserts **the class that is supposed to produce a layout** —
+`expect(pill).toHaveClass(…)`, `toBeVisible()`, a markup snapshot — proves only that
+the author wrote the class they typed; it passes while the two elements render **on
+top of each other**. Overlap, collision, and clipping are **geometric** properties,
+provable cheaply and deterministically, and a class assertion can never catch them.
+
+For any pair of adjacent elements whose collision is user-visible (a label + its
+status pill / badge, a row's text + its action cluster, a header + an overflow
+control), the test that counts is a **rendered bounding-box assertion**, run at
+**each width the project already screenshots** (an overlap is width-dependent and
+usually shows only at the narrow one):
+
+```js
+// Playwright: adjacent elements must not intersect at the target width.
+// boundingBox() returns null for a non-rendered element — assert presence first.
+const a = await label.boundingBox();
+const b = await pill.boundingBox();
+expect(a && b).toBeTruthy();             // both rendered (not null)
+const intersects = (r1, r2) =>
+  r1.x < r2.x + r2.width && r2.x < r1.x + r1.width &&
+  r1.y < r2.y + r2.height && r2.y < r1.y + r1.height;
+expect(intersects(a, b)).toBe(false);    // non-intersection
+expect(a.width).toBeGreaterThan(0);      // and neither collapsed to zero
+```
+
+Equivalent primitives elsewhere: `getBoundingClientRect()` pairs in a browser-backed
+unit runner, or `elementHandle.boundingBox()` per locator. Two companion assertions
+share the mechanism:
+- **Clip / truncation:** `scrollWidth > clientWidth` on an element that must not
+  ellipsise.
+- **Disabled-looks-disabled:** assert the **computed** affordance (`opacity`,
+  `cursor`, or painted colour) of a disabled control, not the `disabled` attribute or
+  the class — an attribute that blocks the click while the control still *styles* as
+  live is a dead control that looks clickable.
+
+**Scope discipline — invariants, not pixels.** These assertions are for
+**non-intersection and non-clipping**, which hold on every renderer. They are **not**
+for absolute positions or exact widths, which are renderer- and font-metric-dependent
+and produce the cross-OS flake the bar warns against (the renderer-tolerance / pinned-
+exception discipline, `product-ux-quality.md` gate 3). The assertion is "these two do
+not overlap," never "this is 132px wide." Show it **red before / green after** the
+fix, like any regression test. This is the mechanical proof behind the
+screenshot-inspection checklist's **overlap** and **clip** items
+(`product-ux-quality.md` gate 1).
+
 ## AI evals (for any model-dependent output)
 
 A mocked-LLM unit test verifies **wiring, not model quality.** Model quality

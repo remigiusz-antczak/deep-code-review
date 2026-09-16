@@ -742,6 +742,31 @@ else
   else
     record 0 "status-claim: flags a downgraded surfaceless parity claim (invalid-not-downgraded)"
   fi
+  # Planted RED (#198): a green UI status leaning on a screenshot but naming no
+  # pixel-defect inspection is unverified -- the third detector must flag it.
+  printf '%s\n' '| route X | ✅ verified -- screenshot attached |' >"$WORK/status.noinspect.md"
+  if python3 "$STATUSCHK" --file "$WORK/status.noinspect.md" >/dev/null 2>&1; then
+    record 1 "status-claim: flags a screenshot status naming no inspection (planted RED)"
+  else
+    record 0 "status-claim: flags a screenshot status naming no inspection (planted RED)"
+  fi
+  # Discrimination: the SAME green status citing the inspection checklist is clean --
+  # proving the inspection-token check, not the downgrade word.
+  printf '%s\n' '| route X | ✅ verified -- screenshot inspected: overlap ok, clip ok, contrast ok |' >"$WORK/status.inspected.md"
+  if python3 "$STATUSCHK" --file "$WORK/status.inspected.md" >/dev/null 2>&1; then
+    record 0 "status-claim: a screenshot status citing the inspection checklist passes"
+  else
+    record 1 "status-claim: a screenshot status citing the inspection checklist passes"
+  fi
+  # Discrimination (inflected): the exemption must survive natural-language inflection
+  # ("overlapping" / "clipped"), not only the bare stems -- INSPECT_STEMS is substring-
+  # matched. If this row flags, the exemption regressed to word-boundary matching.
+  printf '%s\n' '| route X | ✅ verified -- screenshot: no elements overlapping, nothing clipped |' >"$WORK/status.inflected.md"
+  if python3 "$STATUSCHK" --file "$WORK/status.inflected.md" >/dev/null 2>&1; then
+    record 0 "status-claim: an inflected inspection citation (overlapping/clipped) passes"
+  else
+    record 1 "status-claim: an inflected inspection citation (overlapping/clipped) passes"
+  fi
 fi
 
 # ---------------------------------------------------------------------------
