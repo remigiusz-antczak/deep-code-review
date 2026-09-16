@@ -3,6 +3,29 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.79.0] — 2026-09-16
+
+Wave 8 of the dogfooding batch: verify-the-real-thing (#180, #181, #182). Each lens
+extends a shipped one and points at it rather than restating it.
+
+### Added — deep-code-review
+- **`infra-iac-containers.md`** — confirm a deploy on a byte only the *new* build
+  serves, never `/health`: on a build-then-promote platform the old pod keeps
+  answering `/health` = 200 through a slow build's `504`, so poll a discriminator (a
+  new-build-only asset path 404 -> 200, a build id, a changed header). Sharpens the
+  verify-by-effects rule (#148) (#182).
+- **`method.md`** — prove a verify gate *idempotent* (run it twice), not just green
+  from a clean clone: a gate whose steps write artifacts a later step consumes can
+  pass once and fail on re-run; a non-handler export from a framework route module
+  (`.next/types/**`) is one concrete order-dependent trigger (#180).
+- **`product-ux-quality.md`** — measure a field's distribution before building a
+  confidence/corroboration UI: a near-constant field is false precision even as a
+  tier — drop it or reframe to what actually varies (extends the confidence-tier
+  detector #155) (#181).
+- Three new behavioral evals.
+
+Closes #180, #181, #182.
+
 ## [1.78.0] — 2026-09-16
 
 Wave 7 of the dogfooding batch: gate- and probe-honesty (#157, #165, #166, #167,

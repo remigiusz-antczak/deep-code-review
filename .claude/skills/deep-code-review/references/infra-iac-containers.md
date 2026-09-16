@@ -66,6 +66,16 @@ them before the domain audits, because they fail late and silently otherwise:
   (a `409` means wait; a timeout means it was likely accepted), and prefer a deploy
   API that returns a durable deployment id + async status over one that blocks on
   the build inside the gateway window.
+- **Confirm promotion on a byte only the *new* build serves — never on `/health`.**
+  A liveness endpoint both the old and new artifact answer cannot confirm a
+  promotion: on a build-then-promote platform the **old** pod keeps returning
+  `/health` = 200 throughout a slow build's `504`, so polling it "proves" a success
+  that never happened (the old artifact answering). Pick a **discriminator** that
+  differs between the artifacts and poll that — a static asset path the new build
+  ships and the old lacked (`404` → `200` exactly when the new pod takes over), a
+  build/commit id, a changed response header. A response byte only the new build can
+  serve is the honest promotion signal (sharpens the effect-verification above:
+  `/health` is an effect **both** builds produce).
 
 ---
 

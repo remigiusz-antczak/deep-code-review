@@ -711,6 +711,38 @@
         "Computes the no-regression invariant over the route/navigation reachability graph, not nav-position stability",
         "Still catches a genuinely orphaned/unreachable route despite a lingering label"
       ]
+    },
+    {
+      "id": "confirm-deploy-on-new-build-byte-not-health",
+      "prompt": "Our deploy build timed out with a 504, but /health still returns 200, so the new version is live -- right?",
+      "expected_output": "No -- /health cannot confirm a promotion when both the old and new artifact answer it. On a build-then-promote platform the OLD pod keeps returning /health = 200 throughout a slow build's 504, so polling it 'proves' a success that never happened (the old artifact answering). Pick a DISCRIMINATOR that differs between the artifacts and poll that: a static asset path the new build ships and the old lacked (404 -> 200 exactly when the new pod takes over), a build/commit id, or a changed response header. A response byte only the new build can serve is the honest promotion signal; verify by that effect, not a liveness endpoint both builds produce. (infra-iac-containers.md.)",
+      "expectations": [
+        "Rejects /health = 200 as proof the new build was promoted",
+        "Explains that the old pod can keep answering /health during a slow build's timeout",
+        "Requires polling a discriminator only the new build serves (new asset path, build id, changed header)"
+      ]
+    },
+    {
+      "id": "measure-distribution-before-confidence-ui",
+      "prompt": "We want to add a 'confirmed by N sources' badge and an X% match-confidence to our provenance UI. Build it?",
+      "expected_output": "Measure the field's distribution on real data first -- even a tier is false precision if the signal is near-constant. If corroborationCount is 1 on almost every row (e.g. 16,008 of 16,012), a 'confirmed by N sources' badge fires on a fraction of a percent of rows and reads '1 source' everywhere else; if match-confidence is 0.9 on ~70% and 0.8 on the rest, it is effectively binary and 'X% confidence' manufactures precision the pipeline lacks. If the field barely varies, showing it is false precision, not transparency -- drop it or reframe to something that actually varies (how an entity was matched, not a number). A misleading signal is worse than an honest blank (empty beats fabricated). (product-ux-quality.md.)",
+      "expectations": [
+        "Requires measuring the actual field distribution before designing the confidence/corroboration display",
+        "Treats a near-constant field shown as a confidence/corroboration signal as false precision",
+        "Recommends dropping or reframing to a signal that actually varies (how matched, not a number)",
+        "Invokes empty-beats-fabricated: a misleading signal is worse than an honest blank"
+      ]
+    },
+    {
+      "id": "verify-gate-proven-idempotent-not-just-clean-clone",
+      "prompt": "Our verify pipeline is a standalone typecheck then a build (the build has typescript.ignoreBuildErrors, so it doesn't re-check types), and it's green on a fresh clone in CI. But a teammate says tsc fails when they re-run it locally. Is CI's green enough?",
+      "expected_output": "No -- prove the gate idempotent by running it twice, not just green from a clean clone. A gate whose steps write artifacts a later step consumes can pass once and fail on the next run against what the first run generated: here the build emits generated route types (.next/types/**) that a subsequent standalone tsc --noEmit then rejects, so a clean-clone CI run never sees it while the local re-run hits a confusing red -- the gate is order-dependent, not flaky. Run it twice (or clean the generated dirs first) and treat the second-run failure as a real finding. One concrete trigger: a non-handler export (a helper/constant/classifier) from a framework route module (a Next.js App Router route.ts) makes the generated validator reject the module -- move the pure logic to a sibling module. (method.md.)",
+      "expectations": [
+        "Does not accept green-from-a-clean-clone as proof; requires running the gate twice (or cleaning generated dirs)",
+        "Identifies an order-dependent gate where a build writes artifacts a later step consumes",
+        "Flags a non-handler export from a framework route module and moves pure logic to a sibling",
+        "Treats the second-run failure as a real finding, not flakiness"
+      ]
     }
   ]
 }

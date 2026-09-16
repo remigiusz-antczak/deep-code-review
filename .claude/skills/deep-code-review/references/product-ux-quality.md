@@ -161,6 +161,17 @@ model-authored number published as precision. (How to *define* the tiers, and wh
 source reliability and claim corroboration stay independent axes, is a
 data-product-output rule — `product-output-safety`'s — not restated here.)
 
+**Measure the field's distribution before building the display at all.** Even a
+*tier* is false precision if the underlying signal is **near-constant** — so measure
+it first, on real data. A `corroborationCount` that is `1` on 16,008 of 16,012 rows
+makes a "confirmed by N sources" badge fire on ~0.02% of rows and read "1 source"
+everywhere else; a match-confidence that is `0.9` on ~70% of rows and `0.8` on the
+rest is effectively binary, so "90% / 80% confidence" manufactures precision the
+pipeline lacks. If the field barely varies, **showing it is false precision, not
+transparency** — drop it, or reframe to something that actually varies (e.g. *how*
+an entity was matched, not a number). A misleading signal is worse than an honest
+blank — empty beats fabricated (`data-quality.md`).
+
 ## Self-evident over explained — progressive disclosure
 
 Layout + labels + standard components make meaning obvious **without** inline

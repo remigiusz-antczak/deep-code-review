@@ -197,6 +197,18 @@ and any wired security/dependency scanners. Then, before trusting "green":
   regression no matter what label lingers. (For a nav/route reorg, "reachable" also
   means its deep-link history still resolves, not just that a menu entry exists.)
   Relocation is not removal, and a stable label is not proof of reachability.
+- **Prove a verify gate *idempotent* — run it twice — not just green from a clean
+  clone.** A gate whose steps **write artifacts a later step consumes** can pass
+  once and fail on the **next** run against what the first run generated. Archetype:
+  a `typecheck → build` pipeline where the build emits generated route types
+  (`.next/types/**`) that a *subsequent* standalone `tsc --noEmit` then rejects — CI
+  on a clean clone never sees it, the human re-running locally hits a confusing red,
+  and the gate looks flaky when it is actually **order-dependent**. Run the gate
+  **twice** (or clean the generated dirs first) and treat a second-run failure as a
+  real finding. One concrete trigger: a **non-handler export from a framework route
+  module** (a helper, constant, or classifier beside the handlers in a Next.js App
+  Router `route.ts`) makes the generated validator reject the module — move pure
+  logic to a sibling module.
 - **Read the host CI, not only your own shell.** Fetch the base branch's latest
   pipeline conclusion (`gh run list --branch <base> --limit 5`, or the forge
   equivalent); "green locally" is not "green in CI" (different OS image, browser
