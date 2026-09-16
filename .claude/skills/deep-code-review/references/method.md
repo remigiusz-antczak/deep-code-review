@@ -353,6 +353,13 @@ pinned-ref contract — and note the substitution. Never let a harness's prompt
 contract stall **A01/domain B**; the fallback is the audit, not a skip. Depth:
 `references/parallel-audit.md`.
 
+**Product UI (domain P) → rendered route sweep.** On a `FULL` or broad-`DIFF`
+review of a product UI, enumerate every route and rule domain P on each across the
+render matrix, reporting coverage as a ledger — the domain-P analogue of Phase 3's
+anonymous-GET sweep, and the step that turns per-route rules into whole-product
+coverage. Procedure and the matrix: `references/product-ux-quality.md` (*Rendered
+route sweep*). A route not rendered is `unverified`, not clean.
+
 **Phase 3 — Adversarial / red-team pass.** Switch to attacker mindset (section
 below). For any networked app, work these **openers in order** before the
 creative attacks — they are ordered by yield, and each one narrows the next:

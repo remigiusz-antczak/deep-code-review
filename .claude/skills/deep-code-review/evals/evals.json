@@ -963,6 +963,50 @@
         "Holds the union as verification-only -- not waited on to block already-green members, never merged/squashed in place of members",
         "Bars merging a red member or an oral-only exception; serial wait only for a true dependency stack"
       ]
+    },
+    {
+      "id": "rendered-route-sweep-not-a-single-route-screenshot",
+      "prompt": "I'm doing a FULL review of a product UI. The diff touched the settings page; I took a headed-browser screenshot of /settings at 390 and 1440, inspected it (no overlap, contrast fine), and I'm ready to call the whole UX review clean. Good?",
+      "expected_output": "No -- a per-change screenshot of the one route the diff touched is gate 1's receipt, not a FULL UX review. On a FULL review, run the rendered route sweep: enumerate every route from the router tree AND the nav manifest (a route in one but not the other is itself a finding), render each across the matrix -- {~390, ~1440} x {light, dark} x {top, mid-scroll} plus each route's state transitions -- in the running build at the intended base ref, and rule the domain-P checklist on each. Report coverage as a LEDGER, not a verdict: a route you didn't render is unverified, never clean, and a clean finding generalises only to the routes actually rendered, never past them. The defects that reach an owner are the class that spans many routes -- ragged rows, an unpadded sticky bar, an unaxised chart -- which no single-route shot and no green gate ever looked at, so group findings by root cause (a class across many routes is one systemic finding, not forty). (product-ux-quality.md.)",
+      "expectations": [
+        "Rejects a single-route screenshot as a FULL UX review; distinguishes gate 1's per-change receipt from the whole-product sweep",
+        "Requires enumerating every route from BOTH the router tree and the nav manifest (a mismatch is itself a finding)",
+        "Names the render matrix (viewports x themes x top/mid-scroll x state transitions) in the running build at the base ref",
+        "Reports coverage as a ledger -- unrendered routes are unverified not clean, and a clean finding does not generalise past the routes rendered"
+      ]
+    },
+    {
+      "id": "layout-invariants-are-visible-only-mid-scroll",
+      "prompt": "Our UX gate screenshots each changed route at 390 and 1440 and asserts no two elements overlap. A sticky filter bar passed -- the shot at the top of the page shows no overlap and clean spacing. Is the sticky bar cleared?",
+      "expected_output": "Not from a top-of-page shot. The overlap assertion is content-vs-content at the shot's moment; a sticky/fixed-chrome collision happens only once you SCROLL and content passes under the sticky band, and an unpadded sticky bar shows its missing gutter the same way. Both render cleanly at the top of the page at desktop width -- the single condition a casual shot uses -- and are invisible to an overlap/clip check taken there. The sticky-chrome collision and reflow read only mid-scroll or across a state change -- the conditions the rendered route sweep's matrix renders, invisible to a top-of-page shot; gutters and optional-slot reservation read at rest, so they belong on the per-change shot and are re-confirmed in the sweep. The layout invariants beyond overlap/clip are sticky-collision, gutters, optional-slot reservation, no-reflow-on-state-change, and tabular numerals. The sticky collision reuses gate 1's geometry (scroll and sample the header band) and reflow reuses the before/after box compare (the same primitive as overlap), so it is additive, not a new engine -- but the check must run mid-scroll. (product-ux-quality.md.)",
+      "expectations": [
+        "Refuses to clear the sticky bar on a top-of-page shot; the collision is visible only mid-scroll",
+        "Names the layout invariants beyond overlap/clip (sticky collision, gutters, optional-slot reservation, no reflow on state change, tabular numerals)",
+        "Requires checking mid-scroll and on state transitions -- the route sweep's matrix -- not only a fresh top-of-page desktop render",
+        "Notes the mechanical half reuses gate 1's primitives (scroll-and-sample, before/after box compare), so it is additive"
+      ]
+    },
+    {
+      "id": "interaction-consistency-per-class-not-just-completeness",
+      "prompt": "A list row exposes its 'archive' action on hover -- it works when I mouse over and click, the handler fires, the row updates. And two buttons of the same kind highlight a bit differently on hover, but both work. Interaction-completeness is satisfied -- fine to ship?",
+      "expected_output": "Both are defects -- completeness is not consistency. A hover-only action is unreachable on touch and by keyboard: every hover affordance needs a non-hover path (reachable by keyboard focus, present or behind an explicit control on touch), so a mouse-only reveal is a defect, not a power feature -- completeness ('does the control work?') never asks this. The two buttons are an interaction-consistency defect: the same component class must have an IDENTICAL hover/active/focus-visible reaction at every instance; divergent reactions for one class is a finding. Its cause is usually per-instance style overrides on a shared component, so it survives the 'one component per concept' grep (that catches duplicate markup; this catches divergent state styling on the same component) -- enumerate the class's instances and diff their hover/active/focus styles. (frontend-a11y.md owns that a focus ring exists; this owns parity of the reaction across the class.) (product-ux-quality.md.)",
+      "expectations": [
+        "Flags the hover-only action: every hover affordance needs a keyboard-focus and touch path; completeness does not ask this",
+        "Flags the divergent hover as an interaction-consistency defect -- same class must react identically at every instance",
+        "Explains it survives the one-component-per-concept grep (divergent state styling on a shared component, not duplicate markup)",
+        "Distinguishes from frontend-a11y's focus-ring-exists (this is parity of the reaction across the class)"
+      ]
+    },
+    {
+      "id": "no-trend-implied-across-sparse-chart-samples",
+      "prompt": "A dashboard renders a per-metric trend as a smooth filled area line. The series has three readings this quarter, drawn as a continuous curve so it looks like a clean upward trend. The chart renders cleanly -- no overlap, colours are fine. Ship it?",
+      "expected_output": "No -- a smooth or filled line drawn across three sparse readings is a fabricated trajectory: it implies values between the measured points that were never sampled, the visual form of principle 4 (empty beats fabricated). Mark each real sample (a dot per reading) and don't smooth or fill across sparse points -- nothing between measured points should be implied. While you're there, rule the rest of the data-viz checklist the clean render hides: a legible value axis (tick labels or direct labels), a keyboard-reachable hover/focus readout returning the value AND its date, and non-visual access to the numbers (a table or aria summary the chart is additive to). 'No overlap, colours fine' is gate 1's inspection, which is structurally blind to chart legibility and to an implied-trend defect. (product-ux-quality.md.)",
+      "expectations": [
+        "Rejects the smooth/filled line across sparse samples as an implied (fabricated) trend -- principle 4",
+        "Requires marking real samples (a dot per reading) so nothing between measured points is implied",
+        "Also rules the chart's legibility: value axis or direct labels, a keyboard-reachable value+date readout, non-visual access to the numbers",
+        "Notes gate 1's overlap/colour inspection is structurally blind to chart legibility"
+      ]
     }
   ]
 }

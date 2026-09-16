@@ -149,6 +149,29 @@ Amplitude, Robinhood, Linear, Material) — inventing a novel one here is a cost
 - muted **`—`** when flat; anchor the delta to its period ("vs last month") in
   the tooltip/`aria`.
 
+## Data visualization — a chart must answer a question, legibly
+
+The delta standard above governs a single up/down number; a **plotted series** is
+its own surface, and a chart can pass every other rule here — no overlap, no
+colour-only status — while still answering no question ("what is this on that
+date?" has no on-screen answer) or overstating what is known. Rule each chart:
+
+- **Scale is legible.** A value axis with tick labels **or** direct labels; a bare
+  shape with no scale is decorative, and a decorative chart is acceptable **only**
+  when it is explicitly marked decorative (`aria-hidden`) **and** the exact number
+  it illustrates is printed beside it.
+- **A value + its anchor on demand.** Any non-trivial chart returns, on
+  hover/focus, the **value and its date/category**, reachable by keyboard, not
+  mouse-only (`frontend-a11y.md` owns the *a11y* of that interaction; this owns
+  that a readout *exists and returns a value*).
+- **Don't imply the unmeasured.** Mark real samples (a dot per reading) and never
+  smooth or fill a **line across sparse points** — nothing between measured points
+  is implied. Two or three readings drawn as a continuous trend is a fabricated
+  trajectory, the visual form of principle 4 (empty beats fabricated).
+- **Non-visual access to the numbers.** The chart is *additive* to a table or an
+  `aria` summary, never the only path to the data; and series are distinguished by
+  pattern/label, not colour alone (*Never colour alone*).
+
 ## Confidence shown as a bare number is false precision — flag it
 
 A confidence, priority, or match score surfaced as a **raw number** ("87%",
@@ -193,6 +216,19 @@ aesthetic-and-minimalist design; recognition over recall.)
 - Declutter dense rows — few visible chips, secondary actions behind a menu,
   detail on hover. **No dead controls** — a toggle that does nothing is worse
   than none; it is a trust defect, not a cosmetic one.
+- **Footprint tracks information — the opposite failure from a dense row.** The
+  declutter rule above fixes an *over*-dense row; the converse defect is wasted
+  space — an empty/undefined/placeholder record rendered at a **populated record's
+  footprint** (a full card reading "No data source / No owner / —"), a grid that
+  strands half a wide viewport, or a toolbar row holding one control across the
+  full width. Collapse or group placeholders (a compact row, not a full card),
+  give a grid/list a **density target at the wide viewport** (name the top-product
+  precedent — a metrics grid, a list view — not a taste call), and fold stranded
+  single-control chrome. The test is **information-per-screen, not
+  pixels-per-item**: a screen that could show N× more at a glance without crowding
+  is a density defect, ruled like any other. This is the *space-appropriateness*
+  complement of *Every data state*'s honest-empty rule — a full-card empty state is
+  honest and still wastes the footprint.
 
 ## Unified across modules — one component per concept
 
@@ -287,6 +323,22 @@ until it renders:
   in that history as AI-recommended, with its source, **at write time** —
   never merged into the record indistinguishably from a human edit. An
   unstamped AI edit is a defect a reviewer cannot see, not a shortcut.
+- **Interaction *consistency*, not just completeness — the same class reacts the
+  same everywhere.** Completeness (above) asks "does this control work?";
+  consistency asks "do all instances of this class react the same, and is every
+  affordance reachable?" For each interactive class (button, row, card, chip, tab),
+  its **hover / active / focus-visible reaction is identical at every instance** —
+  divergent reactions for one class is a finding, and because the cause is usually
+  per-instance style overrides on a *shared* component, it survives the *one
+  component per concept* grep (that catches duplicate markup; this catches divergent
+  state styling on the same component). **Every hover affordance has a non-hover
+  path** — anything revealed only on hover is also reachable by keyboard focus and
+  present (or behind an explicit control) on touch; a hover-only action is a defect,
+  not a power feature. A **tooltip carries new information** (a value, a date anchor,
+  a definition), never a repeat of the visible label. And a disabled instance looks
+  disabled the **same way** everywhere — the across-instances form of
+  *disabled-looks-disabled* above. (`frontend-a11y.md` owns that a focus ring
+  *exists*; this owns **parity** of the reaction across the class.)
 
 ## Match a named standard; visual & number-format consistency
 
@@ -327,7 +379,46 @@ record's write path with no history/log table behind it, or an
 agent/model-authored value merged in with no field distinguishing it from a
 human edit (change-history / silent AI edit) · a `confidence`/`score`/`priority`
 rendered as a raw `{n}%` or float with no defined tier label beside it, or a model
-confidence number published as precision (confidence tier).
+confidence number published as precision (confidence tier) · an `<svg>`/chart with
+no `<text>`/axis node and no hover/focus readout target, or a line/area drawn across
+`<3` data points (data-viz) · a `position: sticky`/`fixed` element whose scroll
+container has no padding (gutter), or an action revealed by `onMouseEnter`/`:hover`
+with no focus/keyboard sibling (hover-only) — the footprint, reflow, and
+per-class-parity defects are **render-only**, caught by the route sweep below, not a
+grep.
+
+## Rendered route sweep — apply domain P across every surface (FULL reviews)
+
+The rules above are individually correct and still miss a whole class of defect,
+because on a `FULL` (or broad-`DIFF`) review of a product UI **no step renders the
+assembled product route-by-route**. The enforcing gate's screenshot is per-change
+(the route a diff touched), so a defect spanning many routes is found the way an
+owner finds it — scrolling the running app one screenshot at a time, after a green
+gate and a clean code read. The sweep is the domain-P analogue of Phase 3's
+anonymous-GET sweep (`method.md`): a cheap, systematic, whole-surface pass that
+turns "we have the rules" into "we applied them everywhere."
+
+1. **Enumerate every route** — from the router tree **and** the nav manifest (a
+   route in one but not the other is itself a finding), including detail overlays
+   and tabbed sub-views.
+2. **Render each across the matrix** — this is the matrix the layout-invariant
+   checks (Enforcing gate, below) refer to: **{~390px, ~1440px} × {light, dark} ×
+   {top, mid-scroll}**, plus any **state transition** a route has (loading→loaded,
+   empty→populated, collapsed→expanded). Render the **running build at the intended
+   base ref** — verify the checkout first; a stale tree renders the wrong product
+   (render from a clean tree at the right ref — the receipt rule below).
+3. **Rule the domain-P checklist on each route** — states, encoding, delta,
+   **data-viz**, **density/footprint**, interaction **completeness and
+   consistency**, and the **layout invariants** (all defined above / in the
+   enforcing gate; this step *applies* those rules, it does not restate them) — and
+   record a per-route line: `route · viewport · theme · state · what a user sees ·
+   severity`.
+4. **Report coverage as a ledger, not a verdict.** A route not rendered is
+   `unverified`, never clean (the `COVERAGE_LEDGER` discipline, `method.md`); and a
+   clean finding generalises **only** to the routes actually rendered, never past
+   them (`migration-parity.md`, *Scope a parity claim to the correspondence table*).
+   Group findings by root
+   cause: a class spanning many routes is **one** systemic finding, not forty.
 
 ## Pre-ship checklist (mirror SKILL.md's report discipline)
 - [ ] Does it need explaining? If yes, redesign until it doesn't (or demote the text to progressive disclosure).
@@ -352,6 +443,8 @@ confidence number published as precision (confidence tier).
 - [ ] Parity target expressed in **measured device-pixels at the actual render scale** (not user-space units — equal user-units ≠ equal pixels), and same-axis oscillation treated as a **duplicate-implementation-at-different-scale** signal (measure the ratio, don't tune)?
 - [ ] No status is green-with-a-caveat — a status the author can immediately qualify is **downgraded**, not asserted beside a hedge (`report-format.md`)?
 - [ ] UI change: headed-browser receipt on the exact route after the action (screenshot or equivalent) — and the receipt is a **valid non-empty image**, not a proxy/504-wiped stub that passes a bare existence check (existence is not content — `SKILL.md` principle 2), captured from a **clean or separate tree** (a shots script that stashes uncommitted changes discards the very diff under review)? Unit tests alone are not this box.
+- [ ] **Layout invariants hold across the sweep's matrix** — no content under sticky chrome, gutters present, optional slots reserve space, no reflow on a state change, tabular numerals in columns — checked **mid-scroll and on state transitions**, both themes, not only at the top of a fresh desktop render; and **footprint tracks information** (no empty record at a populated card's size; grid dense enough at the wide viewport)?
+- [ ] **Charts are legible** — a value axis or direct labels, a **keyboard-reachable** hover/focus readout of value + its date/category, real samples marked and no trend implied across sparse points — and **interaction states are consistent per component class** (hover/active/focus parity across instances; every hover affordance also reachable by keyboard and touch; tooltips add information, not a repeat of the label)?
 
 ## Parity claims: the default state is the canonical surface
 
@@ -516,7 +609,29 @@ task:
      *no-dead-controls* interaction-completeness rule above, seen in the render);
    - **state named** — which data state the shot is of (empty / loading / error /
      populated), so an absence reads honestly (gate 2's state coverage; the
-     empty≠all-clear rule above).
+     empty≠all-clear rule above);
+   - **sticky-chrome collision** — nothing content-bearing paints under a
+     sticky/fixed header or bar; visible only mid-scroll, so it is checked at scroll
+     offsets, not only at the top of a fresh render;
+   - **gutters present** — every scroll container and sticky bar has padding, so
+     content is not flush to the edge or to the chrome;
+   - **optional slots reserve space** — a row's rail and baseline hold whether or
+     not an optional element (avatar, badge, trend) renders; check the absent-slot
+     variant, so a row doesn't go ragged when a slot collapses;
+   - **no reflow on a state change** — a control keeps its box across
+     loading→loaded and collapsed→expanded (a before/after box compare — the same
+     geometry primitive as *overlap* above), checked on the transition, not only at
+     rest;
+   - **tabular numerals** wherever numbers stack in a column, so values don't jitter
+     the alignment as they update (the tabular-figures rule of *Match a named
+     standard* above, here as a mid-update stability invariant).
+
+   Of these, **sticky-chrome collision reads only mid-scroll**, and **reflow (and
+   numeral jitter) only across a state change / value update** — a single top-of-page
+   shot cannot see them, so on a `FULL` review they are ruled across the **rendered
+   route sweep**'s matrix (above). **Gutters and optional-slot reservation read at
+   rest** (the latter in the absent-slot data variant) — check them on the per-change
+   shot too, and re-confirm in the sweep rather than defer to it.
 
    A screenshot with an unstated inspection is an artifact read as the verification
    it is not.
@@ -532,7 +647,13 @@ task:
    non-colour sibling" false-positives on decorative nodes — so it **warns and
    lists**, never fails closed, and reports what it could not resolve as
    `unverified`, not as clean. Model: a renderer-tolerant ratchet — a pinned
-   exception is *allowed*, never *required* to exhibit.
+   exception is *allowed*, never *required* to exhibit. Same gate, same discipline,
+   for **chart anatomy** (data-viz above): a heuristic assertion that an
+   `<svg>`/canvas chart exposes **axis tick text or a hover/focus readout target**
+   and that a series is not colour-only — it **warns and lists**, never fails
+   closed, because it false-positives on a legitimately decorative chart (the
+   `aria-hidden` + printed-number exemption above), and whether the readout returns
+   the *right* value stays a human inspection.
 
 4. **Parity differ (parity tasks only — proves *equivalence*, not just that a human
    looked).** For a "make X match reference Y" task, build a mechanical differ

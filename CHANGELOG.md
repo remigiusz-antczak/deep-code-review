@@ -3,6 +3,42 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.93.0] — 2026-09-16
+
+Wave 14 of the dogfooding batch: assembled-product visual review — the domain-P rules
+for a single screen existed, but no phase applied them across every route, so a class
+of defect spanning many surfaces reached the owner after a green gate (#227, #228,
+#229, #230, #231). Each addition references existing domain-P canon rather than
+restating it.
+
+### Added — deep-code-review
+- **`method.md` Phase 2 + `product-ux-quality.md` — rendered route sweep** (#227). A
+  FULL-review step that enumerates every route (router tree AND nav manifest — a
+  mismatch is a finding) and rules the domain-P checklist on each across a matrix
+  (`{~390, ~1440} × {light, dark} × {top, mid-scroll}` + state transitions), reporting
+  coverage as a ledger (a route not rendered is `unverified`, not clean; a clean
+  finding doesn't generalise past the routes rendered). The domain-P analogue of the
+  anonymous-GET sweep; the matrix is defined here and referenced elsewhere.
+- **`product-ux-quality.md` — data visualization** (#228). A chart must answer a
+  question legibly: a value axis or direct labels, a keyboard-reachable value+date
+  readout, real samples marked with no trend implied across sparse points, and
+  non-visual access to the numbers. A heuristic chart-anatomy check folds into the
+  enforcing gate's fail-open self-test.
+- **`product-ux-quality.md` — layout invariants** (#229). Extends gate 1's inspection
+  list with sticky-chrome collision, gutters, optional-slot reservation,
+  no-reflow-on-state-change, and tabular numerals — checked mid-scroll and on state
+  transitions (the route sweep's matrix), reusing gate 1's geometry primitives.
+- **`product-ux-quality.md` — interaction consistency** (#230). Beyond completeness:
+  per-class hover/active/focus parity, every hover affordance also reachable by
+  keyboard and touch, and tooltips that add information — the divergent-styling defect
+  the one-component-per-concept grep can't see.
+- **`product-ux-quality.md` — space efficiency** (#231). Footprint tracks information:
+  an empty record must not occupy a populated record's footprint, and a grid has a
+  density target at the wide viewport — the space-appropriateness complement of the
+  honest-empty-state rule.
+- **`evals/evals.json`** — four evals (95 total): route-sweep-vs-single-shot,
+  mid-scroll layout invariants, interaction-consistency-vs-completeness, sparse-trend.
+
 ## [1.92.0] — 2026-09-16
 
 Wave 13 of the dogfooding batch: merge-train and PR-integration hygiene — landing
