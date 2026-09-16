@@ -657,6 +657,60 @@
         "Classifies the difference as structural vs cosmetic and requires structural parity first",
         "Sizes a structural divergence as a rebuild, not a tweak/polish"
       ]
+    },
+    {
+      "id": "confidential-export-held-to-stricter-tier-than-dashboard",
+      "prompt": "Our dashboard API checks a token and team-scopes the confidential tier. We also have a CSV export route and some server-rendered pages showing the same data. The dashboard is locked down -- are we good?",
+      "expected_output": "No -- one hardened route is not a control if a sibling surface serves the same rows unguarded. Enumerate EVERY surface serving the sensitive dataset (each API route, each SSR page, every export/download) and confirm each applies the same server-side authorization; a divergence where one redacts and another returns the full object is Critical when world-reachable. An export/download is a SHARPER leak surface than an on-screen view -- the file is redistributable beyond the auth boundary -- so hold it to a stricter tier (public-tier rows only, or the same token AND scope as the API), never an unauthenticated or unscoped dump. Confidential per-viewer data belongs behind an authenticated, server-scoped API the client calls, not baked into an SSR page whose identity is client-side only (the server cannot scope what it never receives). Don't rest the model on an out-of-band platform gate the app itself cannot enforce. (security-appsec.md.)",
+      "expectations": [
+        "Requires enumerating every surface (API + SSR + export) and applying the same server-side authorization",
+        "Treats a downloadable export as a sharper leak surface held to a stricter tier than the dashboard",
+        "Rejects SSR delivery of confidential per-viewer data scoped only by client-side identity",
+        "Does not accept a single hardened route or an out-of-band platform gate as the control"
+      ]
+    },
+    {
+      "id": "boolean-parser-accepts-all-shapes-exclusion-fails-closed",
+      "prompt": "Our ingest uses bool(v) = v === true || String(v).toLowerCase() === 'true' to read flags like is_fund and is_discontinued from the warehouse. Fine?",
+      "expected_output": "No -- that maps a warehouse 1, 'yes', 'y', 't' to false, so an is_fund: 1 or is_discontinued: 'yes' row reads as operating and can reach a live shortlist (a dead or ineligible entity presented as a target). A boolean/categorical parser for external data must accept every shape the source emits (true/false, 1/0, yes/no, y/n, t/f), and for a gate that EXCLUDES (is_fund, is_discontinued, is_deleted) an unrecognised non-empty value must fail CLOSED -- treat it as exclude/unknown, never a silent false. Test the parser against the values the source actually emits (SELECT DISTINCT), the same way config maps are tested. (data-quality.md.)",
+      "expectations": [
+        "Flags a boolean coercion that recognises only 'true' as accepting too few shapes",
+        "Requires the full shape set (true/false, 1/0, yes/no, and so on)",
+        "Requires exclusion gates to fail closed on an unrecognised non-empty value, not default to false",
+        "Requires testing the parser against the source's real emitted values"
+      ]
+    },
+    {
+      "id": "suppression-match-is-exact-set-not-substring",
+      "prompt": "We drop deals to suppress with (dealStatus ?? '').toLowerCase().includes('pass'), copy-pasted at each funnel stage. Ship it?",
+      "expected_output": "No -- a substring match drops far more than intended: includes('pass') matches 'passed term sheet to legal' and 'compass' as readily as the intended 'need to pass', and because the dropped rows are filtered out before rendering the wrong suppression is invisible. Match against an EXACT value set (a Set like {'need to pass'}) through ONE shared predicate, not a copy-pasted includes at each stage (three copies drift independently), and emit a row-level audit of everything auto-excluded so a wrong suppression is visible, not silent. Flag any includes/indexOf used for a categorical status or gate decision. (data-quality.md.)",
+      "expectations": [
+        "Rejects a substring includes/indexOf for a categorical status/suppression decision",
+        "Requires exact matching against an explicit value set",
+        "Requires one shared predicate rather than copy-pasted matchers",
+        "Requires an audit trail of auto-excluded rows so a wrong suppression is visible"
+      ]
+    },
+    {
+      "id": "external-source-feasibility-probes-freshness-not-just-schema",
+      "prompt": "We probed an external dataset for a distress/liveness signal: the API works, the schema has the right per-entity metrics, and ~13% of our targets match host-exact. Greenlight building the classifier and scoring on it?",
+      "expected_output": "Not yet -- API-works, has-the-fields, and adequate match-rate can all be green while the data is silently months stale, describing last year's state instead of current. Before building a current-state signal, query the MAX timestamp per metric (per-metric, since columns in one table lag differently) and compare to today; if the newest sample lags many months, the signal is real but describes the past, and the decision flips from 'build and wire it' to 'keep a re-runnable probe + route the revisit to the owner.' Label any derived signal by the recency of the metric it is actually computed from, not the freshest column. Run the cheapest decisive go/no-go query first -- freshness, not match-rate, was the real kill-question. The probe itself is the deliverable. (data-quality.md.)",
+      "expectations": [
+        "Requires a max-timestamp / freshness check per metric before greenlighting a current-state signal",
+        "Does not accept API-works + schema + match-rate as sufficient feasibility",
+        "Labels a derived signal by the recency of the metric it is computed from",
+        "Treats the re-runnable probe (and a 'too stale' finding) as the valuable deliverable"
+      ]
+    },
+    {
+      "id": "no-regression-gate-keys-on-reachability-not-nav-position",
+      "prompt": "Our no-regressions check flags this PR because a settings section that used to be a top-level nav item is now nested under a new 'Admin' parent. Is that a removed feature to block on?",
+      "expected_output": "No -- a moved feature is not a removed one. A destructive-change gate that keys on surface position (a top-level nav slot, a route path) false-fires on a legitimate reorganisation, and -- worse -- a label-presence check misses a genuinely orphaned route (still in the menu, reachable by nobody). Key the invariant on REACHABILITY over the before-vs-after route/navigation graph: every prior capability still reachable through some path, with its history preserved, is not a regression no matter where it now sits; a capability reachable by no path IS a regression no matter what label lingers. Relocation is not removal, and a stable label is not proof of reachability. (method.md.)",
+      "expectations": [
+        "Does not treat a relocated (still-reachable) feature as a removed feature",
+        "Computes the no-regression invariant over the route/navigation reachability graph, not nav-position stability",
+        "Still catches a genuinely orphaned/unreachable route despite a lingering label"
+      ]
     }
   ]
 }

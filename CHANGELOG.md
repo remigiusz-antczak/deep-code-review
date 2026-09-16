@@ -3,6 +3,31 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.78.0] — 2026-09-16
+
+Wave 7 of the dogfooding batch: gate- and probe-honesty (#157, #165, #166, #167,
+#168). Each lens points at existing content rather than restating it.
+
+### Added — deep-code-review
+- **`security-appsec.md`** (A01) — a downloadable export is a *sharper* leak surface
+  than an on-screen view: enumerate every surface serving a sensitive dataset and hold
+  exports no weaker than the dashboard; deliver confidential per-viewer data via an
+  authenticated, server-scoped API, not an SSR page scoped only by client-side identity
+  (#165). Points at the existing dual-surface census, does not restate it.
+- **`method.md`** — a no-regressions gate keys on **reachability** over the
+  before-vs-after route graph, not surface-position stability: a relocated feature is
+  not a removed one, but a genuinely orphaned route is a regression despite a lingering
+  label (#157).
+- **`data-quality.md`** — §7: a boolean/categorical parser accepts every shape the
+  source emits, and an exclusion gate (`is_fund`, `is_deleted`) fails **closed** on an
+  unrecognised value, never a silent `false` (#166); a suppression/allow-list match
+  compares an **exact value set** through one shared predicate with a row-level audit,
+  never a substring (#167). §11: a feasibility probe for a current-state signal gates
+  on **freshness** (max-timestamp per metric), not just schema and match-rate (#168).
+- Five new behavioral evals; new data-quality 🚩 signals.
+
+Closes #157, #165, #166, #167, #168.
+
 ## [1.77.0] — 2026-09-16
 
 Wave 6 of the dogfooding batch: the design-parity **verification** cluster (#169,

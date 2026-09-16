@@ -199,6 +199,23 @@ rate), validity (schema/format/range). For each:
   delivers nothing, and unit tests pass because they feed the map the literals it
   expects. `SELECT DISTINCT` the real values and test against them before trusting
   the map.
+- **A boolean / categorical parser accepts every shape the source emits — and an
+  exclusion gate fails *closed*.** `bool(v) = v === true || String(v) === "true"`
+  silently maps a warehouse `1`, `"yes"`, `"y"`, `"t"` to `false`; a row with
+  `is_fund: 1` or `is_discontinued: "yes"` then reads as operating and reaches a
+  live shortlist — a dead or ineligible entity presented as a target. Accept the
+  full shape set (`true/false`, `1/0`, `yes/no`, `y/n`, `t/f`), and for a gate that
+  **excludes** (`is_fund`, `is_discontinued`, `is_deleted`) treat an unrecognised
+  non-empty value as **exclude / unknown**, never a silent `false` — fail closed,
+  and test the parser against the values the source actually emits (as with the
+  config maps above).
+- **A suppression / allow-list / status match compares an *exact value set*, never
+  a substring.** `status.toLowerCase().includes("pass")` matches "passed term sheet
+  to legal" and "compass" as readily as the intended "need to pass", silently
+  dropping rows — invisibly, when the dropped rows are filtered out before
+  rendering. Match against an explicit `Set` through **one shared predicate** (not a
+  copy-pasted `includes` at each funnel stage), and emit a **row-level audit** of
+  everything auto-excluded so a wrong suppression is visible, not silent.
 - **Carry a per-row coverage flag; keep each score glass-box.** A score computed
   on partial inputs is a weaker claim than one computed on full inputs — stamp
   each row with which inputs were actually present (a coverage / provenance flag)
@@ -284,6 +301,18 @@ rate), validity (schema/format/range). For each:
   entity id, dated events, location) the working copy lacks. Scope external
   acquisition to the **measured residual** only; a plan that adds scrapers before
   measuring over-scopes.
+- **A feasibility probe for a *current-state* signal gates on freshness, not just
+  schema and match-rate.** An external source can pass API-works, has-the-fields,
+  and adequate identity-match yet still describe *last year's* state. Query the
+  **max timestamp per metric** (`... MAX(sample_date) ... GROUP BY metric` —
+  per-metric, since columns in one table lag differently) and compare to today
+  **before** designing anything on it. Label a derived signal by the recency of the
+  metric it is **actually computed from**, not the freshest column in the table
+  (overstating freshness in a deliverable is a silent correctness bug; the freshness
+  dimension itself is §4). Run the **cheapest decisive go/no-go query first** —
+  match-rate can look like the kill-question while staleness is the real one — and
+  keep the probe **re-runnable**: a finding of *too stale to use* outvalues a
+  polished pipeline built on a stale signal.
 
 ---
 
@@ -303,4 +332,7 @@ band wider than the decision range; a config/enum map never tested against a
 blanket-blocks a newly-shared standing value; new enrichment scoped before
 existing-source coverage was measured; a per-row score with no coverage/provenance
 flag or no recoverable derivation; a time/activity score that reads an unobserved
-window as a decline; a non-monotone recency curve.
+window as a decline; a non-monotone recency curve; a boolean parser that recognises
+only `"true"`, or an exclusion gate defaulting an unrecognised value to `false`; a
+substring `includes`/`indexOf` driving a categorical status / suppression decision;
+an external-source feasibility sign-off with no max-timestamp freshness check.

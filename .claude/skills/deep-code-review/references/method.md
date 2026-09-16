@@ -186,6 +186,17 @@ and any wired security/dependency scanners. Then, before trusting "green":
   exercises. Gate the **union that actually ships**, not only the parts; a suite
   that only ever runs the parts has left the combination surface unenumerated
   (same principle-2 scope: the union is a positive control no lane fired).
+- **A no-regressions gate keys on *reachability*, not surface-position stability.**
+  A destructive-change gate that watches a surface label or slot (a top-level nav
+  entry, a route path, a menu position) false-fires on a legitimate reorganisation —
+  a feature **moved** under a new parent reads as **removed** — and, worse, a
+  label-presence check misses a genuinely **orphaned** route (still in the menu,
+  reachable by nobody). Compute the invariant over the **before-vs-after reachability
+  graph**: every prior capability still reachable through *some* path is not a
+  regression no matter where it now sits; a capability reachable by no path is a
+  regression no matter what label lingers. (For a nav/route reorg, "reachable" also
+  means its deep-link history still resolves, not just that a menu entry exists.)
+  Relocation is not removal, and a stable label is not proof of reachability.
 - **Read the host CI, not only your own shell.** Fetch the base branch's latest
   pipeline conclusion (`gh run list --branch <base> --limit 5`, or the forge
   equivalent); "green locally" is not "green in CI" (different OS image, browser

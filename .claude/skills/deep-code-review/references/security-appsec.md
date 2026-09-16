@@ -66,6 +66,15 @@ middleware ships).
   props / streaming flight payload (not only rendered DOM), framework-generated
   data siblings, BFFs, mobile clients. Divergence — one surface redacts/401s
   while another returns the full object — is **Critical** when world-reachable.
+- **An export/download is a *sharper* leak surface than an on-screen view.** A file
+  leaves with the user, redistributable **beyond** the auth boundary, so a leak
+  there outlives the session and the gate. Put every export/download route in the
+  dual-surface census above and hold it **no weaker than, and preferably stricter
+  than,** the dashboard — public-tier rows only, or at least the **same token *and*
+  scope** as the guarded API, never an unauthenticated or unscoped dump. Corollary for SSR: confidential, per-viewer
+  data belongs behind an **authenticated, server-scoped API** the client calls, not
+  baked into a server-rendered page whose only identity is client-side (the SSR row
+  of the Identity Arrival Map above cannot scope what it never receives).
 - **Tenant / row scoping.** Confirm tenant/owner predicates are applied in a
   **shared accessor**, not ad-hoc per call site. Flag request-path use of an
   admin/service credential that bypasses row policy as Critical. "DB policy
