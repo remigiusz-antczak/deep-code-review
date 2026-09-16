@@ -102,6 +102,10 @@ that absence is itself worth naming once, not per-PR.
 
 - `dependency-currency-and-upgrades.md` — the other half of domain K (build,
   supply chain, safe version bumps); this file never restates it.
+- `branch-and-merge-hygiene.md` §5 — **merge trains** and the **red-base
+  discharge** recipe: when the target is red and a green-base-required preflight
+  blocks the fixes that would green it, the discharge is a merge train, not an
+  `--admin` override. The merge mechanism lives there; this file never restates it.
 - `agentic-delivery`'s `references/roles.md` **Release** section (if that
   overlay is installed) — the authoring-time counterpart: tag a flag's category
   and set its removal date **when it is added**, not only when a later review

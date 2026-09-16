@@ -930,6 +930,39 @@
         "Requires reproducing against the same artifact the gate scored (production build or deployed/preview URL)",
         "Treats the dev-server 'looks fine' as unverified against the built surface, not a refutation"
       ]
+    },
+    {
+      "id": "tip-diff-before-closing-a-pr-as-duplicate",
+      "prompt": "Two open PRs have near-identical titles and both say they fix the same reduced-motion bug -- looks like a clear duplicate. I'm about to close the newer one as a duplicate and merge the older. OK to close it on the title match?",
+      "expected_output": "No -- don't close a PR as duplicate on title (or branch-name, or same-issue-number) similarity; diff the two heads first, because title similarity is not patch equality. Use two-dot `git diff <tip-A> <tip-B>` when the PRs share a base (the literal difference between the two trees -- empty iff the tips are identical), or `git range-diff <base>..<tip-A> <base>..<tip-B>` to compare the two patch series when they forked from different points (a plain two-dot then pollutes with mainline drift); NOT three-dot `A...B`, which diffs from the merge-base (the `git log` commit-range idiom) and can't isolate what one tip has that the other lacks. The 'duplicate' may carry a hunk the survivor lacks -- e.g. one tip gates a `useReducedMotion` check behind a mount guard (`mounted ? ... : false`) where the other reads it directly. If the newer PR has hunks not in the one you're keeping, FOLD them in first (rebase or cherry-pick), THEN close it with a pointer. Close-as-duplicate is safe only when the diff is empty or the closed PR is a strict subset with no unique lines. Record the diff result in the close comment as the evidence; 'looks the same' is never sufficient, and closing on it silently drops the unique hunk. (branch-and-merge-hygiene.md.)",
+      "expectations": [
+        "Refuses to close-as-duplicate on title/branch/issue-number similarity alone",
+        "Requires diffing both PR heads before closing -- two-dot `git diff <tip-A> <tip-B>` for shared-base tips and `git range-diff` for different-base (NOT three-dot, which diffs from the merge-base)",
+        "Folds any unique hunks into the survivor first, then closes with a pointer; safe only when the diff is empty or a strict subset",
+        "Requires the diff result in the close comment as evidence -- 'looks the same' is insufficient"
+      ]
+    },
+    {
+      "id": "subset-absorb-at-stale-sha-reverts-a-fix",
+      "prompt": "PR B absorbed PR A's changes a while ago, so I can merge just B and skip A. But A has a few commits newer than the point B absorbed -- including a fix that disables a submit control. There's no merge conflict between them. Can I merge A then B and be done?",
+      "expected_output": "No -- merging A then B here silently reverts A's fix. B absorbed A's SOURCE content at an OLDER SHA and is missing A's later commits (the disabled-submit guard); with no textual conflict, B's stale copy of those files overwrites A's fix on merge -- last writer wins and nothing warns. This is distinct from two PRs rebuilding a generated artifact (that's a derived file re-run from source; this is source content absorbed at a stale tip). Fix the order: merge the FULLER tip first and rebase the other onto it, replaying only its unique commits -- or fold A's missing commits into B and merge B once. Then GREP THE LIVE TREE for the fixed symbol (the submit-disable guard); never trust 'B included A.' (branch-and-merge-hygiene.md.)",
+      "expectations": [
+        "Identifies the silent revert: B absorbed A at an older SHA, so merging B after A overwrites A's later fix with no conflict",
+        "Distinguishes it from the generated-artifact superset fold (source content vs a derived rebuild)",
+        "Fixes by merge order -- fuller tip first plus a rebase replaying unique commits, or fold A's missing commits into B",
+        "Requires a post-merge grep of the live tree for the fixed symbol rather than trusting 'B included A'"
+      ]
+    },
+    {
+      "id": "red-base-discharge-with-a-train-not-an-override",
+      "prompt": "Our main branch is red, and the preflight requires the base green before it will merge anything -- so the three individually-green PRs that would actually fix main can't merge. A teammate wants to just use --admin to force one in. What's the right move?",
+      "expected_output": "Don't force with --admin -- discharge the deadlock with a merge train. A green-base-required preflight on a red base refuses the very fixes that would green it; that's a deadlock, not a per-PR failure. Union the three individually-green fix PRs on a throwaway integration branch, run the aggregate gate ONCE, and on green merge the members back-to-back (the merge-train procedure) -- the union's green IS the proof the 'base green at head between merges' wait was asking for, so it discharges that wait, which the red base can't otherwise satisfy. The union is a verification vehicle only: don't wait on its CI to hold members that are already green, and never squash/merge the union in place of its members. What the union green does NOT license: merging a red member, an --admin/force-merge past the gate, or an undocumented 'just merge anyway.' A red member is still red; only the base-green-between-merges wait is discharged. Serial-wait between merges only for a true dependency stack that can't share one union, and put the chosen vehicle on the record -- an oral-only exception is itself the finding. (branch-and-merge-hygiene.md.)",
+      "expectations": [
+        "Rejects --admin/force-merge and names the red base plus green-base-required preflight as a deadlock",
+        "Prescribes the merge-train discharge: union -> one aggregate gate -> back-to-back member merges; union green discharges the base-green-between-merges wait",
+        "Holds the union as verification-only -- not waited on to block already-green members, never merged/squashed in place of members",
+        "Bars merging a red member or an oral-only exception; serial wait only for a true dependency stack"
+      ]
     }
   ]
 }

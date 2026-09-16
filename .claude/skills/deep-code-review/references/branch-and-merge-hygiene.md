@@ -218,11 +218,46 @@ once instead:
    instead of closing them.
 4. Discard the integration branch; it is never itself merged.
 
+**The union verifies the combination; it is not on the critical path.** Its CI
+aggregates every member's checks, so it concludes no sooner than the slowest
+member and usually later — treating "union CI still pending or red" as a reason to
+hold members that are each already green re-serializes the very wait the train
+exists to remove. Once the aggregate gate is green the proof is in hand: merge the
+green members (step 3) and **close the union with a pointer to where they landed**.
+"Wait for union CI, then squash/merge the union" fails twice over — the wait is
+redundant and merging the union orphans its members' issues (step 3).
+
 **Sequence a gate-adding PR last within the batch.** A PR that adds a new
 required gate, merged first, forces every other PR in the batch to retrofit a
 gate that didn't exist when it was authored — extra round-trips for no benefit.
 When triaging several ready branches at once, check whether any changes
 required-CI/gate configuration and put it at the back of the landing order.
+
+### Red base: discharge the deadlock with a train, never an override
+
+When the target branch itself is red, a merge preflight that requires the base
+green refuses the very fix PRs that would green it — a **deadlock**, not a per-PR
+failure. Agents stall, invent one-off exceptions, or serial-wait forever. The
+escape is the merge train above, used deliberately as the *discharge* vehicle:
+
+1. **Discharge (preferred).** Union the individually-green fix members, run the
+   aggregate gate once, and on green merge them back-to-back (the merge-train
+   procedure above). The union's green **is** the proof the preflight's "base green
+   at head between merges" wait
+   was asking for, so it **discharges** that wait — which the red base cannot
+   otherwise satisfy.
+2. **Serial fallback.** Wait for the base to rebuild between merges only when a
+   true dependency stack cannot share one union.
+3. **What the union green does *not* license.** Not merging a **red** member, not
+   an `--admin` / force-merge past the gate, not an undocumented "just merge
+   anyway." A red member is still red; only the *base-green-between-merges* wait is
+   discharged, because the union already proved the combined tree.
+
+Name this the **red-base discharge** and put one of the two vehicles on the
+record; an oral-only exception ("we just merged past it that once") is itself the
+finding. A red base is the release pipeline's blocked state, so
+`release-engineering.md` cross-links here — but the discharge *mechanism* is the
+merge train, so it lives here and that file never restates it.
 
 ### A required check must be *satisfiable* — pending forever blocks merge like a red
 
@@ -268,6 +303,29 @@ downstream PR** — once the base merges the same fix lands twice, a double-patc
 conflict. A stacked PR is only truly green once its base has merged and it has been
 re-run on the mainline.
 
+### A stop halts new work — a MERGEABLE PR and an unpushed rebase are not "new work"
+
+`STOP` / interrupt means **no new lanes, no new commits, no new scope**. It does
+**not** pause landing a PR that is already green and `MERGEABLE` against its
+intended base, and it does not license leaving committed work stranded off the
+remote. Two things must be true before a stop is actually complete:
+
+- **The MERGEABLE set is not silently abandoned — but a stop grants no new merge
+  approval.** Enumerate the open PRs that are green + `MERGEABLE`; finished work must
+  not vanish because a stop arrived. Merging is a shared-state action, so §6's gate
+  still holds: **merge only what already had standing approval** (per its preflight —
+  the red-base discharge above governs *how* such a merge lands, not *whether* you may
+  fire it), and for everything else the stop-complete step is to **hand it off by
+  URL** to the next owner. A green PR left un-merged and handed off is not the loss;
+  an irreversible merge fired *because* a stop arrived — approval a stop cannot itself
+  grant — is the §6 regression.
+- **No unpushed commit is left silent.** An interrupted rebase/amend often leaves
+  the new SHA **local only**; a stop taken there can strand it forever (a later push
+  flake then loses it). Push before stopping, or print the recovery triple in the
+  stop message — the **absolute worktree path**, the **branch**, and
+  `git rev-parse HEAD` — so another lane can retrieve the tree. "Push failed / a
+  flake" is not a completed stop: retry the push or hand off the path.
+
 ## 6 — Safety rails (acting on the triage is destructive / shared-state)
 
 Triage is **advice**; carrying it out mutates shared state. Under `SKILL.md`
@@ -311,6 +369,33 @@ explicit approval** — the same opt-in bar as the Phase 6 imprint.
   rebuilds** from the combined source (a superset fold), never layering its own
   partial build. Flag a generated-artifact PR as **superset-fold-required** while a
   sibling source PR is open.
+- **A subset absorbed at a stale SHA can revert a later fix — no conflict, last
+  writer wins.** Distinct from the generated-artifact fold above (which is a
+  *derived* file rebuilt from source): here PR B **absorbed PR A's own source
+  content** at an **older** tip, missing A's later commits (say a disabled-submit
+  guard that A fixed in follow-ups). Merge A, then merge B, and B's stale copy of
+  those files silently overwrites A's fix — git sees no conflict, so nothing warns.
+  Before landing: if B's history carries a **subset of A at older SHAs** (same
+  files, earlier commits), do not merge B as-is after A — merge the **fuller tip
+  first** and rebase B onto it, replaying only B's unique commits, **or** fold A's
+  missing commits into B and merge B once. After landing, **grep the live tree for
+  the fixed symbol** (the guard, the hard limit); never trust "B included A."
+- **Before closing a PR as duplicate or superseded, diff the two tips — title or
+  branch similarity is not patch equality.** Two PRs that look like the same fix can
+  differ in a hunk only one carries (one tip gates a `useReducedMotion` check behind
+  a mount guard — `mounted ? … : false` — and the other reads it directly); closing
+  the "duplicate" drops that hunk silently. Compare the heads first: **two-dot**
+  `git diff <tip-A> <tip-B>` when they share a base (the literal difference between
+  the two trees — empty iff the tips are identical), or
+  `git range-diff <base>..<tip-A> <base>..<tip-B>` to compare the two **patch series**
+  when the PRs forked from different points, which a plain two-dot pollutes with
+  mainline drift. (Not three-dot `A...B` — that diffs from the merge-base, the
+  `git log` commit-range idiom, so it can't tell you what B has that A lacks.) If B
+  carries hunks A doesn't, **fold them into A** (rebase or cherry-pick) and *then*
+  close B with a pointer; close-as-duplicate is safe only when that diff is empty or
+  B ⊆ A with no unique lines. Put the **diff result in the close comment** as the
+  evidence; "looks the same," a shared branch name, or a shared issue number is never
+  sufficient on its own.
 - **Never rewrite shared history.** Rebase/force-push only branches that are
   personal and undepended-on. When a force is genuinely needed, it is
   **`git push --force-with-lease`** (refuses if the remote moved under you), never
@@ -443,6 +528,16 @@ squash). Mark any PR column `unverified` when forge auth was absent (§1).
   and no graduation marker.
 - A merge-train batch landing a gate-adding PR before the PRs it would force to
   retrofit that gate.
+- A union/integration branch merged or squashed in place of its member PRs, or
+  already-green members held waiting on the union's aggregate CI.
+- An `--admin`/force-merge used to escape a red base, instead of discharging it with
+  a verified merge train.
+- A `STOP` that leaves a green + `MERGEABLE` PR neither merged under standing
+  approval nor handed off by URL, or an unpushed rebase abandoned off the remote.
+- A PR merged after another that absorbed its files at an older SHA — a stale subset
+  silently reverting the later fix, with no conflict to warn.
+- A PR closed as duplicate/superseded on title or branch similarity with no tip-diff
+  evidence in the close comment.
 
 ## Cross-references
 

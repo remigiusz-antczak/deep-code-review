@@ -3,6 +3,42 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.92.0] — 2026-09-16
+
+Wave 13 of the dogfooding batch: merge-train and PR-integration hygiene — landing
+several PRs safely without dropping or reverting work (#220, #221, #222, #223, #224).
+Five lessons, each referencing existing canon (the §5 merge-train mechanism, the
+#212 superset-fold sibling) rather than restating it.
+
+### Added — deep-code-review
+- **`branch-and-merge-hygiene.md` §5 merge trains — a union/integration PR is verification-only**
+  (#220). Its CI aggregates every member's checks, so it is never the critical path:
+  don't hold already-green members waiting on union CI, and close the union with a
+  pointer rather than squashing or merging it in place of its members.
+- **`branch-and-merge-hygiene.md` §5 — red-base discharge** (#224). When the base is
+  red and a green-base-required preflight blocks the fixes that would green it,
+  discharge the deadlock with a merge train — the union's green discharges the
+  "base green at head between merges" wait, and licenses no red member and no
+  `--admin` override. References the merge-train mechanism; `release-engineering.md`
+  cross-links it.
+- **`branch-and-merge-hygiene.md` §5 — a stop halts new work only** (#222). An
+  already-green + `MERGEABLE` PR still merges (or is handed off by URL), and an
+  unpushed rebase must be pushed or its worktree path + branch + HEAD printed in the
+  stop message.
+- **`branch-and-merge-hygiene.md` §6 — a subset absorbed at a stale SHA can revert a
+  later fix** (#223). B absorbed A's source at an older SHA, so merging B after A
+  silently overwrites A's later fix with no conflict; merge the fuller tip first (or
+  fold A's missing commits in) and grep the live tree for the fixed symbol. Distinct
+  from the generated-artifact superset fold.
+- **`branch-and-merge-hygiene.md` §6 — diff two tips before closing a PR as duplicate**
+  (#221). Title/branch similarity is not patch equality; **two-dot** `git diff` of
+  both heads (`git range-diff` when they forked from different points), fold any
+  unique hunk into the survivor, and record the diff in the close comment.
+- **`release-engineering.md`** — cross-link to §5's merge trains + red-base discharge;
+  the mechanism lives there and this file never restates it.
+- **`evals/evals.json`** — three evals (91 total): tip-diff-before-close, stale-SHA
+  subset-absorb revert, red-base train discharge.
+
 ## [1.91.0] — 2026-09-16
 
 Wave 12c of the dogfooding batch: evidence freshness — reproduce a finding against the
