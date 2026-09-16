@@ -3,6 +3,32 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.85.0] — 2026-09-16
+
+Wave 11c of the dogfooding batch: coordinate a parallel restyle fan-out (#194) — own
+the shared shell before spawning page lanes, and flag work built on the wrong
+integration base as High.
+
+### Added — deep-code-review
+- **`migration-parity.md` — shell-ownership ledger before a restyle fan-out (#194a).**
+  When a multi-screen port/restyle fans out to parallel page lanes, the shared shell
+  (layout, nav, tokens, chrome primitives) becomes contested write state that a per-PR
+  review passes lane-by-lane while the collision lives between them. Before spawning,
+  the lead publishes an ownership ledger (same shape as `parallel-audit.md` §1's unit
+  manifest, by reference): exactly one lane owns each shared-shell path (a partition),
+  and the shell lands first. Spawning with no ledger is a **High** coordination defect;
+  a page lane editing a shell path it does not own is a finding even when its diff is
+  correct.
+- **`branch-and-merge-hygiene.md` — check the base of in-flight work (#194b).** §2 now
+  enumerates open branches/PRs and verifies each base against the detected integration
+  target (reusing §3's `git rev-list --left-right --count`); §7 rates a large or
+  long-lived change built on the **wrong** integration target (two long-lived branches,
+  `STAGE` growth/mature) as **High** — above the Medium merge-debt row, because the cost
+  compounds per commit on the wrong base — with the retarget/rebase command named.
+- Two new evals (79 total). Lockstep bump to 1.85.0.
+
+Closes #194.
+
 ## [1.84.0] — 2026-09-16
 
 Wave 11b of the dogfooding batch: name the parity verification surface (#192), and

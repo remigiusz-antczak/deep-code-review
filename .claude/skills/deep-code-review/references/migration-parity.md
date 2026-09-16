@@ -52,6 +52,41 @@ divergence is structural, not per-screen.
   component (`product-ux-quality.md`, one component per concept, #123); two
   *different behaviors* stay **separate wrappers over one shared style**.
 
+## Own the shared shell before the page lanes spawn — one writer per shell primitive
+
+Unifying the chrome/shell (above) is a **precondition**; the moment a multi-screen
+port/restyle **fans out to parallel page lanes**, that shared shell becomes contested
+write state. Every page lane needs the same handful of files — layout, nav, design
+tokens, shared chrome primitives — so lanes editing them concurrently **clobber or
+silently revert** each other's token/shell changes, and a reviewer reading any one
+lane's diff cannot see the collision: a per-PR review passes each lane while the defect
+lives **between** them.
+
+Before spawning any page lane, the lead publishes a **shell-ownership ledger** on the
+integration PR — the same table shape as the fan-out **Unit manifest**
+(`parallel-audit.md` §1, lead-owned, filled before spawn); do **not** restate it. Its
+load-bearing rules:
+
+- **Exactly one lane owns each shared-shell path** (layout, nav, tokens, chrome
+  primitives). Ownership is a **partition**, not a suggestion: two lanes listing the
+  same shell path is the collision, on paper, before a line is written.
+- **The shell lands first.** Page lanes branch from / rebase onto the merged shell, so
+  they restyle **against** the unified chrome, not alongside a moving one.
+- **A page lane editing a shared-shell path it does not own is a finding** — even when
+  its diff is correct in isolation — because it silently diverges the shell the other
+  lanes built on (the per-surface-divergence, unbounded-defect-stream failure this file
+  opens with).
+
+**Severity.** Spawning a restyle fan-out onto a shared shell **with no ownership
+ledger** is a **High** coordination defect (do-no-harm, principle 4 — the lanes will
+clobber the shell and the cost stays invisible until integration). A cross-lane
+shell-path edit is raised as its own finding against the owning lane.
+
+These are **review-side** detections — a reviewer reads a fan-out and finds a missing
+ledger, an unpartitioned shell path, or a cross-lane shell edit. The write-lane
+mechanics that *enforce* single-writer ownership belong to a delivery overlay, not to
+this review-only rule, which stays self-contained.
+
 ## Verify parity surface-by-surface, on real data — never from a structural or seed-data audit
 
 A structural component audit, a green test suite, and a section-by-section
@@ -252,6 +287,11 @@ a separate move: `product-ux-quality.md`, *Match a named standard*.)
   restyle-into-target attempt** — a **High** do-no-harm finding, not a parity win.
 - A restyle that resolves app-only elements with **no exception ledger** classifying
   each as decoration / functionality / owner-approved before implementation.
+- A multi-screen restyle **fanned out to parallel page lanes with no shell-ownership
+  ledger** (single owner per shared-shell path, shell-lands-first) — a **High**
+  coordination defect.
+- A page lane's diff that **edits a shared-shell path it does not own** (layout / nav
+  / tokens / chrome primitive), even when the diff is correct in isolation.
 - A comparison treating **page height / row count** versus a seed-data mockup as a
   defect rather than a notice.
 - "Match the reference and use judgment" with **no cited heuristic** named behind a

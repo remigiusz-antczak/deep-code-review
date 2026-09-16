@@ -809,6 +809,28 @@
         "Requires confirming element state (disabled-by-data / collapsed / in-a-menu) before calling it extra or missing",
         "Warns the destructive edit would fix a non-existent delta and ties a confirmed delta to the restyle classification"
       ]
+    },
+    {
+      "id": "wrong-base-for-integration-branch-high",
+      "prompt": "This repo uses git-flow: features integrate into develop, which is ~40 commits ahead of main. A contributor's large visual-port PR (touching ~30 files) is based on main, not develop. Stage is growth. How do I rate the base?",
+      "expected_output": "High -- a wrong-base coordination defect, not Medium merge-debt. The PR is built against a product state that no longer exists on the integration line (develop carries ~40 commits main lacks), so merging it into develop will conflict with or revert those commits, and the cost compounds with every commit added on the wrong base -- so the High is intrinsic, and stage (growth here) sets only the urgency to block now, not the severity. Measure and state the divergence -- git rev-list --left-right --count develop...<branch> -- and name the fix in the finding: retarget/rebase onto develop BEFORE more work lands. This sits above the Medium merge-debt row, which is for a long-lived branch diverged from main (a different case). Rating it only 'diverged long-lived branch -> Medium' misses that the base itself is wrong. (branch-and-merge-hygiene.md.)",
+      "expectations": [
+        "Rates the wrong-base as High, not Medium merge-debt",
+        "Explains the port is built against a product state absent on the integration line (develop ahead of main)",
+        "Requires measuring and stating the left/right divergence count (git rev-list --left-right --count)",
+        "Names retarget/rebase onto develop before more work lands as the fix"
+      ]
+    },
+    {
+      "id": "restyle-fanout-requires-ownership-ledger",
+      "prompt": "We're fanning out a 12-screen restyle to parallel page lanes, each lane restyling one screen. They will all touch the shared layout, nav, and design tokens as needed. Ready to spawn the lanes?",
+      "expected_output": "Not yet -- spawning page lanes onto a shared shell (layout, nav, design tokens, chrome primitives) with no ownership ledger is a High coordination defect: the lanes will edit those shared files concurrently and clobber or silently revert each other's shell changes, invisible in any single lane's diff. Before spawning, publish a shell-ownership ledger (same shape as the fan-out unit manifest): exactly one lane owns each shared-shell path (a partition -- two lanes listing the same path IS the collision), and the shell lands FIRST so page lanes rebase onto the unified chrome rather than a moving one. During review, a page lane's diff that edits a shared-shell path it does not own is a finding even when the diff is correct in isolation, because it diverges the shell the other lanes built on. (migration-parity.md.)",
+      "expectations": [
+        "Refuses to spawn the lanes before a shell-ownership ledger exists (High coordination defect)",
+        "Requires exactly one lane owning each shared-shell path (a partition), reusing the unit-manifest shape",
+        "Requires the shell to land first, with page lanes rebasing onto it",
+        "Flags a page lane editing an unowned shared-shell path as a finding even when its diff is correct"
+      ]
     }
   ]
 }

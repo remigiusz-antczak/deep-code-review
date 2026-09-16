@@ -88,6 +88,21 @@ branch (`main`). State the detected model in one line before recommending target
 if it's ambiguous (e.g. a lone `develop` with no supporting-branch convention),
 that ambiguity is itself an owner decision, not a guess.
 
+**Check the base of work *in flight*, not only the target of finished branches.**
+Once the model names the integration target, enumerate in-flight work against it: open
+PRs (`gh pr list --state open --limit 500 --json number,baseRefName,headRefName,changedFiles`
+— pass a limit that exceeds the expected total and say which, per §1; the default 30
+silently truncates) **and** pushed branches that have no PR yet (§3's `for-each-ref`
+enumeration — the case where retargeting is still cheapest). Verify each one's **base**
+against that target with the §3 divergence count
+(`git rev-list --left-right --count <integration-target>...<branch>`). A large change
+branched off the **wrong** base — e.g. off `main` while features integrate into
+`develop`, which carries commits `main` lacks — is written against a product state
+that no longer exists on the integration line; merging it later either conflicts with
+or reverts those commits, and every lane built on that base inherits the problem. A
+PR's own green checks say nothing about whether its **base** is the right one; that is
+a §7 severity call, below.
+
 ## 3 — Enumerate & classify every branch (validated commands)
 
 Run these against the refreshed refs. Each row is a classification signal, not a
@@ -293,6 +308,15 @@ the triage table**; escalate a branch to its own finding only on consequence:
   already written but unreleased.
 - **A branch that is the only copy of real work** (never pushed) → **High** as a
   data-loss risk until it's pushed/tagged.
+- **A large or long-lived change built on the *wrong* integration target** — not the
+  one §2 detected (a case that arises only where two long-lived branches exist, so
+  there *is* an alternative target) → **High**, distinct from and **above** the Medium
+  merge-debt row below: the cost compounds with every commit added on the wrong base,
+  and unwinding it later is a forced retarget/rebase of work already built. Intrinsic
+  severity stays High at every stage (guardrail 3, `SKILL.md`); stage calibrates only
+  the **urgency** — block-now on a `growth`/`mature` line vs tracked on a `prototype` —
+  never the severity. State the left⇥right commit counts measured and name the
+  **retarget/rebase-before-more-work-lands** command in the finding.
 - **A long-lived `develop`/`release/*` badly diverged from `main`** → Medium
   merge-debt (Fowler: integration frequency; the longer branches live apart, the
   worse the eventual merge).
@@ -340,6 +364,9 @@ squash). Mark any PR column `unverified` when forge auth was absent (§1).
 - A `develop` branch that hasn't merged to `main` in months (git-flow gone stale).
 - Dozens of merged-but-undeleted branches and **no** "auto-delete on merge".
 - Long-lived `feature/*` branches many commits behind the target (merge debt).
+- An in-flight branch/PR whose **base is not the detected integration target** (e.g.
+  based on `main` while features integrate into `develop`) — for a large or long-lived
+  change, a **High** wrong-base defect (§7), not Medium merge-debt.
 - A branch with an unmerged security fix — the patch exists but never shipped.
 - A branch that only exists on one machine (no upstream) — one disk failure from
   lost work.
