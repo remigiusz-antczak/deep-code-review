@@ -332,7 +332,14 @@ as documented is a Blocker until proven otherwise.
 each, produce findings with `file:line` + impact + fix. Load the domain's
 `references/*.md` for detection procedures. Domains that don't apply are marked
 N/A with a one-line reason. Start from Phase 0's triage-first hits and blast-
-radius order. **Stated invariant / landed guard → bypass census:** when a module
+radius order. **Intent-conformance — a lens distinct from correctness.** Besides "is the
+code right," ask "does the change do what it *claimed*": does the diff satisfy its PR
+description, linked issue, or stated acceptance criteria? A flawless implementation that does
+X while the ticket asked for Y, or silently drops a stated requirement, is a finding — cited
+to the **stated intent** available in context (the PR / issue text), and where no intent is
+stated, say so rather than infer one. This is the review-side counterpart to the delivery
+spec gate (`agentic-delivery` G1); it catches a whole class the domain audits, which ask only
+"is it correct," miss. **Stated invariant / landed guard → bypass census:** when a module
 states an invariant or a guard lands on one path, inventory callers/entry points
 that can skip it (procedure: `references/security-appsec.md` for untrusted egress;
 `references/data-quality.md` for artifact→consumer). When the target is large,
@@ -404,10 +411,15 @@ comments often narrate fixed incidents in present tense — before reporting, ch
 `git log -S'<symbol>' --oneline` show the fix already landed? If either is yes,
 it is a historical note, not a finding. **Distinguish a defect from intended
 behavior a test encodes:** before reporting, check whether the proposed fix would
-break an existing **passing** test — if it would, the flagged behavior is intended
-by design (the fix is wrong, not the code), so it is `REFUTED`, not a defect.
+break an existing **passing** test **present at the base ref** (`git show <base>:` — not one
+the diff itself ships): a **pre-existing** test enshrining the behavior means it is intended
+by design (the fix is wrong, not the code), so it is `REFUTED`, not a defect. But a test the
+**diff itself adds** that encodes off-spec behavior does **not** REFUTE — a self-certifying
+test is re-checked at its base (principle 2), and a diff shipping tests for the wrong
+requirement is the intent-conformance finding (Phase 2), not a refutation of it.
 Re-reading the source the finder read cannot catch this class — the source looks
-exactly as described; only the tests and the suite encode intent, so locate the
+exactly as described; only the tests and the suite encode **design** intent (the
+*stated-request* intent lives in the PR/issue — the Phase 2 intent-conformance lens), so locate the
 tests that exercise the finding, and for a change to security/cost/concurrency
 logic apply the fix in a throwaway worktree and run the suite before confirming
 (`references/parallel-audit.md` §4). **Weigh the failure direction** (fail-open vs
@@ -451,6 +463,12 @@ owner action is not a finding. Drop or demote to Nit/Info:
 - restyling, renaming, or "consider maybe" with no defect;
 - a second copy of a fact the project's own gate already enforces and the
   review already confirmed green;
+- a security finding in a **chronically-noisy class** — DoS, rate-limiting,
+  resource-exhaustion, generic input-validation with no reached sink, open-redirect — with
+  **no demonstrated impact path**: demoted to a non-blocking `unverified`/Nit **lead** —
+  reported at provisional severity that blocks only once a path is shown, not asserted as a
+  confirmed High on suspicion (the *mechanism-unproven* rule applied to the classes that most
+  produce false alarms; a proven impact path re-promotes it to its real severity);
 - a recommendation that would break a passing test (already `REFUTED`);
 - a kit leftover (`AGENTS.md` / `CLAUDE.md` still describing a scaffold
   `app/` layout while the real product lives in `apps/` or `packages/`) —

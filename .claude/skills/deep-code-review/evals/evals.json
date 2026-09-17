@@ -1150,6 +1150,28 @@
         "Requires the states to reflect (aria-selected / aria-controls), not just roles present",
         "Keeps the native-element-first rule; APG applies because it's a hand-built widget"
       ]
+    },
+    {
+      "id": "intent-conformance-is-a-lens-distinct-from-correctness",
+      "prompt": "A PR is clean -- tests pass, no bugs, good style. The linked ticket says 'let users export their data as CSV.' The diff adds a JSON export instead. Everything works. Approve?",
+      "expected_output": "No -- correctness and intent-conformance are different lenses. The code is correct, but it does not do what was CLAIMED: the ticket asked for CSV export and the diff ships JSON. A flawless implementation of the wrong thing is a finding, cited to the stated intent (the linked ticket's 'export as CSV'). This is distinct from any domain-audit finding (those ask 'is it correct,' not 'does it satisfy the request'), and is the review-side counterpart to the delivery spec gate. Flag it as an intent-conformance finding -- the diff does X (JSON) while the ticket asked for Y (CSV) -- and route to the owner to confirm whether the ticket or the diff is authoritative rather than silently approving. Where a PR states no intent, say so rather than infer one. (method.md.)",
+      "expectations": [
+        "Separates correctness (code is right) from intent-conformance (does it do what was claimed) -- clean code does not make it approvable",
+        "Cites the stated intent (ticket: CSV) vs what the diff does (JSON) as the finding",
+        "Frames it as a lens the correctness/domain audits miss; the delivery-spec counterpart",
+        "Routes the mismatch to the owner rather than approving; where no intent is stated, says so rather than inferring"
+      ]
+    },
+    {
+      "id": "noisy-security-class-needs-a-proven-impact-path-not-a-high-on-suspicion",
+      "prompt": "A reviewer wants to file three High findings: 'possible DoS -- this endpoint has no rate limit', 'possible resource exhaustion -- this loop could be large', and 'this input isn't validated'. None traces a concrete exploit path; they're pattern-spotted. File them as High?",
+      "expected_output": "Not as High on suspicion -- these are chronically-noisy classes (DoS, rate-limiting, resource-exhaustion, generic input-validation) where pattern-spotting without a demonstrated impact path produces false alarms. The anti-slop / mechanism-unproven rule applies: a finding in these classes with no reached sink or concrete exploit/exhaustion path is held 'unverified' or dropped to Nit, not posted as a High. To promote one, show the path: for the input-validation item, does untrusted input actually reach a dangerous sink (injection/SSRF/traversal)? for the DoS/exhaustion items, is there a concrete attacker-controlled unbounded amplification with no upstream limit? A proven impact path re-promotes the finding to its real severity; absent that, it is noise that costs the author a round trip. Not every security class -- secrets, authz/IDOR, and data-loss keep their severity; this bar is for the suspicion-prone classes. (method.md.)",
+      "expectations": [
+        "Refuses to post the three as High on suspicion; applies the proven-impact / mechanism-unproven bar to the noisy classes",
+        "Names what a real impact path looks like (untrusted input reaches a sink; attacker-controlled unbounded amplification with no limit)",
+        "Holds them unverified / Nit absent a path; a proven path re-promotes to real severity",
+        "Does not relax the bar for secrets / authz / data-loss classes"
+      ]
     }
   ]
 }

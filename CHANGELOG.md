@@ -3,6 +3,27 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.106.0] — 2026-09-17
+
+Wave 27 of the dogfooding batch: two review lenses (round-1 remainder, no provenance risk) —
+#269 intent-conformance and #270 the proven-impact bar for the chronically-noisy security
+classes.
+
+### Added — deep-code-review
+- **`method.md` Phase 2 — intent-conformance is a lens distinct from correctness** (#269).
+  Besides "is the code right," ask "does the change do what it *claimed*" — does the diff
+  satisfy its PR description / linked issue / stated acceptance criteria? A flawless
+  implementation that does X while the ticket asked for Y, or silently drops a stated
+  requirement, is a finding cited to the stated intent; where none is stated, say so rather
+  than infer. The review-side counterpart to the delivery spec gate (`agentic-delivery` G1).
+- **`method.md` anti-slop — a proven-impact bar for the chronically-noisy security classes**
+  (#270). The general noise-floor was already the anti-slop rule; this adds that a finding in
+  a suspicion-prone class (DoS, rate-limiting, resource-exhaustion, generic input-validation
+  with no reached sink, open-redirect) with no demonstrated impact path is held `unverified`
+  or dropped to Nit, never posted as a High on suspicion (mechanism-unproven applied to the
+  classes that most produce false alarms; a proven path re-promotes). Secrets / authz /
+  data-loss keep their severity. Two new evals (110 total).
+
 ## [1.105.0] — 2026-09-17
 
 Wave 26 of the dogfooding batch: #280, the ARIA APG per-widget-contract lens — the one
