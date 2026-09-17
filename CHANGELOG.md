@@ -3,6 +3,19 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.118.0] — 2026-09-18
+
+Wave 39 of the dogfooding batch: #300 — measure pipeline flow before adopting a platform or a second methodology.
+
+### Added — deep-code-review
+- **`observability.md` — "Delivery / pipeline flow — measure before you adopt"** (#300). Distinct
+  from the service golden signals: watch the delivery pipeline with the same percentile discipline.
+  Before buying a build/merge platform or adopting a **second delivery methodology**, measure p50/
+  p95 of time-to-green, queue/runner wait, rerun/flake rate, and change lead time; attribute the
+  p95 to a stage; take the cheap fix first. Adoption bar: *which measured percentile does it move,
+  and by how much?* — no number, no adoption (route the spend to the owner with the measurement).
+  **One delivery methodology per repo.** One new eval (122 total).
+
 ## [1.117.0] — 2026-09-18
 
 Wave 38 of the dogfooding batch: #299 — modularize before splitting the repo.
