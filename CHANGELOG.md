@@ -3,6 +3,20 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.114.0] — 2026-09-18
+
+Wave 35 of the dogfooding batch: #302 — prefer consumer-contract assertions over giant golden snapshots.
+
+### Changed — deep-code-review
+- **`api-contracts.md` — contract assertions over a whole-payload golden dump** (#302). The
+  Contract-tests section no longer endorses a bare "golden request/response set" for a
+  cross-boundary payload: assert the fields/types/constraints a **consumer** depends on, so a
+  backward-compatible additive change passes and only a real incompatibility fails. A
+  whole-response snapshot fails on every change alike (can't tell a break from a reorder) and
+  trains an `--update-snapshots` re-record reflex that rubber-stamps the next real break; golden
+  fixtures are reserved for small stable identities (cross-ref `testing-and-evals.md`). One new
+  eval (118 total) and a red flag.
+
 ## [1.113.0] — 2026-09-18
 
 Wave 34 of the dogfooding batch: #294 + #298 — the evidence tier of a merge gate.

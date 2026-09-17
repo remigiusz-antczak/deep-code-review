@@ -72,8 +72,16 @@ Treat persisted and in-flight payloads like DB schemas:
 
 ## Contract tests
 
-- Consumer-driven or schema fixtures: a golden request/response (or message)
-  set that fails CI when the handler drifts.
+- **Assert the contract, not a giant golden dump.** For a cross-boundary payload (an API
+  response, a queued message), assert the specific fields, types, and constraints a **consumer**
+  depends on, so the check **passes** a backward-compatible additive change (a new optional
+  field) and **fails** only a real incompatibility — the signal you want at a boundary. A
+  whole-response **golden snapshot** is a poor default here: it fails on **every** change,
+  breaking or cosmetic alike, so its failure can't distinguish a real break from a reordered
+  field or a new optional key, and it trains an `--update-snapshots` **re-record reflex** that
+  rubber-stamps the next genuine break. Reserve a golden fixture for a small, stable,
+  whole-value **identity** (`testing-and-evals.md` snapshot / identity-pinning), not a large
+  evolving payload.
 - Webhook: unit-test invalid signature, expired timestamp, duplicate delivery
   id.
 - OpenAPI/proto generated types: assert the implementation still matches (or
@@ -85,4 +93,6 @@ Treat persisted and in-flight payloads like DB schemas:
 **🚩 red flags**: unverified webhook; unvalidated body; silent contract change;
 required field added to a live message schema; inconsistent error shapes;
 identity taken from webhook body alone; unbounded list endpoints; no version/
-compatibility story for queued payloads.
+compatibility story for queued payloads; a whole-payload golden snapshot as the
+only contract test for an evolving cross-boundary payload (fails on cosmetic churn,
+and a `--update-snapshots` re-record reflex rubber-stamps a real break).

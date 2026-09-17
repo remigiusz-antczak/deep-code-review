@@ -1249,6 +1249,17 @@
         "Treats the required check showing no run as a High merge-blocker / config gap, not something a local run satisfies or that should be overridden",
         "Does not merge on the local evidence; may note that under a worktree the hook wiring (absolute core.hooksPath / default-branch-hardcoded range) can gate the wrong tree so even a green local hook is untrustworthy"
       ]
+    },
+    {
+      "id": "prefer-consumer-contract-assertions-over-a-whole-payload-golden-snapshot",
+      "prompt": "A service's only contract test for its public JSON API is a full golden snapshot of the entire response body; any change fails CI and the team's fix is to run --update-snapshots. A PR adds a new optional field AND renames an existing field that consumers read. What does the reviewer flag?",
+      "expected_output": "Flag the whole-response golden snapshot as the wrong contract-test shape for an evolving cross-boundary payload. It fails on BOTH changes identically -- the safe additive one (a new optional field) and the breaking one (a renamed field consumers read) -- so its failure cannot distinguish them, and the team's --update-snapshots reflex re-records BOTH, rubber-stamping the breaking rename on the next run. Replace it with a consumer-driven contract assertion: assert the specific fields, types, and constraints consumers depend on, so a backward-compatible additive change PASSES and only a real incompatibility (the removed/renamed consumer field) FAILS. Classify the rename as a breaking change (SemVer major / a versioned, compatible migration), and the new optional field as safe. Reserve golden fixtures for a small, stable, whole-value identity, not a large evolving payload. (api-contracts.md.)",
+      "expectations": [
+        "Flags the whole-payload golden snapshot as the wrong shape for an evolving cross-boundary payload -- it cannot distinguish the additive change from the breaking rename (both simply fail)",
+        "Identifies the --update-snapshots re-record reflex as rubber-stamping the breaking rename (the anti-pattern), not a fix",
+        "Prescribes a consumer-driven contract assertion: a backward-compatible additive change passes, only a real incompatibility fails",
+        "Classifies the renamed consumer-read field as the breaking change (SemVer major / versioned migration) and the new optional field as safe; reserves golden fixtures for small stable identities"
+      ]
     }
   ]
 }
