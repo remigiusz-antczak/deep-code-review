@@ -231,11 +231,16 @@ LLM-backed feature, add cases that assert the guardrail holds:
   content** (tool results, MCP responses, fetched pages, another agent's output) **and holds the
   privileges** to act (credentials, write, egress, tool dispatch) — a confused deputy waiting for
   one injection to land. The architectural control is to **split the roles**: a **reader** that
-  consumes untrusted content has **no credentials, no write, no egress**, and emits only a
-  **structured, schema-validated** result; a **privileged actor** accepts **only** that
-  schema-checked value — never the raw text, never free-form instructions derived from it — and is
-  the only side that can act. An injection that lands in the reader can then produce at most an
-  ill-formed or out-of-policy *value* (rejected at the boundary), not a privileged *action*.
+  consumes untrusted content has **no credentials, no write, no egress**, and emits only
+  **structured, schema-validated data operands** — the extracted facts, **never the action to
+  take**. The **action is fixed by the trusted task plan**, not derived from untrusted input: a
+  **privileged actor** selects the operation from that plan, validates it against an **allowlist
+  of actions this task permits**, and consumes the reader's value **only as an operand** — never
+  as raw text, and never as an action / `intent` selector (a schema validates *shape*, not
+  authority, so a schema-valid `{intent: "merge_pr"}` from the reader would still be a privileged
+  action chosen by untrusted input). An injection that lands in the reader can then at most
+  corrupt an *operand* (rejected or bounded at the boundary), not choose a privileged *action* —
+  the action space was fixed on the trusted side before any untrusted byte was read.
   Review it as an **architecture** question a per-file diff cannot answer: does any single
   identity both read untrusted input **and** wield the credentials? For MCP specifically,
   **trust the transport, not the payload** — a signed or allowlisted server connection

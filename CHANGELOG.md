@@ -12,11 +12,12 @@ Wave 36 of the dogfooding batch: #295 — quarantine the untrusted reader from t
   agent-security controls (spotlight, schema-validate, least-privilege) all live inside **one**
   identity that both ingests untrusted content (tool/MCP output, fetched pages, another agent's
   message) and holds the privileges to act — a confused deputy. The architectural control is a
-  **two-role split**: a reader with no credentials/write/egress that emits only a structured,
-  schema-validated result, and a privileged actor that accepts **only** that value (never raw
-  text or derived instructions). An injection then yields at most a rejected value, not a
-  privileged action. For MCP: trust the transport, not the payload. Reviewed as an architecture
-  question a per-file diff cannot answer. One new eval (119 total).
+  **two-role split**: a reader with no credentials/write/egress that emits only structured,
+  schema-validated **data operands** (never the action), and a privileged actor whose action is
+  fixed by the trusted task plan (plus an action allowlist) and that takes the reader's value
+  **only as an operand**. An injection then corrupts at most an operand, not the action — a schema
+  validates shape, not authority. For MCP: trust the transport, not the payload. Reviewed as an
+  architecture question a per-file diff cannot answer. One new eval (119 total).
 
 ## [1.114.0] — 2026-09-18
 
