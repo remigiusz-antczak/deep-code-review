@@ -335,8 +335,9 @@ check is unsatisfiable as wired), not a flake to wait out.
 ### Self-reported evidence is not a trusted control; a local hook is advisory
 
 A merge decision rests on **trusted** evidence — a run the forge verified on the **exact commit
-under review**, whose conclusion names that SHA (above). Anything an author can produce or skip
-locally is **advisory**, never a passing control:
+under review** (a required check must actually report a conclusion for this PR, above; that
+conclusion names the SHA it graded, `method.md`). Anything an author can produce or skip locally
+is **advisory**, never a passing control:
 
 - **Self-report ≠ control.** A local hook (pre-commit / pre-push), a `Tests: N/N` line in a
   commit or PR body, and a checked PR-template box are all self-reported: `git commit` / `git
@@ -346,8 +347,10 @@ locally is **advisory**, never a passing control:
   is the merge-blocker above, not "the author ran it locally").
 - **Hooks under a worktree gate the wrong thing.** In a linked worktree (the multi-lane setup
   this file's red flags cover), a hook wired for the primary checkout misfires: an **absolute
-  `core.hooksPath`** is shared by every worktree, so one clone's hooks run against another's
-  tree; and a pre-push hook that diffs a **hardcoded default branch** gates the wrong range. A
+  `core.hooksPath`** is shared by every worktree, so a hook authored for the primary checkout
+  also fires in every sibling — and one that resolves paths from a hardcoded location rather than
+  the invocation then examines the wrong tree; and a pre-push hook that diffs a **hardcoded
+  default branch** gates the wrong range. A
   pre-push hook's real range is the pushed refs it receives on **stdin** (`<local-ref>
   <local-sha> <remote-ref> <remote-sha>`) — derive scope from the event, not a constant, and
   don't bake an absolute hooks path a sibling worktree will inherit. A hook that silently gates
