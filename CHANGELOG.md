@@ -3,6 +3,24 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.105.0] — 2026-09-17
+
+Wave 26 of the dogfooding batch: #280, the ARIA APG per-widget-contract lens — the one
+genuine residue of the round-2 a11y gap. Verify-against-repo collapsed the rest:
+first-rule-of-ARIA, target-size 24×24 with exceptions, keyboard operability, and the
+widget-role grep were already present.
+
+### Added — deep-code-review
+- **`frontend-a11y.md` — a custom interactive widget is built to its ARIA APG pattern**
+  (#280). Generic keyboard operability was already covered; this adds the per-widget
+  contract: each widget class (dialog, tablist, combobox, listbox, menu, disclosure, slider,
+  tree) has a prescribed role + states + a **full keyboard map** (dialog: `Esc` + focus trap;
+  tablist: `Arrow`/`Home`/`End`; combobox: `Arrow`+`Enter`+`Esc`), so "Tab reaches it" is not
+  "operable" — a custom `role="tablist"` with no arrow-key navigation, a `role="dialog"` with
+  no `Esc`, or a control whose `aria-expanded`/`aria-selected` doesn't reflect state, is a
+  finding. The native-element-first rule still holds; the APG applies only to hand-built
+  widgets. One new eval (108 total).
+
 ## [1.104.0] — 2026-09-17
 
 Wave 25 of the dogfooding batch: #275, a threat-modeling method lens — the highest round-2

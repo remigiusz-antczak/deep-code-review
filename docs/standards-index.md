@@ -326,3 +326,12 @@ Verification date for the row below: **2026-09-17**. Added for the deep-code-rev
 | Standard | URL | What was confirmed |
 |---|---|---|
 | SARIF (Static Analysis Results Interchange Format) 2.1.0 | https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html | OASIS Standard "Static Analysis Results Interchange Format (SARIF) Version 2.1.0 Plus Errata 01", dated 28 August 2023; defines "a standard format for the output of static analysis tools." Cited as the interchange format for ingesting deterministic scanner findings into a review. |
+
+## Verified by direct fetch (2026-09-17) — ARIA APG
+
+Verification date for the row below: **2026-09-17**. Added for the deep-code-review
+`frontend-a11y.md` per-widget APG-contract lens.
+
+| Standard | URL | What was confirmed |
+|---|---|---|
+| W3C ARIA Authoring Practices Guide (APG) | https://www.w3.org/WAI/ARIA/apg/ | W3C guide, title "ARIA Authoring Practices Guide (APG)"; purpose "how to apply accessibility semantics to common design patterns and widgets" via "ARIA roles, states and properties and by implementing keyboard support," with a per-pattern functional example. Confirms the APG supplies per-widget role/state/keyboard-interaction patterns for hand-built widgets. Cited as the per-widget contract in `frontend-a11y.md` (specific keys per widget — e.g. tablist Arrow/Home/End — are the APG's documented pattern behavior). |

@@ -44,6 +44,15 @@ without regressing a deliberate design.
 **Keyboard & focus** (WCAG 2.1.1, 2.4.3, 2.4.7, and 2.2's 2.4.11)
 - Everything actionable is reachable and operable by keyboard alone; logical tab
   order; no keyboard trap.
+- **A custom interactive widget is built to its ARIA Authoring Practices (APG) pattern.**
+  Each widget class (dialog, tablist, combobox, listbox, menu, disclosure, slider, tree) has
+  a prescribed role + states/properties + a **full keyboard map** — e.g. dialog: `Esc` +
+  focus trap; tablist: `Arrow` / `Home` / `End`, with only the active tab in the tab order
+(roving tabindex); combobox: `Arrow` + `Enter` + `Esc`. "Tab
+  reaches it" is not "operable": the finding is a **custom widget missing its pattern's keys
+  or states** (a `role="tablist"` with no arrow-key navigation, a `role="dialog"` with no
+  `Esc`, a control with no `aria-expanded`/`aria-selected` reflecting its state). Prefer a
+  native element first (rule above); reach for the APG only when you build the widget yourself.
 - Visible focus indicator; focus is **not obscured** by sticky headers/toolbars
   (2.2 new: Focus Not Obscured).
 - Focus is managed on route change, modal open/close (trap + restore), and

@@ -1139,6 +1139,17 @@
         "Frames the lens as coverage (does the diff outrun the model / is the agentic surface modeled), not threat-model ceremony",
         "Does not treat naming a maturity frame (SSDF/SAMM/BSIMM) as covering this diff"
       ]
+    },
+    {
+      "id": "custom-widget-checked-against-its-apg-pattern-not-just-tab-reachable",
+      "prompt": "A PR adds a custom tab component: divs with role='tab' and role='tablist', click handlers switch panels, and each tab is in the tab order so you can Tab to it. Accessibility looks handled. Sign off?",
+      "expected_output": "No -- 'Tab reaches it' is not 'operable.' Check the custom widget against its ARIA Authoring Practices (APG) pattern: a tablist has a prescribed keyboard map -- Arrow keys move between tabs, Home/End jump to first/last, and only the active tab is in the tab order (roving tabindex), not every tab. This implementation is missing arrow-key navigation and likely puts every tab in the tab order, so a keyboard user can't operate it as a tablist -- a finding, even though each tab is Tab-reachable. Also verify the states reflect (aria-selected on the active tab, aria-controls to its panel). The rule order still holds: prefer native elements first; the APG pattern applies because this is a hand-built widget. (frontend-a11y.md.)",
+      "expectations": [
+        "Rejects 'Tab-reachable = operable'; checks the widget against its APG pattern's full keyboard map",
+        "Names the tablist pattern's specifics (Arrow between tabs, Home/End, roving tabindex / only the active tab in the tab order)",
+        "Requires the states to reflect (aria-selected / aria-controls), not just roles present",
+        "Keeps the native-element-first rule; APG applies because it's a hand-built widget"
+      ]
     }
   ]
 }
