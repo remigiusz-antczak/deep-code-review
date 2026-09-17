@@ -267,6 +267,17 @@
         "Bounds concurrency -- stops admission on rising swap / low headroom; names the 246-worktree / 99 GB stall as the inverse failure to avoid",
         "Holds BOTH halves at once (refill on quiet AND stop at the ceiling), not one at the expense of the other"
       ]
+    },
+    {
+      "id": "ask-indexed-read-first-request-ledger-in-long-sessions",
+      "prompt": "In a 7-hour unattended run the owner has asked 'how much is left?' six times. Each time my agent re-reads about a thousand lines of transcript to rebuild the list, and a couple of items got re-done because their 'done' status was based on a branch existing. We already run an end-of-session reconciliation. What's missing?",
+      "expected_output": "The end-of-session reconciliation is a run-once, review-side audit -- it does not fix MID-session drift, which is your actual failure. The durable backlog the loop already keeps must ALSO be indexed by the owner's ask-set: one row per distinct request (id, ask, status, evidence, next action), updated at each milestone, not only at the end. 'What's remaining' is then answered by READING that ledger -- one or two tool calls -- never by an O(N) re-scan of the transcript that silently re-litigates settled items. And a row is done only when its evidence points at the CANONICAL surface (a merged-to-default SHA or a live URL), not a branch that merely contains the fix -- project-state.md's receipt discipline (a checkpoint is a recorded claim, not evidence). The fix is not another audit; it is making the ledger a live, ask-indexed, read-first artifact. (fast-agentic-delivery.md.)",
+      "expectations": [
+        "Names mid-session drift as distinct from the end-of-session / review-side reconciliation, which does not fix it",
+        "Requires the durable backlog to carry the ask-set (one row per owner request) updated at each milestone",
+        "Answers 'what's left' by reading the ledger in one or two tool calls, not by re-scanning the transcript",
+        "Marks a row done only on the canonical surface (merged-to-default SHA / live URL), not branch existence -- links project-state.md receipt discipline"
+      ]
     }
   ]
 }

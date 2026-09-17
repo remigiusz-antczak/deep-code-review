@@ -3,6 +3,39 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.101.0] — 2026-09-17
+
+Wave 22 of the dogfooding batch: a control disabled only until client state hydrates is
+*loading*, not dead (#256); and a long unattended session answers "what's left" from a
+durable, ask-indexed ledger, not by re-reading the transcript (#257).
+
+### Added — deep-code-review
+- **`product-ux-quality.md` — a control disabled only until client state resolves is
+  *loading*, not disabled** (#256). A write control gated on client-only state
+  (`useAuth`/`useSession`, a hydration flag) is server-rendered in its `disabled` default and
+  looks like a permanent dead control for the SSR → hydration window, but it is in the
+  **loading** data state and must *look* loading (skeleton/spinner) — distinct from the
+  contextually-unavailable control that stays disabled and owes an explanation. Optimistic-
+  enabled is allowed only when the click is captured and replayed after hydration (never a
+  dropped no-op, which is the dead-control trust defect). The static `disabled={!session}`
+  tell is an `unverified` lead confirmed only by a pre-hydration render — a fourth gate-1
+  timing class, and could-not-check fails open. Adds an interaction-completeness bullet, a
+  pre-ship checklist item, a gate-1 inspection detector, the timing-class extension, and the
+  **pre-hydration capture primitive** its detector cites (a real server-HTML / JS-disabled /
+  throttled snapshot procedure in `testing-and-evals.md`, so the gate has a routed positive
+  control and is not a citation to an absent instrument). One new eval (102 total).
+
+### Added — agentic-delivery
+- **`fast-agentic-delivery.md` — index the backlog by the owner's ask, and read it to answer
+  "what's left"** (#257). Extends the unattended-work-loop rule: the durable backlog the loop
+  already keeps must also carry the **ask-set** (one row per owner request: id, ask, status,
+  evidence, next action), updated at each milestone; "what's remaining" is answered by reading
+  that ledger in one or two tool calls, never by an O(N) transcript re-scan that re-litigates
+  settled items. A row is done only on the canonical surface (a merged-to-default SHA or a
+  live URL), not a branch that merely contains the fix — `project-state.md`'s receipt
+  discipline, not restated. Distinct from the review-side end-of-session claim audit
+  (`method.md`, #244) and the feedback-coverage map (`roles.md`). One new eval (27 total).
+
 ## [1.100.0] — 2026-09-17
 
 Wave 21 of the dogfooding batch: a coordinator's throughput follows its own cadence and the

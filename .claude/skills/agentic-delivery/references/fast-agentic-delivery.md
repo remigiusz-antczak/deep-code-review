@@ -579,6 +579,20 @@ backlog until a termination condition fires*, not *do the one thing, then wait*.
   conversation, which a compaction or a handoff can drop. The
   **queue-a-requirement-to-a-file** rule above is this same discipline applied to
   *incoming* scope; this applies it to the *standing* backlog.
+- **Index the backlog by the owner's ask, and answer "what's left" by reading it — never by
+  reconstructing from the transcript.** The file above is a ranked *work* list; a long or
+  unattended session also needs it to carry the **ask-set** — one row per distinct owner
+  request (id, ask, status, evidence, next action) — updated **at each milestone**, not only
+  at the end. When the owner asks "what's remaining" (often after a gap), the answer is *read
+  the ledger*, answerable in one or two tool calls — not an O(N) re-scan of hundreds of turns
+  that silently re-litigates settled items. A row is *done* only when its evidence points at
+  the **canonical surface** — a merged-to-default SHA or a live URL — not a branch that merely
+  contains the fix (`project-state.md`'s Acceptance and Artifacts receipts, and *a checkpoint
+  is a recorded claim, not evidence*). This is the runtime, ask-indexed form of the
+  feedback-coverage map (`roles.md`); it is distinct from the review-side reconciliation that
+  audits a report's own claims against the artifact before closing (`method.md`, the
+  `deep-code-review` skill), which runs **once at the end** rather than being read live
+  throughout.
 - **Name the termination conditions up front, each with its evidence.** The loop ends
   when the backlog is empty; when every remaining item is *blocked* on another party —
   including an item whose next step is an owner-approved action (push, merge, deploy:

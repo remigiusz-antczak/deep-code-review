@@ -328,6 +328,23 @@ until it renders:
   an attainable alternative**, not left visibly dead — unless its discoverability is
   explicitly wanted (`frontend-a11y.md` owns the disabled-control *contrast*
   exemption; this owns the *recoverability*).
+- **A control disabled only until client state resolves is *loading*, not disabled —
+  render it as loading, never dead.** A write control (add, submit, compose) gated on
+  client-only state — `useAuth` / `useSession`, a hydration flag — is server-rendered in
+  its `disabled` default, then enabled once the client bundle resolves. For the seconds of
+  that SSR → hydration window it looks like a permanent dead control (the *no-dead-controls*
+  class above), but it is really in the **loading** data state (the five-states rule) and
+  must *look* loading — a skeleton or spinner affordance — not a bare disabled button with no
+  reason. This is a distinct class from the *contextually-unavailable* case just above: that
+  control **stays** disabled and owes an explanation; this one **will** enable itself and owes
+  a loading affordance. Optimistic-enabled (render it enabled, act on the click) is allowed
+  **only** when the click is captured and replayed after hydration, so the handler is never a
+  no-op — an enabled control whose pre-hydration click is dropped is the *dead control / no-op
+  handler* trust defect above, not a fix. The static tell — `disabled={!session}` on a write
+  action with no loading sibling — is an **`unverified` lead, not a finding**: only a
+  **pre-hydration render** (a snapshot taken before the client bundle runs,
+  `testing-and-evals.md`) confirms it, so where the harness cannot capture one the gate reports
+  *could-not-check* and fails **open**.
 - **Reviewable change history, and no silent AI edits.** Any surface where an
   edit is itself a decision of record (a value, a target, an assignment, an
   owner) needs a visible who/what/when history behind the current value, not a
@@ -476,6 +493,7 @@ often lost — the on-screen chart carries axes and a readout the serialiser dro
 - [ ] One shared component per concept — reused/extended, not reimplemented per page; a fix landed in the shared component, not one caller; **searched the tree for a duplicate twin (a duplicated visible string/heading) a diff-scoped review would miss**?
 - [ ] Interaction loops close — read-back on every input (no write-only), WYSIWYG not raw markup, no dead controls — checked on the route that actually renders?
 - [ ] Every **disabled action explains its cause and a recovery path** — the unmet prerequisite + a concrete next step, in **reachable** text (nearby or a focusable wrapper/popover, not a tooltip on the disabled element, which may get no hover/focus); an action permanently unavailable to the current role is hidden or replaced, not a dead end?
+- [ ] **No write control renders as a dead/disabled default during the SSR → hydration window** — a control gated on client-only state (auth/session) shows a loading affordance (skeleton/spinner) or is optimistically enabled with its click **replayed** after hydration (never a dropped no-op), not a bare disabled button; confirmed on a **pre-hydration** snapshot, and *could-not-check* (no pre-hydration capture) fails **open**, not a silent pass?
 - [ ] Drawers overlay (don't navigate away); collapse scope correct; no dead controls?
 - [ ] Verified live in the running product, in more than the happy-path state — **including the default state a user lands on** (signed-out / no-role / default route / local default), not only a mock or a hand-picked persona view?
 - [ ] Any "matches / exact / parity" claim checked against the **default served state of the tree under review** as the canonical surface (not whichever tree happens to hold the port — name url · branch · sha, `report-format.md`) — and if it rests on a non-default surface, does it **name** that surface and say the default was not checked?
@@ -653,6 +671,11 @@ task:
    - **disabled-looks-disabled** — a functionally disabled control is *visibly*
      disabled (cursor / opacity / painted colour, not only the attribute; the
      *no-dead-controls* interaction-completeness rule above, seen in the render);
+   - **not-dead-before-hydration** — a write control gated on client-only state shows a
+     loading affordance (or is optimistic-enabled with a **replayed** click), not a bare
+     disabled default, in the **pre-hydration** render; the static `disabled={!session}` tell
+     is an `unverified` lead until that snapshot confirms it (principle 2), so a harness that
+     cannot capture pre-hydration reports *could-not-check*, never a pass;
    - **state named** — which data state the shot is of (empty / loading / error /
      populated), so an absence reads honestly (gate 2's state coverage; the
      empty≠all-clear rule above);
@@ -677,7 +700,12 @@ task:
    shot cannot see them, so on a `FULL` review they are ruled across the **rendered
    route sweep**'s matrix (above). **Gutters and optional-slot reservation read at
    rest** (the latter in the absent-slot data variant) — check them on the per-change
-   shot too, and re-confirm in the sweep rather than defer to it.
+   shot too, and re-confirm in the sweep rather than defer to it. And
+   **not-dead-before-hydration reads only before the client bundle runs** — a fourth timing
+   class neither the at-rest shot nor the mid-scroll sweep can see, because both capture the
+   *post-hydration* render; it needs a snapshot taken inside the SSR → hydration window (a
+   pre-hydration or CPU-throttled capture, `testing-and-evals.md`), and where the harness
+   cannot take one the item is *could-not-check*, not clean.
 
    A screenshot with an unstated inspection is an artifact read as the verification
    it is not.

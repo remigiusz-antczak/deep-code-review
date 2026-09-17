@@ -1073,6 +1073,17 @@
         "Requires each claim to carry its method + viewport (+ route coverage) so results are comparable",
         "Reconciles by a controlled follow-up changing one variable at a time, not by declaring a winner"
       ]
+    },
+    {
+      "id": "pre-hydration-write-control-is-loading-not-dead",
+      "prompt": "On our app's home and weekly pages, the Add comment / Submit update / Ask AI buttons render disabled for the first few seconds on a cold load, then go live once the page finishes loading. They read from a client-side useSession hook. A reviewer filed it as a 'disabled control needs an explanation' issue. Is that the right call, and how do we gate it?",
+      "expected_output": "No -- this is a different class from the contextually-disabled control that owes an explanation. That control STAYS disabled; these WILL enable themselves once the client bundle hydrates and useSession resolves. During the SSR -> hydration window they are in the LOADING data state, so they must LOOK loading -- a skeleton or spinner affordance -- not a bare dead-looking disabled button. The fix is a loading affordance, or optimistic-enabled ONLY if the click is captured and replayed after hydration so the handler is never a no-op; an enabled button whose pre-hydration click is silently dropped is the dead-control / no-op-handler trust defect, not a fix. Gate it as an unverified LEAD, not a finding: the static disabled={!session} pattern with no loading sibling is confirmed only by a pre-hydration render (a snapshot before the client bundle runs); where the harness cannot capture one, report could-not-check and fail open, never a silent pass. (product-ux-quality.md.)",
+      "expectations": [
+        "Reclassifies as the LOADING data state during the SSR -> hydration window, not the permanent contextually-disabled class that owes an explanation",
+        "Requires a loading affordance (skeleton/spinner) or optimistic-enabled with the click replayed after hydration; a dropped pre-hydration click is the no-op-handler defect",
+        "Treats the static disabled={!session} pattern as an unverified lead confirmed only by a pre-hydration render; missing capture is could-not-check / fail-open, not a pass",
+        "Does not conflate it with the permanent-disabled-needs-explanation rule"
+      ]
     }
   ]
 }

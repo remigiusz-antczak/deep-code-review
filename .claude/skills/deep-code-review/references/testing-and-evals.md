@@ -160,6 +160,52 @@ fix, like any regression test. This is the mechanical proof behind the
 screenshot-inspection checklist's **overlap** and **clip** items
 (`product-ux-quality.md` gate 1).
 
+## Capturing the pre-hydration render — the disabled-until-hydrated write control
+
+The geometry assertions above run against the *hydrated* DOM, and one gate-1 defect is
+invisible there: a write control gated on client-only state (`useSession` / `useAuth`) is
+server-rendered `disabled` and enables only once the client bundle hydrates, so for the
+SSR → hydration window it looks like a permanent dead control (`product-ux-quality.md` gate 1,
+*not-dead-before-hydration*). Catching it needs a snapshot taken **before the client bundle
+runs** — three captures, cheapest first:
+
+- **Server HTML** — fetch the route's server-rendered markup with no JS executed (the raw
+  SSR/SSG response, the same bytes the user first receives) and parse it.
+- **JS-disabled render** — load the route with scripting off (Playwright:
+  `browser.newContext({ javaScriptEnabled: false })`), which freezes the pre-hydration paint.
+- **Throttled capture** — screenshot within the hydration window under slow-CPU emulation;
+  least reliable (a race), used only when the two above cannot reach the route.
+
+The assertion is the same across all three: a control that **will** become interactive must
+not present as a bare `disabled` (or `aria-disabled="true"`) with **no loading sibling in its
+container** in that pre-hydration snapshot — it carries a skeleton/spinner affordance, or is
+optimistically enabled (its click captured for replay, never a no-op).
+
+```js
+// Playwright: the pre-hydration paint must not show a dead write control.
+const ctx = await browser.newContext({ javaScriptEnabled: false });
+const page = await ctx.newPage();
+await page.goto(url);                               // server HTML, no hydration
+// scope to the control's own wrapper so the affordance is a sibling, not page-global
+// (a page-wide match would pass on any unrelated spinner; a broken scope that matches
+// nothing would fail every disabled control — stricter than the standard, gate 1 forbids):
+const box = page.locator('[data-testid="composer"]'); // the write control's container
+const btn = box.getByRole('button', { name: /add|submit|post/i });
+const disabled = (await btn.getAttribute('disabled')) !== null
+  || (await btn.getAttribute('aria-disabled')) === 'true';
+const affordance = await box
+  .locator('[aria-busy="true"], [data-loading], .skeleton, [role="status"]').count() > 0;
+expect(disabled && !affordance).toBe(false);        // dead-until-hydrated is the defect
+```
+
+This is the **positive control** for the *not-dead-before-hydration* detector — the instrument
+that converts the static `disabled={!session}` *lead* into a finding (principle 2: *an absence
+is evidence only after a positive control fires*). Where the harness cannot produce any of the
+three captures for a route, the item is **could-not-check** and fails **open**; a missing
+snapshot is not a clean pass (`product-ux-quality.md` gate 1). It complements
+`domain-checklists.md`'s SSR/static-HTML inspection, which catches hydration-*nesting* faults
+in the same server-rendered output.
+
 ## A rewritten browser spec names its retired coverage and pins the wiring it can no longer reach
 
 The geometry assertions above prove a rendered claim you can still reach. This is the
