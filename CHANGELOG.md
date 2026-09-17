@@ -3,7 +3,7 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
-## [1.111.0] — 2026-09-17
+## [1.111.0] — 2026-09-18
 
 Wave 32 of the dogfooding batch: #303 — harden the Wave-30 frontmatter gate (enumeration check
 #6) to fail closed, closing the fail-open it shipped with.
