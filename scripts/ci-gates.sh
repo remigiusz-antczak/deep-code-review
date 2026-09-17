@@ -438,12 +438,16 @@ cmd_enumeration() {
       # Extract metadata.version, anchored to the metadata: block. `|| true`: no
       # match yields grep exit 1, which would abort under `set -o pipefail`; the
       # empty result is the signal the absent/unparseable branches act on.
+      # Match version: only as a DIRECT child of metadata: (the repo's 2-space
+      # convention, verified across all skills). A deeper-nested `sub:\n    version:`
+      # is skipped, so a nested decoy cannot mask a drift of the real stamp; a skill
+      # that deviates from 2-space reads as "no stamp" and fails closed.
       fmline="$(awk '
         /^---[[:space:]]*$/ {c++; next}
         c!=1 {next}
         /^metadata:[[:space:]]*$/ {inmeta=1; next}
         /^[^[:space:]]/ {inmeta=0}
-        inmeta && /^[[:space:]]+version:[[:space:]]/ {print; exit}
+        inmeta && /^  version:[[:space:]]/ {print; exit}
       ' "$d/SKILL.md" || true)"
       fmver="$(printf '%s' "$fmline" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)"
       if [ -z "$fmline" ]; then

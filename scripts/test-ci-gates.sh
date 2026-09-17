@@ -1029,6 +1029,22 @@ else
   record 1 "enumeration: metadata.version is anchored — a description block-scalar version is ignored"
 fi
 
+# Planted RED: a nested sub-key `compat.version` (4-space) placed FIRST under metadata:
+# that happens to match VERSION must NOT mask a drift of the real 2-space metadata.version.
+# The gate must extract the direct-child stamp (9.9.9), see it drift from VERSION (2.0.0),
+# and FAIL — a depth-insensitive match would extract the nested 2.0.0 decoy and falsely pass.
+FMNEST="$WORK/enum-fm-nested"
+wire_enum_skills "$FMNEST"
+printf -- '---\nname: realskill\nmetadata:\n  compat:\n    version: "2.0.0"\n  version: "9.9.9"\n---\nbody\n' \
+  > "$FMNEST/.claude/skills/realskill/SKILL.md"
+printf '2.0.0\n' > "$FMNEST/.claude/skills/realskill/VERSION"
+gate "$ROOT/scripts/ci-gates.sh" enumeration "$FMNEST"
+if [ "$GATE_RC" -ne 0 ] && grep -q 'ENUM: realskill SKILL.md frontmatter version (9.9.9) != VERSION (2.0.0)' "$WORK/last.log"; then
+  record 0 "enumeration: metadata.version is depth-anchored — a nested sub-key version cannot mask a drift (planted RED)"
+else
+  record 1 "enumeration: metadata.version is depth-anchored — a nested sub-key version cannot mask a drift (planted RED)"
+fi
+
 # ---------------------------------------------------------------------------
 # eval predicates — the offline discrimination gate for the fabrication-refusal
 # evals. Each deterministic predicate must SEPARATE a fabricated answer (red

@@ -15,8 +15,9 @@ Wave 32 of the dogfooding batch: #303 — harden the Wave-30 frontmatter gate (e
   fail-closed). The stamp is read as **metadata.version**, anchored to the frontmatter
   `metadata:` block, so a `version:` in a description block-scalar or the body can no longer
   satisfy it; and an absent stamp, an unparseable stamp, and a drifted stamp are now reported
-  distinctly. Three planted-RED self-tests (missing VERSION, missing stamp, metadata anchor); 71
-  gate tests.
+  distinctly. Two new planted-RED self-tests (missing VERSION; a nested sub-key decoy that must
+  not mask a drift) plus a metadata-anchor regression test; the pre-existing missing-stamp
+  planted-RED reworded to metadata.version; 72 gate tests.
 
 ## [1.110.0] — 2026-09-17
 
