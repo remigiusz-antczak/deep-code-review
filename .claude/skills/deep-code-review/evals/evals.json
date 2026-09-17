@@ -1238,6 +1238,17 @@
         "Covers graceful escalation (SIGTERM -> grace window -> SIGKILL) and killing-then-reaping orphaned children that would otherwise hold the worktree/port/lock",
         "Distinguishes the shedding trigger (memory/swap pressure, legitimate) from the kill mechanism (the defect), and notes a teardown record leaving the lane recoverable"
       ]
+    },
+    {
+      "id": "self-reported-tests-and-local-hooks-are-not-a-trusted-merge-control",
+      "prompt": "A PR body reads 'Tests: 142/142 passing' and the repo ships a pre-commit hook that runs the suite. The branch-protection required check shows no run for this PR. Is the test evidence sufficient to merge?",
+      "expected_output": "No -- none of that is a trusted control. The 'Tests: 142/142' line is typed text, not an executed result; the pre-commit hook is self-reported and bypassable (git commit --no-verify skips it with no trace); 'the repo has hooks' proves nothing about THIS commit. Trusted evidence is a forge-verified run pinned to the exact commit under review, whose conclusion names that SHA. The required check showing NO run for this PR is itself a High merge-blocker -- a config gap, the check is unsatisfiable as wired -- not something the author's local run satisfies, and not something to override. Do not log the hook or the Tests line as a green control; require the forge run on the reviewed SHA before merge. If the work is in a linked worktree, also check the hook wiring: an absolute core.hooksPath or a default-branch-hardcoded pre-push range gates the wrong tree or range, so even a 'passing' local hook may have examined the wrong files. (branch-and-merge-hygiene.md.)",
+      "expectations": [
+        "Refuses to treat the self-reported evidence (the Tests: N/N line, the local hook, 'the repo has hooks') as a passing control -- it is typed or --no-verify-bypassable, not executed on this commit",
+        "Requires a forge-verified run pinned to the exact commit under review (its conclusion naming that SHA) as the trusted control",
+        "Treats the required check showing no run as a High merge-blocker / config gap, not something a local run satisfies or that should be overridden",
+        "Does not merge on the local evidence; may note that under a worktree the hook wiring (absolute core.hooksPath / default-branch-hardcoded range) can gate the wrong tree so even a green local hook is untrustworthy"
+      ]
     }
   ]
 }

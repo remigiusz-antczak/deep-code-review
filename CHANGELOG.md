@@ -3,6 +3,19 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.113.0] — 2026-09-18
+
+Wave 34 of the dogfooding batch: #294 + #298 — the evidence tier of a merge gate.
+
+### Added — deep-code-review
+- **`branch-and-merge-hygiene.md` — "Self-reported evidence is not a trusted control; a local
+  hook is advisory"** (#294, #298). A merge decision rests on a forge run verified on the exact
+  reviewed SHA; a local hook, a `Tests: N/N` line, and a checked PR-template box are
+  self-reported and `--no-verify`-bypassable — never logged as a green control. And under a
+  worktree, an inherited absolute `core.hooksPath` or a pre-push hook that diffs a hardcoded
+  default branch gates the wrong tree/range (a pre-push hook's real range is the pushed refs on
+  stdin). One new eval (117 total) and two red flags.
+
 ## [1.112.0] — 2026-09-18
 
 Wave 33 of the dogfooding batch: #297 — terminate work you own without collateral kills.
