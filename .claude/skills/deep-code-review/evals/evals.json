@@ -1172,6 +1172,28 @@
         "Holds them unverified / Nit absent a path; a proven path re-promotes to real severity",
         "Does not relax the bar for secrets / authz / data-loss classes"
       ]
+    },
+    {
+      "id": "ci-skipped-required-check-read-the-on-block-and-stale-base-first",
+      "prompt": "Eight PRs targeting our 'development' integration branch all show a required check as SKIPPED and merge_preflight refuses them; a ninth PR just failed a 'parity' gate. The team is adding the 'full-ci' label and re-running, guessing flakes. What's the right diagnosis order?",
+      "expected_output": "Stop guessing labels/flakes -- read the workflow config first, in order. For the no-run/Pending required check on PRs targeting 'development': (1) is 'development' in the workflow's on.pull_request.branches -- the filter that matches the PR's BASE/target branch? A pull_request workflow that doesn't list 'development' never fires for PRs targeting it, so the required check never reports on their heads -- a structural no-run/Pending block (the #262 no-status case), not a cost-gate or a flake. Fix: add 'development' to on.pull_request.branches -- THIS unblocks the PRs. (Separately, listing 'development' in on.push.branches stamps its own HEAD green via a push run after merge, but that does NOT unblock the open PRs.) Only after that: (2) a job-level cost-gate if:, (3) a path filter (OK), (4) then rerun/flake. For the ninth PR's 'parity' failure (and any time N PRs fail the SAME gate at once): check git log HEAD..origin/main --oneline for a STALE BASE before triaging each PR -- a gate that diffs against origin/main turns one additive main commit the integration branch hasn't pulled into a whole-queue failure with no real regression; one git merge origin/main on development clears them all. Sync the integration branch on each additive main merge, and new gates should baseline on the PR base, not origin/main. (branch-and-merge-hygiene.md.)",
+      "expectations": [
+        "Reads the workflow on: block FIRST and names the right key -- target branch absent from on.pull_request.branches (the base-branch filter) = structural no-run/Pending; fix = add the target branch to on.pull_request.branches (on.push.branches only stamps the branch HEAD post-merge, does not unblock the PRs)",
+        "For N PRs failing the same gate, checks stale-base (git log HEAD..origin/main) before triaging individual PRs; one merge clears the queue",
+        "Names the root cause of the whole-queue failure: a gate diffing against origin/main + a drifted integration branch (additive main commit)",
+        "Does not reach for the label / rerun / flake hypothesis first"
+      ]
+    },
+    {
+      "id": "long-in-progress-ci-shard-read-log-hang-vs-timeout-not-rerun-storm",
+      "prompt": "A Playwright shard has been in_progress for 70 minutes (normal is ~15) during a merge-critical run. Someone already triggered two reruns; all three are running in parallel. What should we do?",
+      "expected_output": "Stop the rerun-storm -- three parallel instances multiply runner spend for zero new signal. Past ~2x a shard's normal duration, READ THAT SHARD'S LOG before acting (< 60s): look at the last-output timestamp and whether a test started but never finished. Diagnose hang vs timeout: a HANG (no new output for minutes -- a deadlocked browser, a port that never opened) should be cancelled and root-caused before any rerun; a TIMEOUT (the log shows a test hitting its per-test/suite limit) should be left to fail cleanly, then the specific timed-out test triaged. Rerun at most once, and only after diagnosis -- a rerun with no known root cause is spend with no expected change; if a second run reproduces the same hang/timeout, that IS the bug -- file it, don't rerun again. Cancel the extra parallel runs now, and cancel with a note naming the evidence (last log line, elapsed) so the next reader knows it was a hang, not a flake or a stale push. (branch-and-merge-hygiene.md.)",
+      "expectations": [
+        "Reads the shard's log before acting; diagnoses hang (no output) vs timeout (log shows a test at its limit)",
+        "Names the rerun-storm anti-pattern (parallel reruns = spend, no new signal) and passive-wait as the mirror error",
+        "Reruns at most once and only after diagnosis; a reproduced hang/timeout is the bug to file, not to rerun",
+        "Cancels a hang with evidence (last log line, elapsed) so it isn't mistaken for a flake"
+      ]
     }
   ]
 }

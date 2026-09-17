@@ -3,6 +3,25 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.107.0] — 2026-09-17
+
+Wave 28 of the dogfooding batch: three owner-filed CI-diagnosis hygiene lessons (#285, #286,
+#287), all into `branch-and-merge-hygiene.md`'s required-check section (extending the #262/#194
+SKIPPED and trigger-event content).
+
+### Added — deep-code-review
+- **`branch-and-merge-hygiene.md` — CI-diagnosis hygiene: a SKIPPED check, a stale base, a hung
+  shard** (#285, #286, #287). **#285**: read the workflow `on:` block FIRST and name the right key — for PRs
+  *targeting* an integration branch, a required check that never runs is governed by
+  `on.pull_request.branches` (the base-branch filter), not `on.push.branches`; absent = a
+  structural no-run/Pending block, diagnosed before the cost-gate / flake hypotheses
+  (`on.push.branches` only stamps the branch's own HEAD green post-merge, not the open PRs). **#286**:
+  a gate diffing against `origin/main` (not the PR base) fails the *whole queue* when the
+  integration branch drifts — check the stale base (`git log HEAD..origin/main`) before triaging
+  N same-gate failures; sync on each additive `main` merge; a new gate documents its baseline.
+  **#287**: a long `in_progress` shard is diagnosed by its log (hang vs timeout), not by waiting
+  or rerun-storming; rerun at most once, on evidence. Two new evals (112 total).
+
 ## [1.106.0] — 2026-09-17
 
 Wave 27 of the dogfooding batch: two review lenses (round-1 remainder, no provenance risk) —

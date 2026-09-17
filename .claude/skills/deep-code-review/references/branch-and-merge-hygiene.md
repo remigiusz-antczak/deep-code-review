@@ -294,6 +294,39 @@ saw this PR — `SKILL.md` principle 2). Two ways it happens:
   `run_id` and never attaches to the PR's check rollup, so the preflight never sees
   it. The workflow **existing** is not the check **running** — verify the required
   name maps to a job whose triggers include how this PR is actually checked.
+- **A required check that never runs on a PR — read the `on:` block FIRST, and name the right
+  trigger key.** A PR's required check reports on the **PR head**, so the run that satisfies it
+  is a **`pull_request`-triggered** run — filtered by **`on.pull_request.branches`, which
+  matches the PR's *base* (target) branch**. So when PRs *targeting* a long-lived integration
+  branch show the check as **no-run / Pending** (the #262 *no-status* case that blocks merge —
+  not the *skipped/Success* case that satisfies it), the load-bearing key is the `pull_request`
+  **base** filter: is the target branch in `on.pull_request.branches`? Absent = **structural**
+  (the check can never report on those PRs), not a flake. A **distinct** concern in the same
+  `on:` block: `on.push.branches` must list the integration branch to stamp *its own HEAD*
+  green via a push run **after merge** — that HEAD-provability point does **not** unblock the
+  open PRs. Diagnose in order: (1) target branch in `on.pull_request.branches`? — this is what
+  unblocks the PRs; (2) a job-level cost-gate `if:` (label/dispatch, above); (3) a path filter
+  (diff out of scope — OK); (4) *only then* rerun / flake / timeout — and separately, is the
+  branch in `on.push.branches` so its HEAD is provable? Reading the `on:` block beats N
+  PR-level reruns chasing the wrong key.
+- **Stale-base fails the whole queue at once.** A gate that diffs the PR head against
+  **`origin/main`** (not the PR *base*) turns one additive commit on `main` — a new row,
+  fixture, or schema entry the integration branch hasn't pulled — into a simultaneous failure
+  of **every** PR queued against that branch, with no regression in any of them. When N PRs
+  fail the *same* gate at once, check `git log HEAD..origin/main --oneline` for a stale base
+  **before** triaging them individually; one `git merge origin/main` on the integration branch
+  clears them all. Sync the integration branch on **each** additive `main` merge, not only
+  before the final train; and a new gate that baselines on `origin/main` must **document that
+  assumption** (prefer the PR base for a long-lived-branch workflow).
+- **A long `in_progress` shard is diagnosed by its log, not by waiting or re-running.** Past
+  ~2× a shard's normal duration, **read that shard's log before acting**: a **hang** (no new
+  output for minutes — a deadlocked browser, a port that never opened) is cancelled and
+  root-caused before any rerun; a **timeout** (the log shows a test hitting its limit) is left
+  to fail cleanly, then the specific test is triaged. Rerun **at most once, only after**
+  diagnosis — a rerun with no known cause is spend with no expected change, and parallel reruns
+  (*rerun-storm*) multiply runner cost for zero new signal; treating an hour-long `in_progress`
+  as normal (*passive wait*) is the mirror error. Cancel with a note naming the evidence (last
+  log line, elapsed time) so the next reader knows it was a hang, not a flake or a stale push.
 
 Read the check's **conclusion**, never the bare colour; a required check with no run
 for this PR is a **High** merge-blocker in its own right — name it a config gap (the
