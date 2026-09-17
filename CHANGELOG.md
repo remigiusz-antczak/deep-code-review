@@ -3,6 +3,21 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.110.0] — 2026-09-17
+
+Wave 31 of the dogfooding batch: #271 behavioral-hotspot prioritization for domain H — a
+review that leads with the debt that actually costs the team, not every structural smell.
+
+### Added — deep-code-review
+- **`domain-checklists.md` domain H — prioritize maintainability debt by team behavior**
+  (#271). A ranking lens: order the domain-H findings by change-frequency × complexity (a
+  "hotspot") computed from the target's own git history, so the review leads with the debt in
+  the files the team keeps touching. It is a ranking lens, **not a severity bump** — a
+  structurally ugly file with near-zero churn stays low, and the severity gate still rules each
+  finding on its own merits. Distinct from Phase-0 blast-radius (which ranks the *audit scope*
+  across all domains). Where git history is absent (shallow clone, fresh import), it falls back
+  to complexity alone rather than inventing a churn number. One new eval (115 total).
+
 ## [1.109.0] — 2026-09-17
 
 Wave 30 of the dogfooding batch: two process-hardening lessons mined from this session's own

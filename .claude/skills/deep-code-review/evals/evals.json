@@ -1216,6 +1216,17 @@
         "Notes the fusion keeps all bytes valid, so lint/format/tests pass over it -- gates do not catch it, a count delta or human read does",
         "Frames it as intent-conformance (the diff did not do what its title claimed) and that an existing rule was silently lost, not merely nothing-added"
       ]
+    },
+    {
+      "id": "maintainability-debt-ranks-by-churn-times-complexity-hotspot",
+      "prompt": "A review found two files with equally tangled, over-complex code (the same cyclomatic complexity). File A (src/legacy/report_export.py) has 2 commits in the last two years; file B (src/checkout/pricing.py) has 40 commits in the last three months. Neither has a correctness bug. How does the reviewer prioritize the maintainability debt?",
+      "expected_output": "Lead with file B. Both are equal structural debt, so rank them by team behavior -- change-frequency x complexity, the hotspot lens: B is churned constantly (40 commits in 3 months), so its complexity taxes the team on every change, while A is near-dormant (2 commits in 2 years) and its ugliness rarely bites. Flag B's debt first and keep A low. This is a RANKING decision, not a severity bump -- neither file is a Blocker/High merely for being complex, and A's low churn does not erase its debt, it only deprioritizes it. Compute churn from the repo's own git history (e.g. git log --format= --name-only | sort | uniq -c | sort -rn); if history were absent (shallow clone, fresh import), say so and fall back to complexity alone rather than invent a churn number. This ranks maintainability debt by where the team works, distinct from Phase-0 blast-radius which ranks the audit scope. (domain-checklists.md, domain H.)",
+      "expectations": [
+        "Ranks the high-churn file B (40 commits/3mo) above the equally-complex low-churn file A -- hotspot = change-frequency x complexity from git history",
+        "Treats it as a ranking/prioritization decision, not a severity bump -- does not inflate either complex file into a Blocker/High",
+        "Keeps the low-churn file's debt low priority without erasing it (deprioritized, not dismissed)",
+        "Computes churn from the target's own git history and, if history were absent, says so or falls back to complexity rather than inventing a churn number"
+      ]
     }
   ]
 }
