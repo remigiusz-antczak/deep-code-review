@@ -226,6 +226,21 @@ LLM-backed feature, add cases that assert the guardrail holds:
   denylist of dangerous-command regexes is bypassable by construction (an
   `rm -rf` pattern misses `-fr` / `-f -r` / `--force`); treat containment, not
   pattern-matching, as the boundary.
+- **Quarantine the reader from the actor.** The controls above (spotlight, schema-validate,
+  least-privilege) still live inside **one** agent identity that both **ingests untrusted
+  content** (tool results, MCP responses, fetched pages, another agent's output) **and holds the
+  privileges** to act (credentials, write, egress, tool dispatch) — a confused deputy waiting for
+  one injection to land. The architectural control is to **split the roles**: a **reader** that
+  consumes untrusted content has **no credentials, no write, no egress**, and emits only a
+  **structured, schema-validated** result; a **privileged actor** accepts **only** that
+  schema-checked value — never the raw text, never free-form instructions derived from it — and is
+  the only side that can act. An injection that lands in the reader can then produce at most an
+  ill-formed or out-of-policy *value* (rejected at the boundary), not a privileged *action*.
+  Review it as an **architecture** question a per-file diff cannot answer: does any single
+  identity both read untrusted input **and** wield the credentials? For MCP specifically,
+  **trust the transport, not the payload** — a signed or allowlisted server connection
+  authenticates *where the bytes came from*, never that their *content* is safe to act on
+  (cross-ref the poisoned-MCP-server risk above and `security-agent-skills.md`).
 - **When the tool *is* code execution, reframe the output-handling test.** For a
   shell / `ipython` / code-interpreter agent, "model output reaches `exec`" is
   the product, not a bug, so LLM10's raw-sink test collapses. The controls to
