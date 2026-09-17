@@ -256,6 +256,17 @@
         "Re-runs release verification only on a quiescent head (integrator reports no outstanding branches), freezing and naming the SHA",
         "Gives the heavy run the machine and splits it into independently-reporting phases so partial progress survives"
       ]
+    },
+    {
+      "id": "coordinator-refills-on-its-own-cadence-bounded-by-resources",
+      "prompt": "My agent coordinator has a ranked backlog of disjoint-surface tasks, the box is at 83% free RAM with flat swap, and the owner hasn't messaged in a while. Right now, each time a lane finishes I just acknowledge it and wait for the owner's next message before launching more -- the owner is annoyed I keep slowing down when they go quiet. Also, earlier a different run spawned ~246 worktrees, used 99 GB, and stalled everything. What's the right admission policy?",
+      "expected_output": "Two failures to fix at once -- do not trade one for the other. First: the owner's message cadence is not your clock. Acknowledging a completed lane one-for-one and waiting for the next message makes human message frequency an accidental concurrency controller, so throughput sags exactly when the owner is quiet while safe capacity (83% free RAM, flat swap) sits idle. A completed lane refills on YOUR own cadence: hold target concurrency while eligible backlog and headroom remain, and a quiet stretch never lowers it. Second, and simultaneously: admission is bounded, not unlimited -- the 246-worktree / 99 GB stall is the inverse failure. So maintain a TARGET concurrency with gradual admission (add one lane, re-probe free RAM and the swap trend, then decide on the next) plus backpressure; admit only disjoint-surface lanes (a shared artifact in flight blocks only the lanes that touch it, not the disjoint ones); and stop admitting when swap rises or headroom/disk runs low -- never keying admission to message count. Refill on quiet AND stop at the resource ceiling -- both, or you have only moved the failure. (fast-agentic-delivery.md.)",
+      "expectations": [
+        "Refills each vacated slot on the coordinator's own cadence while backlog + headroom remain; a quiet period never lowers target concurrency; admission is not keyed to owner-message count",
+        "Admits gradually (add one lane, re-probe free RAM + swap trend, decide) and only for disjoint surfaces (a shared artifact in flight blocks only lanes that touch it)",
+        "Bounds concurrency -- stops admission on rising swap / low headroom; names the 246-worktree / 99 GB stall as the inverse failure to avoid",
+        "Holds BOTH halves at once (refill on quiet AND stop at the ceiling), not one at the expense of the other"
+      ]
     }
   ]
 }

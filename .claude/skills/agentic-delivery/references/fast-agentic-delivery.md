@@ -545,6 +545,13 @@ worktree, and no commits is unclaimed in practice (`assigned` ≠ `in-progress`)
 **before** opening the worktree, never after — take-then-announce races two lanes
 onto the same work.
 
+**The converse over-caution: a shared artifact in flight blocks only the lanes that touch
+it.** Withholding *every* lane because one in-flight branch edits a shared file (a
+design-token file, a lockfile, a config) is the mirror error — disjoint-surface lanes that
+never touch that artifact are safe to run in parallel, and pausing them idles capacity for
+a conflict that cannot occur. Gate a lane on whether **its own** surface overlaps an
+in-flight write, not on whether **any** shared write is open.
+
 ## An ETA on a fan-out states its parallelism assumption — a serial estimate on parallel lanes is a fabrication
 
 An estimated completion time for a multi-lane plan is meaningless without the
@@ -591,6 +598,19 @@ backlog until a termination condition fires*, not *do the one thing, then wait*.
   next* — not just the task in hand; an agent out of ready work names the termination
   condition it is parked on rather than going quiet, because silence reads as
   *working* and the owner discovers the stall late.
+- **The owner's message cadence is not the loop's clock.** A coordinator that acknowledges
+  a completed lane and then **waits** for the next owner message before refilling the slot
+  has made human message frequency an accidental concurrency controller — throughput sags
+  exactly when the owner goes quiet while safe capacity sits idle. A completed lane refills
+  on the coordinator's **own** cadence: hold target concurrency while **unblocked,
+  non-owner-gated** backlog and headroom remain, and a quiet stretch **never lowers** it —
+  but a stretch whose only remaining items are parked on a human gate (`SKILL.md` *Human
+  gates*) is a *termination condition* (above), not a refill opportunity. Admission stays
+  governed by the fan-out gates — disjoint surfaces, free RAM and the swap trend (*gate on
+  free RAM and the swap trend* above), one lane then re-probe with a burst reserve (#239) —
+  **never by message count**; and the target is a *maintained* concurrency with
+  backpressure, never unbounded spawning (bounded by the WIP-cap above; an unbounded
+  fan-out otherwise exhausts the box — the RAM/swap gate above — and stalls everything).
 
 ## Research is not delivery — a brief with no tracked follow-through is reported as unconsumed
 

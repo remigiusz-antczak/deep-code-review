@@ -3,6 +3,25 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.100.0] — 2026-09-17
+
+Wave 21 of the dogfooding batch: a coordinator's throughput follows its own cadence and the
+resource ceiling, not the owner's message frequency (#253).
+
+### Added — agentic-delivery
+- **`fast-agentic-delivery.md` — the owner's message cadence is not the loop's clock**
+  (#253). Extends the unattended-work-loop rule (which already owns the durable backlog and
+  pull-the-next-item discipline): a coordinator that refills a lane only when a new owner
+  message grants a turn has made human message frequency an accidental concurrency
+  controller — throughput sags when the owner goes quiet while safe capacity sits idle. A
+  completed lane refills on the coordinator's own cadence; a quiet stretch never lowers
+  target concurrency; admission stays governed by the fan-out gates (disjoint surfaces, free
+  RAM + swap trend, one-lane-then-re-probe with a burst reserve), never by message count,
+  and the target is a maintained concurrency with backpressure, never unbounded spawning.
+  Also sharpens the ownership-map rule with the converse over-caution: a shared artifact in
+  flight blocks only the lanes that touch it — disjoint-surface lanes proceed. One new eval
+  (26 total).
+
 ## [1.99.0] — 2026-09-17
 
 Wave 20 of the dogfooding batch: a verification claim names the procedure that produced
