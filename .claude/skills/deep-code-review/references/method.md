@@ -385,7 +385,17 @@ work. Assume a hostile user **and** a hostile upstream.
 
 **Phase 4 — Synthesize & rank.** Deduplicate, assign severity, separate blocking
 from non-blocking. Note systemic patterns (one root cause behind many symptoms)
-rather than listing every instance. Also identify **compounds** — findings from
+rather than listing every instance. **A finding matching a copyable idiom** — a guard
+expression, a state-check, a data-flow pattern pasted rather than abstracted
+(`disabled={!x}`, an unchecked identity flag, a hydration-gate) — is scoped by **grepping
+the idiom across the tree in the same pass**: the search result *is* the blast radius,
+reported as one class-finding with its full instance set (how many sites, and where),
+never the first callsite alone. Stopping at one site under-scopes the finding and leaks a
+second fix into a later increment — the review analogue of the *one component per concept*
+duplicate-twin sweep (`product-ux-quality.md`), for a bug pattern rather than a duplicated
+component; after the fix, a re-grep of the idiom confirms none remain (the class is closed
+only when that search returns clean — a zero-survivor check, principle 2). Also identify
+**compounds** — findings from
 different domains where one disables another's safeguard; a compound's severity
 is the joint effect, which can exceed either part, so state it as one finding
 with the fix order. **Distinguish a live defect from a documented past one:**

@@ -521,7 +521,14 @@ implements.
   picking up the queue. A requirement buried in a transcript is only as durable as the
   lane.
 - **Interrupt only for a genuine control signal** — stop, abandon, or a correction
-  that invalidates work in progress. "Also do X" is not a control signal.
+  that invalidates work in progress. "Also do X" is not a control signal, **and neither is
+  a process-policy change** — re-ordering the queue, switching serial↔parallel, reshuffling
+  priority: those queue to the lane's next **checkpoint** (a filed issue, a pushed commit, a
+  merged PR — never a mid-edit or mid-compose state), because each mid-task redirect makes the
+  lane re-orient and ship nothing (the *interrupt-thrash* anti-pattern). A genuine control
+  signal — including a **P0 safety** issue (imminent data loss, a secret leak, a destructive
+  irreversible action), the clearest case since it invalidates continuing — still interrupts at
+  once; a process-policy change is not one, and waits for the checkpoint.
 - **Freeze scope per deliverable** — a lane ships against the scope it was given;
   later asks are the next increment. Prefer a **shippable slice that then stops** over
   a consolidated deliverable with no stopping point — the slice lands artifacts under
@@ -543,7 +550,10 @@ duplicate lane on a feature already in flight. Before starting, check for an
 worktree, and no commits is unclaimed in practice (`assigned` ≠ `in-progress`).
 **Announce-then-take:** claim the objective (a draft PR, or a posted "taking this")
 **before** opening the worktree, never after — take-then-announce races two lanes
-onto the same work.
+onto the same work. And **two lanes reporting the same bug idiom at different callsites is a
+*missed sweep*, not two findings** — grep the idiom and land every instance in one lane, then
+a single follow-up verifies none remain (the review-side rule that a pattern-finding is scoped
+to its full instance set lives once in `deep-code-review` `method.md` Phase 4).
 
 **The converse over-caution: a shared artifact in flight blocks only the lanes that touch
 it.** Withholding *every* lane because one in-flight branch edits a shared file (a
@@ -612,6 +622,16 @@ backlog until a termination condition fires*, not *do the one thing, then wait*.
   next* — not just the task in hand; an agent out of ready work names the termination
   condition it is parked on rather than going quiet, because silence reads as
   *working* and the owner discovers the stall late.
+- **Progress is a durable artifact, not a spawned lane — and the ETA follows the durable
+  rate.** A lane computing locally with **nothing pushed** is, to the owner, in the same state
+  as one never spawned: `spawned` ≠ `started` (the claim-side form is *assigned ≠ in-progress*
+  above). Grade each lane on its durable output — **zero** (local only, no push: not-started,
+  however long it has run), **in-flight** (a pushed branch or open draft PR: visible,
+  recoverable), **done** (merged to the default branch or a filed issue: the canonical surface
+  of the ask-ledger above). A status therefore **names each lane's push / PR / issue URL**; a
+  lane with no URL is reported as *running, no output yet*, never as progress — and the
+  window's ETA is projected from the **durable-output rate**, not the spawn rate, or it is
+  fiction the moment a local lane stalls or resets.
 - **The owner's message cadence is not the loop's clock.** A coordinator that acknowledges
   a completed lane and then **waits** for the next owner message before refilling the slot
   has made human message frequency an accidental concurrency controller — throughput sags

@@ -3,6 +3,45 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.102.0] — 2026-09-17
+
+Wave 23 of the dogfooding batch: four coordination- and review-honesty lenses (#258, #259,
+#260, #262). #261 was closed as already covered by the shipped cadence (#253) and ask-ledger
+(#257) rules; #262 landed as a review lens, not a repo CI fix (its evidence was a downstream
+project's workflow, absent here).
+
+### Added — deep-code-review
+- **`branch-and-merge-hygiene.md` — a local preflight stricter than the forge's own verdict is
+  a deadlock** (#262). When the forge reports a cost-gated job `skipped/Success` (green under
+  branch protection) but a locally-added merge preflight refuses that verdict on an
+  app-touching PR, and the only unblock is an owner-only label or a manual dispatch, an agent
+  is deadlocked — a gate stricter than the standard it enforces (the gate-vs-standard rule,
+  here applied to CI). The preflight must diagnose *policy-declined* (cost gate: work exists, a
+  human must grant the run) vs *nothing-to-run* (path filter: no in-scope change) and name the
+  owner action, not refuse blindly.
+- **`method.md` — a pattern-bug is scoped by grepping the idiom, not the first callsite**
+  (#259). A Phase 4 finding that matches a copyable idiom (a guard expression, a state-check, a
+  pasted data-flow pattern) is scoped by grepping the idiom across the tree in the same pass:
+  the search result is the blast radius, reported as one class-finding with its full instance
+  set, never the first callsite alone. The review analogue of the one-component-per-concept
+  duplicate-twin sweep, for a bug pattern rather than a duplicated component. Two new evals
+  (104 total).
+
+### Added — agentic-delivery
+- **`fast-agentic-delivery.md` — a process-policy change is not a mid-task interrupt** (#258).
+  Extends the interrupt rule: re-ordering the queue, switching serial↔parallel, or reshuffling
+  priority queues to the lane's next checkpoint (a filed issue, a pushed commit, a merged PR),
+  never mid-edit or mid-compose — each mid-task redirect makes the lane re-orient and ship
+  nothing (the interrupt-thrash anti-pattern). The only mid-task interrupt is P0 safety.
+- **`fast-agentic-delivery.md` — progress is a durable artifact, not a spawned lane** (#260).
+  A lane computing locally with nothing pushed is not-started (`spawned` ≠ `started`, the
+  claim-side form of the existing `assigned` ≠ `in-progress`). Grade each lane zero / in-flight
+  / done by its durable output; a status names each lane's push / PR / issue URL; the window's
+  ETA is projected from the durable-output rate, not the spawn rate.
+- **`fast-agentic-delivery.md` — pointer** (#259): two lanes reporting the same bug idiom is a
+  missed sweep, not two findings; the review-side rule lives once in `method.md`. Two new evals
+  (29 total).
+
 ## [1.101.0] — 2026-09-17
 
 Wave 22 of the dogfooding batch: a control disabled only until client state hydrates is

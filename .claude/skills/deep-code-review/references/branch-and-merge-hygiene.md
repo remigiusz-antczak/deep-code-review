@@ -277,7 +277,17 @@ saw this PR — `SKILL.md` principle 2). Two ways it happens:
   or don't name a legitimately-absent workflow in the required list. **Contrast** a
   **job** skipped by a job-level `if:` inside a workflow that *did* run — the forge
   reports it **skipped/Success**, which satisfies the required check and needs no
-  pass-through. The trap is the **missing status**, not the skip itself.
+  pass-through. The trap is the **missing status**, not the skip itself. A
+  **locally-added merge preflight** can invert this: when the forge itself reports a job
+  **skipped/Success** — a job-level cost-gate `if:` an agent cannot flip without an
+  owner-only label or a manual dispatch — a preflight that **refuses** that green verdict
+  is *stricter than the required check it stands in for* and **deadlocks** anyone without
+  the owner lever (the gate-vs-standard rule — a gate must never be stricter than the
+  standard it enforces, `product-ux-quality.md` / `frontend-a11y.md` — applied to CI).
+  Such a preflight must **diagnose why** a check is absent — *policy-declined* (cost gate:
+  work exists, a human must grant the run) vs *nothing-to-run* (path filter: no in-scope
+  change) — and **name the owner action**, not refuse blindly; conflating the two reports
+  a false block and pushes the agent toward the very label it is barred from adding.
 - **Trigger-event gap.** A required job whose workflow omits the event that fires
   the PR never starts *for this PR*: a `full-ci` job with no `labeled` trigger, in a
   label-driven flow, never begins; a `workflow_dispatch` run carries its own

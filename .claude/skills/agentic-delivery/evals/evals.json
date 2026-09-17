@@ -278,6 +278,28 @@
         "Answers 'what's left' by reading the ledger in one or two tool calls, not by re-scanning the transcript",
         "Marks a row done only on the canonical surface (merged-to-default SHA / live URL), not branch existence -- links project-state.md receipt discipline"
       ]
+    },
+    {
+      "id": "process-policy-change-is-not-a-mid-task-interrupt",
+      "prompt": "I'm coordinating a lane that's mid-way through filing an issue and drafting a PR. I keep realizing better process: first I told it serial, then adaptive-parallel, then priority-first ordering -- three redirects in a few minutes. It hasn't shipped anything yet. Am I improving the process or hurting it?",
+      "expected_output": "Hurting it -- this is interrupt-thrash. Each mid-task redirect makes the lane re-orient and restart, so three policy changes in minutes guarantee zero output; the coordinator feels like it is improving the process while the lane is reset to zero each time. A process-policy change -- queue order, serial vs parallel, reprioritization -- is NOT a control signal (nor is 'also do X'): it queues to the lane's next CHECKPOINT (a filed issue, a pushed commit, a merged PR -- never a mid-edit / mid-compose state). A genuine control signal -- stop, abandon, or a correction that invalidates the work (a P0 safety issue: imminent data loss, a secret leak, or a destructive irreversible action, is the clearest case) -- still interrupts at once; a process-policy change is not one and waits. Let the lane reach its checkpoint, apply one batched policy update there, and if a lane has taken more than one or two redirects without completing, that is the signal the scope was mis-sized -- stop sending and let it ship. (fast-agentic-delivery.md.)",
+      "expectations": [
+        "Names interrupt-thrash: rapid mid-task redirects reset the lane to zero, so throughput is zero despite each redirect being individually reasonable",
+        "A process-policy change (ordering / parallelism / priority) is not a control signal; it queues to the next checkpoint",
+        "Defines the checkpoint (filed issue / pushed commit / merged PR, not mid-edit); a process-policy change waits for it, while a genuine control signal (stop / abandon / a work-invalidating correction such as a P0 safety issue) still interrupts at once",
+        "Stops sending after more than one or two uncompleted redirects rather than sending a third"
+      ]
+    },
+    {
+      "id": "spawned-lane-is-not-progress-eta-from-durable-rate",
+      "prompt": "I reported to the owner '4 lanes working, ETA 20 min.' All 4 are computing locally -- none has pushed a commit or opened a PR yet. Two later stalled and reset. The owner's annoyed the ETA was wrong. What did I get wrong?",
+      "expected_output": "The ETA counted spawned lanes as progress. A lane computing locally with nothing pushed is, to the owner, in the same state as one never spawned -- spawned is not started (the claim-side form is 'assigned is not in-progress'). Grade each lane on durable output: zero (local only, no push -- not-started however long it has run), in-flight (a pushed branch or open draft PR -- visible, recoverable), done (merged to the default branch or a filed issue). A status names each lane's push / PR / issue URL; a lane with no URL is 'running, no output yet,' never progress. Project the window's ETA from the durable-output RATE, not the spawn rate -- otherwise it is fiction the moment a local lane stalls or resets, which is exactly what happened. Report '0 of 4 durable, none pushed yet' instead of '4 working, ETA 20 min.' (fast-agentic-delivery.md.)",
+      "expectations": [
+        "Names the error: counting spawned/local-only lanes as progress; spawned is not started",
+        "Grades lanes by durable output (zero / in-flight / done) tied to a pushed artifact, not lane count or elapsed time",
+        "Requires the status to name each lane's push/PR/issue URL; no URL = 'running, no output yet'",
+        "Derives ETA from the durable-output rate, not the spawn rate"
+      ]
     }
   ]
 }

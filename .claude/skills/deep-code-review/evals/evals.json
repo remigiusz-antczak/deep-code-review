@@ -1084,6 +1084,28 @@
         "Treats the static disabled={!session} pattern as an unverified lead confirmed only by a pre-hydration render; missing capture is could-not-check / fail-open, not a pass",
         "Does not conflate it with the permanent-disabled-needs-explanation rule"
       ]
+    },
+    {
+      "id": "local-preflight-stricter-than-forge-verdict-is-a-deadlock",
+      "prompt": "Our repo's required browser/UX jobs are gated behind a cost label so they don't run on every PR -- the forge reports them SKIPPED/Success, which satisfies branch protection. But our own merge-preflight script refuses to pass any PR where those jobs are SKIPPED if the diff touches app code. An agent can't add the label (owner-only) or trigger the manual dispatch. Local gates are all green. Is the preflight right to hold?",
+      "expected_output": "No -- the preflight is stricter than the required check it stands in for, and it deadlocks anyone without the owner-only lever. The forge already accepts SKIPPED/Success as green; a local gate that refuses that verdict, whose only unblock is a label or a dispatch the agent is barred from, is a gate stricter than the standard it enforces (the same gate-vs-standard rule product-ux-quality.md / frontend-a11y.md apply to UI) -- a catch-22, not a safety check. The fix is not to weaken the cost gate: it is to make the preflight DIAGNOSE why the job is absent -- policy-declined (the cost gate: work exists, a human must grant the run) vs nothing-to-run (a path filter: no in-scope change) -- and name the owner action, rather than refuse blindly and push the agent toward the forbidden label. Report the local green as the proof it is, flag the config as an agent-unmergeable deadlock (a High config gap, not a flake), and route the run-grant to the owner. (branch-and-merge-hygiene.md.)",
+      "expectations": [
+        "Identifies the local preflight as stricter than the forge's own SKIPPED/Success verdict -- a gate stricter than the standard (gate-vs-standard rule)",
+        "Names the deadlock: the only unblock is an owner-only label / dispatch the agent cannot use",
+        "Fix is to diagnose policy-declined (cost gate) vs nothing-to-run (path filter) and name the owner action, not to weaken the cost gate or add the label",
+        "Treats it as a config gap to route to the owner (High), not a flake to wait out"
+      ]
+    },
+    {
+      "id": "pattern-bug-is-scoped-by-grepping-the-idiom-not-the-first-callsite",
+      "prompt": "A review found a broken auth guard -- disabled={!member} -- on one composer button, where member is briefly undefined so the control dead-ends. We fixed that callsite. Ship the finding as a single-site fix?",
+      "expected_output": "No -- disabled={!member} is a copyable idiom, so a single callsite is almost never the whole finding. Before calling it single-site, grep the idiom across the tree (the same guard shape, sibling identity flags) in the SAME pass: the search result IS the blast radius, and the finding is reported as one class-finding with its full instance set -- how many sites, and where -- not the first callsite alone. Fixing one and stopping under-scopes the finding and leaks a second fix into a later increment (and a third instance no lane encountered stays broken). This is the review analogue of the one-component-per-concept duplicate-twin sweep (product-ux-quality.md), for a bug pattern rather than a duplicated component: land every instance in one increment, then a single follow-up verifies none remain. (method.md.)",
+      "expectations": [
+        "Refuses the single-site framing; treats the guard as a copyable idiom with a multi-site blast radius",
+        "Requires grepping the idiom across the tree in the same pass, the search result defining the instance set",
+        "Reports it as one class-finding with its full instance set (count + locations), fixed in one increment",
+        "Connects to the duplicate-twin / one-component-per-concept sweep, but for a bug pattern not a duplicated component"
+      ]
     }
   ]
 }
