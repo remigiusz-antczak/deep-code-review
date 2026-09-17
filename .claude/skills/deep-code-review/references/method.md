@@ -339,7 +339,13 @@ X while the ticket asked for Y, or silently drops a stated requirement, is a fin
 to the **stated intent** available in context (the PR / issue text), and where no intent is
 stated, say so rather than infer one. This is the review-side counterpart to the delivery
 spec gate (`agentic-delivery` G1); it catches a whole class the domain audits, which ask only
-"is it correct," miss. **Stated invariant / landed guard → bypass census:** when a module
+"is it correct," miss. **Count-invariant for a claimed add/remove:** a diff that says it
+*adds* an item — a list entry, a `case`, a config key, a test — is falsified by an unchanged
+count. `git show <base>:<file> | grep -cE '<item shape>'` against the working copy must move by
+the number claimed; a delta of **zero on an "add"** means the new text was spliced into an
+existing item and silently **replaced** it (two items fused into one), and the mirror case
+falsifies a claimed removal. The bytes stay valid, so lint, format, and checksums pass over the
+fusion — only the count delta or a human read catches it (this review's own worked near-miss). **Stated invariant / landed guard → bypass census:** when a module
 states an invariant or a guard lands on one path, inventory callers/entry points
 that can skip it (procedure: `references/security-appsec.md` for untrusted egress;
 `references/data-quality.md` for artifact→consumer). When the target is large,

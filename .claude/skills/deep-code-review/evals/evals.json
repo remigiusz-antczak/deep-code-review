@@ -1205,6 +1205,17 @@
         "Frames calibration as a committed path-scoped style/preference record, not a hosted memory service and not a way to dismiss correctness/safety",
         "Does not let a calibration entry override a security/data finding"
       ]
+    },
+    {
+      "id": "claimed-add-that-leaves-item-count-unchanged-is-a-silent-replace",
+      "prompt": "A PR titled 'add a 7th item to the anti-slop checklist' changes exactly one file. Before the diff the checklist had 6 top-level bullets; after it, it still has 6, and one existing bullet's first line now reads differently. Lint, formatting, and the test suite all pass. What does the reviewer post?",
+      "expected_output": "Flag it: an 'add' that leaves the item count unchanged is a silent REPLACE, not an add. The claimed 7th bullet was spliced into an existing bullet's opening line -- fusing two rules into one and deleting the original's subject -- so the count stayed 6, not 7. Verify mechanically: `git show <base>:<file> | grep -cE '<bullet shape>'` against the working copy must rise by the one item claimed; a delta of zero on a claimed add is the tell. The fusion leaves every byte valid, so lint, formatting, and tests all pass over it -- only the count delta or a human read catches the lost rule. This is an intent-conformance finding (Phase 2): the diff did not do what its title claimed, and an existing rule was silently lost. (method.md.)",
+      "expectations": [
+        "Identifies the unchanged count (6 -> 6) as the tell that a claimed add was actually a replace/fusion, not a genuine add",
+        "Names the mechanical check -- base-vs-working-copy item count via git show must rise by the number claimed",
+        "Notes the fusion keeps all bytes valid, so lint/format/tests pass over it -- gates do not catch it, a count delta or human read does",
+        "Frames it as intent-conformance (the diff did not do what its title claimed) and that an existing rule was silently lost, not merely nothing-added"
+      ]
     }
   ]
 }

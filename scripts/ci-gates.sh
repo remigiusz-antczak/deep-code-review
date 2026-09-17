@@ -388,7 +388,7 @@ cmd_enumeration() {
   done
 
   local bt='`'
-  local fail=0 d name
+  local fail=0 d name sver fmver
   for d in "$skills_dir"/*/; do
     [ -d "$d" ] || continue
     name="$(basename "$d")"
@@ -417,6 +417,25 @@ cmd_enumeration() {
     #    not a substring of "idea-critic").
     grep -qF "\"${name}\"" "$recommend" \
       || { printf 'ENUM: %s not named in recommend-overlays.py\n' "$name" >&2; fail=1; }
+    # 6) SKILL.md frontmatter metadata.version must equal this skill's own VERSION.
+    #    Nothing reads this stamp at runtime, so a drift is invisible to every
+    #    other gate — it slid on the lockstep skills for eight releases before
+    #    this check. Compared only when both files exist (a missing VERSION is a
+    #    different gate's concern); the frontmatter version is read strictly from
+    #    inside the leading `---` block, so a body `version:` cannot satisfy it.
+    if [ -f "$d/VERSION" ] && [ -f "$d/SKILL.md" ]; then
+      sver="$(LC_ALL=C tr -d '\n' < "$d/VERSION")"
+      # `|| true`: an empty frontmatter (no version line) yields no grep match,
+      # whose exit 1 would abort under `set -o pipefail`; the empty result is the
+      # signal the missing-stamp branch below acts on. Same idiom as cmd_version.
+      fmver="$(awk '/^---[[:space:]]*$/{c++; next} c>=2{exit} c==1 && /^[[:space:]]*version:/{print; exit}' "$d/SKILL.md" \
+                | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)"
+      if [ -z "$fmver" ]; then
+        printf 'ENUM: %s SKILL.md has no frontmatter version stamp\n' "$name" >&2; fail=1
+      elif [ "$fmver" != "$sver" ]; then
+        printf 'ENUM: %s SKILL.md frontmatter version (%s) != VERSION (%s)\n' "$name" "$fmver" "$sver" >&2; fail=1
+      fi
+    fi
   done
 
   [ "$fail" -eq 0 ] || die "enumeration: one or more skills are not fully enumerated"

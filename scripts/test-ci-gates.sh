@@ -947,6 +947,56 @@ else
   record 1 "enumeration: fails closed and names the un-enumerated skill (planted RED)"
 fi
 
+# Planted RED for check #6 (frontmatter metadata.version == own VERSION): build a
+# FULLY-enumerated tree (both skills wired through all five lists so checks 1–5
+# pass), then drift only realskill's frontmatter from its VERSION. The gate must
+# fail AND name realskill's frontmatter drift, while agentic-ceo (whose stamp
+# matches) is NOT named — proving check #6 attributes the drift, not that the
+# tree is under-wired. wire_enum_skill <root> writes the five shared lists.
+wire_enum_skills() {
+  local root="$1"
+  mkdir -p "$root/.claude/skills/realskill" "$root/.claude/skills/agentic-ceo" \
+           "$root/.github/workflows" "$root/scripts"
+  printf 'bash scripts/ci-gates.sh routing .claude/skills/realskill\nbash scripts/ci-gates.sh routing .claude/skills/agentic-ceo\n' \
+    > "$root/.github/workflows/ci.yml"
+  printf '       .claude/skills/realskill \\\n       .claude/skills/agentic-ceo \\\n' \
+    > "$root/scripts/write-checksums.sh"
+  printf 'SKILLS+=("realskill")\nSKILLS+=("agentic-ceo")\n' > "$root/install.sh"
+  printf '"realskill"\n"agentic-ceo"\n' > "$root/scripts/recommend-overlays.py"
+  # agentic-ceo holds the registry table AND must itself pass check #6.
+  printf -- '---\nname: agentic-ceo\nmetadata:\n  version: "3.0.0"\n---\n| `realskill` | reach for it when x |\n' \
+    > "$root/.claude/skills/agentic-ceo/SKILL.md"
+  printf '3.0.0\n' > "$root/.claude/skills/agentic-ceo/VERSION"
+}
+
+FMDRIFT="$WORK/enum-fm-drift"
+wire_enum_skills "$FMDRIFT"
+printf -- '---\nname: realskill\nmetadata:\n  version: "1.0.0"\n---\nbody\n' \
+  > "$FMDRIFT/.claude/skills/realskill/SKILL.md"
+printf '2.0.0\n' > "$FMDRIFT/.claude/skills/realskill/VERSION"
+gate "$ROOT/scripts/ci-gates.sh" enumeration "$FMDRIFT"
+if [ "$GATE_RC" -ne 0 ] && grep -q 'ENUM: realskill SKILL.md frontmatter version' "$WORK/last.log" \
+   && ! grep -q 'ENUM: agentic-ceo' "$WORK/last.log"; then
+  record 0 "enumeration: fails closed and names a frontmatter/VERSION drift (planted RED)"
+else
+  record 1 "enumeration: fails closed and names a frontmatter/VERSION drift (planted RED)"
+fi
+
+# Planted RED: a skill with a VERSION and a frontmatter block but NO version:
+# stamp must fail closed and name the skill (an absent stamp is a drift lead, not
+# a silent pass).
+FMNOSTAMP="$WORK/enum-fm-nostamp"
+wire_enum_skills "$FMNOSTAMP"
+printf -- '---\nname: realskill\nmetadata:\n  node_type: skill\n---\nbody\n' \
+  > "$FMNOSTAMP/.claude/skills/realskill/SKILL.md"
+printf '2.0.0\n' > "$FMNOSTAMP/.claude/skills/realskill/VERSION"
+gate "$ROOT/scripts/ci-gates.sh" enumeration "$FMNOSTAMP"
+if [ "$GATE_RC" -ne 0 ] && grep -q 'ENUM: realskill SKILL.md has no frontmatter version stamp' "$WORK/last.log"; then
+  record 0 "enumeration: fails closed on a missing frontmatter version stamp (planted RED)"
+else
+  record 1 "enumeration: fails closed on a missing frontmatter version stamp (planted RED)"
+fi
+
 # ---------------------------------------------------------------------------
 # eval predicates — the offline discrimination gate for the fabrication-refusal
 # evals. Each deterministic predicate must SEPARATE a fabricated answer (red

@@ -3,6 +3,27 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.109.0] — 2026-09-17
+
+Wave 30 of the dogfooding batch: two process-hardening lessons mined from this session's own
+near-misses, filed as #290 and #291 — the recurring-miss fix the skill preaches (pair a rule
+with a gate; catch the class the mechanical gates miss).
+
+### Added
+- **CI gate: each SKILL.md `metadata.version` must equal its own `VERSION`** (#290). A sixth
+  per-skill check inside `ci-gates.sh enumeration` (already run in CI) fails when any skill's
+  frontmatter version stamp drifts from its sibling `VERSION`, and names the skill. Nothing
+  reads that stamp at runtime, so the drift was invisible to every other gate — it slid on the
+  three lockstep skills for eight releases before the #272 fix. Exact match against each skill's
+  *own* VERSION, so independent-line skills are checked correctly with no false-positive
+  surface. Two planted-RED self-tests (a drift and a missing stamp); 69 gate tests.
+- **`method.md` count-invariant for a claimed add/remove** (#291). Under the intent-conformance
+  lens (Phase 2), a diff that *claims to add* an item is falsified by an unchanged item count:
+  a delta of zero on an add means the new text was spliced into an existing item and silently
+  replaced it (two items fused into one). The fusion keeps every byte valid, so lint, format,
+  and checksums pass over it — only the count delta or a human read catches the lost item. This
+  wave's own Wave 29 near-miss is the worked example. One new eval (114 total).
+
 ## [1.108.0] — 2026-09-17
 
 Wave 29 of the dogfooding batch: #268 review-calibration (an anti-slop lens) + #272, the
