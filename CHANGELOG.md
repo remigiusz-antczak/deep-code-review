@@ -14,7 +14,7 @@ with a gate; catch the class the mechanical gates miss).
   per-skill check inside `ci-gates.sh enumeration` (already run in CI) fails when any skill's
   frontmatter version stamp drifts from its sibling `VERSION`, and names the skill. Nothing
   reads that stamp at runtime, so the drift was invisible to every other gate — it slid on the
-  three lockstep skills for eight releases before the #272 fix. Exact match against each skill's
+  three lockstep skills for seven releases (v1.101.0–v1.107.0) before the #272 fix. Exact match against each skill's
   *own* VERSION, so independent-line skills are checked correctly with no false-positive
   surface. Two planted-RED self-tests (a drift and a missing stamp); 69 gate tests.
 - **`method.md` count-invariant for a claimed add/remove** (#291). Under the intent-conformance

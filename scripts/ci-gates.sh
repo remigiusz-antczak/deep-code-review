@@ -419,9 +419,11 @@ cmd_enumeration() {
       || { printf 'ENUM: %s not named in recommend-overlays.py\n' "$name" >&2; fail=1; }
     # 6) SKILL.md frontmatter metadata.version must equal this skill's own VERSION.
     #    Nothing reads this stamp at runtime, so a drift is invisible to every
-    #    other gate — it slid on the lockstep skills for eight releases before
-    #    this check. Compared only when both files exist (a missing VERSION is a
-    #    different gate's concern); the frontmatter version is read strictly from
+    #    other gate — it slid on the lockstep skills for seven releases
+    #    (v1.101.0–v1.107.0) before this check. Compared only when BOTH files
+    #    exist: per-skill VERSION presence is not itself gated today, so a skill
+    #    with a SKILL.md but no VERSION is skipped here, not failed (tracked as a
+    #    fail-closed follow-up). The frontmatter version is read strictly from
     #    inside the leading `---` block, so a body `version:` cannot satisfy it.
     if [ -f "$d/VERSION" ] && [ -f "$d/SKILL.md" ]; then
       sver="$(LC_ALL=C tr -d '\n' < "$d/VERSION")"
