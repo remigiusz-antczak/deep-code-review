@@ -1106,6 +1106,28 @@
         "Reports it as one class-finding with its full instance set (count + locations), fixed in one increment",
         "Connects to the duplicate-twin / one-component-per-concept sweep, but for a bug pattern not a duplicated component"
       ]
+    },
+    {
+      "id": "corroborate-security-claim-against-the-tools-deterministic-proof",
+      "prompt": "Our LLM review flagged 'user-controlled input reaches this SQL sink -- SQL injection' on one line, and 'the aws-sdk version here is vulnerable' on a dependency. Both sound right. Post them as findings?",
+      "expected_output": "Not as asserted findings -- corroborate each against the deterministic proof the LLM cannot itself generate, or mark it unverified. 'Input reaches this sink' is a taint/data-flow claim: confirm it against a CodeQL (or equivalent) source->sink path; a claim with no path is unverified, not a finding. 'This version is vulnerable' is an exact version<->CVE match: check osv-scanner / Trivy / Grype against the machine-readable affected-version ranges rather than trusting the model's recall of ranges (error-prone). Running the project's wired scanners is already Phase 1 and re-verifying against source is already the fan-out discipline; this is the security-specific rule that a class a deterministic engine can PROVE is corroborated against that proof (ingested via SARIF / OSV JSON), the LLM layering judgment on top, not asserting the proof. A verified-live secret (TruffleHog Verified) and reachability (Semgrep Supply Chain: importing != executing) are the same pattern. (security-appsec.md.)",
+      "expectations": [
+        "Does not post either claim as a confirmed finding on the model's say-so; corroborates against a deterministic proof or marks unverified",
+        "Maps the taint claim to a CodeQL source->sink path and the version claim to an exact OSV/Trivy/Grype version<->CVE match",
+        "Names SARIF / OSV JSON as the ingestion format and frames the LLM as layering judgment on a proof it cannot generate",
+        "Reuses the existing run-scanners (Phase 1) + re-verify (fan-out) discipline rather than restating it; adds the tool-proof corroboration"
+      ]
+    },
+    {
+      "id": "imprint-a-review-scoped-rules-block-with-the-surface-split",
+      "prompt": "We imprinted our review standards into AGENTS.md so our agents pick them up. But the team also uses Anthropic's managed GitHub Code Review and the local /code-review command, and neither applies our review-specific severity tuning. What should the Phase-6 imprint do?",
+      "expected_output": "Imprint a review-SCOPED rules block, not just the all-tasks AGENTS.md, and state the surface split. Two consumers read a review-only surface: OpenAI Codex reads a `## Code Review Rules` section of AGENTS.md (root = repo-wide, nested = service-scoped), and Anthropic's MANAGED GitHub Code Review reads a root REVIEW.md (severity recalibration, skip rules, verification bar, nit caps). Map all six severities to the de-facto markers so they agree -- the markers are coarser than the six-level rubric, so map by is-it-a-real-bug (Blocker/Critical/High/Medium -> Important, a Medium is a real defect not a Nit; Low/Nit -> Nit; a pre-existing bug -> Pre-existing). The catch to state in the block: the managed reviewer reads REVIEW.md but the LOCAL /code-review command reads CLAUDE.md ONLY (not REVIEW.md) -- so a rule you need on both goes in CLAUDE.md/AGENTS.md, and REVIEW.md carries managed-only tuning. Same idempotent-additive imprint discipline; author each rule as rule -> bad -> good -> reasoning. (docs-and-dx.md.)",
+      "expectations": [
+        "Adds a review-scoped block (## Code Review Rules in AGENTS.md and/or REVIEW.md), distinct from the all-tasks AGENTS.md context",
+        "States the surface split: managed Code Review reads REVIEW.md, local /code-review reads CLAUDE.md only",
+        "Maps all six severities to the de-facto markers, Medium -> Important (a real defect, not a Nit), Low/Nit -> Nit, pre-existing -> Pre-existing",
+        "Keeps the idempotent-additive imprint discipline and the rule->bad->good->reasoning format"
+      ]
     }
   ]
 }

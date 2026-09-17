@@ -3,6 +3,34 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.103.0] — 2026-09-17
+
+Wave 24 of the dogfooding batch: two of the three HIGH gaps from the 2026-09-17
+competitive-landscape research (#265, #266). #267 (a precision/recall detection-eval
+instrument) is deliberately **held for its own wave** — an instrument never run is a
+specification, not an instrument (principle 2) — and will ship against a corpus built from
+this repo's own history (see the #267 scoping note).
+
+### Added — deep-code-review
+- **`security-appsec.md` — deterministic corroboration: an LLM claim rides on a proof it
+  cannot generate** (#265). Names the code-level SAST/quality engines the field runs (Semgrep,
+  CodeQL / code-scanning, SonarQube, Snyk, plus `bandit`/`ruff`/`mypy`/`hadolint`) as canonical
+  instruments, `SARIF 2.1.0` / `OSV JSON` as the ingestion format, and the proof↔claim map: a
+  taint/data-flow path confirms "input reaches this sink"; a verified-live secret confirms
+  "this secret is real"; an exact version↔CVE match confirms "this version is vulnerable";
+  reachability turns "you depend on X" into "you execute X's vulnerable path". Running scanners
+  (Phase 1) and re-verifying findings (`parallel-audit.md` §4–5) already existed; this adds, for
+  a class a deterministic engine can *prove*, corroborate-against-the-proof-or-mark-`unverified`
+  — completing the "multi-signal corroboration" principle on the security side.
+- **`docs-and-dx.md` / `method.md` Phase 6 — imprint a review-scoped rules block** (#266).
+  Beyond the all-tasks `AGENTS.md`, the imprint can carry a review-only surface first-party
+  reviewers read: a `## Code Review Rules` section (OpenAI Codex reads exactly that) and/or a
+  root `REVIEW.md` (Anthropic's managed Code Review reads it), with the Perun-severity ⇄
+  🔴 Important / 🟡 Nit / 🟣 Pre-existing mapping. States the surface split — the managed
+  reviewer reads `REVIEW.md`, the local `/code-review` reads `CLAUDE.md` only — so an imprinted
+  repo drives a Perun pass and the bots consistently. Content into the existing
+  idempotent-additive imprint mechanism. Two new evals (106 total).
+
 ## [1.102.0] — 2026-09-17
 
 Wave 23 of the dogfooding batch: four coordination- and review-honesty lenses (#258, #259,

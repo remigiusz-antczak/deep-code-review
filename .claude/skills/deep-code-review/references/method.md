@@ -569,8 +569,10 @@ never write "fixed" where the mechanism was only inferred.
 **Phase 6 — Imprint standards (opt-in; writes to the repo).** Offer to persist a
 tailored standards set so the bar holds on future iterations — a canonical
 cross-vendor `AGENTS.md` (with `CLAUDE.md` and any peer agent files as thin
-pointers to it), the pre-commit/CI gates, and templates, distilled from
-this review's findings and the project's actual stack. This phase **writes**, so
+pointers to it), the pre-commit/CI gates, templates, and — where the repo will be
+reviewed by a first-party bot — an optional **review-scoped rules block**
+(`REVIEW.md` or a `## Code Review Rules` section, `references/docs-and-dx.md`),
+distilled from this review's findings and the project's actual stack. This phase **writes**, so
 it requires confirmation and must be net-positive and non-destructive:
 **idempotent and additive** — detect-and-stop if present, create-if-missing
 (never silently overwrite a good file), add only missing lines to a shared file,

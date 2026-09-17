@@ -227,6 +227,23 @@ template). It does **not** install delivery. Delivery is a separate opt-in:
 yes. Mention `agentic-delivery` in the imprinted `AGENTS.md` only when that
 skill is already present in the tree.
 
+**A review-scoped rules block (optional, interop).** Beyond the all-tasks `AGENTS.md`, the
+imprint can carry a **review-only** rules surface that first-party reviewers read directly, so
+one imprint drives this review's pass *and* the bots. Two consumers, same idempotent-additive
+discipline: a **`## Code Review Rules`** section in `AGENTS.md` (OpenAI Codex reads exactly
+that — the root file is repo-wide, a nested file is service-scoped) and/or a root **`REVIEW.md`**
+(Anthropic's managed GitHub Code Review reads it — severity recalibration, skip rules, a
+verification bar, nit caps). Map this review's severities to the de-facto markers so the two
+agree — the managed markers are coarser than the six-level rubric, so map by *is-it-a-real-bug*,
+never demote a Medium to a nit: Blocker/Critical/High/**Medium** → **🔴 Important** (a Medium is
+a real defect, not a style nit), Low/Nit → **🟡 Nit**, a real bug not introduced by the change →
+**🟣 Pre-existing**. **State the surface split in the block**, because it bites:
+the *managed* GitHub reviewer reads `REVIEW.md`, but the local `/code-review` command reads
+`CLAUDE.md` only (not `REVIEW.md`) — so a rule you need on both surfaces goes in
+`CLAUDE.md`/`AGENTS.md`, and `REVIEW.md` carries managed-only tuning. Author each rule in the
+few-shot shape the bots parse best — *rule → bad example → good example → reasoning*, one
+concern per rule.
+
 ## Persisted knowledge hygiene — store the query, not the answer
 
 A durable doc, memory, or imprint that records a **fact derived from live state**

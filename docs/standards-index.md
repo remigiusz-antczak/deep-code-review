@@ -317,3 +317,12 @@ design-quality checklist in `references/migration-parity.md` (#124).
 |---|---|---|
 | Sherman Kent, *Words of Estimative Probability* | https://www.cia.gov/resources/csi/studies-in-intelligence/archives/vol-8-no-4/words-of-estimative-probability/ (declassified PDF: https://www.cia.gov/resources/csi/static/Words-of-Estimative-Probability.pdf) | Read the declassified PDF (pages 1–4) directly this session. CIA *Studies in Intelligence*, Vol. 8 No. 4 (1964); released via CIA Historical Review Program 1993. Confirmed thesis: undefined verbal-probability terms are read inconsistently — Kent's own Board of National Estimates read "serious possibility" (NIE 29-51) anywhere from 20:80 to 80:20 odds; the subtitle states "the case for consistent, unambiguous usage of a few key odds expressions." Cite for the read-inconsistently / define-the-tiers point only; assert no canonical numeric mapping. |
 | Admiralty Code (NATO System; intelligence source & information reliability) | https://en.wikipedia.org/wiki/Admiralty_code | **Wikipedia — tertiary source; cite by name only, not as a primary authority.** Two independent axes: source reliability A–F (A completely reliable … F reliability cannot be judged) × information credibility 1–6 (1 confirmed by other sources … 6 truth cannot be judged); "each descriptor is considered in isolation." Confirms the independent-axes framing only. |
+
+## Verified by direct fetch (2026-09-17) — SARIF interchange format
+
+Verification date for the row below: **2026-09-17**. Added for the deep-code-review
+`security-appsec.md` deterministic-corroboration lens (the ingestion-format citation).
+
+| Standard | URL | What was confirmed |
+|---|---|---|
+| SARIF (Static Analysis Results Interchange Format) 2.1.0 | https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html | OASIS Standard "Static Analysis Results Interchange Format (SARIF) Version 2.1.0 Plus Errata 01", dated 28 August 2023; defines "a standard format for the output of static analysis tools." Cited as the interchange format for ingesting deterministic scanner findings into a review. |
