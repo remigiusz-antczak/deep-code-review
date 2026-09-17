@@ -3,6 +3,20 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.112.0] — 2026-09-18
+
+Wave 33 of the dogfooding batch: #297 — terminate work you own without collateral kills.
+
+### Added — deep-code-review
+- **`concurrency-shared-state.md` — "Terminating work you own"** (#297). Load-shedding or
+  aborting a lane must kill the processes it **owns** (an owned process group / job object,
+  terminated by pgid) — never a command-line pattern like `pkill -f` / `killall`, which reaps a
+  sibling lane's identically-named process, a shared dev server, or the orchestrator itself
+  (collateral damage invisible in any diff). Covers graceful escalation (SIGTERM → grace →
+  SIGKILL), reaping orphaned children, and a teardown record that leaves the lane recoverable.
+  The shedding *trigger* stays in `fast-agentic-delivery.md`; this is the *mechanism*. One new
+  eval (116 total) and a matching red flag.
+
 ## [1.111.0] — 2026-09-18
 
 Wave 32 of the dogfooding batch: #303 — harden the Wave-30 frontmatter gate (enumeration check
