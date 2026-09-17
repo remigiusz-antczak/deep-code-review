@@ -8,8 +8,8 @@ follows Keep a Changelog; versioning follows Semantic Versioning.
 Wave 38 of the dogfooding batch: #299 — modularize before splitting the repo.
 
 ### Added — deep-code-review
-- **`infra-evolution-by-stage.md` — internal-package rung before a repo split** (#299). A new
-  trigger row: carve an **internal package** (a named import boundary) inside the one repo first —
+- **`infra-evolution-by-stage.md` — internal-package rung before a repo split** (#299). A new trigger
+  row plus a short prose note: carve an **internal package** (a named import boundary) inside the one repo first —
   cheap and reversible; split to a **separate repo** only when a part has an independent change
   cadence AND distinct external consumers AND its own release + ownership. Co-evolving artifacts
   (schema ↔ validator ↔ types ↔ docs) stay **co-located** or they drift across repos (domain H); a
