@@ -143,7 +143,10 @@ per-owner and collide).
 
 Attacker techniques against agent tool ecosystems are also catalogued in **MITRE
 ATLAS** (e.g. poisoned agent tools, sandbox/host escape) — useful for building
-the red-team test set below.
+the red-team test set below. To *model* an agentic system's threats systematically rather
+than only enumerate techniques, reach for **MAESTRO**, an agentic
+threat-modeling method — the method-side complement to these catalogs (`security-appsec.md`
+A06 names the general threat-model catalog: STRIDE / PASTA / attack trees / LINDDUN / MAESTRO).
 
 ---
 

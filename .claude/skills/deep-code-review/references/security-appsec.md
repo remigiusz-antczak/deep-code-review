@@ -272,6 +272,18 @@ rate limits, quotas, and business-logic limits **designed in** (e.g. can a user
 request 10,000 password resets, redeem a coupon twice, or race a balance check)?
 Secure defaults, or must the operator remember to turn safety on?
 
+**Which threat-model method — name the one that fits, don't hand-wave "a threat model."**
+**STRIDE** (per element: Spoofing / Tampering / Repudiation / Info-disclosure / DoS /
+Elevation) for a component or data flow; **PASTA** when the model must tie threats to
+business impact; **attack trees** to decompose one attacker goal; **LINDDUN** for *privacy*
+threats (STRIDE's privacy counterpart); **MAESTRO** for an *agentic-AI* system — the agentic
+threat-modeling method, complementary to the OWASP ASI / MITRE ATLAS catalogs in
+`security-ai-agents.md`. The review lens is **coverage, not ceremony**: a change that
+introduces a new trust boundary, principal, or state transition the existing model never
+considered is a finding — the model went **stale relative to the diff** — and an agentic
+surface with no agent-specific (MAESTRO-shaped) model is the common miss. (Maturity frames —
+NIST SSDF, OWASP SAMM, BSIMM — measure the org's *program*, not this diff; name, don't score.)
+
 **Detect steps, in order**
 - **Inventory the money/state machines.** List every flow that moves value or
   advances state: checkout, refund, credit/balance, coupon, invite, quota,

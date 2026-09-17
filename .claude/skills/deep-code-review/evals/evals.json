@@ -1128,6 +1128,17 @@
         "Maps all six severities to the de-facto markers, Medium -> Important (a real defect, not a Nit), Low/Nit -> Nit, pre-existing -> Pre-existing",
         "Keeps the idempotent-additive imprint discipline and the rule->bad->good->reasoning format"
       ]
+    },
+    {
+      "id": "threat-model-coverage-names-the-method-and-flags-a-stale-model",
+      "prompt": "A PR adds an autonomous agent that can call external tools and spend from a budget. The team says 'we already did a STRIDE threat model of the app last year.' Is that covered, and what do we check?",
+      "expected_output": "Not covered -- name the method that fits and check coverage, not ceremony. A year-old STRIDE model of the app does not model an AUTONOMOUS AGENT with tool-calling and spend authority: that introduces new trust boundaries, a new principal (the agent acting on a user's behalf), and new state transitions the old model never considered, so the model is stale relative to the diff -- a finding. The fitting method here is MAESTRO (the agentic-AI threat-modeling method, complementary to the OWASP ASI / MITRE ATLAS catalogs), not general STRIDE; LINDDUN if privacy threats are in scope; PASTA if threats must tie to business impact; attack trees to decompose one attacker goal. The review lens is: does the change introduce a trust boundary / principal / transition the existing model didn't cover (here, yes), and is an agentic surface modeled with an agent-specific method (here, no). Maturity frames (SSDF/SAMM/BSIMM) measure the org's program, not this diff. (security-appsec.md.)",
+      "expectations": [
+        "Flags the change as outrunning the existing model (new trust boundary/principal/transition) -- a stale model is a finding, not covered",
+        "Names MAESTRO as the fitting method for an agentic system (not general STRIDE), and names LINDDUN(privacy)/PASTA/attack-trees for their cases",
+        "Frames the lens as coverage (does the diff outrun the model / is the agentic surface modeled), not threat-model ceremony",
+        "Does not treat naming a maturity frame (SSDF/SAMM/BSIMM) as covering this diff"
+      ]
     }
   ]
 }

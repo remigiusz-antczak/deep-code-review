@@ -3,6 +3,25 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.104.0] — 2026-09-17
+
+Wave 25 of the dogfooding batch: #275, a threat-modeling method lens — the highest round-2
+gap after an idea-critic pass revised the sequence (ship #275 as a coverage lens now, the
+#267 precision/recall instrument next, #276 AI-governance deprioritized as the lowest
+review-action-density and the most date-sensitive).
+
+### Added — deep-code-review
+- **`security-appsec.md` A06 + `security-ai-agents.md` — name the threat-modeling method,
+  check coverage not ceremony** (#275). A06 already asks "is there a threat model?"; this
+  names *which method fits* — STRIDE (per element), PASTA (business impact), attack trees (one
+  attacker goal), **LINDDUN** (privacy, the `privacy-by-design.md` counterpart), **MAESTRO**
+  (agentic AI, the modeling method behind the OWASP ASI / MITRE ATLAS catalogs in
+  `security-ai-agents.md`) — and adds the coverage lens: a change that introduces a trust
+  boundary, principal, or state transition the existing model never considered is a finding
+  (the model went stale relative to the diff), and an agentic surface with no agent-specific
+  model is the common miss. Maturity frames (NIST SSDF, OWASP SAMM, BSIMM) measure the org's
+  program — named, not scored. One new eval (107 total).
+
 ## [1.103.0] — 2026-09-17
 
 Wave 24 of the dogfooding batch: two of the three HIGH gaps from the 2026-09-17
