@@ -360,6 +360,13 @@ anonymous-GET sweep, and the step that turns per-route rules into whole-product
 coverage. Procedure and the matrix: `references/product-ux-quality.md` (*Rendered
 route sweep*). A route not rendered is `unverified`, not clean.
 
+**Rewritten browser spec → account for the retired coverage.** When a `DIFF` rewrites an
+existing browser/E2E spec because its target surface became unreachable in the test
+environment, do not pass the rewrite on its new-surface green: check that the coverage
+the old spec provided is named as a gap and pinned by a source-level structural fallback,
+and flag its absence as a finding. Procedure: `references/testing-and-evals.md` (*A
+rewritten browser spec names its retired coverage*).
+
 **Phase 3 — Adversarial / red-team pass.** Switch to attacker mindset (section
 below). For any networked app, work these **openers in order** before the
 creative attacks — they are ordered by yield, and each one narrows the next:

@@ -1040,6 +1040,17 @@
         "Reconciles against the committed diff, not the delegates' reports of what they did",
         "Flags that the audit must run unprompted before close; the owner's challenge is the signal it was owed earlier, and it is cheap"
       ]
+    },
+    {
+      "id": "rewritten-spec-owes-a-structural-fallback-for-retired-coverage",
+      "prompt": "A redesign made a feed page render only user-posted items, and our test store is kept empty on purpose, so the overlay-open spec that used to run from the feed has nothing to click. We rewrote it to open the overlay from a content-populated page instead; it's green. The comment explains the move. Good to merge?",
+      "expected_output": "Not yet -- the rewrite is correct but it silently drops what the feed spec covered: the overlay could open from the feed, and no test asserts that anymore. A later change that removes the feed's wiring (its import of the shared overlay-link component) would break the feed overlay while the whole suite stays green. Three things are owed before merge: (1) name the retired coverage as a gap -- an unrecorded dropped assertion reads as coverage (an absence is evidence only after a positive control fires), and a commit comment is not where coverage is tracked; (2) state that the feed path is now unverifiable via a browser test without seeding the intentionally-empty store, so the gap is a decision, not an accident; (3) add a source-level structural gate -- a unit assertion that the feed component still imports and uses the shared overlay-link component, matching the pattern the codebase's other overlay-wiring tests already use. That fallback is WEAKER than the browser scenario it replaces -- it proves the component is referenced, not that the interaction works -- so it is a named fallback for the retired check, never a substitute that trades rendered coverage for an import check. (testing-and-evals.md.)",
+      "expectations": [
+        "Does not pass the rewrite on its new-surface green; flags the silently-dropped feed coverage as a finding",
+        "Requires naming the retired coverage as a gap (an unrecorded absence reads as coverage; principle 2), not just a commit comment",
+        "Requires a source-level structural fallback that pins the wiring (import/use of the shared component), matching the codebase's existing pattern",
+        "States the fallback is weaker than the browser coverage -- pins wiring, not the interaction -- a named fallback, never a substitute"
+      ]
     }
   ]
 }

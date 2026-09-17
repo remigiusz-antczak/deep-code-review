@@ -295,6 +295,51 @@ Same root cause as `deep-code-review`'s `concurrency-shared-state.md` (two write
 path) but where its mitigations don't reach: **out-of-tree** scratch, and the
 corrupted thing is **commit metadata** a diff review never sees.
 
+## A worktree assignment is a path, not an adjective — an integrator on a shared branch detaches
+
+Brief N lanes with *"work in an isolated worktree off `<branch>`"* and the phrase splits
+two ways: one lane creates a fresh worktree, another reads it as *the* worktree where
+`<branch>` is already checked out and writes straight into that tree. They never collide
+on a file — their file sets are disjoint — they collide on the **tree**. The occupied
+tree then carries a second lane's *uncommitted* work, and the first lane's own gate trips
+on it: a fully verified merge is blocked by a foreign half-written test file it must not
+touch. A git-diff review sees nothing — the foreign edits are unstaged, so the committing
+lane's own diff is clean; the failure surfaces only as a confusing unrelated test
+failure. And "just make your own worktree" fails for exactly the lane that most needs
+one: `git worktree add <path> <branch>` **refuses a branch already checked out
+elsewhere** (`fatal: '<branch>' is already used by worktree at …`), which is precisely
+the integrator's situation.
+
+The topology is fixed: N lanes plus one integrator all want a checkout of the *same*
+integration branch — N+1 agents, one branch. State it explicitly, one line per brief:
+
+- **Name the exact path; "isolated" is not an instruction.** The brief gives the path
+  the lane creates (`<scratch>/wt-<lane>`), and the lane writes **only** under it. "An
+  isolated worktree off X" is a hope; a path is an assignment.
+- **The integrator folds in on a *detached* worktree.** `git worktree add --detach
+  <path> <branch>` — detach at the **local** `<branch>` tip, not `origin/<branch>`:
+  detaching does not occupy the ref, so it succeeds even though the branch is checked out
+  elsewhere, and it lands on the verified local tip; `origin/<branch>` bases off the
+  **stale** remote tip (dropping the merge you just verified) and does not exist at all
+  for a local-only integration branch. Then merge the finished lane, verify, publish, and
+  remove the worktree. A detached checkout is immune to the same-branch refusal above and
+  cannot be squatted by a lane that believes it owns `<branch>`'s tree. How the result is
+  *published* is a separate choice — a direct `git push origin HEAD:<branch>` from the
+  detached tree, or a PR from the merged result — under whatever publish gate the project
+  already applies (a push to a shared branch is itself an owner-approved action); the
+  detach is what makes the *integration step* itself collision-proof either way.
+- **Verify tree ownership before the first write.** `git status --short` in the target
+  tree: if it shows changes the lane did not make, the tree is **occupied** — stop and
+  report, do not write into it. Foreign dirt is an occupancy signal, not noise.
+- **A gate failing on a file the lane never touched is the environment, not the code.**
+  This is the collision twin of *a worktree's own gate can fire on a file it does not
+  own* above: there the unowned file is a mirrored artifact, here it is another lane's
+  uncommitted WIP — either way, re-run the gate in a clean or detached tree to tell an
+  environment fault from a code fault before chasing a bug that does not exist.
+- **Never resolve it by stashing.** `git stash` on another lane's uncommitted work
+  removes it from that lane's tree silently and is unrecoverable from the lane's point of
+  view — a data-loss fix for a coordination bug. Reassign the path instead.
+
 ## Delegate visual / parity work by measured number, not adjective
 
 A qualitative brief for visual/parity work handed to sub-agents ("make this match

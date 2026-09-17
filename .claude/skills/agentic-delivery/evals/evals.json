@@ -234,6 +234,17 @@
         "Reports consumption not production; checks the depth distribution (not only cheap items landing)",
         "Names the downstream consumer; flags research displacing the delivery it was meant to inform"
       ]
+    },
+    {
+      "id": "same-branch-worktree-collision-integrator-detaches",
+      "prompt": "I told three parallel lanes to each 'work in an isolated worktree off the integration branch.' The integrator lane merged a finished lane, verified everything in the running app, then npm test failed on a half-written test file it never created -- another lane had been writing into the same checkout. git worktree add for the integration branch refuses because it's already checked out. Should the integrator just stash the stray file and push its verified merge?",
+      "expected_output": "No -- stashing another lane's uncommitted work removes it silently and is unrecoverable from that lane's side; that is data loss to paper over a coordination bug. The real fault is the brief: 'an isolated worktree off X' is an adjective, not an assignment, so two lanes collided on the tree (not on any file -- their file sets were disjoint). Fixes: (1) give each lane an exact path it alone writes under (<scratch>/wt-<lane>); (2) the integrator folds in on a DETACHED worktree -- git worktree add --detach <path> <branch> (the local branch tip, not origin/<branch>, so it lands on the just-verified merge and does not fail on a local-only integration branch), merge, verify, publish, remove -- which is immune to the 'already checked out' refusal and cannot be squatted, with how it publishes (a direct push or a PR, under whatever publish gate the project applies) left as a separate choice; (3) before writing, run git status --short on the target tree and stop if it shows changes the lane did not make -- foreign dirt means the tree is occupied; (4) read the failing test in an untouched file as an environment fault, not a code fault -- re-run it in a clean or detached tree before chasing a bug that is not there. The verified merge itself is fine; it just has to be published from a tree the integrator actually owns. (fast-agentic-delivery.md.)",
+      "expectations": [
+        "Refuses to stash the foreign file -- silent, unrecoverable data loss for the other lane; names the ambiguous brief as root cause (collision on the tree, not a file)",
+        "Integrator uses a detached worktree (git worktree add --detach <branch>, the local tip) to escape the already-checked-out refusal; assigns each lane an exact path",
+        "Verifies tree ownership (git status --short) before writing and stops on foreign changes",
+        "Classifies the failing test in an untouched file as an environment fault to re-run in a clean tree, not a code bug to chase"
+      ]
     }
   ]
 }

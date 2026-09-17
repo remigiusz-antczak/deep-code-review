@@ -160,6 +160,37 @@ fix, like any regression test. This is the mechanical proof behind the
 screenshot-inspection checklist's **overlap** and **clip** items
 (`product-ux-quality.md` gate 1).
 
+## A rewritten browser spec names its retired coverage and pins the wiring it can no longer reach
+
+The geometry assertions above prove a rendered claim you can still reach. This is the
+opposite case: a redesign makes a spec's target surface **structurally unreachable in the
+test environment** — a surface that now renders only user-submitted content while the
+test store is intentionally empty, so there is nothing to drive the interaction — and the
+spec is correctly rewritten against a different surface. The trap is that the rewrite
+**silently drops** what the old spec covered: surface A and surface B both exercised an
+overlay; B is redesigned to nothing-to-click; the spec moves A-only; a later change
+removes B's wiring (the feed's import of the shared overlay-link component) and **no test
+goes red**, because the only spec that covered B is gone.
+
+When a spec is rewritten because its surface became unreachable, three things are owed —
+and their absence is a finding:
+
+1. **Name the retired coverage as a gap.** What did the old spec assert that the new one
+   does not? A dropped assertion is an *absence*, and an unrecorded absence reads as
+   coverage (principle 2: *an absence is evidence only after a positive control fires*).
+   Record it where coverage gaps are already tracked (the *honest coverage taxonomy*
+   above), not in a commit message the next reader never sees.
+2. **State whether the wiring is now unverifiable via a browser test** without seeding
+   the store (or standing up a costly fixture), and why — so the gap is a decision, not
+   an accident.
+3. **Add a source-level structural gate that pins the wiring** the browser spec can no
+   longer reach: a unit/source assertion that the feed component still imports and uses
+   the shared overlay-link component (the pattern the codebase's other overlay-wiring
+   tests already use). This guarantee is **weaker** than the browser scenario it replaces
+   — it proves the component is *referenced*, not that the interaction *works* — so it is
+   a **named fallback for a retired check, never a substitute** that lets a team trade
+   rendered coverage for import checks and call the surface covered.
+
 ## AI evals (for any model-dependent output)
 
 A mocked-LLM unit test verifies **wiring, not model quality.** Model quality

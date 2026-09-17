@@ -3,6 +3,36 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.98.0] — 2026-09-17
+
+Wave 19 of the dogfooding batch: a rewritten browser spec owes its retired coverage a
+structural fallback, and a worktree assignment is a path an integrator can detach onto
+(#246, #247).
+
+### Added — deep-code-review
+- **`testing-and-evals.md` — a rewritten browser spec names its retired coverage and
+  pins the wiring it can no longer reach** (#246). When a redesign makes a spec's target
+  surface structurally unreachable in the test environment (a surface that now renders
+  only user-submitted content while the test store is intentionally empty) and the spec
+  is rewritten against another surface, the dropped coverage must be named as a gap
+  (principle 2: an unrecorded absence reads as coverage) and pinned by a source-level
+  structural gate — a unit assertion that the wiring still exists. That fallback is
+  weaker than the browser scenario it replaces (it proves the component is referenced,
+  not that the interaction works) and is never a substitute. A Phase-2 trigger in
+  `method.md` routes to it. One new eval (99 total).
+
+### Added — agentic-delivery
+- **`fast-agentic-delivery.md` — a worktree assignment is a path, not an adjective; an
+  integrator on a shared branch detaches** (#247). "An isolated worktree off `<branch>`"
+  is ambiguous — lanes reuse the same checkout and collide on the tree, not on files.
+  The brief names the exact path each lane owns and writes only under; an integrator
+  folding into a shared branch uses a detached worktree (`git worktree add --detach
+  origin/<branch>`), which escapes git's "already checked out" refusal and cannot be
+  squatted; a lane verifies tree ownership (`git status --short`) before its first write;
+  a gate failing on an untouched file is an environment fault (the collision twin of the
+  unowned-file-gate rule above), not a code bug; and another lane's uncommitted work is
+  never stashed. One new eval (24 total).
+
 ## [1.97.0] — 2026-09-17
 
 Wave 18 of the dogfooding batch: an unattended window is a work loop, a delivery
