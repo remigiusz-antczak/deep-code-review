@@ -937,7 +937,9 @@ printf 'bash scripts/ci-gates.sh routing .claude/skills/realskill\nbash scripts/
 printf '       .claude/skills/realskill \\\n       .claude/skills/agentic-ceo \\\n' \
   > "$ENUM_FIX/scripts/write-checksums.sh"
 printf 'SKILLS+=("realskill")\nSKILLS+=("agentic-ceo")\n' > "$ENUM_FIX/install.sh"
-printf '| `realskill` | reach for it when x |\n' > "$ENUM_FIX/.claude/skills/agentic-ceo/SKILL.md"
+printf -- '---\nname: agentic-ceo\nmetadata:\n  version: "9.9.9"\n---\n| `realskill` | reach for it when x |\n' \
+  > "$ENUM_FIX/.claude/skills/agentic-ceo/SKILL.md"
+printf '9.9.9\n' > "$ENUM_FIX/.claude/skills/agentic-ceo/VERSION"
 printf '"realskill"\n"agentic-ceo"\n' > "$ENUM_FIX/scripts/recommend-overlays.py"
 gate "$ROOT/scripts/ci-gates.sh" enumeration "$ENUM_FIX"
 if [ "$GATE_RC" -ne 0 ] && grep -q 'ENUM: ghost' "$WORK/last.log" \
@@ -991,10 +993,40 @@ printf -- '---\nname: realskill\nmetadata:\n  node_type: skill\n---\nbody\n' \
   > "$FMNOSTAMP/.claude/skills/realskill/SKILL.md"
 printf '2.0.0\n' > "$FMNOSTAMP/.claude/skills/realskill/VERSION"
 gate "$ROOT/scripts/ci-gates.sh" enumeration "$FMNOSTAMP"
-if [ "$GATE_RC" -ne 0 ] && grep -q 'ENUM: realskill SKILL.md has no frontmatter version stamp' "$WORK/last.log"; then
-  record 0 "enumeration: fails closed on a missing frontmatter version stamp (planted RED)"
+if [ "$GATE_RC" -ne 0 ] && grep -q 'ENUM: realskill SKILL.md has no metadata.version stamp' "$WORK/last.log"; then
+  record 0 "enumeration: fails closed on a missing metadata.version stamp (planted RED)"
 else
-  record 1 "enumeration: fails closed on a missing frontmatter version stamp (planted RED)"
+  record 1 "enumeration: fails closed on a missing metadata.version stamp (planted RED)"
+fi
+
+# Planted RED (#303): a fully-wired skill with a valid SKILL.md but NO VERSION file
+# must FAIL CLOSED and name the skill — the fail-open the Wave 30 check #6 shipped with.
+FMNOVER="$WORK/enum-fm-nover"
+wire_enum_skills "$FMNOVER"
+printf -- '---\nname: realskill\nmetadata:\n  version: "2.0.0"\n---\nbody\n' \
+  > "$FMNOVER/.claude/skills/realskill/SKILL.md"
+# deliberately write no VERSION for realskill
+gate "$ROOT/scripts/ci-gates.sh" enumeration "$FMNOVER"
+if [ "$GATE_RC" -ne 0 ] && grep -q 'ENUM: realskill has a SKILL.md but no VERSION' "$WORK/last.log" \
+   && ! grep -q 'ENUM: agentic-ceo' "$WORK/last.log"; then
+  record 0 "enumeration: fails closed on a SKILL.md with no VERSION (planted RED)"
+else
+  record 1 "enumeration: fails closed on a SKILL.md with no VERSION (planted RED)"
+fi
+
+# A description block-scalar version: before the metadata: block must NOT be read as
+# the stamp (metadata.version is anchored) — realskill's real metadata.version matches
+# its VERSION, so the gate passes despite the decoy in the description.
+FMANCHOR="$WORK/enum-fm-anchor"
+wire_enum_skills "$FMANCHOR"
+printf -- '---\nname: realskill\ndescription: >-\n  version: 7.7.7 mentioned in prose\nmetadata:\n  version: "2.0.0"\n---\nbody\n' \
+  > "$FMANCHOR/.claude/skills/realskill/SKILL.md"
+printf '2.0.0\n' > "$FMANCHOR/.claude/skills/realskill/VERSION"
+gate "$ROOT/scripts/ci-gates.sh" enumeration "$FMANCHOR"
+if [ "$GATE_RC" -eq 0 ]; then
+  record 0 "enumeration: metadata.version is anchored — a description block-scalar version is ignored"
+else
+  record 1 "enumeration: metadata.version is anchored — a description block-scalar version is ignored"
 fi
 
 # ---------------------------------------------------------------------------

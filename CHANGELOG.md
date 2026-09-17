@@ -3,6 +3,21 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.111.0] — 2026-09-17
+
+Wave 32 of the dogfooding batch: #303 — harden the Wave-30 frontmatter gate (enumeration check
+#6) to fail closed, closing the fail-open it shipped with.
+
+### Changed
+- **`ci-gates.sh` enumeration check #6 now fails closed** (#303). A skill dir must carry **both**
+  a SKILL.md and a VERSION — a SKILL.md with no VERSION (or the reverse) now fails and names the
+  skill, where before it was silently skipped (a fail-open in a gate whose contract is
+  fail-closed). The stamp is read as **metadata.version**, anchored to the frontmatter
+  `metadata:` block, so a `version:` in a description block-scalar or the body can no longer
+  satisfy it; and an absent stamp, an unparseable stamp, and a drifted stamp are now reported
+  distinctly. Three planted-RED self-tests (missing VERSION, missing stamp, metadata anchor); 71
+  gate tests.
+
 ## [1.110.0] — 2026-09-17
 
 Wave 31 of the dogfooding batch: #271 behavioral-hotspot prioritization for domain H — a

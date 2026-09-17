@@ -388,7 +388,7 @@ cmd_enumeration() {
   done
 
   local bt='`'
-  local fail=0 d name sver fmver
+  local fail=0 d name sver fmver fmline has_skill has_ver
   for d in "$skills_dir"/*/; do
     [ -d "$d" ] || continue
     name="$(basename "$d")"
@@ -417,23 +417,39 @@ cmd_enumeration() {
     #    not a substring of "idea-critic").
     grep -qF "\"${name}\"" "$recommend" \
       || { printf 'ENUM: %s not named in recommend-overlays.py\n' "$name" >&2; fail=1; }
-    # 6) SKILL.md frontmatter metadata.version must equal this skill's own VERSION.
-    #    Nothing reads this stamp at runtime, so a drift is invisible to every
-    #    other gate — it slid on the lockstep skills for seven releases
-    #    (v1.101.0–v1.107.0) before this check. Compared only when BOTH files
-    #    exist: per-skill VERSION presence is not itself gated today, so a skill
-    #    with a SKILL.md but no VERSION is skipped here, not failed (tracked as a
-    #    fail-closed follow-up). The frontmatter version is read strictly from
-    #    inside the leading `---` block, so a body `version:` cannot satisfy it.
-    if [ -f "$d/VERSION" ] && [ -f "$d/SKILL.md" ]; then
+    # 6) A skill dir must carry BOTH a SKILL.md and a VERSION, and the SKILL.md
+    #    frontmatter metadata.version must equal that VERSION. Fail closed: nothing
+    #    reads the stamp at runtime, so without this check a drift — or a missing
+    #    VERSION — is invisible to every other gate (the stamp slid on the lockstep
+    #    skills for seven releases, v1.101.0–v1.107.0, before it existed). The stamp
+    #    is read as metadata.version — the version: key inside the frontmatter
+    #    metadata: block — so neither a body line nor a description block-scalar
+    #    version: can satisfy it. A dir with NEITHER file is an empty dir, not a
+    #    malformed skill; checks 1–5 already fail an unenumerated dir.
+    has_skill=0; has_ver=0
+    if [ -f "$d/SKILL.md" ]; then has_skill=1; fi
+    if [ -f "$d/VERSION" ]; then has_ver=1; fi
+    if [ "$has_skill" = 1 ] && [ "$has_ver" = 0 ]; then
+      printf 'ENUM: %s has a SKILL.md but no VERSION (fail closed)\n' "$name" >&2; fail=1
+    elif [ "$has_ver" = 1 ] && [ "$has_skill" = 0 ]; then
+      printf 'ENUM: %s has a VERSION but no SKILL.md (fail closed)\n' "$name" >&2; fail=1
+    elif [ "$has_skill" = 1 ] && [ "$has_ver" = 1 ]; then
       sver="$(LC_ALL=C tr -d '\n' < "$d/VERSION")"
-      # `|| true`: an empty frontmatter (no version line) yields no grep match,
-      # whose exit 1 would abort under `set -o pipefail`; the empty result is the
-      # signal the missing-stamp branch below acts on. Same idiom as cmd_version.
-      fmver="$(awk '/^---[[:space:]]*$/{c++; next} c>=2{exit} c==1 && /^[[:space:]]*version:/{print; exit}' "$d/SKILL.md" \
-                | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)"
-      if [ -z "$fmver" ]; then
-        printf 'ENUM: %s SKILL.md has no frontmatter version stamp\n' "$name" >&2; fail=1
+      # Extract metadata.version, anchored to the metadata: block. `|| true`: no
+      # match yields grep exit 1, which would abort under `set -o pipefail`; the
+      # empty result is the signal the absent/unparseable branches act on.
+      fmline="$(awk '
+        /^---[[:space:]]*$/ {c++; next}
+        c!=1 {next}
+        /^metadata:[[:space:]]*$/ {inmeta=1; next}
+        /^[^[:space:]]/ {inmeta=0}
+        inmeta && /^[[:space:]]+version:[[:space:]]/ {print; exit}
+      ' "$d/SKILL.md" || true)"
+      fmver="$(printf '%s' "$fmline" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)"
+      if [ -z "$fmline" ]; then
+        printf 'ENUM: %s SKILL.md has no metadata.version stamp\n' "$name" >&2; fail=1
+      elif [ -z "$fmver" ]; then
+        printf 'ENUM: %s SKILL.md metadata.version is unparseable (%s)\n' "$name" "$(printf '%s' "$fmline" | tr -s '[:space:]' ' ')" >&2; fail=1
       elif [ "$fmver" != "$sver" ]; then
         printf 'ENUM: %s SKILL.md frontmatter version (%s) != VERSION (%s)\n' "$name" "$fmver" "$sver" >&2; fail=1
       fi
