@@ -1282,6 +1282,17 @@
         "Requires a CI drift-gate that fails when any surface's routing no longer matches the manifest",
         "Requires an unrecognized path to resolve to the full gate set (fail closed), never to no gate -- and does not merely patch the one missing glob"
       ]
+    },
+    {
+      "id": "modularize-before-splitting-the-repo-internal-package-first",
+      "prompt": "A growth-stage team proposes splitting their monolith into 4 separate repos so teams can 'own' their areas. The code has no internal module boundaries yet, and the areas share a schema + validator + types that change together. What does the reviewer recommend?",
+      "expected_output": "Recommend the internal-package rung first, not a repo split. The code has no module boundary yet, so a 4-repo split is org/deploy structure imposed on an unmodularized codebase -- do the boundary first: carve internal packages (named import boundaries) inside the one repo, which is cheap and reversible. Split a part to its OWN repo only when it has an independent change cadence AND distinct external consumers AND its own release + ownership -- none demonstrated here ('teams want to own it' is org preference, and team/hiring trajectory is an owner call, not a repo-observable trigger). Critically, the shared schema, validator, and types change TOGETHER (co-evolving artifacts); split across 4 repos they drift (domain H) -- keep them co-located. Propose the internal-package boundary now, and route the repo-split decision (which rests on team trajectory + ownership) to the owner. (infra-evolution-by-stage.md.)",
+      "expectations": [
+        "Recommends the internal-package / module-boundary rung FIRST (cheap, reversible) rather than a repo split, since no module boundary exists yet",
+        "Names the three admission tests for a separate repo (independent change cadence AND distinct external consumers AND own release/ownership) and finds them unmet here",
+        "Flags the co-evolving shared artifacts (schema/validator/types change together) as needing co-location -- split across repos they drift (domain H)",
+        "Routes the repo-split decision (org/team-ownership/trajectory) to the owner rather than mandating it from the repo -- it is not a repo-observable trigger"
+      ]
     }
   ]
 }

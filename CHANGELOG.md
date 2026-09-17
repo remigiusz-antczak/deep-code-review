@@ -3,6 +3,19 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.117.0] — 2026-09-18
+
+Wave 38 of the dogfooding batch: #299 — modularize before splitting the repo.
+
+### Added — deep-code-review
+- **`infra-evolution-by-stage.md` — internal-package rung before a repo split** (#299). A new
+  trigger row: carve an **internal package** (a named import boundary) inside the one repo first —
+  cheap and reversible; split to a **separate repo** only when a part has an independent change
+  cadence AND distinct external consumers AND its own release + ownership. Co-evolving artifacts
+  (schema ↔ validator ↔ types ↔ docs) stay **co-located** or they drift across repos (domain H); a
+  repo split is org/deploy structure, not a substitute for the module boundary. "modular monolith"
+  added to the by-name standards list. One new eval (121 total).
+
 ## [1.116.0] — 2026-09-18
 
 Wave 37 of the dogfooding batch: #296 — one canonical path→gate manifest across CI, hooks, and the local suite.

@@ -45,6 +45,7 @@ orchestration, IaC, tracing, feature-flag platforms) — never that floor.
 | feature flags | long-lived branches block release cadence; need to decouple deploy from release, canary, or hold a kill-switch (then manage flags as inventory) |
 | orchestration (k8s) | you already have rapid provisioning + monitoring + rapid deploy AND are hand-managing enough services/hosts to cross the complexity threshold — below that it is premium with no payoff |
 | microservices / service extraction | the monolith is genuinely too complex to manage AND the boundaries are stable AND the prerequisites above exist; then peel from the edges |
+| internal package → separate repo | first carve an **internal package** (a named import boundary) inside the one repo — cheap and reversible; split to a **separate repo** only when a part has an **independent change cadence AND distinct external consumers AND its own release + ownership**. Co-evolving artifacts (schema ↔ validator ↔ types ↔ docs) stay **co-located**, or they drift across repos (domain H). A repo split is org/deploy structure, not a substitute for the module boundary — do the boundary first |
 | SLOs + error budget | users now have reliability expectations you must trade against release speed |
 
 ## What the review CANNOT decide from the repo (route to the owner)
@@ -57,7 +58,7 @@ stage-appropriate step and name the observable signal behind it; **route anythin
 gated on these six to the owner** rather than mandating the build.
 
 ## Standards (by name; verify a URL before adding one to `docs/standards-index.md`)
-Monolith-first, YAGNI, microservice-premium and microservice-prerequisites,
+Monolith-first, modular monolith, YAGNI, microservice-premium and microservice-prerequisites,
 infrastructure-as-code, continuous delivery, feature toggles (Fowler);
 choose-boring-technology / innovation tokens (McKinley); the Twelve-Factor App;
 DORA delivery metrics (the set and names have been revised — check the current
