@@ -245,6 +245,17 @@
         "Verifies tree ownership (git status --short) before writing and stops on foreign changes",
         "Classifies the failing test in an untouched file as an environment fault to re-run in a clean tree, not a code bug to chase"
       ]
+    },
+    {
+      "id": "release-verification-on-frozen-quiescent-head-not-during-integration",
+      "prompt": "I kicked off the full verification lane (browser suite + prod build + 26-route audit) against the integration branch while eight feature lanes were still folding in. It came back pass on head A, but the head is now A+8. Can I report 'verified, ready to ship'?",
+      "expected_output": "No -- that verdict certifies a tree that no longer exists (tested A, head is A+8); it is not exactly wrong, it is about something else, and reporting it as 'verified' is worse than no verdict because it gets quoted downstream as certification. Release verification and defect discovery run the same commands but are different contracts: discovery runs continuously during integration against any recent head and its DEFECTS stay useful even when stale; release verification certifies ONE frozen head, once, after integration closes, and a stale verification verdict certifies nothing. So harvest the real defects that run surfaced as LEADS and re-confirm each at the new head A+8 before fixing (a finding carried forward without a re-run is unverified, not still-open), but DISCARD its pass/fail -- do not file it as certification. Re-run release verification only once the integrator reports no outstanding branches (quiescent); record and re-check the SHA (report STALE -- tested <sha>, head is now <sha> if it moved, never a bare pass/fail); give the heavy run the machine so it does not starve into a no-result stall; and split it (unit/type/lint -> browser -> audit -> preflight) so a stall does not lose the earlier phases. (fast-agentic-delivery.md.)",
+      "expectations": [
+        "Refuses to report the stale verdict as certification -- it tested A, head is A+8; a verdict without a current SHA certifies nothing",
+        "Separates defect discovery (findings durable as LEADS, re-confirmed at the new head; verdict disposable) from release verification (one frozen head); harvests defects, discards the pass/fail",
+        "Re-runs release verification only on a quiescent head (integrator reports no outstanding branches), freezing and naming the SHA",
+        "Gives the heavy run the machine and splits it into independently-reporting phases so partial progress survives"
+      ]
     }
   ]
 }

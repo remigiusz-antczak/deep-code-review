@@ -97,6 +97,24 @@ disabled-looks-disabled). `✅ route X verified — screenshot attached` with **
 cited inspection** is downgraded to ⚠️/`unverified` — the image alone is read as a
 verification it is not.
 
+**Name the procedure, not just the surface — different procedures produce different
+true results.** A UI-**behaviour** claim ("focus works," "the menu opens on hover")
+names the **interaction method** (native keyboard / pointer / scripted DOM call /
+assistive-tech command) and the **exact viewport** (width × height), alongside the
+route/state and sha — because each changes the result: scripted `focus()` at a
+320px-tall viewport and native `Tab` at a full viewport are **different experiments**,
+and both verdicts can be true at once. Two results **contradict only when method,
+viewport, and route/state match**; when they differ the result is **method-sensitive**,
+resolved by a controlled follow-up that changes **one variable at a time** — never picking
+a winner to *explain the discrepancy*, though once the variable is isolated, principle 2's
+*canonical instrument* decides which experiment answers the user's real question (for
+keyboard access, native `Tab`, not a scripted `focus()` a user never calls).
+"Focus checked — 26 routes fail" and "Tab works — 196 clean stops" are not a
+contradiction to argue for hours; they are two experiments nobody labelled. And an
+**absence** claim names the **search space** it covered (which idioms/encodings were
+tried) plus the runtime confirmation behind it; an absence naming neither is
+`unverified`, not a gap (`method.md`, *presence and absence are not the same claim*).
+
 **Beware the proxy.** A passing test, a green build, a merged PR, or a
 hand-configured render is a **proxy** for the user's outcome, not the outcome —
 verifying the proxy and asserting the user-facing result is the specific move to

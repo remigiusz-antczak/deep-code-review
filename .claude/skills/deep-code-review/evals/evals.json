@@ -1051,6 +1051,28 @@
         "Requires a source-level structural fallback that pins the wiring (import/use of the shared component), matching the codebase's existing pattern",
         "States the fallback is weaker than the browser coverage -- pins wiring, not the interaction -- a named fallback, never a substitute"
       ]
+    },
+    {
+      "id": "absence-finding-needs-search-space-and-runtime-confirmation",
+      "prompt": "A static audit lane (browser skipped, memory pressure) reports two gaps with file-level confidence: 'interactive SVG elements have no focus ring -- keyboard users are invisible; build an SVG focus overlay' and 'gaps have no per-item route to land on -- add one.' It grepped for ring-* and for a route segment. Should I brief a lane to build both?",
+      "expected_output": "No -- not on a static grep. Both are ABSENCE findings, and an absence is unfalsifiable from the report: it claims nothing exists anywhere, but the report can only show what the searcher looked FOR, so anything written in an idiom they didn't try reads as missing. A focus ring can be ring / outline / stroke / box-shadow / a rendered overlay; grepping ring-* alone misses an SVG-native stroke ring (e.g. group-focus-visible:stroke-...). A per-item destination can be a route / query param / hash / id-keyed overlay; a route-segment search misses /issues?focus=<id>. Before any of this becomes a build brief: (a) search by behaviour -- grep every encoding, not one; (b) confirm the absence at RUNTIME (an absence is evidence only after a positive control fires) -- render it and look; the browser was skipped, fine for presence checks but not for absence, so these are unverified / unconfirmed-absent, not gaps; (c) if you do brief a lane, instruct it to re-confirm the gap and report back before building, because an absence finding is a work order and a false one builds a second, competing mechanism next to a working one. (method.md.)",
+      "expectations": [
+        "Treats both as absence findings a static grep cannot establish; refuses to authorize construction on them",
+        "Requires searching every encoding of the behaviour (ring/outline/stroke/box-shadow/overlay; route/param/hash/id-keyed), not one idiom",
+        "Requires runtime confirmation for absence (positive control / principle 2); downgrades unconfirmed absence to unverified, not a gap",
+        "A downstream build brief must re-confirm the gap before building -- an absence finding is a work order; a false one builds a competing implementation"
+      ]
+    },
+    {
+      "id": "focus-check-names-method-and-viewport-not-aggregate-verdict",
+      "prompt": "Our audit:ux gate uses scripted focus() at a 320px-tall viewport and reports 26 routes failing keyboard focus. A teammate manually tabbed through at a normal viewport and found 196 clean Tab stops. We've argued for hours over which is right so we can put one 'focus' verdict in the report. Which is correct?",
+      "expected_output": "Neither is 'wrong,' and there is no single aggregate verdict to report -- these are two different experiments that share the label 'focus.' A behavior claim is only meaningful with the procedure that produced it: scripted focus() vs native Tab is a different INTERACTION METHOD, and 320px-tall vs a full viewport is a different VIEWPORT, and both change what focus does (scripted focus() can land on off-screen or programmatically-focused nodes a Tab sequence never reaches; a short viewport changes what scrolls into view). Two results contradict only when method and viewport match; here they differ, so the honest report preserves BOTH, each labeled with its method + viewport + route coverage (scripted focus() @ 320px: 26 routes fail; native Tab @ full viewport: 196 clean stops), and refuses a flat 'focus passes' or 'focus fails.' To reconcile, run a controlled follow-up that changes one variable at a time (native Tab at 320px; scripted focus() at full height) until the responsible variable is isolated. Both are true experiments, but for the keyboard-USER question the canonical instrument is native Tab (what a real user actually does), not scripted focus(), so once the variable is isolated the native-Tab result is the one that reflects the user's real experience. (report-format.md.)",
+      "expectations": [
+        "Refuses a single aggregate 'focus passes/fails' verdict; preserves both results as method-sensitive, not contradictory",
+        "Identifies the differing interaction method (scripted focus() vs native Tab) and viewport (320px vs full) as why both can be true",
+        "Requires each claim to carry its method + viewport (+ route coverage) so results are comparable",
+        "Reconciles by a controlled follow-up changing one variable at a time, not by declaring a winner"
+      ]
     }
   ]
 }

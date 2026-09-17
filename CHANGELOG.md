@@ -3,6 +3,38 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.99.0] — 2026-09-17
+
+Wave 20 of the dogfooding batch: a verification claim names the procedure that produced
+it, and a heavy verification run certifies only a frozen, quiescent head (#250, #251, #252).
+
+### Added — deep-code-review
+- **`report-format.md` — name the procedure, not just the surface** (#250, #252). A
+  verification surface includes the experiment that produced the result: a UI-behaviour
+  claim names its interaction method (native keyboard / pointer / scripted DOM call / AT
+  command) and exact viewport (+ route/state/sha); an absence claim names its search space
+  and runtime confirmation. Two results contradict only when method and viewport match —
+  otherwise they are method-sensitive, reconciled one variable at a time, not by picking a
+  winner.
+- **`method.md` — presence and absence are not the same claim** (#250). An absence finding
+  is unfalsifiable from the report (it inherits the searcher's vocabulary), and under
+  parallel delivery it is read as a work order — a false absence builds a second, competing
+  implementation. Absence is held higher: search by behaviour across every encoding, confirm
+  at runtime (principle 2; else `unverified`/unconfirmed-absent, not a gap), a downstream
+  builder re-confirms before building, and a disproven absence is reported back. The shared
+  surface rule lives once in `report-format.md`; this adds the asymmetry and links to it. Two
+  new evals (101 total).
+
+### Added — agentic-delivery
+- **`fast-agentic-delivery.md` — release verification runs on a frozen, quiescent head**
+  (#251). Release verification (certify one frozen head, once, after integration closes, with
+  the machine to itself) is a different contract from defect discovery (continuous, any recent
+  head, findings durable when stale) — the same commands run for different purposes. Gate
+  release verification on quiescence; freeze and name the SHA (a verdict against a moved head
+  is STALE, not pass/fail); give the heavy run the machine; split it so partial progress
+  survives; keep discovery findings, discard a discovery verdict. Composes with #247 on a
+  different axis. One new eval (25 total).
+
 ## [1.98.0] — 2026-09-17
 
 Wave 19 of the dogfooding batch: a rewritten browser spec owes its retired coverage a

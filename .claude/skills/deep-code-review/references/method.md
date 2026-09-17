@@ -411,6 +411,29 @@ count, a metric, a before/after delta) likewise names the ref it was measured at
 inline — "N at `origin/main`", or "in the uncommitted tree" when the working tree
 is the subject; on a dirty checkout those are two different products.
 
+**Presence and absence are not the same claim.** A **presence** finding carries its own
+evidence — the file and line — and a reader checks it in seconds. An **absence** finding
+("X is missing," "there is no Y") claims that *no* implementation exists anywhere, and it
+is **unfalsifiable from the report alone**: the report cannot show the thing it did not
+find, so an absence inherits the **searcher's vocabulary** — any capability written in an
+idiom the searcher did not try reads as missing. Absence findings are the
+highest-leverage and least-verified thing an audit emits, because under parallel delivery
+an absence is read as a **work order** (build the missing thing), and a false absence
+becomes a second, competing implementation next to the working one. So hold an absence to
+a higher bar: (a) **search by behaviour, not one idiom** — enumerate the encodings a
+concept can take (a focus ring is `ring` / `outline` / `stroke` / `box-shadow` / a
+rendered overlay; navigation is a route / query param / hash / id-keyed overlay; state is
+a class / data-attr / ARIA / component state) and grep all of them, since one pattern is
+one hypothesis, not a survey; (b) **confirm the absence at runtime** — render it and look
+(principle 2: *an absence is evidence only after a positive control fires*); if you could
+not boot (memory pressure, no build), the finding is **`unverified` — unconfirmed-absent**,
+not a gap; (c) when it leaves for a downstream builder, the brief instructs the builder to
+**re-confirm the gap before building** and report back if the capability already exists;
+(d) a disproven absence is **reported back loudly** to whoever holds the inventory, or the
+same false gap is re-briefed to the next lane. The verification surface a finding names
+(`report-format.md`, *name the procedure*) includes, for an absence, the search space it
+covered.
+
 **Anti-slop (drop before the report).** A finding that does not change an
 owner action is not a finding. Drop or demote to Nit/Info:
 - a missing community-health file on a **private** repo with no outside

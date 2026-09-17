@@ -407,6 +407,52 @@ this is not reading its **file stat** as *liveness*. And distinct from the idle-
 duplicate section above: that is a false-**positive** "completed" leading to a duplicate
 dispatch; this is a false-**negative** liveness read leading to a destructive **kill**.
 
+## Release verification runs on a frozen, quiescent head — a discovery pass runs during integration
+
+The heavy verification run (full browser suite + production build + audit) is the
+longest-lived task in a fan-out, which makes it the most exposed to two things at once:
+the integration branch **moving underneath it** as feature lanes fold in, and **resource
+starvation** from those same lanes. Dispatched *alongside* active integration it maximises
+both — and a verdict about head `A` delivered when the head is `A+9` describes a tree that
+no longer exists. It is not wrong, it is *about something else*, and it is **worse than no
+verdict** because it reads as reassurance and gets quoted downstream as "we verified it."
+
+Two activities run the same commands but are different contracts — do not conflate them:
+
+| | Defect discovery | Release verification |
+|---|---|---|
+| Purpose | find problems early | certify a specific tree |
+| Target | any recent head | one **frozen** head |
+| Timing | continuously, during integration | once, after integration **closes** |
+| A stale result is | still useful as leads (re-confirm at the new head) | worthless (it certifies nothing) |
+| Resource priority | yields to feature lanes | gets the machine to itself |
+
+- **Gate release verification on quiescence.** Do not dispatch it while the integration
+  branch is still accepting folds; gate it on the integrator reporting **no outstanding
+  branches**. Run *discovery* passes during integration instead, and label their output
+  **discovery, not certification**.
+- **Freeze and name the head.** The lane records the SHA at start and re-checks it at
+  finish; if the head moved, the verdict is **`STALE — tested <sha>, head is now <sha>`**,
+  never a bare pass/fail (a verdict without its sha fails closed — `SKILL.md` *Exact
+  revision*; and #192's verification surface, `deep-code-review`).
+- **Give the heavy run the machine.** Schedule it when the fan-out is quiescent, or
+  explicitly cut sibling concurrency for its duration; a verification run starved into a
+  stall returns **no** information — the worst return on the most expensive task (the
+  swap-trend and WIP-cap gates above size that quiescence).
+- **Split the long run so partial progress survives.** unit/type/lint → browser → audit →
+  deploy-preflight, each reporting independently; a stall in one phase must not destroy
+  the earlier phases' results.
+- **Discovery findings are durable as leads; a discovery verdict is disposable.** Harvest
+  the defects a discovery pass surfaces, but **re-confirm each at the new head before acting
+  on it** — a finding carried forward without a re-run is `unverified`, not still-open
+  (`deep-code-review` `method.md`) — and **discard the pass/fail**, never filing it as
+  certification.
+
+This composes with *a worktree assignment is a path… an integrator on a shared branch
+detaches* above: that fixes **where** the integrator merges (a detached tree at the tip),
+this fixes **when** release verification runs against it (after the tip stops moving) —
+different axes, not competing schedules.
+
 ## Boot-the-dev-server lanes need a copy, not a symlink, of the dependencies dir
 
 Any worktree that runs the **heavy gates** needs its own real install — run
