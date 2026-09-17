@@ -3,6 +3,20 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.116.0] — 2026-09-18
+
+Wave 37 of the dogfooding batch: #296 — one canonical path→gate manifest across CI, hooks, and the local suite.
+
+### Added — deep-code-review
+- **`parallel-audit.md` §6 — one canonical path→gate manifest** (#296). When more than one surface
+  routes gates by path (CI `paths:` filters, a hook's file scoping, the local suite's directory→
+  suite map), the parallel hand-maintained copies **drift** — a path gated in CI but not the hook
+  silently skips its gate on one surface. Keep the glob→gate-set map in **one** version-controlled
+  manifest that every surface **derives** from, with a **CI drift-gate** that fails when any
+  surface's routing no longer matches it (the no-duplication rule applied to gate routing). An
+  unrecognized path resolves to the full gate set (fail closed, already in §6), never to no gate.
+  One new eval (120 total) and a §6 signal.
+
 ## [1.115.0] — 2026-09-18
 
 Wave 36 of the dogfooding batch: #295 — quarantine the untrusted reader from the privileged actor.

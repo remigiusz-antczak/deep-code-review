@@ -441,6 +441,16 @@ the fan-out's *shape***, reported **once** with a remedy — not one finding per
 - **Keep a documented one-command local full suite,** and require the **labelled full
   run** before merging an app change — the cheap gate speeds iteration without becoming
   the merge bar.
+- **One canonical path→gate manifest when more than one surface routes by path.** CI `paths:`
+  filters, a pre-push/pre-commit hook's file scoping, and the local suite's "which gates for
+  which files" each encode the *same* glob→gate-set map; hand-maintained in parallel they
+  **drift** — a path gated in CI but not the hook (or the reverse) silently skips its gate on one
+  surface. Keep the mapping in **one** version-controlled manifest and have every surface
+  **derive** its routing from it (generate the CI filter, the hook scope, and the local
+  selection from the same file), with a **CI drift-gate** that fails when any surface's routing no
+  longer matches the manifest — the repo's own no-duplication rule (`method.md`) applied to gate
+  routing. An unrecognized path resolves to the **full** gate set (fail closed, above), never to
+  "no gate."
 
 **State the residual risk — not optional.** Staged CI trades **coverage for cost**:
 the cheap path-filtered gate **will not catch browser-only regressions** until the
@@ -455,7 +465,9 @@ finding with the staged-pattern remedy. The **fail-open path filter** and a
 severity from the gate-coverage and confidentiality canon — not from this cost section.
 Signals: many fragment PRs each triggering the full matrix; a path filter that skips
 (not fails) on an unknown path; a privacy/security check behind a path filter; a "green
-CI" claim resting on a draft gate that never ran the browser matrix.
+CI" claim resting on a draft gate that never ran the browser matrix; the same path→gate
+map hand-maintained in more than one surface (CI / hook / local) with no single manifest
+they derive from.
 
 ---
 

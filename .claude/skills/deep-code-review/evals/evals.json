@@ -1271,6 +1271,17 @@
         "Notes a schema validates shape not authority, so an injection can at most corrupt an operand rejected at the boundary, not select a privileged action; frames it as an architecture question (no single identity reads-untrusted AND wields-credentials, and the action space is fixed on the trusted side)",
         "For MCP: trust the transport, not the payload -- an allowlisted/signed server authenticates origin, not that the content is safe to act on"
       ]
+    },
+    {
+      "id": "one-canonical-path-to-gate-manifest-all-surfaces-derive-from-it",
+      "prompt": "Our repo scopes gates three ways: .github/workflows/ci.yml uses paths: filters, a pre-push hook greps changed files to decide which linters to run, and `make test` has its own case statement mapping directories to test suites. A PR touches packages/auth/; CI runs the security scan but the pre-push hook does not (its glob list omitted packages/auth). What does the reviewer flag?",
+      "expected_output": "Flag the three hand-maintained path->gate maps as a drift hazard, and this as a live drift: packages/auth/ is gated by CI's security scan but NOT by the pre-push hook (its glob list omitted it), so a developer relying on the hook gets a false-green locally while the same path is gated in CI -- the maps have diverged, and the local `make test` map is a third copy that can diverge too. The fix is one canonical path->gate manifest: keep the glob->gate-set mapping in a single version-controlled file and have all three surfaces (CI paths:, the hook's file scoping, make test's directory->suite map) DERIVE their routing from it, with a CI drift-gate that fails when any surface no longer matches the manifest -- the repo's own no-duplication rule applied to gate routing. An unrecognized path must resolve to the full gate set (fail closed), never to no gate. (parallel-audit.md.)",
+      "expectations": [
+        "Flags the three hand-maintained path->gate maps (CI / hook / local) as a drift hazard and identifies the live drift (packages/auth gated in CI but not the hook)",
+        "Prescribes ONE canonical path->gate manifest that all three surfaces DERIVE from, not three parallel hand-maintained copies (the no-duplication rule applied to gate routing)",
+        "Requires a CI drift-gate that fails when any surface's routing no longer matches the manifest",
+        "Requires an unrecognized path to resolve to the full gate set (fail closed), never to no gate -- and does not merely patch the one missing glob"
+      ]
     }
   ]
 }
