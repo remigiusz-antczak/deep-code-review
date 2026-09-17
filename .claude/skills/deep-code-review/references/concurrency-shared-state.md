@@ -116,29 +116,34 @@ is skipped by `process.exit`, SIGINT, worker crash, or overlapping runs.
 
 Shedding load or aborting a lane means killing **only the processes you started**,
 identified by **ownership**, never by a name/command pattern. `pkill -f <pattern>`
-(or `killall <tool>`) selects by command line, so it reaps a sibling lane's
-identically-named process, a shared dev server, the reviewer's editor, or the
-orchestrator itself — cross-lane collateral damage that is invisible in any diff.
+(matched on the command line) or `killall <tool>` (matched on the process name)
+reaps a sibling lane's identically-named process, a shared dev server, the
+reviewer's editor, or the orchestrator itself — cross-lane collateral damage that
+is invisible in any diff.
 
 - **Own a process group / job object.** Start each lane's work in its own process
   group (`setsid`, or spawn with a new pgid; a Job Object on Windows) and record
   the pgid/handle with the lane's claim. Terminate by that id (e.g. `kill -TERM
   -<pgid>`), so the whole subtree — the tool and every child it forked — dies
-  together and no unrelated process is selected.
+  together and no unrelated process is selected, unless a child started its own
+  session/group (`setsid`) and escaped it — which the orphan bullet backstops.
 - **Escalate, don't nuke.** Graceful stop (SIGTERM) → a bounded grace window for the
   child to flush and release locks → SIGKILL only if it outlives the window. A
   straight SIGKILL orphans children and skips the signal-safe cleanup the store-root
   section above requires.
-- **Reap orphans.** A parent that exits without waiting leaves children reparented
-  to init/PID 1, still holding the lane's worktree, port, or lock. Wait on the
-  group, or run under a subreaper/init that does.
+- **Kill and reap orphans.** A parent that exits without waiting leaves children
+  reparented to init/PID 1, still holding the lane's worktree, port, or lock.
+  Reaping (`wait`) only collects already-dead children — a live orphan must first be
+  **killed** (a group-kill that reaches an escaped descendant, or a signal-forwarding
+  init/subreaper that kills then reaps), not merely waited on.
 - **Leave a teardown record.** Killing a lane must release its claim and mark its
   worktree/lock stale-and-recoverable (the stray-worktree red flag below), so the
   next scheduler pass reclaims it rather than trips on it.
 
 The **trigger** for shedding — when memory/swap or contention says back off, and
-never on staleness alone — lives in `fast-agentic-delivery.md`; this is the
-**mechanism** for acting on it without collateral damage.
+never on staleness — lives in the `agentic-delivery` overlay
+(`agentic-delivery/references/fast-agentic-delivery.md`); this is the **mechanism**
+for acting on it without collateral damage.
 
 ---
 
@@ -151,5 +156,5 @@ path; stage-all from a multi-agent checkout; multiple concurrent-agent write
 lanes sharing one working tree with no worktree-per-lane isolation; a stray or
 stale worktree with no corresponding open PR; duplicate open PRs/branches
 targeting the same file set (no spawn-time preflight); load-shedding or lane-abort
-by command-line pattern (`pkill -f` / `killall`) instead of an owned process group;
+by name/command-line match (`pkill -f` / `killall`) instead of an owned process group;
 a killed lane whose children outlive it (orphaned worktree/port/lock).

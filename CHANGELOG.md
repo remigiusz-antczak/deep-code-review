@@ -10,12 +10,12 @@ Wave 33 of the dogfooding batch: #297 — terminate work you own without collate
 ### Added — deep-code-review
 - **`concurrency-shared-state.md` — "Terminating work you own"** (#297). Load-shedding or
   aborting a lane must kill the processes it **owns** (an owned process group / job object,
-  terminated by pgid) — never a command-line pattern like `pkill -f` / `killall`, which reaps a
+  terminated by pgid) — never a name/command pattern like `pkill -f` / `killall`, which reaps a
   sibling lane's identically-named process, a shared dev server, or the orchestrator itself
   (collateral damage invisible in any diff). Covers graceful escalation (SIGTERM → grace →
-  SIGKILL), reaping orphaned children, and a teardown record that leaves the lane recoverable.
-  The shedding *trigger* stays in `fast-agentic-delivery.md`; this is the *mechanism*. One new
-  eval (116 total) and a matching red flag.
+  SIGKILL), killing-then-reaping orphaned children, and a teardown record that leaves the lane
+  recoverable. The shedding *trigger* stays in the `agentic-delivery` overlay; this is the
+  *mechanism*. One new eval (116 total) and matching red-flag clauses.
 
 ## [1.111.0] — 2026-09-18
 
