@@ -443,14 +443,18 @@ the fan-out's *shape***, reported **once** with a remedy — not one finding per
   the merge bar.
 - **One canonical path→gate manifest when more than one surface routes by path.** CI `paths:`
   filters, a pre-push/pre-commit hook's file scoping, and the local suite's "which gates for
-  which files" each encode the *same* glob→gate-set map; hand-maintained in parallel they
-  **drift** — a path gated in CI but not the hook (or the reverse) silently skips its gate on one
-  surface. Keep the mapping in **one** version-controlled manifest and have every surface
-  **derive** its routing from it (generate the CI filter, the hook scope, and the local
-  selection from the same file), with a **CI drift-gate** that fails when any surface's routing no
-  longer matches the manifest — the repo's own no-duplication rule (`method.md`) applied to gate
-  routing. An unrecognized path resolves to the **full** gate set (fail closed, above), never to
-  "no gate."
+  which files" each encode the *same* **path→required-gates** map (which globs are gated areas and
+  the full gate-set each needs); hand-maintained in parallel they **drift** — a path gated in CI
+  but not the hook (or the reverse) silently skips its gate on one surface. Keep that map in
+  **one** version-controlled manifest and have every surface **derive** its routing from it, with
+  a **CI drift-gate** that fails when any surface's routing no longer matches the manifest — the
+  repo's own single-source-of-truth rule (`docs-and-dx.md`) applied to gate routing. Each surface
+  still runs its own stage-appropriate **slice** (the cheap hook need not run CI's full matrix,
+  per the staged-gate bullet above); what must not drift is *which paths map to which gates*. An
+  unrecognized path resolves to the **full** gate set (fail closed, above), never to "no gate". A
+  drift that drops a **security/privacy or correctness** gate on any surface inherits its severity
+  from the gate-coverage / confidentiality canon (like the fail-open filter above), **not** this
+  cost section's *Medium at most*; the pure cost/DX residue is Medium.
 
 **State the residual risk — not optional.** Staged CI trades **coverage for cost**:
 the cheap path-filtered gate **will not catch browser-only regressions** until the
