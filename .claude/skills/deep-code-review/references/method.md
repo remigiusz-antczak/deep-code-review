@@ -463,6 +463,12 @@ owner action is not a finding. Drop or demote to Nit/Info:
 - restyling, renaming, or "consider maybe" with no defect;
 - a second copy of a fact the project's own gate already enforces and the
   review already confirmed green;
+- a **settled nit** the team has already seen and declined — kept in a committed, path-scoped
+  **review-calibration** record (accepted / rejected findings for this repo, in git, not a
+  hosted memory service) that the reviewer reads to avoid re-raising what the owner already
+  dismissed. **The record NEVER suppresses a security, logic, null-deref, or
+  data-validation/data-loss finding** — those are re-raised every time regardless of prior
+  dismissals; calibration silences *style/preference* noise, not correctness or safety;
 - a security finding in a **chronically-noisy class** — DoS, rate-limiting,
   resource-exhaustion, generic input-validation with no reached sink, open-redirect — with
   **no demonstrated impact path**: demoted to a non-blocking `unverified`/Nit **lead** —

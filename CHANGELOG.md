@@ -3,6 +3,26 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.108.0] — 2026-09-17
+
+Wave 29 of the dogfooding batch: #268 review-calibration (an anti-slop lens) + #272, the
+SKILL.md frontmatter version drift (a real housekeeping bug — the three lockstep skills'
+frontmatter had been stuck at 1.100.0 since it stopped moving with the bump).
+
+### Added — deep-code-review
+- **`method.md` anti-slop — a review-calibration record suppresses settled nits, never
+  security/logic** (#268). A settled style/preference nit the team has already declined — kept
+  in a committed, path-scoped review-calibration record (in git, not a hosted memory service) —
+  is dropped so the review doesn't re-raise what the owner already dismissed. The record
+  **never** suppresses a security, logic, null-deref, or data-validation/data-loss finding;
+  calibration silences preference noise, not correctness or safety. One new eval (113 total).
+
+### Fixed
+- **SKILL.md frontmatter version drift** (#272). The three lockstep skills' `metadata.version`
+  frontmatter had lagged the authoritative `VERSION` file since 1.100.0; bumped to match
+  (1.108.0) in all three. A CI gate that fails on `metadata.version` ≠ `VERSION`, so the drift
+  can't recur silently, is filed as #290.
+
 ## [1.107.0] — 2026-09-17
 
 Wave 28 of the dogfooding batch: three owner-filed CI-diagnosis hygiene lessons (#285, #286,

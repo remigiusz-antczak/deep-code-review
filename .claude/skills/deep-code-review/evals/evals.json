@@ -1194,6 +1194,17 @@
         "Reruns at most once and only after diagnosis; a reproduced hang/timeout is the bug to file, not to rerun",
         "Cancels a hang with evidence (last log line, elapsed) so it isn't mistaken for a flake"
       ]
+    },
+    {
+      "id": "review-calibration-suppresses-settled-nits-never-security-or-logic",
+      "prompt": "Our team keeps a committed .review-calibration file of nits we've decided we don't care about (e.g. 'we allow console.log in scripts/'). This PR re-introduces a console.log in scripts/ AND has an unscoped SQL query that could leak another tenant's rows. The calibration file says 'ignore console.log in scripts/'. What does the reviewer post?",
+      "expected_output": "Suppress the console.log nit, post the SQL finding. The review-calibration record legitimately silences a SETTLED STYLE/PREFERENCE nit the team has already declined -- the console.log in scripts/ is exactly that, so re-raising it is noise (anti-slop: a finding that changes no owner action). But the record NEVER suppresses a security, logic, null-deref, or data-validation/data-loss finding: the unscoped SQL query is a cross-tenant data leak (a security + data finding), so it is raised at full severity regardless of any calibration entry -- a calibration file that silenced it would be a dangerous misuse. Calibration is a committed, path-scoped record of style/preference decisions read to cut repeat noise, not a hosted memory service and not a mechanism to dismiss correctness or safety. (method.md.)",
+      "expectations": [
+        "Suppresses the settled style nit (console.log) per the committed calibration record -- cuts repeat noise",
+        "Posts the unscoped-SQL cross-tenant leak at full severity -- calibration NEVER suppresses security/logic/data findings",
+        "Frames calibration as a committed path-scoped style/preference record, not a hosted memory service and not a way to dismiss correctness/safety",
+        "Does not let a calibration entry override a security/data finding"
+      ]
     }
   ]
 }
