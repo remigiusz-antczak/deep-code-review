@@ -223,6 +223,17 @@
         "Reserves interrupts for control signals (stop/abandon/invalidating correction); freezes scope per deliverable, later asks = next increment",
         "Reads the repeated re-briefs as a mis-sized-scope signal -- split the lane, don't send another"
       ]
+    },
+    {
+      "id": "research-brief-needs-tracked-items-not-a-transcript",
+      "prompt": "A research lane I commissioned came back with a strong brief -- eight recommendations, well-argued. I pasted it into the thread and moved on to the next task. In my status I'm counting the investigation as a completed deliverable. Is that right?",
+      "expected_output": "No -- a brief in the transcript is researched, not delivered; its honest status is 'researched, 0 items tracked,' not 'done' (a transcript is not a landed artifact). Research earns its cost only when its conclusions become tracked work, so turn the eight recommendations into an enumerated list and open each as an issue, a backlog row, or a RECORDED REJECTION now, while the context is live -- a conclusion left only in the thread is lost at the next compaction or handoff. Report consumption, not production: what got tracked, not 'I researched X.' Check the depth distribution before calling it consumed -- if only the cheap, obvious items would ever get opened and the expensive structural ones evaporate, the value you commissioned did not land. And name the downstream consumer the brief was for; if a loop keeps commissioning briefs while the thing they were meant to unblock never moves, research is displacing delivery. (fast-agentic-delivery.md.)",
+      "expectations": [
+        "Rejects counting the brief as a completed deliverable -- a transcript is not a landed artifact; status is 'researched, 0 tracked'",
+        "Requires each recommendation become a tracked item (issue/backlog row/recorded rejection) opened in the same step, while context is live",
+        "Reports consumption not production; checks the depth distribution (not only cheap items landing)",
+        "Names the downstream consumer; flags research displacing the delivery it was meant to inform"
+      ]
     }
   ]
 }

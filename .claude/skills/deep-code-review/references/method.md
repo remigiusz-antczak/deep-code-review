@@ -483,6 +483,24 @@ complete (slow, capped-out, crashed, refused) `unverified`, never absorbed into 
 implied all-clear.** The "no silent caps" principle applies to the fan-out's own
 completeness, not only to sampling inside a unit.
 
+**Reconcile the report's *claims* against the delivered artifact, not only its
+coverage.** The ledger reconciliation above asks *did every applicable surface get
+ruled on*; this asks the sibling question — *does the artifact contain everything the
+report says it does*. Enumerate the report's own claims — each finding's asserted
+fix-state, each definition-of-done line, each "changed X" — as a list, and join every
+one to the artifact that would prove it (a committed hunk, a passing test, a file that
+exists), reporting **present, partial, or absent** and surfacing your own misses, not
+only confirming hits. Join to the **committed diff**, never to a sub-agent's or a
+lane's *report* of what it did — the per-unit rule above records the lead's own
+independent read (`lead-read Y/N`), not the finder's word that a unit is clean, and the
+same holds for what a delegate claims it changed. Run this
+**before you close, unprompted**: a completeness audit that only fires after the owner
+asks "did you actually do all of it?" is not a control but a retrofit, and the
+question itself is the signal the audit was owed earlier. It is cheap — the claim list
+already exists and the diff is already in hand. This is the *set-completeness* question
+that precedes per-claim verification: whether every claimed item is present at all,
+before asking whether each is backed by a real surface rather than a favorable proxy.
+
 **For a `DIFF` of a PR/MR** (often
 a fork or an API-fetched change with no writable checkout) **the deliverable is
 the review comment on the PR itself, not a committed file** — never add

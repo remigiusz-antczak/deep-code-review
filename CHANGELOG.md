@@ -3,6 +3,38 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.97.0] — 2026-09-17
+
+Wave 18 of the dogfooding batch: an unattended window is a work loop, a delivery
+reconciles its claims against the artifact, and research is not delivery
+(#243, #244, #245).
+
+### Added — agentic-delivery
+- **`fast-agentic-delivery.md` — an unattended time budget is a work loop, not a
+  single task** (#243). A granted window is worked until a termination condition fires
+  (backlog empty / every remaining item blocked / a resource ceiling), each stated with
+  its evidence; the standing backlog lives in a file the loop re-reads, a milestone is a
+  cue to pull the next item (an owner stop/redirect is the separate control signal), and
+  an idle loop names the condition it is parked on rather than going silent. Extends the
+  queue-a-requirement-to-a-file rule to the standing backlog.
+- **`fast-agentic-delivery.md` — research is not delivery** (#245). A brief earns its
+  cost only when its conclusions become tracked work — each recommendation an
+  issue/backlog row/recorded rejection opened in the same step, commissioned with a
+  named downstream consumer, reported as consumption not production, with a
+  depth-distribution check so the expensive recommendations aren't the ones that
+  evaporate. References #235's landed-artifact status rule. One new agentic-delivery
+  eval (23 total).
+
+### Added — deep-code-review
+- **`method.md` — reconcile the report's claims against the delivered artifact** (#244).
+  A Phase 5 sibling to the coverage-ledger reconciliation: enumerate the report's own
+  claims and join each to the committed diff (a hunk, a test, a file), reporting
+  present/partial/absent including your own misses, trusting the diff over any lane's
+  report of what it did, run unprompted before close — an audit that only fires after
+  the owner asks "did you actually do all of it?" is a retrofit, not a control. The
+  set-completeness question that precedes per-claim verification. One new
+  deep-code-review eval (98 total).
+
 ## [1.96.0] — 2026-09-16
 
 Wave 17 of the dogfooding batch: the admission schedule leaves a reserve, and a

@@ -468,6 +468,65 @@ wrong, the same over-claim as a status that names no surface. Prefer a stated
 **appetite** — a time-box the work is shaped to fit (`SKILL.md` G0) — over a bare
 estimate wherever the work can be shaped.
 
+## An unattended time budget is a work loop, not a single task — a milestone is not a stop
+
+An agent holding a block of unattended time *to work a backlog* treats the *first* milestone it reaches —
+a deliverable merged, the item it was pointed at finished — as the end of the
+assignment, goes quiet, and leaves the rest of the granted window unspent. The grant
+was a loop; that milestone was one turn of it. Read a time budget as *work the ranked
+backlog until a termination condition fires*, not *do the one thing, then wait*.
+
+- **Keep the backlog outside the working context.** A ranked list of what to do next
+  lives in a file or a tracker the loop re-reads each turn — not only in the
+  conversation, which a compaction or a handoff can drop. The
+  **queue-a-requirement-to-a-file** rule above is this same discipline applied to
+  *incoming* scope; this applies it to the *standing* backlog.
+- **Name the termination conditions up front, each with its evidence.** The loop ends
+  when the backlog is empty; when every remaining item is *blocked* on another party —
+  including an item whose next step is an owner-approved action (push, merge, deploy:
+  the **Human gates**, `SKILL.md`), which an unattended run cannot self-authorize; when
+  the granted window or stated **appetite** is spent (`SKILL.md` G0); or when a resource
+  ceiling is hit (the environment-probe ceilings above). Each ending is stated with the
+  evidence that it holds ("backlog re-read; the tracker shows only owner-approval-gated
+  items"), never asserted bare.
+- **A milestone is a cue to pull the next item, not to stop.** Finishing an item or
+  hitting a checkpoint re-enters the loop: pull the next backlog item and re-check the
+  termination conditions. Stopping is a *decision* that a termination condition fired,
+  and it is reported as one — not a drift into silence. An owner *stop* or *redirect*
+  is a different thing — a control signal that ends or repoints the loop, governed by
+  the interrupt rule above, not a self-milestone to work through.
+- **If the loop is idling, say so loudly, and report the window, not the item.** A
+  status covers the whole grant — *what is left, what is blocked and on whom, what is
+  next* — not just the task in hand; an agent out of ready work names the termination
+  condition it is parked on rather than going quiet, because silence reads as
+  *working* and the owner discovers the stall late.
+
+## Research is not delivery — a brief with no tracked follow-through is reported as unconsumed
+
+A lane sent to investigate comes back with a thorough brief, the brief is pasted into
+the transcript, and the loop moves on — and nothing downstream ever acts on it. Effort
+was spent; nothing was delivered. Research earns its cost only when its conclusions
+become *tracked work*. The **cap-in-flight-by-landed-artifacts** rule above owns the
+status discipline here: a brief is a transcript, not a landed artifact, so its honest
+status is "researched, 0 items tracked," never "done."
+
+- **End in an enumerated, trackable recommendation list, and open the items in the
+  same step.** "Here is what I found" is not a queue; each recommendation becomes an
+  issue, a backlog row, or a *recorded rejection* **now**, while the context is live —
+  a conclusion that lives only in the transcript is lost at the next compaction or
+  handoff.
+- **Commission with a named downstream consumer.** Research is requested *for*
+  something — a decision, a design, a fix. Name it at commission time; a brief with no
+  consumer is one no one will act on.
+- **Check the depth distribution before calling it consumed.** If only the cheap,
+  obvious recommendations turned into tracked items and every expensive or structural
+  one evaporated, the commissioned value did not land — the easy tail is not the
+  reason the research was worth doing.
+- **Watch research standing in for the delivery it was meant to inform.** A loop that
+  keeps commissioning briefs while the thing they were supposed to unblock never moves
+  is displacing delivery with investigation; the status that names *what shipped*
+  (above) is what surfaces it.
+
 ---
 
 ## Sources

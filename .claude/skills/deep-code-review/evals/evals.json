@@ -1029,6 +1029,17 @@
         "Flags that a tooltip on the disabled element is unreachable (no hover/focus events) -- put the explanation in nearby text or a focusable wrapper/popover",
         "Distinguishes the separate permanent-role case (hidden or replaced with an attainable alternative) from this contextual one"
       ]
+    },
+    {
+      "id": "reconcile-claim-list-against-committed-diff",
+      "prompt": "I delegated a review's fixes to three lanes; each lane reported back 'done' and I compiled the report saying all seven findings are resolved. The owner then asked me to double-check that everything actually landed. I re-read the three lane reports and confirmed each said done -- should I report back that yes, all seven are resolved?",
+      "expected_output": "No -- re-reading the lane reports re-confirms what they claimed, not what landed; a report of 'done' is not the artifact. Reconcile the seven claims against the COMMITTED DIFF: enumerate the seven as a list and join each to the hunk, test, or file that proves it, marking every one present, partial, or absent, and surfacing your own misses, not only confirming hits. Trust the diff over any lane's say-so -- independent verification (a lead's own read of the code) outranks self-report, and a delegate's 'done' is self-report. And this audit should have run BEFORE you closed, unprompted -- an owner asking 'did you actually do all of it?' is a process incident, the signal the completeness check was owed earlier, not a trigger for it; it is cheap because the claim list and the diff are both already in hand. This set-completeness pass (is every claimed fix present at all) precedes per-claim verification (is each backed by a real surface, not a favorable proxy). (method.md.)",
+      "expectations": [
+        "Rejects re-reading the lane reports as reconciliation -- a 'done' report is not the delivered artifact",
+        "Requires enumerating the claim set and joining each claim to the committed diff (hunk/test/file), marking present/partial/absent incl. own misses",
+        "Reconciles against the committed diff, not the delegates' reports of what they did",
+        "Flags that the audit must run unprompted before close; the owner's challenge is the signal it was owed earlier, and it is cheap"
+      ]
     }
   ]
 }
