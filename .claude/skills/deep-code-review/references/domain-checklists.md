@@ -301,13 +301,15 @@ Apply to any pipeline, ETL, enrichment, scraping, or dataset producer. Judge the
   (per-plane, vendored) with no parity guard.
 - **Prioritize debt by team behavior (hotspot).** Rank the maintainability findings above by
   **change-frequency × complexity** from the target's own git history: the debt in the files the
-  team keeps touching costs the most to live with, so lead the report with it. A structurally
-  ugly file with **near-zero churn** stays low; a moderately-complex file rewritten every week is
-  the hotspot to flag first. This is a **ranking lens, not a severity bump** — it reorders which
-  debt leads, never inflates a low-churn smell into a Blocker/High (the severity gate still
+  team keeps touching costs the most to live with. Severity stays the **primary** sort — a
+  low-churn **High** still outranks a high-churn **Medium** (never bury it, principle 6) — and
+  churn is the **tiebreak among findings of equal severity**: a structurally ugly file with
+  **near-zero churn** ranks last in its band, a moderately-complex file rewritten every week
+  leads its band. This is a **ranking lens, not a severity bump** — it never inflates a low-churn
+  smell into a Blocker/High, nor demotes a real finding below its severity (the severity gate
   rules each finding on its own merits). Distinct from Phase-0 blast-radius, which ranks the
   *audit scope* across all domains: this ranks *maintainability debt* by where the team works.
-  Compute churn with the git primitive the method already uses (e.g.
+  Compute churn from the target's own git history (e.g.
   `git log --format= --name-only <range> | sort | uniq -c | sort -rn`); where history is absent
   (shallow clone, fresh import), say so and fall back to complexity alone rather than invent a
   churn number.
