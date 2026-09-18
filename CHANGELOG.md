@@ -3,6 +3,18 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.119.0] — 2026-09-18
+
+Wave 40 of the dogfooding batch: #301 — bind the existing release-age-cooldown guidance with an eval.
+
+### Added — deep-code-review
+- **Eval for the release-age cooldown** (#301). The cooldown guidance already shipped in
+  `dependency-currency-and-upgrades.md` (a 7-day release-age window; Renovate `minimumReleaseAge` /
+  Dependabot / pnpm-npm equivalents; security-advisory updates exempt; the no-cooldown red flag).
+  This wave adds the acceptance eval that binds it: a routine bump auto-merged hours after publish is
+  a finding (missing cooldown, A03 supply-chain), while a security-advisory patch is exempt and
+  fast-tracks. No new guidance — the eval closes the #301 acceptance. One new eval (123 total).
+
 ## [1.118.0] — 2026-09-18
 
 Wave 39 of the dogfooding batch: #300 — measure pipeline flow before adopting a platform or a second methodology.
