@@ -14,7 +14,7 @@ Wave 45 of the dogfooding batch: #276 (cards half) — model/data cards as a tra
   transparency finding, and a card stating an unmeasured metric is the no-fabrication floor in a
   template. Cards named by-name (Model Cards / Datasheets / Data Cards; three ledger rows). One new
   eval (product-output-safety 5 → 6). The NIST AI RMF half of #276 was already covered
-  (product-output-safety:148-150); the ISO 42001 / EU AI Act regime half is **owner-deferred**
+  (the product-output-safety Standards-by-name section, NIST AI RMF entry); the ISO 42001 / EU AI Act regime half is **owner-deferred**
   (amendment-sensitive). The dcr/agentic-delivery/idea-critic trio bumps to 1.124.0 via the
   CHANGELOG coupling — no dcr content change.
 
