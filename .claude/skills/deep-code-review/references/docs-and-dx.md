@@ -97,6 +97,16 @@ survives the *next* contributor — see "Standards imprint" below.
   each absent file surfaces at a different step with an error that reads like a
   code defect. Record which absence causes which failure so each newcomer
   doesn't rediscover it.
+- **An operating-discipline doc for stable environment invariants.** Beyond the
+  missing-prerequisite map, an agent-driven review/delivery otherwise re-derives the
+  same environment facts every cycle — how to render a reviewable / authenticated
+  state, which capture tool actually works, which CI gates are conditional, known
+  renderer-specific flakiness. Record these **stable invariants** once in a durable
+  in-repo doc and read it **before** environment-dependent work; a fact that had to be
+  **rediscovered** is a signal the doc is missing an entry, so filing that entry back
+  is part of closing the task, not optional cleanup. Record only stable invariants —
+  a *derived* status (an open-issue count, "the current version is X") follows **store
+  the query, not the answer** (below), never a hardcoded number.
 - **Single source of truth** for any cross-referenced fact (a doc index, a
   count, a schema/field list) — a pointer can't drift, a duplicate always will.
   Enforce a CI **doc↔code sync check** that fails when a tracked doc, field, or

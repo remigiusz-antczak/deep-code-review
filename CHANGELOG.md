@@ -3,6 +3,15 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.138.0] — 2026-09-18
+
+Wave 59 — verification-honesty deltas from owner-filed #334 / #336 / #340 (the other four of the #334–#340 batch — #335/#337/#338/#339 — were already covered and closed with file:line evidence, not duplicated). Three small, seam-guarded additions:
+- **#334 — a visual receipt must show the feature, not a wall past it** (`testing-and-evals.md` + `product-ux-quality.md` checklist): non-empty is necessary, not sufficient — a login / error / empty page is a valid non-empty image; capture authenticated content via a **dev / identity-bypass render mode**, not a route-auth-walling production build; prefer a deterministic readiness signal over a network-idle heuristic (a hot-reload socket defeats it). Discriminated from reproducing a **build-specific** defect (which uses the production build, `method.md`) so it doesn't contradict that rule.
+- **#336 — a persistent cannot-check is not a finding** (`reliability-error-handling.md`): a gate reaching an external dependency retries a transient error bounded, then on a persistent outage / timeout / retired endpoint **does not block and is not reported as a finding** — fails closed only on an observed problem; never wire a gate to a retired/unversioned endpoint; bound the gate's own runtime. **Exception:** a security / authz / integrity / spend attestation still **fails closed** on a can't-verify (a fail-open there is the bug). Phrased as "does not block / not a finding" (**not** "fails open", which already denotes the reviewer-honesty could-not-check status elsewhere).
+- **#340 — an operating-discipline doc for stable environment invariants** (`docs-and-dx.md`): record how to render a reviewable/authenticated state, which capture tool works, which gates are conditional, known flakiness — once, read before environment-dependent work; a rediscovered invariant is filed back as part of closing the task. Scoped to **stable invariants** (a derived status still follows "store the query, not the answer").
+
+Two evals (dcr 130 → 132). No `SKILL.md` content change (all four references already routed). Trio → 1.138.0. Closes #334, #336, #340.
+
 ## [1.137.0] — 2026-09-18
 
 Wave 58 — two owner-filed product-value axes for `product-ux-quality.md` (domain P), **#332 + #333** (dogfood-derived). The domain-P rules prove a component *renders* correctly; these add the *does it help the user act* half. Two distinct sections (different failure modes, evidence, gates):

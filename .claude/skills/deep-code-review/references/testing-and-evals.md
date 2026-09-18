@@ -75,6 +75,17 @@ explicit third choice), not which one this review prefers.
   a production build can all pass while the served page/endpoint is broken
   (stale, unstyled, misconfigured). Assert against what ships. Corollary: don't
   mutate content-hashed assets a running process is still serving.
+- **A visual receipt must show the feature, not a wall past it.** When the review
+  needs a screenshot of a changed screen, non-empty is **necessary, not sufficient**
+  — an error, login, or empty-state page is a valid non-empty image that proves
+  nothing about the change. Capture authenticated content through a **dev /
+  identity-bypass render mode**, not a production build that auth-walls every route
+  (which screenshots a login page perfectly). Prefer a **deterministic readiness
+  signal** (a specific selector / text is present) over a network-idle heuristic,
+  which a live hot-reload socket keeps busy so the capture waits forever and yields
+  zero images. (Distinct from reproducing a **build-specific** defect, which must use
+  the production build — `method.md`; this is capturing *feature* evidence past an
+  auth gate.)
 - **Meaningful assertions.** Not `assertTrue(true)`; not a mock that makes the
   test pass trivially; not coverage inflated by tests that assert nothing.
 - **Mutation testing when a coverage number is doing the assurance work.**

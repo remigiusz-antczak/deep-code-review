@@ -1393,6 +1393,28 @@
         "The sort key needs a measured distribution; an opaque / near-constant key is ordering-layer false precision (reuses measure-the-distribution-first)",
         "Rules whether the default order serves the user's job (not reverse-chron by default on a decision surface); warn-and-list, never block"
       ]
+    },
+    {
+      "id": "ui-receipt-must-show-the-feature-not-a-login-or-error-wall",
+      "prompt": "A review requires a screenshot of a changed authenticated screen. The CI capture ran against the production build and attached a valid, non-empty PNG -- which shows the app's login page (the production build gates every route behind auth). The evidence gate passed on image-presence. Is that sound?",
+      "expected_output": "No -- a non-empty image is NECESSARY, NOT SUFFICIENT. A login / error / empty-state page is a valid non-empty PNG that proves nothing about the change; the receipt must show the TARGET FEATURE. Capture authenticated content through a dev / identity-bypass render mode, not a production build that auth-walls every route (which screenshots a login page perfectly). And prefer a deterministic readiness signal (a specific selector / text present) over a network-idle heuristic -- a live hot-reload socket keeps the network busy, so the capture waits forever and yields zero images. This is distinct from reproducing a build-specific defect (minification / hydration / CSS-order), which correctly uses the production build (method.md); here the goal is capturing feature evidence past an auth gate. (testing-and-evals.md / product-ux-quality.md.)",
+      "expectations": [
+        "Rejects image-presence as sufficient -- a login / error / empty page is a valid non-empty image that proves nothing; the receipt must show the target feature",
+        "Requires capturing authenticated content via a dev / identity-bypass mode, not a route-auth-walling production build",
+        "Prefers a deterministic readiness signal over a network-idle heuristic (a hot-reload socket defeats network-idle -> zero images)",
+        "Discriminates from reproducing a build-specific defect (which uses the production build, method.md) -- no self-contradiction"
+      ]
+    },
+    {
+      "id": "verification-gate-cannot-check-is-not-a-finding",
+      "prompt": "A merge-preflight gate calls an external service to verify a NON-security quality property (a docs-freshness check); the service is down (persistent 503 after retries). The gate reports a finding and blocks the merge, though it observed no actual defect. Correct? And would the answer change if the gate were a secret / CVE scan?",
+      "expected_output": "For the quality gate: No -- a persistent cannot-check is not a finding. A gate reaching an external dependency retries a TRANSIENT error a bounded number of times, then on a persistent outage (or timeout, or retired endpoint) it DOES NOT block and is NOT reported as a finding -- it fails closed only on a problem it actually observed. Blocking all work on a zero-defect outage is the failure. Also: never point a gate at a retired / unversioned endpoint, and bound the gate's own runtime (a silent hang blocks with no error trail, worse than a clean failure). Keep this gate-blocking behaviour distinct from the reviewer-honesty status -- an unverifiable item is marked could-not-check, never a silent pass. YES, the answer flips for a SECURITY / authz / integrity / spend attestation: a secret / CVE / banned-terms check whose input or dependency is unreachable **fails CLOSED (blocks)** -- a fail-open there is the bug, the missing-input fail-closed rule. (reliability-error-handling.md.)",
+      "expectations": [
+        "For a non-security (quality) gate: a persistent cannot-check does NOT block and is NOT a finding; fails closed only on an observed problem",
+        "Retries a transient error a bounded number of times first; never wires a gate to a retired / unversioned endpoint; bounds the gate's own runtime",
+        "Distinguishes gate-blocking from the reviewer-honesty could-not-check status (not a silent pass)",
+        "The answer FLIPS for a security / authz / integrity / spend attestation: a can't-verify there fails CLOSED (blocks), not open -- fail-open there is the bug"
+      ]
     }
   ]
 }
