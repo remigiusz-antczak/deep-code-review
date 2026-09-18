@@ -257,8 +257,8 @@ design-quality checklist in `references/migration-parity.md` (#124).
   (Pushkarna et al.) — AI transparency artifacts documenting intended use, data provenance,
   subgroup performance, and limitations. Named by name only (papers not fetched this session).
 - **EU AI Act** and **ISO/IEC 42001** (AI-management-system standard) — AI-governance regimes.
-  Named by name only; **date/amendment-sensitive** (the EU AI Act's obligation timeline is revised,
-  e.g. the 2026 Omnibus) — name and route to counsel, never encode a deadline or version.
+  Named by name only; **date/amendment-sensitive** (its obligation timeline has been revised over
+  time) — name and route to counsel, never encode a deadline or version.
 - **ISO/IEC 25010** — software product-quality model (the axes this review
   covers).
 - **The Twelve-Factor App** — config/dependency/deploy hygiene.
