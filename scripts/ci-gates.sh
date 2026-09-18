@@ -424,12 +424,16 @@ cmd_enumeration() {
     #    skills for seven releases, v1.101.0–v1.107.0, before it existed). The stamp
     #    is read as metadata.version — the version: key inside the frontmatter
     #    metadata: block — so neither a body line nor a description block-scalar
-    #    version: can satisfy it. A dir with NEITHER file is an empty dir, not a
-    #    malformed skill; checks 1–5 already fail an unenumerated dir.
+    #    version: can satisfy it. A dir under skills/ with NEITHER file is a
+    #    malformed (half-added or stray) skill dir — a *fully-enumerated* one still
+    #    passes checks 1–5, so check #6 fails it closed here rather than relying on a
+    #    separate CI step (the globbed name-matches-dir job and `routing`).
     has_skill=0; has_ver=0
     if [ -f "$d/SKILL.md" ]; then has_skill=1; fi
     if [ -f "$d/VERSION" ]; then has_ver=1; fi
-    if [ "$has_skill" = 1 ] && [ "$has_ver" = 0 ]; then
+    if [ "$has_skill" = 0 ] && [ "$has_ver" = 0 ]; then
+      printf 'ENUM: %s has neither SKILL.md nor VERSION (fail closed)\n' "$name" >&2; fail=1
+    elif [ "$has_skill" = 1 ] && [ "$has_ver" = 0 ]; then
       printf 'ENUM: %s has a SKILL.md but no VERSION (fail closed)\n' "$name" >&2; fail=1
     elif [ "$has_ver" = 1 ] && [ "$has_skill" = 0 ]; then
       printf 'ENUM: %s has a VERSION but no SKILL.md (fail closed)\n' "$name" >&2; fail=1

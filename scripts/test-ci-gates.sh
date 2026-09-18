@@ -941,6 +941,11 @@ printf -- '---\nname: agentic-ceo\nmetadata:\n  version: "9.9.9"\n---\n| `realsk
   > "$ENUM_FIX/.claude/skills/agentic-ceo/SKILL.md"
 printf '9.9.9\n' > "$ENUM_FIX/.claude/skills/agentic-ceo/VERSION"
 printf '"realskill"\n"agentic-ceo"\n' > "$ENUM_FIX/scripts/recommend-overlays.py"
+# realskill is a well-formed enumerated skill (so ghost's omission is the SOLE defect,
+# not realskill's own file-presence — check #6 now flags a both-missing enumerated dir).
+printf -- '---\nname: realskill\nmetadata:\n  version: "1.0.0"\n---\nbody\n' \
+  > "$ENUM_FIX/.claude/skills/realskill/SKILL.md"
+printf '1.0.0\n' > "$ENUM_FIX/.claude/skills/realskill/VERSION"
 gate "$ROOT/scripts/ci-gates.sh" enumeration "$ENUM_FIX"
 if [ "$GATE_RC" -ne 0 ] && grep -q 'ENUM: ghost' "$WORK/last.log" \
    && ! grep -q 'ENUM: realskill' "$WORK/last.log"; then
@@ -982,6 +987,21 @@ if [ "$GATE_RC" -ne 0 ] && grep -q 'ENUM: realskill SKILL.md frontmatter version
   record 0 "enumeration: fails closed and names a frontmatter/VERSION drift (planted RED)"
 else
   record 1 "enumeration: fails closed and names a frontmatter/VERSION drift (planted RED)"
+fi
+
+# Planted RED for check #6 both-missing: a FULLY-enumerated skill dir (wired through
+# all five lists so checks 1–5 pass) that carries NEITHER SKILL.md nor VERSION must
+# still fail closed and name it — proving the subcommand is self-sufficient, not
+# reliant on a separate CI step. wire_enum_skills creates realskill's dir but writes
+# no SKILL.md/VERSION for it, so realskill is the fully-enumerated hollow dir.
+HOLLOW="$WORK/enum-hollow"
+wire_enum_skills "$HOLLOW"
+gate "$ROOT/scripts/ci-gates.sh" enumeration "$HOLLOW"
+if [ "$GATE_RC" -ne 0 ] && grep -q 'ENUM: realskill has neither SKILL.md nor VERSION' "$WORK/last.log" \
+   && ! grep -q 'ENUM: agentic-ceo' "$WORK/last.log"; then
+  record 0 "enumeration: fails closed and names a fully-enumerated dir missing both files (planted RED)"
+else
+  record 1 "enumeration: fails closed and names a fully-enumerated dir missing both files (planted RED)"
 fi
 
 # Planted RED: a skill with a VERSION and a frontmatter block but NO version:

@@ -3,6 +3,10 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.130.0] — 2026-09-18
+
+Wave 51 — self-audit remediation (gate hardening, from the four-agent audit's A4 Low). `scripts/ci-gates.sh enumeration` check #6 now **fails closed on a skill dir carrying neither `SKILL.md` nor `VERSION`**. A fully-enumerated but empty dir previously passed the subcommand (checks 1–5 pass; check #6's three branches covered skill-only / version-only / both-present, not both-missing) — the CI *suite* still caught it via the globbed name-matches-dir job and `routing`, but the subcommand was not self-sufficient and its comment over-claimed that checks 1–5 covered the case (the recurring over-claim-in-prose class, here about a gate). Added the both-missing branch, corrected the comment to name the real backstop, and added a planted-red self-test (`test-ci-gates.sh` 72 → 73; the pre-existing ghost fixture's `realskill` is now given files so ghost's omission stays the sole defect). Trio (`deep-code-review`, `agentic-delivery`, `idea-critic`) → 1.130.0; no skill-content change.
+
 ## [1.129.0] — 2026-09-18
 
 Wave 50 — self-audit remediation (Perun's own bar on Perun; four independent audit agents found zero Blocker/Critical/High). No change to what a review of a target produces — internal suite cleanup plus one install-time pointer fix. Trio (`deep-code-review`, `agentic-delivery`, `idea-critic`) → 1.129.0; the independent-line overlays touched here bump patch.
