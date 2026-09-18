@@ -3,6 +3,22 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.133.0] — 2026-09-18
+
+Wave 54 — audit-2 remediation (portability + eval coverage), from two focused follow-up audits.
+
+### Portability — install.sh
+Audited against the suite's loudest claim (agent-agnostic install): `install.sh --full --with-codex` lands every skill at all four host roots (`.claude` / `.cursor` / `.agents` / `.codex`), with `references/` — including the vendored `standards-index.md` and `example-review-report.md` — present at **each** root; the claim holds. One fix: the generated `AGENTS.md` **repeated the primary path** ("Primary path: `X` (`X`; also …)") because `LOCATIONS` began with the primary path. It now lists only the **mirror** roots, and omits the parenthetical entirely under `--minimal`. Verified across default / `--full --with-codex` / `--minimal`. (REVIEW.md / `## Code Review Rules` is correctly a Phase-6 review-time imprint, not an install-time write — no change.)
+
+### Eval coverage — four load-bearing rules were untested
+The eval-quality audit found rule-consistency and non-duplication **clean across all 11 skills**; the only defects were four load-bearing rules with zero eval coverage. One eval added to each:
+- **agentic-delivery** (→ 1.133.0): a paid-model-call lane with no per-lane budget is **BLOCKED** (not run unlimited) and **UNPRICED** (not zero) — the G2 spend-cap invariant.
+- **contribution** (→ 1.1.1): a paraphrased confidential fact that **passes the banlist** is surfaced in the residual-risk block for a human — the scrub is necessary, not sufficient.
+- **idea-critic** (→ 1.133.0): an objection resting on a **stale number** is re-verified against current state and a sound proposal reaches PASS_TO_USER — the anti-false-negative axis.
+- **growth-analytics** (→ 1.1.1): AARRR read **bottom-up** — diagnose retention before pouring in acquisition.
+
+Trio → 1.133.0 (dcr `SKILL.md` version-only, no content change); contribution → 1.1.1; growth-analytics → 1.1.1.
+
 ## [1.132.0] — 2026-09-18
 
 Wave 53 — round-3 external research (one net-new gap; the rest of the scan confirmed already-covered). Added a **mutation-testing** lens to domain J (`references/testing-and-evals.md`): the quantified method for the suite's most-repeated testing thesis — coverage measures what *ran*, not whether a test would *catch a fault*. When load-bearing logic leans on a coverage number as its assurance, measure the product suite's fault-detection with a **mutation score**; a **surviving mutant is a finding in the method's own shape** — a `file:line` plus the exact behaviour no test asserts (a High-confidence weak-assertion finding). Names the technique + the CI operator (Stryker's `thresholds.break`; no endorsed threshold number) + representative engines (Stryker JS/TS, PIT JVM, plus per-language equivalents), keeps it **distinct from the gate-planted-defect self-test** (that proves the checker; this scores the shipped tests), and **bounds it to the highest-stakes modules** (a mutation run scales with suite size × mutant count). One new eval (dcr 127 → 128). `docs/standards-index.md` gains pitest.org + stryker-mutator.io (**verified by direct fetch 2026-09-18**). Trio → 1.132.0; `SKILL.md` content unchanged apart from the gate-required version bump (depth lands in the routed reference). (The operator's fail-open default — Stryker's `break` is `null` unless set — is disclosed in the lens so the gate is not mistaken for one that already fails closed.)

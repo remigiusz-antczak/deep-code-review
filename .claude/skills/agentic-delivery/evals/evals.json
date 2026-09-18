@@ -300,6 +300,17 @@
         "Requires the status to name each lane's push/PR/issue URL; no URL = 'running, no output yet'",
         "Derives ETA from the durable-output rate, not the spawn rate"
       ]
+    },
+    {
+      "id": "paid-lane-without-a-budget-is-blocked-and-unpriced",
+      "prompt": "The conductor is about to dispatch a lane that makes paid model calls, but no per-lane token/dollar budget was set at G2. The team says 'just run it, we will watch the cost.' What does the gate require?",
+      "expected_output": "G2's hard condition is that every lane with a paid model call names a per-lane token/dollar budget before G4 -- so a lane with NO budget set is BLOCKED, not run unlimited (a cap that defaults to off is not a cap; 'we will watch the cost' is not a budget). Two co-equal invariants apply and are not substitutes: missing spend cap is BLOCKED, never unlimited (the budget is the bound itself), and missing price is UNPRICED, never reported as zero (label the cost honestly). Block the dispatch until a per-lane budget is set at G2; do not let it run on 'we will watch.' (agentic-delivery SKILL.md G2 + the UNVERIFIED/UNPRICED/BLOCKED rule.)",
+      "expectations": [
+        "A paid-model-call lane with no per-lane budget set is BLOCKED, not run unlimited ('we will watch the cost' is not a budget; a cap defaulting to off is not a cap)",
+        "Missing price is reported UNPRICED, never as zero -- honest cost labeling, distinct from the budget bound",
+        "The budget (the bound) and the UNPRICED label are not substitutes -- both apply",
+        "Blocks the dispatch until a per-lane token/dollar budget is set at G2"
+      ]
     }
   ]
 }

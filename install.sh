@@ -294,15 +294,22 @@ upsert_agents_block() {
 
 if [[ "${WRITE_AGENTS}" -eq 1 ]]; then
   AGENTS="${TARGET_DIR}/AGENTS.md"
-  LOCATIONS=".claude/skills/${REVIEW_NAME}/SKILL.md"
+  LOCATIONS=""
   if [[ "${MINIMAL}" -eq 0 ]]; then
-    LOCATIONS="${LOCATIONS}; also .cursor/skills/ and .agents/skills/"
+    LOCATIONS="also .cursor/skills/ and .agents/skills/"
   fi
   if [[ "${WITH_CODEX}" -eq 1 ]]; then
-    LOCATIONS="${LOCATIONS}; .codex/skills/"
+    LOCATIONS="${LOCATIONS:+${LOCATIONS}; }.codex/skills/"
   fi
   if [[ "${WITH_EXTRA}" -eq 1 ]]; then
-    LOCATIONS="${LOCATIONS}; extra hosts (.gemini .opencode .github .windsurf .hermes .kiro)"
+    LOCATIONS="${LOCATIONS:+${LOCATIONS}; }extra hosts (.gemini .opencode .github .windsurf .hermes .kiro)"
+  fi
+  # Primary path is stated once; the parenthetical lists only the MIRROR roots
+  # (empty under --minimal, so no bare "()" and no path repeated).
+  if [[ -n "${LOCATIONS}" ]]; then
+    PRIMARY_PATH_LINE="Primary path: \`.claude/skills/${REVIEW_NAME}/SKILL.md\` (${LOCATIONS})."
+  else
+    PRIMARY_PATH_LINE="Primary path: \`.claude/skills/${REVIEW_NAME}/SKILL.md\`."
   fi
   REVIEW_BLOCK="$(cat <<EOF
 <!-- deep-code-review:begin -->
@@ -311,7 +318,7 @@ if [[ "${WRITE_AGENTS}" -eq 1 ]]; then
 Installed: **${VERSION}** (@ \`${INSTALL_SHA}\`).
 
 Agent-agnostic deep code-review method (same phases on any coding agent).
-Primary path: \`.claude/skills/${REVIEW_NAME}/SKILL.md\` (${LOCATIONS}).
+${PRIMARY_PATH_LINE}
 Depth lives in that skill \`references/\` directory.
 
 How to run: read \`SKILL.md\`, state scope (\`FULL\` | \`DIFF <base-ref>\` |

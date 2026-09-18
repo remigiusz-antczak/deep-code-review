@@ -45,6 +45,17 @@
         "Classifies the bet as a one-way or two-way door and pre-commits kill/quit/pivot criteria before the bet",
         "Does not fabricate a base rate or probability; an ungroundable number is labeled an assumption"
       ]
+    },
+    {
+      "id": "objection-on-a-stale-number-is-verified-not-blocked-sound-idea-passes",
+      "prompt": "The critic's instinct is to HOLD a proposal because 'that will thrash the DB -- we are already at 90% connections.' But that 90% figure is from earlier in the session and was never re-checked. How should the critic proceed?",
+      "expected_output": "An objection is itself a claim and must survive the skeptic hat too -- do not dissent from a stale or remembered number. Re-check the premise against CURRENT verified state (query the live connection count now); the most common failure is citing a figure from earlier in the session as if it were current. If current state does not support the objection, the objection does not stand -- blocking good work on an out-of-date fact is a false negative dressed as rigor, worse than no critic. When a specific, plausible failure was actually tried and did NOT break the claim, the verdict is PASS_TO_USER with a non-generic strongest_attack_survived that names the sharpest objection tried and why it failed -- automatic disagreement is as performative as automatic agreement. (idea-critic SKILL.md: verify your own objection.)",
+      "expectations": [
+        "Re-checks the objection against CURRENT verified state (the stale 90% figure is re-queried, not trusted)",
+        "Refuses to block on a stale/remembered number -- a false negative dressed as rigor is worse than no critic",
+        "If the tried failure does not break the claim, the verdict is PASS_TO_USER (a sound idea is not held)",
+        "strongest_attack_survived is non-generic -- names the specific objection actually tried and why it failed"
+      ]
     }
   ]
 }

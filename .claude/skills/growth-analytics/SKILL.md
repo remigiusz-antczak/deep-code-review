@@ -15,7 +15,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.1.0"
+  version: "1.1.1"
 ---
 
 # Growth analytics
@@ -159,4 +159,7 @@ product-analytics vs ops-observability identifier seam is described in
 - A day-2 read of a 14-day A/B test is peeking → `UNVERIFIED`, not a win; a
   pre-committed design + primary/guardrail is required
   (`experiment-peeking-is-not-a-win-precommit-or-sequential`).
+- Rising signups with flat weekly-active users is read as a retention/activation
+  leak; the funnel is diagnosed bottom-up (retention before acquisition), not by
+  scaling ad spend (`diagnose-retention-before-pouring-in-acquisition`).
 - `evals/evals.json` plants these cases.

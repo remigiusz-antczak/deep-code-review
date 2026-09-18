@@ -51,6 +51,17 @@
         "Flags that click-through is a secondary metric; the primary + a guardrail must be pre-declared so a secondary win is not cherry-picked",
         "Does not accept the day-2 result as a ship signal; may note CUPED variance reduction as a rigor-preserving way to reach power sooner"
       ]
+    },
+    {
+      "id": "diagnose-retention-before-pouring-in-acquisition",
+      "prompt": "Signups are up 40% after an ad push, but weekly active users are flat, and the team wants to double the ad budget. What does the analysis recommend?",
+      "expected_output": "Read the AARRR funnel BOTTOM-UP: retention before acquisition. Flat WAU under rising signups is a retention/activation leak -- pouring more acquisition spend into a leaky bucket is the classic waste. Diagnose in order: is the core action RETAINED? then ACTIVATED? then acquired? Fix why new users do not come back (or do not reach the aha-moment) before scaling acquisition; doubling the ad budget amplifies the leak, it does not fix it. Route the real cohort/retention figures to the user's analytics; do not fabricate a 'good' retention benchmark. (growth-analytics SKILL.md: read AARRR bottom-up, retention first.)",
+      "expectations": [
+        "Reads the funnel bottom-up -- diagnoses retention (and activation) before acquisition",
+        "Identifies flat WAU + rising signups as a retention/activation leak; more acquisition into a leaky bucket is waste",
+        "Recommends fixing retention before scaling the ad budget (doubling spend amplifies the leak)",
+        "Routes real retention/cohort figures to the user's analytics; fabricates no 'good' threshold"
+      ]
     }
   ]
 }

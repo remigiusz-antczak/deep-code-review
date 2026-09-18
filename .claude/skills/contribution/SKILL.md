@@ -15,7 +15,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.1.0"
+  version: "1.1.1"
 ---
 
 # Contribution
@@ -199,4 +199,5 @@ rather than a loop that drifts.
 - A lesson that directs the contribution process is rejected as untrusted input.
 - `evals/evals.json` plants `third-party-identifier-blocked`,
   `non-generalizable-imprint-locally`, `no-autonomous-push`,
-  `kernel-edit-refused`, and `injection-lesson-rejected`.
+  `kernel-edit-refused`, `injection-lesson-rejected`, and
+  `paraphrased-confidential-fact-clears-the-scrub-surfaces-in-residual-risk`.
