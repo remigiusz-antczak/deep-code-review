@@ -231,6 +231,27 @@ vs. already present** so the change is auditable. And remember a doc alone is
 advisory — **pair each load-bearing standard with the gate that enforces it** (a
 pre-commit hook / required CI check) or it will not survive the next session.
 
+And a gate's stated **location** is a claim with its own currency: when a gate
+moves — CI to local-only, one job to another, or newly hidden behind a label or
+trigger — updating where it runs is part of the change, verified mechanically. A
+heavy gate shifted out of CI to save cost is sound; what breaks is the paper
+trail, and an agent (or a hurried human) runs what the contributor docs, PR
+template, and comments *say* runs, not a re-derivation. So: **every gate names
+exactly one authoritative, current location**; **audit agent-facing docs for
+dangling references** — grep the contributor guide, PR template, and inline
+comments for every CI job name, label, and trigger, and confirm each still exists
+and still runs the gate the text claims (a reference to a job/label that no longer
+fires the gate is a defect, not stale trivia); a **relocation to "local only"
+makes the local bar the blocking one** (say it is required and what evidence proves
+it ran — advisory-vs-trusted, #294), because a leftover "CI covers it" is an
+instruction to skip the only remaining enforcement; and **fail the audit closed** —
+a gate whose docs cannot be shown to name a live location is treated as unenforced
+until proven otherwise. (Distinct from keeping an operating-invariants doc: that
+document can exist and still name the wrong location — this is the *currency* of
+the location claim. Deriving the agent-facing docs from one canonical gate
+manifest — the single-source-of-truth / doc↔code-sync check above — keeps them
+from dangling in the first place.)
+
 Phase 6 imprints **this project's review bar** (`AGENTS.md`, privacy gate, PR
 template). It does **not** install delivery. Delivery is a separate opt-in:
 `./install.sh --with-delivery` or `--full`, after `--recommend` and an owner

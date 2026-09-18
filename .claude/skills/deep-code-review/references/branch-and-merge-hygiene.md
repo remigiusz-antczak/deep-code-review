@@ -357,6 +357,33 @@ is **advisory**, never a passing control:
   the wrong files is worse than none: it reports green over unexamined changes — another reason
   the hook tier is advisory and the forge run is the trusted gate.
 
+### A worktree-relative hook runs its base's copy — land the safe hook everywhere first
+
+Resolving hooks relative to the invoking worktree (the fix above) has a
+second-order failure: each worktree then runs the hook **as checked out at its own
+base**. A worktree cut from an old commit or a long-lived feature base runs *that
+base's* hook — not the one the team now intends — so if an older hook is slow,
+prompts interactively, or hangs on a step the environment no longer satisfies,
+every lane off that base inherits the breakage, misattributes it to "flaky / slow
+tooling," and starts bypassing the whole tier (worse than no tier — everyone still
+believes it runs).
+- **Hook content is fail-safe by default.** The committed hook runs a fast,
+  always-safe core and makes every slow, environment-dependent, or interactive
+  step **opt-in** (an env flag or a marker file), so an old copy can never hang or
+  block a push on a step the environment cannot satisfy. A hook that can hang is a
+  hook that will be bypassed.
+- **Order matters: land the safe hook on every base people branch from *before*
+  normalizing the path.** Because a worktree-relative hook runs the base's copy,
+  the fail-safe hook must already be merged into the default branch *and* every
+  long-lived integration / feature base first; normalizing resolution while old
+  bases still carry the old hook guarantees stale-hook execution.
+- **"Which hook runs here" is base-dependent — verify it.** Confirm the worktree's
+  hook matches the intended version; make hook installation idempotently re-assert
+  the current version rather than trusting inheritance.
+- **A push-blocking step needs an audited, reason-required escape hatch**, so a
+  genuinely stuck lane is never forced into a traceless whole-tier bypass (which
+  disables *every* step, not the one bad step).
+
 ### On a stacked PR, attribute a CI failure to the commit that owns it
 
 A PR stacked on another (B's base is A's branch, not the mainline) contains A's

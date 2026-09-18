@@ -1514,6 +1514,28 @@
         "A flat/near-constant metric can be the honest outcome, not automatically a bug",
         "Refuses to inflate via fuzzy/non-independent matching (fabrication); makes the count provable + gated instead"
       ]
+    },
+    {
+      "id": "a-gate-relocated-out-of-ci-must-name-a-live-location-fail-closed",
+      "prompt": "A repo moved its heavy e2e suite out of CI to a local-only pre-push step to save cost, but the CONTRIBUTING guide and PR template still say 'e2e is covered by the `ci-e2e` job.' An agent reads that and skips the local run. What is the finding and the rule?",
+      "expected_output": "The gate now runs NOWHERE: CI no longer fires it, and the docs told the agent it was covered, so the local step was skipped -- every surface reads green while the regression the gate exists to catch ships. A gate's stated LOCATION is a claim with its own currency. Rule: every gate names exactly one authoritative, current location; audit agent-facing docs (contributor guide, PR template, inline comments) for dangling references -- grep every CI job name/label/trigger and confirm each still exists and still runs the gate the text claims (a reference to a job/label that no longer fires the gate is a defect, not stale trivia); a relocation to local-only makes the local bar the BLOCKING one (say it is required + what evidence proves it ran, advisory-vs-trusted #294) -- a leftover 'CI covers it' is an instruction to skip the only remaining enforcement; and fail the audit CLOSED (a gate whose docs cannot name a live location is unenforced until proven otherwise). (docs-and-dx.md.)",
+      "expectations": [
+        "Identifies the gate now runs NOWHERE (CI moved it; docs said covered so the local run was skipped)",
+        "A gate's LOCATION is a currency claim to verify when it moves",
+        "Audit agent-facing docs for dangling CI job/label/trigger references -- a dead reference is a defect",
+        "Relocation-to-local makes the local bar blocking; fail the audit closed on a gate with no live location"
+      ]
+    },
+    {
+      "id": "worktree-relative-hook-runs-its-base-copy-land-safe-hook-first",
+      "prompt": "After fixing an absolute core.hooksPath so hooks resolve relative to each worktree (#298), lanes cut from old feature bases start hanging on a pre-push hook that runs a step the environment no longer has. Agents begin using `--no-verify`. What went wrong, and what is the rule?",
+      "expected_output": "A worktree-relative hook runs the hook AS CHECKED OUT AT THAT WORKTREE'S BASE -- so a lane cut from an old base runs that base's stale/heavyweight hook, which hangs; the breakage is misattributed to flaky/slow tooling and bypassed (worse than no tier -- everyone still believes it runs). The order was backwards. Rules: (1) hook content is fail-safe by default -- a fast always-safe core, every slow/env-dependent/interactive step opt-in via an env flag or marker file (a hook that can hang will be bypassed); (2) land the safe hook on the default branch AND every long-lived base BEFORE normalizing resolution (normalizing while old bases carry the old hook guarantees stale-hook execution); (3) 'which hook runs here' is base-dependent -- verify the worktree's hook matches the intended version and make install idempotently re-assert it, not trust inheritance; (4) a push-blocking step needs an audited, reason-required escape hatch so a stuck lane never does a traceless whole-tier bypass. (branch-and-merge-hygiene.md; second-order to #298.)",
+      "expectations": [
+        "A worktree-relative hook runs the BASE's copy, so a lane off an old base runs a stale hook",
+        "The ordering trap: land the safe hook on every base BEFORE normalizing resolution",
+        "Hook content fail-safe by default (safe core; slow/interactive steps opt-in)",
+        "Verify which hook runs (base-dependent; idempotent re-assert) + an audited escape hatch instead of a whole-tier --no-verify bypass"
+      ]
     }
   ]
 }

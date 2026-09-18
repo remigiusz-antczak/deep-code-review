@@ -3,6 +3,14 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.146.0] — 2026-09-18
+
+Wave 67 — a delivery-CI hygiene batch from owner-filed **#346** and **#349**.
+- **#346 (`docs-and-dx.md`) — a gate's stated *location* is a claim with its own currency.** When a gate moves (CI → local-only, one job to another, behind a label/trigger), an agent runs what the docs / PR template / comments *say* runs. Audit agent-facing docs for dangling CI job/label/trigger references (a dead reference is a defect); a relocation to local-only makes the local bar the blocking one; **fail the audit closed** — a gate whose docs can't name a live location is unenforced until proven otherwise. Else the gate runs *nowhere* while every surface reads green.
+- **#349 (`branch-and-merge-hygiene.md`) — a worktree-relative hook runs its base's copy; land the safe hook everywhere first.** Second-order to #298: once hooks resolve per-worktree, a lane cut from an old base runs *that base's* (stale / heavyweight) hook and hangs → gets bypassed. Rules: hook content fail-safe by default (safe core, slow/interactive steps opt-in); land the safe hook on every long-lived base *before* normalizing resolution; verify which hook runs (base-dependent, idempotent re-assert); an audited escape hatch instead of a whole-tier `--no-verify`.
+
+Two evals (deep-code-review 141 → 143). Trio → 1.146.0. Closes #346, #349.
+
 ## [1.145.0] — 2026-09-18
 
 Wave 66 — verify-the-premise before acting, two additions to `method.md`'s presence/absence section (extending #250), from owner-filed **#353** and **#363**.
