@@ -3,6 +3,20 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.121.0] — 2026-09-18
+
+Wave 42 of the dogfooding batch: #278 — data contracts + the train/serve seam.
+
+### Added — deep-code-review
+- **`data-quality.md` §12 — data contracts & the train/serve seam** (#278). A data contract is the
+  declared, versioned producer-to-consumer agreement covering schema + quality/SLA + **semantics/
+  units** + owner (the data-plane sibling of `api-contracts.md`'s consumer-driven contract —
+  cross-linked, not restated); a producer semantic change that breaks a declared consumer is a
+  breaking change even when the row still parses (cents -> dollars passes every type check). Plus
+  training/serving skew: one shared feature definition + a point-in-time / as-of join so a feature
+  never uses data unavailable at prediction time. Tools named by-name (Great Expectations / dbt); no
+  spec or version pinned. One new eval (124 total) + red flags.
+
 ## [1.120.0] — 2026-09-18
 
 Wave 41 of the dogfooding batch: #282 — experiment rigor + product-led growth in `growth-analytics` (an independent-line overlay; the dcr/agentic-delivery/idea-critic trio bumps to 1.120.0 with the CHANGELOG per the lockstep coupling, no dcr content change).

@@ -314,6 +314,26 @@ rate), validity (schema/format/range). For each:
   keep the probe **re-runnable**: a finding of *too stale to use* outvalues a
   polished pipeline built on a stale signal.
 
+## 12. Data contracts & the train/serve seam
+
+- **A data contract is a declared, versioned agreement** between a data **producer** and its
+  **consumers** — the schema, the quality/SLA guarantees (freshness, null-rate, distribution
+  bounds), the **semantics** (what each field means and its unit), and an **owner**. It is the
+  data-plane sibling of the API/message contract in `api-contracts.md` (consumer-driven contract);
+  don't restate that — a data contract adds **quality/SLA + semantic meaning**, not just shape. A
+  producer schema/semantic change that breaks a **declared** consumer expectation is a finding
+  *even when the row still parses* — a currency silently switched from cents to dollars passes
+  every type check. Look for the contract expressed **as code** (a schema-plus-expectations
+  fixture, e.g. Great Expectations or dbt tests) so a breach fails CI, not a downstream dashboard.
+- **Training/serving skew.** When an ML feature is computed one way for **training** (batch, full
+  history, post-hoc) and another for **serving** (online, partial, real-time), the model meets a
+  different distribution in production than it trained on and degrades **silently, with no error**.
+  The fix is a **single feature definition** both paths derive from (one shared transform or a
+  feature store), and a **point-in-time / as-of** join in training so a feature never uses data
+  that would not have been available at prediction time (label leakage's cousin). Flag a feature
+  transformed in two places, a training join with no as-of bound, or no monitoring of the
+  train-vs-serve feature distribution.
+
 ---
 
 **🚩 red flags**: unconditional `UPDATE`/upsert that ignores existing
@@ -335,4 +355,7 @@ flag or no recoverable derivation; a time/activity score that reads an unobserve
 window as a decline; a non-monotone recency curve; a boolean parser that recognises
 only `"true"`, or an exclusion gate defaulting an unrecognised value to `false`; a
 substring `includes`/`indexOf` driving a categorical status / suppression decision;
-an external-source feasibility sign-off with no max-timestamp freshness check.
+an external-source feasibility sign-off with no max-timestamp freshness check; a
+producer schema/semantic change with no declared consumer data contract (breaks a
+consumer even though the row still parses); an ML feature transformed differently
+for training vs serving, or a training join with no as-of/point-in-time bound.
