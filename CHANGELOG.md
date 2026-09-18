@@ -3,6 +3,20 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.127.0] — 2026-09-18
+
+Wave 48 of the dogfooding batch: #281 — pricing-strategy methods in `business-ops` Lane A (an independent-line overlay; the dcr/agentic-delivery/idea-critic trio bumps to 1.127.0 via the CHANGELOG coupling, no dcr content change).
+
+### Added — business-ops (→ 1.2.0)
+- **Pricing-strategy methods** (#281). Lane A now names the pricing-method space beyond value/
+  cost-plus/competitor: the **Van Westendorp** price-sensitivity survey (structured for the user to
+  run; read the band back from their results) and **usage-based / outcome-based / per-seat /
+  good-better-best** packaging (tied to the user's value metric; usage/outcome fit AI cost-scaling)
+  — applied to the user's willingness-to-pay, never setting the price, never fabricating a survey or
+  market number. Methods named by-name. One new eval (business-ops 5 → 6). **OKRs (in the issue
+  title) were not added** — goal-setting is outside business-ops's money/compliance two-lane scope;
+  noted on #281.
+
 ## [1.126.0] — 2026-09-18
 
 Wave 47 of the dogfooding batch: #276 (regime half) — name-and-route the AI-governance regimes in `product-output-safety` (independent-line overlay; the dcr/agentic-delivery/idea-critic trio bumps to 1.126.0 via the CHANGELOG coupling, no dcr content change). Completes #276.

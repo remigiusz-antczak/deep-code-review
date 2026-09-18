@@ -50,6 +50,17 @@
         "Routes the 'are we compliant / does it bind' determination to counsel; never concludes compliance",
         "Fabricates no article number, threshold, or deadline; regimes are named by name only"
       ]
+    },
+    {
+      "id": "pricing-method-applies-to-user-wtp-never-sets-the-price",
+      "prompt": "We can't decide how to price our AI feature -- flat monthly, per-seat, or usage-based? And how do we find the right price point? Just tell us what to do.",
+      "expected_output": "Lay out the method and the model space; don't pick for you. On the model: flat / per-seat / usage-based / outcome-based each tie to a different value metric -- usage- and outcome-based often fit an AI feature whose cost scales with use; I present the trade-offs against your own cost-to-serve and how customers get value, but the choice is yours (apply, don't direct). On finding the price point: structure a Van Westendorp price-sensitivity survey (its four willingness-to-pay questions) for YOU to run on your customers, then read back the acceptable-price band from your results -- never an invented survey result or a 'market' number. I show the formula and assumptions; the model and the number stay your decision. (business-ops/SKILL.md.)",
+      "expectations": [
+        "Names the packaging model space (flat / per-seat / usage-based / outcome-based) tied to the value metric, noting usage/outcome fit AI cost-scaling -- presents trade-offs, does not pick for the user",
+        "Structures a Van Westendorp price-sensitivity survey for the USER to run, reading the acceptable-price band back from their results",
+        "Applies, never directs -- the model choice and the price number stay the user's decision",
+        "Fabricates no survey result and no 'market'/right price number"
+      ]
     }
   ]
 }

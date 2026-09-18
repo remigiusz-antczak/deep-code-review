@@ -14,7 +14,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.1.1"
+  version: "1.2.0"
 ---
 
 # Business ops
@@ -62,6 +62,14 @@ contribution margin, burn, runway, break-even.
 - **Never fabricate the inputs.** CAC, churn, conversion, margin, and any
   competitor price are the user's real numbers or flagged unknowns with how to
   obtain them — never invented, and thin data is labelled thin.
+- **Name the pricing *method*; apply it to the user's willingness-to-pay — never set the price.**
+  Beyond the value/cost-plus/competitor structure above, the method space is the user's to pick and
+  populate: a **Van Westendorp** price-sensitivity survey (the user runs it; you structure the four
+  questions and read back the acceptable-price band), and the packaging model — **usage-based,
+  outcome-based, per-seat, or good-better-best tiers** (tie it to the user's value metric;
+  usage- and outcome-based increasingly fit AI products whose cost scales with use). Lay out the
+  options and their trade-offs on the user's own data; the model choice and the number stay the
+  user's (apply-don't-direct, above). Never fabricate a survey result or a "market" price.
 
 ## Lane R — regulation-dependent (route, never conclude)
 
@@ -123,7 +131,9 @@ For privacy-by-design specifics, see `deep-code-review`'s `privacy-compliance.md
 
 ## Standards (by name; verify a figure/URL before citing one)
 Unit economics (LTV, CAC, LTV:CAC, payback, contribution margin); value-based,
-cost-plus, and competitor-anchored pricing; runway / burn / break-even analysis; the securities-offering
+cost-plus, and competitor-anchored pricing; the Van Westendorp price-sensitivity
+meter and usage-based / outcome-based / good-better-best packaging models;
+runway / burn / break-even analysis; the securities-offering
 boundary (equity/SAFE fundraising); worker-classification tests; the GDPR/CCPA
 obligation triage (routed, not concluded). Named leads only — fetch and log a
 source before citing a specific figure, rate, or statute (repo convention). Output
@@ -142,4 +152,7 @@ structure follows `communication-structure`.
   engineering-obligation leads, then routes the binding applies/compliant question to counsel,
   never concluding a regime binds or the product is compliant
   (`design-time-regulated-domain-triage`).
+- A "what should we charge / which pricing model" ask names the method + model space (Van Westendorp,
+  usage/outcome/good-better-best) applied to the user's WTP, never setting the price or fabricating a
+  survey/market number (`pricing-method-applies-to-user-wtp-never-sets-the-price`).
 - `evals/evals.json` plants these cases.
