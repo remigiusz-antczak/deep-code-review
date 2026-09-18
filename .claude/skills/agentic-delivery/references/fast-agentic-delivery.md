@@ -562,6 +562,49 @@ never touch that artifact are safe to run in parallel, and pausing them idles ca
 a conflict that cannot occur. Gate a lane on whether **its own** surface overlaps an
 in-flight write, not on whether **any** shared write is open.
 
+## An open tracker issue is not proof the fix is absent — auto-close is default-branch-only
+
+An issue's **OPEN** state is not evidence its fix is missing from the tree.
+Native auto-close fires narrowly: GitHub closes a linked issue only "when you
+merge a linked pull request into the **default branch**," and the `Closes #N` /
+`Fixes #N` / `Resolves #N` keywords are "interpreted only when the pull request
+targets the repository's default branch." A fleet that merges day-to-day into a
+long-lived integration branch (`develop`, `release/*`) running ahead of the
+default branch therefore accumulates issues that are **done in the tree, open in
+the tracker** — the `Closes #N` was present and correct, but the branch it merged
+into left it inert. Once "open" no longer means "not done," the queue stops being
+a source of truth: agents re-pick shipped work and a coordinator's "what is left?"
+count is wrong.
+
+Reading "open" as "not done" opens a lane to redo finished work — the
+duplicate-work failure one level up from re-searching for code already present
+(*An ownership map blocks a dual write*, above). **Before opening a fix lane for a
+tracked issue:**
+- **Grep the branch you would actually base the fix on** — the integration
+  branch, not just the default branch or the issue's state — for the fix's
+  landmark: the changed symbol, the line, or the regression test that guards it
+  (the grep-the-tree-not-the-claim check `deep-code-review`
+  `branch-and-merge-hygiene.md` applies to "B included A", here run pre-laning).
+- **Know the forge's auto-close scope** (`Closes #N` = default branch only) and
+  cross-reference the integration branch's commit log and its merged PRs.
+- **If the fix is already on the integration branch, stop.** Report "already
+  delivered" with `file:line` + the commit SHA, and note it is on the integration
+  branch but not yet on the default branch — so the open issue is *expected*, not
+  a to-do. Do **not** re-lane. Do **not** hand-close it either — "done" means
+  merged to the default branch. And do **not** assume promotion will close it: the
+  original `Closes #N` was inert (it did not target the default branch), and a
+  plain integration→default promotion PR carries no per-issue keyword, so nothing
+  auto-closes on convergence — the issue closes only when a keyword-linked PR
+  reaches the default branch, or via the supplied close step below. A wrong
+  hand-close is silent tracker data-loss: skip rather than guess.
+
+A team that merges off-default and wants a truthful queue must **supply** the
+close step native auto-close will not: a scoped automation that, on a PR *merged*
+into the staging branch, closes only the issues that PR *explicitly* linked with
+the keyword syntax — never a name / branch / title heuristic (a wrong auto-close
+is silent tracker data-loss), least-privilege issue-write, idempotent. Building
+that automation is project tooling and owner-gated; naming the discipline is not.
+
 ## An ETA on a fan-out states its parallelism assumption — a serial estimate on parallel lanes is a fabrication
 
 An estimated completion time for a multi-lane plan is meaningless without the
@@ -676,7 +719,7 @@ status is "researched, 0 items tracked," never "done."
 
 ## Sources
 
-Fetched fresh for this file, verified 2026-09-09:
+Fetched fresh for this file (entries 1–5 verified 2026-09-09; entry 6, 2026-09-18):
 
 1. Kanban University, *Kanban Guide*. A WIP limit's purpose, verbatim:
    "balance utilization and still ensure the flow of work"; "limiting the
@@ -705,6 +748,12 @@ Fetched fresh for this file, verified 2026-09-09:
    TASK_RUNNING average of 0.1" — the basis for "don't gate on `load1`
    alone" above.
    https://www.brendangregg.com/blog/2017-08-08/linux-load-averages.html
+6. GitHub Docs, *Linking a pull request to an issue*. Auto-close is
+   default-branch-scoped: "When you merge a linked pull request into the
+   **default branch** of a repository, its linked issue is automatically
+   closed"; the `Closes` / `Fixes` / `Resolves #N` keywords are "interpreted
+   only when the pull request targets the repository's default branch."
+   https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/linking-a-pull-request-to-an-issue
 
 ## Cross-references
 
@@ -721,5 +770,8 @@ Fetched fresh for this file, verified 2026-09-09:
 - `deep-code-review`'s `release-engineering.md` — the review-time audit of a
   *target's* release pipeline (feature flags, canary, DORA); this file is the
   authoring-time counterpart for the project's own fleet, not a target's.
-- `docs/standards-index.md` — fetch dates and full citations for the five
+- `deep-code-review`'s `branch-and-merge-hygiene.md` — the grep-the-tree-not-the-
+  claim check ("B included A") that the verify-first-before-laning section reuses
+  pre-laning, and the evidence-before-a-destructive-close discipline.
+- `docs/standards-index.md` — fetch dates and full citations for the six
   sources above.

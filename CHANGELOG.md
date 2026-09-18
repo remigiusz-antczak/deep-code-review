@@ -3,6 +3,15 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.141.0] — 2026-09-18
+
+Wave 62 — verify-first before laning a tracked issue, from owner-filed **#352** (and the doctrine half of **#347**). An issue's OPEN state is not proof its fix is absent: GitHub auto-closes a linked issue only "when you merge a linked pull request into the default branch," and `Closes` / `Fixes` / `Resolves #N` are "interpreted only when the pull request targets the repository's default branch" (verified against GitHub Docs this session). A fleet that merges day-to-day into a long-lived integration branch therefore leaves issues **done in the tree, open in the tracker** — and an agent reading "open" as "not done" re-lanes finished work.
+- **New subsection in `fast-agentic-delivery.md`** (the duplicate-work home): before opening a fix lane for a tracked issue, grep the *integration* branch you would base on for the fix's landmark; know the forge's auto-close scope; if already delivered, stop and report "already delivered" with `file:line` + the commit SHA, don't re-lane, and don't hand-close ("done" = merged to the default branch).
+- **#347's automation half is routed, not built.** A team merging off-default must *supply* a scoped close-on-staging-merge automation (explicit `Closes #N` only, never a heuristic; least-privilege; idempotent) — that is project tooling, owner-gated, out of this prose skill's charter.
+- **Provenance.** GitHub linked-PR doc added to the file's own Sources **and** `docs/standards-index.md` (fetched 2026-09-18).
+
+One eval (agentic-delivery 31 → 32). Trio → 1.141.0. Closes #352; #347's doctrine landed here, its automation stays open as an owner-gated tooling item.
+
 ## [1.140.0] — 2026-09-18
 
 Wave 61 — name the exploited-in-the-wild instruments for the "known-exploited" severity gate, from research issue **#357**. `dependency-currency-and-upgrades.md`'s severity discipline gated on "Known-exploited (or high-CVSS)" but named **no source** for "known-exploited" — a gap the skill's own principle 2 (prefer the canonical instrument) exposes.

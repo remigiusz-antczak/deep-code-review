@@ -322,6 +322,17 @@
         "Ties it to the gates: chosen at G3 Design (recorded in the ADR), verified by deep-code-review domain P at G6",
         "Notes the playbook points to product-ux-quality.md for the shared review axes rather than restating them (no duplication)"
       ]
+    },
+    {
+      "id": "open-tracker-issue-is-not-proof-the-fix-is-absent",
+      "prompt": "An agent fleet merges day-to-day into a long-lived `development` branch and promotes to `main` (the default branch) weekly. The conductor sees issue #500 still OPEN and is about to spawn a lane to implement its fix. The issue has a merged PR whose body said 'Closes #500.' What should happen before laning?",
+      "expected_output": "Do not treat OPEN as proof the fix is absent. GitHub auto-close is default-branch-only -- a linked issue closes only when a linked PR merges into the default branch, and the Closes/Fixes/Resolves #N keywords are interpreted only when the PR targets the default branch. A fleet merging into `development` therefore leaves issues 'done in the tree, open in the tracker.' Before laning: (1) grep the branch you would actually base the fix on -- the integration branch (`development`), not the issue state -- for the fix's landmark (the changed symbol, line, or the regression test that guards it); (2) cross-reference the integration branch's commit log and the merged PR. If the fix is already on `development`: STOP, report 'already delivered' with file:line + the commit SHA, note it is on the integration branch but not yet on the default branch (so the open issue is expected -- it does NOT auto-close on convergence: the Closes #N was inert because it did not target the default branch, and the promotion PR carries no per-issue keyword, so it closes only via a keyword-linked PR to the default branch or a supplied automation), do NOT re-lane, and do NOT hand-close it ('done' means merged to the default branch). This is the duplicate-work failure one level up from re-searching for code already present. (fast-agentic-delivery.md.)",
+      "expectations": [
+        "Recognizes OPEN is not proof the fix is absent -- GitHub auto-close (Closes #N) fires only on the default branch, so an off-default merge leaves the issue open",
+        "Before laning, greps the actual integration/base branch for the fix's landmark (symbol/line/regression test), not just the issue state",
+        "If already delivered on the integration branch: stop and report 'already delivered' with file:line + commit SHA; do not re-lane",
+        "Does NOT hand-close the issue -- 'done' means merged to the default branch"
+      ]
     }
   ]
 }
