@@ -1536,6 +1536,17 @@
         "Hook content fail-safe by default (safe core; slow/interactive steps opt-in)",
         "Verify which hook runs (base-dependent; idempotent re-assert) + an audited escape hatch instead of a whole-tier --no-verify bypass"
       ]
+    },
+    {
+      "id": "data-provider-owes-the-consumers-scoring-inputs-not-raw-output",
+      "prompt": "You are reviewing a product whose job is to feed another system's scoring engine. It exposes an API that emits discrete raw events, delivered via a hand-run JSON export, with no per-field documentation of what it authoritatively provides. Its spec credits it with a '~50,000 companies in category X' input the scoring engine will weight. Domain I says the API's shape is fine. What does the provider-contract lens add?",
+      "expected_output": "Domain I checks the API's own shape; the provider SEAM (data-quality.md §12) checks four things shape-only misses: (1) it emits RAW EVENTS but the consumer scores on INPUTS -- it should emit windowed aggregates + velocity keyed on the consumer's canonical ids (with provenance + license/tier), not discrete triggers the consumer must re-aggregate (a join it does not want to own); (2) delivery is a static/manual dump, not a LIVE channel + cadence (a table/feed read on a schedule); (3) no per-field source-of-truth map (authoritative / partial / never) -- the consumer will wire fields the provider never ships and expect data it does not own; (4) the claimed '~50,000 in category X' input must be RECONCILED against the provider's live artifact (count AND classification) before it drives the score -- a pre-reclassification blend can be off ~100x. Pair with a gate: diff the consumer's declared provider-inputs against the provider's actual current output; a mismatch blocks sign-off. (data-quality.md §12.)",
+      "expectations": [
+        "Emits raw events but the consumer needs scoring INPUTS -- windowed aggregates + velocity keyed on the consumer's canonical ids",
+        "Static/manual delivery vs a live channel + cadence (feed/table read on schedule)",
+        "No per-field source-of-truth map (authoritative / partial / never), so the consumer wires the wrong fields",
+        "Reconcile every claimed provider-input (count + classification) against the live artifact before it drives a score, plus a diff-gate"
+      ]
     }
   ]
 }

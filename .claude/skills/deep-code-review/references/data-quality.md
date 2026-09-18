@@ -349,6 +349,25 @@ rate), validity (schema/format/range). For each:
   *even when the row still parses* — a currency silently switched from cents to dollars passes
   every type check. Look for the contract expressed **as code** (a schema-plus-expectations
   fixture, e.g. Great Expectations or dbt tests) so a breach fails CI, not a downstream dashboard.
+- **A provider that feeds another system's scoring / automation owes the consumer's
+  *inputs*, not its own raw output.** When the product's job is to be a data provider
+  (its output is another system's scoring or automation input), the contract seam has
+  four failure modes no shape-only check catches: (1) it **emits raw events when the
+  consumer needs scoring inputs** — the consumer's rubric wants windowed aggregates and
+  velocity ("≥2 events in 90d," a top-decile proxy), keyed on the **consumer's canonical
+  ids** and carrying provenance + license/tier, not discrete triggers the consumer must
+  re-aggregate (a join it does not want to own); (2) **static / manual delivery** (a
+  hand-run dump) where the consumer needs a **live channel + cadence** (a table/feed read
+  on a schedule); (3) **no per-field source-of-truth declaration** (authoritative /
+  partial / never) — so the consumer wires fields the provider never ships and expects
+  data it does not own; (4) **a claimed input stale or misclassified vs the provider's
+  live artifact** — reconcile **every** claimed provider-input (count *and*
+  classification) against the provider's current output **before it drives a downstream
+  score/decision** (a pre-reclassification blend that inflated a category ~100× can
+  silently drive a network-wide score). Pair with a gate: diff the consumer's declared
+  provider-inputs against the provider's actual current output; a mismatch blocks
+  sign-off. (Shape lives in `api-contracts.md` consumer-driven contract; this is the
+  quality / semantics half at the provider seam.)
 - **Training/serving skew.** When an ML feature is computed one way for **training** (batch, full
   history, post-hoc) and another for **serving** (online, partial, real-time), the model meets a
   different distribution in production than it trained on and degrades **silently, with no error**.
@@ -385,4 +404,7 @@ consumer even though the row still parses); an ML feature transformed differentl
 for training vs serving, or a training join with no as-of/point-in-time bound; a
 derived field named for a conclusion it did not measure (a co-occurrence count
 called a "strength"/"relationship" score); a ranking/leaderboard with no
-observed-liveness gate (a missing liveness field ranked as live).
+observed-liveness gate (a missing liveness field ranked as live); a data provider
+that ships raw events where the consumer scores on aggregates, or a claimed
+provider-input never reconciled against the provider's live output before it feeds a
+downstream score.

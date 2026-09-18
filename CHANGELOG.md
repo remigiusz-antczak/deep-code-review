@@ -3,6 +3,18 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.147.0] — 2026-09-19
+
+Wave 68 — a data-provider / integration-contract review lens for `data-quality.md` §12 (domains D + I), from owner-filed **#345**. When a product's job is to *feed another system's scoring / automation*, the contract seam has four failure modes no shape-only (domain I) check catches:
+- **Emits raw events when the consumer needs scoring inputs** — should emit windowed aggregates + velocity keyed on the consumer's canonical ids (with provenance + license/tier), not triggers the consumer must re-aggregate.
+- **Static / manual delivery** where the consumer needs a **live channel + cadence** (a table/feed read on schedule).
+- **No per-field source-of-truth declaration** (authoritative / partial / never) — so the consumer wires fields the provider never ships.
+- **A claimed input stale or misclassified vs the provider's live artifact** — reconcile every claimed provider-input (count + classification) before it drives a downstream score (a pre-reclassification blend can be off ~100×). Gate: diff declared provider-inputs vs the actual current output; a mismatch blocks sign-off.
+
+Shape stays in `api-contracts.md` (consumer-driven contract); this is the quality / semantics half at the provider seam. One eval + a §12 red-flag (deep-code-review 143 → 144). Trio → 1.147.0. Closes #345.
+
+Dogfood reviewer: PASS-WITH-NITS, no must-fix (all four modes verified genuine deltas, not restatements; the "~100×" example is owner-sourced and generic).
+
 ## [1.146.0] — 2026-09-18
 
 Wave 67 — a delivery-CI hygiene batch from owner-filed **#346** and **#349**.
