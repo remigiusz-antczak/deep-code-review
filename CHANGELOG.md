@@ -3,6 +3,15 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.136.0] — 2026-09-18
+
+Wave 57 — `domain-checklists.md` middle-tier de-duplication, **#325 Option A** (owner-selected). The checklist tier restated definitions its per-domain deep files own — the repo's own anti-duplication thesis, violated. Surgically converted the **3 copied definitions/rules the #325 audit surfaced** to a scannable check + a pointer to the canonical deep file (each verified do-no-harm: the full detail was confirmed present in the deep file before the copy was dropped):
+- **Monotonic-quality invariant** (domain D) — near-verbatim from `data-quality.md` (dc even linked while copying); now gist + `data-quality.md` §1 (full invariant + two-part non-regression gate) and §5 (the every-mutation-primitive / discover-write-sites coverage).
+- **CSRF-guard-is-not-authentication** (domain B) — the "why it's bypassable" + the CWE-352-vs-CWE-306 split now point to `security-appsec.md`; the check (CSRF ≠ auth → effectively unauthenticated) stays.
+- **Open-work triage scope + deliverable** (domain S) — a 3rd verbatim copy; the compact-packet scope rule + the triage deliverable now point to `branch-and-merge-hygiene.md`; the domain-S-unique O/S seam stays.
+
+The other two audit pairs (the F and I sections' 🚩 quick-scan lists) were **assessed and kept**: a 🚩 quick-scan IS the checklist's core function (dc:7), the section headers already route to the fuller lists in the deep files, and dropping them would regress the reviewer's scannability — do-no-harm over literal conversion (A1 rated them Nit/acceptable). Trio → 1.136.0.
+
 ## [1.135.0] — 2026-09-18
 
 Wave 56 — link-rot / citation-freshness audit of `docs/standards-index.md` (the "verify before citing" ledger, which `install.sh` vendors into every install's `references/`). Re-fetched every cited URL: content was accurate (**zero drift across ~90 URLs**) but not fully live — **1 dead + 4 moved**, now fixed and each re-verified by direct fetch this session:

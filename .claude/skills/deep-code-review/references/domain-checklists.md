@@ -106,9 +106,9 @@ unwalked domain.
   boundary **and** the confidentiality tier (S0–S3 below) (`git check-ignore`,
   `git ls-files --error-unmatch`, route enumeration + anonymous GET sweep), not
   to the rendering code. And an `Origin`/`Referer`/`Sec-Fetch-Site` check is
-  **CSRF defense, not authentication** — bypassable by any non-browser client and
-  absent on many GET navigations; if it is the only gate on a sensitive/paid/
-  mutating action, that action is effectively unauthenticated.
+  **CSRF defense, not authentication** — if it is the only gate on a sensitive/paid/
+  mutating action, that action is effectively unauthenticated (why it is bypassable,
+  and the CWE-352-vs-CWE-306 split, are in `security-appsec.md`).
 - **Secrets**: nothing sensitive in source, history, comments, logs, error
   strings, or fixtures; env/secret-manager only. A gate that finds a secret
   reports `file:line` — it **never echoes the secret**. User-facing errors expose
@@ -167,18 +167,14 @@ skill**, also walk AST01–AST10 in `references/security-agent-skills.md`.
 ### D. Data integrity & data quality → `references/data-quality.md`
 Apply to any pipeline, ETL, enrichment, scraping, or dataset producer. Judge the
 **output**, not just the code.
-- **Monotonic quality (hard invariant)**: a write/merge may **never** replace a
-  populated, higher-confidence value with an empty, lower, or duplicate one.
-  Upserts **field-merge with preserve-if-absent** — never wholesale-replace.
-  Require a regression test that fails on this exact mode. Non-regression gate:
-  a within-dataset uniqueness check **plus** a populated→worse check against an
-  **explicitly pinned** baseline (never the live artifact).
-- A **degraded/empty/fallback result surfaced by a "latest/max" read is the same
-  monotonic breach** even when no overwrite occurred — tag it (`degraded: true`)
-  and have latest/best queries skip it. A write/erosion guard must intercept
-  **every** mutation primitive (update AND clear AND append AND delete), not just
-  the common one, and the test proving its coverage must **discover** write-sites
-  (grep/AST), never hardcode a list that rots (see `references/data-quality.md`).
+- **Monotonic quality (hard invariant)**: a write/merge never replaces a
+  populated, higher-confidence value with an empty/lower/duplicate one — upserts
+  **field-merge with preserve-if-absent**, and a degraded/fallback surfaced by a
+  **"latest/max" read is the same breach** even when nothing was overwritten. The
+  full invariant and the two-part non-regression gate (within-dataset uniqueness
+  **plus** a populated→worse check against a pinned baseline) live in
+  `references/data-quality.md` §1; the write-erosion guard's every-mutation-primitive
+  coverage + discover-write-sites test are in its §5 — walk it for any data producer.
 - **No fabrication in the data**: skip a field rather than guess; corroboration =
   **two+ independent sources**; `inferred` ≠ `sourced`; omit the unverifiable.
 - **Entity resolution biases false-exclude over false-merge**: stable-id/proof
@@ -517,11 +513,11 @@ export-boundary suppression, and licence-compatibility detail live there.
 
 ### S. Branches, merges & open-work triage → `references/branch-and-merge-hygiene.md`
 Apply on a **FULL / repo-level review**, or whenever the request names branches,
-cleanup, or open work. **N/A by scope on a narrow `DIFF`/`FILE`** — a PR/branch
-reviewed against a base stays a compact packet (don't fetch and triage every
-branch to review a ten-line change) unless branch cleanup was explicitly asked.
-The deliverable is a **triage of all open work**: for every branch, one
-recommendation and the exact command. Distinct from section O, which owns whether
+cleanup, or open work; **N/A by scope on a narrow `DIFF`/`FILE`**. The scope rule
+(a base-reviewed PR/branch stays a compact packet — don't triage every branch to
+review a ten-line change) and the deliverable (a **triage of all open work**: one
+recommendation + the exact command per branch) are owned by
+`references/branch-and-merge-hygiene.md`. Distinct from section O, which owns whether
 branch *protection* is configured — this owns *what open work exists and what to
 do with it*; the one seam ("must this merge go through a PR?") reads O's posture.
 - **Ground the branch set before judging it** — `git fetch --all --prune` first;
