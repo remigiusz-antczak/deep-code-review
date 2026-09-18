@@ -3,6 +3,18 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.126.0] — 2026-09-18
+
+Wave 47 of the dogfooding batch: #276 (regime half) — name-and-route the AI-governance regimes in `product-output-safety` (independent-line overlay; the dcr/agentic-delivery/idea-critic trio bumps to 1.126.0 via the CHANGELOG coupling, no dcr content change). Completes #276.
+
+### Added — product-output-safety (→ 1.3.0)
+- **Name-and-route the AI-governance regimes** (#276, regime half). The hard-boundary and
+  Standards-by-name sections now name the **EU AI Act** and **ISO/IEC 42001** (AI-management-system)
+  alongside NIST AI RMF, and route the binding applies/obligations/deadline question to counsel —
+  **no dates or version numbers** (both regimes revise; the EU AI Act timeline is amendment-sensitive).
+  Names and routes only; asserts no duty. One new eval (product-output-safety 6 → 7). With the cards
+  half (v1.124.0), this completes #276.
+
 ## [1.125.0] — 2026-09-18
 
 Wave 46 of the dogfooding batch: a documentation-sync fix in `business-ops` (an independent-line overlay; the dcr/agentic-delivery/idea-critic trio bumps to 1.125.0 via the CHANGELOG coupling, no dcr content change).

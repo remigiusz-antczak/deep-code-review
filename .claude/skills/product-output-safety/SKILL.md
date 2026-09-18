@@ -17,7 +17,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.2.0"
+  version: "1.3.0"
 ---
 
 # Product output safety
@@ -118,7 +118,11 @@ or the data behind it changes. A one-person team still writes the owner down.
   whether an automated decision is a *regulated* one (consequential decisions,
   minors, health, credit, employment), or what a policy must say is a legal
   determination → **route to counsel**, and let `business-ops` (Lane R) name the
-  regime. Never assert the duty here.
+  regime. Never assert the duty here. The AI-specific regimes to **name** (never
+  assert, never date) include the **EU AI Act** and **ISO/IEC 42001** (AI-management
+  system) alongside the NIST AI RMF above — whether one binds, and any deadline, is
+  counsel's call; these regimes are revised (e.g. amendment cycles), so encode **no
+  dates or version numbers**.
 - **Route the unknowable; never fabricate.** No invented harm metric, incident
   rate, benchmark, or regulatory threshold. `UNVERIFIED` + how to measure beats a
   plausible number.
@@ -161,7 +165,9 @@ NIST AI Risk Management Framework — core functions **Govern, Map, Measure, Man
 AI RMF **Generative AI Profile (AI 600-1)** by name only, no control specifics
 asserted. **Model Cards** (Mitchell et al.), **Datasheets for Datasets** (Gebru et al.),
 **Data Cards** (Pushkarna et al.) — AI transparency artifacts, by name only.
-Human-in-the-loop / human oversight of high-stakes automation. Sherman Kent,
+**EU AI Act** and **ISO/IEC 42001** (AI-management-system standard) — AI-governance
+regimes, **named and routed to counsel only**, no dates or version numbers (both
+revise). Human-in-the-loop / human oversight of high-stakes automation. Sherman Kent,
 *Words of Estimative Probability* (undefined verbal-probability terms are read
 inconsistently across readers; the case for a few consistently-defined estimative
 terms) and the Admiralty Code / NATO reliability × credibility scale (source
@@ -187,4 +193,7 @@ follows `communication-structure`.
 - A shipped AI feature with no model/data card is a transparency finding, and a card
   stating an unmeasured metric is `UNVERIFIED` not a clearance
   (`ai-feature-ships-with-a-model-and-data-card-no-fabricated-clearance`).
+- An "are we covered under <AI regime>?" ask names the regimes (EU AI Act / ISO 42001 / NIST AI
+  RMF) and routes the binding applies/deadline question to counsel, encoding no date
+  (`names-and-routes-ai-governance-regimes-never-dates-or-a-binds-verdict`).
 - `evals/evals.json` plants these cases.
