@@ -253,6 +253,9 @@ design-quality checklist in `references/migration-parity.md` (#124).
   activity, communication, efficiency). Named by name only.
 - **DevEx (developer experience)** — the flow/feedback-loop/cognitive-load framing of developer
   productivity. Named by name only.
+- **Model Cards** (Mitchell et al.), **Datasheets for Datasets** (Gebru et al.), **Data Cards**
+  (Pushkarna et al.) — AI transparency artifacts documenting intended use, data provenance,
+  subgroup performance, and limitations. Named by name only (papers not fetched this session).
 - **ISO/IEC 25010** — software product-quality model (the axes this review
   covers).
 - **The Twelve-Factor App** — config/dependency/deploy hygiene.

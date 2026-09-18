@@ -3,6 +3,21 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.124.0] — 2026-09-18
+
+Wave 45 of the dogfooding batch: #276 (cards half) — model/data cards as a transparency-artifact check in `product-output-safety` (an independent-line overlay; the AI-governance-regime half of #276 stays owner-deferred).
+
+### Added — product-output-safety (→ 1.2.0)
+- **Model / data cards** (#276, cards half). MEASURE gains the transparency artifact: a shipped AI
+  feature carries a **model card** (intended use, subgroup performance, limitations, owner+version)
+  and a **data card / datasheet** (data composition, provenance, consent, gaps); its absence is a
+  transparency finding, and a card stating an unmeasured metric is the no-fabrication floor in a
+  template. Cards named by-name (Model Cards / Datasheets / Data Cards; three ledger rows). One new
+  eval (product-output-safety 5 → 6). The NIST AI RMF half of #276 was already covered
+  (product-output-safety:148-150); the ISO 42001 / EU AI Act regime half is **owner-deferred**
+  (amendment-sensitive). The dcr/agentic-delivery/idea-critic trio bumps to 1.124.0 via the
+  CHANGELOG coupling — no dcr content change.
+
 ## [1.123.0] — 2026-09-18
 
 Wave 44 of the dogfooding batch: #277 — LLM/agent telemetry (OTel GenAI) + honest developer-productivity measurement (SPACE/DevEx).

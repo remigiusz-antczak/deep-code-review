@@ -17,7 +17,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.1.0"
+  version: "1.2.0"
 ---
 
 # Product output safety
@@ -68,6 +68,14 @@ empty inventory is not a pass — it is an unfilled inventory.
 - **Report residual risk; never fabricate a clearance metric.** A bias, accuracy,
   or hallucination rate that was not measured is `UNVERIFIED` — give the eval to
   run and how to read it, never an invented "0% bias" or "99.9% accurate".
+- **Ship the transparency artifact — a model / data card.** The intended use, limitations, and
+  measured results above belong in a durable, versioned artifact a downstream team can read: a
+  **model card** (intended use + out-of-scope uses; measured performance **by subgroup**, not only
+  aggregate; known limitations and failure modes; owner + model version) and, for the training/eval
+  data, a **data card / datasheet** (composition, provenance, consent/licensing, known gaps). A
+  shipped AI feature with **no card** is a transparency finding — the evals may exist but no
+  consumer can see intended use or limits; and a card stating an **unmeasured** metric is the
+  no-fabrication floor above in a nicer template (`UNVERIFIED`, not a filled cell).
 
 ## Manage the residual risk (MANAGE)
 
@@ -130,6 +138,9 @@ higher-stakes actions, the MEASURE and GOVERN layers deepen → then, not before
 - High-stakes / irreversible automated actions have a human-in-the-loop gate.
 - Output harms are measured (evals / red-team) and residual risk is reported;
   nothing is certified "safe" or "unbiased".
+- A shipped AI feature carries a **model / data card** (intended use, data provenance,
+  subgroup performance, limitations, owner); its absence is a transparency finding, and a card
+  never states an unmeasured metric.
 - Any legal disclosure or regulated-decision duty was routed to counsel (regime
   named via `business-ops` Lane R), never asserted here.
 - No fabricated harm metric; unknowns are `UNVERIFIED` with how to measure them.
@@ -148,7 +159,9 @@ higher-stakes actions, the MEASURE and GOVERN layers deepen → then, not before
 NIST AI Risk Management Framework — core functions **Govern, Map, Measure, Manage**
 (function names verified this session; see `docs/standards-index.md`) — and the NIST
 AI RMF **Generative AI Profile (AI 600-1)** by name only, no control specifics
-asserted. Human-in-the-loop / human oversight of high-stakes automation. Sherman Kent,
+asserted. **Model Cards** (Mitchell et al.), **Datasheets for Datasets** (Gebru et al.),
+**Data Cards** (Pushkarna et al.) — AI transparency artifacts, by name only.
+Human-in-the-loop / human oversight of high-stakes automation. Sherman Kent,
 *Words of Estimative Probability* (undefined verbal-probability terms are read
 inconsistently across readers; the case for a few consistently-defined estimative
 terms) and the Admiralty Code / NATO reliability × credibility scale (source
