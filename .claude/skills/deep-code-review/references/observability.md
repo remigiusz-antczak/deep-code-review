@@ -39,6 +39,15 @@ failure paths that *produce* these signals are section F /
   429/402/timeout recorded as "no match" or "score 0" silently corrupts metrics
   and downstream data (`data-quality.md`). Health/readiness endpoints must check
   real dependencies, not `return 200`.
+- **Instrument LLM / agent calls as first-class telemetry, not just the host service.** An LLM or
+  agent feature shipped with only service-level latency/error signals is under-instrumented:
+  capture per-call **token usage** (prompt/completion), **latency** and **cost**, the **model +
+  version**, the **outcome** (success / error / refusal / tool-call), and a **trace** spanning the
+  agent's tool calls, so a failing or token-burning agent is visible. The **OpenTelemetry GenAI
+  semantic conventions** (`gen_ai.*`) name these signals — adopt the convention **names** for
+  portability, but that spec is still at *Development* stability, so **pin no version and expect
+  churn**. A silent, un-traced agent that errors or burns tokens with no signal is the finding
+  (cross-ref the spend-and-value lens in `performance-db-cost.md`).
 
 ---
 

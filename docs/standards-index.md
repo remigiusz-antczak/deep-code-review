@@ -246,6 +246,13 @@ design-quality checklist in `references/migration-parity.md` (#124).
   operate loop. Named by name only.
 - **Chaos engineering (Principles of Chaos)** — steady-state hypothesis + blast-radius-limited
   fault injection to verify resilience. Named by name only.
+- **OpenTelemetry GenAI semantic conventions** (`gen_ai.*`) — LLM/agent telemetry attribute names
+  (token usage, model, operation, outcome). **Still at *Development* stability and revised often —
+  cite the convention names by name only; pin no version and no specific attribute list.**
+- **SPACE framework** — multi-dimensional developer productivity (satisfaction, performance,
+  activity, communication, efficiency). Named by name only.
+- **DevEx (developer experience)** — the flow/feedback-loop/cognitive-load framing of developer
+  productivity. Named by name only.
 - **ISO/IEC 25010** — software product-quality model (the axes this review
   covers).
 - **The Twelve-Factor App** — config/dependency/deploy hygiene.

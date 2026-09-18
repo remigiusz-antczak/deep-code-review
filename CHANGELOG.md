@@ -3,6 +3,23 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.123.0] — 2026-09-18
+
+Wave 44 of the dogfooding batch: #277 — LLM/agent telemetry (OTel GenAI) + honest developer-productivity measurement (SPACE/DevEx).
+
+### Added — deep-code-review
+- **LLM/agent telemetry** in `observability.md` — an LLM/agent feature needs first-class per-call
+  signals (token usage, latency, cost, model+version, outcome, a trace), not just service latency/
+  error; the **OpenTelemetry GenAI semantic conventions** (`gen_ai.*`) name them — adopt the names,
+  pin no version (the spec is at *Development* stability). Do not log raw prompts/responses (PII).
+- **Developer-productivity honesty** in `release-engineering.md` (beside DORA) — productivity and
+  experience are multi-dimensional (**SPACE / DevEx**); a single proxy (LoC, PR count) is gameable
+  false precision; route a people-performance judgement to the owner, never assert it from repo
+  activity.
+
+Frameworks named **by-name** (three ledger rows in `docs/standards-index.md`, no URL/version). One
+new eval (126 total).
+
 ## [1.122.0] — 2026-09-18
 
 Wave 43 of the dogfooding batch: #279 — architecture maturity (Well-Architected), cloud cost (FinOps), and resilience (chaos engineering).

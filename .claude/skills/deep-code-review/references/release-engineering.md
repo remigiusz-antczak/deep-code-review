@@ -98,6 +98,14 @@ incident). Do not compute a number from vibes:
   `UNPRICED`/`UNVERIFIED` convention), never a fabricated number, and never a
   silent pass that reads as "fine."
 
+Beyond delivery throughput, **developer productivity and experience are multi-dimensional** — the
+**SPACE** and **DevEx** frames span satisfaction/well-being, performance, activity, communication,
+and efficiency/flow, precisely because any single proxy (lines of code, commit or PR count, story
+points) is gameable and misleads. A review that reduces "productivity" or "velocity" to one number
+is the finding — the same false-precision bar as a composite score that sums heterogeneous
+constructs (`data-quality.md`). Name what a metric can and cannot support, and **route a
+people-performance judgement to the owner** — never assert it from repo activity.
+
 ---
 
 ## Measure the flow before adopting a platform or a second methodology
