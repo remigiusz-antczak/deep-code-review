@@ -261,7 +261,7 @@ the bad day**. Mostly **lenses** over existing skills, not new skills. Ranked:
    rather than ship a standalone skill.
 
 ## Status ledger (2026-09-11)
-- **Suite complete + hardening — main @ 1.48.0, 11 skills.** Shipped: contribution overlay
+- **Suite complete + hardening — main @ 1.48.0 as of this snapshot (current release: see `.claude/skills/deep-code-review/VERSION` / `CHANGELOG.md`), 11 skills.** Shipped: contribution overlay
   (1.31.0) · agent-readiness lens (1.32.0) · stage-aware review + going-forward roadmap
   (1.33.0) · contribution hardening (1.34.0; contribution 1.1.0) · infra/docs
   stage-evolution refs (1.35.0) · `product-discovery` (1.36.0, +Non-goals 1.39.0 →

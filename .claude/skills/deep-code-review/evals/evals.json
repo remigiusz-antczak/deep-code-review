@@ -1492,6 +1492,28 @@
         "Pin predicate(x) === (renderSet(x).length > 0) as a test",
         "Both directions and non-vacuous (each branch exercised)"
       ]
+    },
+    {
+      "id": "perceived-absent-capability-that-exists-is-a-delivery-gap",
+      "prompt": "A stakeholder reports 'the dashboard feels static, nothing updates.' You grep and confirm the code DOES implement live updates (a websocket subscription, state wiring, the works). Do you (a) build the live-update feature, (b) close it as 'works on my machine,' or (c) something else?",
+      "expected_output": "(c) -- a third verdict, delivery-gap. The capability is present (confirm at runtime), but the reporter's perception is real evidence: the working code is not reaching the surface they evaluated. Rebuilding ships a second competing implementation (the false-absence failure); dismissing ignores a real user-visible fault. Diagnose why along four axes: build/environment drift (stale bundle, symlinked node_modules, an old deploy -- the surface they saw is not this tree); route/mount mismatch (it renders on a route/flag/persona they never reached); preference/state gating (a default, role, or saved state suppresses it for them); or a runtime/integration fault (reached and mounted, but the live channel never connects, the backend never emits, or an error is swallowed). Deliverable: the reason it did not reach them + the smallest fix to close the gap, not a reimplementation. (method.md, presence/absence; extends #250.)",
+      "expectations": [
+        "Neither rebuild nor dismiss -- names the third verdict delivery-gap",
+        "Treats the reporter's perception as real evidence that the working code isn't reaching their surface",
+        "Diagnoses along build/env drift, route/mount mismatch, preference/state gating, or a runtime/integration fault (live channel never connects / backend never emits / error swallowed)",
+        "Deliverable is the reason + smallest fix, not a reimplementation"
+      ]
+    },
+    {
+      "id": "broken-premise-is-a-claim-to-verify-and-a-flat-metric-can-be-honest",
+      "prompt": "A task says: 'field X is hardcoded to a constant / decorative -- go make it real and get the metric moving.' How do you proceed?",
+      "expected_output": "Treat the premise as an unverified claim, not a fact. Verify first: read the current code and MEASURE the live distribution before writing any fix -- the 'constant' may be an initializer a later pass already overwrites, making the premise stale and the fix a no-op. If the measurement then shows the value genuinely does not move, that can be the honest truth of the corpus, not a defect to engineer away. Before 'making it vary,' ask what moving it would require: if the only lever is fuzzy/approximate matching or counting non-independent sources, inflating the number fabricates it (anti-fabrication applied to an 'improve this metric' task -- an inflated-but-fake number is worse than an honest flat one; empty beats fabricated). The honest deliverable is to make the count provable -- retain the distinct corroborating evidence, add a gate that fails if a count outruns its evidence -- not larger. (method.md, presence/absence; SKILL.md principle 3, No fabrication.)",
+      "expectations": [
+        "Treats 'broken/decorative/always N' as a claim to verify -- measures the live distribution + reads the code before fixing",
+        "Catches the stale-premise case (a constant that is only an initializer already overwritten)",
+        "A flat/near-constant metric can be the honest outcome, not automatically a bug",
+        "Refuses to inflate via fuzzy/non-independent matching (fabrication); makes the count provable + gated instead"
+      ]
     }
   ]
 }

@@ -3,6 +3,18 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.145.0] — 2026-09-18
+
+Wave 66 — verify-the-premise before acting, two additions to `method.md`'s presence/absence section (extending #250), from owner-filed **#353** and **#363**.
+- **#353 — a perception-sourced "it's missing" against code that already implements it is a `delivery-gap`, not a build order.** A third verdict beside confirmed-absent and false-absent: when runtime confirms the capability is present but a reporter evaluated the surface as missing, the working code isn't reaching them. Diagnose why (build/env drift, route/mount mismatch, preference/state gating); deliver the reason + the smallest fix, not a reimplementation.
+- **#363 — a "broken / decorative / always N" premise is a claim to verify against live data, and a flat metric can be the honest answer.** Measure the live distribution and read the code before fixing (the "constant" may be an already-overwritten initializer); a near-constant value can be the honest truth of the corpus, and inflating it via fuzzy / non-independent matching fabricates it — make the count provable and gated, not larger (empty beats fabricated).
+
+Also: fixed the stale `docs/roadmap.md` status line ("main @ 1.48.0" → a dated snapshot pointing at `VERSION` / `CHANGELOG`).
+
+Two evals (deep-code-review 139 → 141). Trio → 1.145.0. Closes #353, #363.
+
+Dogfood reviewer: FIX-FIRST → fixed pre-merge. Medium: "empty beats fabricated" was cited as `SKILL.md` principle 4, but that principle is *Do no harm* — anti-fabrication is **principle 3** (corrected in the new prose + the eval; the pre-existing repo-wide mis-numbering cluster is filed separately, not widened into this diff). Also added a 4th delivery-gap diagnostic axis (runtime / integration fault — a reached, mounted control whose live channel never connects / backend never emits / error is swallowed) and made the "third outcome" enumeration scope explicit (unconfirmed-absent is the couldn't-boot branch).
+
 ## [1.144.0] — 2026-09-18
 
 Wave 65 — a UI-state / test-integrity batch from owner-filed **#360 / #361 / #362** (the "green logic test, broken UI" family).

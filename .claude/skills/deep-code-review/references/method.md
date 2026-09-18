@@ -462,6 +462,44 @@ same false gap is re-briefed to the next lane. The verification surface a findin
 (`report-format.md`, *name the procedure*) includes, for an absence, the search space it
 covered.
 
+**A perception-sourced "it's missing" against code that already implements it is a
+`delivery-gap`, not a build order.** When step (b) confirms the capability *is*
+present yet a reporter evaluated the surface as missing — "the product feels
+static," "nothing responds," "there is no empty state," filed against code that
+inspection shows already handles it — the perception is real evidence, and the two
+reflexes are both wrong: **rebuilding** ships a second competing implementation (the
+false-absence failure above); **dismissing** ("works on my machine") ignores a real
+user-visible fault. The finding is a **third verdict — `delivery-gap`**: the working
+code is not reaching the surface the reporter saw. Diagnose *why* along three axes:
+**build / environment drift** (a stale bundle, a symlinked `node_modules`, the
+reporter on an old deploy — the surface they saw is not this tree); **route / mount
+mismatch** (it renders on a route, flag, or persona the reporter never reached);
+**preference / state gating** (gated on a default, role, or saved state that
+suppresses it for them); or a **runtime / integration fault** (reached and mounted,
+but the live channel never connects, the backend never emits, or an error is
+swallowed). The deliverable is the *reason it did not reach them* plus the smallest
+fix to close the gap — not a reimplementation. (Extends #250: the third outcome when
+you *can* confirm the capability at runtime — beside confirmed-absent and
+false-absent; unconfirmed-absent is the couldn't-boot branch above.)
+
+**A "broken / decorative / always N" premise is a claim to verify against live data,
+not a fact to act on — and a flat metric can be the honest answer.** The same
+discipline, one step earlier: a task or stakeholder's "field X is hardcoded /
+decorative — make it real" is an *unverified claim*. Reproduce it first — measure the
+live distribution and read the current code — before writing any fix; the "constant"
+may be an initializer a later pass already overwrites, so the premise is stale and the
+fix a no-op. And when the measurement holds — the value genuinely does **not** move —
+that can be the honest truth of the corpus, not a defect to engineer away. Before
+"making it vary," ask what moving it would *require*: if the only lever is
+fuzzy/approximate matching or counting non-independent sources, inflating the number
+**fabricates** it — the anti-fabrication rule applied to an "improve this metric" task
+(an inflated-but-fake number is worse than an honest flat one; empty beats fabricated,
+`SKILL.md` principle 3, *No fabrication*). The honest deliverable is to make the count **provable** —
+retain the distinct corroborating evidence, add a gate that fails if a count ever
+outruns its evidence — not larger. (The scored / shown cousins live in
+`data-quality.md` scoring discipline and the confidence-tier false-precision rule in
+`product-ux-quality.md`.)
+
 **Anti-slop (drop before the report).** A finding that does not change an
 owner action is not a finding. Drop or demote to Nit/Info:
 - a missing community-health file on a **private** repo with no outside
