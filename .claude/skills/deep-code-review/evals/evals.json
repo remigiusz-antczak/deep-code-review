@@ -1426,6 +1426,28 @@
         "Case 2: a low EPSS or absence from KEV does NOT disarm a reachable-path finding -- KEV/EPSS are inputs that raise and rank, never lower the bar",
         "Names the anti-false-precision reasoning: absence of exploitation evidence is not proof of safety, and EPSS is a probability not a verdict"
       ]
+    },
+    {
+      "id": "name-a-derived-field-for-what-it-measures-not-the-conclusion",
+      "prompt": "A dataset exposes a column `relationship_strength` (0-100) between people. Reading the code, it is computed purely as a normalized count of co-occurrences (shared papers + shared events). A reviewer is asked to sign off on ranking introductions by `relationship_strength`. What is the finding?",
+      "expected_output": "The field NAME is a schema-level overclaim: `relationship_strength` asserts a synthesized 'strength' the data never measured -- it is a co-occurrence count. Name it for what it measures (co-occurrence count / shared-context evidence) and surface the corroborating evidence (co-authored 4 papers; met at 3 events), not a manufactured 0-100 score. Require multiple independent signals before asserting a tie at all -- a lone co-mention or co-attendance is a lead, not a relationship. A relationship is two-sided: verify the edge is not dropped from one endpoint's view; reconcile both directions. And the UI must not render the bare number as fact (confidence-tier false-precision, product-ux-quality.md). (data-quality.md, scoring & config discipline.)",
+      "expectations": [
+        "Flags the field NAME as a schema-level overclaim -- a co-occurrence count is not a measured 'strength'; name it for what it measures",
+        "Surface the corroborating evidence (counts of the actual signals), not a synthesized score",
+        "Require multiple independent signals; a lone co-mention/co-attendance is a lead, not a relationship",
+        "Notes a relationship is two-sided (reconcile both directions) and the UI must not render the bare number as fact"
+      ]
+    },
+    {
+      "id": "ranking-requires-an-observed-liveness-gate",
+      "prompt": "A leaderboard ranks companies by a computed score. The pipeline has no field indicating whether a company is still operating, and the data includes some acquired/defunct entities. The author says liveness data is not available, so they will rank everything and 'filter later.' Sign-off?",
+      "expected_output": "Block it. Any ranking/scoring/leaderboard must gate on an OBSERVED liveness signal; a missing liveness field is a blocker, not a nice-to-have -- ranking without it puts dead or discontinued entities on a live shortlist. Liveness must come from the subject's own recent activity, not from the record merely existing. 'Rank everything, filter later' is fail-open; if the source emits no liveness signal, fail closed -- exclude or flag `unknown`, never rank as live. Distinguish a covered-but-dead entity from an uncovered one (honest-empty, product-ux-quality.md). (data-quality.md, scoring & config discipline.)",
+      "expectations": [
+        "Blocks: a ranking/scoring/leaderboard requires an observed liveness gate; a missing liveness field is a blocker",
+        "Liveness = the subject's own recent activity, not mere record existence",
+        "Fail closed when no liveness signal -- exclude or flag unknown, never 'rank everything, filter later'",
+        "Distinguishes a covered-but-dead entity from an uncovered one (honest-empty)"
+      ]
     }
   ]
 }

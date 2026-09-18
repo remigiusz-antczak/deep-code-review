@@ -3,6 +3,14 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.142.0] — 2026-09-18
+
+Wave 63 — two anti-fabrication data-honesty axes for `data-quality.md` (scoring & config discipline, §7), from owner-filed **#344** and **#355**.
+- **#344 — name a derived field for what it measures, not the conclusion you want.** A column called `relationship_strength` that is really a co-occurrence *count* is a schema-level overclaim; surface the corroborating evidence (co-authored N papers; met at N events), not a manufactured score; require multiple independent signals before asserting a tie (a lone co-mention/co-attendance is a lead, not a relationship); and reconcile a relationship's **two-sided** edge. The UI half is the confidence-tier false-precision rule (`product-ux-quality.md`).
+- **#355 — a ranking / scoring / leaderboard gates on an *observed* liveness signal; a missing liveness field is a blocker.** Ranking without a liveness gate puts dead / discontinued entities on a live shortlist; liveness comes from the subject's own recent activity, not mere record existence; no liveness signal → fail closed (exclude / flag `unknown`), never "rank everything, filter later." The affirmative complement to the exclusion-gate-fails-closed bullet above it.
+
+Two evals (deep-code-review 133 → 135). Trio → 1.142.0. Closes #344, #355.
+
 ## [1.141.0] — 2026-09-18
 
 Wave 62 — verify-first before laning a tracked issue, from owner-filed **#352** (and the doctrine half of **#347**). An issue's OPEN state is not proof its fix is absent: GitHub auto-closes a linked issue only "when you merge a linked pull request into the default branch," and `Closes` / `Fixes` / `Resolves #N` are "interpreted only when the pull request targets the repository's default branch" (verified against GitHub Docs this session). A fleet that merges day-to-day into a long-lived integration branch therefore leaves issues **done in the tree, open in the tracker** — and an agent reading "open" as "not done" re-lanes finished work.

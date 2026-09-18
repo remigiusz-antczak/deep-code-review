@@ -192,6 +192,19 @@ rate), validity (schema/format/range). For each:
   so summing them manufactures false positives and hides which action is warranted.
   Score each construct separately and derive the action from the combination (a
   2×2 / tiering), never from one blended number.
+- **Name a derived field for what it measures, not for the conclusion you want it
+  to support.** A column called `relationship_strength` that is really a
+  co-occurrence *count* (co-authored papers, shared events) is a schema-level
+  overclaim — it asserts a synthesized "strength" the data never measured. Surface
+  the **corroborating evidence** (co-authored 4 papers; met at 3 events), not a
+  manufactured score, and require **multiple independent signals** before asserting
+  a tie at all — a lone co-mention or co-attendance is a lead, not a relationship.
+  A relationship is often **two-sided**: dropping its edge from one endpoint's
+  view erases a real connection, so reconcile the edge from both endpoints (this
+  holds for a directional edge too — record the adjacency at each end). (The UI
+  half — never
+  render a bare synthesized "strength" number as fact — is the confidence-tier
+  false-precision rule in `product-ux-quality.md`.)
 - **Test every enum/config mapping against the source's *real* value
   distribution.** A lookup keyed on the wrong domain — a geography→multiplier map
   keyed on region names while the source emits ISO-3166 alpha-2 codes (plus
@@ -209,6 +222,17 @@ rate), validity (schema/format/range). For each:
   non-empty value as **exclude / unknown**, never a silent `false` — fail closed,
   and test the parser against the values the source actually emits (as with the
   config maps above).
+- **Any ranking, scoring, or leaderboard gates on an *observed* liveness signal;
+  a missing liveness field is a blocker, not a nice-to-have.** Ranking an entity
+  set with no liveness gate puts dead or discontinued entities on a live shortlist
+  — the same failure the exclusion gate above catches at parse time, here as an
+  affirmative *input requirement*. Liveness comes from the subject's **own recent
+  activity** (cf. §4 freshness — from the subject's own newest activity, never your
+  fetch timestamp), not from the record merely existing; if the source emits no
+  liveness signal, that is fail-closed — exclude or flag `unknown`, never rank as
+  live. (A covered-but-dead entity is distinct from an uncovered one — §8
+  observed-low vs unobserved on the data side, and the honest-empty rule in
+  `product-ux-quality.md` on the UI side.)
 - **A suppression / allow-list / status match compares an *exact value set*, never
   a substring.** `status.toLowerCase().includes("pass")` matches "passed term sheet
   to legal" and "compass" as readily as the intended "need to pass", silently
@@ -358,4 +382,7 @@ substring `includes`/`indexOf` driving a categorical status / suppression decisi
 an external-source feasibility sign-off with no max-timestamp freshness check; a
 producer schema/semantic change with no declared consumer data contract (breaks a
 consumer even though the row still parses); an ML feature transformed differently
-for training vs serving, or a training join with no as-of/point-in-time bound.
+for training vs serving, or a training join with no as-of/point-in-time bound; a
+derived field named for a conclusion it did not measure (a co-occurrence count
+called a "strength"/"relationship" score); a ranking/leaderboard with no
+observed-liveness gate (a missing liveness field ranked as live).
