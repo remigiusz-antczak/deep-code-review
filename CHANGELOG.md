@@ -3,6 +3,15 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.144.0] — 2026-09-18
+
+Wave 65 — a UI-state / test-integrity batch from owner-filed **#360 / #361 / #362** (the "green logic test, broken UI" family).
+- **#360 (`product-ux-quality.md`) — a disclosure default derived from async-fetched data silently never fires (mount-capture).** `useState(open)` seeded from a value the hook doesn't re-sync locks in first-paint state; an async signal that lands after mount never applies (unit test green, running UI wrong). Fix: drive the mount default from synchronous data, surface the late signal via a non-reflowing affordance (not force-open), verify in the running app.
+- **#361 (`testing-and-evals.md`) — a state-dependent spec must assert its precondition, not lean on a default.** A browser spec that asserts on expand-only content, or clicks a bulk toggle a redesign removed (`if (count) click` — a no-op), is green only because the default matched; flip the default and it breaks at the slow gate. Drive the state explicitly; prefer an explicit assertion over best-effort click-if-present.
+- **#362 (`testing-and-evals.md`) — pin the equivalence between a should-render / should-expand predicate and the set it gates.** `predicate(x) === (renderSet(x).length > 0)`, both directions and non-vacuous, so a "smart default" can't drift into hiding real content or expanding an empty container.
+
+Three evals (deep-code-review 136 → 139). Trio → 1.144.0. Closes #360, #361, #362.
+
 ## [1.143.0] — 2026-09-18
 
 Wave 64 — a UX / audit-visibility honesty lens for `product-ux-quality.md` (domain P), from owner-filed **#351**. When an action **presented as non-destructive** (resolve / archive / dismiss, backed by a retained `resolved_at` / `archived_at` column) removes the record while giving **no cue that it persists, is reversible, or where it went**, the user cannot tell it from a hard delete — two failures:

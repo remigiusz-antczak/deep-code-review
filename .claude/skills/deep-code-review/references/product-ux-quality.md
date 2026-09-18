@@ -451,6 +451,22 @@ until it renders:
   **pre-hydration render** (a snapshot taken before the client bundle runs,
   `testing-and-evals.md`) confirms it, so where the harness cannot capture one the gate reports
   *could-not-check* and fails **open**.
+- **A disclosure default derived from async-fetched data silently never fires
+  (mount-capture).** An open/collapsed default read once at mount — `useState(open)`
+  seeded from a prop or derived value the hook does **not** re-sync on later change —
+  locks in whatever was available at first paint. When one input to that default is
+  fetched **asynchronously** and lands *after* mount (a count, a flag, a permission),
+  the default silently never applies: the pure decision function's unit test is green,
+  the running UI never opens/collapses as intended. Drive the mount default from data
+  available **synchronously** at first paint (when the deciding signal is async-only,
+  default to the collapsed/closed state at mount — the badge affordance below assumes
+  that polarity); surface a late-arriving signal through a **non-reflowing**
+  affordance (a badge on the collapsed header), never by force-opening after the fetch
+  (which reflows under the reader); keep the async signal in the decision function's
+  *contract* so it is honoured when present at mount (a warm cache) and stays tested.
+  Confirm it **live in the running product** (the live-verification rule above), not
+  only the logic test — same client-state-timing family as the disabled-until-hydrated
+  rule above.
 - **Reviewable change history, and no silent AI edits.** Any surface where an
   edit is itself a decision of record (a value, a target, an assignment, an
   owner) needs a visible who/what/when history behind the current value, not a

@@ -1459,6 +1459,39 @@
         "Fix: in place muted + status label OR a discoverable labelled resolved/archived view; not colour-alone",
         "Carves out conventions (is:open / archive) and soft-delete as out of scope, and is fail-open -- a human adjudicates"
       ]
+    },
+    {
+      "id": "async-derived-disclosure-default-never-fires-mount-capture",
+      "prompt": "A collapsible section's default open/collapsed state is `useState(shouldExpand)` where `shouldExpand` is computed from a count fetched asynchronously that arrives after first paint. The hook does not re-sync when the prop changes. A unit test of the decision function passes. In the running app the section never opens. What is wrong, and how do you fix it?",
+      "expected_output": "Mount-capture: `useState` reads its argument only at mount; the async count lands after mount and the hook never re-syncs, so the computed default silently never applies. The pure decision function's unit test is green while the running UI is wrong. Fix: drive the mount default from data available synchronously at first paint (treat async-only signals as their falsy default at mount); surface the late-arriving signal through a non-reflowing affordance (a badge on the collapsed header), never by force-opening after the fetch (which reflows under the reader); keep the async signal in the decision function's contract so it is honoured when present at mount (a warm cache) and stays tested; verify in the running app, not only the logic test. (product-ux-quality.md.)",
+      "expectations": [
+        "Names mount-capture: useState reads the arg only at mount and does not re-sync, so an async default never applies",
+        "Explains the green-unit-test / broken-running-UI gap",
+        "Fix: synchronous mount default + a non-reflowing late-signal affordance, not force-open-after-fetch",
+        "Verify in the running app, not only the logic test"
+      ]
+    },
+    {
+      "id": "state-dependent-spec-must-assert-its-precondition-not-lean-on-default",
+      "prompt": "A team flips a card's default from expanded to collapsed. Unit tests pass but a browser spec breaks in CI. Investigating, another spec runs `if (await btn.count()) await btn.click()` on an 'Expand all' button a prior redesign removed, and it has been passing. What is the finding?",
+      "expected_output": "The specs lean on an implicit default and pass only by coincidence. Spec 1 asserted on content visible only while expanded, relying on the old default-open, so flipping the default breaks it at the browser tier (not on commit). Spec 2's 'click if present' is a no-op (count is 0 since the button was removed), so it passes only because the default happened to match what it needed -- a latent trap. Fix: make each spec drive the state it needs explicitly (open/collapse the specific control by its own affordance) and prefer an explicit state assertion over a best-effort click-if-present, which silently leaves the precondition unmet once the control is gone. (testing-and-evals.md.)",
+      "expectations": [
+        "Specs pass by coincidence via an implicit default",
+        "A flipped default breaks browser-tier specs, and that break is not caught at the unit tier / on commit",
+        "'click if present' is a no-op latent trap that passes for the wrong reason",
+        "Fix: drive the needed state explicitly + assert state explicitly"
+      ]
+    },
+    {
+      "id": "pin-predicate-equals-renderset-equivalence",
+      "prompt": "A group header shows an 'expand' chevron when `hasContent(group)` is true; a separate function `rows(group)` builds what renders when expanded. They are computed independently. How do you prevent them drifting?",
+      "expected_output": "Independent computation lets the predicate and the render-set drift -- the predicate says 'expand' but the body renders empty, or it collapses a group that in fact has content. Derive both from the same source where possible, and pin the invariant `hasContent(x) === (rows(x).length > 0)` in a test, in both directions and non-vacuously (at least one input exercising each branch), so a later edit to either side cannot silently make them disagree -- the class of bug where a 'smart default' hides real content or expands an empty container. (testing-and-evals.md.)",
+      "expectations": [
+        "Independent predicate + render-set can drift (expand-empty or collapse-nonempty)",
+        "Derive both from the same source where possible",
+        "Pin predicate(x) === (renderSet(x).length > 0) as a test",
+        "Both directions and non-vacuous (each branch exercised)"
+      ]
     }
   ]
 }

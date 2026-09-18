@@ -268,6 +268,29 @@ and their absence is a finding:
    a **named fallback for a retired check, never a substitute** that lets a team trade
    rendered coverage for import checks and call the surface covered.
 
+## A state-dependent spec must assert its precondition, not lean on a default
+
+A browser / E2E spec that depends on an **implicit UI default** passes only by
+coincidence, and the coincidence breaks silently:
+- **A flipped default breaks specs that leaned on the old one — at the browser tier,
+  not on commit.** A spec that asserts on content visible only while a card is
+  *expanded*, or that clicks a bulk "Expand all" a redesign already removed
+  (`if (await btn.count()) await btn.click()` — a no-op when the count is `0`), is
+  green *only because the default happened to match what it needed*. Flip the default
+  and it fails on the slow gate. Make each such spec **drive the state it needs
+  explicitly** (open/collapse the specific control by its own affordance), and prefer
+  an explicit state assertion over a best-effort "click if present" — a control the
+  redesign has since removed silently leaves the precondition unmet.
+- **Pin the equivalence between a "should-render / should-expand" predicate and the
+  set it gates.** When one boolean decides whether to show or expand something and a
+  *separate* path builds what renders inside, independent computation lets them drift —
+  the predicate says "expand" but the body is empty, or it collapses a group that has
+  content. Derive both from the same source where possible, and pin
+  `predicate(x) === (renderSet(x).length > 0)` **in both directions and non-vacuously**
+  (at least one input exercising each branch), so a later edit to either side cannot
+  silently make them disagree — the class of bug where a "smart default" hides real
+  content or expands an empty container.
+
 ## AI evals (for any model-dependent output)
 
 A mocked-LLM unit test verifies **wiring, not model quality.** Model quality
