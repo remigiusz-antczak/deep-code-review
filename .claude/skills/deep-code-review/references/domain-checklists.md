@@ -502,7 +502,7 @@ export-boundary suppression, and licence-compatibility detail live there.
   agent-instance name, or personal workflow when the repo's privacy gate
   forbids it.
 
-### R. Internationalization, encoding & localization
+### R. Internationalization, encoding & localization → depth: `references/i18n-l10n.md`
 - No hardcoded user-facing strings; locale-aware formatting, sort/collation, and
   pluralization; **Unicode normalization (NFC)** at boundaries — a NFC/NFD or
   casing difference silently splits or merges dedup/join keys (cross-ref D);

@@ -3,6 +3,17 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.148.0] — 2026-09-19
+
+Wave 69 — a new **i18n / l10n depth reference** (domain R), from research issue **#390** (coverage cartography — a genuinely new area, no new archetype). Domain R routed only to an 8-line checklist that omitted bidi/RTL; new `references/i18n-l10n.md` carries the standards-heavy depth a checklist can't hold, routed from the R map row + the checklist header:
+- **Encoding & normalization:** UTF-8 declared in-document; normalize before compare / dedup / key — and *after* concatenation, because "None of the Normalization Forms are closed under string concatenation" (UAX #15), so per-fragment NFC can still assemble to un-normalized output.
+- **Bidi / RTL:** declare `dir`; wrap opposite-direction phrases; reject/flag Unicode bidi *override* controls (UAX #9 — "avoided … because of security concerns," UTR #36) — the Trojan-Source class.
+- **Plurals / formatting / collation:** CLDR plural categories (zero/one/two/few/many/other), never `n == 1`; locale-aware number/date/currency formatting; a locale collator, not `.sort()`; text-expansion room.
+
+Sources verified by fetch this session (2026-09-19): W3C i18n, UAX #15, UAX #9 + UTR #36, Unicode CLDR — all added to `docs/standards-index.md`. One eval (deep-code-review 144 → 145). Trio → 1.148.0. Closes #390.
+
+Dogfood reviewer: PASS-WITH-NITS → both fixed pre-merge — scoped the UAX #9 "avoided … because of security concerns" quote to the **overrides** (RLO/LRO) and distinguished them from the *safer* **isolates**; "see UTR #36".
+
 ## [1.147.0] — 2026-09-19
 
 Wave 68 — a data-provider / integration-contract review lens for `data-quality.md` §12 (domains D + I), from owner-filed **#345**. When a product's job is to *feed another system's scoring / automation*, the contract seam has four failure modes no shape-only (domain I) check catches:

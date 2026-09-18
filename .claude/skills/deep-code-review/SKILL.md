@@ -11,7 +11,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.147.0"
+  version: "1.148.0"
 ---
 
 # Deep Code Review
@@ -211,7 +211,7 @@ footguns: `references/language-stack-redflags.md`.
 | O | Docs & DX | `docs-and-dx.md`, `docs-evolution-by-stage.md` (which-docs-when, by stage), `readme-authoring.md` (writing/reviewing a README for onboarding) |
 | P | Frontend / UI / a11y | `frontend-a11y.md`, `product-ux-quality.md`, `migration-parity.md` |
 | Q | Privacy, compliance, licensing | `privacy-compliance.md` (code layer), `privacy-by-design.md` (pre-code product artifacts) |
-| R | i18n, encoding, localization | `domain-checklists.md` |
+| R | i18n, encoding, localization | `domain-checklists.md`, `i18n-l10n.md` (depth: bidi/RTL, Unicode normalization, CLDR plurals) |
 | S | Branches, merges, open-work triage | `branch-and-merge-hygiene.md` |
 | T | Multi-tenancy & isolation | `domain-checklists.md` (when one deployment serves multiple tenants) |
 | W | Workflows, jobs & scheduling | `domain-checklists.md` (when the target runs cron, queues, or multi-step workflows) |

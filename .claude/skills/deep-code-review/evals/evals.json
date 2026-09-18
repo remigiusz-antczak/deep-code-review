@@ -1547,6 +1547,17 @@
         "No per-field source-of-truth map (authoritative / partial / never), so the consumer wires the wrong fields",
         "Reconcile every claimed provider-input (count + classification) against the live artifact before it drives a score, plus a diff-gate"
       ]
+    },
+    {
+      "id": "i18n-unicode-normalization-not-closed-under-concatenation",
+      "prompt": "A pipeline normalizes each translated fragment to NFC, then concatenates the fragments to build a display string that is also used as a dedup key. Cross-locale, some 'identical' entries land as duplicates. Separately, a reviewer notes user-facing counts render via `n === 1 ? 'item' : 'items'`. What are the findings?",
+      "expected_output": "(1) Unicode normalization is NOT closed under string concatenation (UAX #15) -- even if each fragment is NFC, the concatenation X+Y is not guaranteed to be NFC, so the assembled dedup key can differ byte-for-byte between visually-identical entries, producing false duplicates. Fix: normalize at the boundary where the value is compared or stored, AFTER assembly, not per-fragment. (2) `n === 1 ? singular : plural` is wrong outside English-like languages -- Unicode CLDR defines up to six plural categories (zero/one/two/few/many/other) and languages vary in how they pluralize; route through an ICU/CLDR plural API ('other' is the required default), never a hardcoded binary or a count concatenated with a fixed suffix. (i18n-l10n.md.)",
+      "expectations": [
+        "Names UAX #15 concatenation non-closure: per-fragment NFC does not guarantee NFC after concatenation, so the assembled key mismatches -> false duplicates",
+        "Fix: normalize after assembly, at the compare/store boundary (not per-fragment)",
+        "n===1 binary plural is wrong: CLDR categories zero/one/two/few/many/other, route through an ICU/CLDR API ('other' required default)",
+        "Does not treat the author's locale as universal"
+      ]
     }
   ]
 }
