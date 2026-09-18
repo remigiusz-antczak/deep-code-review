@@ -1371,6 +1371,28 @@
         "Names the technique + a CI operator (e.g. Stryker thresholds.break) and representative engines (Stryker/PIT + per-language equivalents) WITHOUT importing a specific threshold number; bounds it to highest-stakes modules because cost scales with suite size x mutant count",
         "Distinguishes it from the gate-planted-defect self-test (checker vs shipped tests)"
       ]
+    },
+    {
+      "id": "ui-unit-needs-a-derived-why-it-matters-not-a-fabricated-score",
+      "prompt": "An activity feed renders each item as a fact + its source (e.g. 'Acme raised a round -- source: press release'), correctly, with all five data states handled. The team says the UI is done. What does the reviewer flag, and how must the fix avoid fabrication?",
+      "expected_output": "The feed passes rendering but fails ACTIONABILITY -- each unit is fact + source with no 'why it matters / what to do next', a wall of verified facts. Flag it (domain P, product-ux-quality.md): a primary information unit on a decision surface should carry a why-it-matters signal DERIVED from real data -- a count ('3rd of its kind this quarter'), a recency-delta ('first activity in 60 days'), a graph-degree ('connects to N entities you follow') -- and, where an action is possible, a concrete next step. Anti-fabrication is the load-bearing constraint: the signal must be derived/deterministic, NEVER a model-authored importance score or an LLM salience judgement (the content-layer cousin of the false precision the confidence-tier rule forbids); and a derived signal that barely varies is not a signal -- measure its distribution first. Also check the most-decision-ready surface is in the first paint and stable, not a post-hydration aria-hidden island. This is a defect to surface, not a mandate to redesign a deliberately-terse product; the heuristic gate warns-and-lists (fail-open) and a human adjudicates. (product-ux-quality.md.)",
+      "expectations": [
+        "Flags the feed as passing rendering but failing actionability -- fact + source with no why-it-matters signal or next step",
+        "Requires a why-it-matters signal DERIVED from real data (count / recency-delta / graph-degree) and a concrete next step where an action is possible",
+        "Hard anti-fabrication: the signal is NEVER a model-authored importance score / LLM salience judgement; a near-constant derived signal is measured first, not shown",
+        "Treats it as a defect-to-surface, not a forced redesign of a deliberately-terse product; the gate is warn-and-list (fail-open), human-adjudicated"
+      ]
+    },
+    {
+      "id": "sort-modes-must-be-self-explaining-and-measurably-distinct",
+      "prompt": "A feed exposes three sort modes over the same data -- 'Newest', 'Top', 'Momentum' -- plus a separate curated home surface. Each mode is individually sound and the default is not naive recency. What does the reviewer flag?",
+      "expected_output": "Ranking / sort-mode legibility (domain P, product-ux-quality.md -- extends variant-bloat to the ordering itself). Flag: (1) a first-time user cannot tell why to pick 'Top' vs 'Momentum' -- each exposed sort mode must be self-explaining (an on-demand one-line 'orders by ...'), and the variant-bloat test applies (would a first-timer know why to pick each? if not, cut to one strong default + progressive disclosure). (2) Two modes producing near-identical orders are variant-bloat -> collapse, and MEASURE the overlap rather than assume it. (3) The sort KEY needs a measured distribution -- an opaque or near-constant key is the ordering-layer form of false precision (reuse 'measure the distribution first'); an order the user cannot explain and the data cannot justify is noise dressed as intelligence. (4) Two ordering regimes across surfaces over one dataset -> consolidate or cross-explain which serves which task. Also rule whether the DEFAULT order serves the user's job (recency is a mode, rarely the right default on a decision surface). Warn-and-list, never block. (product-ux-quality.md.)",
+      "expectations": [
+        "Requires each exposed sort mode to be self-explaining ('orders by ...') and applies the variant-bloat 'would a first-timer know why to pick each?' test",
+        "Near-identical modes are collapsed, with the overlap MEASURED not assumed",
+        "The sort key needs a measured distribution; an opaque / near-constant key is ordering-layer false precision (reuses measure-the-distribution-first)",
+        "Rules whether the default order serves the user's job (not reverse-chron by default on a decision surface); warn-and-list, never block"
+      ]
     }
   ]
 }

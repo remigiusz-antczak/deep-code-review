@@ -276,6 +276,9 @@ design-quality checklist in `references/migration-parity.md` (#124).
   time) — name and route to counsel, never encode a deadline or version.
 - **ISO/IEC 25010** — software product-quality model (the axes this review
   covers).
+- **Smart Brevity** (Axios; VandeHei, Allen & Schwartz) — lead each information unit
+  with *what's new* **and** *why it matters*; the actionability pattern named in
+  `product-ux-quality.md`. Named by name only — no URL fetched this session.
 - **The Twelve-Factor App** — config/dependency/deploy hygiene.
 - **RFC 2119** — requirement-keyword conventions (MUST / SHOULD / MAY), named by
   `docs-evolution-by-stage.md`. Named by name only.

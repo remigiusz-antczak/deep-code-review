@@ -3,6 +3,14 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.137.0] — 2026-09-18
+
+Wave 58 — two owner-filed product-value axes for `product-ux-quality.md` (domain P), **#332 + #333** (dogfood-derived). The domain-P rules prove a component *renders* correctly; these add the *does it help the user act* half. Two distinct sections (different failure modes, evidence, gates):
+- **Actionability (#332)** — a primary information unit answers *why it matters* via a **derived** signal (count / recency-delta / graph-degree) plus a concrete next step where an action is possible, most-actionable-first-and-stable. **Hard anti-fabrication rule:** the signal is derived/deterministic, never a model-authored importance score or LLM salience judgement (the content-layer cousin of the confidence-tier false-precision rule). Warn-and-list (fail-open) heuristic gate, explicitly contrasted with the fail-closed `ci-gates.sh` check-#6/#7.
+- **Ranking & sort-mode legibility (#333)** — the default order serves the user's job (recency is a mode, rarely the right default on a decision surface); each exposed sort mode is self-explaining ("orders by …") and **measurably distinct** (near-identical modes collapse; the sort key needs a measured distribution — an opaque/near-constant key is ordering-layer false precision). Extends the variant-bloat rule to ordering, and owns the shared default-ordering principle the actionability section references (stated once).
+
+Private-vendor exemplars from the issues are described as **patterns, not named** (CLAUDE.md third-party-identifier rule); the public **Smart Brevity** method is named and added to `docs/standards-index.md` by-name. Two checklist items + two evals (dcr 128 → 130). No `SKILL.md` content change (domain P already routes `product-ux-quality.md`). Trio → 1.137.0. Closes #332, #333.
+
 ## [1.136.0] — 2026-09-18
 
 Wave 57 — `domain-checklists.md` middle-tier de-duplication, **#325 Option A** (owner-selected). The checklist tier restated definitions its per-domain deep files own — the repo's own anti-duplication thesis, violated. Surgically converted the **3 copied definitions/rules the #325 audit surfaced** to a scannable check + a pointer to the canonical deep file (each verified do-no-harm: the full detail was confirmed present in the deep file before the copy was dropped):

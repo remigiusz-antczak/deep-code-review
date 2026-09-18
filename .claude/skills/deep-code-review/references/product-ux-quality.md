@@ -195,6 +195,75 @@ transparency** — drop it, or reframe to something that actually varies (e.g. *
 an entity was matched, not a number). A misleading signal is worse than an honest
 blank — empty beats fabricated (`data-quality.md`).
 
+## Actionability — a unit answers "why does this matter," not just "what happened"
+
+The other domain-P rules prove a component **renders** correctly; this one asks
+whether it **helps the user decide or act**. A feed, dashboard, or brief can pass
+every render check and still be a **wall of verified facts** — each unit a *fact +
+its source* with no *so-what / now-what*. That is a real UX defect, invisible to the
+rendering rules.
+
+- **Every primary information unit carries a why-it-matters signal — derived, never
+  fabricated.** A unit a decision depends on states *why it matters* through a
+  **structural / derived** signal: a count ("3rd of its kind this quarter"), a
+  recency-delta ("first activity in 60 days"), a graph-degree ("connects to N
+  entities you follow"). **Hard rule (anti-fabrication):** the signal is computed
+  from real data — **never a model-authored "importance score" or an LLM judgement
+  of salience**, which is the content-layer cousin of the false precision the
+  confidence-tier rule above forbids. A derived signal that barely varies is not a
+  signal — measure its distribution first, exactly as for a confidence tier.
+- **Where an action is possible, name the concrete next step** on the unit (follow,
+  open, assign, dismiss), not a bare record the user must decide what to do with. A
+  signal-led feed maps each event to a follow or next step; a relationship surface
+  offers a next-best-action, not just a row (a pattern, not a product endorsement).
+- **Most-actionable-first, and stable.** The highest-decision-value surface is in the
+  **first paint and stable** — not deferred to a post-hydration `aria-hidden` island,
+  and not pushed below fixed non-interactive summary chrome (cross-ref layout-shift /
+  CLS in `frontend-a11y.md` and the density/footprint rule below). Which order serves
+  the user's job is ruled on in the ranking section below.
+- **Lead with what's new *and* why it matters** — a reader's first two questions are
+  "what is it?" and "is it relevant to me?"; a unit that answers only the first is
+  half-built (the **Smart Brevity** pattern; `docs/standards-index.md`).
+- **Defect vs redesign; the gate is fail-open.** Missing actionability on a decision
+  surface is a **defect to surface**, not a licence to redesign a deliberately-terse
+  product — separate the two, and never carry Blocker/Critical gate language on a
+  product choice (SKILL.md Phase 5). The heuristic gate **warns and lists, never
+  blocks** (unlike the fail-closed `ci-gates.sh` check-#6/#7): it flags a primary
+  list/card whose unit is *fact + source* with no derived why-it-matters signal and
+  no action affordance, and a top-value surface that is an `aria-hidden`-until-
+  hydration island — but it **cannot tell "should be actionable" from "deliberately
+  terse,"** so a human adjudicates every hit.
+
+## Ranking & sort-mode legibility — the order is a product decision, not a default
+
+The variant/option-bloat rule above targets view/style toggles; this extends it to
+the **ordering of a feed/list itself**, and the confidence-tier rule targets a
+*displayed* score, not the *ordering key*. The gap between them: is the **default
+order** the one that serves the user's job, and is each exposed sort mode
+**self-explaining and measurably distinct**?
+
+- **The default order serves the user's primary job** (signal / importance /
+  soonest-to-act), not implementation-convenient reverse-chronological. Recency is a
+  *mode*, rarely the right *default* for a decision surface. (This is the canonical
+  home of the default-ordering rule the actionability section refers to.)
+- **Every exposed sort/rank mode is self-explaining and distinct.** Each mode carries
+  an on-demand one-line *"orders by …"* (tooltip / helptext), and the variant-bloat
+  test applies: **would a first-time user know why to pick "Top" vs "Momentum"?** If
+  not, it is bloat — cut to one strong default, the rest behind progressive
+  disclosure, each self-labeled. Two modes that produce **near-identical orders** are
+  variant-bloat → collapse (measure the overlap, don't assume it).
+- **The sort key needs a measured distribution — anti-fabrication (hard rule).** A key
+  derived from real, varying signal is legitimate ranking; a sort by an **opaque or
+  near-constant score is the ordering-layer form of false precision** — measure the
+  key's distribution before shipping it as "ranking" (reuse the confidence-tier
+  "measure the distribution first" rule above; a key that barely varies orders
+  nothing). An order the user cannot explain and the data cannot justify is noise
+  dressed as intelligence.
+- **Multiple ordering regimes across surfaces** (a curated home *plus* a multi-mode
+  feed over the same data) are a lot of ways to slice one dataset — consolidate, or
+  cross-explain on-surface which regime serves which task. Warn-and-list, never block
+  (a human tells a rich-but-legible set from bloat).
+
 ## Self-evident over explained — progressive disclosure
 
 Layout + labels + standard components make meaning obvious **without** inline
@@ -487,6 +556,8 @@ often lost — the on-screen chart carries axes and a readout the serialiser dro
 - [ ] One channel per dimension; nothing colour-only; reads correctly in greyscale?
 - [ ] Deltas are caret + magnitude, coloured by sentiment; flat is a muted `—` with a period anchor?
 - [ ] Confidence / score / priority shown as a **defined labeled tier** (text + a colourblind-safe cue), not a raw `%` or point score, and no model-authored number published as precision?
+- [ ] Does each primary information unit answer **why it matters** (a derived / structural signal — count, recency-delta, graph-degree — **never a fabricated importance score**), not just what happened; where an action is possible, is a concrete **next step** named; and is the **most decision-ready surface in the first paint and stable** (not a post-hydration `aria-hidden` island, not below fixed non-interactive chrome)?
+- [ ] Does the **default ordering serve the user's job** (not reverse-chron by default on a decision surface), and is **each exposed sort/rank mode self-explaining ("orders by …") and measurably distinct** (near-identical modes collapsed; an opaque / near-constant sort key is false precision — measure its distribution first)?
 - [ ] Matches a **named** top-product pattern; convention gaps surfaced to the owner, not silently redesigned?
 - [ ] If the owner has rejected this element **twice**, stopped tuning — structural flaw named, two or three comparables researched, concrete options surfaced for the owner to choose?
 - [ ] Consistent type scale / spacing / components / number format with sibling views (tabular figures in columns)?
