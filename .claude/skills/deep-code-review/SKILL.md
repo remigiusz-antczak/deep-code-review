@@ -11,7 +11,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.127.0"
+  version: "1.128.0"
 ---
 
 # Deep Code Review
@@ -307,7 +307,9 @@ infra/docs already in place stays in `infra-iac-containers.md` (L) and
 ## Findings report
 
 Exact templates (machine table, plain-language report, invariants ledger):
-`references/report-format.md` — **read when** writing Phase 5. Worked
+`references/report-format.md` — **read when** writing Phase 5; the
+machine-readable findings file a program consumes (or a `PRIOR`
+re-verification) follows `references/machine-report.md`. Worked
 fictional example: `docs/example-review-report.md` in this repository,
 copied to `references/example-review-report.md` by `install.sh`.
 

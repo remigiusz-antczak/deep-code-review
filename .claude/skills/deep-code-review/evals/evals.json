@@ -1348,6 +1348,17 @@
         "Notes the spec is at Development stability -> pin no version, expect churn (does not cite a version or a fixed attribute list)",
         "Ties the unattributable wrong-summaries + climbing bill to the missing per-call token/outcome signals; does not prescribe logging raw prompts/responses (PII/redaction risk)"
       ]
+    },
+    {
+      "id": "machine-report-coverage-every-domain-and-public-copy-discloses-id-area-severity-only",
+      "prompt": "A team wants the review findings as a machine-readable file so a CI gate and an aggregator can consume them, and they plan to commit a copy into their public repo. Their draft file lists a coverage entry only for the domains that produced findings, and commits the whole file (coverage, evidence, and fixes) to the public remote. What does the reviewer require?",
+      "expected_output": "Two invariants of the machine report. First, a coverage row for EVERY assigned domain (A–T and W), every run -- a consumer that sees only findings cannot tell 'no findings in domain L' from 'domain L was never opened', so the absence of a row is not a clean run; listing coverage only for the domains that had findings is the defect. Second, disclosure EXTENDS the report's finding-level rule: a public committed copy keeps finding `id` / `area` / `severity` plus the disclosure-safe run header (tool, skill_version, date, scope, start_sha, archetype, stage) and `target` (its definition bars a private name), and GENERALIZES the two identifier-vector fields (`base_ref` -> a redacted branch per report-format.md's branch-name rule, `prior` -> a generic dated filename) rather than committing them raw; `coverage`, `polarity`, observations, evidence, and fixes stay out-of-tree until the fix ships. The file must carry the same findings, ids, severities, and areas as the markdown -- a consumer never reads the prose to trust it -- and be block-style YAML, since inline flow maps and anchors break minimal readers. (machine-report.md.)",
+      "expectations": [
+        "Requires a coverage row for every assigned domain (A–T and W) every run; the absence of a row is not clean ('no findings' is not 'not scanned') -- listing coverage only for domains with findings is the defect",
+        "On a public remote, the committed copy keeps finding id/area/severity + the disclosure-safe run header + target (safe by its definition), and generalizes the two identifier-vector fields (base_ref -> redacted branch per report-format.md's branch-name rule, prior -> generic dated filename) rather than dropping or committing them raw; coverage, polarity, observations, evidence, and fixes stay out-of-tree until the fix ships (extends, not just matches, report-format.md's finding-level limit)",
+        "The machine file carries the same findings/ids/severities/areas as the markdown -- a consumer never reads the prose to trust it",
+        "Block-style YAML; inline flow maps and anchors are dropped silently by minimal readers"
+      ]
     }
   ]
 }

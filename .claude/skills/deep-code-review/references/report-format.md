@@ -28,8 +28,8 @@ Counts: Blocker N · Critical N · High N · Medium N · Low N · Nit N
 ## Ground truth
 - Reviewed at (`START_SHA`): <the SHA every finding resolves at — the same pin the
   invariant rows use (`file:line`@`START_SHA` below); a later session re-checks each
-  finding against this before repeating it (`method.md`). A machine report records
-  the same pin as its `start_sha` field.>
+  finding against this before repeating it (`method.md`). A machine report
+  (`machine-report.md`) records the same pin as its `start_sha` field.>
 - Build: <ok / failed: …>
 - Tests: <X/Y pass, Z skipped, coverage — scoped per subtree if any gate
   excludes code, e.g. `root: N (excludes X)` + `X: M (separate gate)`>

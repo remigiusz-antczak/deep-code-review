@@ -3,6 +3,21 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.128.0] — 2026-09-18
+
+Wave 49 of the dogfooding batch: re-applies the machine-report format from external contribution #142 onto current main — the spec for the machine-readable findings file a program consumes. The contribution's author is credited in the commit trailer; the stale fork PR is closed as superseded by this re-application. Lead change is in `deep-code-review`; `agentic-delivery` and `idea-critic` bump in lockstep with no content change.
+
+### Added — deep-code-review
+- **`references/machine-report.md`** (#142) — the findings file a program consumes: block-style YAML
+  carrying the same findings, ids, severities, and areas as the markdown report, a **coverage row for
+  every assigned domain (A–T and W)** (absence of a row is not a clean run — a consumer cannot tell
+  "no findings" from "not scanned"), plus the re-verification (`PRIOR`) and fan-out shapes. Routed
+  from `SKILL.md` beside the Phase-5 report templates; `report-format.md`'s first machine-report
+  mention now points at the spec. Disclosure **extends** the report's finding-level rule: a public
+  committed copy keeps finding `id` / `area` / `severity` plus the disclosure-safe run header and
+  `target`, and **generalizes** the two identifier-vector fields (`base_ref` per `report-format.md`'s
+  branch-name rule, `prior`). One new eval (dcr 126 → 127).
+
 ## [1.127.0] — 2026-09-18
 
 Wave 48 of the dogfooding batch: #281 — pricing-strategy methods in `business-ops` Lane A (an independent-line overlay; the dcr/agentic-delivery/idea-critic trio bumps to 1.127.0 via the CHANGELOG coupling, no dcr content change).
