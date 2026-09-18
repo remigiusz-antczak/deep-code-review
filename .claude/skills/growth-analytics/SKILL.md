@@ -4,8 +4,9 @@ description: >-
   Use when deciding what to measure and how to read it once you are building
   or shipping: choosing the one customer-value North Star metric (not a vanity
   count), reading the AARRR funnel bottom-up (retention first), designing the
-  event taxonomy that answers a named question, and deciding what to instrument
-  at each stage. Works on the user's own analytics data; never fabricates
+  event taxonomy that answers a named question, deciding what to instrument
+  at each stage, and reading an A/B experiment honestly (a pre-committed design,
+  no peeking). Works on the user's own analytics data; never fabricates
   benchmarks, metrics, or "good" thresholds, and routes real figures to the
   user's analytics. Distinct from product-discovery (which decides whether to
   build and reads the product-market-fit threshold) and from the ops
@@ -93,9 +94,10 @@ An A/B result is only real if the test was designed before it was read. The fail
 watch the dashboard and **stop the moment p < 0.05** ("peeking") — repeated looks inflate the
 false-positive rate far above the nominal 5%, so the "win" is noise. Require one of: a
 **pre-committed sample size / duration** (compute the minimum detectable effect and N up front,
-then read **once** at the end), or a **sequential-testing** design whose stopping rule stays valid
-under continuous monitoring (an always-valid / group-sequential bound), never a fixed-horizon test
-peeked at daily. Pre-declare the **primary** metric and a **guardrail**, so a win on a secondary
+then read **once** at the end), or a **sequential-testing** design whose stopping rule matches the
+looks you actually take — an **always-valid / anytime-valid** bound (mSPRT, confidence sequences)
+for genuinely continuous monitoring, or a **group-sequential / alpha-spending** bound for a
+**pre-specified schedule** of interim looks — never a fixed-horizon test peeked at daily. Pre-declare the **primary** metric and a **guardrail**, so a win on a secondary
 metric can't be cherry-picked and a "win" that regresses the guardrail is caught. Where variance is
 high and a pre-period exists, **CUPED**-style variance reduction buys power without more users. A
 result read on day 2 of a 14-day test is `UNVERIFIED`, not a win. For a **product-led-growth**
@@ -154,4 +156,7 @@ product-analytics vs ops-observability identifier seam is described in
   (`instrument-answers-a-named-question`).
 - "How are we doing?" routes to the user's analytics / returns `UNVERIFIED`
   without data, never an invented number (`routes-real-figures-to-analytics`).
+- A day-2 read of a 14-day A/B test is peeking → `UNVERIFIED`, not a win; a
+  pre-committed design + primary/guardrail is required
+  (`experiment-peeking-is-not-a-win-precommit-or-sequential`).
 - `evals/evals.json` plants these cases.
