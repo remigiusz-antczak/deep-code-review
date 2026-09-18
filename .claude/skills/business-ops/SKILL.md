@@ -14,7 +14,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.1.0"
+  version: "1.1.1"
 ---
 
 # Business ops
@@ -138,4 +138,8 @@ structure follows `communication-structure`.
   routed to counsel (`fundraising-is-a-securities-matter`).
 - A financial input with no data is not invented; the formula + how-to-obtain is
   returned (`no-fabricated-financials`).
+- A design-time "are we compliant?" ask over a regulated domain names the likely regimes and
+  engineering-obligation leads, then routes the binding applies/compliant question to counsel,
+  never concluding a regime binds or the product is compliant
+  (`design-time-regulated-domain-triage`).
 - `evals/evals.json` plants these cases.

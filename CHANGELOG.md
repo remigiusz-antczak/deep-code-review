@@ -3,6 +3,16 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.125.0] — 2026-09-18
+
+Wave 46 of the dogfooding batch: a documentation-sync fix in `business-ops` (an independent-line overlay; the dcr/agentic-delivery/idea-critic trio bumps to 1.125.0 via the CHANGELOG coupling, no dcr content change).
+
+### Fixed — business-ops (→ 1.1.1)
+- **Verification list omitted a shipped eval id.** The `## Verification` "plants these cases" list
+  named four of the skill's five evals; added the missing `design-time-regulated-domain-triage`
+  bullet so the rules→eval-id map matches `evals/evals.json`. Documentation-sync only — no behavior
+  or eval change.
+
 ## [1.124.0] — 2026-09-18
 
 Wave 45 of the dogfooding batch: #276 (cards half) — model/data cards as a transparency-artifact check in `product-output-safety` (an independent-line overlay; the AI-governance-regime half of #276 stays owner-deferred).
