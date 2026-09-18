@@ -118,6 +118,43 @@ coverage, not only the remedy: a bare "Nothing here" over an unprobed source is 
 false all-clear, not an honest empty. (`data-quality.md` §8 owns the same rule
 where the number is *scored* rather than *shown*.)
 
+## A reversible action reads as a delete when nothing shows the record persists
+
+When an action **presented as non-destructive** — resolve / archive / dismiss,
+backed by a retained column (`resolved_at`, `archived_at`) — removes the record
+from view while giving **no cue that it persists, is reversible, or where it went**,
+the user cannot tell it from a hard delete. Two failures:
+- **Product-safety.** The action *reads* as destructive: a first-time user clicks
+  "Resolve," watches the row vanish with no "Resolved" state, no undo, and no
+  reachable resolved view, and reasonably concludes they deleted it — suppressing a
+  reversible, low-stakes action and eroding trust in it.
+- **Audit / history visibility.** When the retained trail is *meant to be
+  reviewable*, a surface with no way to reach it makes that history effectively
+  invisible — the data layer keeps a record the UI never surfaces. (The data is
+  intact; the defect is visibility, not integrity.)
+
+**The defect is the hidden reversibility, not default-hiding as such.** Hiding a
+completed item is often the *correct* convention — an `is:open` list, an active-only
+board, an inbox that archives out of view all hide a retained record on purpose,
+behind a well-known filter; those are conventions, not defects (matching a
+convention is an observation, not a licence to redesign — read-first opener above).
+A **soft-delete** (`deleted_at`) is out of scope: "reads as a delete" is its
+*intended* behaviour; its concern is recoverability / trash-visibility, not this.
+Like the actionability rule, this is **fail-open**: a heuristic cannot tell a
+hidden-reversible action from a deliberate convention, so a human adjudicates every
+hit — surface options, never silently restyle.
+
+The self-evident fix — how mature issue-trackers and code-review tools render a
+resolved thread — keeps the record **in place, visually muted** (opacity or
+strikethrough) with a **status label** ("Resolved"), or offers a clearly labelled,
+discoverable "resolved / archived" view. Cross-checks: the affordance must **not
+rely on colour alone** (pair opacity with a label or icon + accessible name, per
+*Never colour alone* below); a "show resolved / archived" path must be
+**discoverable**, not a buried default-off filter with no cue; verify on the
+**running app's default surface**, not only a unit test. Distinct from the
+honest-empty rule above (a *retained* record hidden by a *reversible* action, not an
+empty state).
+
 ## Encoding hygiene — one visual channel per dimension
 
 Never make **one channel carry two meanings**. The classic bug: colour encoding
@@ -563,6 +600,7 @@ often lost — the on-screen chart carries axes and a readout the serialiser dro
 - [ ] Consistent type scale / spacing / components / number format with sibling views (tabular figures in columns)?
 - [ ] One shared component per concept — reused/extended, not reimplemented per page; a fix landed in the shared component, not one caller; **searched the tree for a duplicate twin (a duplicated visible string/heading) a diff-scoped review would miss**?
 - [ ] Interaction loops close — read-back on every input (no write-only), WYSIWYG not raw markup, no dead controls — checked on the route that actually renders?
+- [ ] Any action **labelled non-destructive** (resolve / archive / dismiss) that removes the record still shows it **persists** — a persisted-state label, an undo, or a discoverable resolved/archived view — so it doesn't read as a hard delete? (Default-hiding behind a *known* filter is a convention, not this; soft-delete is out of scope; **fail-open** — a human adjudicates.)
 - [ ] Every **disabled action explains its cause and a recovery path** — the unmet prerequisite + a concrete next step, in **reachable** text (nearby or a focusable wrapper/popover, not a tooltip on the disabled element, which may get no hover/focus); an action permanently unavailable to the current role is hidden or replaced, not a dead end?
 - [ ] **No write control renders as a dead/disabled default during the SSR → hydration window** — a control gated on client-only state (auth/session) shows a loading affordance (skeleton/spinner) or is optimistically enabled with its click **replayed** after hydration (never a dropped no-op), not a bare disabled button; confirmed on a **pre-hydration** snapshot, and *could-not-check* (no pre-hydration capture) fails **open**, not a silent pass?
 - [ ] Drawers overlay (don't navigate away); collapse scope correct; no dead controls?

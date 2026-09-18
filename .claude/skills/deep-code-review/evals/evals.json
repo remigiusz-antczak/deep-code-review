@@ -1448,6 +1448,17 @@
         "Fail closed when no liveness signal -- exclude or flag unknown, never 'rank everything, filter later'",
         "Distinguishes a covered-but-dead entity from an uncovered one (honest-empty)"
       ]
+    },
+    {
+      "id": "soft-resolve-whose-default-view-hides-the-record-reads-as-a-delete",
+      "prompt": "A dashboard's 'Resolve' button sets `resolved_at` (row retained) but the default list drops the item; resolved items surface only via a 'Show resolved' filter that defaults off, sits in an overflow menu, and there is no 'Resolved' state, undo, or count anywhere on the surface. The team says 'it's not deleted, the data is still there.' Finding?",
+      "expected_output": "Flag it. The defect is not default-hiding as such -- it is that an action LABELLED non-destructive ('Resolve') removes the record while giving NO cue it persists, is reversible, or where it went (no 'Resolved' state, no undo, and the only path is a buried default-off filter). So it reads as a hard delete: (1) product-safety -- a first-time user concludes they deleted it, suppressing a reversible action; (2) audit/history visibility -- the retained trail is effectively unreachable (data intact; the defect is visibility, not integrity). Fix: keep the record in place, visually muted + a status label ('Resolved'), OR give a clearly-labelled, DISCOVERABLE resolved/archived view; not colour-alone. Caveats: default-hiding behind a KNOWN filter (an is:open list, an active board, inbox archive) is a convention, not this; a soft-DELETE (deleted_at) is out of scope. Fail-open -- a heuristic can't tell hidden-reversibility from a deliberate convention, so a human adjudicates. 'The data is still there' misses the point: the surface gives the user no cue of that. (product-ux-quality.md.)",
+      "expectations": [
+        "Scopes the defect to an action LABELLED non-destructive that hides the record with NO cue it persists/reverses (not default-hiding as such)",
+        "Names both failures -- product-safety (reads as destructive) AND audit/history VISIBILITY (data intact, visibility is the defect)",
+        "Fix: in place muted + status label OR a discoverable labelled resolved/archived view; not colour-alone",
+        "Carves out conventions (is:open / archive) and soft-delete as out of scope, and is fail-open -- a human adjudicates"
+      ]
     }
   ]
 }

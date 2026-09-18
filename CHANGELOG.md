@@ -3,6 +3,20 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.143.0] — 2026-09-18
+
+Wave 64 — a UX / audit-visibility honesty lens for `product-ux-quality.md` (domain P), from owner-filed **#351**. When an action **presented as non-destructive** (resolve / archive / dismiss, backed by a retained `resolved_at` / `archived_at` column) removes the record while giving **no cue that it persists, is reversible, or where it went**, the user cannot tell it from a hard delete — two failures:
+- **Product-safety:** the action reads as destructive (a first-time user watches the row vanish and concludes they deleted it), suppressing a reversible, low-stakes action.
+- **Audit / history visibility:** when the retained trail is meant to be reviewable, an unreachable surface makes it effectively invisible (the data is intact; the defect is visibility, not integrity).
+
+**Scoped to the hidden reversibility, not default-hiding as such:** hiding a completed item behind a known filter (an `is:open` list, an active board, inbox archive) is a convention, not a defect; a soft-**delete** (`deleted_at`) is out of scope ("reads as a delete" is intended there). **Fail-open** — a human adjudicates every hit. Fix: keep the record in place, muted + a status label, or a discoverable labelled resolved/archived view; not colour-alone; verify on the running app's default surface. Pattern described generically (no vendor named).
+
+One eval + one domain-P checklist box (deep-code-review 135 → 136 evals). Trio → 1.143.0.
+
+Dogfood reviewer: FIX-FIRST → fixed pre-merge. High: the flag criterion was over-broad (it flagged conventional archive / `is:open` default-hiding and prescribed rendering soft-deleted rows forever) — rescoped to labelled-non-destructive + no-persistence-cue, carved out conventions + soft-delete, added the fail-open human-adjudicates clause. Also added the missing sweep-checklist box and relabelled "data-integrity"→"audit / history visibility."
+
+Closes #351.
+
 ## [1.142.0] — 2026-09-18
 
 Wave 63 — two anti-fabrication data-honesty axes for `data-quality.md` (scoring & config discipline, §7), from owner-filed **#344** and **#355**.
