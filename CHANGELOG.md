@@ -3,6 +3,16 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.151.0] — 2026-09-19
+
+Wave 72 — **LLM-application engineering correctness** (RAG retrieval-seam + agent-trajectory eval), from research issue **#391** (cartography survivor — a new area under the existing agent/LLM archetype; section-add to `testing-and-evals.md`, no new archetype). The AI-evals section covered generic model-output quality but not the RAG retrieval seam or agent trajectories:
+- **RAG evaluated at the retrieval seam, not only end-to-end** — a faithful answer over the *wrong* retrieved context is still wrong, and a good end-to-end score can hide a retrieval miss the model covered from parametric memory (which fails silently when the knowledge base changes). Evaluate retrieval quality (context precision / recall @k, chunk-boundary loss, reranking) AND generation faithfulness separately.
+- **An agent is evaluated on its trajectory** — tool-call selection + arguments + multi-step completion — not only its final answer (a right answer via a lucky / unsafe path is a latent failure).
+
+Framed by concept, not vendor: RAG technique = Lewis et al. 2020 (neutral anchor); metric names operationalized by a tool like RAGAS (a *tool*, not a standard). Both added to `docs/standards-index.md`; one-line cross-ref from `security-ai-agents.md` (the RAG *correctness* half vs its *security* half). One eval (deep-code-review 147 → 148). Trio → 1.151.0. Closes #391.
+
+Dogfood reviewer: FIX-FIRST → fixed pre-merge. Re-filed the two standards-index rows under a proper `2026-09-19` dated section (they had landed inside the 2026-09-08 idea-critic section — a date/scope contradiction) and scoped the RAGAS row to what the cited index page shows (per-metric definitions were read on the sub-pages). Un-conflated **faithfulness** (groundedness) from **answer relevancy** (addresses the question) — two distinct metrics — in the bullet and the eval.
+
 ## [1.150.0] — 2026-09-19
 
 Wave 71 — **a deserializer re-enforces its builder's invariants** (`data-quality.md`), from owner-filed **#403** (top triage net-new). In a build → serialize → parse pipeline, a serialized line can be torn / hand-edited / older-schema / written by someone else, so "the builder guarantees X" does not mean a parsed object satisfies X. The parse path must independently **re-derive computed fields** (a count from the validated collection, not read verbatim) and **validate element shape** (not just a primitive type) — a parser weaker than its own builder reintroduces, at the deserialize trust boundary, the exact fabrication the builder prevents, invisible to a builder-only test suite. Proof: property tests `parse(serialize(x))` preserves the invariant + `parse(torn input)` drops/rejects rather than emits a violating object (a tautological generator tests nothing — ties #373). The data-integrity face of untrusted deserialization (CWE-502). One eval + a 🚩 red-flag (deep-code-review 146 → 147). Trio → 1.150.0. Closes #403.

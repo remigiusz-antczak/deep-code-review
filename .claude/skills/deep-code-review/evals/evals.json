@@ -1580,6 +1580,17 @@
         "Fix: re-derive computed fields + validate element shape to the builder's invariants (not read verbatim / not just a primitive type)",
         "Property tests: parse(serialize(x)) preserves the invariant; parse(torn input) never emits an invariant-violating object; invisible to a builder-only suite"
       ]
+    },
+    {
+      "id": "rag-app-evaluated-at-the-retrieval-seam-and-agent-on-its-trajectory",
+      "prompt": "A RAG chatbot has an end-to-end eval: a golden set of question->expected-answer scored for correctness; it passes at 92%. Separately, a travel-booking agent is evaluated only on whether the final confirmation message is correct. What is missing from each eval?",
+      "expected_output": "RAG: an end-to-end score is necessary but not sufficient -- a faithful answer over the WRONG retrieved context is still wrong, and a high end-to-end score can hide a retrieval miss the model papered over from parametric memory (which then fails silently when the knowledge base changes). Evaluate the two stages separately: retrieval quality (context precision -- retrieved chunks are relevant; context recall -- the needed facts were retrieved, measured @k; plus chunk-boundary loss and reranking) AND generation faithfulness (the answer is factually consistent with THAT retrieved context -- groundedness), with answer relevancy (does it address the question) as a separate metric. Agent: evaluate the TRAJECTORY, not only the final answer -- tool-call selection (the right tool), tool-call arguments (well-formed, correctly bound), and multi-step task completion (reached the goal without an unrecoverable wrong turn); a right confirmation reached via a lucky or unsafe path is a latent failure, and a wrong tool choice is invisible to an output-only bench. (testing-and-evals.md AI evals; RAG technique = Lewis et al. 2020; metric names operationalized by a tool like RAGAS, not a standard.)",
+      "expectations": [
+        "RAG end-to-end score is insufficient -- a faithful answer over the wrong context is still wrong; a good end-to-end score can hide a retrieval miss covered by parametric memory",
+        "Evaluate retrieval quality (context precision / recall @k, chunk-boundary loss, reranking) AND generation faithfulness separately",
+        "Agent is evaluated on its trajectory -- tool selection + arguments + multi-step completion -- not only the final answer",
+        "A right final answer via a lucky/unsafe path (or a wrong tool choice) is a latent failure invisible to an output-only bench"
+      ]
     }
   ]
 }

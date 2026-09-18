@@ -413,3 +413,14 @@ fault-detection, not only line coverage).
 |---|---|---|
 | PIT (pitest) — mutation testing | https://pitest.org/ | "Traditional test coverage (i.e line, statement, branch, etc.) measures only which code is executed by your tests. It does not check that your tests are actually able to detect faults in the executed code"; "The quality of your tests can be gauged from the percentage of mutations killed." Cited for coverage-measures-execution-not-fault-detection and the mutation-score concept; PIT is the JVM engine. |
 | Stryker Mutator — configuration (`thresholds.break`) | https://stryker-mutator.io/docs/stryker-js/configuration/ | The `thresholds` config exposes `break`: "mutation score < break: Error! Stryker will exit with exit code 1, indicating a build failure." Cited as the available CI-gate operator (exit non-zero below a set score). **`break` defaults to `null` — "Set `break` to `null` (default) to never let your build fail" — so it gates only once explicitly set** (`high`/`low` default 80/60 and only colour the report). No specific threshold value is endorsed — treat the number as per-repo. Stryker is the JS/TS engine. |
+
+## Verified by direct fetch (2026-09-19) — RAG retrieval-seam & agent-trajectory evals
+
+Verification date for the rows below: **2026-09-19**. Added for the deep-code-review
+`testing-and-evals.md` LLM-application eval lens (RAG retrieval quality + generation
+faithfulness/relevancy + agent trajectory).
+
+| Standard / tool | URL | What was confirmed |
+|---|---|---|
+| Lewis et al. (2020), "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks" | https://arxiv.org/abs/2005.11401 | NeurIPS 2020. RAG = models that "combine pre-trained parametric and non-parametric memory for language generation" — a generator plus a retrieval component over external knowledge. The technique anchor for evaluating a RAG app at the retrieval seam. Fetched 2026-09-19. |
+| RAGAS — RAG evaluation library | https://docs.ragas.io/en/stable/concepts/metrics/available_metrics/ | Open-source eval library (a **tool**, not a standards body). The cited available-metrics index page lists the metric *names* (context precision, context recall, faithfulness, response relevancy, …); the per-metric definitions used in the skill were read on the sub-pages this session — faithfulness = factual consistency with the retrieved context; response relevancy = the answer addresses the question; context precision / recall = the retrieved context is relevant / complete. Cited as a tool that names the concepts; the skill frames the concept, not a vendor's exact formula. Fetched 2026-09-19. |

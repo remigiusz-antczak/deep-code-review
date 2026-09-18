@@ -71,7 +71,9 @@ Handling 5→10.
   them; security is enforced outside the model. (Was LLM07:2025.)
 - **LLM09:2026 Vector and Embedding Weaknesses**. RAG stores enforce access
   control and tenant isolation; no cross-user/cross-tenant retrieval
-  leakage; embeddings and retrieval can't be manipulated to exfiltrate.
+  leakage; embeddings and retrieval can't be manipulated to exfiltrate. (This is the
+  RAG *security* half; RAG *correctness* evaluation — retrieval quality + generation
+  faithfulness + agent-trajectory — is in `testing-and-evals.md` AI evals.)
   (Was LLM08:2025.)
 - **LLM10:2026 Improper Output Handling**. Model output is schema-validated
   / sanitized **before** any downstream use — never fed raw into SQL, a

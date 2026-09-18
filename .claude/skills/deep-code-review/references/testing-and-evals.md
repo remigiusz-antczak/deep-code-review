@@ -319,6 +319,26 @@ needs its own harness:
 - A **decorrelated review ensemble** (multiple *different* models/reviewers, all
   must pass) catches a miss or an injection that lands on one reviewer; fail
   soft.
+- **A retrieval-augmented (RAG) app is evaluated at the retrieval seam, not only
+  end-to-end.** The generation-grounding check above is necessary but not
+  sufficient: a faithful answer over the *wrong* retrieved context is still wrong,
+  and a good end-to-end score can hide a retrieval miss the model papered over from
+  parametric memory (which then fails silently when the knowledge base changes).
+  Evaluate the two stages separately — **retrieval quality** (context *precision*:
+  retrieved chunks are relevant; context *recall*: the needed facts were retrieved
+  at all — measured @k, with chunk-boundary loss and reranking in view) and
+  **generation faithfulness** (is the answer factually consistent with *that*
+  retrieved context — groundedness), with **answer relevancy** (does it actually
+  address the question) as a separate check. (RAG = a parametric generator plus a non-parametric
+  retrieval component over external knowledge — Lewis et al., 2020. The metric names
+  are operationalized by open-source eval libraries, e.g. RAGAS — a *tool*, not a
+  standard: frame the concept, don't pin a vendor's exact formula.)
+- **An agent (tool-using, multi-step) is evaluated on its trajectory, not only its
+  final answer.** Score tool-call *selection* (did it pick the right tool), tool-call
+  *arguments* (well-formed, correctly bound), and multi-step *task completion* (the
+  sequence reached the goal without an unrecoverable wrong turn). A right final
+  answer reached via a lucky or unsafe path is a latent failure, and a wrong tool
+  choice is invisible to an output-only bench.
 
 ## Business rules as executable specs
 
