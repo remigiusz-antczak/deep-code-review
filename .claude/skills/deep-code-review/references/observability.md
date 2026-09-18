@@ -42,12 +42,14 @@ failure paths that *produce* these signals are section F /
 - **Instrument LLM / agent calls as first-class telemetry, not just the host service.** An LLM or
   agent feature shipped with only service-level latency/error signals is under-instrumented:
   capture per-call **token usage** (prompt/completion), **latency** and **cost**, the **model +
-  version**, the **outcome** (success / error / refusal / tool-call), and a **trace** spanning the
-  agent's tool calls, so a failing or token-burning agent is visible. The **OpenTelemetry GenAI
-  semantic conventions** (`gen_ai.*`) name these signals — adopt the convention **names** for
-  portability, but that spec is still at *Development* stability, so **pin no version and expect
-  churn**. A silent, un-traced agent that errors or burns tokens with no signal is the finding
-  (cross-ref the spend-and-value lens in `performance-db-cost.md`).
+  version**, the **outcome** (success / error / refusal / empty / tool-call), and a **trace**
+  spanning the agent's tool calls, so a failing or token-burning agent is visible — but emit
+  **structured telemetry: counts and metadata, never the raw prompt/response payload** (redact per
+  *Logs & traces* below; token *counts* need no prompt text). The **OpenTelemetry GenAI semantic
+  conventions** (`gen_ai.*`) name these signals — adopt the convention **names** for portability,
+  but that spec is still at *Development* stability, so **pin no version and expect churn**. A
+  silent, un-traced agent that errors or burns tokens with no signal is the finding (cross-ref the
+  cost-and-value lens in `performance-db-cost.md`).
 
 ---
 

@@ -27,7 +27,7 @@ b8a4c1ae0a34cf8c692d42bf4ad10a1ba21f85c0dd489cbfc2bdae275bb7412a  .claude/skills
 bb541f96bd7d0c3bb4adff8dcaac0f50efa2493b8215b6aa671805bfbb89c42b  .claude/skills/contribution/references/contribution-procedure.md
 97ad15584ae31de032cb1eb0329af3e8ad829688c9ec0b25f49e73d12fc09452  .claude/skills/deep-code-review/SKILL.md
 9ce810be47377fe362adcaca4904678f54dd100fcc15a92fb258aecd87a25bca  .claude/skills/deep-code-review/VERSION
-dfc9a9d7a9ee04f934b990fc0f79febb07cad565035d942af3cda95c0ae54c0a  .claude/skills/deep-code-review/evals/evals.json
+f2c6970b9a78cc0e64d7d73160610ad882d8e5eaaf705a3bbb034a701437977a  .claude/skills/deep-code-review/evals/evals.json
 960211dc69f2b40ba80cc0ad1068816328f1c2dbd465b552b51ae5c805e7fe75  .claude/skills/deep-code-review/references/api-contracts.md
 93d695b99b448a59b1b7e4de3449692847089ba36e9530d0e24d19c04650efc1  .claude/skills/deep-code-review/references/billing-correctness.md
 fc4c267ad64034d8ee6568c83eba175d7bbd22d31d87cd26cd874dd1f05d640e  .claude/skills/deep-code-review/references/branch-and-merge-hygiene.md
@@ -45,7 +45,7 @@ b6a84db6b805a0b902db1370844828eaf87a20c4feb940ed0e4232dac5f062af  .claude/skills
 529b9ea45a55bab863659435bf382b018005e2d322835fe76edfa5688c4a0c68  .claude/skills/deep-code-review/references/method.md
 96e75312686fbedffc5189e2fcc70b80a60997bf93c8c26a1638442dd322944f  .claude/skills/deep-code-review/references/migration-parity.md
 38eebdf80eaa1cb40328eb27cee095560774d0ecc02a31fa427f0124721657a0  .claude/skills/deep-code-review/references/model-tiering.md
-bffc0dc6b0d95f0ebc3b33230cab49b3986acbe905a0e510d2cf86770c8ae848  .claude/skills/deep-code-review/references/observability.md
+9f60815f6658ee84cd912bc08b7d75065c94021775328db0672664e765832fbf  .claude/skills/deep-code-review/references/observability.md
 a04b173853c76f0147cd995a3c9e227665170186c7dde9058a1725a6fdba0814  .claude/skills/deep-code-review/references/parallel-audit.md
 d619abedaae4fa723ebc9d140ee63270b3af49546ae7498136d6d3250ad0d4b8  .claude/skills/deep-code-review/references/performance-db-cost.md
 911d751be267abd133979c2fd78a5fd60474250b4dc8beeb7d80f586c903b886  .claude/skills/deep-code-review/references/privacy-by-design.md
