@@ -1326,6 +1326,17 @@
         "Names the data contract as covering semantics/units + quality/SLA + owner (not just schema); a semantic change breaking a declared consumer is a breaking change",
         "Prescribes versioning/coordinating the migration (or adding a new field) and expressing the contract as code (schema+expectations, e.g. Great Expectations / dbt) so the breach fails CI"
       ]
+    },
+    {
+      "id": "finops-inform-before-buying-a-cost-tool",
+      "prompt": "A cloud bill doubled last quarter. The team wants to buy a cost-monitoring SaaS. There is no spend tagging/allocation, no per-team or per-feature budget, and no owner for cloud cost. What does the reviewer recommend?",
+      "expected_output": "Inform before you buy. FinOps treats cost as a continuous practice whose first phase is INFORM -- tag and allocate the spend to a team, feature, or environment so you can see WHERE it doubled; a cost-monitoring tool bought before allocation just visualizes an unattributed bill. Then OPTIMIZE against the now-visible drivers (rightsize, commit/reserve steady load, kill idle or orphaned resources), and OPERATE (a budget with an anomaly alert and a named owner) so the next doubling pages someone. The missing allocation/tagging, the missing owner, and the missing anomaly alert are the findings; the SaaS purchase is premature until the spend is attributed -- route that spend decision to the owner with the allocation data. (performance-db-cost.md.)",
+      "expectations": [
+        "Requires INFORM first -- tag/allocate spend to a team/feature/environment to see where it doubled -- before buying a cost tool (a tool on an unallocated bill just visualizes it)",
+        "Names the FinOps loop: inform -> optimize (rightsize / commit-reserve / kill idle) -> operate (budget + anomaly alert + owner)",
+        "Flags the missing allocation/tagging, owner, and anomaly alert as the findings",
+        "Treats the SaaS purchase as premature until spend is attributed; routes the spend decision to the owner with the data"
+      ]
     }
   ]
 }

@@ -5,7 +5,12 @@ Terraform/Pulumi/CloudFormation, CI/CD workflows, or any cloud configuration.
 Misconfiguration here is a common real-world breach cause tracked under the
 named OWASP category (OWASP Top 10:2025 A02) and a supply-chain surface
 (A03). Benchmark against the relevant **CIS Benchmarks**; adopt **SLSA** for
-build provenance.
+build provenance. Review the design against the cross-cloud **Well-Architected** pillars —
+operational excellence, security, reliability, performance efficiency, cost optimization (and
+sustainability where the platform tracks it) — and name **which pillar each finding serves**; a
+design audited for only one pillar (usually security) with no reliability, cost, or
+operational-excellence lens is itself the gap. Pillar sets differ and are revised per cloud — use
+the common set, do not pin a count.
 
 ---
 

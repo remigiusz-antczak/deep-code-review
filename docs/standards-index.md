@@ -238,6 +238,14 @@ design-quality checklist in `references/migration-parity.md` (#124).
   are verified in the table above; these document/profile specifics were not fetched.)
 - **SLSA** — build/supply-chain provenance levels.
 - **CIS Benchmarks** — OS/container/cloud hardening baselines.
+- **AWS / Azure / GCP Well-Architected Frameworks** — cloud architecture-review pillars
+  (operational excellence, security, reliability, performance efficiency, cost optimization;
+  sustainability on some clouds). Pillar sets and counts differ and are revised per cloud — cite
+  the common set by name, do not pin a count.
+- **FinOps (FinOps Foundation)** — cloud cost as a continuous practice; the inform → optimize →
+  operate loop. Named by name only.
+- **Chaos engineering (Principles of Chaos)** — steady-state hypothesis + blast-radius-limited
+  fault injection to verify resilience. Named by name only.
 - **ISO/IEC 25010** — software product-quality model (the axes this review
   covers).
 - **The Twelve-Factor App** — config/dependency/deploy hygiene.

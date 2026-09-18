@@ -63,6 +63,14 @@ A migration is a deploy-time hazard, not just a query. Check:
 
 ## External / API / LLM calls — the cost-and-value lens
 
+The org-level frame is **FinOps** — cost as a continuous practice, not a one-time audit:
+**inform** (tag/allocate spend to a team, feature, or environment so it is *visible* and
+attributable), **optimize** (rightsize, commit/reserve steady load, kill idle or orphaned
+resources), **operate** (a budget with an **anomaly alert** and a named **owner**). A cloud bill
+with no allocation/tagging, no owner, or no anomaly alert is a finding independent of any one
+call's cost — and, per `observability.md`, buying a cost tool before the spend is allocated just
+visualizes an unattributed bill.
+
 Every billable or slow call must map to value delivered.
 - **Necessity**: is the call needed *now*, or is it "call it every run/every
   request" out of habit? Unchanged inputs should not be re-fetched, re-embedded,

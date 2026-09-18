@@ -3,6 +3,25 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.122.0] — 2026-09-18
+
+Wave 43 of the dogfooding batch: #279 — architecture maturity (Well-Architected), cloud cost (FinOps), and resilience (chaos engineering).
+
+### Added — deep-code-review
+- **Well-Architected pillars** in `infra-iac-containers.md` — review the design across the
+  cross-cloud pillars (operational excellence, security, reliability, performance efficiency, cost
+  optimization; sustainability where tracked), naming which pillar each finding serves; a
+  one-pillar-only audit is the gap. No pinned pillar counts.
+- **FinOps** in `performance-db-cost.md` — cost as a continuous inform → optimize → operate
+  practice; a bill with no allocation/owner/anomaly-alert is a finding, and a cost tool bought
+  before allocation just visualizes an unattributed bill.
+- **Chaos engineering** in `release-engineering.md` — resilience is exercised, not asserted: a
+  steady-state hypothesis + blast-radius-limited fault injection; a DR/failover/rollback path never
+  run is `unverified`.
+
+Frameworks named **by-name** (three ledger rows added to `docs/standards-index.md`, no URL / version
+/ pillar-counts). One new eval (125 total).
+
 ## [1.121.0] — 2026-09-18
 
 Wave 42 of the dogfooding batch: #278 — data contracts + the train/serve seam.

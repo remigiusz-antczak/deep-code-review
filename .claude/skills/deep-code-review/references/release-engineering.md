@@ -70,6 +70,16 @@ and find where it was **exercised** (a runbook drill, a game-day note, a past
 incident) — not only documented. A rollback path that has never been run is
 `unverified`, the same as an SLI defined only in a doc (`role-coverage.md`).
 
+## Resilience is exercised — chaos engineering
+
+Reliability claims are verified the way rollback is (above): a **chaos-engineering** exercise
+states a **steady-state hypothesis** ("checkout success stays above 99% if a cache node dies"),
+injects the fault in a **blast-radius-limited** scope (one instance, one AZ, a dependency timeout —
+in a controlled window, staging before prod), and confirms the hypothesis held. A DR / failover /
+autoscaling / rollback path with **no exercise** — no game-day, no injected-failure drill, no past
+incident that ran it — is `unverified`, not proven: a documented runbook is a hypothesis until run.
+Scope every experiment so a failed hypothesis cannot itself cause the outage it was testing for.
+
 ## DORA — measure it or say so
 
 The DORA framework's own five metrics, in two categories, are the standard
