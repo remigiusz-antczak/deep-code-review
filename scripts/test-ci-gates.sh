@@ -1004,6 +1004,41 @@ else
   record 1 "enumeration: fails closed and names a fully-enumerated dir missing both files (planted RED)"
 fi
 
+# Planted RED for check #7 (Verification-list completeness): an ALLOWLISTED
+# enumerate-every-id skill (contribution) whose evals.json carries an id NOT named in
+# its SKILL.md must fail closed and name that id; a NON-allowlisted skill's unnamed
+# ids must NOT be flagged (the check is scoped). Both dirs are fully wired through the
+# five lists so checks 1-6 pass and check #7 is the sole failure.
+V7="$WORK/enum-v7"
+mkdir -p "$V7/.claude/skills/contribution/evals" "$V7/.claude/skills/agentic-ceo/evals" \
+         "$V7/.github/workflows" "$V7/scripts"
+printf 'bash scripts/ci-gates.sh routing .claude/skills/contribution\nbash scripts/ci-gates.sh routing .claude/skills/agentic-ceo\n' \
+  > "$V7/.github/workflows/ci.yml"
+printf '       .claude/skills/contribution \\\n       .claude/skills/agentic-ceo \\\n' \
+  > "$V7/scripts/write-checksums.sh"
+printf 'SKILLS+=("contribution")\nSKILLS+=("agentic-ceo")\n' > "$V7/install.sh"
+printf '"contribution"\n"agentic-ceo"\n' > "$V7/scripts/recommend-overlays.py"
+# agentic-ceo holds the registry table AND (non-allowlisted) an evals.json with an
+# unnamed id -- check #7 must SKIP it.
+printf -- '---\nname: agentic-ceo\nmetadata:\n  version: "3.0.0"\n---\n| `contribution` | reach for it when x |\n' \
+  > "$V7/.claude/skills/agentic-ceo/SKILL.md"
+printf '3.0.0\n' > "$V7/.claude/skills/agentic-ceo/VERSION"
+printf '{"evals":[{"id":"unnamed-ceo-eval"}]}\n' > "$V7/.claude/skills/agentic-ceo/evals/evals.json"
+# contribution (allowlisted): names covered-eval in SKILL.md, but not uncovered-eval.
+printf -- '---\nname: contribution\nmetadata:\n  version: "1.0.0"\n---\n## Verification\n- covers the case (`covered-eval`).\n- `evals/evals.json` plants these cases.\n' \
+  > "$V7/.claude/skills/contribution/SKILL.md"
+printf '1.0.0\n' > "$V7/.claude/skills/contribution/VERSION"
+printf '{"evals":[{"id":"covered-eval"},{"id":"uncovered-eval"}]}\n' \
+  > "$V7/.claude/skills/contribution/evals/evals.json"
+gate "$ROOT/scripts/ci-gates.sh" enumeration "$V7"
+if [ "$GATE_RC" -ne 0 ] \
+   && grep -q 'ENUM: contribution eval id "uncovered-eval" is missing' "$WORK/last.log" \
+   && ! grep -q 'unnamed-ceo-eval' "$WORK/last.log"; then
+  record 0 "enumeration: check #7 flags an allowlisted skill's unnamed eval id, scopes past a non-allowlisted one (planted RED)"
+else
+  record 1 "enumeration: check #7 flags an allowlisted skill's unnamed eval id, scopes past a non-allowlisted one (planted RED)"
+fi
+
 # Planted RED: a skill with a VERSION and a frontmatter block but NO version:
 # stamp must fail closed and name the skill (an absent stamp is a drift lead, not
 # a silent pass).

@@ -3,6 +3,10 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.134.0] — 2026-09-18
+
+Wave 55 — a CI gate for the recurring Verification-list doc-sync miss (its root-cause fix). Adding an eval to a skill that enumerates one Verification bullet per eval (closed by "plants these cases") has silently left a later-added eval un-enumerated **four times** (product-output-safety since v1.75.0, undetected until this gate; v1.125.0; and two caught in review at v1.133.0) — no gate referenced eval ids. `scripts/ci-gates.sh enumeration` now has a **check #7**: for a closed allowlist of the six skills that enumerate EVERY eval id (`business-ops`, `contribution`, `growth-analytics`, `positioning`, `product-discovery`, `product-output-safety`), every id in `evals/evals.json` must appear in `SKILL.md`, fail-closed. Scoped by allowlist because the "plants" marker is ambiguous — `idea-critic` and `agentic-ceo` carry it but name only key cases, and the large skills do not enumerate (an unscoped check would false-flag them). Planted-red self-test added, incl. a scoping assertion (`test-ci-gates.sh` 73 → 74). The **fourth instance, caught by the new gate**: `product-output-safety`'s Verification list was missing `confidence-as-defined-tier-not-model-number` (its eval was added at v1.75.0; the behaviour was already in the method at "Show uncertainty as a defined tier", only the enumeration bullet was absent) → product-output-safety 1.3.2. Trio → 1.134.0. The allowlist is **manual and, unlike checks 1–5, does not self-gate**: a new enumerate-every-id skill must be added to it by hand (a typo'd/stale entry is fail-closed by a resolves-check after the loop; a missing addition is not caught).
+
 ## [1.133.0] — 2026-09-18
 
 Wave 54 — audit-2 remediation (portability + eval coverage), from two focused follow-up audits.

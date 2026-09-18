@@ -388,7 +388,9 @@ cmd_enumeration() {
   done
 
   local bt='`'
-  local fail=0 d name sver fmver fmline has_skill has_ver
+  local fail=0 d name sver fmver fmline has_skill has_ver vname
+  # check #7 allowlist: the skills whose SKILL.md enumerates EVERY eval id.
+  local verif_enum="business-ops contribution growth-analytics positioning product-discovery product-output-safety"
   for d in "$skills_dir"/*/; do
     [ -d "$d" ] || continue
     name="$(basename "$d")"
@@ -462,7 +464,47 @@ cmd_enumeration() {
         printf 'ENUM: %s SKILL.md frontmatter version (%s) != VERSION (%s)\n' "$name" "$fmver" "$sver" >&2; fail=1
       fi
     fi
+    # 7) Verification-list completeness — a skill that enumerates EVERY eval id in
+    #    its SKILL.md (one bullet per eval, ids in backticks, closed by "plants these
+    #    cases") must name every id in evals/evals.json, so a later-added eval cannot
+    #    leave its Verification bullet forgotten. Matches the backticked `id` so a bare
+    #    substring elsewhere in the prose cannot satisfy it. CLOSED, MANUAL allowlist
+    #    (`verif_enum`): the "plants" marker is ambiguous — idea-critic and agentic-ceo
+    #    carry it but name only KEY cases, and the large skills (deep-code-review,
+    #    agentic-delivery) do not enumerate, so an unscoped check would false-flag them
+    #    (already-litigated). UNLIKE checks 1–5, this list does NOT self-gate: a new
+    #    enumerate-every-id skill left off it is silently uncovered (fail-open on the
+    #    ADDITION), so it must be added by hand. The resolves-check after the loop
+    #    fail-closes a typo'd/stale entry, but cannot catch a missing addition. This
+    #    doc-sync class surfaced FOUR times before this gate — product-output-safety
+    #    (eval added v1.75.0, bullet forgotten until this wave found it), v1.125.0, and
+    #    two caught in review at v1.133.0 — with nothing referencing eval ids.
+    case " $verif_enum " in
+      *" $name "*)
+        if [ -f "$d/evals/evals.json" ]; then
+          while IFS= read -r eid; do
+            [ -n "$eid" ] || continue
+            grep -qF -- "${bt}${eid}${bt}" "$d/SKILL.md" \
+              || { printf 'ENUM: %s eval id "%s" is missing from its SKILL.md Verification list (doc-sync)\n' "$name" "$eid" >&2; fail=1; }
+          done < <(grep -oE '"id"[[:space:]]*:[[:space:]]*"[^"]+"' "$d/evals/evals.json" | sed -E 's/.*"([^"]+)"$/\1/' || true)
+        else
+          printf 'ENUM: %s is Verification-enumerated but has no evals/evals.json (fail closed)\n' "$name" >&2; fail=1
+        fi
+        ;;
+    esac
   done
+
+  # check-#7 allowlist drift: on the real suite (guarded by the base skill's presence,
+  # so a minimal test fixture that legitimately omits these overlays is skipped), every
+  # name in verif_enum must resolve to a skill dir — else a typo or a post-rename stale
+  # entry silently disables the check (fail-open on a fail-closed gate; the exact
+  # hand-list drift cmd_enumeration exists to catch).
+  if [ -d "$skills_dir/deep-code-review" ]; then
+    for vname in $verif_enum; do
+      [ -d "$skills_dir/$vname" ] \
+        || { printf 'ENUM: check-#7 allowlist names "%s", not a skill dir (typo or stale — fix verif_enum)\n' "$vname" >&2; fail=1; }
+    done
+  fi
 
   [ "$fail" -eq 0 ] || die "enumeration: one or more skills are not fully enumerated"
   printf 'enumeration: ok\n'

@@ -17,7 +17,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.3.1"
+  version: "1.3.2"
 ---
 
 # Product output safety
@@ -196,4 +196,8 @@ follows `communication-structure` if installed (BLUF / plain structure otherwise
 - An "are we covered under <AI regime>?" ask names the regimes (EU AI Act / ISO 42001 / NIST AI
   RMF) and routes the binding applies/deadline question to counsel, encoding no date
   (`names-and-routes-ai-governance-regimes-never-dates-or-a-binds-verdict`).
+- A raw model confidence percentage ("87% confident") shown to users is a finding —
+  render confidence as a **defined coarse tier** (each tier defined), never a bare
+  percentage that implies an uncalibrated precision and invites over-trust
+  (`confidence-as-defined-tier-not-model-number`).
 - `evals/evals.json` plants these cases.
