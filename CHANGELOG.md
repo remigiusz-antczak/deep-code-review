@@ -14,8 +14,7 @@ Wave 48 of the dogfooding batch: #281 — pricing-strategy methods in `business-
   good-better-best** packaging (tied to the user's value metric; usage/outcome fit AI cost-scaling)
   — applied to the user's willingness-to-pay, never setting the price, never fabricating a survey or
   market number. Methods named by-name. One new eval (business-ops 5 → 6). **OKRs (in the issue
-  title) were not added** — goal-setting is outside business-ops's money/compliance two-lane scope;
-  noted on #281.
+  title) were not added** — goal-setting is outside business-ops's money/compliance two-lane scope.
 
 ## [1.126.0] — 2026-09-18
 

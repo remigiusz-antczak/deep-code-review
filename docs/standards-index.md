@@ -298,7 +298,8 @@ design-quality checklist in `references/migration-parity.md` (#124).
   no URL or figure fetched this session; verify before citing a specific claim.
 - **Business / unit-economics frameworks** (named by `business-ops`): unit economics
   (LTV, CAC, LTV:CAC, payback, contribution margin); value-based, cost-plus, and
-  competitor-anchored pricing; runway / burn / break-even; the securities-offering boundary (equity / SAFE
+  competitor-anchored pricing; the Van Westendorp price-sensitivity meter and usage-based /
+  outcome-based / good-better-best packaging models; runway / burn / break-even; the securities-offering boundary (equity / SAFE
   fundraising); worker-classification tests; the GDPR/CCPA obligation triage (routed,
   not concluded). Named leads only — no URL, figure, statute, or rate fetched this
   session; route regulation questions to a licensed professional.
