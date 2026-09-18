@@ -5,6 +5,13 @@ fetch** for this release and what is **referenced by name** (not fetched — ver
 the current version before citing a specific URL). This split enforces the skill's
 own rule: cite only URLs you have verified.
 
+**Last link-rot re-verification: 2026-09-18** — every cited URL was re-fetched and
+confirmed live and content-accurate, except five fixed in that pass: 1 dead (the OWASP
+ASVS project page → 404, repointed to the ASVS repo) and 4 moved (OWASP Top 10:2025,
+its A03 detail, OWASP API Security 2023, and the GitHub Actions security page → their
+new canonical hosts, cited content verbatim-intact). Original verification dates below
+are unchanged (they record first verification); only the five fixed URLs were touched.
+
 Verification date for all direct fetches below: **2026-08-13**.
 
 ---
@@ -13,17 +20,17 @@ Verification date for all direct fetches below: **2026-08-13**.
 
 | Standard | URL | What was confirmed |
 |---|---|---|
-| OWASP Top 10:2025 | https://owasp.org/Top10/2025/ | Categories A01–A10:2025 verbatim (A01 Broken Access Control … A10 Mishandling of Exceptional Conditions). |
+| OWASP Top 10:2025 | https://top10.owasp.org/2025 | Categories A01–A10:2025 verbatim (A01 Broken Access Control … A10 Mishandling of Exceptional Conditions). |
 | OWASP Top 10 for LLM Applications 2025 | https://genai.owasp.org/llm-top-10/ | LLM01–LLM10:2025 names verbatim. A 2026 edition now exists (verified 2026-08-21; see the verification addendum below). |
 | OWASP Top 10 for LLM Applications 2025 (resource) | https://genai.owasp.org/resource/owasp-top-10-for-llm-applications-2025/ | Edition landing page; document publication 2024-11-17. |
 | OWASP Top 10 for Agentic Applications 2026 | https://genai.owasp.org/resource/owasp-top-10-for-agentic-applications-for-2026/ | Framework exists; published 2025-12-09; peer-reviewed by 100+ practitioners. (ASI01–ASI10 titles later confirmed verbatim from the official 2025-12-09 announcement — see the 2026-08-21 addendum below; the authoritative PDF was not re-fetched and wins on any conflict.) |
-| OWASP API Security Top 10 (2023) | https://owasp.org/API-Security/editions/2023/en/0x11-t10/ | API1–API10:2023 names verbatim. |
+| OWASP API Security Top 10 (2023) | https://api-security.owasp.org/editions/2023/en/0x11-t10 | API1–API10:2023 names verbatim. |
 | CWE Top 25 (2025) | https://cwe.mitre.org/top25/archive/2025/2025_cwe_top25.html | Official 2025 edition, last updated 2025-12-15; top entries (XSS, SQLi, CSRF, Missing Authorization, OOB Write, Path Traversal, Use-After-Free, OOB Read, OS Command Injection, Code Injection). |
 | WCAG 2.2 | https://www.w3.org/TR/WCAG22/ | W3C Recommendation, dated 2024-12-12; conformance levels A/AA/AAA; WCAG 3.0 still in development. |
 | Google Engineering Practices — Standard of Code Review | https://google.github.io/eng-practices/review/reviewer/standard.html | Core standard: approve once the change "definitely improves the overall code health," even if imperfect. |
 | Diátaxis | https://diataxis.fr/ | Four documentation types: Tutorials, How-to guides, Reference, Explanation. |
 | C4 model | https://c4model.com/ | Four abstraction levels: Context, Container, Component, Code. |
-| OWASP Top 10:2025 — A03 detail | https://owasp.org/Top10/2025/A03_2025-Software_Supply_Chain_Failures/ | A03 absorbed the former A06:2021 "Vulnerable and Outdated Components"; explicitly covers software that is "vulnerable, unsupported, or out of date"; guidance to upgrade "in a risk-based, timely fashion" and to "deliberately choose which version of a dependency you use and upgrade only when there is need"; names OWASP Dependency-Track / Dependency-Check / retire.js as inventory tools. |
+| OWASP Top 10:2025 — A03 detail | https://top10.owasp.org/2025/A03_2025-Software_Supply_Chain_Failures | A03 absorbed the former A06:2021 "Vulnerable and Outdated Components"; explicitly covers software that is "vulnerable, unsupported, or out of date"; guidance to upgrade "in a risk-based, timely fashion" and to "deliberately choose which version of a dependency you use and upgrade only when there is need"; names OWASP Dependency-Track / Dependency-Check / retire.js as inventory tools. |
 | OpenSSF Scorecard | https://github.com/ossf/scorecard | Automated repo security scorer (0–10 per check). Check names verbatim: `Maintained` (active within ~90 days), `Dependency-Update-Tool` (Dependabot/Renovate present), `Vulnerabilities` (unfixed vulns, via the OSV service), `Pinned-Dependencies`. |
 | OSV | https://osv.dev/ | Distributed open-source vulnerability database spanning 40+ package ecosystems (npm, PyPI, Go, Maven, Debian, …); `osv-scanner` scans a lockfile or SBOM and queries by package version or commit hash. |
 | Semantic Versioning | https://semver.org/ | MAJOR = "incompatible API changes"; MINOR = "add functionality in a backward compatible manner"; PATCH = "backward compatible bug fixes." |
@@ -84,7 +91,7 @@ Verification date: **2026-08-17**.
 
 | Standard / source | URL | What was confirmed |
 |---|---|---|
-| OWASP ASVS (project) | https://owasp.org/www-project-application-security-verification-standard/ | Latest stable version is **5.0.0** (news: released 30 May 2025). Requirement id form `v<version>-<chapter>.<section>.<requirement>` (e.g. `v5.0.0-1.2.5`). Use as L1/L2/L3 verification checklist — claiming "ASVS covered" in a review requires naming level + chapters actually checked. |
+| OWASP ASVS | https://github.com/OWASP/ASVS | Latest stable version **5.0.0** (dated May 2025). Preferred requirement id form `v<version>-<chapter>.<section>.<requirement>` (e.g. `v5.0.0-1.2.5`); a bare `1.2.5` refers to the latest version. Use as a verification checklist — claiming "ASVS covered" in a review requires naming the exact chapters/requirements actually checked, not a bare "ASVS" label. (Repointed 2026-09-18 from the retired `owasp.org/www-project-application-security-verification-standard/`, now 404; ASVS 5.0's assurance-level model was **not** re-verified this session — do not cite L1/L2/L3 without checking the 5.0 spec.) |
 
 ## Verified by direct fetch (2026-08-17) — install / Cursor portability
 
@@ -198,7 +205,7 @@ A03, cross-referenced from `references/security-agent-skills.md` AST02).
 | Standard / source | URL | What was confirmed |
 |---|---|---|
 | Renovate — `minimumReleaseAge` | https://docs.renovatebot.com/configuration-options/ | Supply-chain cooldown option: "Suppress branch/PR creation for X days" / "Prevent holding broken npm packages"; Renovate delays proposing an update until a package has been public for the configured duration, reducing exposure to newly-published malicious or broken releases. Associated option `minimumReleaseAgeBehaviour`. (Dependabot `cooldown` and npm/pnpm `min-release-age`-style keys were **not** fetched this session — confirm the exact key per ecosystem before citing.) |
-| GitHub Actions — Security hardening for GitHub Actions | https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions | Verbatim: `pull_request_target` / `workflow_run` used with an untrusted checkout "expose the repository to security compromises" and "must not explicitly check out untrusted code." Untrusted `${{ github.event.* }}` should be routed through an intermediate `env:` variable rather than inlined into a `run:` script (the value "is stored in memory and used as a variable, and doesn't interact with the script generation process"). Set the default `GITHUB_TOKEN` to "read access only for repository contents," escalating per job as required. (`persist-credentials` on `actions/checkout` was **not** found on this page.) |
+| GitHub Actions — Secure use reference | https://docs.github.com/en/actions/reference/security/secure-use | Privileged workflows (`pull_request_target` / `workflow_run`) share the main-branch cache and may hold write access + secrets, so they "must not explicitly check out untrusted code" (verbatim). For inline scripts, "the preferred approach to handling untrusted input is to set the value of the expression to an intermediate environment variable" rather than inlining `${{ github.event.* }}` into a `run:` script. Set the default `GITHUB_TOKEN` to "read access only for repository contents," escalating per job as required. (`persist-credentials` on `actions/checkout` still **not** on this page. Repointed 2026-09-18 — the page was renamed from "Security hardening for GitHub Actions" to "Secure use reference".) |
 | NIST AI Risk Management Framework — core functions (verified 2026-09-11) | https://www.nist.gov/itl/ai-risk-management-framework | The four core function names — **Govern, Map, Measure, Manage** — appear on the official NIST ITL framework page. Only the function names were confirmed here; the full AI RMF 1.0 (AI 100-1) and the Generative AI Profile (AI 600-1) control specifics were **not** fetched this session — cite those by name only (see the by-name list below). |
 
 ## Verified by direct fetch (2026-09-13) — agent context/memory lifecycle
