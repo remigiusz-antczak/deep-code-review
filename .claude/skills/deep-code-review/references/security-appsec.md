@@ -233,6 +233,21 @@ generation, `random.random()` for secrets, hard-coded keys/IVs, `password` +
 ChaCha20-Poly1305) with unique nonces; CSPRNG for all security-relevant
 randomness; keys in a managed store.
 
+**Crypto-agility & post-quantum readiness.** Beyond using strong *current*
+primitives, check the code can **change** them: algorithm choices named in
+config / metadata (a versioned suite id), not hard-coded at each call site, so a
+primitive can be rotated without a rewrite — and a ciphertext / signature envelope
+carries an algorithm identifier so old and new can coexist during a migration.
+For **long-lived** confidentiality (data or secrets that must stay secret for
+years), weigh **harvest-now-decrypt-later**: an adversary can record
+classical-encrypted traffic today and decrypt it once a cryptographically-relevant
+quantum computer exists — so long-lived secrets warrant a migration path to the
+NIST post-quantum standards: **FIPS 203 ML-KEM** (key encapsulation), **FIPS 204
+ML-DSA** and **FIPS 205 SLH-DSA** (signatures), published 2024. Not every system
+needs PQC now; the finding is a **hard-coded, un-versioned primitive with no swap
+path on a long-lived-data surface** — not "you must ship ML-KEM today" (that would
+be stricter than the standard).
+
 ## A05:2025 — Injection
 
 SQL/NoSQL/OS-command/LDAP/XPath/template/header injection and XSS. Corresponds

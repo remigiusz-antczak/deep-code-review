@@ -1591,6 +1591,28 @@
         "Agent is evaluated on its trajectory -- tool selection + arguments + multi-step completion -- not only the final answer",
         "A right final answer via a lucky/unsafe path (or a wrong tool choice) is a latent failure invisible to an output-only bench"
       ]
+    },
+    {
+      "id": "crypto-agility-and-harvest-now-decrypt-later-on-long-lived-data",
+      "prompt": "A service encrypts records that must stay confidential for 20+ years. The crypto is AES-GCM (strong today), but the algorithm is hard-coded at every call site with no version/identifier in the stored ciphertext envelope. A04's current-primitive check says the crypto is strong. Anything to flag?",
+      "expected_output": "Yes -- two crypto-agility gaps A04's current-primitive check doesn't cover. (1) Crypto-agility: the algorithm is hard-coded at each call site with no versioned suite id and no algorithm identifier in the ciphertext envelope, so it cannot be rotated without a rewrite and old/new can't coexist during a migration -- flag the non-agile design. (2) Harvest-now-decrypt-later: for 20-year confidentiality, an adversary can record the classical-encrypted data today and decrypt it once a cryptographically-relevant quantum computer exists -- so long-lived secrets warrant a migration path to the NIST post-quantum standards (FIPS 203 ML-KEM for key encapsulation; FIPS 204 ML-DSA / FIPS 205 SLH-DSA for signatures, published 2024). The finding is the hard-coded, un-versioned primitive with no swap path on a long-lived-data surface -- NOT 'ship ML-KEM today' (that would be stricter than the standard). (security-appsec.md A04.)",
+      "expectations": [
+        "Flags crypto-agility: a hard-coded primitive with no versioned suite id / no envelope algorithm identifier can't be rotated without a rewrite",
+        "Raises harvest-now-decrypt-later for long-lived confidentiality -> plan a PQC migration path",
+        "Names the NIST PQC standards (FIPS 203 ML-KEM / 204 ML-DSA / 205 SLH-DSA)",
+        "Bounded: the finding is the non-agile design on long-lived data, not 'ship PQC today' (not stricter than the standard)"
+      ]
+    },
+    {
+      "id": "honor-global-privacy-control-gpc-opt-out-signal",
+      "prompt": "A product sells audience data and serves cross-context targeted ads. The privacy review covers consent recording and cookie-banner load order. A reviewer asks about GPC; the team says 'we have a cookie banner.' What is the check?",
+      "expected_output": "A cookie banner is not GPC. Global Privacy Control is a universal opt-out signal the browser sends: check the code reads the `Sec-GPC: 1` request header (and/or navigator.globalPrivacyControl === true) and acts on it as a do-not-sell/share opt-out -- a greppable check: is the signal read at all, and does an opt-out path honor it (suppress the sale / share / cross-context targeting for that request or user)? W3C GPC = 'a mechanism for expressing a person's general universal preference for a do-not-sell-or-share interaction'; it does not cover deletion or same-context use. Whether GPC is legally binding is jurisdiction-specific (several US states recognize it) -> route the legal-obligation question to counsel / business-ops; the code check (reads + acts on the signal) is the concrete review item. (privacy-compliance.md.)",
+      "expectations": [
+        "A cookie banner is not GPC -- they are different mechanisms",
+        "Check the code reads Sec-GPC:1 / navigator.globalPrivacyControl and acts on it as a do-not-sell/share opt-out",
+        "Greppable: is the signal read at all, and does an opt-out path honor it",
+        "Route the legal-binding question to counsel; the code check (reads + acts) is the review item"
+      ]
     }
   ]
 }

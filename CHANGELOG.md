@@ -3,6 +3,19 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.152.0] — 2026-09-19
+
+Wave 73 — **crypto-agility & post-quantum readiness** in `security-appsec.md` A04, from research issue **#359** (cartography survivor — a new technical dimension; A04 reviewed *current* crypto but had nothing on algorithm agility or PQC).
+- **Crypto-agility:** algorithm choices named in config / metadata (a versioned suite id), not hard-coded per call site, so a primitive can be rotated without a rewrite; a ciphertext / signature envelope carries an algorithm identifier so old and new coexist during migration.
+- **Harvest-now-decrypt-later:** long-lived confidentiality warrants a migration path to the NIST post-quantum standards — **FIPS 203 ML-KEM** (KEM), **FIPS 204 ML-DSA** + **FIPS 205 SLH-DSA** (signatures), published 2024.
+- **Bounded (not stricter than the standard):** the finding is a hard-coded, un-versioned primitive with no swap path on a long-lived-data surface — not "ship ML-KEM today." No compliance deadline encoded (rot rule).
+
+- **GPC adjacent (domain Q):** honor the **Global Privacy Control** universal opt-out — the code reads `Sec-GPC: 1` / `navigator.globalPrivacyControl` and acts on it as a do-not-sell/share opt-out (a greppable check); the *legal* binding question routes to counsel / `business-ops` (`privacy-compliance.md`).
+
+FIPS 203/204/205 + W3C GPC verified by direct fetch this session (2026-09-19), in `docs/standards-index.md`. Two evals (deep-code-review 148 → 150). Trio → 1.152.0. Closes #359 (PQC/crypto-agility + the GPC adjacent).
+
+Dogfood reviewer: PASS-WITH-NITS (PQC half) → the one soft item was that #359 also names a "GPC adjacent (Q)" sub-scope; rather than half-close, built the GPC honor-check too so "Closes #359" is accurate. FIPS names + GPC signal verified verbatim by direct fetch; bounded (no PQC mandate / no deadline); provenance filed in a correctly-dated section.
+
 ## [1.151.0] — 2026-09-19
 
 Wave 72 — **LLM-application engineering correctness** (RAG retrieval-seam + agent-trajectory eval), from research issue **#391** (cartography survivor — a new area under the existing agent/LLM archetype; section-add to `testing-and-evals.md`, no new archetype). The AI-evals section covered generic model-output quality but not the RAG retrieval seam or agent trajectories:

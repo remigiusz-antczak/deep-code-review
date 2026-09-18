@@ -92,6 +92,17 @@ referenced nowhere; no scheduled task issuing a delete at all.
 - **Children / age gates**, if the product plausibly reaches minors: is there an
   age signal, does it gate collection and personalization, and is it
   server-enforced rather than a dismissible client dialog?
+- **Global Privacy Control (GPC) universal opt-out**, if the product sells or
+  shares personal data or serves cross-context targeted ads: does the code read the
+  **`Sec-GPC: 1`** request header (and/or `navigator.globalPrivacyControl === true`)
+  and act on it as a do-not-sell/share opt-out? A greppable check — is the signal
+  read at all, and does an opt-out path honor it? W3C GPC is "a mechanism for
+  expressing a person's general universal preference for a do-not-sell-or-share
+  interaction" (it does not cover deletion or same-context use). Whether GPC is
+  *legally binding* for a given product is jurisdiction-specific (several US states
+  recognize it) — **route the legal-obligation question to counsel / `business-ops`**;
+  the *code* check (does the app read and act on the signal) is the concrete review
+  item.
 
 ---
 
