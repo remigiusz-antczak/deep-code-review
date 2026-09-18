@@ -172,8 +172,18 @@ Elevated in 2025. Covers dependencies, build, and CI/CD provenance.
 **How to detect**: lockfile present and honored (`package-lock.json`,
 `poetry.lock`, `go.sum`, `Cargo.lock`)? Dependencies pinned (no floating
 `^`/`latest` for security-critical libs)? Any unmaintained/abandoned or
-typosquatted package (name a character off from a popular one)? Install-time
-scripts (`postinstall`) from untrusted packages? CI actions pinned to a **commit
+typosquatted package (name a character off from a popular one)? Any **slopsquat**
+risk — a *newly-added* dependency whose name an LLM may have **hallucinated** (a
+plausible name that never existed until an attacker pre-registered it, which
+name-proximity does **not** catch)? Verify a new dependency resolves to an
+**established** package (registry age, download history, a real source repo /
+provenance), not merely that it isn't a typo of a popular one — LLM-hallucinated
+package names are a **predictable** pre-registration target (a material share of
+AI-recommended packages don't exist, and the *same* hallucinations recur across
+runs — package-hallucination study logged in `docs/standards-index.md`). Cross-ref
+`dependency-currency-and-upgrades.md` (the release-age cooldown extends to
+never-existed-until-now). Install-time scripts (`postinstall`) from untrusted
+packages? CI actions pinned to a **commit
 SHA**, not a mutable tag (`@main`, `@v3`)? Is the build reproducible/hermetic?
 Is there dependency + image scanning and an SBOM? **CI/CD trigger & token
 hygiene** — does a `pull_request_target` (or `workflow_run`) workflow check out

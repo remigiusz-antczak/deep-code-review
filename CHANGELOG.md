@@ -3,6 +3,17 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.149.0] — 2026-09-19
+
+Wave 70 — **slopsquatting**: a dependency existence / provenance check beyond name-proximity, from research issue **#402** (AI-code research). A03's only name discriminator was typosquat (a character off a popular name); a package name an LLM *hallucinated* — that an attacker pre-registers — isn't a typo of anything, so it passed every named check.
+- **`security-appsec.md` A03:** verify a *newly-added* dependency resolves to an **established** package (registry age, download history, a real source repo / provenance), not merely that it isn't a typo. LLM-hallucinated names are a *predictable* pre-registration target.
+- **`dependency-currency-and-upgrades.md`:** the release-age cooldown also catches a never-existed-until-now name (no history to clear the window); typosquat / slopsquat / maintainer-hijack named together.
+- **By-defect, not author-gated** — the rationale mentions the elevated base rate in AI-assisted code, but the check gates on the dependency's provenance, never on who wrote the diff.
+
+Source (USENIX Security 2025, Spracklen et al.) added to `docs/standards-index.md` + the file's own standards list. One eval (deep-code-review 145 → 146). Trio → 1.149.0. Closes #402.
+
+Dogfood reviewer: FIX-FIRST → fixed pre-merge. The reviewer fetched the USENIX PDF and confirmed every figure accurate, but caught two provenance-honesty defects in the standards-index row: a false "corroborated across the authors' GitHub" claim (the GitHub states a 19.7% overall rate, not the per-model figures) and a per-package-vs-per-sample denominator misframe. Corrected the row ("at least 21.7% of *packages recommended by* open-source models …"; GitHub corroborates names/samples/models + a 19.7% overall rate), removed the inline figures from A03 (they live in the ledger), and fixed the eval's denominator.
+
 ## [1.148.0] — 2026-09-19
 
 Wave 69 — a new **i18n / l10n depth reference** (domain R), from research issue **#390** (coverage cartography — a genuinely new area, no new archetype). Domain R routed only to an 8-line checklist that omitted bidi/RTL; new `references/i18n-l10n.md` carries the standards-heavy depth a checklist can't hold, routed from the R map row + the checklist header:

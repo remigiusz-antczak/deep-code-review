@@ -17,7 +17,8 @@ former A06:2021 *Vulnerable and Outdated Components*), OpenSSF Scorecard, OSV
 (osv.dev), Semantic Versioning, GitHub Dependabot, Renovate (`minimumReleaseAge`
 cooldown), endoflife.date, CISA KEV (Known Exploited Vulnerabilities catalog),
 FIRST EPSS (Exploit Prediction Scoring System), FIRST CVSS (Common Vulnerability
-Scoring System — severity).
+Scoring System — severity), package-hallucination / slopsquatting (Spracklen et
+al., USENIX Security 2025).
 
 > The two forces are in tension and the review must hold both. **Staleness is a
 > security risk** — A03:2025 names software that is "vulnerable, unsupported, or
@@ -122,8 +123,12 @@ tests, performance, or another axis.
 5. **Verify the new release is not itself the attack.** Currency and integrity
    collide here: pulling "latest" is exactly how a compromised version enters.
    Before trusting a jump — especially a large one or a just-published release —
-   confirm provenance/signature and that the version is not typosquatted or
-   maintainer-hijacked (A03 in `security-appsec.md`). "Newer" is not "safer" by
+   confirm provenance/signature and that the package is not typosquatted,
+   **slopsquatted** (a hallucinated name an attacker pre-registered — verify a
+   newly-added dep resolves to an *established* package with real history, not just
+   that it isn't a typo), or maintainer-hijacked (A03 in `security-appsec.md`). The
+   release-age cooldown below also catches a slopsquat name: it has no established
+   history to clear the window. "Newer" is not "safer" by
    itself. Do **not** auto-merge bot update PRs without this + the green gate.
    **Prefer a release-age cooldown**: refuse to resolve a version until it has
    been public for a set window (e.g. 7 days), so a compromised or broken
