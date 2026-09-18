@@ -311,6 +311,17 @@
         "The budget (the bound) and the UNPRICED label are not substitutes -- both apply",
         "Blocks the dispatch until a per-lane token/dollar budget is set at G2"
       ]
+    },
+    {
+      "id": "build-side-playbook-leads-with-relationship-not-record",
+      "prompt": "You are designing the primary surface of a product whose value is how companies, people, and deals connect. A builder proposes a flat sortable table of companies as the landing view, with the relationships available two clicks into each record. What does the build-side product playbook say, and how is that choice verified?",
+      "expected_output": "Lead with the relationship, not the record. When the product's value is in how entities connect, the primary surface makes the relationship the first-class object -- the path between two entities, the shared context, the chain of dependence. A flat entity table with the connections buried inverts the value proposition: it fronts the records a user could get anywhere and hides the graph that is the reason to use the product. Build the relationship as the entry view; record detail is the drill-down. This is a G3 Design build choice recorded in the ADR; deep-code-review domain P verifies it at G6 review (a surface that buries its own core value reads as low actionability). The playbook does not restate domain P's review axes -- it points to product-ux-quality.md for the shared ones (why-it-matters, ranking, progressive disclosure, one-component, interaction-completeness) and adds only the build-time patterns domain P does not shape. (agentic-delivery production-grade-product-playbook.md.)",
+      "expectations": [
+        "Says lead with the relationship / connection as the first-class object, not a flat entity table with the relationships buried",
+        "Names the inversion: a record table fronts what is available anywhere and hides the graph that is the product's actual value",
+        "Ties it to the gates: chosen at G3 Design (recorded in the ADR), verified by deep-code-review domain P at G6",
+        "Notes the playbook points to product-ux-quality.md for the shared review axes rather than restating them (no duplication)"
+      ]
     }
   ]
 }

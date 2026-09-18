@@ -3,6 +3,15 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.139.0] — 2026-09-18
+
+Wave 60 — build-side product playbook from owner-filed **#343**. Perun's domain P reviews a product surface for defects; it was not written as a build spec. New reference `agentic-delivery/references/production-grade-product-playbook.md` adds the build→verify direction: it names the positive build-time patterns and pairs each with the domain-P axis that verifies it.
+- **Scope — net-new only, no restatement.** The patterns already stated once as enforced review axes (why-it-matters / actionability #332, ranking & sort legibility #333, progressive disclosure, one-component-per-concept, interaction-completeness) are *pointed at* `product-ux-quality.md` in a build→verify table, not copied (a second copy is the duplication this suite condemns). The file adds only the three build-time patterns domain P assumes but does not shape: **job-first information architecture** (derive the layout from the user's core decision; illustrative surface-shapes, not a taxonomy to complete), **lead with the relationship, not the record** (for entity-graph products), and **density as a build target** (choose the baseline in the G3 ADR, don't inherit a component-library default).
+- **Placement.** Lives in `agentic-delivery` (the build side, G3 Design), not `deep-code-review` (whose identity is the review bar, and whose `SKILL.md` is byte-capped) — routed from the G3 design block with a "read it when" trigger; verified by dcr domain P at G6.
+- **Provenance.** Cites public design *conventions*, never a private vendor; a named precedent method takes a `docs/standards-index.md` row.
+
+One eval (agentic-delivery 30 → 31). Trio → 1.139.0. Closes #343.
+
 ## [1.138.0] — 2026-09-18
 
 Wave 59 — verification-honesty deltas from owner-filed #334 / #336 / #340 (the other four of the #334–#340 batch — #335/#337/#338/#339 — were already covered and closed with file:line evidence, not duplicated). Three small, seam-guarded additions:

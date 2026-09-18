@@ -10,7 +10,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.138.0"
+  version: "1.139.0"
 ---
 
 # Agentic delivery
@@ -152,6 +152,13 @@ independent verification or a human approval that actually applies.
 never zero. Missing spend cap is `BLOCKED`, never unlimited** — `UNPRICED` is a
 labeling rule (report the cost honestly); the G2 budget is the bound itself, and
 the two are not substitutes.
+
+**Building a user-facing product surface (domain P, build side).** To build to
+the quality bar in G3 rather than discover the gaps in G6 review:
+`references/production-grade-product-playbook.md` — **read it when** shaping a
+product surface's information architecture, ranking, relationship-vs-record
+framing, or density. It is the positive, build-time companion to
+`deep-code-review` domain P, which verifies each choice at G6.
 
 **Durable state, recovery, and non-code receipts** — one canonical project
 record with a single writer, the resume / crash-after-effect reconciliation
