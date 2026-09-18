@@ -68,7 +68,7 @@ The org-level frame is **FinOps** — cost as a continuous practice, not a one-t
 attributable), **optimize** (rightsize, commit/reserve steady load, kill idle or orphaned
 resources), **operate** (a budget with an **anomaly alert** and a named **owner**). A cloud bill
 with no allocation/tagging, no owner, or no anomaly alert is a finding independent of any one
-call's cost — and, per `observability.md`, buying a cost tool before the spend is allocated just
+call's cost — and, per `release-engineering.md`, buying a cost tool before the spend is allocated just
 visualizes an unattributed bill.
 
 Every billable or slow call must map to value delivered.
