@@ -1415,6 +1415,17 @@
         "Distinguishes gate-blocking from the reviewer-honesty could-not-check status (not a silent pass)",
         "The answer FLIPS for a security / authz / integrity / spend attestation: a can't-verify there fails CLOSED (blocks), not open -- fail-open there is the bug"
       ]
+    },
+    {
+      "id": "known-exploited-severity-names-kev-epss-not-a-guess",
+      "prompt": "A dependency review flags a CVE in a library on a reachable code path and calls it 'known-exploited' to justify a Critical, but cites no source. Separately, another CVE on a reachable path has a low EPSS score and is not listed in KEV, and the reviewer proposes waving it through as low-risk. What does the severity discipline require in each case?",
+      "expected_output": "Case 1 (unsourced 'known-exploited'): the claim must name its canonical source, not guess (principle 2, prefer the canonical instrument). CISA's KEV catalog is the authoritative source of vulnerabilities that have been exploited in the wild -- a CVE listed there IS known-exploited. FIRST's EPSS gives the data-driven probability a CVE will be exploited in the wild in the next 30 days. Read them alongside CVSS, not instead of it: KEV/EPSS answer how likely, CVSS answers how bad. Case 2 (low EPSS / absent from KEV -> wave through): refuse. KEV and EPSS are prioritization INPUTS, not a lower bar -- a low EPSS, or a CVE's absence from KEV, does NOT disarm a reachable-path finding (absence of exploitation evidence is not proof of safety; EPSS is a 30-day probability, not a verdict). They raise and rank, never wave a reachable vulnerability through. (dependency-currency-and-upgrades.md, severity discipline.)",
+      "expectations": [
+        "Case 1: requires citing the canonical source -- CISA KEV (authoritative exploited-in-the-wild catalog) and/or FIRST EPSS (30-day exploitation probability) -- not an unsourced 'known-exploited' claim",
+        "Distinguishes KEV/EPSS (likelihood) from CVSS (severity), read together rather than instead of each other",
+        "Case 2: a low EPSS or absence from KEV does NOT disarm a reachable-path finding -- KEV/EPSS are inputs that raise and rank, never lower the bar",
+        "Names the anti-false-precision reasoning: absence of exploitation evidence is not proof of safety, and EPSS is a probability not a verdict"
+      ]
     }
   ]
 }

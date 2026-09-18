@@ -3,6 +3,15 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.140.0] — 2026-09-18
+
+Wave 61 — name the exploited-in-the-wild instruments for the "known-exploited" severity gate, from research issue **#357**. `dependency-currency-and-upgrades.md`'s severity discipline gated on "Known-exploited (or high-CVSS)" but named **no source** for "known-exploited" — a gap the skill's own principle 2 (prefer the canonical instrument) exposes.
+- **Named instruments.** A "known-exploited" finding must now cite the canonical source: **CISA KEV** ("the authoritative source of vulnerabilities that have been exploited in the wild") for *is it exploited now*, and **FIRST EPSS** (probability a CVE "will be exploited in the wild in the next 30 days") for *how likely*. Read alongside CVSS (likelihood vs severity) — the same multi-signal discipline the rubric applies everywhere.
+- **Guardrail — inputs, not a lower bar.** Both bodies cast their scores as an *input* to prioritization, so KEV / EPSS **raise and rank, never lower the bar**: a low EPSS, or a CVE's absence from KEV, does **not** disarm a reachable-path finding (absence of exploitation evidence is not proof of safety; EPSS is a 30-day probability, not a verdict) — the same refusal to over-trust a derived number that the confidence-tier false-precision rule applies to UI display.
+- **Provenance.** KEV + EPSS added to the file's own standards list **and** `docs/standards-index.md` (both URLs fetched this session, 2026-09-18) — the ledger-mirror discipline.
+
+One eval (dcr 132 → 133). Trio → 1.140.0. Closes #357.
+
 ## [1.139.0] — 2026-09-18
 
 Wave 60 — build-side product playbook from owner-filed **#343**. Perun's domain P reviews a product surface for defects; it was not written as a build spec. New reference `agentic-delivery/references/production-grade-product-playbook.md` adds the build→verify direction: it names the positive build-time patterns and pairs each with the domain-P axis that verifies it.

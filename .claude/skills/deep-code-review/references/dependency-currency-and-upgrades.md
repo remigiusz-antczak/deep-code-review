@@ -15,7 +15,9 @@ Standards this file tracks (verified URLs + dates in `docs/standards-index.md`):
 OWASP Top 10:2025 **A03 Software Supply Chain Failures** (which absorbed the
 former A06:2021 *Vulnerable and Outdated Components*), OpenSSF Scorecard, OSV
 (osv.dev), Semantic Versioning, GitHub Dependabot, Renovate (`minimumReleaseAge`
-cooldown), endoflife.date.
+cooldown), endoflife.date, CISA KEV (Known Exploited Vulnerabilities catalog),
+FIRST EPSS (Exploit Prediction Scoring System), FIRST CVSS (Common Vulnerability
+Scoring System — severity).
 
 > The two forces are in tension and the review must hold both. **Staleness is a
 > security risk** — A03:2025 names software that is "vulnerable, unsupported, or
@@ -171,6 +173,20 @@ burying a real Critical under a wall of "bump me":
   debt," non-blocking. Report it as a batch with the recommendation to adopt an
   update bot, **not** as N separate findings. Never let this class outrank a real
   defect.
+
+**Determining "known-exploited" — name the instrument, don't guess.** A finding
+that turns on "known-exploited" must name its source, per principle 2
+(prefer the canonical instrument). CISA's **KEV** catalog is
+"the authoritative source of vulnerabilities that have been exploited in the
+wild" — a CVE listed there *is* known-exploited. FIRST's **EPSS** gives the
+data-driven probability a CVE "will be exploited in the wild in the next 30
+days." Read them **alongside** CVSS, not instead of it: KEV / EPSS answer *how
+likely*, CVSS answers *how bad* (severity). But both bodies frame KEV and EPSS
+as *inputs* to prioritization, so they **raise and rank, never lower the bar** —
+a low EPSS,
+or a CVE's absence from KEV, does **not** disarm a reachable-path finding
+(absence of exploitation evidence is not proof of safety, and EPSS is a 30-day
+probability, not a verdict).
 
 And never recommend a bump you have not shown is gate-green — a fix that breaks
 the build is a regression, not an improvement (principle 4). If you could not run
