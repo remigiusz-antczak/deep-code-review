@@ -10,7 +10,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.130.0"
+  version: "1.131.0"
 ---
 
 # Agentic delivery
@@ -279,9 +279,8 @@ Delivery owns the running stack, not only the diff.
    project's isolated verify dir.
 
 G5 is not green until step 3 ran or is `UNVERIFIED` with the missing
-prerequisite named. When the change can alter a rendered page, step 3 includes
-**headed-browser** evidence on the exact route after the action
-(`product-ux-quality.md`) — a headless unit assertion is not that receipt.
+prerequisite named; for a change that can alter a rendered page, step 3's receipt
+is the **headed-browser** evidence G5 requires (`product-ux-quality.md`).
 
 ---
 
