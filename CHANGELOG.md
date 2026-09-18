@@ -3,6 +3,19 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.120.0] — 2026-09-18
+
+Wave 41 of the dogfooding batch: #282 — experiment rigor + product-led growth in `growth-analytics` (an independent-line overlay; the dcr/agentic-delivery/idea-critic trio bumps to 1.120.0 with the CHANGELOG per the lockstep coupling, no dcr content change).
+
+### Added — growth-analytics (→ 1.1.0)
+- **Experiment rigor — pre-commit the design, no peeking** (#282). A method sub-section + a DoD
+  item + an anti-rationalization row: peeking (stopping the moment p < 0.05) inflates the
+  false-positive rate above the nominal 5%; require a pre-committed sample size/duration read
+  **once**, or a sequential design with a valid stopping rule; pre-declare a **primary + guardrail**
+  metric; CUPED variance reduction where a pre-period exists; a day-2 read of a 14-day test is
+  `UNVERIFIED`. Product-led growth: the activation path is the experiment surface, same rigor.
+  Frameworks named **by-name** (no version/figure pinned). One new eval (growth-analytics 4 → 5).
+
 ## [1.119.0] — 2026-09-18
 
 Wave 40 of the dogfooding batch: #301 — bind the existing release-age-cooldown guidance with an eval.

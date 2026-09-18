@@ -40,6 +40,17 @@
         "Routes to the user's own analytics for the numbers",
         "Returns the query/question to run when the data is not in hand"
       ]
+    },
+    {
+      "id": "experiment-peeking-is-not-a-win-precommit-or-sequential",
+      "prompt": "Our A/B test was planned for 14 days. On day 2 the variant hit p = 0.03 on click-through (a secondary metric); the team wants to stop and ship. What does the reviewer say?",
+      "expected_output": "Do not ship on that read -- it is peeking. Stopping the moment p < 0.05 during a fixed-horizon test inflates the false-positive rate far above the nominal 5%, so a day-2 hit on a 14-day test is UNVERIFIED, not a win: read a fixed-horizon test once at its pre-committed end (day 14), or switch to a sequential design whose stopping rule stays valid under continuous monitoring (an always-valid / group-sequential bound). Also, click-through is a SECONDARY metric -- the primary metric and a guardrail must be pre-declared, so a win on a secondary can't be cherry-picked and a regression on the guardrail is caught. If variance is high and a pre-period exists, CUPED-style variance reduction can reach power sooner without abandoning rigor. Ship only on the pre-committed design's read. (growth-analytics/SKILL.md.)",
+      "expectations": [
+        "Identifies stopping on the day-2 p < 0.05 as peeking, which inflates the false-positive rate above the nominal 5% -- the result is UNVERIFIED, not a win",
+        "Requires reading a fixed-horizon test once at its pre-committed end, OR a sequential design with an always-valid / group-sequential stopping rule for continuous monitoring",
+        "Flags that click-through is a secondary metric; the primary + a guardrail must be pre-declared so a secondary win is not cherry-picked",
+        "Does not accept the day-2 result as a ship signal; may note CUPED variance reduction as a rigor-preserving way to reach power sooner"
+      ]
     }
   ]
 }

@@ -14,7 +14,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # Growth analytics
@@ -88,6 +88,21 @@ and retention limits to `deep-code-review`'s `privacy-compliance.md` (domain Q).
 - `mature` → guardrail metrics, an experimentation platform, and metric
   governance (retire dead events; one definition per metric).
 
+### 5. Experiment rigor — pre-commit the design, no peeking
+An A/B result is only real if the test was designed before it was read. The failure class:
+watch the dashboard and **stop the moment p < 0.05** ("peeking") — repeated looks inflate the
+false-positive rate far above the nominal 5%, so the "win" is noise. Require one of: a
+**pre-committed sample size / duration** (compute the minimum detectable effect and N up front,
+then read **once** at the end), or a **sequential-testing** design whose stopping rule stays valid
+under continuous monitoring (an always-valid / group-sequential bound), never a fixed-horizon test
+peeked at daily. Pre-declare the **primary** metric and a **guardrail**, so a win on a secondary
+metric can't be cherry-picked and a "win" that regresses the guardrail is caught. Where variance is
+high and a pre-period exists, **CUPED**-style variance reduction buys power without more users. A
+result read on day 2 of a 14-day test is `UNVERIFIED`, not a win. For a **product-led-growth**
+motion (self-serve activation is the funnel), the experiment surface is the onboarding/activation
+path — same rigor applies; "it converted better this week" without a controlled test is a trend,
+not a causal claim.
+
 ## Stage-awareness
 Keys to the stage model in `deep-code-review` (the `STAGE` field and *Project
 stage*). Early, less instrumentation is correct; the cost of a metrics stack on a
@@ -102,6 +117,9 @@ earns its keep.
   in case".
 - No benchmark, threshold, or metric value is asserted that the user's data did
   not supply; unknowns are `UNVERIFIED` and routed to the user's analytics.
+- An experiment read-out names its **pre-committed design** (a fixed N/duration or a valid
+  sequential rule) plus a **primary and a guardrail** metric; a peeked mid-test result is never
+  reported as a win.
 - The identifier seam and PII routing are stated, not restated from
   `observability.md` / `privacy-compliance.md`.
 
@@ -114,11 +132,14 @@ earns its keep.
 | "Signups are up — we're growing." | Signups are vanity; they rise regardless. Read retention of the core action first. |
 | "Estimate our conversion so the deck is done." | An un-instrumented metric is UNVERIFIED. Name what to instrument; do not invent the value. |
 | "Use the raw user id for cohorts." | Cohorts need a *stable* id, but keep it pseudonymous; route PII/consent to `privacy-compliance.md`. |
+| "It hit significance on day 2 — ship it." | Peeking inflates the false-positive rate; read a fixed-horizon test **once** at the pre-committed end, or use a valid sequential rule. Day 2 of a 14-day test is `UNVERIFIED`, not a win. |
 
 ## Standards (by name; verify a figure/URL before citing one)
 AARRR / "Pirate Metrics" (McClure); the North Star Metric framework;
 vanity-vs-actionable metrics; retention cohort analysis; "one metric that
-matters"; activation / aha-moment analysis. Named leads only — fetch and log a
+matters"; activation / aha-moment analysis; experiment rigor — peeking, fixed-horizon vs
+sequential testing, always-valid p-values, CUPED variance reduction; product-led growth
+(self-serve activation). Named leads only — fetch and log a
 source before citing a specific figure or threshold (repo convention). The
 product-analytics vs ops-observability identifier seam is described in
 `observability.md` (domain M); privacy of user identifiers in
