@@ -77,6 +77,26 @@ explicit third choice), not which one this review prefers.
   mutate content-hashed assets a running process is still serving.
 - **Meaningful assertions.** Not `assertTrue(true)`; not a mock that makes the
   test pass trivially; not coverage inflated by tests that assert nothing.
+- **Mutation testing when a coverage number is doing the assurance work.**
+  Line/branch coverage shows what *ran*, not whether a test would *catch a fault*
+  in it (`pitest.org`); a suite can hit a high percentage and assert almost
+  nothing. When load-bearing logic leans on a coverage figure as its assurance,
+  measure the **product suite's** fault-detection with **mutation testing**
+  (distinct from self-testing a *gate* against a planted defect, above — this
+  scores the shipped tests, not the checker): seed small faults and read the
+  **mutation score** (percentage of mutants killed). A **surviving mutant is a
+  finding in this method's own shape** — a `file:line` plus the exact behaviour no
+  test asserts (a High-confidence weak-assertion finding, not a style nit); triage
+  survivors on critical paths first. Name the technique + the CI operator (e.g.
+  Stryker's `thresholds.break` — it exits non-zero below a set score, but
+  **defaults to `null` = never fails the build**, so it fail-closes only once you
+  *set* it (the `high`/`low` thresholds default to 80/60 and merely colour the
+  report — a decorative gate if mistaken for one; cross-ref the fail-open severity
+  axis); choose the break value per repo, do not import a number) rather than a
+  single tool; representative engines are **Stryker** (JS/TS) and **PIT** (JVM),
+  plus per-language equivalents. **Bound it to the highest-stakes modules** — a
+  mutation run scales with suite size × mutant count, so a repo-wide mandate is an
+  over-ask.
 - **Deterministic & hermetic.** No real network, no real DNS, no writes outside
   a temp dir, no wall-clock/timezone flakiness. Inject a **seam** (a resolver, a
   store directory, a clock) rather than the real dependency. When a module

@@ -1359,6 +1359,18 @@
         "The machine file carries the same findings/ids/severities/areas as the markdown -- a consumer never reads the prose to trust it",
         "Block-style YAML; inline flow maps and anchors are dropped silently by minimal readers"
       ]
+    },
+    {
+      "id": "mutation-testing-surviving-mutant-is-a-weak-assertion-finding",
+      "prompt": "A service's core billing logic has 95% line coverage and the team cites that as proof its tests are solid. The reviewer notices the tests call the functions but assert very little. What does the reviewer recommend, and how is the finding framed?",
+      "expected_output": "Line/branch coverage measures what EXECUTED, not whether a test would CATCH a fault in it -- 95% coverage can coexist with near-zero assertions, so the number is not proof. For load-bearing logic that leans on a coverage figure as its assurance, measure the PRODUCT suite's fault-detection with MUTATION TESTING: seed small faults and read the mutation score (percentage of mutants killed). A surviving mutant on the billing logic is a concrete finding in this method's own shape -- a `file:line` plus the specific behaviour no test asserts -- rated a High-confidence weak-assertion finding, not a style nit; triage survivors on critical paths first. This is distinct from self-testing a gate against a planted defect (that proves the checker; this scores the shipped tests). Name the technique + the CI operator (e.g. Stryker's `thresholds.break`, which exits non-zero when the score falls below a chosen value -- pick it per repo, do not import a number) rather than any one tool; representative engines are Stryker (JS/TS) and PIT (JVM), plus per-language equivalents. Bound it to the highest-stakes modules -- a mutation run scales with suite size x mutant count, so a repo-wide mandate is an over-ask. (testing-and-evals.md.)",
+      "expectations": [
+        "Distinguishes coverage (what ran) from fault-detection (would a test catch a fault) -- 95% line coverage is not proof the tests are strong",
+        "Recommends mutation testing / mutation score to measure the product suite's assertion strength on the load-bearing logic",
+        "Frames a surviving mutant as a file:line + the unasserted behaviour -- a High-confidence weak-assertion finding, not a style nit; critical paths first",
+        "Names the technique + a CI operator (e.g. Stryker thresholds.break) and representative engines (Stryker/PIT + per-language equivalents) WITHOUT importing a specific threshold number; bounds it to highest-stakes modules because cost scales with suite size x mutant count",
+        "Distinguishes it from the gate-planted-defect self-test (checker vs shipped tests)"
+      ]
     }
   ]
 }

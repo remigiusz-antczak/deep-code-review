@@ -382,3 +382,14 @@ Verification date for the row below: **2026-09-17**. Added for the deep-code-rev
 | Standard | URL | What was confirmed |
 |---|---|---|
 | W3C ARIA Authoring Practices Guide (APG) | https://www.w3.org/WAI/ARIA/apg/ | W3C guide, title "ARIA Authoring Practices Guide (APG)"; purpose "how to apply accessibility semantics to common design patterns and widgets" via "ARIA roles, states and properties and by implementing keyboard support," with a per-pattern functional example. Confirms the APG supplies per-widget role/state/keyboard-interaction patterns for hand-built widgets. Cited as the per-widget contract in `frontend-a11y.md` (specific keys per widget — e.g. tablist Arrow/Home/End — are the APG's documented pattern behavior). |
+
+## Verified by direct fetch (2026-09-18) — mutation testing
+
+Verification date for the rows below: **2026-09-18**. Added for the deep-code-review
+`testing-and-evals.md` mutation-testing lens (measuring the product suite's
+fault-detection, not only line coverage).
+
+| Standard / tool | URL | What was confirmed |
+|---|---|---|
+| PIT (pitest) — mutation testing | https://pitest.org/ | "Traditional test coverage (i.e line, statement, branch, etc.) measures only which code is executed by your tests. It does not check that your tests are actually able to detect faults in the executed code"; "The quality of your tests can be gauged from the percentage of mutations killed." Cited for coverage-measures-execution-not-fault-detection and the mutation-score concept; PIT is the JVM engine. |
+| Stryker Mutator — configuration (`thresholds.break`) | https://stryker-mutator.io/docs/stryker-js/configuration/ | The `thresholds` config exposes `break`: "mutation score < break: Error! Stryker will exit with exit code 1, indicating a build failure." Cited as the available CI-gate operator (exit non-zero below a set score). **`break` defaults to `null` — "Set `break` to `null` (default) to never let your build fail" — so it gates only once explicitly set** (`high`/`low` default 80/60 and only colour the report). No specific threshold value is endorsed — treat the number as per-repo. Stryker is the JS/TS engine. |
