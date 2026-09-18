@@ -13,7 +13,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.1.0"
+  version: "1.1.1"
 ---
 
 # Agentic CEO — the suite's conductor
@@ -132,8 +132,10 @@ a block, a receipt, an over-budget lane, or a collision.
 
 ## Output discipline (no slop) — enforced across the suite
 Every user-facing output the suite produces — message, report, plan, table, or
-template, not just messages — clears the no-slop bar in `communication-structure`
-before it ships. The conductor holds every skill's output to that standard.
+template, not just messages — clears the no-slop bar (BLUF: lead with the answer,
+numbers over adjectives, no filler) before it ships; when `communication-structure`
+is installed it is the fuller standard. The conductor holds every skill's output to
+that bar.
 
 ## Definition of done
 - The right skill was named for the (stage, area, artifact) — not a method

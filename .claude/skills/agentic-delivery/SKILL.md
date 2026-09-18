@@ -10,7 +10,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.128.0"
+  version: "1.129.0"
 ---
 
 # Agentic delivery
@@ -139,14 +139,14 @@ independent verification or a human approval that actually applies.
 | G0 Intake | Owner goal | Brief | Goals, non-goals, constraints, and **appetite** (a stated time-box, not an estimate — Shape Up); `idea-critic` on any agent-originated approach before the owner sees it |
 | G1 Spec | Brief | Testable spec | Acceptance criteria; names `deep-code-review` scope and pinned base SHA |
 | G2 Plan | Spec | Acyclic work graph | Role triggers, one writer per worktree; **every lane with a paid model call names a per-lane token/dollar budget before G4 starts — no budget set is blocked, not unlimited** (a cap that defaults to off is not a cap) |
-| G3 Design | Graph | ADRs / contracts | Interfaces, NFR budgets, data/security decisions explicit. Shape: `template-adr.md` |
+| G3 Design | Graph | ADRs / contracts | Interfaces, NFR budgets, data/security decisions explicit. Shape: `references/template-adr.md` |
 | G4 Implement | Work packets | Patch/commit per lane | Tests before or with the change; packet names review skill + immutable base SHA |
 | G5 Verify | Exact revision | Test receipts | **Local stack up** (project's one-command / compose / devcontainer) then build, lint, type, unit, and applicable integration/E2E **green at that SHA**. A gate that never started the app is `UNVERIFIED`, not pass. **UI change (domain P):** headed-browser evidence on the exact route after the action (screenshot or equivalent). Unit tests alone are not a UI gate |
 | G6 Review | Exact revision + receipts | `deep-code-review` + QA + security verdicts | Independent of the builder; applies the `deep-code-review` severity rubric — Blocker/Critical block, High needs a named owner's acceptance, Medium is tracked and non-blocking (do not silently block on Medium) |
 | G7 Integrate | Accepted lanes | Integration receipt + `deep-code-review DIFF` | One integration owner; rerun affected gates on the exact final SHA |
 | G8 Release | Exact integrated SHA | Release manifest | Rollback proven; **owner approves** outward/production action |
 | G9 Production verify | Deployed SHA | Verification receipt | Served behaviour and SLOs; rollback on breach |
-| G10 Learn | Receipts | Retrospective | Escaped gap → regression test in this repo. Reusable lessons are generalized and stripped of third-party identifiers before leaving the project (the `contribution` overlay, if installed, is the mechanism to propose them upstream). Mandatory-trigger criteria, blameless shape, action-item-closure gate: `retrospective.md` + `template-postmortem.md` |
+| G10 Learn | Receipts | Retrospective | Escaped gap → regression test in this repo. Reusable lessons are generalized and stripped of third-party identifiers before leaving the project (the `contribution` overlay, if installed, is the mechanism to propose them upstream). Mandatory-trigger criteria, blameless shape, action-item-closure gate: `references/retrospective.md` + `references/template-postmortem.md` |
 
 **Missing evidence is `UNVERIFIED`, never pass. Missing price is `UNPRICED`,
 never zero. Missing spend cap is `BLOCKED`, never unlimited** — `UNPRICED` is a
@@ -173,7 +173,7 @@ gone: `references/incident-response.md` — **read it when** drafting an inciden
 runbook (detect→triage→contain→eradicate→recover→review), severity levels,
 comms templates, a break-glass path, a credential/renewal inventory with
 dead-man reminders, or a succession note. It reuses the blameless
-`template-postmortem.md`; **breach notification routes to G2 + counsel, never
+`references/template-postmortem.md`; **breach notification routes to G2 + counsel, never
 asserted here**, and executing any notification or succession is the owner's.
 
 **Support & feedback operations (the compounding solo time-drain).** When the

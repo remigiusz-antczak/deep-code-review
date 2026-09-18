@@ -233,6 +233,14 @@ design-quality checklist in `references/migration-parity.md` (#124).
 - **OWASP Cheat Sheet Series** — concrete implementation guidance.
 - **MITRE CWE / CVE** — weakness and vulnerability naming.
 - **MITRE ATLAS** — adversarial-ML and agent-tool attack techniques.
+- **Threat-modeling methods** (named by `security-appsec.md` A06 and
+  `security-ai-agents.md`): **STRIDE** (per-element spoofing / tampering / repudiation /
+  info-disclosure / DoS / elevation), **PASTA** (risk/impact-centric), **attack trees**,
+  **LINDDUN** (privacy threats), and **MAESTRO** (agentic-AI threat modeling,
+  complementary to the OWASP ASI / MITRE ATLAS catalogs); plus the program-maturity
+  frames **OWASP SAMM** and **BSIMM** (measure the org's program, not a diff — name,
+  don't score). Named methods only — no URL fetched this session; verify before citing
+  specifics.
 - **NIST SSDF (SP 800-218)** and the **NIST AI RMF Generative AI Profile (AI 600-1)**
   — secure-development and AI-risk lifecycle framing. (The AI RMF core function names
   are verified in the table above; these document/profile specifics were not fetched.)
@@ -262,6 +270,13 @@ design-quality checklist in `references/migration-parity.md` (#124).
 - **ISO/IEC 25010** — software product-quality model (the axes this review
   covers).
 - **The Twelve-Factor App** — config/dependency/deploy hygiene.
+- **RFC 2119** — requirement-keyword conventions (MUST / SHOULD / MAY), named by
+  `docs-evolution-by-stage.md`. Named by name only.
+- **llms.txt** — proposed convention for an LLM-oriented repo/site guide, named by
+  `docs-evolution-by-stage.md`. Named by name only; a proposal, not a ratified standard.
+- **"Choose boring technology" / innovation tokens** (McKinley) and **evolutionary
+  architecture / fitness functions** (Ford, Parsons & Kua) — architecture-evolution
+  leads named by `infra-evolution-by-stage.md`. Named by name only.
 - **Conventional Commits** — commit-message discipline. (Semantic Versioning
   graduated to the verified table above this session.)
 - **OWASP Dependency-Check / Dependency-Track**, **retire.js**, **Renovate**,
@@ -285,11 +300,21 @@ design-quality checklist in `references/migration-parity.md` (#124).
   reactance; motivational-interviewing reflective listening. Named leads only — no
   URL or figure fetched this session; verify before citing specifics. (WIP limits
   and orchestrator–worker delegation are already registered above.)
+- **Product-discovery frameworks** (named by `product-discovery`): the Mom Test
+  (Fitzpatrick); the jobs-to-be-done switch interview (Christensen; Klement); Torres
+  continuous-discovery / opportunity-solution tree; the Ellis "very disappointed"
+  product-market-fit survey; Testing Business Ideas (Bland & Osterwalder) experiment
+  library; ICE / RICE prioritization; and fake-door / concierge / Wizard-of-Oz
+  validation. Named leads only — no URL or figure fetched this session; verify before
+  citing a specific figure or threshold.
 - **Product-analytics frameworks** (named by `growth-analytics`): AARRR / "Pirate
   Metrics" (McClure); the North Star Metric framework; vanity-vs-actionable metrics;
   retention cohort analysis; "one metric that matters"; activation / aha-moment
-  analysis. Named leads only — no URL or figure fetched this session; verify before
-  citing a specific figure or threshold.
+  analysis; and the experiment-rigor leads — peeking / fixed-horizon vs sequential
+  testing, always-valid / anytime-valid inference (mSPRT, confidence sequences),
+  group-sequential / alpha-spending designs, CUPED variance reduction, and
+  product-led growth. Named leads only — no URL or figure fetched this session; verify
+  before citing a specific figure or threshold.
 - **Positioning / brand frameworks** (named by `positioning`): the Value Proposition
   Canvas and business-model design (Osterwalder & Pigneur); positioning (Ries & Trout;
   April Dunford's obviously-awesome positioning); the message house / messaging

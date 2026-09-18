@@ -17,7 +17,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.3.0"
+  version: "1.3.1"
 ---
 
 # Product output safety
@@ -179,7 +179,7 @@ shared Excessive-Agency / HITL and hallucination-grounding controls in its
 security-ai-agents reference (this skill governs those harms at the
 product-behaviour level, not in the code) — and `business-ops` Lane R (legal /
 regulatory routing). Output structure
-follows `communication-structure`.
+follows `communication-structure` if installed (BLUF / plain structure otherwise).
 
 ## Verification
 - A "certify us safe / unbiased" ask returns a harm inventory + a measurement plan,

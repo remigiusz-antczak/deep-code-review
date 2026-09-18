@@ -11,7 +11,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.128.0"
+  version: "1.129.0"
 ---
 
 # Deep Code Review
@@ -89,12 +89,11 @@ delivery role or security-team colour.
 | Release & docs | S O K + release sign-off |
 | Agent-readiness | C J K M N F O H + agent-readiness lens |
 
-**Security-team colours** re-package the same evidence (no new rules): Red =
-Phase 3; Blue = detection / fail-closed; Purple = red→blue gates; Yellow =
-build; Green = Yellow+Blue; Orange = Yellow+Red; White = scope / ROE / owner
-decisions. **Black Team — the agent boundary is absolute:** plan / tabletop /
-analyse owner-supplied evidence only; never perform or direct physical or
-social-engineering action. Depth: `references/role-coverage.md`.
+**Security-team colours** re-package the same evidence (no new rules); the
+Red/Blue/Purple/Yellow/Green/Orange/White model is tabulated in
+`references/role-coverage.md`. **Black Team — the agent boundary is absolute:**
+plan / tabletop / analyse owner-supplied evidence only; never perform or direct
+physical or social-engineering action.
 
 **Host-neutral tools.** Read files, `rg`, `git show` / `git log`, run the
 project's scripts. Fan-out contract: `references/parallel-audit.md`.
@@ -333,12 +332,10 @@ Two checklists; they fail independently.
 - On a FULL review, `STAGE` is stated (or `UNVERIFIED`, defaulting stricter) and a
   stage-calibrated going-forward roadmap is produced (`report-format.md`); stage
   never downgraded a security, secret, or data-loss finding.
-- Every status emitted (`✅`/done/exact/matches) names its evidence surface and
-  holds at its strongest reading — no `✅` beside a caveat, and a UI/parity claim
-  is checked on the running instance **built from the tree under review** (URL +
-  branch + sha), not merely "the default served state" when more than one tree can
-  serve it; a parity claim naming no surface is **invalid**, not downgraded. Screen
-  the status table with `scripts/validate_status_claims.py` (`references/report-format.md`).
+- Every status meets the status rule (evidence surface + strongest reading; a
+  UI/parity claim names the URL/branch/sha of the tree under review or is
+  **invalid**) in `references/report-format.md`, screened by
+  `scripts/validate_status_claims.py`.
 - Gate self-test claimed only when run.
 - Coverage ledger reconciled; fan-out units attributed (finder + lead-read);
   incomplete finder = `unverified`.

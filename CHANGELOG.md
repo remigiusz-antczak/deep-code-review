@@ -3,6 +3,24 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.129.0] — 2026-09-18
+
+Wave 50 — self-audit remediation (Perun's own bar on Perun; four independent audit agents found zero Blocker/Critical/High). No change to what a review of a target produces — internal suite cleanup plus one install-time pointer fix. Trio (`deep-code-review`, `agentic-delivery`, `idea-critic`) → 1.129.0; the independent-line overlays touched here bump patch.
+
+### Leanness — deep-code-review (SKILL.md 23872 → 23507 B; hard 24000-byte gate, headroom 128 → 493)
+- Collapsed the Definition-of-done status bullet to a one-line pointer: the whole rule (evidence surface, strongest reading, tree-under-review URL/branch/sha, no-surface-named = invalid, `validate_status_claims.py`) already lives in `references/report-format.md`; the DoD restated it. Closes a status-rule-stated-three-times duplication.
+- Moved the security-team colour **definitions** to `references/role-coverage.md` (which already tabulates them); **kept the Black-team prohibition inline** (a safety constraint stays in the always-loaded file).
+
+### Provenance ledger — docs/standards-index.md (by name only; no URLs fetched this session)
+- Added the threat-modeling method catalog cited inline in `security-appsec.md` / `security-ai-agents.md` — **STRIDE, PASTA, LINDDUN, MAESTRO, attack trees, OWASP SAMM, BSIMM** — closing the recurring cite-without-a-ledger-row miss.
+- Added **RFC 2119**, **llms.txt**, **choose-boring-technology / innovation tokens**, and **evolutionary architecture / fitness functions**.
+- Added a **product-discovery** by-name row (Mom Test, JTBD switch interview, Torres continuous discovery, Ellis PMF survey, Testing Business Ideas, ICE/RICE, fake-door/concierge/Wizard-of-Oz) and extended the **growth-analytics** row with the experiment-rigor leads (peeking, always-valid/mSPRT, group-sequential/alpha-spending, CUPED, product-led growth).
+
+### Correctness + hygiene
+- **Install-time pointer bug:** four overlays pointed unconditionally at `communication-structure`, which their own `--with-*` flags do not install. Conditioned on "if installed" with a BLUF fallback (the `agentic-delivery`/`idea-critic` pattern): **business-ops → 1.2.1, positioning → 1.0.1, product-output-safety → 1.3.1, agentic-ceo → 1.1.1**.
+- README: moved **Nielsen's usability heuristics** into the verified-by-fetch summary (it was listed under "referenced by name"); tightened the overlay-count wording.
+- `agentic-delivery`: prefixed its three own-reference targets (`template-adr.md`, `retrospective.md`, `template-postmortem.md`; four citations) with `references/` — a bare basename otherwise reads as a `deep-code-review` sibling file. This added ~44 B, floating the file 23965 → 24009 B on its standing owner-reasoned size-allowlist (`ci-gates.sh`); a trim back under 24000 is scheduled with the `agentic-delivery` de-duplication in the next (dedup) wave.
+
 ## [1.128.0] — 2026-09-18
 
 Wave 49 of the dogfooding batch: re-applies the machine-report format from external contribution #142 onto current main — the spec for the machine-readable findings file a program consumes. The contribution's author is credited in the commit trailer; the stale fork PR is closed as superseded by this re-application. Lead change is in `deep-code-review`; `agentic-delivery` and `idea-critic` bump in lockstep with no content change.

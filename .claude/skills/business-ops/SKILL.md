@@ -14,7 +14,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.2.0"
+  version: "1.2.1"
 ---
 
 # Business ops
@@ -137,7 +137,8 @@ runway / burn / break-even analysis; the securities-offering
 boundary (equity/SAFE fundraising); worker-classification tests; the GDPR/CCPA
 obligation triage (routed, not concluded). Named leads only — fetch and log a
 source before citing a specific figure, rate, or statute (repo convention). Output
-structure follows `communication-structure`.
+structure follows `communication-structure` if installed (BLUF / plain structure
+otherwise).
 
 ## Verification
 - A pricing / unit-economics ask applies the user's own numbers with the formula

@@ -14,7 +14,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.0.0"
+  version: "1.0.1"
 ---
 
 # Positioning
@@ -117,7 +117,8 @@ positioning (Ries & Trout; and April Dunford's obviously-awesome positioning);
 the message house / messaging framework; jobs-to-be-done as a positioning lens;
 minimum-viable-brand; premature scaling as a pre-PMF anti-pattern. Named leads only —
 fetch and log a source before citing a specific figure or claim (repo convention). Discovery inputs come
-from `product-discovery`; output structure follows `communication-structure`.
+from `product-discovery`; output structure follows `communication-structure` if
+installed (BLUF / plain structure otherwise).
 
 ## Verification
 - A TAM / competitor-fact request yields an empty-slot template + how-to-obtain,

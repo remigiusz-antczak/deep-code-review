@@ -164,7 +164,7 @@ shasum -a 256 -c SHA256SUMS     # verify integrity — do not skip (Linux: sha25
 ./install.sh --claude-only        /path/to/project   # only .claude/skills/ (no AGENTS.md)
 ```
 
-The seven overlays here are opt-in and **not** in `--full` (which is review +
+Seven further overlays are opt-in and **not** in `--full` (which is review +
 delivery + critic + comms); add each with its flag. `install.sh` **copies** the
 skills — it never symlinks — so re-run it after a `git pull` to update. It's the
 air-gapped, SHA-stamped path; see [`SECURITY.md`](SECURITY.md).
@@ -286,13 +286,14 @@ Agentic Applications 2026, OWASP API Security Top 10, OWASP ASVS 5.0, CWE Top 25
 (2025), WCAG 2.2, Google Engineering Practices, Diátaxis, the C4 model, Semantic
 Versioning, OpenSSF Scorecard, OpenSSF Best Practices Badge, OSV, GitHub
 Dependabot, Keep a Changelog, pre-commit, EditorConfig, Development Containers,
-AGENTS.md, the GitHub community-health docs, and Cursor Agent Skills docs. For the
+AGENTS.md, the GitHub community-health docs, Cursor Agent Skills docs, and Nielsen's
+usability heuristics. For the
 software-house overlay and agent-orchestration discipline: Anthropic's *Building
 Effective AI Agents*, the Claude Code Subagents and Agent Skills documentation,
 and the MetaGPT and ChatDev multi-agent papers. Referenced by name (verify before
 citing): OWASP WSTG, MITRE ATLAS, NIST SSDF and AI RMF, SLSA, CIS Benchmarks,
-ISO/IEC 25010, PCI DSS, SOC 2, ISO/IEC 27001, Twelve-Factor, Conventional
-Commits, and Nielsen's usability heuristics.
+ISO/IEC 25010, PCI DSS, SOC 2, ISO/IEC 27001, Twelve-Factor, and Conventional
+Commits.
 
 </details>
 
