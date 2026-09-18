@@ -319,8 +319,8 @@ rate), validity (schema/format/range). For each:
 - **A data contract is a declared, versioned agreement** between a data **producer** and its
   **consumers** — the schema, the quality/SLA guarantees (freshness, null-rate, distribution
   bounds), the **semantics** (what each field means and its unit), and an **owner**. It is the
-  data-plane sibling of the API/message contract in `api-contracts.md` (consumer-driven contract);
-  don't restate that — a data contract adds **quality/SLA + semantic meaning**, not just shape. A
+  data-plane sibling of the API/message contract in `api-contracts.md` (consumer-driven contract),
+  not restated here — a data contract adds **quality/SLA + semantic meaning**, not just shape. A
   producer schema/semantic change that breaks a **declared** consumer expectation is a finding
   *even when the row still parses* — a currency silently switched from cents to dollars passes
   every type check. Look for the contract expressed **as code** (a schema-plus-expectations
