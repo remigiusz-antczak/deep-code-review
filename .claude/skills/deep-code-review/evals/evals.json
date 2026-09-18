@@ -1569,6 +1569,17 @@
         "Verify the new dep resolves to an established package (registry age / download history / real repo), not just non-typo",
         "Notes the release-age cooldown catches a never-existed-until-now name"
       ]
+    },
+    {
+      "id": "deserializer-re-enforces-builder-invariant-not-trust-serialized-form",
+      "prompt": "A builder drops any evidence item lacking a URL and sets `evidenceCount = urls.length`; the type's docstring says an item with no evidence is invalid. The parser for the same serialized form reads `evidenceCount` verbatim and keeps 'evidence' entries that are merely `typeof === 'string'`. A sibling parser in the same module validates fully. Finding?",
+      "expected_output": "The parser is weaker than its own builder and docstring: at the deserialize trust boundary it reintroduces the fabrication the builder prevents -- a torn, hand-edited, or older-schema serialized line yields an item whose count exceeds its actual evidence (a fabricated count) or whose 'evidence' is a non-URL string. 'The builder guarantees X' does not mean a parsed object satisfies X (the serialized form can be torn-appended, hand-edited, an older schema, or written by a different writer). Fix: the parser must independently re-derive computed fields (re-derive the count from the validated collection, never read it verbatim) and validate element shape (a real URL, not just a string), enforcing the same invariants the builder and docstring claim. The fully-validating sibling parser shows this is an oversight, not a decision. Prove it with property tests: parse(serialize(x)) preserves the invariant, and parse(torn/adversarial input) drops or rejects rather than emits an invariant-violating object. Invisible to a builder-only test suite. (data-quality.md; CWE-502.)",
+      "expectations": [
+        "Parser weaker than its builder/docstring reintroduces the fabrication at the deserialize trust boundary",
+        "'Builder guarantees X' does not mean a parsed object satisfies X (torn / hand-edited / older-schema / different writer)",
+        "Fix: re-derive computed fields + validate element shape to the builder's invariants (not read verbatim / not just a primitive type)",
+        "Property tests: parse(serialize(x)) preserves the invariant; parse(torn input) never emits an invariant-violating object; invisible to a builder-only suite"
+      ]
     }
   ]
 }

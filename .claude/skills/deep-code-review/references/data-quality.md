@@ -222,6 +222,23 @@ rate), validity (schema/format/range). For each:
   non-empty value as **exclude / unknown**, never a silent `false` — fail closed,
   and test the parser against the values the source actually emits (as with the
   config maps above).
+- **A deserializer re-enforces every invariant its builder guarantees — never trust
+  the serialized form.** In a build → serialize → parse pipeline, a serialized line
+  can be violated by a torn append, a hand edit, an older schema version, or a
+  different writer, so "the builder guarantees X" does **not** mean a parsed object
+  satisfies X. The parse path must independently **re-derive computed fields** (a
+  count re-derived from the validated collection, not read verbatim) and **validate
+  element shape** (not just a primitive type) against the same invariants the builder
+  and the type's docstring claim. A parser weaker than its own builder reintroduces,
+  at the deserialize trust boundary, the exact fabrication the builder prevents (a
+  stored count that exceeds its evidence) — invisible to a builder-only test suite,
+  since the builder is correct and the parser silently downgrades the guarantee.
+  Prove it with property tests: `parse(serialize(x))` preserves the invariant, and
+  `parse(torn / adversarial input)` **drops or rejects, never emits** an
+  invariant-violating object (a generator that bakes in the invariant can't produce
+  the violation, so it exercises only round-trip fidelity, never the violation path
+  — `testing-and-evals.md`). This is the
+  data-integrity face of untrusted deserialization (CWE-502, `security-appsec.md`).
 - **Any ranking, scoring, or leaderboard gates on an *observed* liveness signal;
   a missing liveness field is a blocker, not a nice-to-have.** Ranking an entity
   set with no liveness gate puts dead or discontinued entities on a live shortlist
@@ -407,4 +424,6 @@ called a "strength"/"relationship" score); a ranking/leaderboard with no
 observed-liveness gate (a missing liveness field ranked as live); a data provider
 that ships raw events where the consumer scores on aggregates, or a claimed
 provider-input never reconciled against the provider's live output before it feeds a
-downstream score.
+downstream score; a deserializer that trusts a serialized computed field (a count
+read verbatim, not re-derived from the validated collection) or checks only a
+primitive type, not element shape — weaker than its own builder.

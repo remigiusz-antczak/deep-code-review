@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.150.0] — 2026-09-19
+
+Wave 71 — **a deserializer re-enforces its builder's invariants** (`data-quality.md`), from owner-filed **#403** (top triage net-new). In a build → serialize → parse pipeline, a serialized line can be torn / hand-edited / older-schema / written by someone else, so "the builder guarantees X" does not mean a parsed object satisfies X. The parse path must independently **re-derive computed fields** (a count from the validated collection, not read verbatim) and **validate element shape** (not just a primitive type) — a parser weaker than its own builder reintroduces, at the deserialize trust boundary, the exact fabrication the builder prevents, invisible to a builder-only test suite. Proof: property tests `parse(serialize(x))` preserves the invariant + `parse(torn input)` drops/rejects rather than emits a violating object (a tautological generator tests nothing — ties #373). The data-integrity face of untrusted deserialization (CWE-502). One eval + a 🚩 red-flag (deep-code-review 146 → 147). Trio → 1.150.0. Closes #403.
+
+Dogfood reviewer: PASS-WITH-NITS → tightened an over-claim ("tests nothing" → exercises only round-trip fidelity, never the violation path) and logged **CWE-502** in `docs/standards-index.md` (a pre-existing cite-without-log gap this wave also touches).
+
 ## [1.149.0] — 2026-09-19
 
 Wave 70 — **slopsquatting**: a dependency existence / provenance check beyond name-proximity, from research issue **#402** (AI-code research). A03's only name discriminator was typosquat (a character off a popular name); a package name an LLM *hallucinated* — that an attacker pre-registers — isn't a typo of anything, so it passed every named check.
