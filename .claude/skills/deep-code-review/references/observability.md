@@ -42,28 +42,6 @@ failure paths that *produce* these signals are section F /
 
 ---
 
-## Delivery / pipeline flow — measure before you adopt
-
-The golden signals above watch the running **service**; a separate set watches the **delivery
-pipeline** that ships it, and the same percentile discipline applies. Before adopting a build/merge
-platform (a merge queue, a remote-cache or CI vendor) or a **second delivery methodology**,
-**measure the current flow**: p50/p95 of **time-to-green** (push → all checks pass), **queue /
-runner wait**, **rerun / flake rate**, and **change lead time** (merge → deploy). Then **attribute
-the p95 to a stage** (which job, which wait) and take the **cheap fix first** — cache a step, shard
-a slow suite, cancel superseded runs, fix the top flaky test. A tool bought before the bottleneck
-is measured usually moves a percentile you were not blocked on.
-
-- **The adoption bar is a question, not a vibe:** *"which measured percentile does this platform
-  move, and by how much?"* No number, no adoption — route the spend to the owner **with** the
-  measurement (via `agentic-delivery`'s gates when that overlay runs; the owner-decision facts
-  stay the owner's, like the infra-stage triggers).
-- **One delivery methodology per repo.** A second parallel process — a rival branching model or
-  release ritual added "to go faster" — is coordination overhead priced as progress until the flow
-  metrics show the first one is the actual bottleneck. Adding a methodology is itself an adoption
-  subject to the bar above.
-
----
-
 ## Logs & traces: secrets, PII, injection
 
 - **Redact by default**: an allow-list of loggable fields beats a deny-list of

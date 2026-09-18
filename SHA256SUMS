@@ -27,7 +27,7 @@ b8a4c1ae0a34cf8c692d42bf4ad10a1ba21f85c0dd489cbfc2bdae275bb7412a  .claude/skills
 bb541f96bd7d0c3bb4adff8dcaac0f50efa2493b8215b6aa671805bfbb89c42b  .claude/skills/contribution/references/contribution-procedure.md
 ffcc0e33f31f064d2cdf12417c0655770ebe1109683b66a9104c2b3c9382e76f  .claude/skills/deep-code-review/SKILL.md
 b4732aeea0eb0a990035eca3d5628f48f052e80b7ad9a3ea46fa6d861a5fee50  .claude/skills/deep-code-review/VERSION
-9227ec6a8573b655a393a8d4f2b6ea8dcd1063b1698a0f0e0986b683eb1e857d  .claude/skills/deep-code-review/evals/evals.json
+14d4211c43b5a225dbfb14d7f7f0ef7b54cdd93e7905bfcf2051485aa26ad29d  .claude/skills/deep-code-review/evals/evals.json
 960211dc69f2b40ba80cc0ad1068816328f1c2dbd465b552b51ae5c805e7fe75  .claude/skills/deep-code-review/references/api-contracts.md
 93d695b99b448a59b1b7e4de3449692847089ba36e9530d0e24d19c04650efc1  .claude/skills/deep-code-review/references/billing-correctness.md
 fc4c267ad64034d8ee6568c83eba175d7bbd22d31d87cd26cd874dd1f05d640e  .claude/skills/deep-code-review/references/branch-and-merge-hygiene.md
@@ -45,14 +45,14 @@ b6a84db6b805a0b902db1370844828eaf87a20c4feb940ed0e4232dac5f062af  .claude/skills
 529b9ea45a55bab863659435bf382b018005e2d322835fe76edfa5688c4a0c68  .claude/skills/deep-code-review/references/method.md
 96e75312686fbedffc5189e2fcc70b80a60997bf93c8c26a1638442dd322944f  .claude/skills/deep-code-review/references/migration-parity.md
 38eebdf80eaa1cb40328eb27cee095560774d0ecc02a31fa427f0124721657a0  .claude/skills/deep-code-review/references/model-tiering.md
-3818287b5e555a10856f8e62f8fc3d51afb7e3e5ff459503d0ff52014fbf638b  .claude/skills/deep-code-review/references/observability.md
+3084fc7544e922c33975b5d5e84899410c3d83b1083cdf3019aac019d73cbc42  .claude/skills/deep-code-review/references/observability.md
 a04b173853c76f0147cd995a3c9e227665170186c7dde9058a1725a6fdba0814  .claude/skills/deep-code-review/references/parallel-audit.md
 15bff299137b8602bb622539faff00eeb22b0a72dbaf1878e1705bf7ba7dbde1  .claude/skills/deep-code-review/references/performance-db-cost.md
 911d751be267abd133979c2fd78a5fd60474250b4dc8beeb7d80f586c903b886  .claude/skills/deep-code-review/references/privacy-by-design.md
 55d074484a0c6d3b987725420f2acdc955a5a3f79d94fd0cd9bc977b25a4c964  .claude/skills/deep-code-review/references/privacy-compliance.md
 549ab58922ab43f826c02880dd2dff4960122c572ee5d19c17c067aff5378b60  .claude/skills/deep-code-review/references/product-ux-quality.md
 5978e95203bb95f9918241cbc0b8748052d9f427177213f7ef65837a7bc8bc71  .claude/skills/deep-code-review/references/readme-authoring.md
-dd55bd244d2fda874f9ae65d84c287fa86582ee4e108b71714eb1f5de7451e22  .claude/skills/deep-code-review/references/release-engineering.md
+e0d4d2329a9348b286cad38d9b2a0d4ec654426a7c7c4570c30f7fc16fcf4273  .claude/skills/deep-code-review/references/release-engineering.md
 08fb2d300a5227ea4a41cd10c7487eb803d5baaf7525413da0ec0b66d831bf50  .claude/skills/deep-code-review/references/reliability-error-handling.md
 98e7dd0b0def3ed687a90f86237d0a2c2195067fb47d6e8662d792abac6e7ecc  .claude/skills/deep-code-review/references/report-format.md
 e4842666073f6dfe8f173758289c7015204c1a504d99b9b6f0b5aa32a0ab9f76  .claude/skills/deep-code-review/references/role-coverage.md

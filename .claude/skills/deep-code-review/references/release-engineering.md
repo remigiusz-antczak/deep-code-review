@@ -89,6 +89,29 @@ incident). Do not compute a number from vibes:
 
 ---
 
+## Measure the flow before adopting a platform or a second methodology
+
+The DORA metrics above say whether the pipeline is healthy; a second, cheaper set says where the
+**iteration loop** hurts day to day — **time-to-green** (push → all checks pass), **queue / runner
+wait**, and **rerun / flake rate**. These are **not** DORA metrics; apply the same p50/p95
+discipline to them (an average hides the tail). Before adopting a build/merge platform (a merge
+queue, a remote-cache or CI vendor) or a **second delivery methodology**, **measure the current
+flow** on both sets, **attribute the p95 to a stage** (which job, which wait), and take the
+**cheap fix first** — cache a step, shard a slow suite, cancel superseded runs, fix the top flaky
+test. A tool bought before the bottleneck is measured usually moves a number you were not blocked
+on.
+
+- **The adoption bar is a question, not a vibe:** *"which measured metric does this platform move,
+  and by how much?"* No number, no adoption — route the spend to the owner **with** the
+  measurement (`agentic-delivery`'s Release gate when that overlay runs; the spend decision itself
+  is the owner's, like the DORA *measure-it-or-say-so* rule above).
+- **One delivery methodology per repo.** A second parallel process — a rival branching model or
+  release ritual added "to go faster" — is coordination overhead priced as progress; a measured
+  bottleneck justifies **switching** to a better one, never **running both**. Adopting a
+  methodology is itself subject to the bar above.
+
+---
+
 **🚩 grep**: `feature.?flag`/`FF_`/`toggle` definitions with no adjacent removal
 date, ticket reference, or category comment; `canary`/`blue.?green`/`rollout` in
 prose (PR body, runbook, `README`) with no matching weight/percentage/router
