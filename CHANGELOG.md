@@ -3,6 +3,27 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.212.0] — 2026-09-19
+
+### agentic-delivery — wave 133 parallel-lane hygiene: repo-global stash + decouple finalize (closes #536, #506, #528)
+
+Filed-backlog drain (issues surfaced by concurrent-lane delivery runs). Two additions to
+`fast-agentic-delivery.md`:
+- **A worktree does not isolate repo-global refs (#536)** — `git stash` is a single repo-wide stack
+  (`refs/stash`), not per-worktree, so a sibling lane's push/pop consumes or reorders this lane's entry
+  (silent WIP loss). Never bare stash push/pop under concurrency — commit-then-reset, a second worktree,
+  or a unique-message stash matched by `stash@{N}`. (#536's scratch-path-collision half was already
+  covered; this ships the genuinely-new stash half.)
+- **Land the fix, then finalize separately (#506, #528)** — a lane that opens a draft PR early and does
+  async finish-work can orphan the draft when a lingering helper process or a retry loop holds the turn
+  open past the promote step. Decouple fix-landing from finalize (ready the PR once code+gates are green;
+  make finalize a separate idempotent step), kill a lane-owned helper the moment its step ends, bound
+  every flaky finalize step to a cap that fails to a report, and have the orchestrator sweep-and-adopt
+  orphan drafts.
+
++2 evals (47 -> 49 agentic-delivery). Triage confirmed #525 / #519 / #528-F3 already covered
+(concurrency pkill / auto-close-hygiene / host-sizing) — not rebuilt.
+
 ## [1.211.0] — 2026-09-19
 
 ### deep-code-review — wave 132 verify build provenance at deploy, not just generate it (SLSA, research round 7)
