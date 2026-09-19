@@ -59,9 +59,7 @@ above can be correct and the gate still bypassed if the edge/WAF and the origin
 disagree on request boundaries: a `Transfer-Encoding` header alongside a
 `Content-Length`, parsed inconsistently by the two hops (CL.TE / TE.CL / TE.TE),
 lets one connection smuggle a second, uninspected request past the WAF into the
-origin — or poison the connection so the *next* user's request arrives prefixed
-with attacker bytes (response-queue poisoning: a confidentiality break, not just an
-authz bypass). The anonymous-GET sweep proves nothing here — it shows only that the
+origin — or poison the connection so the *next* user's request arrives prefixed with attacker bytes it can capture — a confidentiality break, not just an authz bypass. The anonymous-GET sweep proves nothing here — it shows only that the
 edge's *own* parser rejects requests it recognizes as unauthenticated, not that the
 edge and origin agree on what a request *is*. In HTTP/1.x a present `Transfer-Encoding`
 means `Content-Length` must be ignored (ASVS v5.0.0-4.2.1, L2); reject or normalize a
