@@ -9,7 +9,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.157.0"
+  version: "1.158.0"
 ---
 
 # Idea critic

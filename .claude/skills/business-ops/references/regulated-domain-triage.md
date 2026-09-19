@@ -62,6 +62,22 @@ can fire at once — a product can be in multiple regimes.
   Route whether the product is in scope, its conformity-assessment class (default /
   important / critical), the reporting authority/route, and the exact timelines to
   counsel.
+- **Operating your own in-scope services in the EU?** (a medium-sized-or-larger
+  organization in a covered sector — energy, transport, digital infrastructure,
+  cloud / data centres / DNS, online marketplaces / search / social, health, water,
+  public administration, and others — a *how you operate* cybersecurity trigger,
+  distinct from the CRA's *product* scope above) → **EU NIS2 Directive (Directive
+  (EU) 2022/2555)**, "on measures for a high common level of cybersecurity across
+  the Union" → leads: cybersecurity risk-management measures (risk analysis,
+  incident handling, business continuity / backup, **supply-chain security**, and
+  basic cyber hygiene — zero-trust, patching, segmentation, identity / access) and
+  **incident-reporting readiness** (the
+  ability to detect, triage, and produce a staged report to the CSIRT / competent
+  authority; the engineering maps to `deep-code-review`'s observability +
+  `agentic-delivery`'s `incident-response.md`, and the supply-chain half reuses the
+  CRA / A03 leads above). Route whether the entity is in scope, its
+  essential-vs-important classification, the reporting authority and exact
+  timelines, and management-accountability duties to counsel.
 - **Consumer product or digital service on the EU market?** (e-commerce, consumer
   banking / payment terminals, passenger-transport ticketing & self-service, e-readers,
   phones / computers / operating systems) → **EU Accessibility Act (EAA — Directive

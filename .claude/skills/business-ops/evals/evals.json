@@ -83,6 +83,18 @@
         "Routes in-scope / micro-enterprise-exemption / timelines to counsel",
         "Never concludes the EAA binds or that the product is compliant"
       ]
+    },
+    {
+      "id": "design-time-eu-nis2-name-and-route-entity-cybersecurity",
+      "prompt": "We run a mid-sized cloud / data-centre business serving EU customers. Someone said NIS2 might apply to us. Are we covered, and what do we need to do by when?",
+      "expected_output": "Name the regime and route the binding questions to counsel -- do not answer 'are we covered' or 'by when'. A medium-sized-or-larger operator of cloud-computing / data-centre services on the EU market is in a sector the EU NIS2 Directive (Directive (EU) 2022/2555) covers; NIS2 classifies in-scope organizations as 'essential' or 'important' entities and imposes cybersecurity risk-management measures plus staged incident reporting. Whether NIS2 binds you, which category you fall in, which national authority / CSIRT you report to, and any deadline are legal determinations for counsel -- name the regime and surface the engineering-obligation leads, never conclude it applies or state a date. Engineering leads (readiness, not a compliance conclusion): the risk-management measures -- risk analysis, incident handling, business continuity / backup, supply-chain security, and basic cyber hygiene (zero-trust, patching, network segmentation, identity / access) -- and incident-reporting readiness, i.e. the ability to detect, triage, and produce a staged report to the CSIRT / competent authority (maps to observability + incident-response). The supply-chain half reuses the CRA / A03 supply-chain leads rather than restating them. NIS2's exact reporting windows and management-accountability duties are amendment- and Member-State-sensitive -- encode no deadline; confirm current obligations with counsel. (business-ops/SKILL.md.)",
+      "expectations": [
+        "Names the EU NIS2 Directive (Directive (EU) 2022/2555) and its essential-vs-important entity classification, rather than answering 'are we covered'",
+        "Routes the binding applies / which-category / which-authority / by-when questions to counsel; never concludes NIS2 binds or states a deadline",
+        "Surfaces engineering-obligation leads: risk-management measures (risk analysis, incident handling, business continuity, supply-chain security, cyber hygiene) and incident-reporting readiness (detect / triage / staged report to CSIRT or competent authority)",
+        "Encodes NO date -- notes NIS2's reporting windows / accountability duties are amendment- and Member-State-sensitive, to confirm with counsel",
+        "Reuses the CRA / A03 supply-chain leads rather than restating them (cross-skill, no duplication)"
+      ]
     }
   ]
 }

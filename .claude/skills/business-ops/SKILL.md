@@ -14,7 +14,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.4.0"
+  version: "1.5.0"
 ---
 
 # Business ops
@@ -165,4 +165,9 @@ otherwise).
   the EN 301 549 / WCAG engineering benchmark (→ `frontend-a11y.md`), and routes in-scope /
   exemption / timelines to counsel, never concluding it binds
   (`design-time-eu-eaa-name-and-route-accessibility-of-products-and-services`).
+- A design-time "do NIS2 / EU cybersecurity operating obligations apply to us?" ask over an
+  organization running in-scope services in the EU names the **EU NIS2 Directive** (Directive
+  (EU) 2022/2555) + its risk-management-measure and incident-reporting-readiness
+  leads, and routes in-scope / essential-vs-important / reporting-authority / timelines to
+  counsel, never concluding it binds (`design-time-eu-nis2-name-and-route-entity-cybersecurity`).
 - `evals/evals.json` plants these cases.
