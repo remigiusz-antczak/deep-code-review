@@ -3,6 +3,14 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.233.0] — 2026-09-20
+
+### deep-code-review — wave 154 committed binary artifacts as an unreviewable supply-chain surface
+
+- **`domain-checklists.md`** (domain H): a genuinely compiled/opaque blob (`.jar`/`.dll`/`.so`/`.wasm`/`.pyc`, a prebuilt bundle, a vendored SDK binary) checked into the tree is code nobody can source-diff, so a malicious swap is indistinguishable from a legitimate rebuild — a supply-chain surface, distinct from the NUL-byte case (a *text* file git *misclassifies* as binary). Build from source in CI, or fetch at build/run time; if vendoring is unavoidable, pin by content hash with recorded provenance (domain K / A03, and A08 integrity failures).
+- +1 eval; +1 standards row (OpenSSF Scorecard Binary-Artifacts, verbatim risk + description + remediation, fetched 2026-09-20). Reviewer FIX-FIRST applied: the standards-index description is now the verbatim source sentence (the earlier draft paraphrased it), and the eval prompt now cues the NUL-byte contrast so its discrimination expectation is reachable.
+- Citation-ledger hygiene from wave 153's review: the V7 session-management row now attaches "such that re-authentication is enforced…" to re-authentication (its true subject) and restores the "Verify that" stem on 7.4.1.
+
 ## [1.232.0] — 2026-09-20
 
 ### deep-code-review — wave 153 session termination & timeout (A07)

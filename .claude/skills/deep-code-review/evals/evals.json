@@ -2931,6 +2931,16 @@
         "Identifies that one long exp is not an idle timeout — requires a separate server-enforced inactivity timeout distinct from the absolute lifetime",
         "Requires an absolute maximum session lifetime cap enforced server-side and risk-driven, not a client-trusted cookie Max-Age"
       ]
+    },
+    {
+      "id": "a-committed-compiled-binary-is-unreviewable-supply-chain-code-not-just-tech-debt",
+      "prompt": "A repo vendors a third-party SDK as a committed `libvendor.so` plus a few `.jar`s under `third_party/`, with no source and no build recipe. The same repo also has a `config.py` that `git` reports as `Binary files … differ` because of a stray literal NUL byte. A reviewer lumps both together as 'binary, out of scope, skip.' Right call?",
+      "expected_output": "No. A committed compiled/binary artifact (`.so`/`.jar`/`.dll`/`.wasm`/`.pyc`, a prebuilt bundle, a vendored SDK) is code nobody can source-diff — a malicious swap is indistinguishable from a legitimate rebuild in `git log`, so it's a supply-chain surface (OpenSSF Scorecard rates a checked-in binary high-risk, 'non-reviewable code'), not out-of-scope. It is distinct from a text file git merely misclassifies as binary (a diffability defect) — this blob is genuinely opaque/compiled. Right process: build it from source in CI, or fetch it at build/run time from a registry/release-asset store; if it genuinely must be vendored (a licensed SDK, a firmware blob), pin it by content hash with recorded provenance beside it so a swap is detectable. Flag any tracked `.so`/`.jar`/`.dll` with no source or build recipe.",
+      "expectations": [
+        "Rejects skipping it — identifies a committed compiled/binary blob as unreviewable code and a supply-chain risk (a malicious swap is indistinguishable from a legitimate rebuild), not out-of-scope",
+        "Distinguishes it from a text file merely misclassified as binary via a stray NUL (a diffability defect) — this artifact is genuinely opaque/compiled",
+        "Prescribes build-from-source in CI or fetch-at-build/run-time, or (if vendoring is unavoidable) pin by content hash with recorded provenance"
+      ]
     }
   ]
 }

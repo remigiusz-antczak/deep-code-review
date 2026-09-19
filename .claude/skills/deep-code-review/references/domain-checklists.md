@@ -341,6 +341,20 @@ Apply to any pipeline, ETL, enrichment, scraping, or dataset producer. Judge the
   `\x1f`) — ASCII, diffable, greppable, byte-identical at runtime. A commit/CI gate
   can flag any tracked source-path file git treats as binary (or containing a NUL) —
   cheap and deterministic (domain K).
+- **A committed compiled/binary artifact is unreviewable code — a supply-chain
+  surface, distinct from the NUL-byte case above.** The bullet above is a *text*
+  source file git *misclassifies* as binary (a diffability defect); this is a
+  *genuinely* compiled, opaque blob — a `.jar`/`.dll`/`.so`/`.dylib`/`.wasm`/`.pyc`,
+  a prebuilt bundle, or a vendored SDK binary — deliberately checked into the tree.
+  Nobody can source-diff it, so a **malicious swap is indistinguishable from a
+  legitimate rebuild** in `git log` (OpenSSF Scorecard rates a checked-in binary
+  **"Risk: `High` (non-reviewable code)"**). Build it from source in CI, or fetch it
+  at build/run time from a registry/release-asset store; if a binary genuinely must
+  be vendored (a licensed SDK, a firmware blob), pin it by content hash with
+  recorded provenance beside it so a swap is detectable (domain K / A03, and A08 integrity failures). 🚩
+  `git ls-files` showing a tracked `.exe`/`.dll`/`.so`/`.jar`/`.wasm`/`.pyc`; a
+  `vendor/`/`third_party/` directory holding compiled output with no source or build
+  recipe.
 - **Feature-flag lifecycle**: each flag has an owner, a kill-switch, a test for
   both states, and a staleness/removal policy; dead flags are removed.
 - **Lockstep surfaces** enumerated — the file sets that must change together
