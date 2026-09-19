@@ -3,6 +3,32 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.187.0] — 2026-09-19
+
+### agentic-delivery — wave 108 autonomous-loop epistemology + auto-close hygiene
+
+- **#423** (SKILL.md gate epistemology, new principle 12): an apparent owner-fork that a
+  ratified invariant (no-data-loss, a security/a11y floor, a monotonic-quality rule) already
+  decides is not a human gate — applying the invariant is a lane's mechanical job; escalate
+  only the genuine forks the invariants leave open.
+- **#476** (fast-agentic-delivery.md, sibling to the under-close section): the over-close
+  mirror — a close keyword fires the *whole* referenced issue on merge, so an umbrella/epic
+  or partly-advancing PR must use a non-keyword link (`Part of #N`); and the parser is purely
+  textual, so a keyword only *quoted* while explaining a bug still closes the issue. A split
+  clause states which section governs which case; it does not license parking a G7-complete item.
+- **#413** (fast-agentic-delivery.md, ownership-map absence-check): `gh`/issue state is blind
+  to local-only branches, worktrees, and unpushed commits, so a forge-only occupancy check can
+  read "unclaimed" while a lane is in flight; scan local git too, treating a hit as a lead to
+  check for liveness (not proof of an active lane), then adopt-and-re-verify or reconcile it.
+- **#421** (SKILL.md principle 3, net-new clause): a conclusion that surprises you is the
+  signal to re-fetch the specific state at decision time, not to act on a remembered snapshot.
+  (The four-instance unification #421 also proposed is already covered by existing re-verify instances (SKILL.md principles 3/9/11, plus the
+  mergeable-snapshot and open-tracker sections) in their own homes — restating it was declined per the no-duplication rule; only this trigger
+  clause was net-new.)
+
+Three evals (agentic-delivery 40 -> 43, incl. the over-close discriminator paired with the
+existing under-close eval). Trio -> 1.187.0. `SHA256SUMS` regenerated last.
+
 ## [1.186.0] — 2026-09-19
 
 Wave 107 — **product-ux data-viz honesty batch: invertibility, heat-cell third state, sparkline, UX auto-merge policy** (#459 + #487 + #486 + #485 + #471; dcr; from the 4-agent parallel triage). Five deltas in `product-ux-quality.md`: **(#459+#487)** a new section — a rendered tier/score/**aggregate encoding** (sparkline tick, heat cell, count) must **invert** to the exact source rows it summarizes (drill-through), or it is decoration that can't be verified or corrected; applies to aggregate encodings, not only per-row chips. **(#486)** a grid/heat-map/calendar cell needs a **third state** (event / collected-zero / not-collected) — an uncollected cell painted as low-activity fabricates "quiet" where the truth is "unknown" (grid form of observed-low-vs-unobserved). **(#485)** named the **sparkline** case in the sparse-line rule. **(#471)** a UX-bearing change does not **auto-merge** on code/build/lint + presence-only evidence, and a disabled UX-quality gate is a **P0** blocking that change-class. Inline 🚩 on the invertibility section and the auto-merge policy. Three evals (deep-code-review 187 -> 190). Trio -> 1.186.0. Closes #459, #487, #486, #485, #471.

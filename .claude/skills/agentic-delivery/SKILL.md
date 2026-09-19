@@ -10,7 +10,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.186.0"
+  version: "1.187.0"
 ---
 
 # Agentic delivery
@@ -312,7 +312,7 @@ B: <approach> — <why, ≤12 words>
 ```
 
 Never a list of questions. `idea-critic` must have attacked A before it
-is marked recommended.
+is marked recommended. Before raising a gate, apply gate epistemology principle 12 below — a fork a ratified invariant already decides is not a human gate.
 
 ---
 
@@ -334,7 +334,11 @@ Copied as principles, not as anyone's private playbook:
    the failing job **and step** before blaming the newest merge, and if the
    shape matches a known-flaky browser/probe/hydration check, rerun and recheck
    **before** reverting — a revert is warranted only once the failure
-   reproduces and is causally tied to the change, not merely adjacent in time.
+   reproduces and is causally tied to the change, not merely adjacent in time. And **a
+   conclusion that surprises you** — a gate that flips, a count that jumps — **is the signal
+   to re-fetch the specific state at decision time**, not to act on a snapshot remembered from
+   earlier in the run (principles 9 and 11 apply the same discipline to a close and to the
+   owner's rendered surface).
 4. **Prove the gate can fail.** Plant, watch red, revert. Required for
    every new gate this project adds.
 5. **Skip loudly over absent input.** Missing fixture ≠ pass.
@@ -364,6 +368,11 @@ Copied as principles, not as anyone's private playbook:
     value**; "queryable" ≠ "query written"; "the code path exists" ≠ "it was
     proven to run" (principle 3's `UNVERIFIED`, stated for the liveness case;
     it is what G9 verifies against a deployed SHA).
+12. **A fork a ratified invariant already decides is not an owner gate.** Before shaping a
+    choice as a human gate, check whether a ratified invariant — no-data-loss, a security or
+    accessibility floor, a monotonic-quality rule — already mandates the answer; if it does,
+    applying it is a lane's **mechanical** job, and escalating spends an owner decision on a
+    settled question while the lane stalls. Gate only the genuine forks the invariants leave open.
 
 ---
 

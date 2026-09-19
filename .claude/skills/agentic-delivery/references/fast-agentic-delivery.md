@@ -698,7 +698,7 @@ where*, not *is anyone already building this*. Read as a work-lock, it spawns a
 duplicate lane on a feature already in flight. Before starting, check for an
 **active lane on the objective**, not just file ownership — and treat a forge
 **assignment as intent, not progress**: an assigned issue with no draft PR, no
-worktree, and no commits is unclaimed in practice (`assigned` ≠ `in-progress`).
+worktree, and no commits is unclaimed in practice (`assigned` ≠ `in-progress`). That absence-check is only as complete as the surface it runs on: `gh pr list` and issue state show **forge** signals, never a **local-only** branch, worktree, or unpushed commit on another machine or another agent's checkout — so a lane that queries the forge alone can read *unclaimed* while a real one is mid-flight. Scan local git too (`git branch`, `git worktree list`, `git stash list`), but treat any hit as a **lead to check for liveness**, not proof of an active lane — a `worktree list` entry proves only that something *once* ran (the transcript-is-not-liveness rule above); cross-check a real liveness signal, then adopt-and-re-verify the work or reconcile the dead lane, never trust its state blind.
 **Announce-then-take:** claim the objective (a draft PR, or a posted "taking this")
 **before** opening the worktree, never after — take-then-announce races two lanes
 onto the same work. And **two lanes reporting the same bug idiom at different callsites is a
@@ -755,6 +755,33 @@ into the staging branch, closes only the issues that PR *explicitly* linked with
 the keyword syntax — never a name / branch / title heuristic (a wrong auto-close
 is silent tracker data-loss), least-privilege issue-write, idempotent. Building
 that automation is project tooling and owner-gated; naming the discipline is not.
+
+## The auto-close keyword fires on merge — do not write it where the issue should stay open
+
+The section above governs a keyword that was **correct but inert** (a `Closes #N` that merged
+off the default branch, so the issue is done-in-tree yet open). This is the mirror: the keyword
+**fires when it should not**, silently closing an issue the merge does not actually complete.
+Two ways it over-fires:
+
+- **The PR only partly advances the issue, or the issue is an umbrella/epic with open
+  children.** A keyword closes the *whole* referenced issue on merge, so `Closes #N` on a parent
+  buries its still-open sub-work. Use a **non-keyword** reference for anything the PR does not
+  fully satisfy — `Part of #N`, `Advances #N`, `Re #N` link without closing. Reserve `Closes` /
+  `Fixes` / `Resolves #N` for an issue whose acceptance **is** "this change, merged" (a
+  G7-closeable work item — `SKILL.md`, *A work item's own completion is G7*; whether the feature is
+  actually observable in production is a separate, later check at **G9**, not a reason to hold the
+  ticket open). This does **not**
+  license parking a G7-complete item as "blocked on deploy": when merge *is* the acceptance,
+  close it and name G8 downstream. The over-close rule is about issues the merge genuinely
+  leaves unfinished, not about deferring closable ones.
+- **Treat the close keyword as textual — a mention may fire it.** GitHub's own docs do not
+  specify whether the keyword is position-aware, and it is **widely observed** to match anywhere
+  in the PR body or a commit message — inside a quote, a code fence, or a sentence *explaining* a
+  defect (this suite hit it: a `Closes #N` quoted in a PR body to describe a bug auto-closed the
+  issue it described). Since the docs will not promise it *won't* match a mention, treat any such
+  keyword+number as live wherever it appears: keep it out of any body or commit unless you intend
+  the close, and phrase around it otherwise (*the auto-close of #N*, *issue N*, split the `#`) —
+  the same reflex a log line uses to describe a secret without printing a live one.
 
 ## An ETA on a fan-out states its parallelism assumption — a serial estimate on parallel lanes is a fabrication
 

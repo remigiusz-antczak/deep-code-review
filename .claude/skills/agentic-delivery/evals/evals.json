@@ -419,6 +419,36 @@
         "Requires enumerating the full backlog + bucketing by label/type (not a title regex), minding pagination, before claiming terminus",
         "Notes a keyword filter may prioritize a known-complete set but never define it, and the filter must be stated when claiming done"
       ]
+    },
+    {
+      "id": "the-auto-close-keyword-must-not-fire-on-an-issue-the-merge-does-not-complete",
+      "prompt": "An agent's PR fixes one bug tracked under umbrella issue #40 ('Q3 reliability epic', 12 open sub-tasks). To help the coordinator's count it writes 'Closes #40' in the PR body, and adds a note quoting 'Closes #7' to explain why a teammate's earlier template mis-fired. Merged to the default branch. What happens, and what should it have written?",
+      "expected_output": "Both close on merge. `Closes #40` closes the whole epic — burying its 11 other open sub-tasks — when the PR completed only one; an umbrella/partly-advancing reference must be a non-keyword link (`Part of #40` / `Advances #40`). The quoted `Closes #7`, cited only to explain a past mishap, is widely observed to be parsed textually like an intended one and GitHub's docs do not promise otherwise, so treat it as closing #7 too; the explanation should have phrased around the keyword (`the auto-close of #7`, split the `#`). Reserve `Closes`/`Fixes`/`Resolves #N` for an issue whose acceptance IS this change merged (a G7-closeable item that closes at G7, with G8/G9 named downstream) — not parked as blocked-on-deploy.",
+      "expectations": [
+        "Identifies that `Closes #40` closes the entire umbrella/epic on merge, burying open sub-tasks — a partly-advancing PR must use a non-keyword link (Part of / Advances / Re #N)",
+        "Identifies that the close keyword is widely observed to match textually anywhere (GitHub's docs do not specify position), so even a quoted/explanatory `Closes #7` should be treated as live — the keyword+number phrased around unless the close is intended",
+        "States that an item whose acceptance IS the merge takes the keyword and closes at G7, with G8 (and G9 production-verify) named as separate downstream steps — not parked as blocked-on-deploy"
+      ]
+    },
+    {
+      "id": "an-apparent-owner-fork-a-ratified-invariant-already-decides-is-not-a-human-gate",
+      "prompt": "A lane hits what looks like a product fork: a migration could drop a rarely-used column or keep it. The agent drafts a two-approach owner gate ('A: drop — simpler; B: keep — safe') and blocks on the owner. The repo has a ratified no-data-loss invariant. Is the owner gate warranted?",
+      "expected_output": "No — the no-data-loss invariant already decides it: keep the column (or migrate its data). This is not an owner value-judgment, it is a lane's mechanical job to apply the ratified rule; blocking spends an owner decision on a question the project already answered and stalls the lane. Escalate a human gate only for a genuine fork the invariants leave open (e.g. a user-visible behavior change no invariant governs). Before shaping any fork as a gate, check whether an existing invariant — no-data-loss, a security/a11y floor, a monotonic-quality rule — mandates the answer.",
+      "expectations": [
+        "Recognizes the ratified no-data-loss invariant already decides the choice, making it a mechanical application, not an owner value-judgment",
+        "Notes that escalating a pre-decided question wastes an owner decision and stalls the lane",
+        "Limits human gates to genuine forks the invariants leave open, and prescribes checking existing invariants before shaping any fork as a gate"
+      ]
+    },
+    {
+      "id": "an-occupancy-check-run-from-the-forge-alone-is-blind-to-local-only-lanes",
+      "prompt": "Before starting an issue an agent checks `gh pr list` and the issue's assignee/state, sees no PR and no assignee, concludes the work is unclaimed, and opens a fresh worktree to build it. Another agent already had the fix in a local branch and an unpushed worktree on the same machine. Sound?",
+      "expected_output": "No — `gh pr list` and issue state show only forge signals; a local-only branch, an unpushed commit, or a worktree on the machine are invisible to them, so a forge-only absence-check can read 'unclaimed' while a lane is mid-flight, spawning duplicate work. Include local git in the scan (`git branch`, `git worktree list`, `git stash list`). But treat any hit as a lead to check for liveness, not proof of an active lane — a `worktree list` entry proves only that something once ran; cross-check a real liveness signal, then adopt-and-re-verify or reconcile the dead lane rather than trusting its state blind.",
+      "expectations": [
+        "Identifies that forge queries (gh pr list, issue state) cannot see local-only branches/worktrees/unpushed commits, so a forge-only absence-check is unsound",
+        "Adds local git (branch/worktree/stash) to the occupancy scan before laning",
+        "Treats a found local branch/worktree as a lead to verify liveness (not proof of an active lane), then adopt-and-re-verify or reconcile the dead lane"
+      ]
     }
   ]
 }
