@@ -625,3 +625,12 @@ determination routes to counsel).
 | OWASP ASVS v5.0.0-12.3.4 (Secure Communication) | https://github.com/OWASP/ASVS/blob/v5.0.0_release/5.0/en/0x21-V12-Secure-Communication.md | Level 2: "Verify that TLS connections between internal services use trusted certificates. Where internally generated or self-signed certificates are used, the consuming service must be configured to only trust specific internal CAs and specific self-signed certificates." Verified 2026-09-20. |
 | CWE-295 — Improper Certificate Validation | https://cwe.mitre.org/data/definitions/295.html | "Improper Certificate Validation" — "The product does not validate, or incorrectly validates, a certificate." Fetched + verified 2026-09-20. |
 | CWE-297 — Improper Validation of Certificate with Host Mismatch | https://cwe.mitre.org/data/definitions/297.html | "Improper Validation of Certificate with Host Mismatch" — a child of CWE-295; the specific case of an all-accepting `HostnameVerifier`. Fetched + verified 2026-09-20. |
+
+## Verified by direct fetch (2026-09-20) — HTTP request/response smuggling (A01)
+
+| Standard / source | URL | What was confirmed |
+|---|---|---|
+| OWASP ASVS v5.0.0-4.2.1 (API and Web Service) | https://github.com/OWASP/ASVS/blob/v5.0.0_release/5.0/en/0x13-V4-API-and-Web-Service.md | Level 2: "all application components (including load balancers, firewalls, and application servers) determine boundaries of incoming HTTP messages using the appropriate mechanism for the HTTP version to prevent HTTP request smuggling. In HTTP/1.x, if a Transfer-Encoding header field is present, the Content-Length header must be ignored per RFC 2616." Verified 2026-09-20 at tag v5.0.0_release. |
+| OWASP ASVS v5.0.0-4.2.2 (API and Web Service) | https://github.com/OWASP/ASVS/blob/v5.0.0_release/5.0/en/0x13-V4-API-and-Web-Service.md | Level 3: "when generating HTTP messages, the Content-Length header field does not conflict with the length of the content as determined by the framing of the HTTP protocol, in order to prevent request smuggling attacks." Verified 2026-09-20. |
+| CWE-444 — Inconsistent Interpretation of HTTP Requests ('HTTP Request/Response Smuggling') | https://cwe.mitre.org/data/definitions/444.html | Title verbatim: "Inconsistent Interpretation of HTTP Requests" (common name 'HTTP Request/Response Smuggling'). Fetched + verified 2026-09-20. |
+

@@ -42,13 +42,32 @@ reachable directly**, bypassing the edge/WAF that enforces auth? (2) Does the
 app **strip inbound copies** of trusted proxy/identity headers (`X-Forwarded-*`,
 `X-User`, host-injected claims)? (3) Does the gate matcher cover `/path`,
 `/path/`, case variants, encoded traversal (`%2e%2e`), and **non-GET** verbs?
-(4) Path normalization before match? A gate whose input a client can set is not
-a gate.
+(4) Path normalization before match? **(5) Do the edge/proxy and the origin
+agree on where one HTTP message ends and the next begins** — `Transfer-Encoding`
+vs `Content-Length` precedence, consistently by HTTP version — or can a crafted
+request desync them so the edge inspects one message while the origin executes a
+different, smuggled one (HTTP request smuggling, CWE-444)? A gate whose input a
+client can set is not a gate.
 
 **Known anti-pattern:** "add middleware on the document request" when identity
 only arrives on same-origin XHR via a client-attached Bearer (or host-injected
 header the document never carries). Propose a gate only on a request class that
 actually carries the principal. Cross-ref Phase 0 platform-vs-app-vs-preflight.
+
+**Smuggling defeats a correct gate without forging anything.** Every header check
+above can be correct and the gate still bypassed if the edge/WAF and the origin
+disagree on request boundaries: a `Transfer-Encoding` header alongside a
+`Content-Length`, parsed inconsistently by the two hops (CL.TE / TE.CL / TE.TE),
+lets one connection smuggle a second, uninspected request past the WAF into the
+origin — or poison the connection so the *next* user's request arrives prefixed
+with attacker bytes (response-queue poisoning: a confidentiality break, not just an
+authz bypass). The anonymous-GET sweep proves nothing here — it shows only that the
+edge's *own* parser rejects requests it recognizes as unauthenticated, not that the
+edge and origin agree on what a request *is*. In HTTP/1.x a present `Transfer-Encoding`
+means `Content-Length` must be ignored (ASVS v5.0.0-4.2.1, L2); reject or normalize a
+message carrying both. 🚩 a reverse proxy and origin of different vendors/versions in
+front of an auth gate with no desync-specific test — plain `curl` will not surface it;
+it needs a raw-socket / desync tool.
 
 **Bidirectional gate proof (required before recommending a gate).** Every
 proposed gate ships an expected-status table **per request class**, before and
@@ -216,7 +235,7 @@ code." Is untrusted `${{ github.event.* }}` interpolated straight into a `run:`
 step (script injection — route it through an intermediate `env:` var)? Is
 `GITHUB_TOKEN` / `permissions` read-only by default and escalated per job?
 **Verification vs authenticity** — is a released artifact **signed**
-(SLSA / sigstore), or only checksummed over the **same channel** it ships on? A
+(SLSA / sigstore), or only checksummed over the **same channel** it ships on? (Producer-side signing depth — cosign/Sigstore, npm/PyPI provenance, GPG — is in `release-engineering.md`.) A
 same-origin checksum defends against corruption and a CDN mishap, **not** a
 compromised origin, so it does not neutralize the trust-on-first-use risk of a
 `curl | sh` install from that origin.

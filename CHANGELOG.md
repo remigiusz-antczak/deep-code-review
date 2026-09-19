@@ -3,6 +3,14 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.239.0] — 2026-09-20
+
+### deep-code-review — wave 160 HTTP request/response smuggling (A01)
+
+- **`security-appsec.md`** (A01): a correct auth gate can still be bypassed if the edge/WAF and the origin disagree on where one HTTP message ends and the next begins. A `Transfer-Encoding` + `Content-Length` request parsed inconsistently by the two hops (CL.TE/TE.CL/TE.TE) smuggles a second, uninspected request past the WAF, or poisons the connection so the next user's request is prefixed with attacker bytes (response-queue poisoning). The anonymous-GET sweep proves nothing here — it exercises only the edge's own parser, not edge/origin agreement. New forgeability-row item (5) + a dedicated paragraph. Fix at the framing layer (HTTP/1.x: `Transfer-Encoding` present => ignore `Content-Length`; reject a message with both); add a desync test (plain curl won't surface it).
+- Folded the deferred back-reference from wave 157: A03's "signed vs same-channel-checksummed" clause now points to `release-engineering.md`'s producer-side signing section (bidirectional cross-link).
+- +1 eval; +1 standards section (OWASP ASVS v5.0.0-4.2.1 L2 / -4.2.2 L3; CWE-444 — verbatim via raw fetch 2026-09-20).
+
 ## [1.238.0] — 2026-09-20
 
 ### deep-code-review — wave 159 shared accessor silently no-ops for the nested-key polymorphic shape (closes #559)

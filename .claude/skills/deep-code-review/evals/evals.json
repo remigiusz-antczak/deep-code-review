@@ -3001,6 +3001,16 @@
         "Explains why it survives review: the other shapes work and a correctly-written per-shape accessor masks it, so smoke tests on the common shapes pass",
         "Prescribes enumerating every shape and checking nesting at the schema/type, cross-checking a correct sibling accessor, and fixing with a per-shape accessor registry + per-shape regression tests — not merely adding metadata.slug to the top-level list ad hoc"
       ]
+    },
+    {
+      "id": "a-passing-anonymous-get-sweep-does-not-prove-a-gate-survives-http-request-smuggling",
+      "prompt": "An app has an edge WAF (enforces auth, allow-lists `/api/*`) in front of an origin Express server. The anonymous GET sweep (no cookies, no Authorization) returns 401 on every documented route — clean. Both the WAF (nginx) and the origin parse a request carrying BOTH `Transfer-Encoding` and `Content-Length`, and neither has been tested for desync. The team asks: 'the sweep passed — are we done on access control?' Answer.",
+      "expected_output": "No. The anonymous GET sweep only proves the WAF's own parser rejects requests it recognizes as unauthenticated; it says nothing about whether the WAF and the origin agree on where one HTTP request ends and the next begins. Because both parse a request carrying both `Transfer-Encoding` and `Content-Length`, an attacker can craft a request the WAF reads as one benign message while the origin reads as two — smuggling a second, uninspected request past the auth gate (HTTP request smuggling, CWE-444; the CL.TE/TE.CL/TE.TE class), or poisoning the connection so the next user's request is prefixed with attacker bytes. Fix at the framing layer: in HTTP/1.x a present Transfer-Encoding means Content-Length must be ignored (ASVS v5.0.0-4.2.1), and a message carrying both should be rejected/normalized; add a dedicated desync test — plain curl won't surface it, it needs a raw-socket/desync tool. Not done.",
+      "expectations": [
+        "States the anonymous GET sweep passing does NOT prove the gate is unbypassable — it only exercises the edge's own parser, not edge/origin agreement on request boundaries",
+        "Names the mechanism: edge/origin disagreement on Transfer-Encoding vs Content-Length (CL.TE/TE.CL/TE.TE), i.e. HTTP request smuggling / CWE-444, smuggling a second request past the gate",
+        "Requires a fix at the framing layer (TE present => ignore CL per HTTP/1.x; reject a message with both) AND a dedicated desync test — noting plain curl won't surface it"
+      ]
     }
   ]
 }
