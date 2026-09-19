@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.155.0] — 2026-09-19
+
+Wave 76 — **EU Accessibility Act (EAA) name-and-route**, a new regulatory area (the coverage cartography's EAA candidate, now primary-sourced). A new tree entry in `business-ops/regulated-domain-triage.md`: a consumer product / service on the EU market (e-commerce, banking / payment terminals, transport ticketing & self-service, e-readers, computers / OS) → name the **EU Accessibility Act (Directive (EU) 2019/882)** + the EN 301 549 / WCAG engineering benchmark (routes to `frontend-a11y.md`); route in-scope / micro-enterprise-exemption / timelines to counsel (name-and-route boundary; no rot-prone dates encoded). Verified by direct fetch of EUR-Lex 2019/882 this session (the cartography couldn't reach a primary source; now logged in `docs/standards-index.md`). One eval + a Verification-list entry (business-ops 7 → 8). **business-ops → 1.4.0; trio → 1.155.0.**
+
+Dogfood reviewer: FIX-FIRST → fixed pre-merge. The EAA ledger row had asserted "aligns with EN 301 549 / WCAG" attributed to the EUR-Lex fetch, but that page names neither standard — removed the claim from the ledger (EN 301 549 kept as a by-name engineering lead in the skill body only, WCAG stays grounded by its own row); softened the tree/eval "the benchmark **is** EN 301 549 / WCAG" to a lead-to-verify, per the name-and-route boundary.
+
 ## [1.154.0] — 2026-09-19
 
 Wave 75 — **ML-pipeline correctness** (data leakage, training reproducibility, label quality), from research issue **#384** (a new area; dcr-only). Perun's AI coverage was security / output / governance-shaped; this adds the *correctness of a classical ML training/eval pipeline* — where a leaked split makes the reported metric **false** (the anti-fabrication thesis in classical-ML clothing).

@@ -72,6 +72,17 @@
         "Routes in-scope / conformity-class / timelines to counsel",
         "Never concludes the regime binds or that the product is compliant"
       ]
+    },
+    {
+      "id": "design-time-eu-eaa-name-and-route-accessibility-of-products-and-services",
+      "prompt": "A team is launching an e-commerce site + mobile app + self-service kiosks to EU consumers and asks business-ops: 'do we have EU accessibility obligations?' What do you do?",
+      "expected_output": "Name and route -- never conclude it binds (business-ops boundary). Name the likely regime: the EU Accessibility Act (EAA -- Directive (EU) 2019/882), 'on the accessibility requirements for products and services,' which covers consumer digital surfaces on the EU market such as e-commerce, banking, transport ticketing / self-service, e-readers, and computers / operating systems. Engineering leads: the digital surfaces must meet functional accessibility requirements -- the technical benchmark to verify is typically EN 301 549 / WCAG, so route the engineering to deep-code-review's frontend-a11y.md (WCAG 2.2 AA). Route to counsel: whether the product / service is in scope, the micro-enterprise exemption, and enforcement timelines. Do NOT conclude the EAA binds or that the product is compliant. (regulated-domain-triage.md.)",
+      "expectations": [
+        "Names the EU Accessibility Act (Directive (EU) 2019/882) for a consumer product/service on the EU market",
+        "Engineering leads = functional accessibility via EN 301 549 / WCAG -> frontend-a11y.md",
+        "Routes in-scope / micro-enterprise-exemption / timelines to counsel",
+        "Never concludes the EAA binds or that the product is compliant"
+      ]
     }
   ]
 }

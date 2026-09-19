@@ -62,6 +62,14 @@ can fire at once — a product can be in multiple regimes.
   Route whether the product is in scope, its conformity-assessment class (default /
   important / critical), the reporting authority/route, and the exact timelines to
   counsel.
+- **Consumer product or digital service on the EU market?** (e-commerce, consumer
+  banking / payment terminals, passenger-transport ticketing & self-service, e-readers,
+  phones / computers / operating systems) → **EU Accessibility Act (EAA — Directive
+  (EU) 2019/882)**, "on the accessibility requirements for products and services" →
+  leads: the product's digital surfaces meet functional accessibility requirements —
+  the technical benchmark to verify is typically **EN 301 549 / WCAG**, and the
+  engineering lives in `deep-code-review`'s `frontend-a11y.md`. Route whether the product/service is in
+  scope, the micro-enterprise exemption, and enforcement timelines to counsel.
 - **Biometrics?** (face, fingerprint, voiceprint, retina) → biometric-privacy
   regimes (several US states have specific statutes) → leads: explicit consent,
   strict retention limits, a deletion path. Route which statute(s) apply to

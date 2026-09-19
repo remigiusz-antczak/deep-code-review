@@ -14,7 +14,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.3.0"
+  version: "1.4.0"
 ---
 
 # Business ops
@@ -160,4 +160,9 @@ otherwise).
   digital elements names the **EU Cyber Resilience Act** (Regulation (EU) 2024/2847) + its
   engineering-obligation leads, and routes in-scope / conformity-class / timelines to counsel,
   never concluding the regime binds (`design-time-eu-cra-name-and-route-products-with-digital-elements`).
+- A design-time "do we have EU accessibility obligations?" ask over a consumer product /
+  service on the EU market names the **EU Accessibility Act** (Directive (EU) 2019/882) +
+  the EN 301 549 / WCAG engineering benchmark (→ `frontend-a11y.md`), and routes in-scope /
+  exemption / timelines to counsel, never concluding it binds
+  (`design-time-eu-eaa-name-and-route-accessibility-of-products-and-services`).
 - `evals/evals.json` plants these cases.
