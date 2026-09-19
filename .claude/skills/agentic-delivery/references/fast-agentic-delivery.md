@@ -929,6 +929,41 @@ owner's message cadence is not the loop's clock* bullet: that stops owner-quiet 
 the loop **down** (*don't stop while the backlog has work*); this stops a pressure tick from
 driving it **up** into busywork (*don't fake work once it doesn't*).
 
+## A degradation workaround is temporary by default — tie its removal to the condition that caused it
+
+When a fast mechanism is blocked by a broken dependency, the reflex is a slower
+workaround: a merge-train whose union-proof gate is unavailable falls back to serial
+merging; a saturated parallel stage drops to sequential. Two traps follow, and the
+second is the expensive one.
+
+First, the workaround is often **heavier than necessary**: a broken part need not
+collapse the whole vehicle to serial — the fast batch mechanism can keep running on
+the **runnable subset**, skipping only the broken term, rather than downgrading
+everything (a tool broken *in this environment* is a **can't-check, not a red** —
+`SKILL.md` principle 2; and a merely **hung** gate is timeboxed and escalated, its
+reduced subset a proof-of-record that does **not** license merging an unvalidated
+member — see `deep-code-review`'s `branch-and-merge-hygiene.md`). Downgrading the
+whole vehicle to serial is a bigger regression than routing around the one broken
+piece.
+
+Second — the costly one — **the workaround outlives the outage.** Momentum keeps the
+degraded mode running long after the blocker clears: nothing is red (the slower path
+still "works"), so no failing gate prompts the switch-back. The regression persists
+until a human notices the slowness — a failure of self-monitoring, not of the
+mechanism. Discipline:
+
+- A workaround adopted during a degradation is **temporary by default.** Tie it to
+  the degradation explicitly at install time — *"revert to `<primary mechanism>`
+  when `<blocker>` is fixed"* — not a vague intention to undo it later.
+- **Track active workarounds** as open obligations (the same way a brief's
+  follow-through is tracked, below). Fixing or noticing the blocker restored must
+  trigger a *"what did I downgrade because of this?"* check, and restore the primary
+  mechanism **in the same breath**.
+- "It still works" ≠ "it's still the right mechanism." A slower-but-working fallback
+  hides a regression *precisely because* nothing is red — so the switch-back needs an
+  explicit trigger set when the workaround is installed, never the absence of an
+  error to prompt it.
+
 ## Research is not delivery — a brief with no tracked follow-through is reported as unconsumed
 
 A lane sent to investigate comes back with a thorough brief, the brief is pasted into

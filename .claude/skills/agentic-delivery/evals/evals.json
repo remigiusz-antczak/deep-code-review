@@ -479,6 +479,16 @@
         "Requires serving from a tree the sync loop doesn't touch (separate-tree) and/or ff-only over hard-reset on a served tree",
         "Requires a health-checked supervisor that restarts the server after a sync, with the UX gate waiting on health"
       ]
+    },
+    {
+      "id": "a-degradation-workaround-is-temporary-revert-it-when-the-blocker-clears",
+      "prompt": "A merge-train's fast union-proof gate became unavailable, so the loop fell back to a serial auto-merger (~1 merge per CI cycle). The gate was restored hours ago, but the serial fallback is still running — ~5x slower — and nobody switched back until the owner asked why throughput dropped. What are the two mistakes?",
+      "expected_output": "(1) The fallback was heavier than necessary even during the outage: a broken part need not collapse the whole vehicle to serial — the fast batch mechanism can keep running on the RUNNABLE subset, skipping only the broken term (a tool broken in this environment is a can't-check, not a red; a merely hung gate is timeboxed and escalated, and its reduced subset does not license merging an unvalidated member). Downgrading everything to serial is a bigger regression than routing around the one broken piece. (2) The bigger mistake: the workaround OUTLIVED the outage. A degradation workaround is temporary by default, but momentum kept the degraded mode running because nothing was red — the serial path still 'worked,' so no failing gate prompted the switch-back, and it persisted until a human noticed the slowness (a self-monitoring failure). Fix: tie the workaround to its trigger at install time ('revert to the merge-train when the gate is restored'), track active workarounds as open obligations, and on restoring/noticing the blocker cleared run a 'what did I downgrade because of this?' check and restore the primary mechanism in the same breath. 'It still works' is not 'it's still the right mechanism.'",
+      "expectations": [
+        "Identifies that the workaround outlived the blocker because nothing was red — no failing gate prompts a switch-back, so the degraded mode persists on momentum (a self-monitoring failure)",
+        "Requires tying the workaround to its trigger condition at install time and restoring the primary mechanism when the blocker clears (track active workarounds; 'still works' != 'still the right mechanism')",
+        "Notes the fallback was heavier than necessary — a broken part need not collapse the whole vehicle to serial; keep batching on the runnable subset rather than downgrading everything"
+      ]
     }
   ]
 }
