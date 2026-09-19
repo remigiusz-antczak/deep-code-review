@@ -3,6 +3,33 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.213.0] — 2026-09-19
+
+### deep-code-review — wave 134 concurrent & distributed correctness: memory visibility + trace propagation (research round 8)
+
+Two axes the concurrency and observability sections under-covered, each with its own fetched source.
+
+`concurrency-shared-state.md`:
+- **Memory visibility is a separate axis from atomicity.** For every shared mutable field read by a
+  thread/goroutine other than its writer, name the synchronization edge (lock, atomic, `volatile`,
+  channel op, fence) that orders the write before the read. With none the write has no guaranteed
+  visibility — the reader may never observe it or observe it reordered — and no interleaving is needed
+  to fail, so a check-then-act race hunt misses it (a plain polled `bool` flag, or a lazily-assigned
+  singleton / broken double-checked locking, are the canonical cases). A data race is undefined
+  behavior in C/C++ and `unsafe` Rust and "incorrect" (with multiword tearing) in Go — not a benign
+  stale scalar.
+
+`observability.md`:
+- **A shared log correlation id is not an unbroken distributed trace.** Every service can stamp the same
+  id on its logs while each still starts a fresh root span, so logs reassemble by grep but the trace
+  backend shows N disconnected fragments. Verify one request's trace id resolves to one trace in the
+  tracing backend; the break is at a hop without auto-instrumentation (queue publish, cron/background
+  job, async handoff) where W3C `traceparent` must be injected into the envelope by hand.
+
++2 evals (244 -> 246 deep-code-review). SRC fetched + verified 2026-09-19:
+doc.rust-lang.org/reference/behavior-considered-undefined.html (Rust data races = UB),
+go.dev/ref/mem, en.cppreference.com/w/cpp/language/multithread, w3.org/TR/trace-context.
+
 ## [1.212.0] — 2026-09-19
 
 ### agentic-delivery — wave 133 parallel-lane hygiene: repo-global stash + decouple finalize (closes #536, #506, #528)
