@@ -316,6 +316,19 @@ considered is a finding — the model went **stale relative to the diff** — an
 surface with no agent-specific (MAESTRO-shaped) model is the common miss. (Maturity frames —
 NIST SSDF, OWASP SAMM, BSIMM — measure the org's *program*, not this diff; name, don't score.)
 
+- **A producer crossing a publish / trust boundary invalidates guards scoped to the old side —
+  re-audit them.** A guard's *sufficiency* is often conditioned on a precondition — "internal
+  only," "never published," "not user-facing," "dry-run," "behind auth." When a change wires that
+  producer **across** the boundary (to a published / trusted / user-facing / external consumer),
+  every guard justified by the old precondition must be **re-audited under the new one** — a
+  weaker guard that was fine "because it never publishes" now ships its excused defect to the
+  public surface (a false attribution, say). Two things hide it: the comment defending the weaker
+  guard is now **out of date** (its precondition changed) yet reads authoritative, and the guard and the
+  boundary-crossing edit usually live in **different files**, so a diff-scoped review sees one but
+  not the other (the DIFF blast-radius rule, `SKILL.md`).
+- **🚩 at the crossing:** a guard whose rationale cites "internal only / never published / dry-run /
+  no rows" on a producer the same change wires to a published or external surface.
+
 **Detect steps, in order**
 - **Inventory the money/state machines.** List every flow that moves value or
   advances state: checkout, refund, credit/balance, coupon, invite, quota,

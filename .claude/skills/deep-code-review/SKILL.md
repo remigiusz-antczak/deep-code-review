@@ -11,7 +11,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.172.0"
+  version: "1.173.0"
 ---
 
 # Deep Code Review
@@ -44,12 +44,14 @@ non-file-capable model also paste the `references/*.md` for the archetype.
 **Scope modes** (state which; if unstated, infer):
 - `FULL` — entire repository. Default when handed a repo.
 - `DIFF <base-ref>` — PR/MR, branch, or range. Review the change **and its
-  blast radius**. 🚩 authorization blast-radius (each obliges Phase 3
-  anon-GET / two-principal probes): removed guard or middleware matcher, a
+  blast radius**. 🚩 blast-radius (each obliges a Phase 3 probe —
+  anon-GET / two-principal for the access items, a guard re-audit under the new
+  precondition for the producer-crossing one): removed guard or middleware matcher, a
   **widened** route matcher or CORS origin, a **new route with no gate**, a
   permission check **moved client-side**, a data path **dropped from
   `.gitignore`**, a **loosened `Cache-Control`** on an identity-bearing
-  response.
+  response, a **producer wired across a publish/trust boundary** whose guards
+  were justified by the old side (`internal only`/`never published`).
 - `FILE <paths>` — named files.
 
 **DIFF quick-path** — small self-contained diff you will fix immediately.

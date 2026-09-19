@@ -1781,6 +1781,17 @@
         "Refuses the while-I'm-here untested refactor -- scope-creep re-buries the validated change under unvalidated risk; make it a separate validated change",
         "Notes the symmetry with refusing a placebo fix proven not to work -- ship only what's shown to hold"
       ]
+    },
+    {
+      "id": "producer-crossing-a-publish-boundary-invalidates-old-guards",
+      "prompt": "This PR wires an internal CSV producer -- previously used only for a dry-run report that never published -- into the public bundle. The CSV code is unchanged. A code comment there says 'weaker de-dup is fine, this never publishes.' The diff only touches the wiring file. Anything to check?",
+      "expected_output": "Yes -- re-audit the producer's guards under the NEW (published) precondition; don't trust the diff scope. A guard's sufficiency is often conditioned on a precondition ('internal only / never published / dry-run'), and this change moves the producer ACROSS that boundary into the public bundle -- so the weaker de-dup that was 'fine because it never publishes' now ships its excused defect to the public surface (e.g. one account's data published as evidence under two entities -- a false attribution, the worst class). Two things hide it: (a) the code comment defending the weaker guard is now STALE (its precondition changed) but reads authoritative; (b) the guard and the boundary-crossing wiring live in DIFFERENT files, so a diff-scoped review that reads only the wiring file misses it -- a DIFF blast-radius escalation. Treat a guard whose rationale cites 'internal only / never published / dry-run / no rows' on a producer this change publishes as a finding at the crossing; re-audit every such guard under the published precondition, and compare against the sibling path that always published (it likely carries the stronger guard -- the asymmetry is the defect). (security-appsec.md.)",
+      "expectations": [
+        "Re-audits the producer's guards under the NEW published precondition rather than trusting the unchanged CSV code / diff scope",
+        "Identifies the stale comment ('weaker de-dup is fine, never publishes') as a finding at the crossing -- its precondition changed, so its justification no longer holds",
+        "Names the cross-file invisibility (guard in one file, boundary-crossing wiring in another) as a DIFF blast-radius escalation a per-file review misses",
+        "Flags the excused defect now reaching the public surface (e.g. false attribution) and/or compares against the always-published sibling path whose stronger guard exposes the asymmetry"
+      ]
     }
   ]
 }
