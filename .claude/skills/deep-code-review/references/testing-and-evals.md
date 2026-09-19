@@ -75,6 +75,29 @@ explicit third choice), not which one this review prefers.
   a production build can all pass while the served page/endpoint is broken
   (stale, unstyled, misconfigured). Assert against what ships. Corollary: don't
   mutate content-hashed assets a running process is still serving.
+- **A passing type-check / compile is a *partial* gate — after a conflict
+  resolution on a long-behind branch, run the full suite.** A clean compile proves
+  the tree type-checks, not that it still *behaves* as pinned. A three-way merge can
+  be type-correct yet wrong: the branch pins a behavior with a test asserting a
+  specific behavior (an emitted event name, a serialized field, a default value) the other
+  side refactored away; the resolution compiles against the new shape while a
+  behaviorally-pinned test still asserts the old one — the type checker never sees
+  it, the suite does (and the longer the branch was behind, the likelier). Classify
+  a type-check / compile pass as **necessary, never sufficient**; run the behavioral
+  + regression suite after a conflict resolution before declaring it correct. When a
+  pinned test breaks under the resolution, treat it as a signal to re-examine the
+  resolution — **not** a cue to delete or "update" the test to match the merged code
+  (it may pin behavior the other side still depends on).
+- **A property test whose generator encodes the invariant it checks is
+  tautological.** If the input generator is built from the same rule the assertion
+  verifies, it can never produce the case that violates it — the test passes
+  vacuously and guards nothing. The generator must sample the input space
+  **independently of the property's *conclusion*** — constraining it to the property's
+  **precondition** (only sorted inputs for a sort property, only valid emails for a
+  formatting property) is legitimate and often necessary; the smell is specifically a
+  generator built from the same rule the **assertion** checks, so the violating case can
+  never be generated and the test passes vacuously (the property-test sibling of the mocked-into-a-tautology
+  integration smell above).
 - **A visual receipt must show the feature, not a wall past it.** When the review
   needs a screenshot of a changed screen, non-empty is **necessary, not sufficient**
   — an error, login, or empty-state page is a valid non-empty image that proves
@@ -503,7 +526,9 @@ that make the assertion trivial; a checker with no test of its own; `skip`/
 "update if it changes"; tests that hit the real network or real services; **tests
 that write a real tracked/shared data path with cleanup only in `finally`/`try`**;
 an AI feature with only mocked unit tests and no eval bench; a coverage % cited
-as proof of correctness; a threshold lowered in the same diff that would otherwise
+as proof of correctness; a type-check / compile pass trusted as the full suite after a conflict
+resolution; a property test whose generator is built from the invariant it asserts (passes vacuously);
+a threshold lowered in the same diff that would otherwise
 fail; a heavily skewed pyramid-or-trophy shape with no stated test philosophy
 anywhere in the repo; a served ML model with no drift monitoring on its input or
 prediction distribution; a new model version promoted on latency/error-rate alone,

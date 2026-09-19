@@ -1912,6 +1912,26 @@
         "Prescribes a transactional outbox (event in the same transaction, relay publishes) or CDC, with commit-before-publish ordering",
         "Gives the fallback (idempotent consumer + reconciliation) and does not accept 'both usually succeed' as reliable"
       ]
+    },
+    {
+      "id": "type-check-clean-after-a-conflict-resolution-is-not-a-passing-suite",
+      "prompt": "A feature branch is 300 commits behind main. Someone resolves the merge conflicts, the TypeScript compiler and the production build both pass clean, and they merge on that basis (the full test suite was not run — 'it compiles, the resolution is correct'). Sound?",
+      "expected_output": "No — a clean compile / type-check is a PARTIAL gate, necessary but not sufficient, and this is exactly the situation it fails. A three-way conflict resolution can be type-correct yet behavior-wrong: the far-behind branch may pin a behavior with a test asserting a specific behavior (an emitted event name, a serialized field, a default value) that main refactored away; the resolution compiles against main's new shape while a behaviorally-pinned test still asserts the old one — the compiler never sees it, the suite does, and the longer the branch was behind the likelier the divergence. Run the FULL behavioral + regression suite after the resolution before declaring it correct. And if a behaviorally-pinned test then breaks, treat it as a signal to re-examine the resolution — not a cue to delete or 'update' the test to match the merged code (it may pin behavior the other side still depends on). (testing-and-evals.md.)",
+      "expectations": [
+        "States a clean type-check/compile is a partial gate — necessary, not sufficient — and does not stand in for the full test suite, especially after a conflict resolution on a long-behind branch",
+        "Requires running the full behavioral + regression suite after the resolution before declaring it correct (a type-correct three-way merge can still fail a behaviorally-pinned test)",
+        "Says a pinned test that breaks under the resolution is a signal to re-examine the resolution, NOT a cue to delete/update the test to match the merged code"
+      ]
+    },
+    {
+      "id": "property-test-generator-must-not-encode-the-invariant-it-checks",
+      "prompt": "A property-based test for a `normalizeEmail(s)` function asserts that the output is always lowercase. Its input generator produces candidate strings by calling `s.toLowerCase()` on random strings before feeding them in. It passes on thousands of cases. Is this a strong test?",
+      "expected_output": "No — it is tautological and guards nothing. The generator lowercases every input before the assertion checks the output is lowercase, so the test can never produce the case it exists to catch (an input with uppercase that normalizeEmail fails to lowercase) — it passes vacuously no matter what normalizeEmail does to case. A property test's generator must not encode the property's CONCLUSION: it must be free to produce inputs that VIOLATE the assertion (here: uppercase / mixed-case, which this generator pre-lowercased away). Constraining a generator to a precondition (only valid emails, only sorted inputs) is legitimate PBT; pre-satisfying the very property the assertion checks is the smell — the violating case becomes unreachable and the test proves nothing. Fix: generate arbitrary strings (with uppercase/mixed-case included) and assert the property on the function's output. (This is the property-test sibling of the mocked-into-a-tautology integration smell.) (testing-and-evals.md.)",
+      "expectations": [
+        "Identifies the test as tautological/vacuous: the generator pre-satisfies the invariant (lowercases inputs), so it never produces the violating case the test exists to catch",
+        "States the generator must be free to produce inputs that VIOLATE the property (uppercase/mixed-case here) — i.e. must not encode the property's conclusion; notes a precondition constraint is legitimate, but pre-satisfying the checked property is the smell",
+        "Notes passing on thousands of cases proves nothing here, and gives the fix (generate arbitrary inputs, assert on the output)"
+      ]
     }
   ]
 }
