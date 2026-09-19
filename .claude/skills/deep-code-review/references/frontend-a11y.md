@@ -123,9 +123,12 @@ confirm the background does not move.
 - Content reflows to 320 CSS px wide without loss (1.4.10); works at 200% zoom.
 - Respect `prefers-reduced-motion`; no content flashes > 3×/sec. A CSS
   `@media (prefers-reduced-motion: reduce)` override does **not** reach a JS-driven
-  animation (a `requestAnimationFrame` loop, a motion library, a scroll/parallax
-  handler) — the JS path must itself consult `matchMedia('(prefers-reduced-motion:
-  reduce)')` (WCAG 2.3.3, AAA — for high-stakes / vestibular-risk flows).
+  animation (a `requestAnimationFrame` loop, an autoplaying motion library, a
+  scroll/parallax handler) — the JS path must itself consult
+  `matchMedia('(prefers-reduced-motion: reduce)')`. Vestibular-safety best practice; for
+  the **interaction-triggered** subset (scroll/parallax, hover/click transitions) this is
+  WCAG **2.3.3 Animation from Interactions** (AAA — SC 2.2.2 governs the *automatically*
+  started case instead).
 
 **Timing & motion** (WCAG 2.2.1, 2.2.2 — both Level A)
 - **A time limit that logs out or discards unsaved input needs a warn-and-extend path.**
@@ -135,12 +138,14 @@ confirm the background does not move.
   invalidates the activity, limits > 20 h. Note the **security ↔ a11y tension** — a short
   idle timeout is a security ask, but it still needs the warn+extend affordance before it
   fires (cross-ref `security-appsec.md` A07 session lifetime).
-- **Auto-moving / auto-updating content needs a pause / stop / hide control (2.2.2).** An
-  auto-advancing carousel, an auto-refreshing feed/dashboard, or content that moves /
-  blinks / scrolls automatically for **> 5 s** alongside other content needs a visible
-  pause / stop / hide (or a frequency control) — unless the motion is essential. Distinct
-  from the 3×/sec flash limit above (that is seizure risk, 2.3.1; this is
-  attention / distraction, and auto-updating content has **no** 5 s grace period).
+- **Auto-starting motion / auto-updating content needs a user control (2.2.2, Level A).**
+  **Moving / blinking / scrolling** content that starts automatically, lasts **> 5 s**, and
+  runs alongside other content needs a visible **pause / stop / hide** (an auto-advancing
+  carousel is the classic case) — unless the motion is essential. **Auto-updating** content
+  (an auto-refreshing feed / dashboard) needs the same pause/stop/hide **or** a control over
+  its update **frequency**, unless the updating itself is essential — and it gets **no** 5 s
+  grace period. Distinct from the 3×/sec flash limit above (seizure risk; this is
+  attention / distraction).
 
 **Forms**
 - Every input has a programmatic label; errors are announced (not color-only),

@@ -8,7 +8,7 @@ follows Keep a Changelog; versioning follows Semantic Versioning.
 ### deep-code-review — wave 131 frontend accessibility & performance depth (research round 6)
 
 Comparative vs WAI-ARIA Authoring Practices + WCAG 2.2 + web.dev Core Web Vitals. Six additions to
-`frontend-a11y.md` (the covered 6 WCAG-2.2 A/AA criteria + first-rule-of-ARIA confirmed already present):
+`frontend-a11y.md` (its 6 new WCAG-2.2 A/AA criteria + first-rule-of-ARIA were already present — this wave adds a different, adjacent set spanning ARIA authoring, WCAG 2.2.1/2.2.2/2.3.3, and web.dev CWV):
 - **Phantom focus (4th rule of ARIA)** — hidden interactive content (closed off-canvas menu, collapsed
   accordion, CSS-hidden dropdown) must leave the tab order (`inert` / unmount / `tabindex=-1`);
   `aria-hidden="true"` must never sit on a container with a focusable child. The mirror of the
