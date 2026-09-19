@@ -2751,6 +2751,26 @@
         "Requires isolating the two — for experiments that mutate the same surface, mutual exclusion (or a layer design that guarantees they do not co-mutate the same element); orthogonal layers alone do not isolate two experiments changing the same element",
         "Keeps it on the code/infra side (distinct from read-side analysis like novelty/primacy or multiple-comparison correction)"
       ]
+    },
+    {
+      "id": "an-emitted-acknowledgment-or-readiness-flag-that-nothing-reads-is-not-a-control",
+      "prompt": "A pipeline sets an `acknowledged_drop` field with a reason whenever it drops rows, and a separate `data_ready` flag when a dataset finishes loading. In review you find the drop still ships to consumers and a half-loaded dataset is still served — yet both fields are written correctly at their write sites. What's the defect, and what's the review test?",
+      "expected_output": "Both fields are WRITE-ONLY: emitted but nothing READS them, so they change no behavior — the acknowledged drop still ships silently (no gate consumes acknowledged_drop) and the not-ready dataset is still served (no consumer checks data_ready before reading). An acknowledgment or readiness flag that nothing reads is not a control; it must be ACTIVE, not merely emitted. Fix: give each a reader — the acknowledgment gates the merge/publish (or a review surfaces it); the readiness flag is checked before the consumer reads. The review test is a GREP FOR A READER: a flag written at one site and read at none is the finding (the same defect as a written artifact with no reader).",
+      "expectations": [
+        "Identifies both flags as write-only — emitted but never read, so they change no behavior (the drop still ships, the not-ready data is still served)",
+        "States the principle: an acknowledgment/readiness flag must be actively consumed (gates a merge/publish; checked before the consumer reads), not merely emitted",
+        "Gives the review test — grep for a reader; a flag written but read nowhere is the finding"
+      ]
+    },
+    {
+      "id": "consume-an-external-identity-cluster-when-an-internal-resolver-model-is-forbidden",
+      "prompt": "Entity resolution for a dataset needs to disambiguate records, but running an internal ML matcher is off the table (a no-ML constraint on this pipeline). The team is about to fall back to a name-only match. Is there a cleaner option, and how should it be treated?",
+      "expected_output": "Yes — a name-only match is exactly the merge-worse-than-separate failure to avoid. The clean escape from a forbidden internal model is to consume an EXTERNAL, pre-computed identity cluster or id — plus its public artifact (an authoritative registry id, a published disambiguation) — as the resolver, rather than fake it with a name match or ship the forbidden model anyway. Treat the external cluster as a CORROBORATING source, not ground truth: record its provenance, and don't promote a lone external cluster to certainty. That keeps 'skip rather than guess' intact when the in-house resolver is off the table — you resolve on a real external authority or surface the ambiguous count, never on a name-only guess.",
+      "expectations": [
+        "Rejects the name-only fallback and identifies consuming an external pre-computed identity cluster/id (+ its public artifact) as the clean escape from the forbidden internal model",
+        "Requires treating the external cluster as a corroborating source with recorded provenance (not ground truth), not promoting a lone external cluster to certainty",
+        "Keeps 'skip rather than guess' — resolve on a real external authority or surface the ambiguous count, never a name-only guess"
+      ]
     }
   ]
 }

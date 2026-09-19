@@ -135,6 +135,14 @@ accepted overwrite with the grades, so the arbitration is auditable.
   then a name **only as a last resort behind a collision (namesake) guard** — and
   surface the **unresolved/ambiguous count as a first-class output**, never a
   silent drop.
+- **Consume an external pre-computed identity cluster instead of running a forbidden internal model.**
+  When resolving identity would need a model or number you are not allowed to run (a no-ML constraint,
+  a spend gate, a privacy limit), the clean escape is to consume an **external, pre-computed** cluster
+  or id — plus its **public artifact** (an authoritative registry id, a published disambiguation) — as
+  the resolver, rather than fall back to a name-only match or ship the forbidden model anyway. Treat
+  the external cluster as a **corroborating source** (§2 independence): record its provenance, and do
+  not promote a lone external cluster to certainty. It keeps "skip rather than guess" intact when the
+  in-house resolver is off the table.
 - Matches must clear a threshold on **multiple independent signals**; ambiguous
   or conflicting matches are **flagged for review, never auto-merged**.
 - **Grade a shared value by frequency; don't treat it as all-or-nothing.** A value's
@@ -291,6 +299,14 @@ rate), validity (schema/format/range). For each:
   build pass.** An intended drop is acknowledged explicitly, per field, with a
   stated reason. (This is the monotonic invariant applied to the *gates
   themselves*.)
+- **An acknowledgment or readiness flag that nothing *reads* is not a control — it must be active,
+  not merely emitted.** A "drop acknowledged" field, a `data_ready` / `is_complete` flag, a coverage
+  note — if no gate consumes it and nothing renders it, it is a **write-only** value that changes no
+  behavior: the drop still ships silently, the not-ready data is still served. Require a **reader** —
+  the acknowledgment gates the merge/publish (or a review surfaces it); the readiness flag is checked
+  before the consumer reads. The review test is a **grep for a reader**: a flag written at one site
+  and read at none is the finding (§5's **artifact → consumer census** — a written artifact with
+  zero readers is dead pipe — is the persisted-store cousin of the same defect).
 - **Never sum heterogeneous constructs into one composite score.** A blended
   "urgency"/"risk" number often merges constructs that imply *opposite* actions —
   raise-timing overdue (introduce to investors) vs distress/contraction (triage) —

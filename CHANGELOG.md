@@ -3,6 +3,21 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.223.0] — 2026-09-19
+
+### deep-code-review — wave 144 data-quality: active-not-emitted signals (#480, #552) + external identity cluster (#461)
+
+`data-quality.md`:
+- **#480 + #552:** an acknowledgment ("drop acknowledged") or readiness flag (`data_ready`/`is_complete`)
+  that nothing READS is not a control — it is write-only and changes no behavior (the drop still ships, the
+  not-ready data is still served). Require a reader (gate the merge/publish; check before the consumer reads);
+  the review test is a grep-for-a-reader. §7.
+- **#461:** when an internal identity resolver model/number is forbidden (no-ML / spend / privacy), consume
+  an external pre-computed identity cluster + its public artifact as the resolver instead of a name-only
+  match; treat it as a corroborating source with recorded provenance. §3.
+
++2 evals (262 -> 264 deep-code-review).
+
 ## [1.222.0] — 2026-09-19
 
 ### deep-code-review — wave 143 experimentation infrastructure: isolate concurrent experiments (breadth research)
