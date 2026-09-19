@@ -333,6 +333,18 @@
         "If already delivered on the integration branch: stop and report 'already delivered' with file:line + commit SHA; do not re-lane",
         "Does NOT hand-close the issue -- 'done' means merged to the default branch"
       ]
+    },
+    {
+      "id": "absolute-count-ratchet-is-contended-under-parallel-lanes",
+      "prompt": "Our CI fails a PR if the whole repo exceeds an absolute `--max-warnings 40` ceiling. It worked fine for one committer, but now that we fan work out to several parallel build lanes, a lane sometimes goes red for a warning it didn't introduce. What's happening, and what should the gate be?",
+      "expected_output": "An absolute count over the whole tree is a shared counter, and parallel lanes each rebased from the same base are blind to each other's deltas: lane A lands and consumes the last slot, then lane B -- whose own diff is no worse -- pushes and trips N+1, red for arriving second. The failure scales with fan-out width and is invisible until the second lane's CI runs (the first lane saw only headroom). Fix: gate on the per-diff delta -- 'this change introduces no new warnings versus its merge base' -- which is order-independent, so no lane can consume another's slot; keep the absolute count only as a slow-moving burndown target (a report or a non-blocking trend), never the per-PR gate under fan-out. Also brief every lane to fix any warning its own diff introduces before pushing, and never raise the ceiling to pass (a ratchet only tightens). Same shape for any absolute-threshold gate on a shared counter -- a coverage-percent floor, a bundle-size budget: under concurrency, gate on the delta the change owns, not the tree total. (Distinct from a `--max-warnings` false-fail caused by a symlinked dep tree inflating the count -- that is an infra 'could not run' where the count is wrong, not contended.) (agentic-delivery/references/fast-agentic-delivery.md.)",
+      "expectations": [
+        "Identifies the absolute tree-wide count as contended shared state -- parallel lanes off the same base are blind to each other's deltas, so the second to push trips the ceiling for a diff no worse than the first (punished for arriving second)",
+        "Prescribes gating on the per-diff delta ('no new warnings versus the merge base') and notes it is order-independent, so no lane consumes another's slot",
+        "Keeps the absolute count only as a slow-moving burndown target, never the per-PR gate under fan-out; and never raise the ceiling to pass (a ratchet only tightens)",
+        "Generalizes to any absolute-threshold gate on a shared counter (coverage %, bundle-size) -- under concurrency gate on the delta the change owns",
+        "Distinguishes this (count right but contended) from the phantom-warning false-fail where a symlinked dep tree makes the count wrong (an infra 'could not run')"
+      ]
     }
   ]
 }

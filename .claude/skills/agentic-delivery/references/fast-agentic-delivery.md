@@ -494,6 +494,41 @@ output) and from the out-of-tree-scratch metadata-crossing section above: this i
 **serve-vs-commit deadlock** where a running process dirties a **tracked, gate-asserted** file
 so the commit gate itself fails.
 
+## An absolute-count ratchet is contended shared state under parallel lanes — gate on the delta, not the tree total
+
+A gate that asserts an **absolute count over the whole tree** — `--max-warnings N`, a
+coverage-percent floor, a total-bundle-size budget — is a **shared counter**, and under
+parallel write-lanes each lane is **blind to the others' deltas**:
+
+- Lane A rebases, sees `N-1 / N` ("one slot left"), adds one warning of its own and pushes
+  green, taking the last slot.
+- Lane B, branched from the **same base**, adds one warning of its own and pushes — the
+  tree is now `N+1`, so **B goes red** even though B's own diff is **no worse** than A's.
+  B is punished for **arriving second**.
+
+The failure **scales with fan-out width** and is **invisible until the second lane's CI
+runs** — the first lane sees only headroom. It is the same shape as capping in-flight
+lanes by a shared count rather than by landed artifacts (above): the quantity each lane
+must respect is the **delta it owns**, not a tree-wide total it shares with lanes it cannot
+see.
+
+- **Gate on the per-diff delta** — "this change introduces **no new** warnings versus its
+  **merge base**" — not on the absolute tree count. A per-diff check is
+  **order-independent**: every lane is measured against its own base, so no lane can
+  consume another's slot. Keep the absolute count as a **slow-moving burndown target** (a
+  report or a non-blocking trend), never the per-PR gate under fan-out.
+- **Brief every lane to fix any warning its own diff introduces** before pushing, and
+  **never raise the ceiling to pass** — bumping `N` to land is decoration, the ratchet
+  inverted (a ratchet only tightens).
+- **🚩 grep:** an absolute `--max-warnings <N>`, a whole-tree coverage-percent floor, or a
+  total-bundle-size budget used as the **per-PR** gate in a repo that fans work out to
+  **parallel lanes** — gate the delta instead.
+
+Distinct from the phantom-warning `--max-warnings` false-fail above (a symlinked dep tree
+inflating the **count** — an *infra* "could not run", not a real regression): there the
+count is **wrong**; here it is **right but contended**. Same shape as any absolute-threshold
+gate on a shared counter — under concurrency, gate on the **delta the change owns**.
+
 ## Acknowledge a live-feedback burst before dispatching — silent throughput reads as ignoring
 
 When the owner is present and firing many separate pieces of feedback, silently
