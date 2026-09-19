@@ -62,6 +62,16 @@ just gets the gate switched off) — and don't relax the gate's baseline to pass
 which the never-lower-a-baseline rule under *Scoring & config discipline* already
 governs.
 
+**Grade-monotonic write-authority — arbitrate a non-empty *overwrite*, not just a blanking.** The
+against-baseline check blocks populated→empty and the fanout arm blocks collapse; neither arbitrates
+a **value-A → different-value-B overwrite**, so a lower-grade source can silently replace a
+higher-grade value while the field stays populated, just **wrong** (a "did a good row go empty?"
+check waves it through). Attach a **source grade** to every asserted value (an authored,
+deterministic per-source table, not an inferred judgement) and refuse a write when `new.grade <
+incumbent.grade`; keep the incumbent on ties. Additive to the populated→empty and fanout checks,
+never a replacement (grade-gating alone won't stop an equal-grade blanking). Record each refused /
+accepted overwrite with the grades, so the arbitration is auditable.
+
 ## 2. No fabrication in the data itself
 
 - **Skip a field rather than guess it.** An empty cell beats a confident-looking
@@ -69,7 +79,14 @@ governs.
   hedge.
 - **Corroboration = two or more distinct, independent sources.** Label
   self-attested facts `inferred`, never `sourced`. One source is a lead, not a
-  fact.
+  fact. **Independence means independent *origins*, not distinct domains:** a
+  conference page, the speaker's blog on another domain, an aggregator that scraped
+  it, and a repost are four domains but **one** origin — three *derive from* the
+  first, and counting them as four inflates confidence with derivative echoes.
+  Collapse **derivation** (a source that cites or derives from another is the same
+  origin), not just same-domain duplicates; where derivation cannot be established
+  deterministically (no citation / link / "via" signal, no known-aggregator list),
+  prefer the **conservative** count over assuming independence. (This is source *independence* — how many origins exist; a separate rule governs what a corroboration count may *promote*: occurrence, never entity-attribution, §7.)
 - **Provenance + confidence per record/field:** where a value came from and how
   sure you are (a deterministic score is preferred over a model-assigned one).
   Keep provenance tags honest — "live-queried" (a command that returns the same
@@ -89,6 +106,18 @@ governs.
   silent drop.
 - Matches must clear a threshold on **multiple independent signals**; ambiguous
   or conflicting matches are **flagged for review, never auto-merged**.
+- **Grade a shared value by frequency; don't treat it as all-or-nothing.** A value's
+  weight as a match / join key is **inversely related to how common it is**: a field
+  shared by two entities is signal (two co-founders, one company); shared by forty it
+  is a role / vendor / generic value to **demote** as a key. Binary include/exclude is
+  wrong both ways — it drops legitimate rare-value signal and trusts generic-value
+  collisions. Compute a **deterministic value-commonness table** (distinct entities per
+  normalized value) from data on hand — below a small **named** frequency band a value
+  still counts, above it is demoted — and **scale the required corroboration by
+  commonness** (a rare value clears a lower bar; a common one demands more independent
+  evidence, since the chance it silently collapses two distinct entities rises with
+  frequency). Thresholds are named constants with a rationale, never a tuned magic
+  number; route any demotion that empties a field through the non-regression gate (§1).
 - Prefer revealed-preference, hard-to-game, multi-signal evidence over a single
   vanity/attention signal.
 - Temporal claims (a prior role, a past affiliation) require an explicit
@@ -468,4 +497,4 @@ that ships raw events where the consumer scores on aggregates, or a claimed
 provider-input never reconciled against the provider's live output before it feeds a
 downstream score; a deserializer that trusts a serialized computed field (a count
 read verbatim, not re-derived from the validated collection) or checks only a
-primitive type, not element shape — weaker than its own builder; a corroboration / fusion step that raises a fused confidence past its **entity-attribution** component on agreement that only evidences occurrence; a hand-rolled composite / score / tiering where a citable external standard exists and wasn't used, or per-metric spec URLs over a **tool-chosen metric set** (the invented index one level up).
+primitive type, not element shape — weaker than its own builder; a corroboration / fusion step that raises a fused confidence past its **entity-attribution** component on agreement that only evidences occurrence; a hand-rolled composite / score / tiering where a citable external standard exists and wasn't used, or per-metric spec URLs over a **tool-chosen metric set** (the invented index one level up); a non-empty value-A→value-B overwrite with no source-grade arbitration; a join / corroboration key not weighted by value-commonness (a value shared by dozens treated as a confirming match); a corroboration count that collapses same-domain duplicates but not derivation.

@@ -1862,6 +1862,36 @@
         "Distinguishes this trigger-coverage staleness from a moving-base failure (the reviewed object mutated via an event the check never saw, not the base moving under a fresh check)",
         "Requires confirming the SHA/inputs the check ran against vs the merge target, and re-triggering a fresh green before merge"
       ]
+    },
+    {
+      "id": "grade-monotonic-write-refuses-lower-grade-overwrite-of-a-populated-field",
+      "prompt": "A data pipeline rebuild replaces a company's headquarters value: the incumbent came from a curated warehouse source, the new value from a scraped aggregator. Both are non-empty (just different). The non-regression gate checks for populated→empty regressions and duplicate-fanout, and reports no regression (the field is still populated). Ship the rebuild?",
+      "expected_output": "No — the gate has a hole. It blocks populated→empty and fanout but does not arbitrate a non-empty value-A → different value-B overwrite, so a lower-grade scraped-aggregator value silently replaced a higher-grade warehouse value: the field stayed populated, just wrong, and a 'did a good row go empty?' check waves it through. The fix is grade-monotonic write-authority: attach a deterministic per-source grade to every asserted value and refuse the write when new.grade < incumbent.grade (keep the incumbent on ties). This is additive to the populated→empty and fanout checks, not a replacement. Record the refused/accepted overwrite with the grades for audit. (data-quality.md §1.)",
+      "expectations": [
+        "Identifies the gap: the non-regression gate blocks populated→empty and fanout but does NOT arbitrate a non-empty→different-non-empty overwrite, so a lower-grade source silently overwrote a higher-grade value",
+        "Prescribes grade-monotonic write-authority: a deterministic per-source grade, refuse when new.grade < incumbent.grade, keep incumbent on ties",
+        "Notes it is additive to (not a replacement for) the populated→empty + fanout checks, and the arbitration is recorded/auditable"
+      ]
+    },
+    {
+      "id": "shared-value-match-weight-scales-with-frequency-not-binary",
+      "prompt": "An identity-resolution join merges two person records because they share the same value in a `company` field — a value that, in the dataset, appears on 40 distinct entities. The join treats a shared value as a confirming match. Is that sound?",
+      "expected_output": "No. A shared value's evidentiary weight is inversely related to how common it is: a value shared by 40 distinct entities is a generic / role / vendor value and must be DEMOTED as a join or corroboration key, not treated as a confirming match — merging on it will silently collapse distinct people. Binary include/exclude is wrong both ways; instead compute a deterministic value-commonness table (distinct entities per normalized value) and scale the required corroboration by commonness — a rare value clears a lower bar, a common one (like this 40-entity company) demands more independent evidence. Thresholds are named constants, not a tuned magic number. Do not auto-merge on a demoted high-frequency value. (data-quality.md §3.)",
+      "expectations": [
+        "States a value shared by many entities (here 40) is generic and must be DEMOTED as a match/join key, not treated as a confirming match (it would collapse distinct entities)",
+        "Prescribes a deterministic value-commonness table + scaling required corroboration by commonness (rare = lower bar, common = more evidence), not binary include/exclude",
+        "Keeps thresholds as named constants, not a tuned magic number, and does not auto-merge on the high-frequency value"
+      ]
+    },
+    {
+      "id": "corroboration-counts-independent-origins-not-distinct-domains",
+      "prompt": "A fact is marked 'confirmed by 4 sources' and clears the corroboration threshold. The four: (1) a conference's speaker page, (2) a news aggregator that scraped that page, (3) a blog on another domain that links to and restates (1), (4) a social repost of (1). The corroboration module already collapses same-registrable-domain duplicates and excludes the system's own record. Is the count of 4 honest?",
+      "expected_output": "No — it is one origin, not four. Independence means independent ORIGINS, not distinct domains: the aggregator (2), the blog (3), and the repost (4) all DERIVE from the conference page (1) — three derivative echoes of a single origin, four distinct domains but one independent source. Same-domain collapse is necessary but insufficient. Before incrementing the count, collapse derivation (a source that cites or derives from another is the same origin), using a citation/link/'via' signal or a known-aggregator list. Where derivation cannot be established deterministically, prefer the conservative count over assuming independence. Here the honest count is 1, which does not clear a 2+ threshold. (data-quality.md §2.)",
+      "expectations": [
+        "States the honest count is ONE origin, not four — the aggregator, blog, and repost all derive from the conference page (distinct domains but one origin)",
+        "Explains same-domain collapse is necessary but insufficient; corroboration must collapse DERIVATION (cites/derives-from = same origin), via a citation/link/via signal or known-aggregator list",
+        "Where derivation can't be established deterministically, prefer the conservative count over assuming independence — and notes 1 does not clear a 2+ threshold"
+      ]
     }
   ]
 }
