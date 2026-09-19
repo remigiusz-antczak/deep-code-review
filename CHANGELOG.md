@@ -3,6 +3,29 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.199.0] — 2026-09-19
+
+### agentic-delivery — wave 120 delivery-lane hygiene (closes #492, #494, #496)
+
+Draining the filed backlog. Three deltas to `fast-agentic-delivery.md`:
+
+- **#492**: reproduce the bug on current integration HEAD before writing a fix — an inbound report is
+  about a past build (deploy/report lag) and may already be fixed on HEAD.
+- **#494**: after applying a captured diff (3-way/context), re-run the formatter on the changed files
+  (the apply can shift bytes), AND brief the lane up front with the root/repo-wide gate it will be
+  judged by at land — not a workspace-local subset (point 1's briefing arm).
+- **#496**: a hard-reset sync loop on a live-served worktree silently kills the dev server (clean
+  exit) → the UX gate hits a dead port; serve from an untouched tree / ff-only / health-checked supervisor.
+
+Three evals (agentic-delivery 43 -> 46). Trio -> 1.199.0. `SHA256SUMS` regenerated last.
+
+Dogfood reviewer (sonnet): PASS-WITH-NITS -> applied. Shipped #494's missing briefing arm (brief the
+lane with the root gate up front) so #494 fully closes; softened "apply shifts bytes" -> "can shift"
+(a clean apply against the exact base doesn't); stripped the diagnosis from the #492 eval prompt so it
+tests inference. No-duplication verified clean across all three deltas.
+
+Closes #492. Closes #494. Closes #496.
+
 ## [1.198.0] — 2026-09-19
 
 ### deep-code-review — wave 119 graceful shutdown & disposability (reliability-error-handling.md)

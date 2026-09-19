@@ -449,6 +449,36 @@
         "Adds local git (branch/worktree/stash) to the occupancy scan before laning",
         "Treats a found local branch/worktree as a lead to verify liveness (not proof of an active lane), then adopt-and-re-verify or reconcile the dead lane"
       ]
+    },
+    {
+      "id": "reproduce-an-inbound-bug-on-current-head-before-building-a-fix",
+      "prompt": "An agent picks up a bug report ('the export button 500s'), reads the stack trace, and writes a fix without first trying to reproduce it — its own lane can't make the button 500 on current HEAD. What discipline was skipped, and what does the non-repro most likely mean?",
+      "expected_output": "Reproducing the bug on current HEAD before writing code. An inbound bug report is a claim about a PAST build — a stale deploy, a cached bundle, or a report filed before an intervening fix landed — so a report that won't reproduce on current HEAD most likely means it's ALREADY FIXED (grep for the guarding test / changed symbol to confirm) or is environment-specific. Building a fix for a bug that no longer exists on HEAD is wasted work and a spurious diff. Reproduce first; on a non-repro, confirm already-fixed-or-environment-specific rather than shipping a speculative fix. Generalizes 'an open issue is not proof the fix is absent' to any inbound bug — the trigger is deploy/report lag.",
+      "expectations": [
+        "Identifies the skipped step: reproduce the bug on current HEAD before writing a fix",
+        "Infers the non-repro most likely means already-fixed (deploy/report lag) or environment-specific — not a reason to build blind",
+        "Requires confirming via grep-for-the-fix / environment before shipping, avoiding a spurious diff"
+      ]
+    },
+    {
+      "id": "re-run-the-formatter-after-applying-a-captured-diff-before-the-land-gate",
+      "prompt": "An agent adopts a fix captured as a diff from another lane, applies it with a 3-way merge, runs the changed-files tests (green), and lands — but the repo-wide `prettier --check` fails at integration on the very files it touched, even though the original author's tree was formatted. Why, and what's the missing step?",
+      "expected_output": "The apply itself shifted bytes — reindented context lines, whitespace/newline normalization, a relocated hunk (a fuzzy/3-way apply, not a clean apply against the exact base) — so a diff whose ORIGIN was correctly formatted can still land unformatted. The changed-files test pass didn't run the formatter; the authoritative repo-wide prettier --check at land did, and caught it. Missing step: after applying a captured diff (3-way / context / cherry-pick), re-run the formatter on the changed files (don't trust the source was clean) before the land gate; and brief the lane up front with the root gate it will be judged by, not a workspace-local subset.",
+      "expectations": [
+        "Identifies that the apply mechanics (3-way/context/fuzzy) can shift bytes, so an origin-formatted diff can land unformatted",
+        "Notes the changed-files pass missed it but the repo-wide formatter gate at land caught it",
+        "Requires re-running the formatter on changed files AFTER the apply, before the land gate (and briefing the lane against the root gate)"
+      ]
+    },
+    {
+      "id": "a-hard-reset-sync-loop-on-a-live-served-worktree-silently-kills-the-dev-server",
+      "prompt": "An autonomous loop keeps a worktree in sync with `git reset --hard origin/main` every minute. A dev server serves the UX from that same worktree for the browser gate. Intermittently the browser gate fails with 'connection refused' and it's blamed on the code. What's really happening?",
+      "expected_output": "The sync loop's git reset --hard yanks files out from under the running dev server; many dev servers (or their watchers) exit CLEANLY when their entry file vanishes/rewrites mid-run, so the server just stops — zero exit code, no error — and the next browser/UX gate hits a dead port ('connection refused'), a false failure that looks like a code defect. Fix: serve from a tree the sync loop never touches (the separate-tree rule), prefer a fast-forward-only update over a hard reset on any served tree, and put the dev server under a health-checked supervisor that restarts it after a sync (with the UX gate waiting on that health check) so a legitimate resync doesn't read as a broken build.",
+      "expectations": [
+        "Identifies that reset --hard on the served worktree kills the dev server (clean exit, no error), so the gate hits a dead port — a false failure, not a code defect",
+        "Requires serving from a tree the sync loop doesn't touch (separate-tree) and/or ff-only over hard-reset on a served tree",
+        "Requires a health-checked supervisor that restarts the server after a sync, with the UX gate waiting on health"
+      ]
     }
   ]
 }

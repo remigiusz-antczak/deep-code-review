@@ -528,6 +528,14 @@ land** — a delegated green predicts *less* rework, never *none*.
 - **🚩 tell:** a lane reporting `verify: green` from a `--filter=<changed>` / package-local run,
   or a `land`/merge step that trusts a subagent's verdict **without re-running the repo-wide gate**
   on the merged result.
+- **After applying a captured diff (3-way / context / cherry-pick), re-run the formatter on the
+  changed files before the land gate.** The apply itself **can** shift bytes — reindented context,
+  whitespace/newline normalization, a relocated hunk — so a diff whose *origin* was correctly
+  formatted can still land unformatted and fail the repo-wide `prettier --check` / `gofmt -l` at
+  integration. Re-run the formatter on the changed files post-apply (don't trust the source was
+  clean). And **brief the lane up front with the root / repo-wide gate it will be judged by at
+  land** — not a workspace-local subset: naming the narrow scope proactively is what stops a lane
+  building green against a gate narrower than the one that actually gates.
 
 This is the **inverse** of the symlinked-deps section below and the provisioning-gap section above (a worktree too
 *poor* to run a check yields a false **failure** — "could not run" misread as red); here a
@@ -609,6 +617,19 @@ against a directory a running server is serving" (a stale-asset *ship* failure �
 output) and from the out-of-tree-scratch metadata-crossing section above: this is a single-tree
 **serve-vs-commit deadlock** where a running process dirties a **tracked, gate-asserted** file
 so the commit gate itself fails.
+
+## A hard-reset sync loop on a live-served worktree silently kills the dev server
+
+The mirror of the serve-vs-commit deadlock above: a background loop that **`git reset --hard`** (or
+`checkout`) a worktree **while a dev server is serving from it** yanks the files out from under the
+running process. Many dev servers (or their file-watchers) **exit cleanly** when their entry file
+vanishes or is rewritten mid-run — so the server just stops, with a **zero exit code and no error**,
+and the next browser / UX gate hits a dead port (`connection refused`), a **false failure** that
+reads as a code defect. Don't hard-reset a served tree on a sync loop: **serve from a tree the sync
+loop never touches** (the separate-tree rule above), prefer a **fast-forward-only** update over a
+hard reset on any served tree, and put the dev server under a **health-checked supervisor** that
+restarts it after a sync (with the UX gate waiting on that health check) so a legitimate resync
+does not read as a broken build.
 
 ## An absolute-count ratchet is contended shared state under parallel lanes — gate on the delta, not the tree total
 
@@ -731,6 +752,13 @@ Reading "open" as "not done" opens a lane to redo finished work — the
 duplicate-work failure one level up from re-searching for code already present
 (*An ownership map blocks a dual write*, above). **Before opening a fix lane for a
 tracked issue:**
+- **Reproduce the bug on the current integration HEAD before writing a fix.** An inbound bug report
+  is a claim about a *past* build — a stale deploy, a cached bundle, or a report filed before an
+  intervening fix merged. Reproduce the symptom against current HEAD first; one you cannot
+  reproduce may already be fixed (grep for the guarding test / changed symbol, below) or be
+  environment-specific — building a fix for a bug that no longer exists on HEAD is wasted work and a
+  spurious diff. (Generalizes this section to *any* inbound bug: the trigger is deploy/report lag,
+  not only off-default merges.)
 - **Grep the branch you would actually base the fix on** — the integration
   branch, not just the default branch or the issue's state — for the fix's
   landmark: the changed symbol, the line, or the regression test that guards it
