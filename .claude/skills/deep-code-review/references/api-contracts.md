@@ -39,6 +39,41 @@ Standards (URLs + dates in `docs/standards-index.md`): OWASP API Security Top 10
 
 ---
 
+## Breaking-change discipline for public APIs & SDK exports
+
+The **SemVer MAJOR for a breaking change** rule above needs a *recognition taxonomy* and a
+*mechanical* check — most breaks are not a removed field — and it applies to a **library / SDK's
+exported symbols** exactly as to an HTTP response: a public exported function, class, type, or CLI
+flag is a contract, which is the SDK-boundary scope this file's header claims.
+
+- **Recognize the non-obvious breaking changes.** Beyond remove/rename, each of these breaks an
+  existing consumer although nothing was deleted: **stricter validation** on an existing field/param
+  (input previously accepted is now rejected); a **changed default** for an existing optional
+  param/field (callers that relied on the old default silently get new behavior); a **new required** param on a direct
+  call (not only a queued-message field); a **widened output** (a field goes non-null → nullable, or
+  a returned union grows a case the consumer's exhaustive handling does not cover); and an **added
+  enum / union member** a strict or exhaustive-`switch` consumer must now handle. The mirror is a
+  **forward-compatibility** guarantee to state and test — a consumer tolerates an unknown field or a
+  new enum value rather than crashing (the flip side of the extra-fields-tolerated note above).
+- **Add a mechanical surface-diff gate, distinct from hand-written contract tests.** The contract
+  tests below catch only what someone thought to assert; complement them with an **automated
+  differ** that compares the current declared surface against the last released version and fails CI
+  on an incompatible delta, independent of whether a test covers that field. Name the instrument per
+  ecosystem (OpenAPI: `oasdiff`; protobuf/gRPC: `buf breaking`; a typed/compiled SDK: a
+  semver-checking differ such as `cargo-semver-checks`). **🚩** no automated surface-diff in CI — a
+  signature change then rides in only on a human reviewer or a hand-written test noticing it.
+- **Removal needs a stated window and a usage precondition, not just the deprecate → dual-read →
+  drop sequence below.** Publish a **sunset date** and a machine-readable deprecation signal on the
+  surface itself — the HTTP **`Sunset`** response header (RFC 8594: a single HTTP-date hint that the
+  URI is likely to become unresponsive at that time; a separate `Deprecation` header exists, cited
+  by name only) — so consumers are warned in-band. And you **cannot know the window has safely
+  expired unless something measures calls to the deprecated path**: removal with no call-volume
+  evidence is a guess, not a verified drop (the skip-rather-than-guess bar). Distinct from
+  `security-appsec.md`'s zombie/legacy-route sunset, which retires an already-orphaned surface rather
+  than planning the deprecation of a live one.
+
+---
+
 ## Webhooks & inbound integrations
 
 - **Verify the signature** with the configured secret; reject on mismatch.

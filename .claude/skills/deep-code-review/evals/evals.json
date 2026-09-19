@@ -2142,6 +2142,36 @@
         "Requires the unreachable-default set per flag category, not blanket",
         "Disambiguates 'closed' (release toggle → old path; ops kill-switch → engaged/degraded) so an outage neither enables a half-built feature nor disables a safety lever"
       ]
+    },
+    {
+      "id": "a-breaking-api-change-is-more-than-a-removed-field-stricter-validation-and-new-defaults-count",
+      "prompt": "A PR to a public API adds stricter validation to an existing optional field (values previously accepted now 400), changes the default of another optional param, and adds a new value to a returned status enum. No field was removed or renamed, so it's tagged a MINOR release. Correct?",
+      "expected_output": "No — all three are breaking changes even though nothing was removed. (1) Stricter validation rejects input existing clients already send, so their working calls now fail. (2) A changed default silently changes behavior for every caller that relied on the old default. (3) A new enum/union member breaks a consumer that exhaustively handles the known set (a strict switch, a validating parser). Each needs a MAJOR bump (or a versioned surface) + a migration note, not MINOR. The mirror discipline is forward-compatibility: consumers should tolerate an unknown field/enum value rather than crash. This taxonomy applies to a library/SDK's exported symbols (functions, types, CLI flags) exactly as to an HTTP response.",
+      "expectations": [
+        "Identifies stricter-validation, changed-default, and added-enum-member as breaking despite no removal/rename — each breaks an existing consumer",
+        "Requires a MAJOR bump (or versioned surface) + migration, not MINOR",
+        "Notes the forward-compatibility mirror (tolerate unknown field/enum) and that the taxonomy applies to SDK exported symbols, not only HTTP"
+      ]
+    },
+    {
+      "id": "an-api-breaking-change-needs-a-mechanical-surface-diff-gate-not-only-hand-written-contract-tests",
+      "prompt": "A team relies on their contract tests to catch API breaking changes in CI. A refactor changes a response field's type from string to number; no contract test covered that field, so CI stays green and the break ships. How should CI catch this class?",
+      "expected_output": "Hand-written contract tests catch only what someone thought to assert — an unasserted field slips through, as here. Complement them with an automated SURFACE-DIFF gate: a tool that compares the current declared API/SDK surface (OpenAPI/proto/typed exports) against the last released version and fails CI on an incompatible delta, independent of whether a test exists for that field. Name the instrument per ecosystem (OpenAPI: oasdiff; protobuf/gRPC: buf breaking; a typed SDK: a semver-checking differ like cargo-semver-checks). The red flag is no automated surface-diff in CI — every break then depends on a human or a hand-written test noticing a signature change.",
+      "expectations": [
+        "Identifies that hand-written contract tests only catch asserted fields, so an unasserted change slips through",
+        "Requires an automated surface-diff gate comparing current vs last-released declared surface, failing CI on an incompatible delta regardless of test coverage",
+        "Names a per-ecosystem instrument (oasdiff / buf breaking / cargo-semver-checks) rather than relying on tests alone"
+      ]
+    },
+    {
+      "id": "removing-a-deprecated-api-path-needs-a-sunset-signal-and-usage-evidence-not-just-a-sequence",
+      "prompt": "An API owner followed deprecate→dual-read and now wants to drop an old endpoint on the next release. They have no data on whether anyone still calls it. Safe to remove?",
+      "expected_output": "Not yet — the deprecate→dual-read→drop sequence gives the mechanism, not the go-ahead. Two things are missing: (1) a stated sunset window with a machine-readable signal on the surface itself (the HTTP Sunset response header, RFC 8594 — a single HTTP-date hint the URI will become unresponsive; a separate Deprecation header exists by name), so consumers are warned in-band; and (2) usage evidence — you cannot know the window has safely expired unless something measures calls to the deprecated path. Removal with no call-volume data is a guess, not a verified drop (skip rather than guess). Only remove once the sunset date has passed AND traffic to the path is zero, or the remaining callers are known and migrated.",
+      "expectations": [
+        "Requires a stated sunset window + a machine-readable in-band signal (HTTP Sunset header, RFC 8594) before removal, not just the deprecate→drop sequence",
+        "Requires usage/call-volume evidence that the deprecated path is unused — removal without it is a guess, not a verified drop",
+        "Ties it to skip-rather-than-guess; only remove after the sunset passes AND traffic is zero / remaining callers migrated"
+      ]
     }
   ]
 }

@@ -3,6 +3,27 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.192.0] — 2026-09-19
+
+### deep-code-review — wave 113 API/SDK evolution & deprecation discipline (api-contracts.md)
+
+From an industry-research scout (verified genuine at source; the file's header claims "SDK boundaries"
+scope but the body was HTTP-only, and SemVer-MAJOR was stated without a recognition taxonomy or a
+mechanical check). New section between "Public interface hygiene" and "Webhooks".
+
+- **Breaking-change recognition taxonomy beyond remove/rename** — stricter validation, changed
+  default, new required param, widened/nullable output, added enum member; + the forward-compatibility
+  mirror; + a public exported symbol / CLI flag is a contract like an HTTP response (fulfils the SDK
+  scope the header claims).
+- **Mechanical surface-diff CI gate** distinct from hand-written contract tests (which catch only what
+  was asserted) — per ecosystem: `oasdiff` / `buf breaking` / `cargo-semver-checks` (by name).
+- **Removal needs a sunset window + usage precondition** — the HTTP `Sunset` header (RFC 8594) as the
+  machine-readable signal, and call-volume evidence before dropping (skip rather than guess). Distinct
+  from security-appsec's zombie-route sunset.
+
+Three evals (deep-code-review 201 -> 204). Source: RFC 8594 (Informational) fetched + logged this
+session. Trio -> 1.192.0. `SHA256SUMS` regenerated last.
+
 ## [1.191.0] — 2026-09-19
 
 ### deep-code-review — wave 112 feature-flag & experiment correctness (release-engineering.md, domain K)
