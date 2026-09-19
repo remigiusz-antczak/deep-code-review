@@ -2611,6 +2611,26 @@
         "Requires fixing at the source: don't track a build output (gitignore + generate at build time), or regenerate deterministically as its own committed step",
         "Requires scoping the clean-tree check to exclude the generated path — not 'run the build then assert clean' in the same working tree"
       ]
+    },
+    {
+      "id": "a-per-request-retry-cap-is-not-an-aggregate-retry-budget",
+      "prompt": "A service retries each failed downstream call up to 3 times with jittered backoff. During a partial outage of that downstream it gets much slower and stops recovering even after the root cause is fixed. The per-request retry cap is respected the whole time. What's missing?",
+      "expected_output": "A per-request cap bounds one call but not the AGGREGATE: when many requests fail at once, each spending its 3 retries, the combined retry traffic multiplies load on the already-struggling downstream and can hold it down (a retry storm) even after the original fault clears. What's missing is a process- or client-wide retry BUDGET — a ceiling on the retry rate (a fixed cap per process, e.g. a bounded number of retries per minute, or a bounded fraction of live request volume above a small floor) — beyond which the client fails fast instead of retrying. This is distinct from the circuit breaker (which trips on the destination's health) and from keeping retries to a single layer (which stops one request's own attempts from multiplying N×M); the budget caps this client's aggregate retry rate across all requests. Fix: add the aggregate budget and fail fast once it's exceeded.",
+      "expectations": [
+        "Identifies that a per-request cap does not bound the aggregate retry rate — many simultaneous failures each retrying multiplies load (a retry storm) on the struggling dependency, which can persist after the root cause clears",
+        "Requires a process/client-wide retry budget (a ceiling on retry rate, or a bounded fraction of live volume) that fails fast once exceeded",
+        "Distinguishes the budget from the circuit breaker (destination health) and from keeping retries to one layer (a single request's attempts)"
+      ]
+    },
+    {
+      "id": "a-downstream-call-must-inherit-the-remaining-deadline-not-a-fresh-timeout",
+      "prompt": "Each service in a 4-hop request chain sets a fresh 5-second timeout on its downstream call. A user-facing request has a 5-second deadline. Under load, requests that should fail fast instead consume far more than 5 seconds of backend work. Why, and what's the fix?",
+      "expected_output": "Each hop resetting a fresh full timeout means the chain can run up to N×5s (here ~20s) of backend work even though the user-facing caller gave up at 5s — every hop past the 5s mark does work whose result no one is waiting for, amplifying load exactly when the system is struggling. The fix is deadline PROPAGATION: pass the caller's REMAINING time down to each downstream call (derive the downstream timeout from the inbound deadline minus already-elapsed time and a small buffer), and check the deadline still has room before starting a retry. This is distinct from merely having a timeout on each call (each does) — it makes each downstream timeout a function of the caller's remaining one, the wall-clock analogue of bounding an agent's recursion by depth/steps/spend. Some RPC stacks propagate deadlines automatically (converting the deadline to a remaining-time timeout, deducting elapsed time); a hand-rolled client must do it explicitly.",
+      "expectations": [
+        "Explains that fresh per-hop timeouts let the chain run up to N× the caller's deadline, doing work after the caller already gave up (load amplification under stress)",
+        "Requires propagating the remaining deadline downstream (each timeout derived from the inbound deadline minus elapsed/buffer) rather than resetting a fresh full timeout per hop",
+        "Requires checking the deadline still has room before a retry, and distinguishes this from merely having a timeout on each call"
+      ]
     }
   ]
 }

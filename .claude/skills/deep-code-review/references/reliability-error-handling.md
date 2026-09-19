@@ -36,10 +36,32 @@ the checklist.
 - **Timeout and abort are independent.** A `fetch` with only `AbortSignal` from
   a parent that never fires, or only a library default with no per-call bound,
   still hangs. Both must exist; the abort must be *wired* to the call site.
+- **Propagate the deadline; don't reset it at each hop.** A service handling a
+  request that arrived with a deadline must pass the *remaining* time down to its
+  own calls, not start each one on a fresh full timeout — otherwise a chain of N
+  hops that each allow T seconds lets one request run up to N×T while the original
+  caller already gave up at T (work continues that nobody is waiting for). Derive
+  each downstream timeout from the time left on the inbound deadline (minus a small
+  buffer), and **check the deadline still has room before a retry** — a retry begun
+  after the budget is spent only adds load for a discarded result. This is the
+  wall-clock cousin of bounding an agent's recursion tree by depth/steps/spend
+  (`security-ai-agents.md`), and distinct from merely *having* a timeout (above):
+  here each downstream timeout is a function of the caller's remaining one.
 - **Retry only what is safe.** Idempotent GETs / put-with-idempotency-key: OK
   with jittered backoff and a hard cap. Non-idempotent POST/charge/send: retry
   only behind an idempotency key or after echo-verify that nothing applied.
   **Retry-forever** and **retry-without-jitter** are findings.
+- **Cap retries with an aggregate budget, not only a per-request limit.** A
+  per-request hard cap (above) bounds a single call, but if *every* failing call
+  retries during a partial outage the combined retry traffic multiplies load on an
+  already-struggling dependency and tips a brown-out into an outage. Add a process-
+  or client-wide **retry budget** — a ceiling on the retry *rate* (a fixed cap per
+  process, or a bounded fraction of live request volume above a small floor) — and
+  once it is exceeded, **fail fast instead of retrying**. Distinct from the circuit
+  breaker below (which trips on a *destination's* health) and from keeping retries to
+  one layer (`performance-db-cost.md`, which stops a single request's attempts from
+  multiplying): the budget caps *this* client's own aggregate retry rate across all
+  requests, regardless of any one destination's state.
 - **Circuit-break** on 402/429 / consecutive hard failures — stop amplifying
   spend and load; surface a clear "paused" state.
 - **Check status before body.** `res.json()` on a 500 HTML page, or treating
@@ -285,7 +307,9 @@ subsystem never executing in production while local runs look fine.
 
 ---
 
-**🚩 red flags**: swallowed exceptions; retry-forever; no timeout; non-idempotent
+**🚩 red flags**: swallowed exceptions; retry-forever; no timeout; a per-request
+retry cap with no aggregate retry budget; a downstream call started on a fresh full
+timeout instead of the caller's remaining deadline; non-idempotent
 retry; work lost on crash; status not checked before body read; emergency stop
   behind the rate limiter; missing-key path that corrupts state instead of clean
   no-op; missing-key path that **writes empty artifacts** over last-good data;

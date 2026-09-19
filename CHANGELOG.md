@@ -3,6 +3,27 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.215.0] — 2026-09-19
+
+### deep-code-review — wave 136 reliability under stress: retry budgets + deadline propagation (research round 9)
+
+Two ways a system amplifies its own load exactly when a dependency is struggling
+(`reliability-error-handling.md`):
+- **Cap retries with an aggregate budget, not only a per-request limit.** A per-request cap bounds one
+  call, but if every failing call retries during a partial outage the combined retry traffic multiplies
+  load on the struggling dependency (a retry storm) and can hold it down after the fault clears. Add a
+  process/client-wide retry budget — a ceiling on the retry rate — and fail fast once exceeded. Distinct
+  from the circuit breaker (destination health) and from keeping retries to one layer.
+- **Propagate the deadline; don't reset it at each hop.** A request arriving with a remaining deadline
+  must pass the remaining time down, not start each downstream call on a fresh full timeout — else an
+  N-hop chain runs up to N×T of backend work while the caller gave up at T. Derive each downstream
+  timeout from the inbound deadline, and check the deadline still has room before a retry.
+
++2 evals (248 -> 250 deep-code-review). SRC fetched + verified 2026-09-19:
+sre.google/sre-book/addressing-cascading-failures ("60 retries per minute in a process ... just fail the
+request"), grpc.io/docs/guides/deadlines ("converts the deadline to a timeout from which the already
+elapsed time is already deducted").
+
 ## [1.214.0] — 2026-09-19
 
 ### deep-code-review — wave 135 CI-gate correctness: false-green pass-through holes + build-regenerated tracked files (closes #520, #514)
