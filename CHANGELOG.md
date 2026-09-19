@@ -3,6 +3,26 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.206.0] — 2026-09-19
+
+### agentic-delivery — wave 126 revert a degradation workaround when the blocker clears (closes #454)
+
+Standalone-backlog drain. A new section in `fast-agentic-delivery.md`: a degradation workaround is
+temporary by default — tie its removal to the condition that caused it. The expensive trap is that the
+workaround OUTLIVES the outage: momentum keeps the degraded mode running because nothing is red (the
+slower path still "works"), so no failing gate prompts the switch-back until a human notices the
+slowness — a self-monitoring failure. Discipline: tie the workaround to its trigger at install time,
+track active workarounds as open obligations, restore the primary mechanism the moment the blocker
+clears ("still works" is not "still the right mechanism"). +1 eval (46 -> 47 agentic-delivery).
+
+Independent review returned FIX-FIRST twice, both verify-before-cite catches, both fixed: the first
+draft mis-cited #483's hung-gate rule for a "keep merging on the reduced batch" claim it contradicts
+(corrected to reference branch-and-merge-hygiene.md accurately — a hung gate timeboxes + escalates,
+its reduced subset does not license an unvalidated merge; a tool broken-in-environment is a
+can't-check, not a red); the second cited the wrong SKILL.md principle (3 = can't-check/UNVERIFIED,
+not 2 = banlist). #454 point-1 (a crashed tool must fail-open the batch proof) is the separate open
+#378, split to its own wave.
+
 ## [1.205.0] — 2026-09-19
 
 ### deep-code-review — wave 127 test reliability fallback paths, not just guard paths
