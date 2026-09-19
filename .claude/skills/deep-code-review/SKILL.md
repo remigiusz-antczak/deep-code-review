@@ -11,7 +11,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.220.0"
+  version: "1.221.0"
 ---
 
 # Deep Code Review
@@ -196,7 +196,7 @@ footguns: `references/language-stack-redflags.md`.
 
 | | Domain | Depth |
 |---|---|---|
-| A | Correctness & logic | `domain-checklists.md` |
+| A | Correctness & logic | `domain-checklists.md`, `time-date-correctness.md` (timestamps, durations, recurring/scheduled times, time zones) |
 | B | AppSec (OWASP Top 10:2025) | `security-appsec.md` |
 | C | AI / LLM / agents | `security-ai-agents.md`, `security-agent-skills.md` |
 | D | Data integrity | `data-quality.md` |

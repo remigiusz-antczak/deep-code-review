@@ -2711,6 +2711,36 @@
         "Requires tiering by the subtlety of getting it right (not line count) and verifying against real acceptance (independent check / rendered geometry / the criterion), not the model's own green self-report",
         "Requires re-deriving a cheap-tier miss from the acceptance criterion, not from 'make the failing tests pass'"
       ]
+    },
+    {
+      "id": "a-recurring-wall-clock-event-stored-as-a-fixed-utc-instant-drifts-across-dst",
+      "prompt": "A 'daily 9:00 am reminder' feature computes the next fire time once at creation, converts it to a UTC instant, stores that instant, and a scheduler fires on the stored UTC time. After the spring-forward DST transition, users report the reminder now arrives an hour off — at 10:00 am instead of 9:00. Why, and what's the correct storage model?",
+      "expected_output": "9:00 am is a WALL-CLOCK time, not an instant — its UTC offset changes at a DST transition. Baking in a single UTC instant at creation freezes the pre-transition offset, so after the clocks change the fixed instant maps to a different local time (8am or 10am) — the classic 'store everything in UTC' mistake applied to a wall-clock-anchored recurrence. UTC storage is correct for a past/point instant (a log line, created_at), but a future or recurring wall-clock commitment must store the LOCAL wall-clock time + the tz-id and RE-RESOLVE the UTC offset per occurrence (near fire time), so each 9am fires at the correct local 9am regardless of DST. Match representation to feature: instant -> UTC; wall-clock recurrence -> local time + tz-id resolved per occurrence.",
+      "expectations": [
+        "Identifies that 9am is a wall-clock time whose UTC offset changes at DST, so a single UTC instant frozen at creation drifts by the offset after the transition",
+        "Names the mistake as 'store everything in UTC' misapplied to a wall-clock-anchored recurrence (UTC is right for an instant, wrong here)",
+        "Requires storing local wall-clock time + tz-id and re-resolving the offset per occurrence (not once at creation)"
+      ]
+    },
+    {
+      "id": "a-local-to-instant-conversion-must-handle-ambiguous-and-missing-dst-times",
+      "prompt": "A scheduler lets users pick a local time of day and converts it to a UTC instant assuming each local time maps to exactly one instant. On the fall-back DST night a 1:30 am job runs twice; a job set for 2:30 am on the spring-forward night never runs. What's the underlying bug and the fix?",
+      "expected_output": "At a DST transition a local time is not one-to-one with an instant: on fall-back the clock repeats an hour, so a local time in the 'fold' is AMBIGUOUS (occurs twice); on spring-forward an hour is skipped, so a local time in the 'gap' is MISSING (occurs never). Code that assumes exactly one instant per local time double-runs fold-hour jobs and drops gap-hour jobs. The fix is an explicit, documented disambiguation rule for both cases — e.g. Python's PEP 495 fold flag to pick the first vs second occurrence for ambiguous times, and never producing/scheduling a time in the gap (map a missing time forward to the post-transition instant, or reject it). Decide and document which occurrence fires for ambiguous times and what happens to missing ones, rather than leaving it to the library default.",
+      "expectations": [
+        "Distinguishes the ambiguous (fold, repeated hour, occurs twice) and missing (gap, skipped hour, occurs never) cases at a DST transition",
+        "Explains that assuming a one-to-one local->instant mapping causes the double-run (fold) and no-run (gap)",
+        "Requires an explicit disambiguation rule for both (e.g. PEP 495 fold selection; never schedule/produce a time in the gap), not the library default"
+      ]
+    },
+    {
+      "id": "a-future-wall-clock-timestamp-must-survive-a-tzdata-rule-change",
+      "prompt": "An app lets users schedule a meeting for '13:00 next October 1, Dublin time' and immediately stores the computed UTC instant. Months later a government changes its DST rules before that date, and the meeting fires at the wrong local time. Root cause and fix?",
+      "expected_output": "Time-zone rules are DATA (the IANA tz database / the platform's ICU), not code, and change with little government notice. Converting a FUTURE wall-clock commitment to a UTC instant at creation freezes the conversion under the OLD rules; when the rules change before the date, the frozen instant no longer maps to 13:00 local — exactly IANA's warning that software 'can mess up after the rule change if it blithely relies on conversions made before the change.' Fix: store the wall-clock time + tz-id and re-resolve the instant LATE (at/near occurrence), and treat tzdata/ICU as a pinned dependency with a real update path (a refreshed base image / bundled ICU / vendored tzdata) so future conversions pick up rule changes. A frozen future instant plus a never-updated tzdata is the finding.",
+      "expectations": [
+        "Identifies that tz rules are data that change on government notice, and a future wall-clock->UTC conversion frozen at creation goes wrong after a rule change",
+        "Requires storing wall-clock + tz-id and re-resolving the instant late (near occurrence), not freezing it at creation",
+        "Requires treating tzdata/ICU as a pinned dependency with an update path so future conversions reflect rule changes"
+      ]
     }
   ]
 }

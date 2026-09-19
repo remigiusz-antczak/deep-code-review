@@ -3,6 +3,22 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.221.0] — 2026-09-19
+
+### deep-code-review — wave 142 NEW DOMAIN: time, dates & time zones (breadth research)
+
+New reference `references/time-date-correctness.md`, routed from SKILL.md domain A, plus a correction to the
+domain-A "Time & dates" one-liner in `domain-checklists.md` (it stated a blanket "store everything in UTC"
+that is wrong for a wall-clock-anchored recurrence). Covers: the **instant-vs-wall-clock** distinction (UTC is
+right for an instant, wrong for a recurring 9am / monthly-invoice date which drifts by the DST offset if
+frozen to one UTC instant — store local + tz-id, re-resolve per occurrence); **ambiguous (fold) / missing
+(gap)** local times at a DST transition (PEP 495); **tzdata as a stale-able dependency** (a future
+wall-clock->UTC conversion frozen before a government rule change is wrong after it — IANA theory); durations
+monotonic + a **calendar day is 23/25h** on a DST day (leap smear).
+
++3 evals (258 -> 261 deep-code-review). SRC fetched + verified 2026-09-19: tc39.es/proposal-temporal timezone,
+peps.python.org/pep-0495, data.iana.org/time-zones/tzdb/theory.html, developers.google.com/time/smear.
+
 ## [1.220.0] — 2026-09-19
 
 ### deep-code-review + agentic-delivery — wave 141 cheap-lane delegation discipline (closes #504, #498)

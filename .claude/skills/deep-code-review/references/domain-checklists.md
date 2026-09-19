@@ -28,10 +28,13 @@ Read this when walking a domain in Phase 2 (or a DIFF quick-path that touches th
   a non-finite value becomes a blank cell, a broken parse, or a failed encode depending on stack.
   Detect it (guard the divisor / `isfinite` → reject / clamp / explicit sentinel) at the point it
   can arise, not downstream once it has spread.
-- **Time & dates**: store and compute in **UTC**, tz-aware; use a **monotonic
-  clock** for durations (not wall-clock, which jumps); handle DST, leap
-  day/second, and clock skew across services; never derive freshness from a
-  local `now()` where the subject's own timestamp is meant.
+- **Time & dates**: store an **instant** (a past/point event) in **UTC**, tz-aware —
+  but a **wall-clock-anchored recurrence** (a daily 9am, a monthly invoice date) stores
+  **local time + tz-id** and re-resolves per occurrence, or it drifts by the DST offset;
+  use a **monotonic clock** for durations (not wall-clock, which jumps); handle DST
+  fold/gap, leap day/second, clock skew, and stale tzdata; never derive freshness from a
+  local `now()` where the subject's own timestamp is meant. Depth:
+  `time-date-correctness.md`.
 - A **scope/subset flag must REPLACE the working set, not union into it** — an
   accidental union silently balloons scope and cost; test the two selectors are
   disjoint.
