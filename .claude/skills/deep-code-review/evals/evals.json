@@ -2032,6 +2032,36 @@
         "Requires gating the UI-change class on the UX-evidence gate with its inspection cited, not the code gates alone",
         "Flags the disabled UX-quality gate as a P0 that must block that change-class until restored (a silently-off gate reads green over unexamined UI)"
       ]
+    },
+    {
+      "id": "a-user-controlled-trust-signal-needs-confusable-detection-not-just-escaping",
+      "prompt": "A dashboard shows each incoming message's sender display name and linked domain, both HTML-escaped and length-checked before rendering; security review passes on injection grounds. A phishing sender registers a display name and a look-alike domain using Cyrillic letters that render identically to a trusted brand's Latin ones. Is the review complete?",
+      "expected_output": "No — HTML-escaping stops injection, not visual spoofing. Cyrillic look-alikes are different byte strings that render identically to the Latin originals (e.g. Latin `scope` vs Cyrillic `ѕсоре`), so the user makes a trust decision on a lie: visual identity ≠ string identity. A string rendered as a trust signal — domain, sender/display name, package or dependency name, username beside an identity claim — needs confusable / mixed-script detection (Unicode UTS #39: skeleton algorithm, resolved-script-set mixed-script detection, restriction levels), not just escaping. This is STRIDE Spoofing at the display layer (security-appsec.md A06); the Unicode mechanism is in i18n-l10n.md. Distinct from dependency typosquatting and from the bidi/Trojan-Source class.",
+      "expectations": [
+        "Identifies that HTML-escaping/length checks stop injection but not visual confusable/homograph spoofing — visual identity ≠ string identity",
+        "Requires confusable / mixed-script detection (UTS #39 skeleton / restriction levels) for a user-controlled string rendered as a trust signal (domain/sender/package/username)",
+        "Frames it as a spoofing threat distinct from injection, and distinct from typosquatting and the bidi/Trojan-Source class"
+      ]
+    },
+    {
+      "id": "truncating-user-text-on-bytes-or-code-points-not-grapheme-clusters-corrupts-it",
+      "prompt": "A service builds a preview by slicing the first 20 UTF-16 code units of a user's text and reports len(text) as the character count. Users report broken/garbled previews and wrong counts on names with accents and emoji. What's wrong?",
+      "expected_output": "A user-perceived character can span multiple code points and, in UTF-16, a surrogate pair of code units: a base letter plus combining marks, a ZWJ emoji sequence (family/flag/skin-tone), a Hangul syllable. Slicing at a fixed code-unit (or code-point) offset lands mid-cluster — splitting a surrogate pair or a combining/ZWJ sequence — producing mojibake, an invalid-UTF-8 tail, or a broken emoji; and a code-unit/code-point length reported as a 'character count' is wrong for any non-ASCII text. Truncate and count on extended grapheme cluster boundaries (Unicode UAX #29), e.g. via a grapheme segmenter, not raw byte/code-unit offsets.",
+      "expectations": [
+        "Identifies that a user-perceived character can be multiple code points / a UTF-16 surrogate pair, so a code-unit or code-point slice splits a cluster (mojibake / invalid UTF-8 / broken emoji)",
+        "Notes that a byte/code-unit length is not a character count for non-ASCII text",
+        "Requires truncation and counts on extended grapheme cluster boundaries (UAX #29 / a grapheme segmenter)"
+      ]
+    },
+    {
+      "id": "locale-formatted-numeric-input-must-be-parsed-with-a-known-locale-not-guessed",
+      "prompt": "A form accepts an amount as free text; the backend parses it with a default parser and stores the result. A German user enters `1.234` meaning one-thousand-two-hundred-thirty-four; the stored value is 1.234, no error raised. The output side already uses a locale-aware formatter. Is the i18n handling complete?",
+      "expected_output": "No — the formatter fixes output, not input. `1.234` is 1234 in de-DE (dot = grouping separator) and 1.234 in en-US (dot = decimal), and a naive parse silently picks one — a value wrong by 1000× with no error, a silent data-integrity defect, not a crash. Parse locale-formatted numbers/dates/times through a parser tied to the input's stated locale, or require an unambiguous machine format (ISO-8601, a raw decimal), and reject rather than guess when the locale is unknown. This is the read-side counterpart to the output-formatting rule and it fails silently.",
+      "expectations": [
+        "Identifies that locale-aware OUTPUT formatting does not cover INPUT parsing, and that `1.234` is ambiguous across locales (1234 vs 1.234)",
+        "Notes the failure is silent (wrong value by ~1000×, no error) — a data-integrity defect, not a crash",
+        "Requires parsing against the input's known locale or an unambiguous machine format, and rejecting rather than guessing"
+      ]
     }
   ]
 }

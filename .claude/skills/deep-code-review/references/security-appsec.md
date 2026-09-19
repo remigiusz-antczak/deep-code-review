@@ -328,6 +328,17 @@ NIST SSDF, OWASP SAMM, BSIMM — measure the org's *program*, not this diff; nam
   not the other (the DIFF blast-radius rule, `SKILL.md`).
 - **🚩 at the crossing:** a guard whose rationale cites "internal only / never published / dry-run /
   no rows" on a producer the same change wires to a published or external surface.
+- **A rendered *trust signal* must resist *visual* spoofing, not only injection — STRIDE
+  Spoofing at the display layer.** When user-controlled text is shown as an identity a human
+  or system trusts and acts on, HTML-escaping and input-sanitizing do **not** stop **Unicode
+  confusables / mixed-script homographs** — visual identity ≠ string identity, so the trust
+  decision is made on a lie. The spoofable surfaces, a worked example, and the detection
+  mechanism (Unicode skeleton / mixed-script restriction, UTS #39) live in `i18n-l10n.md` —
+  threat-model such a signal for spoofing and check it there. Distinct from dependency
+  typosquatting (`dependency-currency-and-upgrades.md`) and the bidi / Trojan-Source class
+  (`i18n-l10n.md`).
+- **🚩** a domain / sender-name / package-name / username rendered from user-controlled text as
+  a trust cue with only HTML-escaping — no confusable or mixed-script check.
 
 **Detect steps, in order**
 - **Inventory the money/state machines.** List every flow that moves value or

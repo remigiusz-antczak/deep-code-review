@@ -3,6 +3,30 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.188.0] — 2026-09-19
+
+### deep-code-review — wave 109 i18n / Unicode-security depth (domain R)
+
+From an industry-research scout (verified genuine at source; all 4 sub-checks were absent by
+repo-wide grep). Domain R was already a routed lens (bidi/Trojan-Source, NFC/NFD, collation,
+timezone all covered) — these are the missing sub-checks, added as depth, not a new lens.
+
+- **Unicode confusables / mixed-script homograph** — a user-controlled string rendered as a
+  *trust signal* (domain, sender name, package name, username) needs confusable / mixed-script
+  detection, not just HTML-escaping; visual identity ≠ string identity. Mechanism depth (UTS #39
+  skeleton / mixed-script / restriction levels) in `i18n-l10n.md` next to the bidi sibling;
+  security framing (STRIDE Spoofing at the display layer) as a bullet in `security-appsec.md` A06.
+- **Locale-dependent case-folding** (Turkish ı/İ, German ß→SS) — a case-insensitive compare/key
+  must use Unicode case-folding, not an ASCII `lower()/upper()` round-trip. `i18n-l10n.md`.
+- **Grapheme-cluster-safe truncation** — slicing on bytes/code-units splits surrogate pairs and
+  ZWJ/combining sequences (mojibake); truncate and count on UAX #29 grapheme clusters. `i18n-l10n.md`.
+- **Locale-formatted input parsing** — `1.234` is 1234 or 1.234 by locale; a naive parse is a
+  silent 1000× data-integrity bug. Parse against the input's locale or require a machine format.
+  `i18n-l10n.md` (read-side counterpart to the existing output-formatting rule).
+
+Three evals (deep-code-review 190 -> 193). Sources logged in `docs/standards-index.md`: Unicode
+UTS #39 + UAX #29 (both fetched 2026-09-19). Trio -> 1.188.0. `SHA256SUMS` regenerated last.
+
 ## [1.187.0] — 2026-09-19
 
 ### agentic-delivery — wave 108 autonomous-loop epistemology + auto-close hygiene
