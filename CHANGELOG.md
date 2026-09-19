@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.244.0] — 2026-09-20
+
+### agentic-delivery — wave 165 auto-mode permission gate that denies the orchestrator but allows a sub-agent is a false 'stuck' (closes #515)
+
+- **`fast-agentic-delivery.md`**: an unattended orchestrator draining green/mergeable/un-held PRs can hit a permission classifier that denies its OWN merge ("merge without review") while allowing the identical merge from a spawned sub-agent — the loop runs every tick and lands nothing, reading as "stuck" when the work is done and gated only by the classifier. Fixes: (1) a preflight-keyed allow-rule (permit the orchestrator to merge a PR whose repo green-gate/merge_preflight just passed — the deterministic portion of the review already ran); (2) symmetry + transparency (deny sub-agents too and surface the reason); (3) document the merge-routing. Delegation is fine for a clean merge of an already-green PR, but delegating a *workaround* for an action the orchestrator was just denied is itself catchable as laundering, not a loophole.
+- +1 eval. Closes #515. Reviewer FIX-FIRST applied (scoped the "delegation is fine" clause to clean merges; softened the gate-is-review equivalence to "the deterministic portion of the review").
+
 ## [1.243.0] — 2026-09-20
 
 ### deep-code-review — wave 164 cancel-in-progress concurrency race leaves the head with no CI run (closes #366)

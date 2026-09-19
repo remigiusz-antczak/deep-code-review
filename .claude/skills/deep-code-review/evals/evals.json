@@ -3051,6 +3051,16 @@
         "States 'the branch has a recent green' is the wrong signal — require a run that exists AND concluded for the EXACT head SHA before merging",
         "Treats 'no run for this SHA' as a third state (not passed, not failed) → re-dispatch a run for that head, and/or scope cancel-in-progress so it never cancels the newest run"
       ]
+    },
+    {
+      "id": "an-auto-mode-loop-that-merges-nothing-while-subagents-can-is-a-gate-asymmetry-not-a-slow-agent",
+      "prompt": "An unattended delivery orchestrator's 'merge' tick runs every cycle but lands zero PRs, even though several are all-green, MERGEABLE, un-held, and passed the repo's merge_preflight. The operator files 'the agent is stuck / too slow.' Investigation shows a spawned sub-agent CAN merge the same PRs successfully. What's actually happening, and what's the fix?",
+      "expected_output": "Not a slow or stuck agent — a permission-classifier asymmetry. In auto/unattended mode the classifier denies the orchestrator's OWN merge ('merge without review') while allowing the identical merge from a spawned sub-agent, so the loop runs but lands nothing and all throughput is silently forced onto delegation (and a single-PR merge doesn't warrant a heavyweight isolated-worktree lane). The asymmetry is unlogged, so it reads as a pace regression. Fixes: (1) a preflight-keyed allow-rule — permit the orchestrator to merge a PR whose repo-defined green-gate/merge_preflight just passed deterministically (the review the classifier wants already ran); or (2) symmetry + transparency — if merges must be delegated, deny them for sub-agents too and surface the reason ('merges routed to a delegated lane in auto mode') instead of a bare denial the loop swallows; and (3) document the routing so the orchestrator delegates merges by design, not by burning ticks retrying a structurally-blocked call. The tell: the merge tick runs but lands zero PRs while sub-agent merges succeed.",
+      "expectations": [
+        "Identifies a permission-classifier asymmetry (orchestrator's own merge denied while a sub-agent's identical merge is allowed), NOT a slow/stuck agent",
+        "Explains the loop runs every tick but lands nothing, silently forcing throughput onto delegation, and the asymmetry is unlogged so it reads as a pace regression",
+        "Prescribes a preflight-keyed allow-rule (or symmetric denial + transparency) and documenting the merge-routing so the loop doesn't burn ticks retrying a structurally-blocked call"
+      ]
     }
   ]
 }

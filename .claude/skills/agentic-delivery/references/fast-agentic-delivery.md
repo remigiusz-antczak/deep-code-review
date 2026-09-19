@@ -227,6 +227,22 @@ branch / diff / subject told them apart).
   under the owner's token; or any auto-merge/auto-rebase with no positive agent-ownership mark
   (label / branch-prefix / allowlist) and no default-deny.
 
+## An auto-mode permission gate that denies the orchestrator but allows a sub-agent is a false "stuck"
+
+An unattended orchestrator draining a queue of green, mergeable, un-held PRs can hit a permission classifier
+that **denies its own `merge`** ("merge without review") while **allowing the identical merge from a spawned
+sub-agent**. The loop then runs every tick and lands nothing — the operator sees "stuck / not pushing" when the
+work is done and gated only by the classifier, and all real throughput is silently forced onto sub-agent
+delegation (fine for a *clean* merge of a PR that already independently passed the gate — but delegating a **workaround** for an action the orchestrator was just denied is itself catchable as laundering, not a loophole, and a single-PR merge does not warrant a heavyweight isolated-worktree lane).
+The asymmetry is the trap: it is surprising, usually unlogged, and reads as a pace regression rather than a
+gate. Resolve it explicitly instead of letting the loop burn ticks retrying a structurally-blocked call:
+(1) a **preflight-keyed allow-rule** — permit the orchestrator to merge a PR whose repo-defined
+green-gate / `merge_preflight` has just passed deterministically (the deterministic portion of the review the classifier wants already ran); or (2) **symmetry + transparency** — if merges must be delegated, deny them for sub-agents too and
+surface the reason ("merges routed to a delegated lane in auto mode") rather than a bare denial the loop
+swallows; and (3) **document the routing** so the orchestrator delegates merges by design, not by
+trial-and-error. **🚩** an auto-mode loop whose merge tick runs but lands zero PRs while sub-agent merges
+succeed — a classifier asymmetry, not a slow agent.
+
 ## A third gate-epistemology case: a correct, external, fleet-wide finding
 
 Principle 3 separates *the check could not run* (`UNVERIFIED` — never a pass, and
