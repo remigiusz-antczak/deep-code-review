@@ -61,6 +61,17 @@
         "Applies, never directs -- the model choice and the price number stay the user's decision",
         "Fabricates no survey result and no 'market'/right price number"
       ]
+    },
+    {
+      "id": "design-time-eu-cra-name-and-route-products-with-digital-elements",
+      "prompt": "A startup is about to ship a smart-home device (hardware + firmware + a cloud app) to the EU market and asks: 'are we compliant with EU product-security law?' What do you do?",
+      "expected_output": "Name and route -- never conclude it binds or that they are compliant (the business-ops boundary). Name the likely regime: the EU Cyber Resilience Act (CRA -- Regulation (EU) 2024/2847), which sets horizontal cybersecurity requirements for products with digital elements placed on the EU market. Engineering-obligation leads: security-by-design + a documented vulnerability-handling process; an SBOM + coordinated-vulnerability-disclosure; a security-update / support period; and reporting actively-exploited vulnerabilities to the designated authority (the engineering half maps to deep-code-review A03 supply-chain). Route to counsel: whether the product is in scope, its conformity-assessment class (default / important / critical), and the exact timelines. Do NOT state that CRA binds or that the product is compliant. (regulated-domain-triage.md.)",
+      "expectations": [
+        "Names the EU CRA (Regulation (EU) 2024/2847) as the likely regime for a product with digital elements on the EU market",
+        "Gives engineering leads (security-by-design, SBOM, coordinated disclosure, support period, exploited-vuln reporting -> A03)",
+        "Routes in-scope / conformity-class / timelines to counsel",
+        "Never concludes the regime binds or that the product is compliant"
+      ]
     }
   ]
 }

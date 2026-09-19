@@ -3,6 +3,16 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.153.0] — 2026-09-19
+
+Wave 74 — **EU Cyber Resilience Act (name-and-route) + VEX**, from research issue **#358** (cartography survivor — a new regulatory area + a supply-chain artifact).
+- **CRA (`business-ops/regulated-domain-triage.md`):** a new tree entry — shipping a product with digital elements to the EU market → name the **EU Cyber Resilience Act (Regulation (EU) 2024/2847)** + its engineering-obligation leads (security-by-design; SBOM + coordinated-vulnerability-disclosure; a support / update period; reporting actively-exploited vulns to the designated authority → maps to dcr A03); route in-scope / conformity-class / reporting-authority / exact-timelines to counsel (name-and-route boundary; no rot-prone dates encoded).
+- **VEX (`security-appsec.md` A03):** pair an SBOM with a **VEX** — a producer-issued per-CVE exploitability assertion (`not_affected` *with a justification*, `affected`, `fixed`, `under_investigation`) so a consumer distinguishes a real exposure from a component that merely *ships* the vulnerable code on an unreachable path (CISA VEX; complements, never replaces, the SBOM).
+
+CRA + VEX verified by direct fetch this session (2026-09-19), in a new `docs/standards-index.md` section. Two evals — business-ops (6 → 7, + a Verification-list entry) and deep-code-review (150 → 151). **business-ops → 1.3.0; trio → 1.153.0.** Closes #358.
+
+Dogfood reviewer: PASS-WITH-NITS → both fixed pre-merge. Generalized the CRA reporting recipient to "the designated authority" (the CSIRT-coordinator/ENISA specifics are correct to CRA Art. 14 but were not in the fetched summary — routed to counsel, per verify-before-cite), and added a VEX prompt to A03's *How to detect* so the eval's reviewer check has a home on the detection surface.
+
 ## [1.152.0] — 2026-09-19
 
 Wave 73 — **crypto-agility & post-quantum readiness** in `security-appsec.md` A04, from research issue **#359** (cartography survivor — a new technical dimension; A04 reviewed *current* crypto but had nothing on algorithm agility or PQC).

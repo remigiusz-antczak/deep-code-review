@@ -1613,6 +1613,17 @@
         "Greppable: is the signal read at all, and does an opt-out path honor it",
         "Route the legal-binding question to counsel; the code check (reads + acts) is the review item"
       ]
+    },
+    {
+      "id": "vex-complements-sbom-per-cve-exploitability-not-affected-justification",
+      "prompt": "A vendor ships an SBOM with its release; a scanner flags 40 CVEs in the listed components, but the vendor says most are not exploitable in their product. How should they communicate that, and what is the review check?",
+      "expected_output": "An SBOM lists components but not whether each listed CVE is actually exploitable in the product. Pair it with a VEX (Vulnerability Exploitability eXchange) -- a producer-issued, per-CVE exploitability assertion: for each flagged CVE a status (not_affected WITH a justification, affected, fixed, under_investigation), so a consumer can distinguish a real exposure from a component that merely ships the vulnerable code on an unreachable path. VEX complements, never replaces, the SBOM (CISA VEX). Review check: a not_affected claim carries a justification (e.g. the vulnerable function is not called / not reachable), not a bare assertion. (security-appsec.md A03.)",
+      "expectations": [
+        "An SBOM lists components but not per-CVE exploitability -- pair it with VEX",
+        "VEX is a producer-issued per-CVE assertion; status values incl. not_affected WITH a justification",
+        "VEX complements, not replaces, the SBOM",
+        "A not_affected claim needs a reachability justification, not a bare assertion"
+      ]
     }
   ]
 }

@@ -14,7 +14,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.2.1"
+  version: "1.3.0"
 ---
 
 # Business ops
@@ -156,4 +156,8 @@ otherwise).
 - A "what should we charge / which pricing model" ask names the method + model space (Van Westendorp,
   usage/outcome/good-better-best) applied to the user's WTP, never setting the price or fabricating a
   survey/market number (`pricing-method-applies-to-user-wtp-never-sets-the-price`).
+- A design-time "are we compliant with EU product-security law?" ask over a product with
+  digital elements names the **EU Cyber Resilience Act** (Regulation (EU) 2024/2847) + its
+  engineering-obligation leads, and routes in-scope / conformity-class / timelines to counsel,
+  never concluding the regime binds (`design-time-eu-cra-name-and-route-products-with-digital-elements`).
 - `evals/evals.json` plants these cases.

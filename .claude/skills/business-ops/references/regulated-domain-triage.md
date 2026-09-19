@@ -52,6 +52,16 @@ can fire at once — a product can be in multiple regimes.
   **CCPA / CPRA** and peer state laws → leads: data inventory, opt-out of
   sale/share, deletion/access request handling (same engineering refs as above).
   Route applicability/thresholds to counsel.
+- **Shipping a product with digital elements to the EU market?** (hardware or
+  software placed on the EU market — a product-cybersecurity trigger, not a
+  personal-data one) → **EU Cyber Resilience Act (CRA — Regulation (EU) 2024/2847)**
+  → leads: security-by-design + a documented vulnerability-handling process, an
+  **SBOM** and coordinated-vulnerability-disclosure, a security-update / support
+  period, and **reporting actively-exploited vulnerabilities** to the designated
+  authority (the engineering half maps to `deep-code-review` A03 supply-chain).
+  Route whether the product is in scope, its conformity-assessment class (default /
+  important / critical), the reporting authority/route, and the exact timelines to
+  counsel.
 - **Biometrics?** (face, fingerprint, voiceprint, retina) → biometric-privacy
   regimes (several US states have specific statutes) → leads: explicit consent,
   strict retention limits, a deletion path. Route which statute(s) apply to

@@ -185,7 +185,9 @@ runs — package-hallucination study logged in `docs/standards-index.md`). Cross
 never-existed-until-now). Install-time scripts (`postinstall`) from untrusted
 packages? CI actions pinned to a **commit
 SHA**, not a mutable tag (`@main`, `@v3`)? Is the build reproducible/hermetic?
-Is there dependency + image scanning and an SBOM? **CI/CD trigger & token
+Is there dependency + image scanning and an SBOM — and, if an SBOM ships, is it
+paired with a **VEX** whose `not_affected` entries each carry a justification (see
+Fix)? **CI/CD trigger & token
 hygiene** — does a `pull_request_target` (or `workflow_run`) workflow check out
 untrusted PR head code? GitHub's hardening guide: these triggers "expose the
 repository to security compromises" and "must not explicitly check out untrusted
@@ -208,7 +210,12 @@ as the artifact.
 
 **Fix**: pin by hash, commit lockfiles, scan dependencies and images in CI,
 generate an SBOM (CycloneDX/SPDX), and adopt provenance (SLSA) for released
-artifacts. For workflows: never check out untrusted PR code under
+artifacts. Pair the SBOM with a **VEX** (Vulnerability Exploitability eXchange) —
+a producer-issued, per-CVE exploitability assertion (`not_affected` **with a
+justification**, `affected`, `fixed`, `under_investigation`) so a consumer can tell
+a real exposure from a component that merely *ships* the vulnerable code on an
+unreachable path; it complements, never replaces, the SBOM (CISA VEX). For
+workflows: never check out untrusted PR code under
 `pull_request_target`; set `permissions` to least privilege (read by default,
 escalate per job); pass untrusted context through an `env:` var, never inline
 `${{ }}` in `run:`; sign released artifacts (a checksum is integrity, not

@@ -438,3 +438,15 @@ non-agile primitive on long-lived data, not a date-driven mandate).
 | NIST FIPS 203 — ML-KEM | https://csrc.nist.gov/pubs/fips/203/final | "Module-Lattice-Based Key-Encapsulation Mechanism Standard"; standardizes **ML-KEM** (params ML-KEM-512/768/1024), "believed to be secure, even against adversaries who possess a quantum computer." Published 2024-08-13. Fetched 2026-09-19. |
 | NIST FIPS 204 — ML-DSA | https://csrc.nist.gov/pubs/fips/204/final | "Module-Lattice-Based Digital Signature Standard"; standardizes **ML-DSA** for digital signatures, quantum-resistant. Published 2024-08-13. Fetched 2026-09-19. |
 | NIST FIPS 205 — SLH-DSA | https://csrc.nist.gov/pubs/fips/205/final | "Stateless Hash-Based Digital Signature Standard"; standardizes **SLH-DSA**, "based on SPHINCS+." Published 2024-08-13. Fetched 2026-09-19. |
+
+## Verified by direct fetch (2026-09-19) — EU CRA & VEX (supply-chain regulation)
+
+Verification date for the rows below: **2026-09-19**. Added for the `business-ops`
+regulated-domain-triage (CRA name-and-route) and the deep-code-review `security-appsec.md`
+A03 (VEX). Named as regimes/artifacts; no compliance deadline or conformity conclusion is
+encoded (business-ops routes applicability to counsel).
+
+| Standard / tool | URL | What was confirmed |
+|---|---|---|
+| EU Cyber Resilience Act (CRA) — Regulation (EU) 2024/2847 | https://eur-lex.europa.eu/eli/reg/2024/2847/oj | "Regulation (EU) 2024/2847 … on horizontal cybersecurity requirements for products with digital elements." Manufacturer obligation categories confirmed: security-by-design; vulnerability handling + coordinated-vulnerability-disclosure + a security-update / support period; automatic-update + end-of-support transparency; stricter conformity assessment for "important"/"critical" categories. Exact timelines/class routed to counsel (not encoded). Fetched 2026-09-19. |
+| CISA VEX — Vulnerability Exploitability eXchange (status & justification) | https://www.cisa.gov/resources-tools/resources/vulnerability-exploitability-exchange-vex-status-justification-document-june-2022 | CISA-published (June 2022, community-led). A producer-issued per-CVE assertion of whether a product is affected; status values NOT AFFECTED (with a justification), AFFECTED, FIXED, UNDER INVESTIGATION; complements (does not replace) an SBOM. Fetched 2026-09-19. |
