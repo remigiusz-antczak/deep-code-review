@@ -634,6 +634,25 @@ serialize through an explicit DTO/field allow-list — returning the whole model
 (or `SELECT *`) leaks internal columns and future ones added later. Test by
 adding a privileged field to a legitimate request and re-reading the object.
 
+**API6 — unrestricted access to a *sensitive business flow*.** Distinct from the
+rate-limit key/burst check in A06 above: a flow can be **correctly authorized,
+individually within the rate limit, and still harm the business at volume** —
+scalping limited inventory across many accounts/IPs, hold-then-cancel to force a
+price drop, farming a referral/coupon credit. A generic per-IP / per-principal
+limiter does not catch it because each request, alone, is legitimate; the signal is
+**automation, not volume**. First ask the business question the limiter does not —
+OWASP's framing: "identify the business flows that might harm the business if they
+are excessively used" (checkout, referral credit, review/vote, waitlist,
+price-affecting cancel). Then check for automation-specific controls the limiter
+can't provide: device / headless-browser fingerprinting, human detection (CAPTCHA or
+behavioral biometrics), and non-human-timing detection — OWASP's own example is to
+"analyze the user flow to detect non-human patterns (e.g. the user accessed the 'add
+to cart' and 'complete purchase' functions in less than one second)," and ASVS
+v5.0.0-2.4.2 (L3) requires "business logic flows require realistic human timing."
+Machine-consumed (B2B / partner) APIs are the common blind spot. 🚩 a sensitive flow
+protected by the **same** generic per-IP limiter as the rest of the API, with no
+automation / timing signal at all.
+
 **API9 — inventory (zombie / legacy / `v1`).** Enumerate the *deployed* surface,
 not the documented one: route tables, framework route dumps, gateway/CDN and
 load-balancer configs, access logs, OpenAPI vs reality, old hostnames and

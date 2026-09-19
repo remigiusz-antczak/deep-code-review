@@ -3031,6 +3031,16 @@
         "Prescribes fetching/resetting the worktree base to the current remote ref before running any script",
         "Prescribes querying the forge/server API for actual check-runs (immune to local staleness) for checks that must reflect current remote/CI state, rather than trusting a local script copy"
       ]
+    },
+    {
+      "id": "a-sensitive-business-flow-abused-by-automation-is-api6-not-a-rate-limit-gap",
+      "prompt": "Review this checkout flow. Object-level authorization is correct (each user completes only their own cart). `/checkout/purchase` is rate-limited to 20 requests/minute per authenticated user id — the team says that satisfies business-logic limits. A limited-edition product sells out in 4 seconds at launch, entirely to accounts created in the previous hour. What did the existing controls miss?",
+      "expected_output": "Object-level authz and the per-user rate limit both worked as designed and neither catches this: each purchase came from a distinct, individually-authorized account, each within its own 20/min limit. This is OWASP API6 (Unrestricted Access to a Sensitive Business Flow), not BOLA and not a generic rate-limit gap — the signal is automation (freshly-created accounts, superhuman timing), not per-account volume. OWASP's framing: first 'identify the business flows that might harm the business if they are excessively used' (here, checkout of scarce inventory), then add automation-specific controls the per-IP/per-user limiter can't provide — device/headless-browser fingerprinting, human detection (CAPTCHA or behavioral biometrics), and non-human-timing detection (ASVS v5.0.0-2.4.2 requires business logic flows to 'require realistic human timing'). Do NOT just lower the per-account rate limit — that punishes real users while a botnet of fresh accounts sidesteps it. The newly-created-account pattern is a corroborating automation signal.",
+      "expectations": [
+        "States the per-user rate limit and object-level authz are NOT the missing control and does not recommend merely lowering the rate limit — each request was individually authorized and within limit",
+        "Names OWASP API6 / sensitive business flow, distinct from API1/BOLA and from the generic A06 rate-limit check; the signal is automation, not per-account volume",
+        "Prescribes an automation/human-detection control (fingerprinting, CAPTCHA/behavioral biometrics, non-human-timing per ASVS realistic-human-timing) and notes the fresh-account pattern as a corroborating automation signal"
+      ]
     }
   ]
 }

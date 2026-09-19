@@ -639,3 +639,11 @@ determination routes to counsel).
 | Standard / source | URL | What was confirmed |
 |---|---|---|
 | OpenSSF Scorecard — Fuzzing check | https://github.com/ossf/scorecard/blob/main/docs/checks.md | "Risk: `Medium` (possible vulnerabilities in code)". "This check tries to determine if the project uses fuzzing" (via OSS-Fuzz membership, ClusterFuzzLite, or user-defined fuzzing functions). "Regular fuzzing is important to detect vulnerabilities that may be exploited by others, especially since attackers can also use fuzzing to find the same flaws." (Distinct from the other Scorecard rows above that cite the same catalog URL.) Fetched + verified 2026-09-20. |
+
+## Verified by direct fetch (2026-09-20) — API6 sensitive business flows (API Security Top 10, 2023)
+
+| Standard / source | URL | What was confirmed |
+|---|---|---|
+| OWASP API6:2023 — Unrestricted Access to Sensitive Business Flows | https://api-security.owasp.org/editions/2023/en/0xa6-unrestricted-access-to-sensitive-business-flows/ | "identify the business flows that might harm the business if they are excessively used." Non-human detection: "analyze the user flow to detect non-human patterns (e.g. the user accessed the 'add to cart' and 'complete purchase' functions in less than one second)." Fetched + verified 2026-09-20. |
+| OWASP ASVS v5.0.0-2.4.2 (Validation and Business Logic) | https://github.com/OWASP/ASVS/blob/v5.0.0_release/5.0/en/0x11-V2-Validation-and-Business-Logic.md | Level 3: "Verify that business logic flows require realistic human timing, preventing excessively rapid transaction submissions." Verified 2026-09-20 at tag v5.0.0_release. |
+

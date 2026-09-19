@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.242.0] — 2026-09-20
+
+### deep-code-review — wave 163 API6 unrestricted access to sensitive business flows
+
+- **`security-appsec.md`** (API-specific overlay): API6 was named-only; now a worked paragraph. A flow can be correctly authorized, individually within the rate limit, and still harm the business at volume (scalping, hold-then-cancel, referral/coupon farming); a generic per-IP/per-principal limiter misses it because each request is individually legitimate — the signal is automation, not volume. Ask which flows harm the business if excessively used, then add automation-specific controls (device/headless-browser fingerprinting, CAPTCHA/behavioral biometrics, non-human-timing detection). Machine-consumed B2B/partner APIs are the blind spot.
+- +1 eval; +2 standards rows (OWASP API6:2023; OWASP ASVS v5.0.0-2.4.2 L3 — verbatim via raw fetch 2026-09-20).
+
 ## [1.241.0] — 2026-09-20
 
 ### agentic-delivery — wave 162 isolation worktree inherits the parent clone's stale refs (closes #560)
