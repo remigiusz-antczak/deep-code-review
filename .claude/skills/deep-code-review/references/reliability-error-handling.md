@@ -42,17 +42,25 @@ the checklist.
 - **Check status before body.** `res.json()` on a 500 HTML page, or treating
   transport success as business success, hides outages as parse bugs.
 - **A verification gate: a persistent cannot-check is not a finding.** A gate that
-  reaches an external dependency and hits a **persistent** cannot-check — an outage,
-  a timeout after bounded retry, a retired endpoint — **does not block work and is
-  not reported as a finding**; it fails closed only on a problem it actually
+  reaches an external dependency — **or launches its own harness (a headless browser, a
+  dev/preview server, a probe)** — and hits a **persistent** cannot-check — an outage,
+  a timeout after bounded retry, a retired endpoint, **or a crash during harness setup,
+  before it takes the first measurement** — **does not block work and is not reported as
+  a finding**; it fails closed only on a problem it actually
   observed (retry a *transient* error a bounded number of times first). **Exception —
   a security / authz / integrity / spend attestation fails closed on a can't-verify,
   not open:** a CVE / secret / banned-terms / authz check whose input or dependency is
-  unreachable **blocks** (the missing-input fail-closed rule, `domain-checklists.md`;
+  unreachable — **including its own harness failing to launch** — **blocks** (the missing-input fail-closed rule, `domain-checklists.md`;
   "Fail closed on authz/crypto/integrity errors" below; a fail-open there is the bug,
   `security-appsec.md`). Never point a gate at a **retired or unversioned endpoint**,
   and **bound the gate's own runtime**
-  — a silent hang blocks work with no error trail, worse than a clean failure. (This
+  — a silent hang blocks work with no error trail, worse than a clean failure. **A gate
+  that exits the *same* failure code for a setup/harness crash as for a real violation is
+  itself the defect** — consumers can't tell an outage from a finding, so a flaky harness
+  blocks everything and trains blanket-overrides (which then suppress the real findings too);
+  require **distinct exit semantics + a distinct message** for could-not-check vs
+  found-a-problem, and flag any gate whose pre-measurement crash is indistinguishable from a
+  real finding. (This
   is the gate's *blocking* behaviour; an item a reviewer genuinely could not verify is
   a separate axis — marked `could-not-check`, never a silent pass, the sense in which
   "fails open" is used for a review status elsewhere.)

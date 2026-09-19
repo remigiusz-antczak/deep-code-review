@@ -1703,6 +1703,17 @@
         "Notes this is a fast-forward (not a force-push) only when the remote ref is an ancestor of the new HEAD -- verify first; a diverged branch needs a real merge",
         "Notes the 'already checked out' collision is usually stale unpruned worktrees (teardown hygiene)"
       ]
+    },
+    {
+      "id": "gate-harness-crash-is-could-not-check-not-a-finding",
+      "prompt": "Review this CI gate: it boots a headless browser + a preview server, then runs accessibility checks. When the preview server fails to start (a flaky port bind, before any check runs), the gate exits 1 -- the same exit code it uses when it finds a real a11y violation. It's been blocking merges intermittently and the team now blanket-overrides it. Sound?",
+      "expected_output": "No -- the gate conflates 'could not check' with 'found a problem'. A crash during harness setup (the preview server failing to bind, before the first measurement) is a persistent cannot-check, not a finding: it should not block work and should not be reported as a violation (after bounded retries of a transient error). Exiting the SAME code for a setup/harness crash as for a real a11y violation is the defect -- consumers can't tell an infrastructure outage from a genuine finding, so a flaky harness blocks everything and trains exactly the blanket-override you're seeing (which then also suppresses real findings). Fix: distinguish could-not-check (harness/setup/transient failure, or any crash before the first measurement) from found-a-problem with distinct exit semantics AND a distinct message; fail OPEN on a persistent setup failure after bounded retries, fail closed only on a violation actually observed. (This is a quality gate; a security/authz/integrity attestation is the exception -- it fails closed on a can't-verify.) (reliability-error-handling.md.)",
+      "expectations": [
+        "Identifies a harness/setup crash before the first measurement as could-not-check, not a finding -- must not block or be reported as a violation (after bounded transient retries)",
+        "Names the same-exit-code-for-crash-and-violation as the defect: consumers can't distinguish an outage from a finding -> blanket-overrides that also suppress real findings",
+        "Prescribes distinct exit semantics + a distinct message for could-not-check vs found-a-problem; fail open on persistent setup failure, fail closed only on an observed violation",
+        "Notes the security/authz/integrity attestation exception (fails closed on can't-verify) so 'fail open' is not over-generalized"
+      ]
     }
   ]
 }
