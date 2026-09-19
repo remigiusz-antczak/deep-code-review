@@ -199,6 +199,28 @@ rate), validity (schema/format/range). For each:
 - Deletes are soft status changes; support subject erasure-on-request; a
   rejected record re-enters the active set only on a material, tracked quality
   improvement, never silently.
+- **Soft-delete correctness — a `deleted_at` demands discipline everywhere it is read.** Once a
+  table has a soft-delete marker, **every** read must exclude deleted rows (a query, a JOIN, a
+  COUNT, an aggregate, a uniqueness check) — via a **default-scoped accessor** (a base query /
+  repository scope filtering `deleted_at IS NULL`), not per-call-site filters that drift (one
+  site forgets and silently re-admits deleted rows into results, counts, exports). Flag raw
+  reads that bypass the scope.
+- **A `UNIQUE` constraint must carve out soft-deleted rows.** `UNIQUE(email)` on a soft-delete
+  table blocks re-creating a value whose row was soft-deleted (the tombstone still holds the
+  constraint) — the user cannot re-sign-up. Make it a **partial index**
+  (`UNIQUE … WHERE deleted_at IS NULL`); on an engine without partial indexes, fold a **non-null**
+  delete marker into the key (a fixed epoch / `0` / generated column) — never a bare nullable
+  `deleted_at` in a composite `UNIQUE`, since `NULL ≠ NULL` lets duplicate **live** rows through
+  (Postgres / MySQL / SQLite).
+- **Delete semantics are deliberate across relationships.** `ON DELETE CASCADE` can
+  **over-delete** (deleting a user nukes shared or audit rows the delete never intended); a hard
+  delete with no cascade **under-deletes** — leaving **dangling foreign keys** / orphaned children
+  where the FK is **unenforced** (an app-level / cross-service / warehouse relation, a disabled
+  constraint) or `ON DELETE SET NULL`; an *enforced* FK with the default `RESTRICT` / `NO ACTION`
+  instead **blocks** the delete. Confirm each FK's on-delete policy is chosen on purpose, and a soft-delete cascades
+  to its children (or deliberately does not); a parent soft-deleted while children stay
+  live-and-reachable is a leak. (The privacy **erasure** obligation is separate —
+  `privacy-compliance.md`; this is delete *correctness*.)
 
 ## 7. Scoring & config discipline
 
@@ -474,7 +496,11 @@ apply; failure types excluded from the denominator; absent/empty/false/list
 collapsed in completeness or CAS; freshness derived from `fetched_at`; a model
 call that returns a score or a boolean gate; weights inlined in code with no
 snapshot; a consumer/export that re-queries raw instead of the filtered set;
-written artifact with no reader; mass status-change on an upstream error; live
+written artifact with no reader; mass status-change on an upstream error; a read / JOIN / COUNT on a soft-delete table with no `deleted_at IS NULL`
+filter (deleted rows leak into results); a `UNIQUE` column on a soft-delete table with no
+partial-index carve-out (cannot re-create a soft-deleted value); a hard delete leaving dangling
+foreign keys on an unenforced/`SET NULL` FK, or an `ON DELETE CASCADE` that over-deletes
+shared/audit rows; live
 counts hard-coded into docs; a coverage threshold lowered in the same diff that
 would otherwise fail it; a composite score that **sums** heterogeneous
 constructs; a ranker validated with **MAE** instead of concordance, or a "±N"

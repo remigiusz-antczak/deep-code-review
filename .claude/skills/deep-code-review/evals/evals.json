@@ -1952,6 +1952,26 @@
         "Requires every non-terminal state to have an actor-independent exit — a timeout/escalation, a reassignment/reclaim path, or a deadline",
         "Does not flag a genuinely terminal state as stuck (the rule is about non-terminal states with no exit)"
       ]
+    },
+    {
+      "id": "soft-delete-table-reads-must-exclude-deleted-rows-via-a-default-scope",
+      "prompt": "A `users` table got a `deleted_at` soft-delete column last quarter. An analytics query reports active-user counts: `SELECT country, COUNT(*) FROM users GROUP BY country`. It runs fine and returns numbers. The signup query and the admin list were updated to filter `deleted_at IS NULL`; this analytics query was written separately. Any issue?",
+      "expected_output": "Yes — this query omits the `deleted_at IS NULL` filter, so soft-deleted users are counted as active: the per-country counts are inflated by every deleted row. Once a table has a soft-delete marker, EVERY read — query, JOIN, COUNT, aggregate, uniqueness check, export — must exclude deleted rows, and per-call-site filters drift exactly like this (signup and admin got it, analytics didn't). The durable fix is a default-scoped accessor (a base query / repository scope / view that filters `deleted_at IS NULL` by default) so a new read inherits the filter instead of each author remembering it; flag raw reads that bypass the scope. (This is delete correctness; the GDPR erasure obligation is separate — privacy-compliance.md.) (data-quality.md §6.)",
+      "expectations": [
+        "Identifies the missing `deleted_at IS NULL` filter: soft-deleted rows are counted as active, inflating the results",
+        "States EVERY read on a soft-delete table must exclude deleted rows, and per-call-site filters drift (one site forgets) — prefer a default-scoped accessor / base query / view",
+        "Does not conflate delete-correctness with the privacy/GDPR erasure obligation — treats erasure as separate only if it is raised; staying silent on erasure is fine (the prompt does not raise it)"
+      ]
+    },
+    {
+      "id": "unique-constraint-on-a-soft-delete-table-needs-a-partial-index",
+      "prompt": "A `users` table has soft-delete (`deleted_at`) and `UNIQUE(email)`. A user deletes their account (soft-deleted), then tries to sign up again with the same email — the insert fails with a unique-constraint violation. The team proposes hard-deleting the row on account deletion to fix it. Assess.",
+      "expected_output": "The diagnosis is right, the proposed fix is wrong. The `UNIQUE(email)` still counts the soft-deleted tombstone row, so re-signup collides — a classic soft-delete + unique-constraint bug. But hard-deleting to fix it discards the record (breaking audit/erasure-grace/restore and orphaning any FKs that referenced it). The correct fix is a PARTIAL unique index that only constrains live rows: `CREATE UNIQUE INDEX ... ON users(email) WHERE deleted_at IS NULL` (or fold the delete marker into the key). Then a soft-deleted email no longer blocks a new signup, and history is preserved. (data-quality.md §6; the erasure obligation, if any, is privacy-compliance.md.)",
+      "expectations": [
+        "Identifies the soft-delete + UNIQUE collision: the tombstone row still holds the constraint, blocking re-creation of the value",
+        "Rejects hard-delete as the fix (loses history/audit/restore, can orphan FKs) and prescribes a PARTIAL unique index (`WHERE deleted_at IS NULL`) or folding the marker into the key",
+        "Does not conflate delete-correctness with the privacy/GDPR erasure obligation — treats erasure as separate only if it is raised; staying silent on erasure is fine (the prompt does not raise it)"
+      ]
     }
   ]
 }
