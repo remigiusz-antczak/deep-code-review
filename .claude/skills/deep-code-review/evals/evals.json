@@ -2292,6 +2292,36 @@
         "Requires FOR UPDATE / a conditional-CAS update / UNIQUE / SERIALIZABLE, not the transaction boundary alone",
         "Notes any approach that can abort under contention (serialization failure at SERIALIZABLE, or a deadlock with FOR UPDATE; 40001 / InnoDB rollback) must retry the WHOLE transaction with fresh reads, not the single statement"
       ]
+    },
+    {
+      "id": "batch-merging-must-poll-transient-unknown-mergeability-not-treat-it-as-conflicting",
+      "prompt": "A coordinator merges a batch of green+mergeable PRs back-to-back. After the first merges, it reads the next PR's mergeable field, sees it's not MERGEABLE, treats it as CONFLICTING, and skips it — ending up landing only the first PR each run even though the others were fine. What's wrong?",
+      "expected_output": "GitHub computes mergeability asynchronously: right after a base-changing merge, an overlapping PR's mergeable field is briefly null/UNKNOWN while the forge recomputes — that is 'not yet known,' not CONFLICTING. The coordinator reads that transient UNKNOWN as CONFLICTING and skips a PR that is actually mergeable, so it lands only the first of the batch. Fix: poll until mergeability settles to a definite state (a bounded 2-4 tries with short backoff), retry only UNKNOWN, and never auto-retry a definite CONFLICTING as if transient. (Distinct from a real MERGEABLE->CONFLICTING flip when an earlier merge touches a shared file — that's a genuine rebase need, not a recompute race.)",
+      "expectations": [
+        "Identifies GitHub's async mergeability recompute → a transient null/UNKNOWN state after a base-changing merge, distinct from CONFLICTING",
+        "Explains the bug: treating UNKNOWN as CONFLICTING skips a mergeable PR (lands only the first of the batch)",
+        "Requires polling until settled (bounded retries), retrying only UNKNOWN, never auto-retrying a definite CONFLICTING"
+      ]
+    },
+    {
+      "id": "the-absence-of-a-mutable-hold-marker-is-not-merge-authorization",
+      "prompt": "A merge preflight blocks if the PR body contains a 'DO NOT MERGE' line and allows the merge if it's absent. A bot that reformats PR bodies edits the line out; the preflight then sees no marker and merges — with no human approval. What's the design flaw?",
+      "expected_output": "The hold lives in a MUTABLE, self-reported surface (the PR body), so its absence is not authorization — anyone or any automated edit can clear it with no approving review and no trace (deletion-by-edit). 'No marker present → clear to merge' is fooled exactly as here. Fix: back the hold out of band — a branch-protection rule, a required review, or a status check the author can't toggle — never mutable body text alone; make body-editing automation append/insert-only with a before/after diff; and treat a hold-marker disappearance with no corresponding approving review as STILL HELD (fail closed). It's the mirror of 'a self-reported Tests: N/N line is not a passing control.'",
+      "expectations": [
+        "Identifies that the hold is in a mutable self-reported surface, so its absence/removal is not authorization (deletion-by-edit, no trace)",
+        "Requires backing the hold out-of-band (branch protection / required review / status check), not mutable body text",
+        "Requires fail-closed on a marker disappearance with no approving review, and append/insert-only body automation with a diff"
+      ]
+    },
+    {
+      "id": "a-hung-not-failed-merge-train-gate-is-detected-by-gate-output-liveness-then-a-bounded-fallback",
+      "prompt": "A merge-train coordinator waits on the union gate before landing a batch. One run, the union job hangs (a wedged runner) instead of failing; the coordinator waits indefinitely and the whole queue stalls with no red status. How should it detect and handle this?",
+      "expected_output": "A hang produces no failure to react to, so waiting-for-red never fires. Detect it by LIVENESS, not elapsed time alone: during the gate RUN the base head is stationary by design (nothing lands until the gate concludes), so the live signal is the gate job's own OUTPUT — no new log output past ~2x its normal window is a hang (the long in_progress shard rule, applied to the conductor); cancel and root-cause. (Base-head movement is the hang signal only in the merge DRAIN phase, where members are landing.) Then don't block forever: treat a hung heavy gate as a can't-check / UNVERIFIED (never a pass), timebox it, and fall back to the deterministic runnable subset (lint/unit/type) as a proof-of-record, escalating the heavy gate's absence — but never merge a member the union never validated. Emit progress so a stall is visible; and keep flaky heavy gates in per-change pre-merge checks, not as a blocking union term.",
+      "expectations": [
+        "Identifies that a HANG (vs a failure) produces no red, so a waiting coordinator stalls the whole queue silently",
+        "Detects the hang by the gate job's OUTPUT liveness (no new output past ~2x normal), not elapsed time alone — noting the base head is stationary during the gate run by design (base-head movement is the drain-phase signal); cancels+root-causes",
+        "Treats a hung gate as can't-check/UNVERIFIED — timebox + fall back to the runnable subset as proof-of-record (never merge on it), emit progress, keep heavy gates in per-change checks"
+      ]
     }
   ]
 }

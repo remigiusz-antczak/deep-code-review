@@ -270,7 +270,16 @@ changed). This bites at two scales:
   Freezing the merge rather than pausing all work removes the invalidation without
   dropping throughput.
 
-Both are the **stale-base failure below at the mergeability layer** — a quantity
+**A third state — `UNKNOWN` while the forge recomputes.** Distinct from the MERGEABLE↔CONFLICTING
+flip above: **GitHub** computes mergeability **asynchronously** (not independently verified for other
+forges), so right after any base-changing merge an overlapping PR's `mergeable` field is briefly
+**`null` / `UNKNOWN`** while the recompute runs — that is *not-yet-known*, not CONFLICTING. A batch
+merger that treats `UNKNOWN` as CONFLICTING skips a PR that is actually fine (landing only the
+**first** of a back-to-back set); one that treats it as MERGEABLE merges blind. **Poll until it
+settles** to a definite state (a bounded 2–4 tries with short backoff), retry **only `UNKNOWN`**, and
+never auto-retry a definite `CONFLICTING` as if it were transient.
+
+Both value-flip cases above are the **stale-base failure below at the mergeability layer** — a quantity
 computed against one base head, consumed against another — except the moving head
 breaks *mergeability* here, not a gate's diff. A fleet coordinator applies this
 whenever it batches merges; `agentic-delivery`'s `fast-agentic-delivery.md`
@@ -334,6 +343,26 @@ record; an oral-only exception ("we just merged past it that once") is itself th
 finding. A red base is the release pipeline's blocked state, so
 `release-engineering.md` cross-links here — but the discharge *mechanism* is the
 merge train, so it lives here and that file never restates it.
+
+### A union / merge-train gate that HANGS (not fails) silently stalls the pipeline
+
+A train's aggregate gate can **hang** — a wedged runner, a deadlocked build, a lost webhook —
+rather than fail, and a coordinator waiting on it stops merging everything queued behind it, with
+no red status to react to. **Detect it by liveness, not elapsed time alone.** During the gate
+**run** the base head is stationary *by design* (nothing lands until the gate concludes), so the
+live signal is the **gate job's own output** — no new log output past ~2× its normal window is a
+hang (the *long `in_progress` shard* rule below, applied to the conductor); cancel and root-cause,
+don't passively wait. During the merge **drain** (members landing back-to-back), a **base head that
+stops advancing** past ~2× the per-member cadence is the hang signal there. Emit progress (members
+landed / remaining) so a stall is visible instead of reading as healthy idle.
+
+A hung heavy gate is a **can't-check (`UNVERIFIED`), not a pass** — it never authorizes the merge.
+But don't block the queue forever: **timebox** it and fall back to the **deterministic runnable
+subset** (lint / unit / type-check) as a **proof-of-record** for what *can* be checked, escalating
+the heavy gate's absence — that subset is a degraded record, **not** the union's combined-build
+proof, so it does not license merging a member the union never validated. And keep flaky / heavy
+browser / visual gates in **per-change pre-merge checks**, not as a blocking term of the batch
+union, so one wedged heavy gate cannot stall the whole train.
 
 ### A required check must be *satisfiable* — pending forever blocks merge like a red
 
@@ -455,6 +484,15 @@ is **advisory**, never a passing control:
   executed. "The repo has hooks" or "the PR says tests pass" is **never** logged as a green
   control — record only a forge run pinned to the reviewed SHA (a required status that never ran
   is the merge-blocker above, not "the author ran it locally").
+- **The *absence* of a hold marker is not authorization — a mutable-text hold can be edited away.**
+  The mirror of the rule above: where a merge is blocked by a "DO NOT MERGE" / hold marker in a
+  **mutable** surface (a PR-body line, a checklist box, a label a bot can toggle), its
+  **disappearance** is self-reported too — anyone, or an automated body-edit, can clear it with no
+  approving review and no trace. A preflight that reads "no hold marker present → clear to merge"
+  is fooled by deletion-by-edit. Back a hold **out of band** (a branch-protection rule, a required
+  review, a status check the author cannot toggle), never mutable body text alone; make
+  body-editing automation **append/insert-only** with a before/after diff; and treat a hold-marker
+  *disappearance with no corresponding approving review* as **STILL HELD** (fail closed).
 - **Hooks under a worktree gate the wrong thing.** In a linked worktree (the multi-lane setup
   this file's red flags cover), a hook wired for the primary checkout misfires: an **absolute
   `core.hooksPath`** is shared by every worktree, so a hook authored for the primary checkout

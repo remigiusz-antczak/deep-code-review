@@ -3,6 +3,31 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.197.0] — 2026-09-19
+
+### deep-code-review — wave 118 branch-and-merge cluster (closes #448, #469, #483)
+
+Draining the filed backlog. Three deltas to `branch-and-merge-hygiene.md`:
+
+- **#469**: a THIRD mergeability state — GitHub recomputes `mergeable` async, so an overlapping PR is
+  briefly null/UNKNOWN after a base-changing merge (not CONFLICTING); poll-until-settled, retry
+  UNKNOWN only. (GitHub-verified; hedged for other forges.)
+- **#448**: the ABSENCE of a mutable hold marker is not authorization — deletion-by-edit false-clears
+  a preflight; back holds out-of-band, body automation append/insert-only, fail-closed on disappearance.
+- **#483**: a union/merge-train gate that HANGS (not fails) stalls the pipeline — detect by the gate
+  job's OUTPUT liveness (the base head is stationary during the gate run by design; base-head movement
+  is the drain-phase signal), treat a hang as can't-check/UNVERIFIED, timebox + fall back to the
+  runnable subset as proof-of-record (never merge on it), keep heavy gates in per-change checks.
+
+Three evals (deep-code-review 216 -> 219). Trio -> 1.197.0. `SHA256SUMS` regenerated last.
+
+Dogfood reviewer (sonnet): FIX-FIRST -> applied. #483's base-head-movement heuristic was vacuous
+during the gate-run hang window (the base head only moves in the drain phase) — re-led with gate-output
+liveness (mirroring the long in_progress-shard rule) and shipped the timeout→runnable-subset fallback
+the issue asked for, so #483 fully closes; hedged the async-mergeable claim to GitHub; fixed flow.
+
+Closes #448. Closes #469. Closes #483.
+
 ## [1.196.0] — 2026-09-19
 
 ### deep-code-review — wave 117 DB migration depth + concurrency transaction-isolation
