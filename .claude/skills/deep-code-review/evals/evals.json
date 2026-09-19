@@ -2811,6 +2811,36 @@
         "Identifies the customer-registered callback URL as an SSRF surface — validate + resolve-pin + block internal ranges, re-validated at connect time (DNS rebinding), not only at registration",
         "Requires bounded retry into a visible dead-letter (not retry-forever or silent drop) and a stable delivery id + sequence so the consumer's dedup/idempotency works"
       ]
+    },
+    {
+      "id": "distinguish-an-abortcontroller-timeout-from-a-user-cancel-before-suppressing",
+      "prompt": "A data-fetch hook wraps requests in an AbortController and does `catch (e) { if (e.name === 'AbortError') return; }`. It aborts on both a 10s timeout and when the user navigates away. Users occasionally see stale/empty data with no error. What's the bug and the fix?",
+      "expected_output": "AbortError is raised for BOTH causes — the 10s timeout AND the user-navigation cancel — and the blanket `if (AbortError) return` swallows them identically, so a real TIMEOUT is silently discarded as if the user had walked away (stale/empty UI, no error surfaced, no retry). A timeout and a user-cancel need opposite handling: a user-cancel is expected (drop silently, no error, no retry); a timeout is a failure (surface/log it, and it's the retry-eligible case). Fix: distinguish the cause before suppressing — set/read AbortSignal.reason (e.g. abort(new DOMException('timeout')) vs the user-cancel path), or use a separate controller per cause, and branch: silent for user-cancel, surfaced/retried for timeout. A bare name==='AbortError' return with no reason check is the finding.",
+      "expectations": [
+        "Identifies that AbortError covers both timeout and user-cancel, and the blanket suppression hides a real timeout (swallowed as a cancel)",
+        "States the opposite handling: user-cancel silent (no error/retry) vs timeout surfaced + retry-eligible",
+        "Requires distinguishing the cause (AbortSignal.reason or a per-cause controller) before suppressing, not a bare AbortError check"
+      ]
+    },
+    {
+      "id": "local-ci-parity-includes-the-resource-envelope-not-just-the-commands",
+      "prompt": "A test gate runs green in CI with `vitest --pool=threads --maxWorkers=16`. A contributor on a laptop runs the exact same command and it OOM-crashes before finishing. The commands are identical. What's the parity gap, and how should the concurrency be set?",
+      "expected_output": "Local/CI parity is not just the same COMMANDS — it's the same behavior across the RESOURCE ENVELOPE. The gate's parallelism (maxWorkers=16) is tuned for CI's cores/RAM; on a lower-headroom laptop that same worker count exhausts memory and OOM-crashes, so the gate is green in CI but unrunnable locally and the contributor can't reproduce or debug it. Fix: size concurrency to the HOST rather than hardcoding a CI-shaped constant — detect available cores/free memory and derive the worker count (or cap it), or expose it as a documented, overridable knob (env var / flag) with a sane default that fits a modest dev machine. 'Runs in CI' must also mean 'runs on the machine a human debugs it on.'",
+      "expectations": [
+        "Identifies that identical commands still diverge because the hardcoded worker count is tuned to CI's resource envelope and OOMs a lower-headroom host",
+        "Frames it as local/CI parity extending to the resource envelope, not just the command — green-in-CI-but-unrunnable-locally blocks reproduction",
+        "Requires host-sized concurrency (detect/cap cores+memory) or a documented overridable knob, not a hardcoded CI-shaped constant"
+      ]
+    },
+    {
+      "id": "a-filter-option-with-zero-matching-rows-in-real-data-is-a-dead-control",
+      "prompt": "A list view's filter dropdown is populated from a status enum with 8 values. In production, 3 of those statuses never occur in real data, so selecting them always returns an empty list. The filter handler works correctly. Is this a defect, and how should the options be generated?",
+      "expected_output": "Yes — it's a dead control, just a DATA one rather than a structural (no-op handler) one: the handler works, but selecting a value that no real row can satisfy does nothing useful (an always-empty result), so the user wastes a click and distrusts the filter. The menu was hardcoded from the enum, which outruns the actual data. Fix: validate the option set against the ACTUAL DATA DISTRIBUTION — render only options with a non-zero count (ideally showing the count per option), or otherwise mark/disable the empty ones, rather than emitting every enum value. Generate filter options from what's present in the data, not from the type definition, so a user never selects a filter that silently returns nothing.",
+      "expectations": [
+        "Identifies it as a (data) dead control — a working handler on an option no real row satisfies always returns empty, so it does nothing useful",
+        "Locates the cause in generating options from the enum/type rather than the actual data",
+        "Requires deriving options from the real data distribution (only non-zero counts, or show/disable counts), not emitting every enum value"
+      ]
     }
   ]
 }

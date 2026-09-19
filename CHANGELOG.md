@@ -3,6 +3,21 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.226.0] — 2026-09-19
+
+### deep-code-review — wave 147 filed singles: abort-cause, CI/dev resource parity, data-dead-filter (closes #551, #389, #371)
+
+- **#551** (`reliability-error-handling.md`): an AbortController fires for both a timeout and a user-cancel;
+  a blanket `if (AbortError) return` hides a real timeout — distinguish the cause (`AbortSignal.reason` /
+  per-cause controller): user-cancel silent, timeout surfaced + retry-eligible.
+- **#389** (`testing-and-evals.md`): local/CI parity includes the resource envelope — a hardcoded CI-tuned
+  worker count OOMs the same gate on a lower-headroom dev host; size concurrency to the host or an
+  overridable knob.
+- **#371** (`product-ux-quality.md`): a filter/facet option matching zero real rows is a dead control (data,
+  not structural) even with a working handler; derive options from the actual data distribution.
+
++3 evals (268 -> 271 deep-code-review).
+
 ## [1.225.0] — 2026-09-19
 
 ### deep-code-review — wave 146 webhooks — provider (outbound) side (breadth research)

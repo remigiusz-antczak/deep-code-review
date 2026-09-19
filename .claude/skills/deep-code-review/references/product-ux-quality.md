@@ -472,6 +472,12 @@ until it renders:
   unavailable must *look* unavailable, not merely be inert. Unit-logic tests
   passing is **not** a working UI — exercise the real control in the running app
   (cross-ref the live-verification rule below).
+- **A filter/facet option that matches zero rows in real data is a dead control too.** The no-op-handler
+  case above is *structural*; this one is *data*: a filter value, facet, or sort option whose handler works
+  fine but that **no real row can ever satisfy** (a category with no items, a status nothing is ever in) is
+  still a control that does nothing when clicked. Validate the option set against the **actual data
+  distribution** — render only options with a non-zero count (or show the count) rather than hardcoding a
+  menu from an enum that outruns the data — so a user never picks a filter that silently returns nothing.
 - **A disabled action explains its cause and its recovery path — not a dead end.**
   Looking disabled (gate 1's *disabled-looks-disabled*) and disabling the same way at
   every instance (the *interaction-consistency* bullet below) prove the control's

@@ -176,6 +176,11 @@ explicit third choice), not which one this review prefers.
 - **Honest coverage taxonomy.** State what is automated vs. operationally
   checked vs. human-reviewed vs. not-applicable-with-reasoning. Document
   coverage gaps and skipped tests; never claim an assurance you don't have.
+- **Local/CI parity includes the *resource envelope*, not just the commands.** A gate whose parallelism is
+  tuned for CI's cores/RAM (`--workers=N`, `-j N`, a fixed pool size) can OOM or crash the *same* gate on a
+  lower-headroom dev host — green in CI, unrunnable locally, so a contributor can't reproduce it. Size
+  concurrency to the host (detect cores / free memory, or cap it) or make it a documented, overridable knob,
+  never a hardcoded CI-shaped constant. "Runs in CI" is not "runs on the machine a human debugs it on."
 
 ## A green run is a sample, not a proof, when the trigger is nondeterministic or the run is too costly to repeat
 

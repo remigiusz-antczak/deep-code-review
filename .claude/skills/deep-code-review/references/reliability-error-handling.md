@@ -36,6 +36,13 @@ the checklist.
 - **Timeout and abort are independent.** A `fetch` with only `AbortSignal` from
   a parent that never fires, or only a library default with no per-call bound,
   still hangs. Both must exist; the abort must be *wired* to the call site.
+- **Distinguish a timeout-abort from a user-cancel before suppressing the error.** An `AbortController`
+  fires for *both* a deadline timeout and a deliberate user cancel (navigation away, a cancel button), so
+  code that blanket-swallows an `AbortError` as "cancelled, ignore" **hides a real timeout** — a timed-out
+  request looks identical to a user who walked away. Tag the cause (`AbortSignal.reason`, or a separate
+  controller per cause): a **user-cancel** is expected (drop silently — no error, no retry); a **timeout**
+  is a failure (surface/log it, and it is the retry-eligible case). A bare
+  `if (err.name === 'AbortError') return` with no reason check is the finding.
 - **Propagate the deadline; don't reset it at each hop.** A service handling a
   request that arrived with a deadline must pass the *remaining* time down to its
   own calls, not start each one on a fresh full timeout — otherwise a chain of N
