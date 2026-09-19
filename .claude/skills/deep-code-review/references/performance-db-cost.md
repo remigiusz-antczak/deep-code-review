@@ -49,7 +49,14 @@ A migration is a deploy-time hazard, not just a query. Check:
 - **Locking**: `ALTER TABLE` / `CREATE INDEX` on a large table without the
   non-blocking variant (`CREATE INDEX CONCURRENTLY` in Postgres — use the engine's
   online-DDL equivalent elsewhere, e.g. MySQL `ALGORITHM=INPLACE` or gh-ost; plus
-  safe column-add order) locks writes and can take an outage. 
+  safe column-add order) locks writes and can take an outage.
+- **A failed or transaction-wrapped `CONCURRENTLY` build is its own hazard.** On Postgres a
+  failed concurrent index build "will fail but leave behind an 'invalid' index" — one "ignored
+  for querying purposes" that "will still consume update overhead" (Postgres docs); recover by
+  dropping and retrying, or `REINDEX INDEX CONCURRENTLY`, never by assuming the index is simply
+  absent. And `CREATE INDEX CONCURRENTLY` **cannot run inside a transaction block** (a regular
+  `CREATE INDEX` can), so a migration runner that wraps each migration in one transaction by
+  default must use its escape hatch or the concurrent build fails outright.
 - **Backward compatibility during rolling deploy**: old and new code run
   simultaneously mid-deploy — a migration must be compatible with both. Follow
   expand → migrate → contract: add the new column/table (nullable), backfill,
@@ -191,7 +198,23 @@ Every billable or slow call must map to value delivered.
 - Correct key (includes every input that changes the result; per-user/tenant
   where results differ) and correct **invalidation** (a stale-cache bug is worse
   than no cache). No caching of sensitive/per-user data in a shared cache.
+- **Invalidate every *derived* entry, not just the entity's own key.** The correct-key rule
+  above covers one entry; a write must also invalidate every composite / aggregate / list /
+  rendered-fragment entry that *embeds* the mutated entity (a user's name cached inside a
+  rendered comment, a row inside a cached list or count). HTTP caches make the split explicit:
+  a cache "MUST invalidate the target URI" on an unsafe method but treats related URIs only as
+  *candidates* for invalidation (RFC 9111 §4.4) — derived-key fan-out is the application's job,
+  not the protocol's. Tag each entry with a surrogate key per entity it depends on and purge by
+  tag, or keep an explicit dependency index; a write that clears only `entity:{id}` and leaves
+  the entries embedding it is a stale-read bug no single-key test catches.
 - Bounded size / TTL / eviction; a cache that only grows is a leak.
+- **Bound key *cardinality*, not just total size.** A key built from an unbounded or
+  high-cardinality input — raw free text, a full query string with volatile params, a
+  per-request timestamp — makes almost every lookup miss while filling the cache with
+  single-use entries, so it adds latency and memory pressure for no hit-rate benefit.
+  Normalize and allow-list the key inputs to the dimensions that actually recur. Distinct from
+  a *wrong* key (correctness, above) and from unbounded *total size* (the eviction bullet) —
+  here the key *space* is too large to ever reuse.
 - **Stampede / thundering herd on expiry.** A hot key expiring lets N concurrent
   misses all hit the origin at once — an outage amplifier on an expensive origin.
   Require **single-flight** (coalesce concurrent recomputes behind one lock/lease)
@@ -209,6 +232,16 @@ Every billable or slow call must map to value delivered.
   truth** (write-only-to-cache, no durable store behind it) turns an eviction into
   **data loss**. (Identity-keyed caching as an authorization surface —
   `private`/`no-store`, per-principal keys — is `security-appsec.md` A01.)
+- **A shared cache must key on whatever varies the representation.** When a response differs by
+  request header — `Accept-Language`, `Accept-Encoding`, a currency/tenant negotiated from a
+  header — a shared or CDN cache that ignores it serves one visitor's variant to another
+  (English to a German reader, gzip to a client that can't decode it). HTTP formalizes the key
+  rule: a cache "MUST NOT use that stored response without revalidation unless all the presented
+  request header fields nominated by that Vary field value match" (RFC 9111 §4.1), and `Vary: *`
+  never matches. Include every representation-varying dimension in the cache key (a correct
+  `Vary`, or explicit key dimensions). Distinct from the identity/authz `Vary` rule in
+  `security-appsec.md` (threat: a cross-user *auth* leak) — this is content-negotiation
+  correctness.
 
 ## Concurrency, memory & payloads
 
@@ -226,7 +259,10 @@ constructed per call; a pool checkout not returned on the error path (connection
 pool exhaustion); no `timeout=`/`AbortController` on network calls; `while
 True` poll loops; `CREATE INDEX` without `CONCURRENTLY`; `ADD COLUMN … NOT NULL`
 with no default; `ADD CONSTRAINT` with no `NOT VALID`; `ALTER COLUMN … TYPE` on a big table; DDL with
-no `lock_timeout`; a backfill loop with a fixed `sleep` and no lag/health read; unbounded in-memory caches/dicts as module globals; retry loops
+no `lock_timeout`; a backfill loop with a fixed `sleep` and no lag/health read; unbounded in-memory caches/dicts as module globals; a write invalidating only the
+entity's own cache key with no derived-key fan-out; a cache key built from raw/unbounded input; a
+shared/CDN cache with no `Vary` or key dimension for `Accept-Language`/`Accept-Encoding`; `CREATE
+INDEX CONCURRENTLY` inside a transaction block or a left-behind invalid index; retry loops
 with no cap; a custom retry loop wrapping an auto-retrying SDK; a prompt-cache
 marker on per-call-varying content (or a long static prefix with none); a
 `countTokens` call before every generation; cost math charging cache-read/write

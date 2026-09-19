@@ -2651,6 +2651,36 @@
         "Requires column-level lineage: output columns mapped to input columns + the transformation, so root-input and impact-analysis questions are answerable",
         "Frames the absence as under-instrumentation for correctness (debugging becomes an unbounded search across stages), not merely a missing feature"
       ]
+    },
+    {
+      "id": "a-cache-write-must-invalidate-derived-entries-not-just-the-entitys-own-key",
+      "prompt": "A service caches user profiles under `user:{id}` and also caches rendered comment HTML (with the author's name baked in) and a `top-users` leaderboard list. When a user renames themselves, the code deletes `user:{id}`. Users still see the old name on comments and the leaderboard for hours. What's the bug and the fix?",
+      "expected_output": "The write invalidated only the entity's OWN key (user:{id}) but not the DERIVED entries that embed the entity — the rendered comment HTML and the leaderboard list both baked in the old name and were never invalidated. Deleting one key is not enough when other cached entries contain a copy of the mutated data. This is the application's responsibility, not the cache's: HTTP caches, for example, MUST invalidate the target URI on an unsafe method but treat related URIs only as candidates (RFC 9111 §4.4). Fix: tag each cached entry with a surrogate key for every entity it depends on and invalidate by tag (purge everything tagged user:{id}), or maintain an explicit dependency index, so a rename fans out to every derived entry. A single-key delete test won't catch this — the review must ask which OTHER entries embed the mutated value.",
+      "expectations": [
+        "Identifies that only the entity's own key was invalidated while derived/composite entries (rendered HTML, the leaderboard list) that embed the value went stale",
+        "States that derived-key fan-out is the application's responsibility (a cache/protocol invalidates the primary key/target, not everything that embeds it)",
+        "Requires surrogate-key/tag-based invalidation or an explicit dependency index so a write fans out to every derived entry"
+      ]
+    },
+    {
+      "id": "a-shared-cache-must-key-on-headers-that-vary-the-representation",
+      "prompt": "A site serves localized pages: the same URL returns English or German based on the Accept-Language header. It sits behind a shared CDN cache keyed only on the URL. German users start seeing English pages (and vice versa) at random. Why, and what's the fix?",
+      "expected_output": "The representation varies by a request header (Accept-Language) but the shared cache keys only on the URL, so whichever language was cached first is served to everyone until it expires — a correctness bug specific to a SHARED cache (a per-user cache wouldn't cross-contaminate). HTTP's rule: a cache MUST NOT use a stored response without revalidation unless all the request header fields nominated by Vary match (RFC 9111 §4.1), and Vary: * never matches. Fix: include every representation-varying dimension in the cache key — set a correct Vary: Accept-Language (and Accept-Encoding if compressed variants differ), or add the negotiated dimension explicitly to the key. This is distinct from an auth/identity Vary bug (whose harm is a cross-user data leak); here the harm is serving the wrong variant.",
+      "expectations": [
+        "Identifies that the response varies by a request header while the shared cache keys only on the URL, so one variant is served to all clients",
+        "Requires keying on the varying dimension — a correct Vary (Accept-Language/Accept-Encoding) or an explicit key dimension — and notes Vary: * never matches",
+        "Frames it as a shared-cache content-negotiation correctness bug (distinct from a per-user cache and from an auth/identity Vary leak)"
+      ]
+    },
+    {
+      "id": "create-index-concurrently-cannot-run-in-a-migration-runners-transaction-and-can-leave-an-invalid-index",
+      "prompt": "A Postgres migration adds CREATE INDEX CONCURRENTLY to avoid locking writes. It's run by a migration framework that wraps each migration in a transaction by default. The migration errors out, and later the team notices the index exists but queries don't use it while writes are slower. What went wrong on both counts?",
+      "expected_output": "Two distinct CONCURRENTLY footguns. (1) CREATE INDEX CONCURRENTLY cannot run inside a transaction block (a regular CREATE INDEX can); a migration runner that wraps each migration in a transaction by default makes the concurrent build fail outright unless the migration opts out of the wrapping transaction (the framework's escape hatch). (2) A failed concurrent build leaves behind an 'invalid' index that is ignored for querying but still consumes update overhead on every write — so queries don't use it while writes pay for it. Fix: run the CONCURRENTLY build outside any transaction block, and on failure drop the invalid index and retry (or REINDEX INDEX CONCURRENTLY) rather than assuming the index is simply absent. (Postgres docs.)",
+      "expectations": [
+        "Identifies that CREATE INDEX CONCURRENTLY cannot run inside a transaction block and gives the remedy — the migration must opt out of the runner's wrapping transaction (its escape hatch), else the concurrent build fails outright",
+        "Identifies that a failed concurrent build leaves an invalid index that is skipped for queries but still adds write overhead",
+        "Requires the fix: run outside a transaction, and drop+retry or REINDEX the invalid index rather than treating it as absent"
+      ]
     }
   ]
 }

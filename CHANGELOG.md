@@ -3,6 +3,25 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.217.0] — 2026-09-19
+
+### deep-code-review — wave 138 caching correctness (#478) + a CONCURRENTLY migration correction
+
+Closes #478. `performance-db-cost.md` (Caching & memoization):
+- **Invalidate every derived entry, not just the entity's own key** — composite/aggregate/list/rendered
+  entries that embed the mutated entity; surrogate-key/tag invalidation or a dependency index. HTTP caches
+  invalidate only the target URI; related keys are "candidates" (RFC 9111 §4.4).
+- **Bound key cardinality, not just total size** — an unbounded/high-cardinality key = near-zero hit rate
+  and single-use entries.
+- **A shared cache must key on whatever varies the representation** (Accept-Language/Accept-Encoding) —
+  RFC 9111 §4.1; distinct from the identity/authz Vary rule (a cross-user auth leak).
+- **CONCURRENTLY correction**: a failed concurrent index build leaves an INVALID index (skipped for
+  queries, still pays write overhead) and CREATE INDEX CONCURRENTLY cannot run in a transaction block.
+Co-evolution: `domain-checklists.md` §E, `performance-db-cost.md` 🚩 grep footer.
+
++3 evals (252 -> 255 deep-code-review). SRC fetched + verified 2026-09-19: rfc-editor.org/rfc/rfc9111,
+postgresql.org/docs/current/sql-createindex.html.
+
 ## [1.216.0] — 2026-09-19
 
 ### deep-code-review — wave 137 data-pipeline contract & lineage: schema-registry compatibility + backward lineage

@@ -215,9 +215,13 @@ Apply to any pipeline, ETL, enrichment, scraping, or dataset producer. Judge the
   (`CONCURRENTLY`); `NOT NULL` only after backfill+default; backfill in bounded
   batches **outside** the DDL transaction; a tested rollback path; **snapshot
   before the mutation, not after**; a data-transforming migration must not
-  violate D.
+  violate D. `CONCURRENTLY` runs **outside** a transaction block (a migration runner that wraps
+  each migration in one must opt out) and a failed concurrent build leaves an **invalid** index to
+  drop or `REINDEX`, not silently absent.
 - **External / API / LLM calls — cost-and-value lens**: is each call *necessary*
-  now? cache with a correct key + invalidation; batch; single-flight duplicates;
+  now? cache with a correct key + invalidation (invalidate every *derived*/composite entry, not
+  just the entity key; bound key *cardinality*; a shared cache keys on `Vary`); batch;
+  single-flight duplicates;
   events over polling; don't re-fetch/re-embed unchanged inputs. Enforce spend
   caps **before** the call — per-run **and** a global/monthly cap (from an
   append-only ledger); a **dry-run must cost nothing** (gate the call, not just
