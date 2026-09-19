@@ -2861,6 +2861,26 @@
         "Requires guarding the nullable value before the deref/call/index on any reachable path (e.g. a nil check before user.Name)",
         "Generalizes across languages (Go nil panic, Java NPE, Python None, JS undefined, C/C++), not a single-language nit"
       ]
+    },
+    {
+      "id": "a-streaming-reconnect-must-resume-from-the-last-position-not-restart-or-gap",
+      "prompt": "A dashboard streams live events over SSE. When a client's connection drops and reconnects, users report either missing events (a gap) or a burst of already-seen ones. The server ignores the reconnect request's headers and just starts sending from 'now'. What's the fix, and how does it differ for WebSocket?",
+      "expected_output": "A dropped connection is normal (NAT/proxy timeout, deploy, blip), so a reconnect must RESUME from the last delivered position, not restart from 'now' (gap) or replay everything (dupes). For SSE there's a built-in primitive: the client re-sends the last id in the Last-Event-ID header, and the SERVER must read it and replay events after that id — the bug here is the server ignoring it. WebSocket has NO built-in resume, so the application must carry its own cursor/sequence number and catch up from it on reconnect (re-subscribe alone is not resume). Either way, give the reconnect a bounded backoff so a flapping server isn't hammered, and make the consumer idempotent on a per-message id since a resumed stream can overlap what was already processed.",
+      "expectations": [
+        "Identifies that a reconnect must resume from the last delivered position, not restart-from-now (gap) or replay-all (dupes)",
+        "SSE: the server must read and honor the client's Last-Event-ID to replay the gap (the bug is ignoring it); WebSocket has no built-in resume so the app carries its own cursor/sequence",
+        "Adds bounded reconnect backoff and per-message idempotency (a resumed stream can overlap already-processed messages)"
+      ]
+    },
+    {
+      "id": "a-live-push-connection-needs-per-connection-backpressure-and-missed-pong-reclaim",
+      "prompt": "A WebSocket server fans out a high-frequency feed to many clients. Memory climbs until the process OOMs, and connection count never drops even though users close their laptops. Two separate problems — what are they and the fixes?",
+      "expected_output": "Two live-connection failure modes neither a queue nor an outbound-call rule covers. (1) Slow-consumer backpressure: a client that reads slower than the feed produces makes the server queue unbounded outbound data for that connection, so memory climbs to an OOM. Cap each connection's send buffer and pick a policy — drop-oldest, coalesce, or disconnect the laggard — never queue unboundedly; on a browser sender, watch bufferedAmount and pace to it. (2) Dead-connection reclaim: a client that vanished (laptop closed, NAT drop) never sends a close, so its slot + subscriptions leak forever unless you detect it — send pings on an interval, track outstanding pongs, and close/reclaim on a missed pong (the protocol requires a Pong in response to a Ping but is silent on a missing one, so reclaiming is the app's job). Pinging without acting on a missed pong doesn't reclaim anything.",
+      "expectations": [
+        "Identifies unbounded per-connection send buffering for a slow consumer as the OOM cause; fix = cap the buffer + drop/coalesce/disconnect policy (and watch bufferedAmount on the sender)",
+        "Identifies vanished clients holding connection slots/subscriptions; fix = ping interval + track pongs + reclaim on a missed pong",
+        "Notes pinging alone (without acting on a missed pong) doesn't reclaim — both are per-live-connection concerns, not queue/outbound-call rules"
+      ]
     }
   ]
 }

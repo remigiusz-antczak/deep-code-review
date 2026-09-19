@@ -158,6 +158,38 @@ inbound rules above rely on.
 
 ---
 
+## Streaming transports (WebSocket / SSE) — contract & reliability
+
+A live push connection is neither a queue nor an outbound call; its own failure modes need their own
+review. (The auth angle — upgrade auth, `Origin`/CSWSH, per-connection limits — is in `security-appsec.md`'s API-specific overlay (OWASP API Security Top 10), the WebSocket paragraph; not restated here.)
+
+- **Reconnection resumes from the last delivered position — not from scratch, not silently gapped.** A
+  connection *will* drop (NAT/proxy timeout, deploy, blip). SSE gives a resume primitive: the client
+  re-sends its last id ("`Set (Last-Event-ID, lastEventIDValue) in request's header list`") and the
+  server must honor it to replay the gap. WebSocket has **no** built-in resume, so the application must
+  carry an equivalent cursor/sequence and catch up on reconnect. Give the reconnect a bounded backoff
+  (SSE's own reconnection time "must initially be an implementation-defined value, probably in the region
+  of a few seconds," with "an exponential backoff delay" on repeated failure). 🚩 an SSE server that
+  never reads `Last-Event-ID`; a WS reconnect that just re-subscribes with no catch-up.
+- **Bound a slow consumer — never let one connection grow server memory without limit.** The backpressure
+  discipline required for queues (`domain-checklists.md`) applies *per live connection*: a server fanning
+  out to N clients where one reads slowly must cap that connection's send buffer and pick a policy —
+  drop-oldest, coalesce, or disconnect — not queue unboundedly. On the browser send side, a
+  high-frequency `send()` loop must watch `bufferedAmount` ("the number of bytes ... queued using
+  `send()` but ... not yet ... transmitted") and pace to it, not fire blindly.
+- **Check liveness both ways, with a timeout policy — not just "ping is available."** A vanished client
+  (phone sleep, NAT drop) holds a connection slot and its subscriptions open forever unless you detect
+  it: send pings on an interval, track outstanding pongs, reclaim on timeout. RFC 6455: a Ping "may serve
+  either as a keepalive or as a means to verify that the remote endpoint is still responsive," and "Upon receipt of a Ping frame, an endpoint MUST send a Pong frame in response, unless it already received a Close frame" — but the spec is silent on a
+  *missed* pong, so closing/reclaiming on one is the application's job. 🚩 a server that pings but never
+  acts on a missing pong.
+- **Ordering and dedup are an explicit contract across a reconnect.** The transport delivers messages in order *within* one connection (WebSocket runs over TCP, SSE over one long-lived HTTP response), but that guarantee ends at the connection boundary — a resumed stream can overlap what the client already
+  processed. Give each message a stable id/sequence and make the consumer idempotent on it: the same
+  at-least-once + idempotent-consumer rule this file states for queues/webhooks, applied to a resumed
+  live stream.
+
+---
+
 ## Message / queue / serialized-state evolution
 
 Treat persisted and in-flight payloads like DB schemas:
@@ -221,6 +253,8 @@ required field added to a live message schema; inconsistent error shapes;
 identity taken from webhook body alone; an **outbound** webhook sent unsigned or on a
 non-rotatable static secret; a dispatcher POSTing to a tenant-registered URL with no SSRF guard;
 outbound retry-forever with no dead-letter; no stable delivery id; unbounded list endpoints; no version/
-compatibility story for queued payloads; a whole-payload golden snapshot as the
+compatibility story for queued payloads; an SSE server that ignores `Last-Event-ID` (or a WS reconnect
+with no resume cursor); a live connection with no per-connection send-buffer cap; a WS server that pings
+but never reclaims a missed pong; a resumed stream with no per-message idempotency; a whole-payload golden snapshot as the
 only contract test for an evolving cross-boundary payload (fails on cosmetic churn,
 and a `--update-snapshots` re-record reflex rubber-stamps a real break).

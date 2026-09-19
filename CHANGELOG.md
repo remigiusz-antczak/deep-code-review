@@ -3,6 +3,15 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.228.0] — 2026-09-19
+
+### deep-code-review — wave 149 streaming transports (WebSocket / SSE) contract & reliability
+
+- **`api-contracts.md`**: new "Streaming transports (WebSocket / SSE)" section — a live push connection is neither a queue nor an outbound call and needs its own review. Reconnection resumes from the last delivered position (SSE re-sends `Last-Event-ID` and the server must replay the gap; WebSocket has no built-in resume, so the application carries its own cursor/sequence; bounded backoff). Per-connection backpressure (cap the send buffer; drop/coalesce/disconnect; the browser sender watches `bufferedAmount`). Liveness both ways (ping interval + track outstanding pongs + reclaim on a missed pong). Ordering/dedup explicit across a reconnect (the transport orders within one connection only; per-message id + idempotent consumer).
+- Reviewer FIX-FIRST applied: the WebSocket auth cross-reference now points to `security-appsec.md`'s API-specific overlay (OWASP API Security Top 10) WebSocket paragraph, not A01; the per-connection ordering claim no longer rests on RFC 6455's §5.4 fragment-ordering quote (stated as TCP/HTTP transport semantics instead); the RFC 6455 Pong quote is restored verbatim.
+
++3 standards rows (WHATWG SSE §9.2, RFC 6455, WHATWG WebSocket), +2 evals (273 → 275).
+
 ## [1.227.0] — 2026-09-19
 
 ### deep-code-review — wave 148 GraphQL resolver N+1 + null-deref-as-DoS (CWE-476) red-flags

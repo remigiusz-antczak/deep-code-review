@@ -575,3 +575,11 @@ determination routes to counsel).
 | Standard / source | URL | What was confirmed |
 |---|---|---|
 | Standard Webhooks (community spec) | https://github.com/standard-webhooks/standard-webhooks | Outbound-webhook signing convention: the message's "ID, timestamp and body are concatenated (delimited by full-stops) and then signed" with HMAC-SHA256 (`msg_id.timestamp.payload`); headers `webhook-id` / `webhook-timestamp` / `webhook-signature`; the signature header is "a space delimited list of signatures" to "support zero downtime secret rotation"; verify `webhook-timestamp` "is within some allowable tolerance ... to prevent replay attacks." A multi-vendor community spec (guided by an ~8-company technical steering committee), not an IETF/W3C standard — cite as a convention. Fetched + verified 2026-09-19. |
+
+## Verified by direct fetch (2026-09-19) — streaming transports (WebSocket / SSE)
+
+| Standard / source | URL | What was confirmed |
+|---|---|---|
+| WHATWG HTML — Server-sent events (§9.2) | https://html.spec.whatwg.org/multipage/server-sent-events.html | Reconnection re-sends the last id: "Set (`Last-Event-ID`, lastEventIDValue) in request's header list" when the last event ID string is not empty; the reconnection time "must initially be an implementation-defined value, probably in the region of a few seconds," with "an exponential backoff delay" on repeated failure. Fetched + verified 2026-09-19. |
+| RFC 6455 — The WebSocket Protocol | https://www.rfc-editor.org/rfc/rfc6455 | A Ping "may serve either as a keepalive or as a means to verify that the remote endpoint is still responsive"; "Upon receipt of a Ping frame, an endpoint MUST send a Pong frame in response, unless it already received a Close frame"; "Message fragments MUST be delivered to the recipient in the order sent by the sender" (ordering is per-connection). Fetched + verified 2026-09-19. |
+| WHATWG — WebSocket `bufferedAmount` | https://websockets.spec.whatwg.org/ | `bufferedAmount` = "the number of bytes of application data ... that have been queued using `send()` but that ... had not yet been transmitted to the network"; the flow-control example paces sends "at whatever rate the network _can_ handle," checking `bufferedAmount`. Basis for per-connection send-side backpressure. Fetched + verified 2026-09-19. |
