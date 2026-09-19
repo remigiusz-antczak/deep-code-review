@@ -335,6 +335,22 @@ LLM-backed feature, add cases that assert the guardrail holds:
   steps / spend) must be **propagated to every spawned sub-agent** — a parent cap
   not forwarded leaves each child on the framework default and the whole tree
   unbounded.
+- **Streaming / completion-delivery mode is part of output handling and spend.** A guard written
+  for one *complete* response silently fails on a **streamed** one, and truncated output reads as
+  complete: (1) **check the finish / stop reason** (`finish_reason` / `stop_reason`) before using a
+  response — one cut off by a length or safety stop but returned with HTTP 200, then rendered /
+  stored / parsed as if whole, is a silent truncation (**LLM10**); (2) a moderation / schema /
+  sanitization guard built for one complete string must run on the **assembled** stream, not
+  per-chunk-too-late or not-at-all once delivery is chunked / SSE (**LLM10**); (3) **chunk-boundary
+  evasion** — a payload split across two stream chunks passes a per-chunk sanitizer that inspects
+  each fragment in isolation, so guard the *assembled* output (**LLM10**); (4) a **client disconnect
+  must cancel the upstream generation** — a caller that aborts mid-stream while the model keeps
+  generating burns billed tokens nobody reads (**LLM06**), distinct from the pre-dispatch caps above
+  (this is cancellation *after* a call starts): wire the consumer's abort / close (`AbortSignal`,
+  `req.on('close')`, context) through to the model call — the LLM-cost-specific case of the
+  abort-wiring discipline in `reliability-error-handling.md`. **🚩** `finish_reason` / `stop_reason`
+  used nowhere near the response's use site; an SSE / async-generator / stream handler that renders
+  or forwards chunks with no assembled-output guard and no abort path from the consumer.
 - **Provenance & grounding**: citations/sources for claims that reach users;
   confidence surfaced; unverifiable claims flagged, not shipped as fact.
 - **Context & memory lifecycle — a constraint must survive compaction.** A

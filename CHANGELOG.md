@@ -3,6 +3,28 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.194.0] — 2026-09-19
+
+### deep-code-review — wave 115 LLM streaming / completion-delivery review (security-ai-agents.md)
+
+From a round-3 research scout (verified genuine at source; the standard LLM-app items are covered under
+LLM01/10 + LLM06 + testing-and-evals RAG + privacy egress — streaming/completion-delivery mode was the
+zero-hit gap). Added as ONE bullet in "Defensive patterns to look for" (keeping the OWASP LLM01–LLM10
+enumeration a clean 1:1 walk), no new external source (under OWASP LLM Top 10 2026, already logged).
+
+- Check `finish_reason`/`stop_reason` before use (a length/safety-truncated 200 read as complete) — LLM10.
+- A complete-string moderation/sanitizer guard must run on the ASSEMBLED stream, not per-chunk — LLM10.
+- Chunk-boundary evasion (a payload split across two chunks passes a per-chunk sanitizer) — LLM10.
+- A client disconnect must cancel the upstream generation (non-cancelled generation burns billed tokens;
+  distinct from pre-dispatch caps) — LLM06; cross-ref the abort-wiring discipline in reliability-error-handling.md.
+
+Three evals (deep-code-review 207 -> 210). Trio -> 1.194.0. `SHA256SUMS` regenerated last.
+
+Dogfood reviewer (sonnet): FIX-FIRST -> applied. Moved all 4 deltas out of the mid-OWASP-list splice
+into "Defensive patterns" (one bullet, LLM10/LLM06 tagged) so the LLM01–LLM10 walk stays 1:1; rewrote
+the client-disconnect eval to withhold the mechanism and make the "distinct from pre-call caps"
+expectation discriminate; added the reliability-error-handling cross-ref. No fabrication/overclaim found.
+
 ## [1.193.0] — 2026-09-19
 
 ### deep-code-review — wave 114 resource lifecycle / leak review

@@ -2202,6 +2202,36 @@
         "Notes each uncleared timer retains its closure (a leak)",
         "Requires clearInterval/clearTimeout on teardown (useEffect cleanup), same class as an un-removed listener"
       ]
+    },
+    {
+      "id": "an-llm-response-must-be-checked-for-a-truncation-stop-reason-before-use",
+      "prompt": "A service calls an LLM, takes `response.content`, parses it as JSON, and stores it. Occasionally the stored JSON is invalid or a list is cut short, but there's no error in the call. What's likely missing?",
+      "expected_output": "The code never checks the completion's finish/stop reason. When the model hits its max-token limit (or a safety stop), the API returns a truncated response with finish_reason 'length' (or equivalent) and HTTP 200 — no error — so a response cut mid-JSON/mid-list is parsed and stored as if complete. Check finish_reason/stop_reason before using the output: on a length/safety truncation, retry with a higher limit / continuation, or reject — don't treat a 200 as a complete response. This is output handling (LLM10) applied to the completion/delivery mode.",
+      "expectations": [
+        "Identifies the missing finish_reason/stop_reason check — a length/safety-truncated response returns 200 and is used as if complete",
+        "Notes the symptom (invalid/short JSON, no error) follows from treating a truncated completion as whole",
+        "Requires checking the stop reason before use and handling truncation (retry/continue/reject), not trusting the 200"
+      ]
+    },
+    {
+      "id": "a-moderation-or-sanitizer-guard-on-complete-output-must-run-on-the-assembled-stream",
+      "prompt": "An app moderates and HTML-sanitizes the LLM's full response string before showing it. To cut latency it switches to streaming the response to the browser token-by-token as it arrives. Moderation still 'passes.' What's the risk?",
+      "expected_output": "The guard was written for one complete string; streaming defeats it two ways. (1) If moderation/sanitization now runs per-chunk (or is skipped because there's no single complete string), unsafe output can reach the user before/without the guard seeing the whole thing. (2) Chunk-boundary evasion: a payload (a script tag, a policy-violating phrase) split across two stream chunks passes a per-chunk check that inspects each fragment in isolation. Fix: run moderation/sanitization on the ASSEMBLED output — buffer-and-guard before release, or use a streaming-aware guard; don't render/forward raw chunks. Streaming is part of output handling (LLM10), not a free latency win.",
+      "expectations": [
+        "Identifies that a complete-string guard runs too-late/not-at-all or per-chunk under streaming, so unsafe output can reach the user",
+        "Identifies chunk-boundary evasion (a payload split across chunks passes a per-chunk sanitizer)",
+        "Requires guarding the assembled output (buffer-and-guard / streaming-aware), not raw per-chunk rendering"
+      ]
+    },
+    {
+      "id": "a-client-disconnect-must-cancel-the-upstream-llm-generation-or-it-burns-billed-tokens",
+      "prompt": "A streaming chat endpoint forwards LLM tokens to the browser over SSE. Users often close the tab mid-response. The LLM bill is higher than session/message counts would suggest, even though a per-request token cap is already enforced. What's happening, and what's the fix?",
+      "expected_output": "The client disconnect isn't propagated to the upstream model call: when the user closes the tab, the server stops reading the SSE stream but the model keeps generating server-side, billing for tokens nobody receives. The per-request token cap doesn't help — it bounds each call's size before dispatch; this is wasted spend on a call already in flight, orthogonal to the cap. Wire the consumer's abort/close (req.on('close') / AbortController / context cancellation) through to the model API call so a disconnect aborts the upstream generation. Red flag: a streaming model call with no abort path from the consumer. (Unbounded Consumption — LLM06 — via non-cancelled generation.)",
+      "expectations": [
+        "Identifies that the client disconnect isn't propagated upstream, so generation continues server-side and bills for unread tokens (not a fault of request size)",
+        "Explains why the enforced per-request token cap doesn't address it — the cap bounds a call before dispatch; this is wasted spend on a call already in flight (cancellation, not a ceiling)",
+        "Requires wiring the consumer abort/close (req.on('close')/AbortController/context) through to the model call"
+      ]
     }
   ]
 }
