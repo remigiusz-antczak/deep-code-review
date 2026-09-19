@@ -52,6 +52,10 @@ grep -rInE 'console\.log|print\(|dbg!|System\.out\.print|fmt\.Print' .
   to non-`strict`.
 - Floating promises (missing `await`), `.catch` absent, `async` in `forEach`
   (does not await) → dropped errors / races.
+- `addEventListener` / `.on(` / `.subscribe(` / `setInterval` / `setTimeout` with no matching
+  `removeEventListener` / `.off(` / `unsubscribe` / `clearInterval` / `clearTimeout` on
+  unmount / request-end / disposal → listener + timer leaks (a `useEffect` with no cleanup return
+  is the React form; see the subscription-lifetime rule in `concurrency-shared-state.md`).
 - `process.env.X` read at module load without validation → silent misconfig.
 - Secrets or API keys referenced in client/bundle code → shipped to the browser.
 

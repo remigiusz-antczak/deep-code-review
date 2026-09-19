@@ -35,6 +35,15 @@ paths. Expands section G of `SKILL.md`. Cross-ref J /
   any per-call cache the orchestrator already passes), not by adding a lock. A
   self-authored test that calls the method **once** is structurally blind to this —
   add a two-run regression test.
+- **A subscription that outlives its subscriber is the same lifetime mismatch.** A listener,
+  observer, or callback registered on a **longer-lived** emitter / event bus / store / signal, with
+  no deregistration when the subscriber's own lifetime ends (a component unmounts, a request
+  finishes, a worker is recycled), accumulates: the live emitter retains each dead subscriber (so it
+  never gets collected) and its handler keeps firing on detached state. Same question — does the
+  registration's lifetime match the subscriber's? — and same fix: pair every register with a
+  deregister on teardown. The stack-agnostic form of the goroutine-leak footgun in
+  `language-stack-redflags.md`: a spawned task or subscription with no cancellation reachable from
+  its owner's teardown.
 - **Non-atomic read-modify-write** (`x = load(); x.f++; store(x)`) under
   concurrency needs a lock, atomic primitive, or single-writer queue.
 - **Lock held across I/O** — latency multiplies; deadlock risk rises when a
@@ -148,7 +157,7 @@ for acting on it without collateral damage.
 ---
 
 **🚩 red flags**: shared mutable globals; a per-request/run field held on a
-singleton/long-lived object (lifetime mismatch); missing `await`; non-atomic
+singleton/long-lived object, or a subscription/listener outliving its subscriber (lifetime mismatch); missing `await`; non-atomic
 read-modify-write; load→await→write without re-read/CAS; lock held across I/O;
 two writers on one file; corrupt/unreadable store wiped to empty; check-then-act
 without a constraint/transaction; tests/jobs writing a real tracked/shared data

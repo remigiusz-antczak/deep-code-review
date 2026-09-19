@@ -3,6 +3,29 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.193.0] — 2026-09-19
+
+### deep-code-review — wave 114 resource lifecycle / leak review
+
+From an industry-research scout (verified genuine at source; acquire/release-on-error-path already
+covered by A10, unbounded-cache/goroutine-leak already covered — these 3 sub-patterns were zero-hit).
+Engineering-judgment deltas, no new external citation.
+
+- **A subscription/listener/observer that outlives its subscriber is the same lifetime mismatch** —
+  the live emitter retains the dead subscriber (no GC) and its handler fires on detached state; pair
+  register with deregister on teardown. → `concurrency-shared-state.md` (+ 🚩 footer widened).
+- **Listener/timer/subscription with no teardown** (`addEventListener`/`.on`/`.subscribe`/
+  `setInterval` with no matching removal; a `useEffect` with no cleanup) → `language-stack-redflags.md`.
+- **A pool connection not released on the error path starves the pool**; pool exhaustion as its own
+  symptom → `performance-db-cost.md` (cross-ref `security-appsec.md` A10 for the general form; 🚩 grep
+  extended).
+
+Three evals (deep-code-review 204 -> 207). Trio -> 1.193.0. `SHA256SUMS` regenerated last.
+
+Dogfood reviewer (sonnet): PASS-WITH-NITS -> applied (widened the concurrency 🚩 footer to match the
+extended lifetime class; added the pool-exhaustion pattern to the perf-db-cost 🚩 grep; cross-ref'd
+A10 from the pool bullet). No-duplication and correctness verified clean.
+
 ## [1.192.0] — 2026-09-19
 
 ### deep-code-review — wave 113 API/SDK evolution & deprecation discipline (api-contracts.md)

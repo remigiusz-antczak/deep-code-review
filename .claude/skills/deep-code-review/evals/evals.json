@@ -2172,6 +2172,36 @@
         "Requires usage/call-volume evidence that the deprecated path is unused — removal without it is a guess, not a verified drop",
         "Ties it to skip-rather-than-guess; only remove after the sunset passes AND traffic is zero / remaining callers migrated"
       ]
+    },
+    {
+      "id": "a-subscription-that-outlives-its-subscriber-is-a-leak-even-with-no-race",
+      "prompt": "A dashboard component subscribes to a long-lived app-wide event bus in its constructor to update on data changes. Components mount and unmount as the user navigates. Over a session, memory grows and stale components' handlers still run (updating detached UI, sometimes throwing). No concurrency involved. What's the defect?",
+      "expected_output": "A lifetime mismatch: the subscription's lifetime (one component instance) doesn't match the emitter's (app-wide, long-lived). Each unmounted component is retained by the live event bus because its handler is still registered, so it never gets collected AND its handler keeps firing on detached state — a leak even single-threaded, no race. Fix: pair every register with a deregister on teardown — unsubscribe / removeEventListener / .off on unmount (a useEffect cleanup return in React). Ask of any registration: does its lifetime match the subscriber's? Same shape as a spawned task with no cancellation reachable from its owner's teardown.",
+      "expectations": [
+        "Identifies a lifetime mismatch (subscription for a short-lived subscriber on a long-lived emitter) that leaks with no concurrency",
+        "Notes the emitter retains the dead subscriber (no GC) and its handler still fires on detached state",
+        "Requires pairing register with deregister on teardown (unsubscribe/off; useEffect cleanup) — matching registration lifetime to subscriber lifetime"
+      ]
+    },
+    {
+      "id": "a-pool-connection-not-released-on-the-error-path-starves-the-pool-under-load",
+      "prompt": "A service checks out a DB connection from the pool, runs a query, and returns it to the pool at the end of the function. Under load the service hangs waiting for connections; the happy path returns connections fine. What's likely wrong?",
+      "expected_output": "A checked-out pool connection isn't released on the ERROR path — if the query or the code between checkout and release throws, the return-to-pool line is skipped, so that connection leaks. Under load, leaked checkouts accumulate until the pool is exhausted and every request blocks waiting for a connection that never comes back. Release on EVERY path (finally / defer / try-with-resources / context-manager / using), not just the happy path. Watch pool exhaustion — active connections trending to max with checkouts never returned — as its own symptom. Distinct from constructing a fresh client per call (which throws away the pool); here the pool exists but connections leak out of it.",
+      "expectations": [
+        "Identifies the leak as a checkout not released on the error/throw path (released only on the happy path)",
+        "Requires releasing on every path (finally/defer/using/context-manager) so an exception can't skip the return",
+        "Names pool exhaustion (active→max, checkouts unreturned) as the symptom; distinguishes from fresh-client-per-call"
+      ]
+    },
+    {
+      "id": "a-recurring-timer-with-no-clear-on-teardown-leaks-and-keeps-firing",
+      "prompt": "A component starts `setInterval(poll, 5000)` when it mounts to refresh data; it's never cleared. Users report the app slowing down and duplicate network calls after navigating between pages several times. Cause?",
+      "expected_output": "The interval is never cleared on unmount, so every mount starts a new recurring timer that fires forever — after N navigations, N intervals run concurrently (the slowdown + duplicate polls), and each retains its closure (a leak). A recurring timer/interval must have a matching clearInterval/clearTimeout on teardown (a useEffect cleanup return in React; unsubscribe on disposal generally). Same class as a listener registered with no removal — pair start with stop on the owner's teardown.",
+      "expectations": [
+        "Identifies uncleared setInterval accumulating one live timer per mount (concurrent timers → slowdown + duplicate calls)",
+        "Notes each uncleared timer retains its closure (a leak)",
+        "Requires clearInterval/clearTimeout on teardown (useEffect cleanup), same class as an un-removed listener"
+      ]
     }
   ]
 }

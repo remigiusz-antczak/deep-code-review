@@ -37,7 +37,11 @@ of work earn its keep?**
   likewise reuse one HTTP/SDK client per process, since constructing a fresh
   client per call throws away its connection pool; transactions scoped as tightly
   as correctness allows; no long transaction held across a network/LLM call (lock
-  contention); no application logic inside a DB lock window.
+  contention); no application logic inside a DB lock window. A borrowed/checked-out pool connection must be
+  **released on every path including the error/throw path** (the general form is `security-appsec.md`
+  A10) — a leaked checkout starves the pool under load; watch **pool exhaustion** (active connections
+  trending toward max with checkouts never returned) as its own symptom, distinct from constructing a
+  fresh client per call above.
 
 ## Schema & data migrations (safety)
 
@@ -190,7 +194,8 @@ Every billable or slow call must map to value delivered.
 large `OFFSET`; `.all()` then filter in code; identical HTTP/LLM calls with the
 same args; an external call in the render body of a `no-store`/dynamic page; the
 same full-collection scan run twice in one operation; a fresh SDK/HTTP client
-constructed per call; no `timeout=`/`AbortController` on network calls; `while
+constructed per call; a pool checkout not returned on the error path (connections trending to max =
+pool exhaustion); no `timeout=`/`AbortController` on network calls; `while
 True` poll loops; `CREATE INDEX` without `CONCURRENTLY`; `ADD COLUMN … NOT NULL`
 with no default; unbounded in-memory caches/dicts as module globals; retry loops
 with no cap; a custom retry loop wrapping an auto-retrying SDK; a prompt-cache
