@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.231.0] — 2026-09-20
+
+### deep-code-review — wave 152 JWT algorithm confusion (A07)
+
+- **`security-appsec.md`** (A07): new rule — JWT algorithm confusion. `alg: none` was already flagged; the live-key variant is worse. A verifier that accepts both a symmetric (HS256) and an asymmetric (RS256/ES256) algorithm AND reads the algorithm from the token's own `alg` header is forgeable — an attacker signs with `alg: HS256` using the RSA/EC **public** key (published, not secret) as the HMAC key, and a naive `verify()` accepts it. "The signature verifies" is not enough when the attacker chooses the algorithm. Fix: pin an algorithm allow-list per verification context; never derive the algorithm from the token; don't mix signature and MAC algorithms on the same key material.
+- +1 eval. +2 standards rows (OWASP ASVS v5.0 §9.1.2 (L1, confirmed at source); OWASP JWT Cheat Sheet), fetched + verified 2026-09-20.
+
 ## [1.230.0] — 2026-09-20
 
 ### deep-code-review — wave 151 lock-ordering deadlock (prevention vs recovery)

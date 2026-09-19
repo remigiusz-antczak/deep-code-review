@@ -2911,6 +2911,16 @@
         "Names this a circular-wait/deadlock that only manifests under concurrent execution (queue consumer racing the webhook handler), not in a single-path unit test",
         "Prescribes a fixed global lock-acquisition order across both call sites (or a deadlock-avoiding multi-lock primitive) as the fix, not treating it as a plain missing-lock or missing-timeout bug"
       ]
+    },
+    {
+      "id": "jwt-algorithm-confusion-verifier-trusts-the-token-alg-header",
+      "prompt": "An API verifies JWTs with `verify(token, key)` where the library reads the algorithm from the token's own `alg` header, and the service is configured to accept both RS256 (an RSA key pair) and HS256. The RSA public key is published at a well-known JWKS URL. A reviewer says 'signatures are verified, so forgery is impossible.' Is that right?",
+      "expected_output": "No — this is JWT algorithm confusion. Because the verifier picks the algorithm from the token's own `alg` header and accepts both an asymmetric (RS256) and a symmetric (HS256) algorithm, an attacker can set `alg: HS256` and sign the token using the RSA PUBLIC key (published, not secret) as the HMAC secret; a naive verify() that trusts `alg` then uses that same public key as the HMAC key and accepts the forged token. 'Signatures are verified' is insufficient when the verifier lets the attacker choose the algorithm — a public key is not a secret and cannot safely serve as a MAC key. Fix: pin an algorithm allow-list per verification context and never derive the algorithm from the token — accept only the specific algorithm this context expects (e.g. RS256 only), never 'None', and do not mix public-key signature algorithms with MAC algorithms on the same key material. (`alg: none` is the degenerate form of the same bug.)",
+      "expectations": [
+        "Identifies JWT algorithm confusion: the attacker sets alg to HS256 and signs with the RSA PUBLIC key as the HMAC secret because the verifier trusts the token's own alg header and accepts both asymmetric and symmetric algorithms",
+        "Explains that 'the signature verifies' is insufficient when the attacker chooses the algorithm — a public key is not a secret, so it cannot safely serve as a MAC key",
+        "Prescribes pinning an algorithm allow-list per verification context (accept only the expected algorithm; never read alg from the token; do not mix signature and MAC algorithms), not merely 'check the signature'"
+      ]
     }
   ]
 }

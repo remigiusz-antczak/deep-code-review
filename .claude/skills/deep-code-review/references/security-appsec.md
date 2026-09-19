@@ -454,6 +454,21 @@ checked inside the returned ID token. Validate the ID token's `iss`, `aud`,
 token or one fetched from an issuer-supplied URL without pinning. Implicit flow
 and tokens in URL fragments/query strings are findings.
 
+**JWT algorithm confusion (asymmetric token verified as symmetric).** `alg: none`
+(above) is the degenerate case; the live-key variant is worse. A verifier that
+accepts **both** a symmetric (HS256) and an asymmetric (RS256/ES256) algorithm **and
+reads the algorithm from the token's own `alg` header** is forgeable: an attacker
+sets `alg: HS256` and signs with the RSA/EC **public** key — published, not secret —
+as the HMAC key; a naive `verify(token, key)` then uses that public key as the HMAC
+secret and accepts the forgery. "The signature verifies" is not enough when the
+attacker chooses the algorithm — a public key is not a secret and must never serve as
+a MAC key. Fix: pin an **algorithm allow-list per verification context** and never
+derive the algorithm from the token — "only algorithms on an allowlist can be used …
+must not include the 'None' algorithm. If both symmetric and asymmetric must be
+supported, additional controls will be needed to prevent key confusion" (OWASP ASVS
+v5.0 §9.1.2, L1); "hardcode the accepted algorithms and do not mix public-key digital
+signatures algorithms and MAC algorithms" (OWASP JWT Cheat Sheet).
+
 **Refresh tokens.** Rotate on every use, invalidate the predecessor, and
 implement **reuse detection**: presentation of an already-rotated token means the
 chain is compromised → revoke the whole family/session and force
