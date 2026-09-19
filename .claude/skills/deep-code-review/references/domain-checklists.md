@@ -16,6 +16,18 @@ Read this when walking a domain in Phase 2 (or a DIFF quick-path that touches th
 - **Money & numeric precision**: currency uses integer-minor-units or `Decimal`,
   **never** binary `float`; rounding mode is explicit and consistent;
   accumulation error bounded. (Float-for-money is a textbook Critical.)
+- **Non-finite results (`NaN`, `±Infinity`) don't fail loud on the float path — and encoders
+  disagree on them.** In **unguarded IEEE 754 float** arithmetic (JS numbers, C/Java/Rust
+  `float`/`double`, NumPy) a `0.0/0.0` or an overflow yields `NaN`/`±Infinity` that **keeps
+  flowing instead of raising**, and by IEEE 754 `NaN` compares **false** to everything including
+  itself — so it silently poisons `min`/`max`/`sort`, dedup, and aggregates (order-dependent).
+  This is **not** a universal divide-by-zero rule: many languages **guard** division — Python's
+  `/` raises `ZeroDivisionError`, integer division traps in Java/Rust/C — so it is a *float-path*
+  hazard. Serialization then **diverges**: `JSON.stringify` emits `null`, Python's default
+  `json.dumps` emits a non-standard `NaN`/`Infinity` token, Go's `encoding/json` **errors** — so
+  a non-finite value becomes a blank cell, a broken parse, or a failed encode depending on stack.
+  Detect it (guard the divisor / `isfinite` → reject / clamp / explicit sentinel) at the point it
+  can arise, not downstream once it has spread.
 - **Time & dates**: store and compute in **UTC**, tz-aware; use a **monotonic
   clock** for durations (not wall-clock, which jumps); handle DST, leap
   day/second, and clock skew across services; never derive freshness from a
@@ -34,7 +46,9 @@ Read this when walking a domain in Phase 2 (or a DIFF quick-path that touches th
   it only when backing data exists ("empty beats fabricated" for layout too).
 - 🚩 `==`/truthiness bugs, `float` for money, naive datetimes, mutation of
   shared/default args, silent coercion, unhandled enum case, subset flag that
-  unions, "latest batch" keyed on a shared timestamp a single write can move.
+  unions, "latest batch" keyed on a shared timestamp a single write can move, an integer id/amount sent as a
+  JSON number past 2^53, an unchecked NaN/Infinity on a float path reaching an aggregate or a JSON
+  encoder (null / non-standard token / encode error, by stack).
 
 ### B. Security — application (OWASP Top 10:2025) → `references/security-appsec.md`
 **If the target has a network surface or accepts untrusted input, load

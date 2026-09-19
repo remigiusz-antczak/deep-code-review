@@ -67,6 +67,16 @@ Treat persisted and in-flight payloads like DB schemas:
 - **Poison messages** — bad payload must dead-letter or skip with loud metric,
   not block the partition forever.
 - Exactly-once is rare; design for **at-least-once + idempotent consumer**.
+- **A number crossing the wire can lose a guarantee its type never enforced.** An integer wider
+  than the receiver's exact-integer range is silently **rounded, not rejected**: JSON numbers
+  interoperate as IEEE 754 double, exact only for integers in `[-(2^53)+1, (2^53)-1]`
+  (RFC 8259 §6 — "implementations will agree exactly" only inside that range), so a 64-bit id, a
+  large minor-unit amount, or a snowflake sent as a JSON **number** can arrive **changed** while
+  every schema and type check still passes (`integer` says nothing about magnitude). Send such
+  values as **strings** (or pin a documented smaller-range contract), and check, per numeric
+  field crossing a serialization / storage / language boundary, its exact-representable range at
+  each hop — the same class as the cents-vs-dollars unit breach in `data-quality.md`, at the
+  representation layer.
 
 ---
 

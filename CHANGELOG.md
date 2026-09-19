@@ -3,6 +3,32 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.189.0] — 2026-09-19
+
+### deep-code-review — wave: numeric correctness at a boundary
+
+From an industry-research scout (verified genuine at source; float-for-money was already covered,
+these boundary-crossing numeric mechanics were absent by repo-wide grep).
+
+- **Integer past 2^53 across a JSON boundary is silently rounded, not rejected** — JSON numbers
+  interoperate as IEEE 754 double, exact only for integers in [-(2^53)+1, (2^53)-1] (RFC 8259 §6);
+  a 64-bit id / large amount sent as a JSON number arrives changed while `type: integer` still
+  passes. Send as strings or a documented range contract. → `api-contracts.md`.
+- **Non-finite results (NaN/±Infinity) don't fail loud on the float path** — they poison
+  min/max/sort/aggregate (NaN compares false to everything). Scoped honestly: many languages guard
+  division (Python's `/` raises), and encoders diverge on non-finite output (JS → null, Python →
+  non-standard token, Go → error), so the "silent null" outcome is stack-specific, not universal.
+  → `domain-checklists.md` domain A.
+
+Two evals (deep-code-review 193 -> 195). Sources logged in `docs/standards-index.md`: RFC 8259
+(STD 90) + CWE-1339 (fetched 2026-09-19); IEEE 754 added to the by-name list (paywalled). Trio ->
+1.189.0. `SHA256SUMS` regenerated last.
+
+Dogfood reviewer (sonnet): FIX-FIRST -> applied. The non-finite claim was overclaimed as a
+universal (empirically false: Python `/` raises, `json.dumps(NaN)` emits a token, Go errors) —
+rescoped to the unguarded-float path with per-stack encoder behavior, and the eval pinned to
+Node/JS so its expectations stay sharp. IEEE 754 was cited but unindexed — added by-name.
+
 ## [1.188.0] — 2026-09-19
 
 ### deep-code-review — wave 109 i18n / Unicode-security depth (domain R)

@@ -2062,6 +2062,26 @@
         "Notes the failure is silent (wrong value by ~1000×, no error) — a data-integrity defect, not a crash",
         "Requires parsing against the input's known locale or an unambiguous machine format, and rejecting rather than guessing"
       ]
+    },
+    {
+      "id": "a-64-bit-integer-id-sent-as-a-json-number-is-silently-rounded-past-2-53",
+      "prompt": "A service returns 64-bit database ids as JSON numbers. Schema validation (type: integer) passes on both ends, tests pass with small seed ids, and it ships. In production, some ids fetched by clients don't match any row. What's the defect and the fix?",
+      "expected_output": "JSON numbers interoperate as IEEE 754 double, exact only for integers in [-(2^53)+1, (2^53)-1] (RFC 8259 §6). A 64-bit id above 2^53 is silently ROUNDED to the nearest representable double when a JSON parser reads it into a float — the value changes, yet `type: integer` still passes because the schema constrains type, not magnitude; small seed ids never exceed 2^53, so tests miss it. Fix: serialize large ids (and large minor-unit amounts, snowflakes) as STRINGS, or pin a documented range contract; check each numeric field crossing a serialization/storage/language boundary for its exact-representable range at every hop. A type check is not a range check.",
+      "expectations": [
+        "Identifies that JSON numbers are IEEE 754 double, exact only within ±(2^53−1) (RFC 8259 §6), so a large integer id is silently rounded on parse",
+        "Notes the type/schema check passes because it constrains type not magnitude, and small seed ids hide it in tests",
+        "Fixes by sending large ids/amounts as strings (or a documented range contract) and checking representable range per boundary hop"
+      ]
+    },
+    {
+      "id": "a-non-finite-result-propagates-to-a-null-dashboard-cell-instead-of-failing",
+      "prompt": "A Node.js metrics job computes ratios; for one segment the denominator is zero, producing a value that flows through Math.max() and a sort into a stored aggregate, then JSON.stringify for a dashboard, where the cell shows blank. No error anywhere. What happened and what should the code do?",
+      "expected_output": "In JS, 0/0 yields NaN (x/0 yields ±Infinity) and float division does not raise, so it propagated. By IEEE 754, NaN compares false to everything including itself, so it silently corrupts Math.max()/sort()/aggregation (order-dependent — it neither reliably wins nor loses comparisons); and JSON.stringify emits null for a non-finite number, so the dashboard blank reads as 'no data' rather than a broken computation. Guard the divisor / check Number.isFinite at the point it arises and reject, clamp, or substitute an explicit sentinel — don't let it flow downstream. Note the hazard is stack-specific: Python's `/` raises instead of propagating, and some encoders emit a non-standard NaN token or error rather than null — so 'silently becomes null' is JS behavior, not universal.",
+      "expectations": [
+        "Identifies the value as non-finite (NaN from 0/0) propagating on JS's float path, and that NaN compares false to everything so it poisons Math.max/sort/aggregate",
+        "Notes JSON.stringify emits null for a non-finite number (disguising a broken computation as a blank cell) — ideally flagging this as stack-specific, not universal",
+        "Requires detecting/handling the non-finite result where it arises (guard divisor / Number.isFinite → reject/clamp/sentinel), not downstream"
+      ]
     }
   ]
 }
