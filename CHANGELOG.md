@@ -3,6 +3,20 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.218.0] — 2026-09-19
+
+### deep-code-review — wave 139 a gate's committed fixture is part of its contract (closes #507)
+
+`testing-and-evals.md` new section: a gate that asserts real-data-shaped output is honest on a clean clone
+only if the committed fixture can produce what it checks — else it is red-by-construction (green from a
+populated checkout, red on a fresh clone) and the repo's "green `verify` from a clean clone" DoD claim is
+false. Fix by enriching the fixture to exercise every asserted field, or scoping real-data-only assertions
+to a real-bundle run; verify from a truly clean clone. The repeated "several contributors each copy the real
+bundle in" workaround is the signal that the fixture/gate contract is the defect. `docs-and-dx.md`: one
+pointer line by the missing-prerequisite → symptom map.
+
++1 eval (255 -> 256 deep-code-review).
+
 ## [1.217.0] — 2026-09-19
 
 ### deep-code-review — wave 138 caching correctness (#478) + a CONCURRENTLY migration correction

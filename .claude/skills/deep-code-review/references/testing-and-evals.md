@@ -202,6 +202,29 @@ unrun matrix is `unverified`, not a pass") resolve the same way — **name the r
 silent pass** (`SKILL.md` principle 2: an absence is evidence only after a positive control fires);
 they differ only in cause — here the gate ran green *once*, there it never ran.
 
+## A gate's committed fixture is part of its contract — a clean-clone gate must be satisfiable without the gitignored data
+
+A gate that asserts real-data-shaped output — required copy, a populated section, a field's
+presence — is honest on a clean clone only if the **committed fixture** can produce what it
+checks. If the sample fixture omits the fields the assertion needs (they live only in the real,
+gitignored bundle), the gate is **red on a clean clone by construction**: green for anyone
+working from a populated checkout, red for everyone on a fresh clone/worktree, while the repo's
+own "green `verify` from a clean clone" Definition-of-Done claim is quietly false.
+
+The committed fixture is part of the gate's contract. Resolve it one of two ways:
+- **Enrich the fixture** so it exercises every field/section the gate asserts (a clean clone can
+  render every required-copy check), or
+- **Scope the real-data-only assertions to a real-bundle run**, and on the clean-clone run assert
+  only what the fixture can produce.
+
+Verify by running the gate from a **truly clean clone** (no gitignored data present), not from
+your populated tree: red there means the fixture or the assertion scope is wrong, and any "green
+from a clean clone" claim stays `unverified` until it holds — the resolving artifact is the clean
+run, not the convenient one (`SKILL.md` principle 3). **Signal:** when several contributors
+independently hit the *same* gate failure and each "fixes" it by copying the real gitignored data
+into their checkout, the defect is the fixture/gate contract, not their environments — the
+workaround masks a standing Definition-of-Done violation.
+
 ## Prove a rendered-layout claim with geometry, not class names
 
 A UI test that asserts **the class that is supposed to produce a layout** —
