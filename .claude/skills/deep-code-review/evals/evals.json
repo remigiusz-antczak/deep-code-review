@@ -1681,6 +1681,28 @@
         "Prescribes proving v2 on prediction quality via shadow or canary / champion-challenger with a prediction-quality promotion gate and a rollback path",
         "Notes a model canary needs a longer, quality-based bake than a code canary because ground truth lags"
       ]
+    },
+    {
+      "id": "automated-conflict-resolution-grep-markers-not-git-add-exit",
+      "prompt": "Our agent auto-resolves merge conflicts: for each conflicted file it runs `git checkout --theirs <path>` then `git add <path>`, and commits when `git add` succeeds. It works, except one file -- app/kpis/[key]/page.tsx -- shipped with conflict markers in it and only a later tsc error caught it. What went wrong, and how should automated resolution be gated?",
+      "expected_output": "Two bugs. (1) `git checkout --theirs app/kpis/[key]/page.tsx` was glob-expanded by the shell -- `[key]` is a character class that matched nothing (zsh errors; bash may pass the literal), so the checkout silently no-op'd and the file was never resolved. Quote/escape every path with glob metacharacters (`git checkout --theirs -- 'app/kpis/[key]/page.tsx'`, or disable globbing with the shell's own switch -- `setopt noglob` / `noglob` in zsh, `set -f` in bash/POSIX sh, since zsh's `set -f` leaves globbing on). (2) `git add` stages whatever is on disk -- conflict markers and all -- so `add` exiting 0 is NOT proof of resolution; the commit shipped `<<<<<<<`/`=======`/`>>>>>>>`. Gate every commit on a conflict-marker grep of the staged tree that actually fails on a hit (`git grep --cached -qE '^(<{7}|={7}|>{7})'` and exit non-zero, or `git diff --cached --check`; a bare `git diff -G` prints but exits 0, so it does not gate) plus a build/parse, not on `add` success -- especially in agent/automated resolution where no human eyeballs the diff. (branch-and-merge-hygiene.md.)",
+      "expectations": [
+        "Identifies shell glob-expansion of the [param] path making `git checkout --theirs` silently no-op (matched nothing) -- fix: quote/escape metachar paths (or disable globbing with the shell's switch: `setopt noglob` in zsh, `set -f` in bash)",
+        "States `git add` stages on-disk content incl. conflict markers, so `add` exiting 0 is not proof of resolution",
+        "Requires a conflict-marker grep of the STAGED tree before every commit (plus a build/parse) as the mechanical backstop",
+        "Frames it as a silent-corruption surface specific to automated/agent resolution (no human eyeballs the diff)"
+      ]
+    },
+    {
+      "id": "update-branch-checked-out-elsewhere-detached-ff-not-force",
+      "prompt": "I need to update PR branch `feature-x` (merge main into it, resolve, push), but `git worktree add feature-x` refuses -- it's already checked out in a stalled lane's worktree. Should I just force-push feature-x from a fresh clone to get it updated?",
+      "expected_output": "No -- force-pushing strands the other lane -- it discards commits it had already pushed (orphaned on the remote) and leaves its local ref and unpushed work on a now-diverged branch. The non-destructive primitive: create a DETACHED-HEAD worktree at the true remote head -- `git worktree add --detach <dir> origin/feature-x` -- do the work there (merge main in, resolve keep-both, run gates), then push `HEAD:feature-x`. When the remote ref is an ancestor of your new HEAD this is a fast-forward, not a force-push: it updates the PR branch without touching the other worktree and without rewriting history. Verify the ancestor relationship first; if the branch has diverged it needs a real merge, not a push. And the 'already checked out' collision is usually stale worktrees never pruned -- prune them (teardown hygiene). (branch-and-merge-hygiene.md.)",
+      "expectations": [
+        "Rejects the force-push -- it strands the other worktree's ref and any unpushed work there",
+        "Prescribes a detached-HEAD worktree at origin/<branch> (`git worktree add --detach`), do the work, then push HEAD:<branch>",
+        "Notes this is a fast-forward (not a force-push) only when the remote ref is an ancestor of the new HEAD -- verify first; a diverged branch needs a real merge",
+        "Notes the 'already checked out' collision is usually stale unpruned worktrees (teardown hygiene)"
+      ]
     }
   ]
 }

@@ -574,6 +574,32 @@ explicit approval** — the same opt-in bar as the Phase 6 imprint.
     unquoted variable immediately followed by a merge/delete/publish/deploy
     call, and confirm the loop actually iterates more than once against a
     multi-item fixture in the shells the script claims to support.
+- **Automated conflict resolution is gated on a marker-grep, not on `git add` exiting 0.**
+  `git add` stages whatever is on disk — conflict markers and all — so a resolution step whose
+  `git checkout --theirs -- <path>` silently failed can still be staged and committed with
+  `<<<<<<<` / `=======` / `>>>>>>>` in the tree (caught, if at all, only by a later parse error).
+  Two mechanical backstops, both required for agent/automated resolution where no human eyeballs
+  the diff: **quote/escape every path with glob metacharacters** (`git checkout --theirs --
+  'app/kpis/[key]/page.tsx'`, or disable globbing with the shell's own switch — `set -f` in
+  bash/POSIX sh, but `setopt noglob` / a `noglob` precommand in **zsh**, where `set -f` is NO_RCS
+  and leaves globbing on — because a `[param]` / `*` / `?` path glob-expands differently per shell,
+  zsh erroring on a no-match while bash may pass the literal, so an unquoted resolution silently
+  no-ops); and **grep the staged tree for conflict
+  markers before every commit, gating on the result** — `git grep --cached -qE
+  '^(<{7}|={7}|>{7})' && { echo 'unresolved markers'; exit 1; }` (exit 0 = a marker was found →
+  block), or git's built-in `git diff --cached --check`. A bare `git diff -G` *prints* the hunk
+  but **exits 0**, so it does not gate — and `add` success is never proof of resolution; the
+  gating marker-grep plus a build/parse is.
+- **Update a branch another worktree still holds with a detached-HEAD fast-forward, never a
+  force-push.** When the branch you must update is already checked out in another (often stalled)
+  worktree, `git worktree add <branch>` refuses and force-pushing to escape it **strands** that
+  lane — it discards commits the lane had already pushed (orphaned on the remote) and leaves its
+  local ref and unpushed work on a now-diverged branch. The non-destructive primitive: `git worktree add
+  --detach <dir> origin/<branch>`, do the work there (merge the base in, resolve, run gates), then
+  push `HEAD:<branch>` — a **fast-forward** when the remote ref is an ancestor of your new HEAD
+  (verify that first; if it diverged, it needs a real merge, not a push). The "already checked
+  out" collision is usually a symptom of stale worktrees never pruned — `git worktree prune`
+  (and removing a merged lane's tree) clears it.
 
 ## 7 — Severity discipline (don't turn cleanup into noise)
 
@@ -686,6 +712,12 @@ squash). Mark any PR column `unverified` when forge auth was absent (§1).
 - Under a worktree: an inherited absolute `core.hooksPath`, or a pre-push hook whose
   range is a hardcoded default branch instead of the pushed refs on stdin — gates run
   against the wrong tree or the wrong range.
+- A programmatic conflict resolution that stages with a quoted `git add` **without** grepping the
+  staged tree for `<<<<<<<` / `=======` / `>>>>>>>`, or an unescaped `[param]` / glob-metachar path
+  in a `git checkout` / `add` (a no-match glob silently no-ops the resolution).
+- A **force-push** used to update a branch checked out in another worktree (strands that lane's
+  unpushed work on a diverged branch + discards its pushed commits) instead of a detached-HEAD
+  fast-forward.
 
 ## Cross-references
 
