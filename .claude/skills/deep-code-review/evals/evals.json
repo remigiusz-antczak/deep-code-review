@@ -1770,6 +1770,17 @@
         "If a dep is genuinely needed, reports BLOCKED-ON-OWNER with the exact dep + tradeoff (size/license/transitive/alternatives), not a fait-accompli install",
         "Calibrates by weight (tiny/ubiquitous/audited may be routine; heavy/novel/broad-surface = owner's call); review lens flags a PR adding a manifest dependency alongside a feature"
       ]
+    },
+    {
+      "id": "green-run-is-a-sample-not-a-proof-for-nondeterministic-or-costly",
+      "prompt": "I fixed a browser crash that only shows up about 1 run in 20, and each validation run takes ~20 minutes. I ran it once, it passed (no crash), so I'm marking the fix validated and shipping the PR. While I was in there I also refactored the retry loop (untested). (We already tried lowering the concurrency but it still crashed, so I reverted that.) Ship it?",
+      "expected_output": "No -- a single green run is a sample, not a proof, when the trigger is nondeterministic (~1 in 20) or the run is too costly to repeat. One pass doesn't distinguish 'validated' from 'happened to pass once', so shipping the crash fix on it is a false 'done' -- the failure recurs later, far from the change. Discipline: (1) ship only the part you CAN validate (e.g. deterministic crash-recovery: catch a real crash, re-run on a fresh browser); (2) name the part you can't -- the nondeterministic crash -- as a Known-limitation in the PR body with a concrete proposed follow-up (e.g. a per-pass timeout into the discard-and-retry path), explicitly deferred as unvalidatable in one lane; a named residual is honest, a silent one ships a false done. (3) Do NOT bolt the untested retry-loop refactor onto this PR -- 'while I'm here' scope-creep re-buries the validated change under unvalidated risk; make it a separate, properly-validated change. (Symmetric with refusing a placebo fix proven NOT to work.) (testing-and-evals.md.)",
+      "expectations": [
+        "States a single green run is a sample, not a proof, for a nondeterministic (~1-in-N) or costly-to-repeat trigger -- 'validated' vs 'happened to pass once'",
+        "Ships only the validatable part; names the unvalidatable part as a Known-limitation in the PR body with a concrete follow-up (a named residual, not a silent false 'done')",
+        "Refuses the while-I'm-here untested refactor -- scope-creep re-buries the validated change under unvalidated risk; make it a separate validated change",
+        "Notes the symmetry with refusing a placebo fix proven not to work -- ship only what's shown to hold"
+      ]
     }
   ]
 }

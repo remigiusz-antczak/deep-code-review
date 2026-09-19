@@ -144,6 +144,31 @@ explicit third choice), not which one this review prefers.
   checked vs. human-reviewed vs. not-applicable-with-reasoning. Document
   coverage gaps and skipped tests; never claim an assurance you don't have.
 
+## A green run is a sample, not a proof, when the trigger is nondeterministic or the run is too costly to repeat
+
+Some fixes can't be validated in one session: a **nondeterministic trigger** (a browser
+degradation that appears ~1 run in N), or a validation run so long (~20 min each) that one pass
+is not proof. Shipping such a fix on a **single green run is a false "done"** — the failure
+recurs later, far from the change. **Distinguish "validated" from "happened to pass once,"** and
+label accordingly.
+- **Ship the part you *can* validate** — e.g. crash-recovery for a *reproducible* mid-pass browser
+  death, validated by catching a real crash and re-running the pass on a fresh browser.
+- **Name the part you can't** as a **Known-limitation** in the PR body, with a concrete proposed
+  follow-up (e.g. a per-pass timeout routed into the existing discard-and-retry path) — explicitly
+  deferred because its trigger is nondeterministic and unvalidatable in one lane. A **named
+  residual is honest; a silent one ships a false "done."**
+- **Don't let "while I'm here" scope-creep** bolt an **unproven** refactor onto an
+  otherwise-validated PR — it re-buries the validated change under unvalidated risk; make it a
+  separate, properly-validated change.
+- **Symmetric with the placebo.** The same judgment that refuses an *unvalidatable* fix also
+  refuses one **proven not to work** (a "lower the concurrency" change that still crashed). Ship
+  only what you've shown to hold; everything else is a named residual or a separate change.
+
+This *ran-green-but-once* residual and a *deferred / never-run* gate (`parallel-audit.md`'s "an
+unrun matrix is `unverified`, not a pass") resolve the same way — **name the residual, never a
+silent pass** (`SKILL.md` principle 2: an absence is evidence only after a positive control fires);
+they differ only in cause — here the gate ran green *once*, there it never ran.
+
 ## Prove a rendered-layout claim with geometry, not class names
 
 A UI test that asserts **the class that is supposed to produce a layout** —
@@ -436,4 +461,7 @@ anywhere in the repo; a served ML model with no drift monitoring on its input or
 prediction distribution; a new model version promoted on latency/error-rate alone,
 with no prediction-quality gate, shadow/canary, or rollback path; an
 absence / negative assertion loosened or removed in the same diff that adds a
-conflicting feature (silently reversing a ratified must-not-show-X constraint).
+conflicting feature (silently reversing a ratified must-not-show-X constraint); a fix for a
+nondeterministic or costly-to-repeat failure shipped on a single green run with no named residual
+(validated is not happened-to-pass-once), or an unproven refactor scope-crept onto an
+otherwise-validated PR.
