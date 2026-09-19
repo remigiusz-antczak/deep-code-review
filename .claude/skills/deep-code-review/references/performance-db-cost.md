@@ -22,7 +22,11 @@ of work earn its keep?**
 - **N+1**: a query issued per row of a previous result (query inside a `for`/
   `map`/serializer). Detect by reading the data-access path and by counting
   queries per request in a test. Fix with a join, an `IN (…)` batch, or the
-  ORM's eager-load.
+  ORM's eager-load. A **GraphQL resolver** N+1 is the *structural* variant this
+  textual grep misses: a field resolver invoked once per parent node in a list
+  fires N nested fetches with **no loop visible at any single call site** — the
+  fix is a per-request batch/cache seam (the **DataLoader** pattern), and the same
+  queries-per-request test catches it.
 - **Indexes**: the columns in `WHERE`/`JOIN`/`ORDER BY` on hot queries are
   indexed and the index is actually used — confirm with the query plan
   (`EXPLAIN`/`EXPLAIN ANALYZE`); a seq scan on a large table is the finding.

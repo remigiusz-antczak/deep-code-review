@@ -2841,6 +2841,26 @@
         "Locates the cause in generating options from the enum/type rather than the actual data",
         "Requires deriving options from the real data distribution (only non-zero counts, or show/disable counts), not emitting every enum value"
       ]
+    },
+    {
+      "id": "a-graphql-resolver-n-plus-1-has-no-visible-loop-fix-with-a-dataloader-batch-seam",
+      "prompt": "A GraphQL API's `posts` query returns 50 posts, and each post's `author` field has a resolver that fetches the user by id. Under load the DB shows ~51 queries for one `posts` request. Static review found no query inside a loop. Why does the existing N+1 grep miss this, and what's the fix?",
+      "expected_output": "It's a GraphQL resolver N+1 — the STRUCTURAL variant, not the textual one the grep looks for. The author field resolver is invoked once per parent post by the GraphQL executor, so 50 posts trigger 50 nested user fetches (+1 for the list) with NO loop at any single call site — the fan-out is in the executor, not in visible for/map code, so a 'query inside a loop' grep can't see it. Detect it by counting queries per request (the ~51 signal), not by reading for a loop. Fix: batch the per-parent fetches behind a per-request seam — the DataLoader pattern (collect the ids requested during a tick, issue one IN (...) batch, cache within the request) — so the 50 author fetches collapse to one. The same queries-per-request test then pins it.",
+      "expectations": [
+        "Identifies it as a GraphQL resolver N+1 — the executor invokes the field resolver once per parent node, so there's no loop at any call site for a textual grep to catch",
+        "Requires detecting it by queries-per-request count, not by reading for a loop",
+        "Requires a per-request batch/cache seam (the DataLoader pattern) — collect ids, one batched query, cache within the request"
+      ]
+    },
+    {
+      "id": "a-nullable-value-dereferenced-before-a-check-on-a-reachable-path-is-a-crash-dos",
+      "prompt": "A Go HTTP handler does `user := lookup(id); return user.Name` where `lookup` returns `(*User)` and `nil` when the id is absent. A request with an unknown id panics, aborting the request — and the same dereference in a handler-spawned goroutine would crash the whole process. A reviewer waved it through as 'just a wrong-answer edge case.' Is that the right severity, and what's the general rule?",
+      "expected_output": "Wrong severity — it's a NULL/nil dereference on an attacker-reachable path (CWE-476), which is a CRASH / DoS, not a wrong-answer bug: an unknown id (attacker-controllable) nil-panics the handler and can take down the process. The general rule: a value from an external call, an optional/nullable lookup, or an unchecked cast that can be null/nil/None/undefined must be guarded BEFORE it's dereferenced, called, or indexed on any attacker- or upstream-reachable path. Here: check if user == nil { return 404 } before user.Name. Same class across languages — a Go nil panic, a Java/Kotlin NPE (a !! on a nullable), a Python AttributeError on None, a JS deref of undefined (a ! assertion hiding it), a C/C++ deref of a failed lookup. Cross-ref reliability for the fail-closed + resource-release angle on the crash path.",
+      "expectations": [
+        "Corrects the severity — a nil/null deref on an attacker-reachable path is a crash/DoS (CWE-476), not a wrong-answer edge case",
+        "Requires guarding the nullable value before the deref/call/index on any reachable path (e.g. a nil check before user.Name)",
+        "Generalizes across languages (Go nil panic, Java NPE, Python None, JS undefined, C/C++), not a single-language nit"
+      ]
     }
   ]
 }

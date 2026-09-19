@@ -100,7 +100,8 @@ grep -rInE 'console\.log|print\(|dbg!|System\.out\.print|fmt\.Print' .
 - `strcpy`, `strcat`, `sprintf`, `gets`, `scanf("%s")` → buffer overflow; use
   bounded variants. Integer overflow before `malloc`; use-after-free / double
   free; `memcpy` with an unchecked length; format-string bugs (`printf(user)`).
-- Run with ASan/UBSan (these map to top CWEs 787/416/125) — and **ThreadSanitizer**
+- Run with ASan/UBSan (these map to top CWEs 787/416/125 — plus the classic/stack/heap
+  buffer-overflow family, 120/121/122) — and **ThreadSanitizer**
   (`-fsanitize=thread`) for data races, which ASan/UBSan do **not** catch; state shared
   across threads needs `std::atomic` / an explicit `std::memory_order`, not a plain access.
 
@@ -119,6 +120,14 @@ grep -rInE 'console\.log|print\(|dbg!|System\.out\.print|fmt\.Print' .
   (`(a+)+`, `(.*)*`, `(\d+)*$`) on untrusted input, or an untrusted string
   compiled into a pattern (`new RegExp(userInput)`, `re.compile(userInput)`).
   Bound input length, prefer a linear-time engine (RE2), or apply a match timeout.
+- **Null/nil dereference on a reachable path (CWE-476)** — a value from an external call, an
+  optional/nullable lookup, or an unchecked cast that can be `null`/`nil`/`None`/`undefined` is
+  dereferenced, called, or indexed **before a null check**, on an attacker- or upstream-reachable
+  path: a **crash / DoS**, not merely a wrong-answer bug. Per language: a Go `nil` pointer/interface
+  panic, a Java/Kotlin NPE (a `!!` on a nullable), a Python `AttributeError` on `None`, a JS/TS deref
+  of `undefined` (a `!` non-null assertion papering over it), a C/C++ deref of a failed
+  allocation/lookup return. Guard the unhappy path before the deref; cross-ref
+  `reliability-error-handling.md` for the fail-closed + resource-release angle on the same crash.
 - **Decompression / entity-expansion bombs** — an archive (`zip`/`gzip`/`tar`)
   extracted with no size or ratio cap, or XML parsed with entity expansion enabled
   (billion-laughs): a small input that inflates to gigabytes. Cap the decompressed

@@ -3,6 +3,14 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.227.0] — 2026-09-19
+
+### deep-code-review — wave 148 GraphQL resolver N+1 + null-deref-as-DoS (CWE-476) red-flags
+
+- **`performance-db-cost.md`**: GraphQL resolver N+1 — the structural variant the textual "query in a loop" grep misses (the executor invokes a field resolver once per parent node, so there is no visible loop). Detect by queries-per-request count; fix with a DataLoader per-request batch/cache seam.
+- **`language-stack-redflags.md`** (DoS section): null/nil dereference on a reachable path (CWE-476) is a crash/DoS, not a wrong-answer bug. Guard a nullable/optional/unchecked-cast value before dereference on any attacker- or upstream-reachable path (Go nil panic / Java NPE / Python None / JS undefined / C/C++). Closes the one real CWE-Top-25 detection gap (null-deref was named as a protected finding but had no detection procedure).
+- **`language-stack-redflags.md`** (C/C++): added CWE-120/121/122 to the existing 787/416/125 ASan/UBSan citation (the two CWE-Top-25 partials).
+
 ## [1.226.0] — 2026-09-19
 
 ### deep-code-review — wave 147 filed singles: abort-cause, CI/dev resource parity, data-dead-filter (closes #551, #389, #371)
