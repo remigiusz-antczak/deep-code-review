@@ -1725,6 +1725,18 @@
         "Frames a false attribution as worse than nothing (anti-fabrication -- an empty cell beats a confident-looking wrong one)",
         "Rule: corroboration may raise only occurrence/role, never past the entity-attribution component; or carry the count as unrendered evidence and don't promote at all"
       ]
+    },
+    {
+      "id": "show-coverage-readiness-not-a-fabricated-attainment-grade",
+      "prompt": "Product wants OKR progress bars showing an attainment % for each key result. But for most KRs we have no current reading, and for several there's no agreed rule for which metric counts or which direction is better. Engineering can compute *something* to fill each bar. Build it?",
+      "expected_output": "No -- a progress bar / %-complete with no honest current reading is a fabricated 'done', and computing 'something' to fill it invents an attainment number the inputs don't support (which direction is better, which metric counts are unratified). The honest alternative is coverage / readiness -- 'N of M key results are measurable / instrumented' -- which is always honestly computable; and for a KR with no reading, render 'awaiting reading / not yet measurable' (an honest empty state), never a manufactured number. Enforce it structurally, not by convention: a write-broker / observation gate that refuses (e.g. 422s) any attainment / on-track claim the system can't substantiate, and a contract that states 'attainment is out of scope' so a later 'add progress bars' ask is triaged as 'ratify a rule first', not a quick UI edit. And if the bars would honestly show 'awaiting reading' on nearly every row, that's worse than no feature -- hold it (BLOCKED-ON-OWNER: ratify the rule + instrument the inputs first). Review lens: ask the denominator/rule and whether each value is measured or inferred. (product-ux-quality.md.)",
+      "expectations": [
+        "Refuses to fill bars with a computed 'something' -- a %-complete / grade with no measured current reading is a fabricated 'done' (inputs incl. which metric + direction don't exist)",
+        "Prescribes coverage / readiness ('N of M measurable/instrumented') as the honest, always-computable alternative; render 'awaiting reading' for an unmeasured KR, never a manufactured number",
+        "Enforce structurally: a write-gate/broker that refuses (422) an unsubstantiated attainment/on-track claim + a contract declaring attainment out-of-scope (a later ask = 'ratify a rule first')",
+        "Notes a display that would honestly be 'awaiting reading' on nearly every row is worse than no feature -> hold it (ratify the rule + instrument the inputs first)",
+        "Review lens: asks the denominator/rule and whether each value is measured or inferred"
+      ]
     }
   ]
 }

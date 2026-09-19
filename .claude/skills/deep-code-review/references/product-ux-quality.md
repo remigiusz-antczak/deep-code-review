@@ -232,6 +232,32 @@ transparency** — drop it, or reframe to something that actually varies (e.g. *
 an entity was matched, not a number). A misleading signal is worse than an honest
 blank — empty beats fabricated (`data-quality.md`).
 
+## A progress/attainment display with no honest reading is a fabricated "done" — show coverage, not a grade
+
+When a product visualizes **progress toward goals**, there is constant pressure to render an
+**attainment %** or a **grade** even when the honest inputs don't exist — no current reading, no
+ratified rule for *which* metric counts, an undefined lower-is-better direction. **Distinct from the confidence-tier rule above** — there a
+reading *exists* but is shown with false precision; here **no honest reading exists at all**, so any
+attainment number fabricates a "done." A progress bar or
+`%-complete` with **no honest current reading is a fabricated "done"**; the review lens is to ask
+"what's the denominator / rule, and is the current value **measured** or **inferred**?". The
+honest alternative is **coverage / readiness** — "**N of M** key results are measurable /
+instrumented" — computable without inventing a reading (given an enumerable M and a defined
+"measurable"), and inventing no attainment number; where a reading is
+genuinely absent, render **"awaiting reading / not yet measurable"** (an honest empty state, per
+*Every data state* above), never a manufactured value.
+- **Enforce it structurally, not by convention.** A write-broker / observation gate that
+  **refuses** (e.g. `422`) any claim asserting attainment or on-track status the system can't
+  substantiate, so no path — human or agent — sneaks a fabricated grade in; and a **contract/doc
+  stating "attainment is out of scope"** so a later "add progress bars" ask is triaged as
+  *ratify a rule first*, not a quick UI edit.
+- A display that would honestly render **"awaiting reading" on nearly every row is worse than no
+  feature** — hold it (a legitimate BLOCKED-ON-OWNER: ratify the rule and instrument the inputs
+  first) rather than shipping a fabricated grade to fill it.
+- **🚩** a `%-complete` / grade / progress bar with no measured current value (a fabricated
+  "done"); an attainment number the pipeline can't substantiate rendered instead of an
+  "awaiting reading" state or a coverage ("N of M measurable") metric.
+
 ## Actionability — a unit answers "why does this matter," not just "what happened"
 
 The other domain-P rules prove a component **renders** correctly; this one asks
@@ -609,6 +635,7 @@ often lost — the on-screen chart carries axes and a readout the serialiser dro
 - [ ] One channel per dimension; nothing colour-only; reads correctly in greyscale?
 - [ ] Deltas are caret + magnitude, coloured by sentiment; flat is a muted `—` with a period anchor?
 - [ ] Confidence / score / priority shown as a **defined labeled tier** (text + a colourblind-safe cue), not a raw `%` or point score, and no model-authored number published as precision?
+- [ ] A progress / attainment display shows **coverage / readiness** ("N of M measurable / instrumented"), never a fabricated `%-complete` / grade with no measured reading; an unmeasured item renders **"awaiting reading"**, not a manufactured number; a display "awaiting reading" on nearly every row is **held, not shipped**?
 - [ ] Does each primary information unit answer **why it matters** (a derived / structural signal — count, recency-delta, graph-degree — **never a fabricated importance score**), not just what happened; where an action is possible, is a concrete **next step** named; and is the **most decision-ready surface in the first paint and stable** (not a post-hydration `aria-hidden` island, not below fixed non-interactive chrome)?
 - [ ] Does the **default ordering serve the user's job** (not reverse-chron by default on a decision surface), and is **each exposed sort/rank mode self-explaining ("orders by …") and measurably distinct** (near-identical modes collapsed; an opaque / near-constant sort key is false precision — measure its distribution first)?
 - [ ] Matches a **named** top-product pattern; convention gaps surfaced to the owner, not silently redesigned?
