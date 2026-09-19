@@ -2002,6 +2002,36 @@
         "Prescribes a binary in-window gate (`now − retrieved_at ≤ window`) instead — elapsed time is observable/deterministic, the curve's fade-rate is not",
         "Rejects adopting a vendor/marketing half-life as a number (uses it only to order windows, if at all)"
       ]
+    },
+    {
+      "id": "a-rendered-aggregate-encoding-must-invert-to-its-source-rows",
+      "prompt": "A dashboard renders a per-company 'relationship strength' as a sparkline and a big number ('strength: 8'), and a contribution-style heat calendar. None of them is clickable. The numbers are computed correctly from real data. Ship it?",
+      "expected_output": "No — these are un-invertible aggregate encodings. A sparkline tick, a heat cell, and a rolled-up 'strength: 8' each assert something about SPECIFIC underlying rows, so each must invert: the viewer must be able to drill through to the exact N artifacts that produced it. As rendered, nobody can tell a real 8 (or a real 5-event cell) from an off-by-one, and no one can audit the roll-up — it's decoration wearing a data costume even though the math is right. Add drill-through: the score/sparkline/cell resolves to the source rows it aggregates. (Computing a continuous intermediate is fine; publish a tier, but make the rendered mark invertible.) This applies to aggregate encodings, not just per-row chips. (product-ux-quality.md.)",
+      "expectations": [
+        "States each aggregate encoding (sparkline / heat cell / rolled-up score) must INVERT — drill through to the exact source rows it summarizes",
+        "Explains that correct math is not sufficient: without drill-through the viewer can't distinguish a real value from an off-by-one and no one can audit it (decoration)",
+        "Applies to aggregate encodings, not only per-row chips"
+      ]
+    },
+    {
+      "id": "heatmap-calendar-cell-needs-a-third-state-uncollected-vs-zero",
+      "prompt": "A contribution-style calendar heat map colours each day by activity count on a single green scale: darker = more, lightest green = 0. Days before the account existed, and days the collector hasn't ingested yet, are rendered as lightest-green (0). Sound?",
+      "expected_output": "No — it conflates 'collected and genuinely zero' with 'not collected / not yet observed,' both painted as lightest-green zero. That fabricates data: the viewer reads 'quiet / inactive' on days that are actually UNKNOWN (pre-account, un-ingested). A grid/heat-map/calendar cell needs a THIRD state distinct from the activity scale — a hatch, a blank, or an explicit 'no data' — for not-collected cells, never the low end of the ramp. This is the grid form of observed-low vs unobserved (data-quality.md §8): an uncollected cell is not a zero. (product-ux-quality.md.)",
+      "expectations": [
+        "Identifies the conflation: uncollected/unobserved cells painted the same as genuine zero-activity cells fabricates 'quiet' where the truth is 'unknown'",
+        "Requires a third, non-scale state (hatch / blank / 'no data') for not-collected cells, distinct from the zero end of the activity ramp",
+        "Connects it to observed-low vs unobserved (an uncollected cell is not a zero)"
+      ]
+    },
+    {
+      "id": "ux-bearing-change-must-not-auto-merge-on-code-gates-plus-presence-only-evidence",
+      "prompt": "A repo auto-merges any PR once lint, unit tests, type-check, and the build are green and a screenshot is attached to the body. A PR restyling the dashboard layout met all of that (screenshot present, nobody looked at it) and auto-merged — shipping a broken layout. The UX-quality visual-audit gate had been disabled a week earlier 'temporarily.' What's the review finding?",
+      "expected_output": "Two findings. (1) A UX-bearing change must not auto-merge on code-gate green + presence-only evidence: lint/unit/type/build prove the CODE, not the rendered result, and a screenshot merely attached (unread, no cited inspection) is 'unverified,' not 'verified' — auto-merging on that ships exactly the layout regressions the UX reference catches. A UI-change class must gate on the UX-evidence gate WITH its inspection cited (overlap/clip/etc.), not on the code gates alone. (2) The disabled UX-quality gate is a P0: a silently-off quality gate is worse than none — it reads green over unexamined UI — and it must block merges of that change-class until restored, not be left off while merges flow. (product-ux-quality.md, enforcing gate; branch-and-merge-hygiene.md self-reported ≠ trusted control.)",
+      "expectations": [
+        "States a UX-bearing change must not auto-merge on code/build/lint gates + a presence-only screenshot (code gates prove the code, not the render; an unread screenshot is unverified)",
+        "Requires gating the UI-change class on the UX-evidence gate with its inspection cited, not the code gates alone",
+        "Flags the disabled UX-quality gate as a P0 that must block that change-class until restored (a silently-off gate reads green over unexamined UI)"
+      ]
     }
   ]
 }

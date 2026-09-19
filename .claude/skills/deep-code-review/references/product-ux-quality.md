@@ -203,8 +203,16 @@ date?" has no on-screen answer) or overstating what is known. Rule each chart:
   that a readout *exists and returns a value*).
 - **Don't imply the unmeasured.** Mark real samples (a dot per reading) and never
   smooth or fill a **line across sparse points** — nothing between measured points
-  is implied. Two or three readings drawn as a continuous trend is a fabricated
-  trajectory, the visual form of principle 3 (empty beats fabricated).
+  is implied. Two or three readings drawn as a continuous trend (a **sparkline** on
+  a handful of readings is exactly this) is a fabricated trajectory, the visual form
+  of principle 3 (empty beats fabricated).
+- **A grid / heat-map / calendar cell needs a third state — event, collected-zero,
+  not-collected.** A per-cell colour scale that paints an **uncollected** cell the
+  same as a genuine **zero-activity** cell fabricates data: the viewer reads "quiet"
+  where the truth is "unknown / not yet observed." Give the not-collected cell a
+  distinct, non-scale encoding (hatch / blank / explicit "no data"), never the low end
+  of the activity ramp — the grid form of *Every data state*'s honest-empty rule above and of *observed-low vs unobserved*
+  (`data-quality.md` §8).
 - **Non-visual access to the numbers.** The chart is *additive* to a table or an
   `aria` summary, never the only path to the data; and series are distinguished by
   pattern/label, not colour alone (*Never colour alone*).
@@ -231,6 +239,23 @@ pipeline lacks. If the field barely varies, **showing it is false precision, not
 transparency** — drop it, or reframe to something that actually varies (e.g. *how*
 an entity was matched, not a number). A misleading signal is worse than an honest
 blank — empty beats fabricated (`data-quality.md`).
+
+## A rendered tier / score / aggregate encoding must invert to its source rows
+
+A confidence tier, a match label, or an **aggregate visual encoding** — a sparkline tick, a
+heat-map cell, a count badge, a rolled-up score — asserts something about **specific underlying
+rows**, so it must **invert**: the viewer can resolve it back to the exact source it summarizes.
+Compute the continuous intermediate if you like, but **publish only the tier** (the confidence-tier
+rule above); the acceptance test is separate — **can the rendered mark be drilled through to the N
+artifacts that produced it?** A tier or a cell that maps to nothing checkable is decoration wearing
+a data costume: the viewer cannot tell a real 5-event cell from an off-by-one, and no one can audit
+the roll-up. This applies to **aggregate** encodings, not only per-row chips — a `count: 12` badge,
+a sparkline's last tick, a calendar heat cell each owe a path to their 12 / their reading / their
+day's events. This is orthogonal to the *decorative-chart* exemption above (a chart marked
+`aria-hidden` with its exact number printed beside it is fine for **legibility**): invertibility then
+applies to that printed number / tier, which must itself resolve to its source rows — not a second
+drill-path on the decorative shape. **🚩**: a score / tier / sparkline / heat cell / count with no drill-through to the
+exact rows it aggregates (un-invertible — it cannot be verified or corrected).
 
 ## A progress/attainment display with no honest reading is a fabricated "done" — show coverage, not a grade
 
@@ -795,6 +820,18 @@ return first.
 
 ## Enforcing gate (Phase 6 imprint)
 
+**A UX-bearing change does not auto-merge on code-gate green alone.** Lint, unit tests, type-check,
+and a build passing prove the *code*, not the *rendered result* — auto-merging a UI change on those
+plus **presence-only** evidence (a screenshot exists but is unread) ships the exact layout
+regressions this reference catches. Gate a UI-change class on the UX-evidence gate below **with its
+inspection cited**, not on the code gates alone; and treat a **disabled or crashed** UX-quality gate
+as a **P0 repair that blocks merges of that change-class** until restored — a silently-off quality
+gate is worse than none, it reads green over unexamined UI (cf. `branch-and-merge-hygiene.md`,
+self-reported ≠ trusted control; and the auto-merge-on-bot-PRs flag in
+`dependency-currency-and-upgrades.md`). **🚩**: auto-merge on a UI-bearing change with only
+code/build/lint gates + a presence-only screenshot; a UX-quality gate disabled "temporarily" with
+merges still flowing.
+
 A standard with no gate is advisory (SKILL.md Phase 6: *pair each imprinted
 standard with the gate that enforces it*). When imprinting into a project that
 ships a UI, pair this reference with a UX-evidence gate — held to the skill's own
@@ -807,7 +844,9 @@ task:
 
 1. **Screens-changed evidence — the artifact, plus the inspection it demands.** On
    any diff that can change a rendered page, require a screenshot of each affected
-   route at a narrow and a wide width (e.g. 390 / 1440), or an explicit `No UX
+   route — the **whole affected surface**, not a clip of only the diff's own region (a regression
+   on an adjacent part of the surface is never in a cropped shot) — at a narrow and a wide width
+   (e.g. 390 / 1440), or an explicit `No UX
    change: <reason>` line. A screenshot proves a human/agent *looked*; it does
    **not** prove the render is correct — and "screenshot attached" **with no cited
    inspection** is `unverified`, not `verified` (the treatment a parity claim with no
