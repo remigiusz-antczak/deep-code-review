@@ -462,12 +462,7 @@ sets `alg: HS256` and signs with the RSA/EC **public** key — published, not se
 as the HMAC key; a naive `verify(token, key)` then uses that public key as the HMAC
 secret and accepts the forgery. "The signature verifies" is not enough when the
 attacker chooses the algorithm — a public key is not a secret and must never serve as
-a MAC key. Fix: pin an **algorithm allow-list per verification context** and never
-derive the algorithm from the token — "only algorithms on an allowlist can be used …
-must not include the 'None' algorithm. If both symmetric and asymmetric must be
-supported, additional controls will be needed to prevent key confusion" (OWASP ASVS
-v5.0 §9.1.2, L1); "hardcode the accepted algorithms and do not mix public-key digital
-signatures algorithms and MAC algorithms" (OWASP JWT Cheat Sheet).
+a MAC key. Fix: pin an **algorithm allow-list per verification context** and never derive the algorithm from the token. ASVS requires that "only algorithms on an allowlist can be used to create and verify self-contained tokens, for a given context" and that the allow-list "must not include the 'None' algorithm"; where it must support "both symmetric and asymmetric" algorithms, "additional controls will be needed to prevent key confusion" (OWASP ASVS v5.0.0-9.1.2, L1). The OWASP JWT Cheat Sheet is blunter: "…hardcode the accepted algorithms and do not mix public-key digital signatures algorithms and MAC algorithms."
 
 **Refresh tokens.** Rotate on every use, invalidate the predecessor, and
 implement **reuse detection**: presentation of an already-rotated token means the
@@ -475,6 +470,20 @@ chain is compromised → revoke the whole family/session and force
 re-authentication. Confirm rotation is server-enforced (a stored family/lineage
 id), that refresh tokens are single-audience and revocable at logout and on
 password/MFA change, and that they are not readable by client JS.
+
+**Session termination & timeout are server-side controls, not a cookie `Max-Age`.**
+Require two distinct, both-enforced controls — an **inactivity (idle) timeout** and an
+**absolute maximum session lifetime** — both server-side and driven by documented risk
+decisions (ASVS v5.0.0-7.3.1 / -7.3.2, L2), not a client-trusted cookie `Max-Age`/`Expires`
+(which the client can ignore). Typical ranges (OWASP Session Management Cheat Sheet): idle
+"2-5 minutes for high-value applications and 15-30 minutes for low risk applications"; an
+absolute cap "between 4 and 8 hours" for a full workday. **Logout must actually terminate the
+session server-side** — a stateless self-contained JWT cannot be "deleted" (clearing the client
+cookie is not revocation), so ASVS v5.0.0-7.4.1 (L1) requires "a solution such as maintaining a
+list of terminated tokens, disallowing tokens produced before a per-user date and time or
+rotating a per-user signing key." A token still accepted after logout, or a session with no
+absolute cap, is the finding. (Accessibility: a short idle timeout still needs the warn-and-extend
+affordance in `frontend-a11y.md` before it fires.)
 
 **Fix**: rate-limit and lock out; rotate session on auth state change; short
 token lifetimes + server-side revocation; verify JWT signature/alg/exp/aud; MFA

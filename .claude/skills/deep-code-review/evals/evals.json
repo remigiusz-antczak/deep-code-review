@@ -2921,6 +2921,16 @@
         "Explains that 'the signature verifies' is insufficient when the attacker chooses the algorithm — a public key is not a secret, so it cannot safely serve as a MAC key",
         "Prescribes pinning an algorithm allow-list per verification context (accept only the expected algorithm; never read alg from the token; do not mix signature and MAC algorithms), not merely 'check the signature'"
       ]
+    },
+    {
+      "id": "a-jwt-session-that-cant-be-revoked-after-logout-and-has-no-absolute-timeout",
+      "prompt": "A service issues stateless JWTs with no server-side session store. Logout just deletes the cookie client-side. Tokens carry a 30-day `exp` and there's no other lifetime control. Is this session management sound? What's missing?",
+      "expected_output": "No — two problems. (1) Logout doesn't terminate anything server-side: a stateless JWT stays valid until its `exp`, so a token captured before logout still works — deleting the client cookie is not revocation. A self-contained token needs a real termination mechanism: a deny-list of terminated tokens, a per-user not-before timestamp that logout advances, or per-user signing-key rotation. (2) A single 30-day `exp` is neither an inactivity timeout nor a sensible absolute cap: there is no idle timeout (an unattended session stays usable), and 30 days is far past a normal absolute lifetime. Require BOTH a server-enforced inactivity (idle) timeout AND an absolute maximum session lifetime, per documented risk (e.g. idle minutes, absolute hours), enforced server-side — not a client-trusted cookie Max-Age.",
+      "expectations": [
+        "Identifies that client-side cookie deletion does NOT revoke a stateless JWT (valid until exp); requires a real server-side termination mechanism (deny-list, per-user not-before, or signing-key rotation)",
+        "Identifies that one long exp is not an idle timeout — requires a separate server-enforced inactivity timeout distinct from the absolute lifetime",
+        "Requires an absolute maximum session lifetime cap enforced server-side and risk-driven, not a client-trusted cookie Max-Age"
+      ]
     }
   ]
 }

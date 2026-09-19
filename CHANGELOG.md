@@ -3,6 +3,14 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.232.0] — 2026-09-20
+
+### deep-code-review — wave 153 session termination & timeout (A07)
+
+- **`security-appsec.md`** (A07): new rule — session termination & timeout are server-side controls, not a cookie `Max-Age`. Require both a server-enforced inactivity (idle) timeout and an absolute maximum session lifetime (ASVS v5.0.0-7.3.1/-7.3.2, L2), not a client-trusted cookie. Logout must actually terminate server-side: a stateless JWT can't be "deleted", so it needs a deny-list of terminated tokens, a per-user not-before timestamp, or per-user signing-key rotation (ASVS v5.0.0-7.4.1, L1). Closes a dangling cross-reference from `frontend-a11y.md` (which pointed at "A07 session lifetime" prose that did not exist).
+- Applied the JWT-algorithm-confusion citation nits from wave 152's review: ASVS id-form now `v5.0.0-9.1.2` per the repo convention; the ASVS quote no longer splices across a sentence boundary; the JWT Cheat Sheet quote carries a leading ellipsis for the dropped "if possible".
+- +1 eval. +2 standards rows (OWASP ASVS v5.0 V7 §7.3.1/7.3.2/7.4.1; OWASP Session Management Cheat Sheet), fetched + verified 2026-09-20.
+
 ## [1.231.0] — 2026-09-20
 
 ### deep-code-review — wave 152 JWT algorithm confusion (A07)
