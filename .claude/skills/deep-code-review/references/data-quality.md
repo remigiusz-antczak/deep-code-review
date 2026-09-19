@@ -71,6 +71,17 @@ deterministic per-source table, not an inferred judgement) and refuse a write wh
 incumbent.grade`; keep the incumbent on ties. Additive to the populated→empty and fanout checks,
 never a replacement (grade-gating alone won't stop an equal-grade blanking). Record each refused /
 accepted overwrite with the grades, so the arbitration is auditable.
+- **An identity / roster change re-attributes cached signals — classify the drop, don't blind-ack
+  or blind-block.** A change that improves the entity roster or resolution (fills anchors, corrects
+  matches) **re-keys attribution** across every cached downstream signal, so a per-dimension
+  **volume drop** can be a **correction** (a signal re-attributed to a better-matched entity, or
+  poisoned as newly-ambiguous — one handle now known to belong to two entities) rather than a
+  **regression** (a valid attribution wrongly lost); the count alone cannot tell them apart. When an
+  identity / roster / entity-resolution change is in the diff or ran in the pipeline, **investigate
+  the fold** (which signals moved or dropped, and why) before acking (blind-ack ships a possible
+  regression) or blocking (blind-block rejects a correctness improvement). The volume floor (and the run-over-run drift guard above) is the
+  **trigger**; the fold investigation is the **adjudication** — after an identity/roster/ER change,
+  "beyond-attrition drop = regression" names what to **investigate**, not the automatic verdict.
 
 ## 2. No fabrication in the data itself
 
@@ -125,6 +136,16 @@ accepted overwrite with the grades, so the arbitration is auditable.
 - Free-text→structured extraction reliably captures **descriptors, not
   entities** (a category or adjective lands where a name belongs). It needs a
   structured source, not a regex; treat its bulk writes as unsafe by default.
+- **Don't trust raw connected components — a bridge edge signals a false merge.** When clustering
+  identities from pairwise links, taking **raw connected components** silently over-merges: one
+  spurious `A~B` link plus a real `B~C` collapses two distinct entities (the transitive-chaining
+  case a shared-key-collision gate never sees). Run **graph metrics** over the merge graph — a
+  **bridge** edge (removing it splits the cluster), especially one backed by a **single artifact**
+  joining two otherwise well-connected sub-clusters, is a prime false positive: flag or skip it and
+  log why (skip-rather-than-guess); **low neighborhood overlap** (few shared neighbors between the
+  edge's two endpoints — the weak-tie indicator) is a further false-link signal.
+  Pure false-merge insurance — it does not conflict with monotonic-quality (§1); it keeps a bad
+  merge from ever entering the bundle.
 
 ## 4. The six data-quality dimensions — measure separately
 
@@ -392,6 +413,14 @@ rate), validity (schema/format/range). For each:
   lower freshness, never raise it; a non-monotone recency curve manufactures false
   "re-activation". Principle 2 again: the quiet window is evidence only once a
   positive control confirms the source was actually read for it.
+- **A freshness *window* is observable; a freshness *decay curve* is fabricated.** A **binary
+  in-window gate** — `now − retrieved_at ≤ window_for_type` — is honest: elapsed time is an
+  observable input, and a per-signal-type window that gates routing ("act on this only within N
+  days") is deterministic and clickable. A **continuous decay-strength curve** — `strength =
+  0.5^(days / half_life)` — is a **banned fabricated constant** (Principle 2): the half-life
+  is invented, not observed — the same family as a predicted buying-stage score. Take the window,
+  reject the curve; and treat a vendor / marketing **half-life figure** as **unverified** unless it traces to a
+  primary source — use it only to illustrate window *ordering*, never as a number.
 
 ## 9. The model's role in a data pipeline (if any)
 
@@ -523,4 +552,4 @@ that ships raw events where the consumer scores on aggregates, or a claimed
 provider-input never reconciled against the provider's live output before it feeds a
 downstream score; a deserializer that trusts a serialized computed field (a count
 read verbatim, not re-derived from the validated collection) or checks only a
-primitive type, not element shape — weaker than its own builder; a corroboration / fusion step that raises a fused confidence past its **entity-attribution** component on agreement that only evidences occurrence; a hand-rolled composite / score / tiering where a citable external standard exists and wasn't used, or per-metric spec URLs over a **tool-chosen metric set** (the invented index one level up); a non-empty value-A→value-B overwrite with no source-grade arbitration; a join / corroboration key not weighted by value-commonness (a value shared by dozens treated as a confirming match); a corroboration count that collapses same-domain duplicates but not derivation.
+primitive type, not element shape — weaker than its own builder; a corroboration / fusion step that raises a fused confidence past its **entity-attribution** component on agreement that only evidences occurrence; a hand-rolled composite / score / tiering where a citable external standard exists and wasn't used, or per-metric spec URLs over a **tool-chosen metric set** (the invented index one level up); a non-empty value-A→value-B overwrite with no source-grade arbitration; a join / corroboration key not weighted by value-commonness (a value shared by dozens treated as a confirming match); a corroboration count that collapses same-domain duplicates but not derivation; a per-dimension volume-floor drop acked or blocked with no fold investigation after an identity/roster/entity-resolution change (a correction and a regression are identical from the count); an identity cluster built from raw connected components with no bridge / centrality check (transitive over-merge); a fabricated freshness decay curve (`0.5^(days/half_life)`) or an adopted vendor half-life in place of an observable in-window gate.

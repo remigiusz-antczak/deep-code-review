@@ -1972,6 +1972,36 @@
         "Rejects hard-delete as the fix (loses history/audit/restore, can orphan FKs) and prescribes a PARTIAL unique index (`WHERE deleted_at IS NULL`) or folding the marker into the key",
         "Does not conflate delete-correctness with the privacy/GDPR erasure obligation — treats erasure as separate only if it is raised; staying silent on erasure is fine (the prompt does not raise it)"
       ]
+    },
+    {
+      "id": "volume-drop-after-an-identity-change-needs-fold-classification-not-blind-ack-or-block",
+      "prompt": "A pipeline change enriched the entity roster (filled 10k missing identity anchors), then re-ran the downstream lanes. Overall row count grew, but the volume-floor gate flagged a -12.75% drop in one cached source's published signals and held (fail-closed). One reviewer says 'coverage improved, so ack the drop and merge'; another says 'a 12% drop is a regression, block it.' Who's right?",
+      "expected_output": "Neither — both are blind. An identity/roster/entity-resolution change re-keys attribution across every cached downstream signal, so a per-dimension drop can be a CORRECTION (a signal re-attributed to a better-matched entity, or poisoned as newly-ambiguous — one handle now known to belong to two entities) OR a REGRESSION (a valid attribution wrongly lost) — and the count alone cannot distinguish them. Blind-ack ships a possible regression; blind-block rejects a correctness improvement. The volume floor is the TRIGGER; the adjudication is to INVESTIGATE THE FOLD — enumerate which signals moved or dropped and why, classify each (re-attributed=correction, poisoned=correction, lost=regression), and decide on that evidence before acking or blocking. (data-quality.md §1.)",
+      "expectations": [
+        "Rejects BOTH blind-ack ('coverage improved') and blind-block ('12% drop = regression') — the count alone can't tell a correction from a regression",
+        "Explains an identity/roster change re-keys attribution, so a drop may be re-attribution or poison (correction) rather than lost data (regression)",
+        "Requires investigating the fold (which signals moved/dropped and why, classified) before ack/block — the gate is the trigger, the fold is the adjudication"
+      ]
+    },
+    {
+      "id": "identity-clusters-from-raw-connected-components-need-a-bridge-false-merge-check",
+      "prompt": "An identity-resolution step builds person clusters by taking connected components of a pairwise-link graph. Two well-known distinct people ended up in one cluster: there is a real `B~C` link and a single spurious `A~B` link (one shared artifact). The duplicate-fanout gate (one key on two entities) passed. Sound?",
+      "expected_output": "No — raw connected components silently over-merge via transitive chaining: the spurious A~B plus the real B~C collapses two distinct entities into one cluster, and a shared-key/fanout gate never sees it (no single key is on two entities; the merge is transitive). Run graph metrics over the merge graph: the `A~B` edge is a BRIDGE (removing it splits the cluster in two) backed by a SINGLE artifact joining two otherwise well-connected sub-clusters — a prime false-positive to flag or skip (log the reason; skip-rather-than-guess). Low edge centrality is a further weak-link signal. This is false-merge insurance and does not conflict with monotonic quality — it keeps the bad merge out of the bundle. (data-quality.md §3.)",
+      "expectations": [
+        "Identifies transitive over-merge: a spurious A~B + real B~C collapses two distinct entities, which a shared-key/fanout gate cannot catch (no single key on two entities)",
+        "Prescribes graph metrics — a single-artifact BRIDGE edge (splits the cluster if removed) and/or low neighborhood overlap between its endpoints — to flag/skip the false merge deterministically, logging the reason",
+        "Notes it does not conflict with monotonic-quality (it prevents a bad merge from entering, rather than dropping good data)"
+      ]
+    },
+    {
+      "id": "freshness-in-window-gate-is-observable-but-a-decay-curve-is-a-fabricated-number",
+      "prompt": "A product scores how 'actionable' each signal still is with `strength = 0.5 ** (days_since / 30)` — a smooth decay with a 30-day half-life taken from a vendor blog. It's monotone (older = lower). Ship it?",
+      "expected_output": "No — although monotone, it fabricates a number. `0.5^(days/half_life)` is a model asserting HOW real relevance fades over time, backed by no observation — the half-life is invented (and worse, adopted from a vendor blog — treat any such half-life as unverified unless it traces to a primary source). That is the same family as a predicted buying-stage score (Principle 2: no fabricated numbers). The honest form is a BINARY IN-WINDOW GATE — `now − retrieved_at ≤ window_for_type` — because elapsed time is an OBSERVABLE input; a per-signal-type window that gates routing ('act only within N days') is deterministic and clickable. Take the window, reject the curve; use any vendor half-life only to illustrate window ORDERING, never as a number. (data-quality.md §8.)",
+      "expectations": [
+        "States the decay curve fabricates a number (the invented half-life) despite being monotone — same family as a banned fabricated constant (Principle 2)",
+        "Prescribes a binary in-window gate (`now − retrieved_at ≤ window`) instead — elapsed time is observable/deterministic, the curve's fade-rate is not",
+        "Rejects adopting a vendor/marketing half-life as a number (uses it only to order windows, if at all)"
+      ]
     }
   ]
 }
