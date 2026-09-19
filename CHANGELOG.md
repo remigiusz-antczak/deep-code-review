@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.234.0] — 2026-09-20
+
+### deep-code-review — wave 155 duplicate-detection depth: orphaned straggler + unassembled molecule (closes #582)
+
+- **`product-ux-quality.md`** ("Unified across modules"): two refinements to the duplicate-detection technique (the base literal-string-grep rule is unchanged). (1) The **orphaned straggler** — a shared component existing and adopted in its named set is not proof the concept is unified; diff the component's doc-comment named set against a fresh whole-tree grep, and treat a hit outside it as a *candidate* straggler to confirm renders (not an automatic defect — consistent with the render-trace bullet). (2) The **unassembled molecule** — duplication with no shared literal string; call sites re-assemble the same primitives ad hoc and diverge on the assembly decisions; grep a repeated scaffolding pattern (not the label) and fix by building the one shared atom.
+- +2 evals (one per sub-concept, matching the file's precedent). Closes #582.
+
 ## [1.233.0] — 2026-09-20
 
 ### deep-code-review — wave 154 committed binary artifacts as an unreviewable supply-chain surface

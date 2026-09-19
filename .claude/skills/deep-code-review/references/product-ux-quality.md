@@ -405,6 +405,32 @@ domain H) with a UX consequence, so it is ruled on here too.
   so on any "unify" or "fix this component" task, grep the **duplicated visible
   literal string or section heading** across the whole tree as the search key that
   surfaces the twin, before claiming the concept unified.
+- **A shared component existing is not proof the concept is unified — check the
+  adoption is total.** A shared component often exists *because* a drift was
+  already fixed: built and rolled out to N callers (often via its own closed
+  PR/issue) to kill exactly this duplication. But 1–2 new or missed sites
+  reintroduce the drift by hand afterward — sometimes copy-pasting the component's
+  own default-string constant instead of importing it. A component being *created*
+  reads as the concept being *solved*, so reviewers stop once they confirm it's
+  "adopted" without verifying adoption is **total**. When the shared component's
+  doc-comment names the exact call sites (or the exact prior drift) it fixed,
+  **diff that named set against a fresh whole-tree grep** for the same
+  string/concept; any hit outside the named set is a **candidate** straggler — confirm it renders before treating it as reintroduced drift (grep finds candidates; the render trace confirms). Higher-confidence than a cold duplicate search — the comment
+  describes the "before" state, so you match a known defect instead of guessing.
+- **The unassembled molecule — duplication with no shared literal string.** The
+  twin-search above keys on a duplicated *string*, which misses call sites that
+  each correctly use the **same underlying primitives** (say an icon plus a
+  tooltip/popover) where no one has composed them into the one compound widget the
+  recurring concept deserves. The **assembly** carries the real decisions — which
+  a11y attributes, native `title` vs the shared tooltip, sizing — so the ad-hoc
+  assemblies silently diverge on exactly those, and one site's hard-won fix (e.g. a
+  documented conflict with a screenshot/visual-test tool) never propagates because
+  it lives only in that file. The visible label differs per site, so grep for a
+  repeated **scaffolding** pattern instead — the same small a11y-attribute cluster,
+  or a one-character glyph inside a small rounded element — recurring across files
+  that import no common component for it. If the design system already ships the
+  primitives, the fix is to build the one shared atom, not just reconcile the
+  wording (the wording was never the only thing diverging).
 - **A fix to a shared concept lands in the shared component**, not in one caller —
   otherwise the same defect survives in every other caller, and whoever checked
   only the screen they were shown signs off a still-broken app.

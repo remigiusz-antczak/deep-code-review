@@ -2941,6 +2941,26 @@
         "Distinguishes it from a text file merely misclassified as binary via a stray NUL (a diffability defect) — this artifact is genuinely opaque/compiled",
         "Prescribes build-from-source in CI or fetch-at-build/run-time, or (if vendoring is unavoidable) pin by content hash with recorded provenance"
       ]
+    },
+    {
+      "id": "a-shared-component-existing-does-not-mean-the-concept-is-unified-everywhere",
+      "prompt": "A reviewer must confirm a 'status chip' concept is now unified. They find a shared `StatusChip` whose JSDoc says 'replaces the inline chip that seven list views used to hand-roll,' and it's imported in seven views. They sign off 'unified.' Sufficient?",
+      "expected_output": "No. A shared component existing and being adopted in the named set does not prove the concept is unified everywhere: a component being created reads as the concept being solved, but new or missed call sites can reintroduce the identical drift by hand afterward (sometimes copy-pasting the component's own default constant instead of importing it). The JSDoc naming the exact prior set ('seven list views') is the lever — diff that named set against a FRESH whole-tree grep for the same chip string/concept; any hit outside the seven is a straggler the consolidation never reached. This is higher-confidence than a cold duplicate search because the comment describes the 'before' state, so you match a known defect. Don't stop at 'the shared component exists and is imported' — verify adoption is total.",
+      "expectations": [
+        "Rejects 'a shared component exists and is imported = unified' — new/missed call sites can reintroduce the drift by hand after the consolidation shipped",
+        "Uses the component's own doc-comment named set (the 'seven views') diffed against a fresh whole-tree grep to find stragglers outside that set",
+        "Notes this is higher-confidence than a cold search because the comment already describes the known 'before' state / prior drift"
+      ]
+    },
+    {
+      "id": "duplication-with-no-shared-literal-string-the-unassembled-molecule",
+      "prompt": "A reviewer greps the whole tree for duplicated visible literal strings to find un-unified UI concepts and finds none. But across five files, each hand-assembles the same small info-icon-with-hover-tooltip next to a heading — the same two primitives (an icon component + a tooltip/popover), composed ad hoc, with no shared component — and they disagree on the a11y attributes and on whether they use the native `title` or the design system's tooltip. The literal-string grep found nothing. Is the concept unified?",
+      "expected_output": "No. This is duplication a literal-string grep can't catch — the 'unassembled molecule': multiple call sites correctly use the same underlying primitives but no one composed them into the one compound widget the recurring concept deserves. The visible label differs per site, so a duplicated-string search misses it. And because the assembly — not just the primitives — carries the real decisions (which a11y attributes, native `title` vs the shared tooltip, sizing), the ad-hoc assemblies silently diverge on exactly those, and one site's hard-won fix (e.g. a documented conflict with a screenshot/visual-test tool) never propagates. Detection: grep for a repeated scaffolding pattern instead of the label — the same small a11y-attribute cluster, or a one-character glyph in a small rounded element — recurring across files that import no common component. Fix: if the design system already ships the primitives, build the one shared atom; don't just reconcile the wording, because wording was never the only thing diverging.",
+      "expectations": [
+        "Recognizes a duplicated-literal-string grep misses this class — the label differs per site, so string search finds nothing though the concept is duplicated (the 'unassembled molecule')",
+        "Explains the divergence is in the ASSEMBLY decisions (a11y attributes, native title vs shared tooltip, sizing), not the primitives, and one site's fix doesn't propagate",
+        "Prescribes detecting via a repeated scaffolding/attribute pattern (not the label) and fixing by building the one shared atom, not merely reconciling wording"
+      ]
     }
   ]
 }
