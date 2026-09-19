@@ -3,6 +3,23 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.205.0] — 2026-09-19
+
+### deep-code-review — wave 127 test reliability fallback paths, not just guard paths
+
+From research round 5 (comparative vs chaos-engineering / Google SRE): the suite prescribed
+fallback/degraded paths in 5+ loci but never required a repo-owned TEST that the fallback branch runs
+correctly (only a fired-counter or a one-time game-day). Extends `testing-and-evals.md`'s "test the
+failure" bullet from security/guard paths to reliability fallback paths (circuit-open, retry-exhausted
+/ dead-letter, cache-miss serve-stale, generation-failure): force the trigger and assert the branch
+OUTPUT, not just no-crash / a counter; plus a matching clause in that file's closing red-flag recap.
+Plus a recency bar on `release-engineering.md`'s chaos section (date the game-day like the restore
+drill; stale once the exercised path materially changed). +1 eval (233 -> 234).
+
+Independent review PASS-WITH-NITS; both nits applied (recap clause added; a Rollback-section
+over-attribution reframed to "extending the exercise bar to a recency bar"). SRC (fetched):
+principlesofchaos.org, sre.google/sre-book/{testing-reliability, addressing-cascading-failures}.
+
 ## [1.204.0] — 2026-09-19
 
 ### deep-code-review — wave 125 a NUL/control-byte source file is git-binary-unreviewable (closes #479)

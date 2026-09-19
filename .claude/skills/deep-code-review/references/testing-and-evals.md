@@ -47,7 +47,17 @@ explicit third choice), not which one this review prefers.
 - **Test the failure, not just the feature.** Every refusal/guard path — a
   rejected input, an over-cap request, a denied scope, a bad signature — needs a
   test asserting it actually refuses. Write the red case and watch it fail
-  **first**; a test that has never failed proves nothing.
+  **first**; a test that has never failed proves nothing. Extend this past
+  **security/guard** paths to **reliability fallback** paths: a circuit-breaker
+  open-state, a retry-exhausted / dead-letter branch, a cache-miss serve-stale, a
+  generation-failure fallback each needs a test that **forces the triggering
+  condition and asserts the fallback branch's *output* is correct** — not merely
+  that it doesn't crash, and not merely that a fired-counter incremented. The code
+  path you never run is the one that silently rots: an unexercised fallback gets
+  broken by an unrelated edit with no red test, invisible until the real dependency
+  fails in production. A past game-day / chaos exercise (`release-engineering.md`)
+  proves the infra path ran **once**; it is not a substitute for a repo-owned
+  regression test that keeps the branch honest on every future change.
 - **Probe the real function on the real fixture before pinning an expected
   value.** Never hand-guess an expected string — a guessed expectation encodes a
   misunderstanding as a green test.
@@ -537,4 +547,6 @@ absence / negative assertion loosened or removed in the same diff that adds a
 conflicting feature (silently reversing a ratified must-not-show-X constraint); a fix for a
 nondeterministic or costly-to-repeat failure shipped on a single green run with no named residual
 (validated is not happened-to-pass-once), or an unproven refactor scope-crept onto an
-otherwise-validated PR.
+otherwise-validated PR; a reliability fallback path (circuit-open, retry-exhausted /
+dead-letter, cache-miss serve-stale, generation-failure) whose only evidence is a fired-counter or a
+one-time game-day, with no test that forces the trigger and asserts the branch's output.

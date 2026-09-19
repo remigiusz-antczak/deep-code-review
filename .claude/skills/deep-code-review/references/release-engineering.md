@@ -110,6 +110,12 @@ autoscaling path with **no exercise** — no game-day, no injected-failure drill
 that ran it — is `unverified`, not proven, exactly as the Rollback section above holds: a
 documented runbook is a hypothesis until run.
 Scope every experiment so a failed hypothesis cannot itself cause the outage it was testing for.
+A game-day / drill also loses evidentiary value as the code drifts from what it validated: **date it**
+like the backup-restore drill (`observability.md`), and flag one with **no re-run since a material
+change to the exercised path** as **stale, not proof** — extending the Rollback section's exercise
+bar to a recency bar, the same "a green run is a sample, not a proof" discipline `testing-and-evals.md`
+applies. Exercising the infra path is also not a substitute for a repo-owned regression test on the
+fallback branch's output (`testing-and-evals.md`).
 
 ## DORA — measure it or say so
 

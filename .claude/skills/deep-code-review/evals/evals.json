@@ -2461,6 +2461,16 @@
         "Frames it as a reviewability/maintainability defect orthogonal to correctness (tests pass; the diff is just unreadable), not a runtime bug",
         "Requires replacing the literal control byte with an escape (byte-identical) AND a deterministic commit/CI gate for source files git treats as binary"
       ]
+    },
+    {
+      "id": "a-reliability-fallback-path-needs-a-test-that-forces-it-not-just-a-fired-counter",
+      "prompt": "A service has a circuit breaker that serves a cached/stale response when the primary DB is unavailable, plus a counter that reports how often the fallback fired. The team says the fallback is 'covered' because the counter exists and a game-day last quarter exercised it once. Is it adequately tested?",
+      "expected_output": "No. A fired-counter proves the fallback RAN, not that its OUTPUT is correct; a one-time game-day proves the infra path worked once, not that it still works after subsequent code changes. The gap is a repo-owned regression test that FORCES the triggering condition (breaker open / DB unavailable) and ASSERTS the stale-serve branch returns the correct response — not merely that it doesn't crash. 'Test the failure, not just the feature' extends past security/guard paths to reliability fallback paths (circuit-open, retry-exhausted/dead-letter, cache-miss serve-stale, generation-failure): the code path you never run is the one that silently rots — an unrelated edit breaks the fallback with no red test, invisible until the real dependency fails in production. Fix: add a test that injects the trigger and asserts the fallback output; keep the counter as a runtime signal, and (if there's a game-day/chaos drill) date it and treat it as stale once the exercised path has materially changed.",
+      "expectations": [
+        "Distinguishes a fired-counter (proves the fallback ran) and a one-time game-day (infra path ran once) from a repo-owned regression test that asserts the fallback branch's OUTPUT is correct",
+        "Requires a test that forces the triggering condition (breaker open / dependency down) and asserts the fallback output, not merely that it doesn't crash",
+        "Names the rot risk: an unexercised fallback is silently broken by an unrelated edit with no red test, invisible until the real failure occurs"
+      ]
     }
   ]
 }
