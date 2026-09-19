@@ -77,7 +77,7 @@ paths. Expands section G of `SKILL.md`. Cross-ref J /
   a stable key — table name, primary key, mutex id) — "the best defense against
   deadlocks is generally to avoid them by being certain that all applications using
   a database acquire locks on multiple objects in a consistent order" (PostgreSQL)
-  — or use a primitive that orders for you (C++ `std::scoped_lock`: "deadlock
+  — or use a primitive that avoids deadlock for you regardless of acquisition order (C++ `std::scoped_lock`: "deadlock
   avoidance algorithm is used as if by `std::lock`"). Ordering is the
   **prevention**; the `40001`/deadlock-victim retry in *DB / store TOCTOU* below is
   the **recovery** — PostgreSQL names that retry only as the fallback "if it is not

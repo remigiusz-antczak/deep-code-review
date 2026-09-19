@@ -587,6 +587,7 @@ determination routes to counsel).
 ## Verified by direct fetch (2026-09-20) — concurrency lock-ordering / deadlock prevention
 
 | Standard / source | URL | What was confirmed |
+|---|---|---|
 | PostgreSQL Documentation — 13.3.4 Deadlocks (Explicit Locking) | https://www.postgresql.org/docs/current/explicit-locking.html | Consistent lock ordering is the primary defense: "The best defense against deadlocks is generally to avoid them by being certain that all applications using a database acquire locks on multiple objects in a consistent order." Retry is the fallback: "If it is not feasible to verify this in advance, then deadlocks can be handled on-the-fly by retrying transactions that abort due to deadlocks." Fetched + verified 2026-09-20. |
-| cppreference — std::scoped_lock | https://en.cppreference.com/w/cpp/thread/scoped_lock | A multi-mutex lock primitive orders acquisition for you: "If several mutexes are given, deadlock avoidance algorithm is used as if by std::lock." Basis for citing an ordering primitive as an alternative to a hand-maintained global order. Fetched + verified 2026-09-20. |
+| cppreference — std::scoped_lock | https://en.cppreference.com/w/cpp/thread/scoped_lock | A multi-mutex lock primitive that avoids deadlock regardless of the order mutexes are passed: "If several mutexes are given, deadlock avoidance algorithm is used as if by std::lock." Basis for citing a deadlock-avoiding multi-lock primitive as an alternative to a hand-maintained global order. Fetched + verified 2026-09-20. |
 
