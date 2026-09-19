@@ -1085,6 +1085,123 @@ simply lacking the keywords.
 - **🚩 tell:** a "what is next / terminus" decision driven by a title / keyword grep over the
   backlog rather than a full enumeration bucketed by label / type.
 
+## Cap every dev/build server's memory — and cap the path a lane actually uses, not only CI's
+
+A locally-run dev/build/test server is frequently the single largest memory consumer in a
+fan-out, and it commonly has **two independent start paths**: the one CI invokes — often wrapped
+with a memory ceiling (an interpreter heap flag, a container `--memory` limit, a cgroup/`ulimit`)
+— and the one a project's own README / `package.json` / `Makefile` documents for a human or an
+agent to run directly, which frequently carries **no such ceiling** because nobody expected it to
+run several-at-once. A delivery lane follows the **documented** path, not CI's internal one, so
+the cap that guards CI is invisible to exactly the concurrent-lane scenario that most needs it —
+several uncapped interactive dev servers are what turns "several lanes, plenty of free RAM" into a
+swap balloon within minutes (the failure the RAM/swap gate above detects; this section is the
+standing fix that keeps it from firing at all).
+
+- **The cap is an artifact of the one place every caller goes through, not a CI-only
+  convention.** If a memory ceiling exists for a server process, apply it inside the documented
+  script itself (the `npm run dev` / `make serve` a human or agent actually types) rather than in a
+  separate CI-only invocation, so a human, an agent, and CI all inherit the same ceiling by
+  construction. A ceiling that exists only in a CI job definition is a ceiling that does not exist
+  on the path lanes actually use.
+- **Size the cap to the concurrency you intend, not to one server alone.** A per-server heap limit
+  sized for "one dev server on a laptop" still permits several of them to jointly exhaust RAM; size
+  it against the same fan-out tier the environment probe sizes lanes against (total budget ÷
+  intended concurrent HEAVY lanes), and re-derive it whenever the intended concurrency changes.
+- **Prefer an OS/container limit over an interpreter-level flag where both are available** — a
+  `ulimit` / cgroup / container `--memory` bound also catches native-addon and worker-thread memory
+  an interpreter heap flag does not see, and it fails the one process predictably (killed) rather
+  than thrashing the whole host into swap.
+- **🚩 tell:** a memory-limiting flag or wrapper present in a CI job definition but absent from the
+  plain command the project's own README / `package.json` / `Makefile` documents for local use —
+  the two paths silently diverge exactly where concurrent lanes collide.
+
+## Sweep the machine for leaked dev/build servers on a cadence — by port/PID ownership, never by name, never the operator's own
+
+*Terminating work you own* (`deep-code-review`'s `concurrency-shared-state.md`) covers a lane
+cleanly killing **its own** process group at the end of its own run. That discipline cannot reach a
+server left behind by a lane that never got there — crashed, was killed externally, or hit its own
+timeout before its teardown code ran. Those leaks accumulate silently: each one holds memory (feeding
+the swap-balloon failure above) and a port, so the next lane that tries to bind that port fails with
+a collision that reads as a broken build rather than as someone else's leftover process.
+
+- **Run the sweep on a cadence, not only inside a lane's own exit path.** A crashed or externally
+  killed lane never executes its own teardown, so a check that only fires there never sees these
+  leaks. A separate, recurring, coordinator-owned pass — once per interval, or once per tick of
+  whatever loop is sizing the fan-out — is what actually reclaims them.
+- **Identify candidates by resource, not by name.** Enumerate listening ports (or a recorded
+  lane-to-port map, when one exists) and cross-reference each to a live PID; a process bound to a
+  port no in-flight lane claims, whose parent is gone (reparented to init/PID 1), or whose start
+  time predates every currently-known lane, is a candidate. This is the same *ownership, not
+  name/command-line match* discipline as terminating a lane's own work, applied to a process whose
+  owning lane record no longer exists — `pkill -f <toolname>` / `killall <tool>` still reaps a
+  sibling's identically-named live process, the reviewer's own editor, or the operator's own dev
+  server, exactly as it would mid-run.
+- **Protect the operator's own session and anything a live lane still serves from, explicitly,
+  before killing anything.** A sweep is a destructive action on shared state (gate epistemology
+  principle 9 — closing or reclaiming shared state needs evidence, not presumption): check each
+  candidate against the operator's own interactive ports/PIDs and every port a currently-live
+  lane's worktree record claims, and exclude both, before acting. Never a bare "kill anything
+  matching this pattern."
+- **Log what was reclaimed.** A silent sweep that kills a server nobody remembers starting is
+  indistinguishable, later, from "it just crashed" — record the port, PID, and the worktree/lane it
+  belonged to (when recoverable), so a downstream port collision can be diagnosed instead of
+  re-triggering a fresh leak on a different port.
+
+This is the coordinator's backstop for exactly the leaks a lane's own clean self-teardown cannot
+reach once the owning lane is gone — distinct from *A worktree is a resource with a lifecycle*
+above, which reclaims idle worktree **directories**, not live server **processes**.
+
+## Once RAM/CPU are provisioned for, the ceiling is collision surface and merge throughput — raise it by slicing finer, not by adding lanes
+
+The environment probe sizes a fan-out against a resource floor (RAM, swap, CPU, disk); once that
+floor is comfortably clear, adding another lane stops buying more delivered work and starts buying
+more collisions. **One writer per file** and **one shared generated artifact** (a compiled bundle,
+a lockfile, an aggregated registry) are the structural chokepoints that cap useful concurrency
+regardless of how much headroom the machine reports: two lanes cannot both hold the pen on the same
+file, and a shared generated artifact serializes every lane that touches it no matter how disjoint
+their actual source edits are. Past that point the binding constraint is **landed artifacts per
+unit time** (*cap in-flight write lanes by landed artifacts*, above) — not free RAM.
+
+- **Raise the ceiling by shrinking the collision surface, not by spawning more lanes into it.**
+  Slice the work finer so more of it is genuinely disjoint (smaller, more numerous work items each
+  touching fewer shared files), and give the remaining shared chokepoints — a package-install
+  cache, a compiled-artifact build, a shared dependency store — their own single owner or their own
+  read-through cache, so lanes stop re-deriving or re-locking the same shared state independently.
+  More lanes contending for the same two chokepoints is pure overhead; the same lane count against
+  a finer-grained decomposition with more shared infrastructure converts into more landed work.
+- **A comfortable resource probe is a necessary floor, not the ceiling.** Passing the RAM/swap/CPU
+  gate says the machine can *run* another lane; it says nothing about whether that lane has
+  anything collision-free to do. Check both before adding one: capacity (the probe) and a genuinely
+  disjoint objective (*size the fan-out to the decomposition*, above) — either alone still stalls,
+  on thrash or on a file lock.
+
+## A second machine's own coordinator is a second conductor — merge/train authority does not fan out across sessions
+
+The single-session case is already the operating model (one conductor, hats not headcount,
+`SKILL.md`), and the duplicate-*worker*-lane case is covered above (*confirm a subagent is idle
+before dispatching a duplicate*). A distinct case: **two separate agent sessions, on two different
+machines or checkouts, each independently running its own merge-drainer or train-conductor loop
+against the same shared remote.** Neither session can see the other's in-flight decisions — each
+reads the same forge state (open PRs, branch heads) and can independently choose to merge, rebase,
+or open a train on the same queue at the same time, producing a double merge, a rebase race against
+a branch the other session just force-updated, or two conflicting labels/comments on the same PR a
+few seconds apart.
+
+- **Merge and train authority is a single role, named once, regardless of how many machines are
+  producing work.** Many machines may run write-lanes (producers); at most one, at a time, runs the
+  drain/merge/train loop (the conductor) against a given shared remote. Decide which before either
+  starts, not after a collision is observed.
+- **Make the claim checkable by the *other* session, not just self-reported.** A comment or label on
+  a tracking issue, a lock file on a coordination branch, or simply a stated claim where the other
+  session's own preflight (*preflight before spawning any lane*, above) would read it before
+  acting — the same *manufacture an ownership signal when identity is shared* discipline as the
+  auto-merger case above, applied to the conductor role itself rather than to individual PRs.
+- **On an unannounced second conductor, the newer session yields.** Noticing a merge/rebase/train
+  action it did not itself take (a PR merged, a branch force-updated, a train branch it did not
+  create) is the tell; the session that notices second stops its own drain loop and reconciles
+  rather than racing a second attempt.
+
 ---
 
 ## Sources
@@ -1140,6 +1257,10 @@ Fetched fresh for this file (entries 1–5 verified 2026-09-09; entry 6, 2026-09
 - `deep-code-review`'s `release-engineering.md` — the review-time audit of a
   *target's* release pipeline (feature flags, canary, DORA); this file is the
   authoring-time counterpart for the project's own fleet, not a target's.
+- `deep-code-review`'s `concurrency-shared-state.md`, *Terminating work you own* —
+  a lane's own clean self-teardown by owned process group; this file's
+  machine-sweep section is the coordinator's backstop for the leaks that
+  self-teardown cannot reach once the owning lane is already gone.
 - `deep-code-review`'s `branch-and-merge-hygiene.md` — the grep-the-tree-not-the-
   claim check ("B included A") that the verify-first-before-laning section reuses
   pre-laning, the evidence-before-a-destructive-close discipline, and the

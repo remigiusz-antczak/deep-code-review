@@ -3,6 +3,16 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.233.0] — 2026-09-20
+
+### agentic-delivery — wave 154 resource-maximization: dev-server memory-cap parity, machine-wide orphan sweep, the real concurrency ceiling, cross-machine conductor authority
+
+- **`fast-agentic-delivery.md`**: four new sections. (1) A dev/build server's memory ceiling must guard the plain documented start command, not only a CI-only wrapper — the two paths diverge exactly where concurrent lanes collide, and several uncapped interactive servers are what turns "plenty of free RAM" into a swap balloon. (2) A coordinator sweeps the machine on a cadence for dev/build servers a crashed lane left behind — by port/PID ownership (never by name/command-line match), always excluding the operator's own session and any port a live lane still claims; the backstop for leaks a lane's own clean self-teardown (`concurrency-shared-state.md`'s *Terminating work you own*) cannot reach once the owning lane is already gone. (3) Past a comfortable RAM/CPU floor, the real ceiling is collision surface and merge throughput, not headroom — raise it by slicing work finer and giving a shared chokepoint (a build cache, a dependency store) one owner, not by adding lanes into the same two chokepoints. (4) Merge/train authority does not fan out across machines — many sessions may produce, at most one drains/merges/trains a given shared remote at a time, made checkable the same way a shared-identity auto-merger needs a manufactured ownership signal rather than an inferred one.
+- **`SKILL.md`**: three short pointers into the above (Environment probe; Worktrees and occupancy; the "One conductor" line under When to Use) so the map names the new depth without restating it.
+- +4 evals (50 → 54 agentic-delivery).
+
+Version lockstep 1.233.0 (deep-code-review + agentic-delivery + idea-critic + plugin). Gates: test-ci-gates + routing (11 skills) + version + privacy + enumeration + SKILL.md-name-matches-dir + `install.sh` parse + eval-predicates self-test + eval-runner self-test green; SHA256SUMS regenerated.
+
 ## [1.232.0] — 2026-09-20
 
 ### deep-code-review — wave 153 session termination & timeout (A07)

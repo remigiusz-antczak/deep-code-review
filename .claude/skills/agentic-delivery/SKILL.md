@@ -10,7 +10,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.232.0"
+  version: "1.233.0"
 ---
 
 # Agentic delivery
@@ -40,8 +40,11 @@ separately.
 - `./install.sh --recommend` named this overlay for the target.
 
 **Do not use** for a typo, a docs-only nit, or a repo that already runs another
-delivery pack. One conductor. Hats, not headcount. Before any agent-originated
-"we should" reaches the owner, load `idea-critic` if installed.
+delivery pack. One conductor. Hats, not headcount — and one conductor **per
+shared remote** even across machines: many sessions may produce (write-lanes),
+at most one drains/merges/trains a given remote at a time
+(`references/fast-agentic-delivery.md`). Before any agent-originated "we
+should" reaches the owner, load `idea-critic` if installed.
 
 ---
 
@@ -240,6 +243,10 @@ throwaway integration SHA plus one aggregate gate before a merge train (G7).
   integration branch.
 - Occupancy is **visibility, not a lock**. Say what is live or stale. Do
   not comment "do not merge" on a peer's PR after you stopped writing.
+- **Past a comfortable resource floor, the ceiling is collision surface and
+  merge throughput, not headroom.** Raise it by slicing work finer and giving
+  a shared chokepoint (a build cache, a dependency store) one owner, not by
+  adding lanes into the same two chokepoints: `references/fast-agentic-delivery.md`.
 
 ## Environment probe (before you size anything)
 
@@ -266,6 +273,12 @@ check (`branch-and-merge-hygiene.md` §6), the contention-vs-defect rule
   or the swap trend trips; the numbers are a rule of thumb to recalibrate on
   the host in front of you. Why `load1` misleads, the worked example, and the
   swap-blowout case: `references/fast-agentic-delivery.md`.
+- **A dev/build server's own memory ceiling must guard every path that starts
+  it, not only CI's** — a wrapper present in CI but absent from the plain
+  documented dev command is invisible on the path lanes actually use. A
+  coordinator also sweeps the machine on a cadence for servers a crashed lane
+  left behind, by port/PID ownership, never by name, never the operator's own.
+  Mechanism: `references/fast-agentic-delivery.md`.
 
 ## Local environment (own it)
 

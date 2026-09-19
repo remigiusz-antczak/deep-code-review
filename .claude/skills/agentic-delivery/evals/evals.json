@@ -520,6 +520,50 @@
         "Requires the host-enforced fix: spawn with an allowed-tools set excluding the tool (or deny at the execution boundary) — a capability the worker can't edit",
         "Notes the protocol-level fallback (audit tool calls in the receipt; narrow/deny the dependent action) when host exclusion isn't available"
       ]
+    },
+    {
+      "id": "dev-server-memory-cap-must-guard-the-documented-command-not-only-ci",
+      "prompt": "A project's CI job runs its dev/build server wrapped with a memory ceiling (a container --memory limit). Several delivery lanes each start the same server the way the project's own README documents (`npm run dev`), with no wrapper, and the machine swaps into a crawl within minutes even though free RAM looked comfortable at spawn time. What's the mechanism, and what's the fix?",
+      "expected_output": "The CI wrapper's memory ceiling only guards the path CI itself invokes; a delivery lane follows the plain, human-documented command, which nobody capped because nobody expected several to run at once. So the cap that exists is invisible on exactly the path multiple concurrent lanes actually use, and several uncapped interactive dev servers together exhaust RAM even though each individual spawn passed a free-RAM check at the moment it started. The fix is to apply the ceiling inside the one place every caller goes through — the documented script itself (the npm run dev / make serve a human or agent actually types) — so a human, an agent, and CI all inherit the same cap by construction, rather than maintaining a second, CI-only invocation. Prefer an OS/container-level limit (ulimit / cgroup / --memory) over an interpreter heap flag alone, since it also catches native-addon/worker-thread memory and fails the one process predictably instead of thrashing the whole host into swap. Size the cap against the intended concurrent-lane count, not against one server running alone.",
+      "expectations": [
+        "Identifies that the CI memory wrapper does not cover the plain/documented dev command lanes actually run, so the cap is invisible on the concurrent-lane path",
+        "Explains that several uncapped servers, not one, is what exhausts RAM even though each individual spawn passed a free-RAM check",
+        "Requires the cap live inside the one documented script every caller (human, agent, CI) goes through, not a CI-only wrapper",
+        "Prefers an OS/container-level memory limit over an interpreter-only flag, and sizes the cap to the intended concurrency"
+      ]
+    },
+    {
+      "id": "sweep-orphaned-dev-servers-by-port-pid-never-by-process-name",
+      "prompt": "A coordinator wants to reclaim memory and free up ports held by dev/build servers that crashed or externally-killed lanes left running. A quick fix is a periodic `pkill -f node` across the box. Why is that unsafe, and what should the sweep do instead?",
+      "expected_output": "pkill -f matches on the command line, not on ownership, so a periodic name-based kill reaps a sibling lane's still-live server, the operator's own interactive dev server, or the reviewer's own editor process — collateral damage invisible in any diff and indistinguishable, after the fact, from a random crash. The sweep needs to run on a cadence separate from any lane's own exit path (a crashed or externally-killed lane never reaches its own teardown code, so a check that only fires there never sees these leaks), and it must identify candidates by resource, not name: cross-reference listening ports (or a recorded lane-to-port map) against live PIDs, flagging a process bound to a port no in-flight lane claims, whose parent is gone, or whose start time predates every known lane. Before killing anything, explicitly exclude the operator's own session's ports/PIDs and every port a currently-live lane still claims — this is a destructive action on shared state and needs evidence, not presumption. Log what was reclaimed (port, PID, owning lane if recoverable) so a later port collision can be diagnosed instead of silently re-triggering a new leak.",
+      "expectations": [
+        "Identifies that pkill -f / killall-by-name reaps unrelated same-named processes (a sibling lane's live server, the operator's own dev server or editor) because it matches command-line text, not ownership",
+        "Requires a sweep that runs on its own cadence, separate from any lane's own exit path, since a crashed/killed lane never reaches self-teardown",
+        "Requires identifying candidates by port/PID ownership (cross-referenced against a lane record), not by process name",
+        "Requires explicitly excluding the operator's own session and any port a live lane still claims before killing anything, and logging what was reclaimed"
+      ]
+    },
+    {
+      "id": "the-real-concurrency-ceiling-is-collision-surface-not-free-ram",
+      "prompt": "A machine reports comfortable free RAM and idle CPU, so the coordinator keeps adding write-lanes. Throughput stops improving and then gets worse — lanes spend most of their time waiting on the same lockfile and the same generated registry file. What's the actual ceiling here, and how do you raise it?",
+      "expected_output": "Once the RAM/CPU/disk floor is comfortably clear, the binding constraint stops being headroom and becomes collision surface and merge throughput: one writer per file and one shared generated artifact (a lockfile, a compiled bundle, an aggregated registry) are structural chokepoints that cap useful concurrency no matter how much free RAM the machine reports, because every lane touching that one file serializes behind it regardless of how disjoint their actual source edits are. Adding more lanes into the same two chokepoints is pure overhead — it doesn't increase landed artifacts per unit time, which is the metric that actually matters. Raise the ceiling by shrinking the collision surface: slice the work into smaller, more numerous items that touch fewer shared files, and give the remaining shared chokepoints (a package-install cache, a compiled-artifact build, a shared dependency store) a single owner or a read-through cache so lanes stop re-deriving or re-locking the same shared state independently. A comfortable resource probe is a necessary floor, not the ceiling — it says the machine can run another lane, not that the lane has anything collision-free to do.",
+      "expectations": [
+        "Identifies that once RAM/CPU/disk pass their floor, the real ceiling is collision surface (one-writer-per-file, one shared generated artifact) and landed-artifacts-per-time, not free headroom",
+        "Explains why more lanes contending for the same shared chokepoint is pure overhead rather than more throughput",
+        "Requires raising the ceiling by slicing work finer (smaller, more disjoint items) and giving shared chokepoints a single owner or shared cache, not by adding lanes",
+        "States that a resource probe passing is necessary but not sufficient — it must be paired with a genuinely disjoint objective"
+      ]
+    },
+    {
+      "id": "two-machines-running-independent-merge-conductors-race-the-same-queue",
+      "prompt": "Two agent sessions on two different machines are both working against the same repository. Each independently runs its own merge-drainer against the open PR queue. A PR gets merged twice in different ways within seconds, and a branch one session force-updated is immediately rebased again by the other. What's wrong with the setup, and what's the fix?",
+      "expected_output": "Merge/train/drain authority is being run twice against one shared remote, and neither session can see the other's in-flight decisions — each reads the same forge state (open PRs, branch heads) independently and acts on it, so they collide exactly the way two writers on one file would, except the shared resource is the merge queue itself rather than a file. The single-conductor model does not stop being the rule just because the producers are spread across machines: many sessions may run write-lanes (producers), but at most one, at a time, should run the drain/merge/train loop (the conductor) against a given shared remote — decide which before either starts. Because both sessions likely share the same identity/token the way agent-authored PRs often do, the claim needs to be made checkable by the other session rather than self-reported or inferred from authorship: a comment/label on a tracking issue, a lock file on a coordination branch, or an explicit stated claim that the other session's own preflight would read before acting. If an unannounced second conductor is discovered anyway (a merge, rebase, or train action neither session's own conductor initiated), the session noticing it second should stop its own drain loop and reconcile rather than racing a second attempt.",
+      "expectations": [
+        "Identifies that two independent merge/drain/train loops against one shared remote is the root cause, and that neither session can see the other's in-flight decisions from forge state alone",
+        "Requires that merge/train authority stay a single role even when producers span multiple machines — many can produce, at most one drains a given shared remote at a time",
+        "Requires making the conductor claim checkable by the other session (a label, a lock file, a stated claim read at preflight), not inferred from shared authorship/identity",
+        "States that on discovering an unannounced second conductor, the session that notices second yields/stops rather than racing a second merge attempt"
+      ]
     }
   ]
 }
