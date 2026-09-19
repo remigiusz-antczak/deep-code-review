@@ -29,6 +29,14 @@ windows). The one-line rule in `domain-checklists.md` domain A points here for d
   occurrence**, not once. Match the representation to the feature: a past/point instant
   → UTC; a future wall-clock commitment or recurrence → local time + tz-id, resolved to
   an instant late (at/near each occurrence).
+- **A default-argument clock captures the *server's* zone on a server-rendered path.** A
+  testability seam like `function render(now: Date = new Date())` is fine until a **server-rendered**
+  call site omits the argument: the default is evaluated on the server, so `new Date()` reflects the
+  **server's** clock, and any `toLocale*` / format that reads the ambient zone renders in the
+  **server's** time zone, not the request's or the user's — a date renders a day off, or a "today" boundary lands in the
+  wrong zone, only under SSR and only for users in other zones. Pass the request's time (and the
+  user's/target zone) explicitly on any rendered path; a `= new Date()` default is a test
+  convenience, not a request clock.
 
 ## Ambiguous & missing local times at a DST transition
 

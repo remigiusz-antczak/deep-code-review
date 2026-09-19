@@ -2771,6 +2771,36 @@
         "Requires treating the external cluster as a corroborating source with recorded provenance (not ground truth), not promoting a lone external cluster to certainty",
         "Keeps 'skip rather than guess' — resolve on a real external authority or surface the ambiguous count, never a name-only guess"
       ]
+    },
+    {
+      "id": "an-incremental-sync-cursor-on-a-non-unique-timestamp-drops-rows-at-a-page-boundary",
+      "prompt": "An incremental sync pages through rows with `WHERE updated_at > :cursor ORDER BY updated_at LIMIT 1000`, setting the next cursor to the last row's `updated_at`. Many rows share the same `updated_at` (a batch write stamped them identically). Rows go missing from the sync. Why, and what's the fix?",
+      "expected_output": "The cursor is a non-unique timestamp used as a strict boundary: when a page ends in the middle of a run of rows that share the same updated_at, setting the cursor to that timestamp and using > :cursor on the next page SKIPS every remaining row with that exact timestamp (a naive >= :cursor would double-read instead). A batch write that stamps many rows with one timestamp guarantees such ties. Fix: page on a UNIQUE, MONOTONIC tiebreak — a composite (updated_at, id) cursor (WHERE (updated_at, id) > (:ts, :id)), or an explicit monotonic sequence/change-id — so the boundary is exact and total-ordered, never a shared timestamp alone. Same non-unique-timestamp root as treating a shared timestamp as a batch id.",
+      "expectations": [
+        "Identifies that a shared/non-unique timestamp used as a strict cursor boundary drops rows (with >) or double-reads them (with >=) when a page cuts mid-timestamp",
+        "Ties it to a batch write stamping many rows with one timestamp (ties guaranteed, not rare)",
+        "Requires a unique, monotonic tiebreak — a composite (ts, id) cursor or an explicit sequence — not a shared timestamp alone"
+      ]
+    },
+    {
+      "id": "one-shared-classifier-two-call-sites-test-the-adapters-agree",
+      "prompt": "A repo has ONE scoring/classifier function, called from two places (an API handler and a batch job). There's no duplicated implementation to drift, so no parity test was added. In production the two call sites produce different results for the same underlying entity. Where's the bug, and what should the review require?",
+      "expected_output": "The classifier is shared and identical, so the divergence isn't in the core — it's in the ADAPTERS: each call site builds the classifier's inputs differently (different field names, defaults, units, filtering, or normalization), so they feed the same function different shapes and get different outputs. A parity test scoped to 'duplicated implementations' misses this because there's only one implementation. The review should require: (1) a test that the two call sites AGREE on a shared fixture (run the same underlying entity through both input-construction paths and assert equal classifier inputs/outputs), and (2) deriving both call sites' inputs from ONE spec/mapping, so an input-shape change can't diverge silently. The finding is the missing adapter-agreement guard, not a duplicated module.",
+      "expectations": [
+        "Locates the divergence in the callers' input-construction (adapters), not the shared classifier — one implementation, differently-built inputs",
+        "Notes that a duplicated-implementation parity check misses this (there is no duplicate)",
+        "Requires an adapter-agreement test on a shared fixture and deriving both call sites' inputs from one spec"
+      ]
+    },
+    {
+      "id": "a-default-now-argument-captures-the-servers-timezone-on-a-server-rendered-path",
+      "prompt": "A component is written as `render(now: Date = new Date())` so tests can inject a fixed clock. It's a `'use client'` component that is server-rendered for its first paint. Users in other time zones see dates rendered a day off on that first server paint, corrected only after client hydration re-renders. Why, and what's the fix?",
+      "expected_output": "On the server-rendered path the call site omits the now argument, so the default new Date() is evaluated ON THE SERVER — it reflects the server's clock and, for any toLocale*/format that reads the ambient zone, the server's TIME ZONE, not the request's or the user's. A user in another zone gets the server's notion of 'now'/'today', so a date near a day boundary renders a day off; after hydration the client re-renders with the browser's zone, which is why it only shows in SSR. The default-argument seam is a test convenience, not a request clock. Fix: pass the request's time and the user's/target time zone explicitly on any rendered path (thread them from the request), and reserve = new Date() for tests; never let a server-evaluated default supply the clock/zone for user-facing output.",
+      "expectations": [
+        "Identifies that the omitted default arg makes new Date() evaluate on the server, so the first server paint uses the server's clock/timezone not the request's/user's — and why it is corrected only once the client re-renders (in the browser's zone)",
+        "Distinguishes the testability-injection default (a test convenience) from a request clock",
+        "Requires passing the request time + user/target time zone explicitly on rendered paths, not relying on a server-evaluated default"
+      ]
     }
   ]
 }

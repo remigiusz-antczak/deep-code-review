@@ -43,6 +43,11 @@ Read this when walking a domain in Phase 2 (or a DIFF quick-path that touches th
   single-row write to `col` — it can collapse a whole view to one row. Batch
   membership must be an explicit batch id, not a shared timestamp individual
   writes can move (cross-ref D).
+- The same non-unique-timestamp trap bites an **incremental-sync cursor**: a batch-stamped
+  timestamp used as a strict `WHERE ts > :cursor` (or a naive `>=` high-water mark) **drops or
+  double-reads rows at a page boundary** when many rows share the cursor's timestamp — the page
+  cuts mid-timestamp and the next query skips (or repeats) the rest. Page on a **unique, monotonic
+  tiebreak** (a `(ts, id)` composite cursor) or an explicit sequence, never a shared timestamp alone.
 - Error paths are correct, not just happy paths; idempotent where retried;
   deterministic where relied upon.
 - **UI chrome is a claim** — a tab/heading/count asserts data beneath it; render
@@ -307,7 +312,11 @@ Apply to any pipeline, ETL, enrichment, scraping, or dataset producer. Judge the
   pairs — need a **parity test or a single generated source**, or they silently
   drift; flag the *missing guard*, not the duplication itself (a drifting second
   copy of a crypto/auth module would encrypt/decrypt or authorize differently on
-  each plane — a security hazard, cross-ref B).
+  each plane — a security hazard, cross-ref B). **One** implementation with **no** duplicate can
+  still drift at its *callers*: when a single shared classifier/scorer/function serves two call
+  sites that each build its inputs differently, the divergence lives in the **adapters**, not the
+  core — test that the two call sites **agree on a shared fixture**, and derive their inputs from
+  **one spec**, or one caller silently feeds the shared logic a different shape than the other.
 - **Complexity**: one thing per function; shallow nesting; named constants/enums
   over magic values in one place. **Naming & structure** navigable by human and
   AI. **Dependencies current and safely upgraded** — see K and

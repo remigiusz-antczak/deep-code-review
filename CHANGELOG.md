@@ -3,6 +3,21 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.224.0] — 2026-09-19
+
+### deep-code-review — wave 145 timestamp / parity / SSR-clock correctness (closes #558, #370, #561)
+
+- **#558** (`domain-checklists.md` §A): the non-unique-timestamp trap also bites an incremental-sync cursor —
+  a batch-stamped timestamp used as a strict `WHERE ts > :cursor` drops (or `>=` double-reads) rows at a page
+  boundary; page on a unique monotonic tiebreak (`(ts,id)` composite) or an explicit sequence.
+- **#370** (`domain-checklists.md` §H): one shared classifier with no duplicate implementation can still
+  drift at its callers — the divergence is in the adapters; test the two call sites agree on a shared fixture
+  and derive inputs from one spec.
+- **#561** (`time-date-correctness.md`): a `now: Date = new Date()` testability default captures the server's
+  clock/zone on a `'use client'` server-rendered first paint; pass the request time + user zone explicitly.
+
++3 evals (264 -> 267 deep-code-review).
+
 ## [1.223.0] — 2026-09-19
 
 ### deep-code-review — wave 144 data-quality: active-not-emitted signals (#480, #552) + external identity cluster (#461)
