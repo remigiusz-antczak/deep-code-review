@@ -760,6 +760,40 @@ backlog until a termination condition fires*, not *do the one thing, then wait*.
   backpressure, never unbounded spawning (bounded by the WIP-cap above; an unbounded
   fan-out otherwise exhausts the box — the RAM/swap gate above — and stalls everything).
 
+## A go-faster signal fires on a clock, not on state — holding is a valid response, not a demand for busywork
+
+The work-loop above runs *until a termination condition fires*; this is what to do **when one
+does**. An unattended loop is usually driven by a **recurring pressure signal** — a cron, a
+"why are you stalling?" supervisor prompt — that fires on a **clock, not on state**, so it keeps
+arriving when the correct action is to **hold**: async work is still draining (a background
+merge-drainer, in-flight lanes), the buildable backlog is **exhausted or parked on a human gate**
+(a *termination condition* above, not a refill opportunity), or the only moves left are **risky**
+(a blind rebase of a large, possibly-active PR). The failure is to read every tick as a demand
+for a **new visible action** and **manufacture low-value work** — spawning lanes that re-report
+*already-delivered*, re-checking unchanged state, padding findings, forcing a risky change —
+burning budget and adding risk to look busy.
+- **Distinguish *stalled* from *correctly holding*.** Stalled = nothing is progressing, you are
+  blocked on yourself → a new move is warranted. Holding = async work is progressing without a
+  new action from you, or the rest is owner-gated → no new move. Only the first warrants motion.
+- **Answer the pressure with the truth, not filler** — what's running, what's blocked and on
+  whom, why holding is correct — in one line. This is the *if the loop is idling, say so loudly*
+  rule above answered to an **external** trigger: same whole-window status, opposite failure —
+  there the risk is **silence** (going quiet reads as working), here it is **filler** (motion to
+  look busy).
+- **At a genuine terminus the highest-value moves are non-fan-out** — drain the merge queue,
+  close delivered items, surface the decisions that gate the rest. When even those are done,
+  **hold and say so**; busywork under observation is still busywork.
+- **🚩 tell:** a new lane whose outcome is *already-delivered* / *nothing-changed*, or a finding
+  filed only because a pressure prompt fired — activity manufactured to answer a clock.
+
+A go-faster signal is about **outcomes, not activity**: when you are already maximally deployed
+and the rest is blocked, the honest response is a precise status, not motion for its own sake. (A
+pressure cron ideally fires on a state change, not a fixed clock — but the agent must behave
+correctly when it doesn't.) The counterweight to the work-loop above — the mirror of its *the
+owner's message cadence is not the loop's clock* bullet: that stops owner-quiet from throttling
+the loop **down** (*don't stop while the backlog has work*); this stops a pressure tick from
+driving it **up** into busywork (*don't fake work once it doesn't*).
+
 ## Research is not delivery — a brief with no tracked follow-through is reported as unconsumed
 
 A lane sent to investigate comes back with a thorough brief, the brief is pasted into
