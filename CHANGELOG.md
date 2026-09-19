@@ -3,6 +3,29 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.203.0] — 2026-09-19
+
+### deep-code-review — wave 124 data-quality: per-hop pivot graph + observability-class bias (closes #468)
+
+Standalone-backlog drain (domain D data integrity). Two additions to `data-quality.md`:
+
+- **#468 per-hop pivot graph** (§10, cross-ref §1/§3) — a connector/transform pivot engine (identifier
+  -> transform -> new entities -> next transform; the Maltego/SpiderFoot pattern) compounds two risks a
+  single-source lane does not have: attribution risk (a wrong entity mid-chain poisons downstream hops,
+  so each transform's output must re-pass the identity/fanout gate before attribution, not just at the
+  chain end) and identity-disclosure risk (each hop contacts a new host directly — route a gated hop
+  through a licensed broker under the declared identity policy, never spoof; no rate-limit-evasion
+  fan-out). Per-hop guards, not a single end-of-chain gate.
+- **#466 observability-class bias** (§8) — observability is a per-entity-class property, not only a
+  per-window one: whole classes (operators, investors) are structurally less publicly observable than
+  others (engineers, researchers, OSS contributors), independent of time window. Label a
+  public-footprint class and carry it into every consumer so an empty profile in a low-observability
+  class renders "not observed," never "inactive," and a ranking never reads unobserved as low-activity.
+  Extends §8's temporal "absent window is not a decline" rule to the cross-sectional axis (#466 was
+  PARTIAL, not covered — §8 covered only temporal gaps).
+
++2 evals (230 -> 232). #468 closed; #466 addressed (cross-sectional stratum shipped).
+
 ## [1.202.0] — 2026-09-19
 
 ### deep-code-review — wave 123 segregation of duties / maker-checker (closes #472)

@@ -2431,6 +2431,26 @@
         "Identifies that an admin editing their own role assignments can self-grant the approver role, collapsing two principals to one — the role grant must be outside the requester's control",
         "Flags dual-approval on a trivial action (avatar change) as scope over-reach — SoD is scoped to consequential actions; gating trivial writes is friction, not control"
       ]
+    },
+    {
+      "id": "a-connector-transform-pivot-graph-must-re-gate-identity-and-fanout-at-every-hop",
+      "prompt": "A data collector upgrades its flat source registry into a pivot engine: an identifier feeds a transform that emits new entities, which feed the next transform, several hops deep (the Maltego/SpiderFoot pattern). The team runs the identity/fanout gate once, on the final output. What's the design flaw?",
+      "expected_output": "Gating only the final output is wrong on two axes a single-source lane doesn't have. (1) Attribution risk multiplies per hop: a wrong entity at hop 2 poisons every entity derived at hops 3+, so a single end-of-chain gate attributes a whole poisoned subtree — each transform's OUTPUT entities must re-pass the identity/fanout gate (and false-merge check) BEFORE they're attributed and fed onward, not just once at the end. (2) Identity-disclosure risk multiplies per hop: each hop contacts a new host directly, so a pivot toward a gated host must route through a licensed broker under the declared identity policy (anonymous/identified/brokered), never spoof, and the pivot must not become a rate-limit-evasion fan-out. Fix: per-hop guards — a fanout/identity gate on every transform's output, an identity-policy check on every transform's fetch. A pivot graph without per-hop gates is both a fanout amplifier and an identity-exposure amplifier.",
+      "expectations": [
+        "Identifies that attribution risk compounds per hop — a wrong entity mid-chain poisons downstream hops, so each transform's output must re-pass the identity/fanout gate before attribution, not only at the chain end",
+        "Identifies that identity-disclosure risk compounds per hop — each hop is a new host contacted directly, requiring a per-hop identity-policy check (broker for gated hosts, never spoof) and no rate-limit-evasion fan-out",
+        "Requires per-hop guards on both the transform output (fanout) and the transform fetch (identity), not a single end-of-chain gate"
+      ]
+    },
+    {
+      "id": "an-empty-profile-in-a-low-observability-class-is-not-observed-not-inactive",
+      "prompt": "A talent-intelligence product ranks people by public activity (open-source commits, conference talks, papers). It already corrects demographic bias. An operator and an investor both come back with near-empty profiles and rank at the bottom as 'inactive.' Is the ranking sound?",
+      "expected_output": "No — this is observability bias, distinct from demographic bias (which the product already corrects) and from a temporal coverage gap. Whole CLASSES of person are structurally less observable on public signal: engineers/researchers/OSS contributors work in public and over-represent; operators and investors work privately and under-represent — regardless of time window. So an empty profile here means NOT PUBLICLY OBSERVABLE, not inactive, and ranking it at the bottom as 'low-activity' systematically penalizes exactly the people the public surface can't see. Fix: label each person's public-footprint class (high vs low observability) and carry it into the ranking — an empty/low profile in a low-observability class renders as 'not observed,' never 'inactive,' and the ranker must not treat unobserved as low-activity. Empty-beats-fabricated at the coverage layer.",
+      "expectations": [
+        "Identifies observability bias as distinct from demographic bias and from a temporal coverage gap — whole entity CLASSES are structurally less publicly observable",
+        "States that an empty profile in a low-observability class means 'not observed,' not 'inactive'",
+        "Requires labeling a public-footprint class and not letting a ranking read unobserved as low-activity (penalizing the unseen)"
+      ]
     }
   ]
 }

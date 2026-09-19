@@ -438,6 +438,19 @@ rate), validity (schema/format/range). For each:
   lower freshness, never raise it; a non-monotone recency curve manufactures false
   "re-activation". Principle 2 again: the quiet window is evidence only once a
   positive control confirms the source was actually read for it.
+- **Observability is a per-entity-*class* property, not only a per-window one.**
+  The rule above corrects a *temporal* coverage gap; a distinct, cross-sectional
+  one is that whole **classes** of entity are structurally less observable on
+  public signal — people who work in public (engineers, researchers, OSS
+  contributors) over-represent, and those whose work is private or gated
+  (operators, investors) under-represent — independent of any time window.
+  Uncorrected, an empty profile reads as **inactive** when it means **not publicly
+  observable**. Label each entity's **public-footprint class** (high vs low
+  observability) and carry it into every consumer: an empty / low profile in a
+  low-observability class renders as *not observed*, never *inactive*, and a
+  ranking must not read *unobserved* as *low-activity* — that systematically
+  penalizes the very members the public surface can't see. Empty-beats-fabricated
+  at the coverage layer.
 - **A freshness *window* is observable; a freshness *decay curve* is fabricated.** A **binary
   in-window gate** — `now − retrieved_at ≤ window_for_type` — is honest: elapsed time is an
   observable input, and a per-signal-type window that gates routing ("act on this only within N
@@ -470,6 +483,19 @@ rate), validity (schema/format/range). For each:
   the TLS handshake and HTTP/2 frame ordering, so a browser token on a
   non-browser client is a **stronger** bot signal than an honest one. Prefer an
   official API to scraping; exhaust free/public sources before paid ones.
+- **A connector/transform *pivot graph* multiplies both risks per hop — gate every
+  hop, not just the chain end.** A pivot engine (identifier → transform → new
+  entities → next transform; the Maltego / SpiderFoot pattern) is powerful for
+  coverage but compounds two hazards a single-source lane does not have. (1)
+  **Attribution risk multiplies:** a wrong entity at hop 2 poisons every entity
+  derived at hops 3+, so each transform's *output* entities must re-pass the
+  identity / fanout gate (§1 fanout arm, §3 false-merge) **before** attribution —
+  not once at the end of the chain. (2) **Identity-disclosure risk multiplies:**
+  each hop contacts a new host directly, so a pivot toward a gated host routes
+  through a licensed broker under the declared identity policy (anonymous /
+  identified / brokered) — never spoof (above) — and a pivot must not become a
+  rate-limit-evasion fan-out. A pivot graph without per-hop guards is both a
+  fanout amplifier and an identity-exposure amplifier.
 - Enforce data-subject suppression/erasure **once at the export/publish
   boundary**, so every downstream consumer inherits it.
 
