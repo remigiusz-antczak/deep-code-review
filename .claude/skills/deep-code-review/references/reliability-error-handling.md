@@ -93,7 +93,14 @@ semaphore) is a **single point of coupling**: if one dependency saturates it —
 downstream holding every connection while its calls time out — every *other* caller of that pool,
 including healthy critical paths, starves behind it. That is a **cascading failure** (Release It!,
 *Bulkheads*), and it is the enforcement the architecture lens already promises (`role-coverage.md`:
-a failure "bounded by timeouts, **bulkheads**, and circuit breakers"). Review:
+a failure "bounded by timeouts, **bulkheads**, and circuit breakers").
+
+**Scope:** a service with a *shared* resource pool, client, or semaphore serving more than one
+dependency or traffic class. A single-dependency CLI, a serverless function with one client per
+invocation, or a process already using one pool per dependency has nothing to partition — say so
+and move on.
+
+Review:
 
 - **Partition the pool by dependency / traffic class.** For every shared pool, list what draws from
   it; one pool serving both a slow/optional call and a fast/critical one is unpartitioned — give the
@@ -104,7 +111,9 @@ a failure "bounded by timeouts, **bulkheads**, and circuit breakers"). Review:
   threads.
 - **A fixed downstream capacity divides per replica — with a floor.** When the caller scales out, a
   fixed connection limit / per-key rate budget split across N instances can starve each; size it
-  per-replica with a floor, don't assume the single-instance budget survives fan-out.
+  per-replica with a floor, don't assume the single-instance budget survives fan-out, and alert when
+  replica-count × per-replica size approaches the downstream ceiling, so scale-out can't silently
+  oversubscribe it.
 - **Under self-overload, shed or degrade low-priority work.** A synchronous service with no path to
   shed low-priority load under overload collapses *all* callers uniformly (critical and optional
   alike) instead of protecting the critical ones (the queue/async shed-load case is in
@@ -114,6 +123,8 @@ a failure "bounded by timeouts, **bulkheads**, and circuit breakers"). Review:
   capacity silently shrinking per replica with no floor; a synchronous service with no self-overload
   shed/degrade path. (Sibling to the circuit-breaker rule above; distinct from tenant-vs-tenant
   noisy-neighbour isolation in domain T — a different axis.)
+
+---
 
 ## Partial failure & persisted state
 
@@ -288,4 +299,7 @@ retry; work lost on crash; status not checked before body read; emergency stop
   entity's mutually-exclusive lifecycle stages (admits impossible combinations); a non-terminal
   state whose only exit depends on one specific actor (no timeout / reassignment); a listening service
 that closes its listener before failing readiness, or drains unboundedly; a worker that exits without
-nacking its in-flight job.
+nacking its in-flight job; one pool/client/semaphore shared by a critical and a background call with
+no partition, admission check, or per-replica floor; a downstream consumer that gates on an artifact's
+**existence** rather than the producing step's **success** (an abort added to a formerly-hanging step
+must preserve last-good and signal failure, not write-then-throw).

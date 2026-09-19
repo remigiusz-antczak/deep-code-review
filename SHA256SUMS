@@ -37,7 +37,7 @@ cf7f5c7b84fe84604950b25fb85216bc6f19b6898cbf238e752b08bbbb33c798  .claude/skills
 9d041ba99fccbea1646940a598265bf0a7c38de733226acdd71327a2591a4ce5  .claude/skills/deep-code-review/references/dependency-currency-and-upgrades.md
 6c0abead7ad297e15b807f8f663d3fcb07c5308208f933fb31111618b8d16b9d  .claude/skills/deep-code-review/references/docs-and-dx.md
 b0bbec43934a3da9e666183dc157c97ef7e587670efe26209d12a0e0f7f01900  .claude/skills/deep-code-review/references/docs-evolution-by-stage.md
-084c62b579ea7c326d310ca3b4666daa31bf3e52e1ee47a14c5aa4a9f3718c7c  .claude/skills/deep-code-review/references/domain-checklists.md
+5334742a6723455b589d88674575735b72e7be07b62aaf1ba96547a89f4f69f7  .claude/skills/deep-code-review/references/domain-checklists.md
 ed10ed59f4ec9fcfb337ce474a8971b6a4a17f78bd0980db9a6bed08a308166f  .claude/skills/deep-code-review/references/example-review-report.md
 1bc951d87bacf60a5f5d6ea8add991f4bb2da22abb636c968f5e7bec810fa5d4  .claude/skills/deep-code-review/references/frontend-a11y.md
 1dc8549e32c86ea978afdea6f38e92369a6dbabd164d040b3b165415cce4eb83  .claude/skills/deep-code-review/references/i18n-l10n.md
@@ -56,7 +56,7 @@ bc080f8ffdb596e818e384f2ef95e028302bf744a7325811e34bc4657e98c49b  .claude/skills
 a12eca6ccc6c2981702357c3a4daa83fc3441bd8639fe3fc7527ba32b0749052  .claude/skills/deep-code-review/references/product-ux-quality.md
 5978e95203bb95f9918241cbc0b8748052d9f427177213f7ef65837a7bc8bc71  .claude/skills/deep-code-review/references/readme-authoring.md
 872229aad27f2fa06dadd8423f761bfd61b7a672aec8ababf568d5aebbc97c93  .claude/skills/deep-code-review/references/release-engineering.md
-5696d490cd6f710110c002201ba9344789108acb76cc51624b2a2b1b31771477  .claude/skills/deep-code-review/references/reliability-error-handling.md
+5a4e1a787b89a838a9139013427afcf43be38599391a00ea25e66b4032718843  .claude/skills/deep-code-review/references/reliability-error-handling.md
 78dedc4bfa1c8d0de22551d0e51f4418b7357071fa00ac2f585feb53d967b2e6  .claude/skills/deep-code-review/references/report-format.md
 e4842666073f6dfe8f173758289c7015204c1a504d99b9b6f0b5aa32a0ab9f76  .claude/skills/deep-code-review/references/role-coverage.md
 4e3672bd86fe39b2e2c026072b0c8224b2ff4ca22f365bbbcb0bf1fc5f7c34b9  .claude/skills/deep-code-review/references/security-agent-skills.md

@@ -243,7 +243,9 @@ Apply to any pipeline, ETL, enrichment, scraping, or dataset producer. Judge the
   loops catch **per-item** errors, log, and continue so one bad item can't halt
   the run. Every call carries a **timeout and an independent abort signal**
   (one without the other leaves a hang path). Circuit-break on 402/429 or
-  consecutive errors.
+  consecutive errors. A **shared pool** serving a slow/optional and a fast/critical dependency is a
+  **bulkhead** gap — partition by dependency, fail fast on exhaustion, and size a fixed downstream
+  budget per-replica with a floor on scale-out (`references/reliability-error-handling.md`).
 - No silent swallow (`catch {}` / `except: pass` / `rescue nil`); fail **closed**
   on security-relevant errors, degrade cleanly elsewhere; partial failure never
   corrupts persisted state. **Echo-verify** a write (compare the response
@@ -256,7 +258,8 @@ Apply to any pipeline, ETL, enrichment, scraping, or dataset producer. Judge the
   in-flight job (`references/reliability-error-handling.md`); a **two-key confirmation** guards the
   highest-consequence irreversible actions; every credentialed integration
   degrades to a **clean no-op** without its key — unsafe if the CLI still
-  **persists an empty/zero artifact** that downstream merge/read treats as data
+  **persists an empty/zero artifact** that downstream merge/read treats as data — a downstream
+  consumer must gate on the producing step's **success**, not the artifact's mere existence
   (procedure: `references/reliability-error-handling.md`). A **load-order/registration bug
   can silently no-op an entire subsystem** — assert each optional/paid subsystem
   actually executes in the deployed environment, not just locally, and that each
