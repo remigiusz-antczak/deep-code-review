@@ -249,6 +249,13 @@ design-quality checklist in `references/migration-parity.md` (#124).
 
 ## Referenced by name (not fetched this session — verify before citing a URL)
 
+- **Published metric/measurement standards** — cited in `data-quality.md` §7 (#396) as the
+  constructive escape from an invented score: **CHAOSS** (community activity/health metrics +
+  metric-models), **Fellegi-Sunter** (probabilistic record-linkage match tiers, incl. a
+  possible-match "skip" band), **W3C PROV** (provenance/lineage), **rel=me / ORCID / schema.org
+  `sameAs`** (identity), **network-science structural-position measures** (Freeman betweenness centrality; Burt structural
+  holes), **ESCO / O*NET** (skills taxonomies). Named by name only — not fetched this session;
+  verify each current spec/URL before citing a version or a specific claim.
 - **OWASP WSTG** — how-to-test companion for each web risk.
 - **OWASP Cheat Sheet Series** — concrete implementation guidance.
 - **MITRE CWE / CVE** — weakness and vulnerability naming.

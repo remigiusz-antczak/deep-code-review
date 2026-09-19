@@ -219,6 +219,24 @@ rate), validity (schema/format/range). For each:
   component's own value** — it answers "did it happen," never "whose is it." Safest default:
   carry the corroboration **count as unrendered evidence** (the derived-field rule above) and
   don't promote a fused confidence at all.
+- **When the anti-fabrication rule forbids an invented score, the constructive escape is a
+  *published standard* — checked at both the definition *and* the selection layer.** A data
+  product barred from an "invented composite index" or an inferred human-judgment score can turn a
+  forbidden invented metric into a **cited third-party primitive** by adopting an external published
+  standard whose *definition* is the spec, not the tool's judgment — e.g. **CHAOSS** (community
+  activity/health), **Fellegi-Sunter** (record-linkage match tiers), **W3C PROV** (lineage),
+  **rel=me / ORCID / schema.org `sameAs`** (identity), **network-science centrality** (e.g. Freeman
+  betweenness), **ESCO / O\*NET** (skills) — each looked up at its own spec (named here **by name
+  only**; verify the current spec before citing a version or a specific claim). **The subtle trap:**
+  citing each metric's spec while **hand-picking which metrics to include** re-introduces the
+  invented index **one level up** — the *selection* is now editorial judgment, hidden because every
+  row still carries a spec URL. So the check is two-layer, plus observability: (1) is each metric an
+  external, cited **definition**? (2) is the metric **selection** itself a cited published **model**,
+  not a set the tool chose? (3) is each metric's **input actually observable** by the product (else
+  it is redundant with a system that already observes it)? Where the product must deviate from a published model, it **records the
+  deviation per metric, with a reason**. Corollary: a standard often supplies the honest **skip
+  band** for free — Fellegi-Sunter's *possible-match* middle tier is literally "skip rather than
+  guess" (§2).
 - **Test every enum/config mapping against the source's *real* value
   distribution.** A lookup keyed on the wrong domain — a geography→multiplier map
   keyed on region names while the source emits ISO-3166 alpha-2 codes (plus
@@ -450,4 +468,4 @@ that ships raw events where the consumer scores on aggregates, or a claimed
 provider-input never reconciled against the provider's live output before it feeds a
 downstream score; a deserializer that trusts a serialized computed field (a count
 read verbatim, not re-derived from the validated collection) or checks only a
-primitive type, not element shape — weaker than its own builder; a corroboration / fusion step that raises a fused confidence past its **entity-attribution** component on agreement that only evidences occurrence.
+primitive type, not element shape — weaker than its own builder; a corroboration / fusion step that raises a fused confidence past its **entity-attribution** component on agreement that only evidences occurrence; a hand-rolled composite / score / tiering where a citable external standard exists and wasn't used, or per-metric spec URLs over a **tool-chosen metric set** (the invented index one level up).

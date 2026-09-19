@@ -1737,6 +1737,17 @@
         "Notes a display that would honestly be 'awaiting reading' on nearly every row is worse than no feature -> hold it (ratify the rule + instrument the inputs first)",
         "Review lens: asks the denominator/rule and whether each value is measured or inferred"
       ]
+    },
+    {
+      "id": "published-standard-over-invented-metric-check-both-layers",
+      "prompt": "Our data product isn't allowed to publish an 'invented composite index'. To comply, for each entity we show a set of metrics that each cite a published spec (a couple of CHAOSS metrics, a centrality measure, etc.) instead of one made-up score. We hand-picked which metrics to show. Are we clear of the invented-score rule?",
+      "expected_output": "Not fully -- you've fixed the definition layer but re-introduced the invented index one level up, at the SELECTION layer. Citing each metric's spec makes each metric a cited third-party primitive (good -- the constructive escape from the anti-fabrication rule: adopt an external published standard whose definition is the spec, not your judgment, e.g. CHAOSS / Fellegi-Sunter / W3C PROV / centrality). But HAND-PICKING which metrics to include is itself editorial judgment -- a bespoke composite -- and it hides because every row still carries a spec URL. Two-layer check (plus observability): (1) is each metric an external cited definition? (yes) (2) is the metric SELECTION itself a cited published model, not a set you chose? (here: no -- fix this) (3) is each metric's input actually observable by the product, else it's redundant? Where you must deviate from a published model, record the deviation per metric with a reason. And a standard often hands you an honest skip band for free -- Fellegi-Sunter's possible-match middle tier is 'skip rather than guess'. (data-quality.md.)",
+      "expectations": [
+        "Credits the definition-layer fix (each metric a cited published spec = a third-party primitive, the constructive escape from the invented-score prohibition)",
+        "Catches the SELECTION-layer trap: hand-picking which metrics to include re-introduces the invented index one level up, hidden because every row still has a spec URL",
+        "Requires the metric SELECTION itself be a cited published model (not a tool-chosen set), plus each metric's input actually observable (else redundant); deviations recorded per metric with a reason",
+        "Notes a published standard often supplies an honest skip band for free (e.g. Fellegi-Sunter's possible-match tier = skip rather than guess)"
+      ]
     }
   ]
 }
