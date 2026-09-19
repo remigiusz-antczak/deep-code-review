@@ -65,6 +65,23 @@ paths. Expands section G of `SKILL.md`. Cross-ref J /
 - **Lock held across I/O** — latency multiplies; deadlock risk rises when a
   second lock is taken inside. Prefer: lock, copy/mutate small state, unlock,
   then I/O.
+- **Lock *ordering* — not just lock *scope* — is what prevents deadlock.** Two
+  code paths that acquire the **same two-plus locks in different orders** deadlock
+  under contention: A holds lock 1 waiting on lock 2 while B holds lock 2 waiting
+  on lock 1. This fires even when each lock is held briefly with no I/O — distinct
+  from the held-across-I/O case above — and is invisible to a single-threaded test
+  or one that only ever exercises one acquisition order. Applies to in-process
+  mutexes and to DB row/table locks alike (PostgreSQL's canonical case: two
+  transactions updating the *same two* rows in opposite order). Fix: impose a
+  **fixed global acquisition order** at every site holding two-plus locks (sort by
+  a stable key — table name, primary key, mutex id) — "the best defense against
+  deadlocks is generally to avoid them by being certain that all applications using
+  a database acquire locks on multiple objects in a consistent order" (PostgreSQL)
+  — or use a primitive that orders for you (C++ `std::scoped_lock`: "deadlock
+  avoidance algorithm is used as if by `std::lock`"). Ordering is the
+  **prevention**; the `40001`/deadlock-victim retry in *DB / store TOCTOU* below is
+  the **recovery** — PostgreSQL names that retry only as the fallback "if it is not
+  feasible to verify this in advance," so the two are complementary, not competing.
 - Missing `await` / fire-and-forget: the caller returns success while work
   fails later; unhandled rejection may crash the process or vanish.
 
@@ -186,6 +203,7 @@ for acting on it without collateral damage.
 singleton/long-lived object, or a subscription/listener outliving its subscriber (lifetime mismatch); missing `await`; non-atomic
 read-modify-write; load→await→write without re-read/CAS; retrying only the failed statement after a `40001`/deadlock
 instead of the whole transaction; lock held across I/O;
+two-plus locks acquired in a different order across call sites (ordering deadlock);
 two writers on one file; corrupt/unreadable store wiped to empty; check-then-act
 without a constraint or row lock (a bare default-isolation transaction is not enough); tests/jobs writing a real tracked/shared data
 path; stage-all from a multi-agent checkout; multiple concurrent-agent write

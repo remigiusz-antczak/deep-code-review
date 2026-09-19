@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.230.0] — 2026-09-20
+
+### deep-code-review — wave 151 lock-ordering deadlock (prevention vs recovery)
+
+- **`concurrency-shared-state.md`**: new red flag — lock *ordering*, not just lock *scope*, is what prevents deadlock. Two code paths that acquire the same two-plus locks in different orders deadlock under contention (a circular wait), even when each lock is held briefly with no I/O — distinct from the held-across-I/O case, and invisible to a single-threaded test or one that only exercises one acquisition order. Applies to in-process mutexes and DB row/table locks alike. Fix: a fixed global acquisition order at every multi-lock site (sort by a stable key), or a primitive that orders for you (C++ `std::scoped_lock`). Ordering is the prevention; the `40001`/deadlock-victim retry is the recovery — complementary, not competing. Closes the "no deadlock ordering" item that `domain-checklists.md` already promised but the routed file never delivered.
+- +2 evals (DB row-lock transfer; in-process mutex pair). +2 standards rows (PostgreSQL 13.3.4 Deadlocks; cppreference `std::scoped_lock`; fetched + verified 2026-09-20).
+
 ## [1.229.0] — 2026-09-19
 
 ### deep-code-review — wave 150 reconcile a self-inconsistent design reference before building (closes #500)

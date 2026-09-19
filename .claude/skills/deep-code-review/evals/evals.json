@@ -2891,6 +2891,26 @@
         "Requires reconciling to one canonical interpretation first — pick the reading the rest of the design implies, or raise it as an owner decision (an A/B of the two)",
         "Requires recording the chosen interpretation as its own reviewable artifact (a decision note or a separate reconciliation commit), separate from the build — not silently resolving it by whichever screen was copied last"
       ]
+    },
+    {
+      "id": "concurrency-lock-ordering-db-transfer",
+      "prompt": "Review this code for concurrency defects:\n\n```python\ndef transfer_a_to_b(db, amount):\n    with db.transaction():\n        db.execute(\"UPDATE accounts SET balance = balance - %s WHERE id = 'acct_1'\", [amount])\n        db.execute(\"UPDATE accounts SET balance = balance + %s WHERE id = 'acct_2'\", [amount])\n\ndef transfer_b_to_a(db, amount):\n    with db.transaction():\n        db.execute(\"UPDATE accounts SET balance = balance - %s WHERE id = 'acct_2'\", [amount])\n        db.execute(\"UPDATE accounts SET balance = balance + %s WHERE id = 'acct_1'\", [amount])\n```\nBoth functions run concurrently under real user traffic. What is the concurrency risk, and what is the fix?",
+      "expected_output": "A lock-ordering deadlock: transfer_a_to_b locks acct_1 then acct_2; transfer_b_to_a locks acct_2 then acct_1 — the reverse order. Under concurrent execution one transaction can hold the first row lock while waiting on the second while the other holds the second waiting on the first; the DB detects the cycle and aborts one side (SQLSTATE 40001), but that abort-and-retry is RECOVERY, not prevention. The real fix is a fixed, consistent acquisition order in both functions — e.g. always update the lower account id first — so the cycle can never form; retrying the aborted transaction is only the fallback when a consistent order can't be guaranteed up front.",
+      "expectations": [
+        "Names the two functions' opposite row-lock acquisition order (acct_1-then-acct_2 vs acct_2-then-acct_1) as the deadlock cause",
+        "States the deadlock only fires under concurrent execution and would not appear in a single call or single-threaded test",
+        "Prescribes a fixed, consistent acquisition order (e.g. always lock the lower id first) as the fix — an answer that only catches the deadlock error and retries, with no ordering fix, does not satisfy this"
+      ]
+    },
+    {
+      "id": "concurrency-lock-ordering-in-process-mutex",
+      "prompt": "Review this worker code for concurrency defects:\n\n```javascript\n// Path A: called from the queue consumer\nfunction reserveThenCharge(order) {\n  inventoryLock.acquire();\n  billingLock.acquire();\n  try { /* reserve stock, then charge card */ } finally {\n    billingLock.release();\n    inventoryLock.release();\n  }\n}\n\n// Path B: called from the refund webhook handler\nfunction refundThenRelease(order) {\n  billingLock.acquire();\n  inventoryLock.acquire();\n  try { /* refund card, then release stock */ } finally {\n    inventoryLock.release();\n    billingLock.release();\n  }\n}\n```\nBoth paths can run concurrently. What is wrong, and what is the fix?",
+      "expected_output": "An in-process ordering deadlock: reserveThenCharge acquires inventoryLock then billingLock; refundThenRelease acquires billingLock then inventoryLock — a circular wait if both run at once (A holds inventoryLock waiting on billingLock, B holds billingLock waiting on inventoryLock). It will not reproduce in a single-path test; it only fires under real contention between the queue consumer and the webhook handler. Fix: acquire both locks in one fixed global order at every call site (e.g. always inventoryLock before billingLock), or use a primitive that locks a set of mutexes without regard to call order (deadlock-avoiding multi-lock). This is not a missing-lock or missing-timeout bug.",
+      "expectations": [
+        "Identifies that the two functions acquire the same two locks (inventoryLock, billingLock) in opposite order",
+        "Names this a circular-wait/deadlock that only manifests under concurrent execution (queue consumer racing the webhook handler), not in a single-path unit test",
+        "Prescribes a fixed global lock-acquisition order across both call sites (or a deadlock-avoiding multi-lock primitive) as the fix, not treating it as a plain missing-lock or missing-timeout bug"
+      ]
     }
   ]
 }
