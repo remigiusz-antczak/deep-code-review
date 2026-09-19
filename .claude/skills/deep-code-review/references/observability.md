@@ -156,4 +156,6 @@ only; health check that always returns 200; quota/transport failure counted as a
 result; raw request/response/headers logged; secrets or PII in spans; user input
 concatenated into log lines; unbounded metric labels; destructive action with no
 audit record; audit table the app can UPDATE/DELETE; stateful store with no
-backup, no off-site copy, or no dated restore drill.
+backup, no off-site copy, or no dated restore drill; a correlation/trace id
+assumed to prove an unbroken trace with no verified context propagation across
+service hops.

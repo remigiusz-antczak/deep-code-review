@@ -193,4 +193,6 @@ lanes sharing one working tree with no worktree-per-lane isolation; a stray or
 stale worktree with no corresponding open PR; duplicate open PRs/branches
 targeting the same file set (no spawn-time preflight); load-shedding or lane-abort
 by name/command-line match (`pkill -f` / `killall`) instead of an owned process group;
-a killed lane whose children outlive it (orphaned worktree/port/lock).
+a killed lane whose children outlive it (orphaned worktree/port/lock); a
+plain (non-atomic, non-`volatile`) flag or field shared across threads with no
+named synchronization edge — a memory-visibility bug, not only an interleaving race.
