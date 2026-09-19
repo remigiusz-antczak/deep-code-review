@@ -453,6 +453,42 @@ detaches* above: that fixes **where** the integrator merges (a detached tree at 
 this fixes **when** release verification runs against it (after the tip stops moving) —
 different axes, not competing schedules.
 
+## A delegated "verify green" in an isolated worktree is a lead, not the authoritative gate — re-run the full-repo gate at land
+
+In a **delegate → review → land** pipeline, a subagent that builds in an isolated worktree and
+reports `verify` **green** ran whatever gate its **partial environment** could — routinely
+**narrower** than the authoritative one. The worktree tends to run a **changed-files or
+package-local** check while the real gate at land is repo-wide, so a green lane verdict can sit
+on top of failures the full gate catches:
+- an **unused-import / lint** error the worktree's changed-files pass skipped but root
+  `eslint . --max-warnings 0` flags;
+- **formatter diffs on files the change never touched** that root `prettier --check .` fails on
+  but a package-local pass never saw;
+- **coverage / cross-workspace / design-system** checks the worktree **literally could not run**
+  (missing hoisted deps, an absent sibling package) — a *could-not-run* silently folded into a
+  "green" that only ever meant "what I could run passed."
+
+So **the authoritative gate is the full-repo run at integration** — through the real pre-commit
+hook / CI, on the **integrated** tree — not the subagent's env-limited pass. This extends
+**CI-offload the heavy gate** above ("a local run is the pre-check, never the evidence") from the
+RAM-tiering case to delegation, with the load-bearing addition that the authoritative run is on
+the **integrated** tree, not any single lane's. Treat a delegated green as a **lead** (a discovery
+verdict, above: useful to proceed to review, never the certification); **land re-runs the full
+gate** and *that* verdict is the one of record — a lane's green is `unverified` until the
+integrated tree confirms it (`deep-code-review` `method.md`), so **budget a fix-and-recommit at
+land** — a delegated green predicts *less* rework, never *none*.
+- **🚩 tell:** a lane reporting `verify: green` from a `--filter=<changed>` / package-local run,
+  or a `land`/merge step that trusts a subagent's verdict **without re-running the repo-wide gate**
+  on the merged result.
+
+This is the **inverse** of the symlinked-deps section below and the provisioning-gap section above (a worktree too
+*poor* to run a check yields a false **failure** — "could not run" misread as red); here a
+worktree too *partial* yields a false **pass**. Both reduce to one rule — a verdict is only as
+wide as the environment it ran in, so **name the scope and re-run the authoritative gate at land**
+(the *could-not-run ≠ found-a-problem* epistemology applied to delegation). Distinct, too, from
+the stale-verdict case above: there the verdict is current-scope but a *moved head*; here it is a
+*current head* but *partial scope*.
+
 ## Boot-the-dev-server lanes need a copy, not a symlink, of the dependencies dir
 
 Any worktree that runs the **heavy gates** needs its own real install — run

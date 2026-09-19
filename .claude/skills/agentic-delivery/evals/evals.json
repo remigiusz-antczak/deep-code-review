@@ -345,6 +345,17 @@
         "Generalizes to any absolute-threshold gate on a shared counter (coverage %, bundle-size) -- under concurrency gate on the delta the change owns",
         "Distinguishes this (count right but contended) from the phantom-warning false-fail where a symlinked dep tree makes the count wrong (an infra 'could not run')"
       ]
+    },
+    {
+      "id": "delegated-verify-green-is-not-the-authoritative-gate",
+      "prompt": "Three sub-agent lanes each built in an isolated worktree and reported 'verify: green' (they ran a changed-files lint + package-local unit tests). The integrator is about to land all three by merging their branches and pushing, trusting those green verdicts to skip re-running the gate. Sound?",
+      "expected_output": "No -- a subagent's green in an isolated worktree is a LEAD, not the authoritative gate, because its environment ran a NARROWER scope than the real gate: a changed-files or package-local lint/test, not the repo-wide gate. A green like that can sit on failures the full gate catches -- an unused-import that root `eslint . --max-warnings 0` flags, formatter diffs on files the change never touched that `prettier --check .` fails, and coverage / cross-workspace / design-system checks the worktree literally could not run (missing hoisted deps). The authoritative gate is the full-repo run at integration, through the real pre-commit hook / CI on the INTEGRATED tree -- so land must RE-RUN the full gate on the merged result; each lane's green is unverified until that confirms it. (Distinct from a stale verdict as the head moves -- there the verdict is current-scope but a moved head; here it is a current head but partial scope; and the inverse of a too-poor worktree that yields a false failure.) (fast-agentic-delivery.md.)",
+      "expectations": [
+        "Rejects trusting the subagent green -- an isolated-worktree verdict ran a narrower scope (changed-files / package-local) than the authoritative repo-wide gate, so it is a lead, not certification",
+        "Names concrete misses a partial env allows: repo-wide lint (unused import vs `eslint . --max-warnings 0`), formatter diffs on untouched files, coverage / cross-workspace checks the worktree could not run",
+        "Requires land to RE-RUN the full-repo gate on the INTEGRATED tree (real pre-commit hook / CI) as the verdict of record; a lane's green is unverified until then",
+        "Distinguishes this (partial-scope env, false pass at a current head) from a stale verdict as the head moves, and from a too-poor env that yields a false failure"
+      ]
     }
   ]
 }
