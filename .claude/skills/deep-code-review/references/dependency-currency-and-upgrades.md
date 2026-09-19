@@ -57,7 +57,7 @@ ships:
 which spans 40+ ecosystems — a good single cross-check when the repo mixes
 stacks. Prefer a **call-graph-aware** scanner where one exists (`govulncheck`):
 "the CVE is present" and "the vulnerable function is reachable" are different
-severities (see §4).
+severities (see §3).
 
 **B. End-of-life / unmaintained / deprecated (the silent risk).** A package can
 be on its own latest version and still be a liability because *there will be no
@@ -79,7 +79,7 @@ next version*:
 stable release and no known vuln. Target **latest _stable_** — exclude
 pre-release/alpha/beta/RC channels unless a specific fix is only there and the
 risk is accepted by an owner. This list is real (it is how you *end up* in list A
-later) but it is **not** a blocking finding on its own — rank it per §4 or it
+later) but it is **not** a blocking finding on its own — rank it per §3 or it
 becomes noise.
 
 Report per-list, and state coverage honestly: "audited the committed lockfile;
@@ -200,6 +200,33 @@ would confirm it.
 
 ---
 
+## 4 — Adding a new dependency is a governance decision, not an implementation detail
+
+Sections 1–3 keep **existing** dependencies current; this covers **taking on a new one**. A
+feature sometimes needs a capability the codebase lacks (client-side screenshot capture, a
+charting or date-parse lib), and the tempting move is to `npm install` a package and ship. But a
+new runtime dependency is a **long-term liability the maintainer carries, not a free import** — it
+commits the project to a bundle-size / perf cost, a **supply-chain and security surface** (the
+whole transitive tree, §1), a **license** obligation, and ongoing maintenance. That is an
+**owner/maintainer decision**, not one an agent (or a feature PR) can unilaterally own.
+- **Report "this needs a new dependency" as BLOCKED-ON-OWNER** — with the exact dep(s) / approach
+  and the tradeoff (size, license, transitive surface, alternatives) — never an already-committed
+  `npm install` shipped as a fait accompli.
+- **First check for a lighter path** — an existing in-repo capability, an already-bundled lib, or
+  a native platform API; often the new dep is avoidable.
+- **Calibrate by weight, not reflex.** A tiny, ubiquitous, well-audited dep may be routine; a
+  **heavy / novel / broad-surface / unmaintained** one is the owner's call. When unsure, ask.
+- **Review lens:** a PR that adds a `package.json` (or `requirements.txt`, `go.mod`, …)
+  dependency **alongside a feature** deserves explicit scrutiny — necessary, minimal, maintained,
+  license-compatible, and **approved**?
+
+This is the global *confirm before a lasting / shared-state commitment* rule applied to the
+dependency manifest — especially in automated/agent work, where no human chose to take on the
+liability. (This is the *governance* decision — whether to take it on; the added dep's **integrity**
+once approved — that it resolves to an **established, non-slopsquatted** package — is verified per §2.)
+
+---
+
 ## 🚩 Red flags
 
 - No lockfile, or a lockfile out of sync with the manifest (a bump landed without
@@ -208,6 +235,9 @@ would confirm it.
 - No update-bot config (`dependabot.yml` / `renovate.json`) **and** a long tail
   of outdated deps — currency has no owner.
 - A single mega "update all dependencies" commit with no per-dep test evidence.
+- An **agent- or feature-PR-added new runtime dependency with no recorded owner/maintainer
+  decision** (heavy / novel / broad-surface especially) — adding a dep is a governance call (§4),
+  not an implementation detail.
 - Pinned to an **EOL** runtime/base image (`python:3.8`, `node:14`, an
   out-of-support framework LTS).
 - A direct dep last released years ago / repo archived / registry-deprecated,
