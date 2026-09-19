@@ -1669,6 +1669,18 @@
         "Diagnoses the non-converging resolver as the sweep re-dirtying it (each merge moves the base head, invalidating the resolution) and prescribes freezing the MERGE step -- not the build step -- while the resolver runs (queue greens, land hardest-to-rebase first)",
         "Frames it as the stale-base failure at the mergeability layer -- a quantity computed against one base head, consumed against another"
       ]
+    },
+    {
+      "id": "ml-in-production-drift-and-safe-model-rollout",
+      "prompt": "We trained and validated a fraud model, it hit target metrics offline, and we deployed it 6 months ago. It's still up with green latency/error dashboards, and we're about to swap in a retrained v2 the same way we deploy any service -- build, health-check, flip traffic. Anything wrong with this?",
+      "expected_output": "Two production-ML gaps a service-style deploy misses. (1) Drift: a served model degrades silently with no error as the live input distribution drifts from training -- green latency/error dashboards do not show it. Monitor the input-feature distribution and the prediction distribution (a shift in either is the early signal) and realized performance against ground truth, remembering ground truth LAGS (the fraud label lands days/weeks later), so alert on a proxy (distribution shift, confidence drop) in the meantime; six months unmonitored on distribution/quality is the real risk, not uptime. (2) Rollout: a new model version is a behavior change, not just a deploy -- green error-rate and latency do NOT mean v2 is as good (they miss a quieter, worse model). Don't flip traffic on a health check. Prove v2 on prediction quality first: shadow it (run in parallel on live traffic, compare, serve none) or canary / champion-challenger to a slice with a prediction-quality promotion gate, keep a rollback path, and because ground truth lags give it a longer quality-based bake than a code canary. (deep-code-review/references/testing-and-evals.md.)",
+      "expectations": [
+        "Flags model drift: a served model degrades silently as the input distribution drifts, and green latency/error dashboards do not reveal it -- monitor input + prediction distribution",
+        "Notes ground truth LAGS, so realized quality is delayed and a proxy (distribution shift / confidence drop) is what you alert on in the meantime",
+        "Rejects flipping traffic to v2 on a health check -- a new model version is a behavior change; error-rate/latency looking fine does not mean v2 is as good (a quieter, worse model)",
+        "Prescribes proving v2 on prediction quality via shadow or canary / champion-challenger with a prediction-quality promotion gate and a rollback path",
+        "Notes a model canary needs a longer, quality-based bake than a code canary because ground truth lags"
+      ]
     }
   ]
 }

@@ -362,6 +362,35 @@ split-hygiene and reproducibility half.)
   noise. Seed the training RNG and pin the data + model + code version behind each
   reported number (Breck et al., *The ML Test Score*, 2017).
 
+## ML in production — drift monitoring & safe model rollout
+
+The lifecycle sibling of the two sections above: §"ML pipeline correctness" verifies the model
+was **trained** honestly and `data-quality.md` §12 verifies a feature is **computed the same**
+for training and serving — this is the **post-deployment** half, where a model that was correct
+at ship time silently decays, or a swap ships a quietly worse one. Both are invisible to the
+checks that guard training.
+- **Monitor drift, not just uptime.** A served model **silently loses accuracy** (no error is
+  thrown) as the live input distribution drifts from the training distribution **over time** —
+  distinct from `data-quality.md` §12's train/serve *parity* check (two computation paths at one
+  instant); this compares live inputs to the training baseline as time passes. Monitor the **input-feature
+  distribution** and the **prediction distribution** (a sudden shift in either is the early
+  signal), plus realized **performance against ground truth** — but **ground truth often lags** (the
+  label for today's prediction lands days or weeks later), so quality is delayed and the thing
+  you alert on in the meantime is a **proxy** (distribution shift, a confidence drop). A model
+  with green infra dashboards and no distribution/quality monitoring is unmonitored where it
+  matters (cf. the monitoring category of the ML Test Score cited above; the generic signal
+  plumbing is `observability.md`).
+- **Roll a new model out behind a quality gate, not a health check.** A new model version is a
+  behavior change, not just a deploy — and **green error-rate and latency do not mean the new
+  model is as good** (they miss a quieter, worse model). Prove the candidate on **prediction
+  quality** first: **shadow** it (run it on live traffic in parallel, compare outputs, serve
+  none), or **canary / champion-challenger** to a slice with a **prediction-quality** promotion
+  gate (not just error/latency), keeping a **rollback path** to the incumbent. Because ground
+  truth lags, a model canary needs a **longer, quality-based bake** than a code canary —
+  promoting on a few minutes of green health is how a worse model reaches everyone. This
+  specializes the generic canary/rollback discipline in `release-engineering.md` to the ML case,
+  where the load-bearing signal is delayed prediction quality, not error rate.
+
 ## Business rules as executable specs
 
 Encode load-bearing business rules as acceptance tests so the build fails if the
@@ -380,4 +409,6 @@ that write a real tracked/shared data path with cleanup only in `finally`/`try`*
 an AI feature with only mocked unit tests and no eval bench; a coverage % cited
 as proof of correctness; a threshold lowered in the same diff that would otherwise
 fail; a heavily skewed pyramid-or-trophy shape with no stated test philosophy
-anywhere in the repo.
+anywhere in the repo; a served ML model with no drift monitoring on its input or
+prediction distribution; a new model version promoted on latency/error-rate alone,
+with no prediction-quality gate, shadow/canary, or rollback path.
