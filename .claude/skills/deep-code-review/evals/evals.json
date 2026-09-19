@@ -1748,6 +1748,17 @@
         "Requires the metric SELECTION itself be a cited published model (not a tool-chosen set), plus each metric's input actually observable (else redundant); deviations recorded per metric with a reason",
         "Notes a published standard often supplies an honest skip band for free (e.g. Fellegi-Sunter's possible-match tier = skip rather than guess)"
       ]
+    },
+    {
+      "id": "negative-assertion-guardrail-test-is-a-ratified-constraint",
+      "prompt": "A feature request says 'add progress bars to the Brief.' But there's a test `assert.doesNotMatch(brief, /ProgressBar/)` that fails on my change. Easiest fix: delete that test so the feature ships. OK?",
+      "expected_output": "No -- that test is a negative-assertion guardrail encoding a deliberate, likely-ratified design constraint (the Brief must NOT show a ProgressBar). Deleting or loosening it to make the feature pass silently REVERSES that ratified decision and removes the very record of it -- the code-review equivalent of pulling the smoke detector. Read the negative test as evidence the constraint is intentional: ship only the part that doesn't violate it (e.g. an honest coverage / readiness stat), and report the conflicting part (the progress bars) as BLOCKED-ON-OWNER -- the owner can split / reopen or loosen the test themselves, explicitly. Changing a ratified constraint is an explicit, owner-visible decision in its own reasoned commit, never a side effect of a feature PR. (Review lens: a diff that loosens / removes an assertion -- especially an absence assertion -- while adding a feature is a red flag for a silently-reversed decision. This is distinct from a spec retired because its surface became unreachable, which is owed a named coverage gap; here the surface is reachable and the constraint is still intended.) (testing-and-evals.md.)",
+      "expectations": [
+        "Refuses to delete/loosen the test -- a negative-assertion (assert-absent) test encodes a deliberate/ratified constraint; removing it to pass silently reverses that decision and erases its record",
+        "Prescribes shipping only the non-violating part and reporting the conflicting part as BLOCKED-ON-OWNER (owner may split/reopen or loosen the test explicitly)",
+        "States that changing a ratified constraint is an explicit owner-visible decision in its own commit, never a side effect of a feature PR",
+        "Review lens: a diff that loosens/removes an assertion (esp. an absence assertion) while adding a feature is a red flag for a silently-reversed decision"
+      ]
     }
   ]
 }

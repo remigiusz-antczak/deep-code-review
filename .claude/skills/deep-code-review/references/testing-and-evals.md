@@ -268,6 +268,29 @@ and their absence is a finding:
    a **named fallback for a retired check, never a substitute** that lets a team trade
    rendered coverage for import checks and call the surface covered.
 
+## A negative-assertion (assert-absent) test is a ratified constraint — never loosen it to ship a conflicting feature
+
+A test that asserts something is **absent** — `assert.doesNotMatch(brief, /ProgressBar/)`, "no
+attainment %", "no dashed drop-target" — encodes a **deliberate, often-ratified design
+constraint**: *this surface must not show X.* When a new feature request conflicts with one
+("add progress bars" vs a Brief that pins **no** `ProgressBar`), an agent faces a fork:
+- **Wrong:** delete or loosen the guardrail to make the feature pass — the code-review equivalent
+  of pulling the smoke detector. It **silently reverses a ratified decision** and removes the very
+  record that decision left behind.
+- **Right:** read the negative test as **evidence the constraint is intentional** — ship only the
+  part that doesn't violate it, and report the conflicting part as **BLOCKED-ON-OWNER** (they can
+  split / reopen, or loosen the test themselves, explicitly). (Observed: a lane asked for a live
+  OKR dashboard added the honest **coverage** stat but **not** an attainment-% meter, because a
+  guardrail test pinned the omit-percentage contract — a test-layer enforcement of *show coverage, not
+  a grade* in `product-ux-quality.md`.)
+- **Review lens:** a diff that **loosens or removes an assertion — especially an absence
+  assertion — while adding a feature** is a red flag: check whether it silently reverses a
+  recorded decision. Changing a ratified constraint is an **explicit, owner-visible** decision (its
+  own reasoned commit), never a side effect of a feature PR. Distinct from the retired-coverage
+  case above (a spec dropped because its surface became *unreachable*, owed a named gap): here the
+  surface is reachable and the constraint is **still intended** — the test is not stale, it is
+  load-bearing.
+
 ## A state-dependent spec must assert its precondition, not lean on a default
 
 A browser / E2E spec that depends on an **implicit UI default** passes only by
@@ -411,4 +434,6 @@ as proof of correctness; a threshold lowered in the same diff that would otherwi
 fail; a heavily skewed pyramid-or-trophy shape with no stated test philosophy
 anywhere in the repo; a served ML model with no drift monitoring on its input or
 prediction distribution; a new model version promoted on latency/error-rate alone,
-with no prediction-quality gate, shadow/canary, or rollback path.
+with no prediction-quality gate, shadow/canary, or rollback path; an
+absence / negative assertion loosened or removed in the same diff that adds a
+conflicting feature (silently reversing a ratified must-not-show-X constraint).
