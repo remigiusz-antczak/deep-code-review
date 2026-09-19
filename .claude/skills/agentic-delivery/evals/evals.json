@@ -399,6 +399,26 @@
         "Requires a `Verify:` line naming the method (command run, surface exercised, evidence link) before trusting it -- treat as unverified, ask for the method not the adjective",
         "Notes the `Verify:` line is a claim-quality requirement, NOT a trusted control (still self-reported; the SHA-pinned forge run is the control)"
       ]
+    },
+    {
+      "id": "terminus-requires-verifying-every-work-queue-not-just-the-one-worked",
+      "prompt": "An autonomous delivery agent has merged every open issue in the GitHub tracker and reports: 'Terminus — nothing left to build.' The repo also has a `BACKLOG.md` with a todo list, a `docs/critique.md` of known gaps, and CI shows 7 skipped tests. The agent checked none of those. Is 'terminus' honest?",
+      "expected_output": "No — terminus is a claim about ALL available work, not the one queue the agent worked. The GitHub tracker is drained, but a `BACKLOG.md` todo list, a `docs/critique.md` gaps file, and 7 skipped tests are un-examined work surfaces. Before declaring done, enumerate EVERY surface — issue tracker(s), the todo/gaps/critique files, failing/skipped tests, TODO comments, any open-review backlog — and confirm each is drained or blocked-with-reason. 'I finished the tracker' is not 'nothing to do.' The honest report names which surfaces were verified (and states any that are blocked, e.g. skipped tests that are quarantined-with-reason). This is the delivery-side analog of reconciling against the review coverage ledger before closing. (fast-agentic-delivery.md.)",
+      "expectations": [
+        "States terminus is a claim about ALL work surfaces, not just the queue worked — the tracker being empty is not 'nothing left'",
+        "Requires enumerating + checking the other surfaces (BACKLOG.md todo, docs/critique gaps, the 7 skipped tests, TODO comments) — each drained or blocked-with-reason — before declaring done",
+        "Requires naming the queues verified so a missed surface is auditable"
+      ]
+    },
+    {
+      "id": "discover-work-by-enumerating-the-backlog-not-a-keyword-title-filter",
+      "prompt": "An agent picks its next work by running a title filter over the 150 open issues (`gh issue list` grepped for `feat|fix|ui|ux`), builds all matches, and declares the backlog cleared. Is that a sound way to reach 'nothing left'?",
+      "expected_output": "No — a keyword/title filter silently hides every item whose title lacks the keywords, so 'cleared' really means 'everything matching feat|fix|ui|ux is cleared.' Docs, CI, security, tooling, API, and registry items — plus bugs whose titles just don't contain those words — are invisible to that grep and remain. Discover work by ENUMERATING the full list and bucketing by type (using the tracker's labels/type field, not a title regex), then confirm each bucket is drained or blocked; also mind pagination (a default 30-row page can hide the rest of 150). A keyword filter is fine to PRIORITIZE within a known-complete set — never to define the set. State the filter when claiming done, so the blind spot is auditable. (fast-agentic-delivery.md.)",
+      "expectations": [
+        "Identifies that a title/keyword filter hides every non-matching item (docs/CI/security/tooling and mis-titled bugs), so 'cleared' only means 'cleared among matches'",
+        "Requires enumerating the full backlog + bucketing by label/type (not a title regex), minding pagination, before claiming terminus",
+        "Notes a keyword filter may prioritize a known-complete set but never define it, and the filter must be stated when claiming done"
+      ]
     }
   ]
 }

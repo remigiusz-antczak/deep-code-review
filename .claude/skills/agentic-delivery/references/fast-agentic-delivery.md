@@ -900,6 +900,50 @@ status is "researched, 0 items tracked," never "done."
   is displacing delivery with investigation; the status that names *what shipped*
   (above) is what surfaces it.
 
+## Terminus is a claim about ALL work queues — verify every one before declaring done
+
+An agent working one backlog can declare "terminus — nothing left" while a **second, parallel
+work queue** sits untouched because it was never checked. "I finished the queue I was working"
+is not "there is nothing to do."
+
+- Before declaring terminus, **enumerate every work surface** the repo / product has — the issue
+  tracker(s), a gaps / todo / next-actions queue, a debt / critique file, failing or skipped
+  tests, TODO comments, an open-review backlog — and confirm each is **drained or
+  blocked-with-reason**.
+- **Name the queues you checked** when you claim done, so a missed surface is visible and
+  auditable.
+- The pressure to "keep delivering" is best answered by **widening the search for work** (a new
+  surface), not re-scanning the one queue you already know.
+- This is the delivery-side analog of the review's coverage-ledger reconcile
+  (`deep-code-review` `method.md`: reconcile against the Phase 0 coverage ledger before you close); it
+  **generalizes** this file's own *termination conditions* above ("the loop ends when the backlog
+  is empty") from one tracked list to **every** work surface.
+- **🚩 tell:** "terminus / nothing left" after checking only the assigned queue, with no
+  enumeration of the other work surfaces (a parallel gaps / debt / test / TODO backlog never
+  opened).
+
+## Discover work by enumerating the surface, not a keyword/title filter — filter only to order
+
+Scanning a backlog for "what to build next" via a **keyword / title filter** (titles matching
+`app|ux|feat|fix`) silently **misses every item whose title does not match** — and can conclude
+"nothing left" while a whole category (docs, CI, security, tooling, API) remains, its titles
+simply lacking the keywords.
+
+- **Enumerate the full list, then categorize** — never pre-filter by keyword to *discover* work.
+  Count the total (**mind pagination** — a tracker's default page can hide the rest; confirm
+  yours), bucket by type, confirm
+  each bucket is drained or blocked. A keyword filter is fine to **prioritize within a
+  known-complete set**, never to define the set.
+- Titles are lossy: a CI / security / tooling / bug item may not contain your keywords — use the
+  tracker's **labels / type field** as the axis, not a title regex.
+- **State the filter when you claim done** — "I delivered everything matching my search" is not
+  "nothing is left"; it is "nothing *matching my search* is left." The shape of your search is
+  the shape of your "done."
+- The intra-queue companion to the every-queue rule above: even one queue has categories a filter
+  can hide.
+- **🚩 tell:** a "what is next / terminus" decision driven by a title / keyword grep over the
+  backlog rather than a full enumeration bucketed by label / type.
+
 ---
 
 ## Sources
