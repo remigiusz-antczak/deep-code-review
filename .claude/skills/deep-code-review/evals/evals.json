@@ -2521,6 +2521,16 @@
         "Notes the auth review missed it because it's about the response difference, not the credential check itself",
         "Requires one generic response for the exists/not-exists pair (login and reset) AND a constant-time path so timing doesn't leak existence"
       ]
+    },
+    {
+      "id": "a-tool-broken-in-this-environment-fails-open-for-the-batch-proof-not-collapse-to-serial",
+      "prompt": "A merge-train batches PRs behind a union proof (one green run of the full local suite). One tool in that suite, audit:ux, crashes on startup in CI (its own harness is broken). The train's union run can't complete, so the system falls back to merging one PR per full base-CI cycle. Green, mergeable PRs pile up. What's the design gap, and how does it differ from a gate that merely hangs?",
+      "expected_output": "A tool broken IN THIS ENVIRONMENT (harness crash, dependency down) is a can't-check, not a red — 'could not check' is not 'found a problem.' Letting it halt all batching collapses throughput to serial, which is the gap. Fix: fail-open for the batch proof — drop that one broken term and run the deterministic runnable subset — so batching continues; and treat a throughput-gating tool as P0 (its blast radius is the whole delivery rate, not one PR, so it jumps the queue ahead of a gate that only affects one change's correctness). This differs from a HUNG gate: a hang has genuinely-unknown validity (the gate may still be running), so it's timeboxed then escalated; a crash is definitively broken here and safe to route around now. Both keep the flaky/heavy gate out of the blocking union term, and both hold the same floor — fail-open means the tool's own crash isn't a red, not that a member whose essential validation only that gate provided merges on the reduced proof.",
+      "expectations": [
+        "Identifies the broken-in-environment tool as a can't-check (could-not-check != found-a-problem) that must fail-open for the batch proof — run the runnable subset, keep batching — rather than collapse throughput to serial",
+        "Requires treating a throughput-gating tool as P0 (blast radius = whole delivery rate, jumps the queue), distinct from a gate that fails one PR",
+        "Distinguishes the crash case (definitively broken, route around now) from a hung gate (unknown validity, timebox + escalate), while holding the floor that fail-open does not license merging a member whose essential validation the gate provided"
+      ]
     }
   ]
 }

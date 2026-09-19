@@ -3,6 +3,24 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.209.0] — 2026-09-19
+
+### deep-code-review — wave 129 crash-case fail-open batch proof + P0 throughput-gate (closes #378)
+
+Standalone-backlog drain, the crash cousin of #483's hung-gate rule, in `branch-and-merge-hygiene.md`:
+a tool **broken in this environment** (harness crash / dependency down) is a **can't-check, not a red**
+("could not check" is not "found a problem", `product-ux-quality.md`), so it must **fail-open for the
+batch proof** — drop that one broken term, run the runnable subset, keep batching — rather than
+collapse the whole train to serial merging; and **treat a throughput-gating tool as P0** (its blast
+radius is the whole delivery rate). Reconciled against #483: a hang is timeboxed + escalated (unknown
+validity), a crash is routed around now (definitively broken); both keep the flaky/heavy gate out of
+the blocking union term and hold the same floor at the grain each leaves intact (a hang validated
+nobody; a crash validated everyone except a member whose essential check was the crashed term). +1
+eval. This is #454 point-1, split from wave 126 per that review.
+
+Independent review FIX-FIRST (the same-floor equivalence was asserted, not earned) then re-confirmed
+PASS after naming the surviving-evidence difference.
+
 ## [1.208.0] — 2026-09-19
 
 ### deep-code-review — wave 130 privacy threat modeling: linkability + account-enumeration (research round 5)

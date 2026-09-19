@@ -344,7 +344,7 @@ finding. A red base is the release pipeline's blocked state, so
 `release-engineering.md` cross-links here — but the discharge *mechanism* is the
 merge train, so it lives here and that file never restates it.
 
-### A union / merge-train gate that HANGS (not fails) silently stalls the pipeline
+### A union / merge-train gate that HANGS or is BROKEN in-env (not fails) silently stalls the pipeline
 
 A train's aggregate gate can **hang** — a wedged runner, a deadlocked build, a lost webhook —
 rather than fail, and a coordinator waiting on it stops merging everything queued behind it, with
@@ -363,6 +363,24 @@ the heavy gate's absence — that subset is a degraded record, **not** the union
 proof, so it does not license merging a member the union never validated. And keep flaky / heavy
 browser / visual gates in **per-change pre-merge checks**, not as a blocking term of the batch
 union, so one wedged heavy gate cannot stall the whole train.
+
+A heavy gate **broken in this environment** — its own harness crashes, a dependency it needs is down —
+is the **crash cousin** of the hang above, and it is likewise a **can't-check, not a red**: "could not
+check" is not "found a problem" (the gate discipline in `product-ux-quality.md`). It must **fail-open
+for the batch proof** — drop that one broken term and run the deterministic runnable subset — so
+batching **continues** rather than collapsing the whole train to serial merging; one broken tool must
+not halt all batching. The hang and the crash differ in the **response** and in **what evidence
+survives**: a hang is **timeboxed then escalated** (validity genuinely unknown, the gate may still be
+running) and leaves *no* completed union run; a crash is **definitively broken here and safe to route
+around now** and leaves the run's **other** terms genuinely complete. Both keep the flaky / heavy gate
+out of the blocking union term, and both hold the **same floor at the grain each leaves intact**: a
+hang validated nobody, so nobody merges on the reduced record (the floor above); a crash validated
+everyone *except* a member whose essential check **was** the crashed term, so only those members are
+held back. Fail-open means the tool's *own crash* is not a red — **never** that an unvalidated member
+merges. **Treat a
+throughput-gating tool as P0:** a broken gate that fails one PR is a normal bug, but one sitting in the
+batch-proof path throttles *every* merge — its blast radius is the whole delivery rate, so it jumps
+the queue ahead of a gate that only affects the correctness of a single change.
 
 ### A required check must be *satisfiable* — pending forever blocks merge like a red
 
