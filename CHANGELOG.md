@@ -3,6 +3,27 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.190.0] — 2026-09-19
+
+### deep-code-review — wave 111 telemetry / analytics-event correctness (data-quality.md)
+
+From an industry-research scout (verified genuine at source; PII-in-analytics + consent were
+already covered in `privacy-compliance.md`, and one-definition-per-metric in `growth-analytics` —
+these three were the absent slivers, at the data-quality × api-contracts intersection).
+
+- **An externally-consumed event is not dead-pipe just because no in-repo reader exists** — the
+  artifact→consumer census misfires for a `track()`/`emit()` whose consumer is a vendor
+  dashboard / warehouse / funnel; rename/removal of a published event is a breaking change, not a
+  cleanup. Carve-out added to the census bullet (§5), cross-ref `api-contracts.md`.
+- **Test/QA traffic pollutes the metric denominator** the same way an ineligible type does —
+  filter at the emitter/ingestion boundary (enforced once), not a per-dashboard `is_test` filter.
+  §4 denominator-integrity.
+- **Outcome-correlated sampling biases the metric** — sample at a uniform known rate
+  (reweightable) or independently of the measured outcome. §8.
+
+Three evals (deep-code-review 195 -> 198). No new external source (engineering-judgment deltas).
+Trio -> 1.190.0. `SHA256SUMS` regenerated last.
+
 ## [1.189.0] — 2026-09-19
 
 ### deep-code-review — wave: numeric correctness at a boundary

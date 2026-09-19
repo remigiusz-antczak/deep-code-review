@@ -158,7 +158,13 @@ rate), validity (schema/format/range). For each:
 - **Denominator integrity:** every entity type that can fail a check must be
   eligible for the denominator (`checks_total` / coverage base). Scoring failures
   against a narrower type set than the failure set understates or misstates
-  coverage.
+  coverage. Conversely, **test / QA / staging / internal traffic reaching a production metric
+  pollutes the denominator** the same way an ineligible type does — inflating the base and skewing
+  every rate derived from it. Filter or tag it out at the **emitter / ingestion boundary**
+  — the same single-enforcement-point discipline as the shared quality/noise filter below and
+  `privacy-compliance.md`'s suppression boundary, not a per-dashboard filter a new consumer omits; an
+  `is_test` / `environment` field that rides on the event but isn't enforced at the boundary is
+  the red flag.
 - **Empty-shape honesty:** distinguish **absent**, **expected-empty**,
   **false**, and **empty-list** when completeness or compare-and-swap logic
   collapses them — treating "blank field" as "no check" or "no prior" mis-scores
@@ -188,11 +194,18 @@ rate), validity (schema/format/range). For each:
   already-filtered junk.
 - **Artifact → consumer census:** for each file/table/topic a pipeline writes,
   find the readers and exports that consume it. An artifact with **zero
-  consumers** is dead pipe (honest comment or wire it); a consumer that reads a
+  consumers** (in-repo — but see the externally-consumed carve-out below) is dead pipe (honest comment or wire it); a consumer that reads a
   sibling path skipping the stated guard/filter is the bypass-census miss from
   Phase 2. When testing degraded/empty output, confirm consumers treat
   present-empty as empty — not as valid data (cross-ref
-  `reliability-error-handling.md` soft-no-op persistence).
+  `reliability-error-handling.md` soft-no-op persistence). **Carve-out for an externally-consumed
+  event / metric:** an analytics or telemetry `track()` / `emit()` whose real consumer is
+  out-of-tree — a vendor dashboard, a warehouse / BI model, a funnel or retention definition —
+  has **no in-repo reader by design**, so "zero in-repo consumers" is *not* dead pipe here, and
+  renaming or removing a published event or property is a **breaking change** on par with a public
+  API (`api-contracts.md`), silently breaking a downstream surface the diff can't see — not a safe
+  cleanup. Verify against a schema / event registry, a tracking plan, or a named owner, not in-repo
+  call sites.
 - **A write/erosion guard must intercept every mutation primitive the storage
   layer offers** (update AND clear AND append AND delete), not just the common
   one — a cleanup pass that blanks populated cells via an unguarded `clear`/
@@ -374,6 +387,18 @@ rate), validity (schema/format/range). For each:
 
 - Measure enrichment **lift on the subset that actually surfaces to users**, not
   total fill rate — filling fields on records nobody sees moves no outcome.
+- **A sampled event stream must record each event's inclusion probability and reweight before
+  aggregating.** Sampling is fine — often *preferred*, to cheaply buy precision on a rare outcome
+  (case-control / stratified sampling) — but a rate from **raw** sampled counts is biased whenever
+  the rate differs by stratum (keep 100% of errors, 10% of successes → the naive success rate reads
+  far too low). The fix is **not** "sample uniformly": every retained event carries a **known
+  inclusion probability** and the metric **reweights by 1/probability** (inverse-probability /
+  Horvitz–Thompson) before aggregating — then uniform *and* outcome-stratified sampling both recover
+  the true rate. It is genuinely **unrecoverable** only when the probability is **unknown/unrecorded**
+  (an unlogged adaptive or load-shedding sampler) or **zero for a stratum** (a hard drop — e.g. "drop
+  the highest-volume users" — no weight resurrects a stratum never sampled). A pipeline that aggregates
+  raw sampled counts with no reweighting and no recorded sampling design is the finding; state the
+  design where the metric is defined.
 - **Self-consistency / inter-model agreement is not precision.** Treat output
   quality as *unmeasured* until an expert rates a frozen, labeled cohort; don't
   stack features on an unvalidated base. See `testing-and-evals.md` for the

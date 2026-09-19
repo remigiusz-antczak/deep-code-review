@@ -2082,6 +2082,36 @@
         "Notes JSON.stringify emits null for a non-finite number (disguising a broken computation as a blank cell) — ideally flagging this as stack-specific, not universal",
         "Requires detecting/handling the non-finite result where it arises (guard divisor / Number.isFinite → reject/clamp/sentinel), not downstream"
       ]
+    },
+    {
+      "id": "an-externally-consumed-analytics-event-is-not-dead-pipe-just-because-no-in-repo-reader",
+      "prompt": "A reviewer sees a `track('checkout_completed', {...})` call whose event name and properties have no reader anywhere in the repo, and flags it as dead code to delete (per the artifact→consumer census). Sound?",
+      "expected_output": "No — an analytics/telemetry event's real consumer is normally OUT of the repo: a vendor dashboard, a warehouse/BI model, a funnel or retention definition. 'Zero in-repo consumers' is expected by design for a published event, not evidence of dead pipe. Renaming or removing the event or a property is a BREAKING CHANGE on par with a public API surface (it silently breaks a downstream dashboard/funnel nothing in the diff can see), not a safe cleanup. Verify against a schema/event registry, a tracking plan, or a named owner before touching it (cross-ref api-contracts.md); the in-repo consumer census applies to internal pipeline artifacts, not externally-consumed events.",
+      "expectations": [
+        "Recognizes an externally-consumed event's consumer is out-of-tree (dashboard/warehouse/funnel), so zero in-repo readers is by design, not dead-pipe",
+        "Treats rename/removal of a published event or property as a breaking change (silently breaks downstream), not a safe cleanup",
+        "Checks a registry/tracking-plan/owner rather than in-repo call sites before deleting"
+      ]
+    },
+    {
+      "id": "test-traffic-must-be-filtered-at-the-boundary-or-it-pollutes-the-metric-denominator",
+      "prompt": "A product metric is computed from analytics events. QA and automated end-to-end tests hit production and emit the same events; each dashboard is expected to filter them out with an `is_test` flag. Conversion looks oddly low. What's the review finding?",
+      "expected_output": "Test/QA/staging/internal traffic reaching the production metric pollutes its denominator exactly like an ineligible entity type — inflating the base and skewing the rate. Relying on each dashboard to filter `is_test` is enforce-at-every-consumer (someone forgets, or a new consumer doesn't know the flag), the same anti-pattern as any per-reader guard. Filter or tag test traffic OUT at the emitter/ingestion boundary, enforced once; an `is_test`/`environment` field that exists on the event but isn't enforced at the boundary is the red flag.",
+      "expectations": [
+        "Identifies test/QA traffic polluting the metric denominator (skews the rate), analogous to an ineligible type in the denominator",
+        "Rejects per-dashboard is_test filtering as enforce-at-every-consumer (forgettable) — enforce once at the emitter/ingestion boundary",
+        "Flags an is_test/environment field that exists but isn't enforced at the boundary"
+      ]
+    },
+    {
+      "id": "a-sampled-event-stream-must-not-let-the-sampling-correlate-with-the-measured-outcome",
+      "prompt": "To cut cost, an analytics pipeline samples events: it keeps 100% of error events but 10% of success events, then computes the success rate from the stored sample. Is the metric trustworthy?",
+      "expected_output": "As computed, no — it aggregates raw sampled counts, so the success rate is biased: with 100% of errors but 10% of successes retained, successes are 10x under-represented (a true 90% success rate reads ~47%). But this is RECOVERABLE, not fatal: both inclusion probabilities are known (1.0 and 0.1), so reweight each event by 1/probability (inverse-probability / Horvitz–Thompson — successes x10, errors x1) and the true rate comes back exactly. The real defect is that the pipeline doesn't reweight and doesn't record the sampling design. Outcome-stratified sampling is legitimate (often preferred for a rare outcome); it is genuinely unrecoverable only when the inclusion probability is unknown/unrecorded, or zero for some stratum (a hard drop no weight can fix). Fix: record each event's inclusion probability and reweight before aggregating; state the design where the metric is defined.",
+      "expectations": [
+        "Identifies the raw-count rate as biased (successes under-represented) but RECOVERABLE by inverse-probability reweighting (successes x10) because the inclusion probabilities are known — not 'cannot be recovered'",
+        "Names the real defect as no reweighting + no recorded sampling design, and notes outcome-stratified sampling is legitimate when probabilities are known",
+        "Limits the genuinely-unrecoverable case to unknown/unrecorded probability or a zero-probability hard drop (a never-sampled stratum)"
+      ]
     }
   ]
 }
