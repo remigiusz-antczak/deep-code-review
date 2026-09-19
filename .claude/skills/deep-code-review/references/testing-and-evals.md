@@ -141,6 +141,22 @@ explicit third choice), not which one this review prefers.
   plus per-language equivalents. **Bound it to the highest-stakes modules** — a
   mutation run scales with suite size × mutant count, so a repo-wide mandate is an
   over-ask.
+- **Continuous, coverage-guided fuzzing as CI infrastructure — not a one-off property
+  test.** The taxonomy above lists property/fuzz as a *shape*; the assurance that finds
+  *new* bugs is a **coverage-guided fuzzer run continuously** (OSS-Fuzz / ClusterFuzzLite,
+  `go test -fuzz`, `cargo fuzz` / libFuzzer, Atheris), mutating inputs against live
+  coverage feedback so it keeps finding crashes indefinitely — a different assurance than
+  a hand-written property test that exercises its own corpus once. OpenSSF Scorecard's
+  Fuzzing check (**"Risk: `Medium` (possible vulnerabilities in code)"**) reasons that
+  "Regular fuzzing is important to detect vulnerabilities that may be exploited by others,
+  especially since attackers can also use fuzzing to find the same flaws." (Scorecard also credits non-coverage-guided property-testing libraries — fast-check, QuickCheck/Hedgehog, proper, FsCheck — so a passing Scorecard Fuzzing score alone is not evidence of *continuous coverage-guided* fuzzing; apply the wired-to-CI + crash-corpus bar below regardless of the score.) The review
+  question is not "is there a fuzz target" but **is it wired to a job that runs on a
+  schedule / in CI, and does a crash reach a human** — findings triaged into a committed
+  **crash corpus that becomes regression tests**, not a log nobody reads. A fuzz target
+  defined in-repo but attached to no fuzzing job or service is **decorative** — the same
+  "a gate must be proven to run" bar this file holds mutation testing and self-tests to.
+  Scope it (like mutation testing above) to the highest-stakes parsers / decoders /
+  deserializers / protocol boundaries, where input reaches attacker-controlled bytes.
 - **Deterministic & hermetic.** No real network, no real DNS, no writes outside
   a temp dir, no wall-clock/timezone flakiness. Inject a **seam** (a resolver, a
   store directory, a clock) rather than the real dependency. When a module

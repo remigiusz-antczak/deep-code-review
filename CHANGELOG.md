@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.240.0] — 2026-09-20
+
+### deep-code-review — wave 161 continuous coverage-guided fuzzing as CI infrastructure
+
+- **`testing-and-evals.md`**: the taxonomy lists property/fuzz as a shape; this adds the depth the file gave mutation testing — a coverage-guided fuzzer run continuously (OSS-Fuzz/ClusterFuzzLite, `go test -fuzz`, `cargo fuzz`/libFuzzer, Atheris) mutates inputs against live coverage feedback and keeps finding new crashes, unlike a one-off property test. The review question is not "is there a fuzz target" but "is it wired to a scheduled/CI job, and does a crash reach a human" (triaged into a committed crash corpus that becomes regression tests); a target attached to no job is decorative. Caveat (per review): a passing OpenSSF Scorecard Fuzzing score can be satisfied by a non-coverage-guided property-testing library, so it alone is not evidence of continuous fuzzing — apply the wired-to-CI + crash-corpus bar regardless.
+- +1 eval; +1 standards row (OpenSSF Scorecard Fuzzing — risk + description + rationale verbatim via raw fetch 2026-09-20).
+
 ## [1.239.0] — 2026-09-20
 
 ### deep-code-review — wave 160 HTTP request/response smuggling (A01)

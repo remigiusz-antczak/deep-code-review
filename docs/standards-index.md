@@ -634,3 +634,8 @@ determination routes to counsel).
 | OWASP ASVS v5.0.0-4.2.2 (API and Web Service) | https://github.com/OWASP/ASVS/blob/v5.0.0_release/5.0/en/0x13-V4-API-and-Web-Service.md | Level 3: "Verify that when generating HTTP messages, the Content-Length header field does not conflict with the length of the content as determined by the framing of the HTTP protocol, in order to prevent request smuggling attacks." Verified 2026-09-20. |
 | CWE-444 — Inconsistent Interpretation of HTTP Requests ('HTTP Request/Response Smuggling') | https://cwe.mitre.org/data/definitions/444.html | Title verbatim: "Inconsistent Interpretation of HTTP Requests" (common name 'HTTP Request/Response Smuggling'). Fetched + verified 2026-09-20. |
 
+## Verified by direct fetch (2026-09-20) — continuous fuzzing (test assurance)
+
+| Standard / source | URL | What was confirmed |
+|---|---|---|
+| OpenSSF Scorecard — Fuzzing check | https://github.com/ossf/scorecard/blob/main/docs/checks.md | "Risk: `Medium` (possible vulnerabilities in code)". "This check tries to determine if the project uses fuzzing" (via OSS-Fuzz membership, ClusterFuzzLite, or user-defined fuzzing functions). "Regular fuzzing is important to detect vulnerabilities that may be exploited by others, especially since attackers can also use fuzzing to find the same flaws." (Distinct from the other Scorecard rows above that cite the same catalog URL.) Fetched + verified 2026-09-20. |

@@ -3011,6 +3011,16 @@
         "Names the mechanism: edge/origin disagreement on Transfer-Encoding vs Content-Length (CL.TE/TE.CL/TE.TE), i.e. HTTP request smuggling / CWE-444, smuggling a second request past the gate",
         "Requires a fix at the framing layer (TE present => ignore CL per HTTP/1.x; reject a message with both) AND a dedicated desync test — noting plain curl won't surface it"
       ]
+    },
+    {
+      "id": "a-fuzz-target-wired-to-no-ci-job-is-decorative-continuous-coverage-guided-fuzzing",
+      "prompt": "A repo's binary parser has a `FuzzParse` function using Go's native fuzzing (`go test -fuzz`). It was run once locally months ago, found nothing, and is committed. No CI job invokes it and there's no crash corpus. The team lists 'we fuzz our parser' as a security control. Is that assurance real?",
+      "expected_output": "No — a fuzz target that no job runs is decorative, the same way a mutation-testing gate or a self-test that never executes is. Coverage-guided fuzzing finds NEW bugs only when run continuously against live coverage feedback (OSS-Fuzz/ClusterFuzzLite, or `go test -fuzz` wired into a scheduled CI job), mutating inputs over time; a single local run months ago only exercised the corpus it had then. The review question is not 'is there a fuzz target' but 'is it wired to a job that runs on a schedule/CI, and does a crash reach a human' — with findings triaged into a committed crash corpus that becomes regression tests. OpenSSF Scorecard counts fuzzing as a control precisely because regular fuzzing catches what attackers otherwise would. Fix: wire FuzzParse into a recurring CI/fuzzing job, commit discovered crashers as regression seeds, and route new crashes to a human — otherwise 'we fuzz' is not a real control.",
+      "expectations": [
+        "States a fuzz target that no CI/scheduled job runs is decorative — a one-off local run is not continuous fuzzing assurance",
+        "Explains coverage-guided fuzzing finds new bugs only when run continuously against live coverage feedback (names OSS-Fuzz/ClusterFuzzLite/go test -fuzz or an equivalent CI-wired form)",
+        "Requires wiring it to a recurring job AND a triaged crash corpus committed as regression tests (a crash must reach a human), not merely the target's existence"
+      ]
     }
   ]
 }
