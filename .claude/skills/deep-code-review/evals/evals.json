@@ -1714,6 +1714,17 @@
         "Prescribes distinct exit semantics + a distinct message for could-not-check vs found-a-problem; fail open on persistent setup failure, fail closed only on an observed violation",
         "Notes the security/authz/integrity attestation exception (fails closed on can't-verify) so 'fail open' is not over-generalized"
       ]
+    },
+    {
+      "id": "corroboration-evidences-occurrence-not-attribution",
+      "prompt": "Our knowledge-graph fuses a per-event confidence as min(identity_match, occurrence, role). When 3+ independent publishers report the same event, we bump that fused confidence to 'fact-grade'. A record where identity_match was low (we're not sure it's the right person) but 5 sources reported the event just got promoted to fact-grade. Ship it?",
+      "expected_output": "No -- corroboration evidences OCCURRENCE, not ATTRIBUTION. N independent publishers naming the same event establishes only that it happened; it says nothing about whether the entity you attributed it to (identity_match) was actually involved. The fused confidence was min(identity_match, occurrence, role), and identity_match was the binding minimum precisely BECAUSE the attribution was uncertain -- promoting the whole thing on a source count that only evidences occurrence erases exactly that signal and ships a confident FALSE attribution (worse than publishing nothing -- the anti-fabrication rule, an empty cell beats a confident-looking wrong one). Fix: a corroboration count may raise only the component it evidences (occurrence / role), never past the entity-attribution component's own value; equivalently, corroboration answers 'did it happen,' never 'whose is it.' Safest default: carry the corroboration count as unrendered evidence and don't promote a fused confidence at all. So do NOT ship this promotion -- cap it at identity_match, or don't promote. (data-quality.md.)",
+      "expectations": [
+        "States corroboration (N independent sources) evidences OCCURRENCE only, not the entity-attribution -- it doesn't establish the attributed entity was involved",
+        "Identifies that the promotion overrides the binding minimum (identity_match), low precisely because attribution was uncertain -> ships a confident false attribution",
+        "Frames a false attribution as worse than nothing (anti-fabrication -- an empty cell beats a confident-looking wrong one)",
+        "Rule: corroboration may raise only occurrence/role, never past the entity-attribution component; or carry the count as unrendered evidence and don't promote at all"
+      ]
     }
   ]
 }

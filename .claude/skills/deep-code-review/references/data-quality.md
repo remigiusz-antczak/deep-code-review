@@ -205,6 +205,20 @@ rate), validity (schema/format/range). For each:
   half — never
   render a bare synthesized "strength" number as fact — is the confidence-tier
   false-precision rule in `product-ux-quality.md`.)
+- **Corroboration raises only the component it evidences — never the entity-attribution.** An
+  event/activity confidence often fuses three independent propositions: *occurrence* (did it
+  happen), *role*, and *entity-attribution* (whose is it). Cross-source corroboration — N
+  independent publishers naming the same event — evidences **occurrence** (and role); it says nothing
+  about whether **entity X** was involved. A promotion that lifts the *whole* fused confidence to
+  "fact-grade" on an agreement count therefore **silently promotes a weakly-matched
+  attribution** — the worst axis, since a confident false attribution is worse than publishing
+  nothing (§2). The tell: a confidence computed as `min(identity_match, occurrence, role)`
+  **raised** by a corroboration count that only evidences occurrence — `identity_match` was the
+  binding minimum *because* attribution was uncertain, and the promotion overrides exactly that.
+  Rule: corroboration may raise only occurrence/role, **never past the entity-attribution
+  component's own value** — it answers "did it happen," never "whose is it." Safest default:
+  carry the corroboration **count as unrendered evidence** (the derived-field rule above) and
+  don't promote a fused confidence at all.
 - **Test every enum/config mapping against the source's *real* value
   distribution.** A lookup keyed on the wrong domain — a geography→multiplier map
   keyed on region names while the source emits ISO-3166 alpha-2 codes (plus
@@ -436,4 +450,4 @@ that ships raw events where the consumer scores on aggregates, or a claimed
 provider-input never reconciled against the provider's live output before it feeds a
 downstream score; a deserializer that trusts a serialized computed field (a count
 read verbatim, not re-derived from the validated collection) or checks only a
-primitive type, not element shape — weaker than its own builder.
+primitive type, not element shape — weaker than its own builder; a corroboration / fusion step that raises a fused confidence past its **entity-attribution** component on agreement that only evidences occurrence.
