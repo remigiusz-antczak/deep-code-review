@@ -3,6 +3,25 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.211.0] — 2026-09-19
+
+### deep-code-review — wave 132 verify build provenance at deploy, not just generate it (SLSA, research round 7)
+
+Comparative vs SLSA v1.0. Closes the asymmetry: inbound package signatures are a blocking gate
+(`infra-iac-containers.md`) but the OUTBOUND SLSA attestation had no verify step. `security-appsec.md`
+A03 now covers the consumer side — verify the attestation before promoting (**subject digest matches
+the artifact** first, else a validly-signed attestation for a *different* artifact passes; then
+signature valid, signer/builder trusted, canonical source repository matches) and **fail closed** on
+missing/mismatch — the runtime-proven-gate lens applied to the supply chain. Plus SLSA Build level
+detail (L1 exists/forgeable/may-be-unsigned, L2 signed + downstream authenticity verification, L3
+hardened) so a bare "adopts SLSA" with no level named isn't credited as the strong guarantee.
+`infra-iac-containers.md` cross-linked with the same blocking-gate phrasing as its inbound sibling;
+the by-name SLSA standards-index entry promoted to a verified row.
+
++1 eval (243 -> 244). SRC fetched + verified 2026-09-19: slsa.dev/spec/v1.0/{levels,verifying-artifacts}.
+Independent review PASS-WITH-NITS; all nits applied (subject-digest first check, "may be unsigned",
+canonical-source-repo).
+
 ## [1.210.0] — 2026-09-19
 
 ### deep-code-review — wave 131 frontend accessibility & performance depth (research round 6)

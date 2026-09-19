@@ -2561,6 +2561,16 @@
         "Concludes 'Lighthouse passed' is not 'meets Core Web Vitals' — the claim needs a field-data source",
         "Draws the lab-necessary-not-sufficient parallel (same as an automated a11y scanner) and requires stating which was measured"
       ]
+    },
+    {
+      "id": "generated-provenance-is-not-verified-provenance-gate-the-attestation-at-deploy",
+      "prompt": "A team's CI generates SLSA provenance and an SBOM for every released artifact, and the release notes say 'SLSA compliant.' The deploy pipeline pulls the artifact by tag and ships it. Is the supply chain actually protected?",
+      "expected_output": "Not as claimed. Generating provenance is not verifying it — the deploy step pulls by tag and never checks the attestation, so the provenance is a file nothing downstream reads (the runtime-proven-gate failure applied to the supply chain: a gate that exists but is never proven to fire). And 'SLSA compliant' with no level named is unverified strength: SLSA Build L1 is just 'provenance exists' (trivial to forge, may be unsigned); only L2 adds signed provenance from a hosted builder and requires downstream authenticity verification; L3 adds a hardened build. Fix: make the deploy/promotion step VERIFY the attestation as a blocking gate — the attestation's subject digest matches the artifact being promoted (else a validly-signed attestation for a different artifact passes), the signature is valid, the signer/builder identity is one you trust, and the recorded canonical source repository matches — and FAIL CLOSED on a missing or mismatched attestation. That's the same blocking-gate bar already applied to inbound package signatures; the outbound attestation of what you actually ship deserves it too. And name the target SLSA level rather than a bare 'compliant.'",
+      "expectations": [
+        "Identifies that generating provenance is not verifying it — the deploy step never checks the attestation, so it's a gate that exists but never fires (runtime-proven-gate failure)",
+        "Requires the deploy/promotion step to verify the attestation as a blocking gate (the subject digest matches the artifact being promoted, signature valid, signer/builder trusted, canonical source repo matches) and fail closed on missing/mismatch",
+        "Notes 'SLSA compliant' with no level is unverified strength — L1 provenance-exists (forgeable) vs L2 signed/verified vs L3 hardened; name the target level"
+      ]
     }
   ]
 }

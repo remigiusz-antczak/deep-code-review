@@ -221,6 +221,23 @@ same-origin checksum defends against corruption and a CDN mishap, **not** a
 compromised origin, so it does not neutralize the trust-on-first-use risk of a
 `curl | sh` install from that origin.
 
+**Provenance is only as strong as its verification.** SLSA's own Build track
+separates *provenance exists* (**L1** — trivial to forge, may be unsigned) from
+*signed provenance from a hosted builder* (**L2**) and a *hardened, tamper-resistant
+build* (**L3**), so a bare "adopts SLSA" with **no level named** is unverified
+strength, not the strong guarantee. The failure that reads as done but isn't: an
+artifact **generates** provenance / an SBOM, but the **deploy or promotion step
+never checks it**. It must **verify the attestation before promoting** — the
+attestation's **subject digest matches the artifact** being promoted (the spec's
+first check, or a validly-signed attestation for a *different* artifact passes), its
+signature is valid, the **signer / builder identity is one you trust**, and the
+recorded **canonical source repository** (and, where the builder records it, the
+commit) matches what you expect — and **fail closed** on a missing or mismatched
+attestation, not merely emit a file nothing downstream re-reads. This is the runtime-proven-gate
+lens (domain B) applied to the supply chain, and the **same blocking-gate bar**
+already required for inbound package signatures (`infra-iac-containers.md`): the
+outbound attestation of the thing you actually ship deserves the same enforcement.
+
 **🚩 grep**: `"postinstall"` in `package.json`, `uses: actions/*@main`,
 unpinned base images (`FROM node:latest`), `curl … | bash` in build steps,
 dependencies added in a diff without a lockfile update, `pull_request_target`

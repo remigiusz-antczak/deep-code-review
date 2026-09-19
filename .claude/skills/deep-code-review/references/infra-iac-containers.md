@@ -152,7 +152,12 @@ hard-coded `access_key`/`secret`/`password` in `.tf`.
   means the artifact is not what the registry signed); transitive-CVE audit is a
   useful **advisory** signal — schedule high/critical, don't block on every
   transitive finding.
-- Build provenance/attestation (SLSA) for released artifacts; SBOM published.
+- Build provenance/attestation (SLSA) for released artifacts, and the deploy step
+  **verifies it as a blocking gate** — subject digest matches the artifact, signer/builder
+  trusted, canonical source repo matches, fail closed on a missing/mismatched attestation
+  (the same bar as package-signature verification above; a named SLSA level, not a bare
+  "SLSA compliant" — depth in
+  `security-appsec.md` A03); SBOM published.
 - **Verify identifier ownership before deploy**: deploying under a slug /
   app-id / project name another service already owns can silently clobber it.
 - A credentialed integration must degrade to a clean no-op without its key

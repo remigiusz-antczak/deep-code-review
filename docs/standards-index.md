@@ -285,7 +285,6 @@ design-quality checklist in `references/migration-parity.md` (#124).
 - **NIST SSDF (SP 800-218)** and the **NIST AI RMF Generative AI Profile (AI 600-1)**
   — secure-development and AI-risk lifecycle framing. (The AI RMF core function names
   are verified in the table above; these document/profile specifics were not fetched.)
-- **SLSA** — build/supply-chain provenance levels.
 - **CIS Benchmarks** — OS/container/cloud hardening baselines.
 - **AWS / Azure / GCP Well-Architected Frameworks** — cloud architecture-review pillars
   (operational excellence, security, reliability, performance efficiency, cost optimization;
@@ -523,3 +522,4 @@ determination routes to counsel).
 | WCAG 2.2 SC 2.2.2 Pause, Stop, Hide | https://www.w3.org/WAI/WCAG22/Understanding/pause-stop-hide.html | Level A. Moving/blinking/scrolling that auto-starts, lasts >5s, in parallel with other content needs a pause/stop/hide (unless essential); auto-updating content has no 5s grace. Fetched + verified 2026-09-19. |
 | Core Web Vitals (web.dev) | https://web.dev/articles/vitals | Thresholds assessed at the 75th percentile of real-user page loads (field data). "Only field measurement can accurately capture the complete picture"; lab (Lighthouse) "is not a substitute for field measurement." Fetched + verified 2026-09-19. |
 | WCAG 2.2 SC 2.3.3 Animation from Interactions | https://www.w3.org/WAI/WCAG22/Understanding/animation-from-interactions.html | Level AAA. "Motion animation triggered by interaction can be disabled, unless the animation is essential to the functionality or the information being conveyed." Applies to interaction-INITIATED non-essential motion (parallax, decorative transitions); SC 2.2.2 governs automatically-started animation instead. Fetched + verified 2026-09-19. |
+| SLSA v1.0 — Build track levels | https://slsa.dev/spec/v1.0/levels | Build L1 "provenance exists" (trivial to forge, may be unsigned); L2 adds signed provenance from a hosted build platform and "downstream verification of provenance includes validating the authenticity of the provenance"; L3 adds a hardened, tamper-resistant build. Consumer verification compares expected vs actual provenance — subject digest, builder identity, canonical source. Fetched + verified 2026-09-19. |
