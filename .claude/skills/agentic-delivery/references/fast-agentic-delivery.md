@@ -174,6 +174,30 @@ check per candidate PR) before returning to waiting — not only the item that
 triggered the check. This is a completeness fix to what a checkpoint covers,
 not a change to the event-driven model itself.
 
+## A serial queue-drainer must advance past a blocked head, not re-select it — head-of-line starvation
+
+A serial auto-processor — a **merge-drainer, a retry queue, a task poller** — that picks the
+**first eligible** item each cycle and retries it will **spin forever on one item blocked for a
+persistent reason**, starving everything queued behind it. The tell is a loop that looks **idle**
+but is actually **starving**: an auto-merge drainer picks the first **green + mergeable** PR each
+loop, but that PR is refused by a **stricter final gate** (a PR-body lint, say) it cannot pass
+as-is — so the drainer re-picks the *same* head every cycle and never reaches the others. The
+**cheap pre-filter is not the final admission gate**: an item can pass *green + mergeable* forever
+while failing the final gate, so "retry the front of the queue" is a starvation bug, not a queue.
+- **Iterate all candidates per cycle; on a refusal, advance to the *next*** — never break the loop
+  and re-select the same head. This completes the *sweep the whole ready queue* rule above: that
+  says *scan the whole queue* (don't miss a ready item); this says *don't let one blocked item
+  stop the drain* (don't get stuck on the head you did find).
+- **Keep a cooldown / skip-set** for persistently-refused items so cycles aren't burned
+  re-checking them, with **periodic re-evaluation** — the block may clear (the refusing gate gets
+  fixed, a dependency lands).
+- **Log the outcome per item** — `refused → advancing` vs `merged` vs `cycle idle` — so a spin is
+  visible at a glance instead of reading as healthy idle (the *idle, say so loudly* discipline
+  below, at the item grain).
+- **🚩 tell:** a drain/retry loop that `break`s or `return`s on the first refusal, or re-selects
+  `queue[0]` each cycle; or a *cheap* pre-filter (green + mergeable) used as the loop's selection
+  key while a stricter final gate does the real admission.
+
 ## A third gate-epistemology case: a correct, external, fleet-wide finding
 
 Principle 3 separates *the check could not run* (`UNVERIFIED` — never a pass, and

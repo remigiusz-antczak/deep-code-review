@@ -367,6 +367,17 @@
         "Answers with a precise status (what's running, what's blocked and on whom, why holding is correct), not manufactured/filler work",
         "Refuses to spawn lanes that re-report already-delivered / re-check unchanged state / force a risky change just to satisfy the cadence -- busywork under observation is still busywork"
       ]
+    },
+    {
+      "id": "serial-drainer-advances-past-a-blocked-head-not-re-selects-it",
+      "prompt": "Our auto-merge drainer loops: each cycle it picks the first green+mergeable PR and tries to merge it. It's been 'idle' for an hour -- nothing merging -- even though several PRs are green+mergeable. One PR at the front passes green+mergeable but our final merge gate (a PR-body lint) keeps refusing it. What's happening, and how should the drainer work?",
+      "expected_output": "That's not idle, it's head-of-line starvation. The drainer re-selects the same first-eligible PR every cycle; it passes the cheap pre-filter (green+mergeable) but is refused by the stricter FINAL gate (the PR-body lint) it can't pass as-is, so the loop spins on that one head forever and starves every PR queued behind it. The cheap pre-filter is not the final admission gate -- an item can pass green+mergeable forever while failing the final gate. Fixes: (1) iterate ALL candidates per cycle and, on a refusal, ADVANCE to the next rather than breaking the loop and re-selecting the same head; (2) keep a cooldown / skip-set for persistently-refused items (with periodic re-evaluation, since the block may clear) so cycles aren't burned re-checking them; (3) log distinct outcomes per item -- 'refused -> advancing' vs 'merged' vs 'cycle idle' -- so a spin is visible at a glance instead of reading as healthy idle. Any head-of-line retry loop needs explicit head-of-line-blocking avoidance. (fast-agentic-delivery.md.)",
+      "expectations": [
+        "Identifies head-of-line starvation, not idle -- the drainer re-selects the same blocked first-eligible item every cycle, starving those behind it",
+        "Names that the cheap pre-filter (green+mergeable) is NOT the final admission gate -- an item can pass the first forever while failing the second",
+        "Fix: iterate all candidates per cycle and advance PAST a refused item to the next, rather than break/re-select the same head",
+        "Adds a cooldown / skip-set for persistently-refused items (with periodic re-eval) and distinct per-item log lines so a spin is visible, not mistaken for idle"
+      ]
     }
   ]
 }
