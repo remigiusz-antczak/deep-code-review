@@ -46,6 +46,22 @@ paths. Expands section G of `SKILL.md`. Cross-ref J /
   its owner's teardown.
 - **Non-atomic read-modify-write** (`x = load(); x.f++; store(x)`) under
   concurrency needs a lock, atomic primitive, or single-writer queue.
+- **Memory visibility is a separate axis from atomicity — name the synchronization
+  edge.** For every shared mutable field read by a thread / goroutine *other than its
+  writer*, name the edge (lock, atomic, `volatile`, channel op, memory fence) that
+  **orders the write before the read**. With none, the write has **no guaranteed
+  visibility** — the reader may never observe it, or observe it reordered relative to
+  what it depends on (a plain `bool` flag polled across threads, or a lazily-assigned
+  singleton reference / broken double-checked locking, are the canonical cases). This
+  needs **no interleaving at all**, so a check-then-act race hunt misses it entirely.
+  And a data race (an unsynchronized conflicting access, ≥1 write) is not merely
+  "sometimes wrong": in **C/C++ or Rust `unsafe`** it is **undefined behavior** — the
+  compiler may assume it cannot happen and hoist / reorder / miscompile around it — and
+  **Go** calls such a program **incorrect**, where a racy read of a multiword value
+  (interface, map, slice, string) can observe a **torn** value and lead to memory
+  corruption, not just a stale scalar. A green test proves little here — a race can be 1-in-N and
+  CPU-architecture-dependent (weak ARM/POWER vs stronger x86); see `testing-and-evals.md`
+  on why a nondeterministic green run is a sample, not a proof.
 - **Lock held across I/O** — latency multiplies; deadlock risk rises when a
   second lock is taken inside. Prefer: lock, copy/mutate small state, unlock,
   then I/O.

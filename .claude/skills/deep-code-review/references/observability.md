@@ -72,7 +72,17 @@ failure paths that *produce* these signals are section F /
   forge entries and break the parser (CRLF/log-forging, CWE-117 — name only,
   verify before citing). Key-value logging avoids this by construction.
 - Correlation/request id propagated across services and present on every line so
-  an incident can be reassembled; log levels used meaningfully.
+  an incident can be reassembled; log levels used meaningfully. A shared **log**
+  correlation id is **not** the same guarantee as an unbroken **distributed trace** —
+  every service can stamp the same id on its logs while each still starts a fresh root
+  span, so logs reassemble by grep but the trace backend shows N disconnected
+  fragments and you can't see where latency went. Verify separately: follow one
+  request's trace id through every hop **in the tracing backend**, and confirm **one**
+  trace, not N. The break is almost always at a hop without auto-instrumentation — a
+  **queue publish, a cron / background job, an async or thread handoff** — where trace
+  context must be injected into the envelope by hand (W3C `traceparent`) instead of
+  riding an instrumented HTTP client; such a boundary that starts a fresh root span
+  silently blinds the trace, and nothing fails until an incident needs it.
 - **Audit the logs a platform injects, not only your app's log statements.** A
   managed platform often runs an nginx / auth-proxy **sidecar** in front of each
   app that logs, on **every authenticated request**, per-request user PII and the full

@@ -67,7 +67,9 @@ grep -rInE 'console\.log|print\(|dbg!|System\.out\.print|fmt\.Print' .
 - Goroutine leaks: a goroutine with no cancellation/`context`; `defer` inside a
   loop accumulating until function return.
 - `math/rand` for security (use `crypto/rand`); missing `rows.Close()`;
-  data races (run with `-race`); `panic` used for normal control flow.
+  data races (run with `-race`; a flag/state shared across goroutines needs
+  `sync/atomic` or a channel, not a plain field read); `panic` used for normal
+  control flow.
 
 ## Java / Kotlin
 
@@ -76,7 +78,9 @@ grep -rInE 'console\.log|print\(|dbg!|System\.out\.print|fmt\.Print' .
 - `Runtime.exec`/`ProcessBuilder` with a concatenated string.
 - String-built JPQL/SQL vs `PreparedStatement`/bound params.
 - `Random` for tokens (use `SecureRandom`); swallowed `catch (Exception e) {}`;
-  `printStackTrace()` to the response; broad `@SuppressWarnings`.
+  `printStackTrace()` to the response; broad `@SuppressWarnings`; a field shared across
+  threads read without `volatile` / `synchronized` / an `AtomicX` (double-checked
+  locking with a non-`volatile` instance field is broken).
 
 ## Ruby
 
@@ -96,7 +100,9 @@ grep -rInE 'console\.log|print\(|dbg!|System\.out\.print|fmt\.Print' .
 - `strcpy`, `strcat`, `sprintf`, `gets`, `scanf("%s")` → buffer overflow; use
   bounded variants. Integer overflow before `malloc`; use-after-free / double
   free; `memcpy` with an unchecked length; format-string bugs (`printf(user)`).
-- Run with ASan/UBSan; these map to top CWEs (787/416/125).
+- Run with ASan/UBSan (these map to top CWEs 787/416/125) — and **ThreadSanitizer**
+  (`-fsanitize=thread`) for data races, which ASan/UBSan do **not** catch; state shared
+  across threads needs `std::atomic` / an explicit `std::memory_order`, not a plain access.
 
 ## SQL / migrations
 
