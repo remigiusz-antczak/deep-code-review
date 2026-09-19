@@ -2411,6 +2411,26 @@
         "Requires a lane-level budget: abort the remaining batch on a high consecutive-fault fraction (wall-clock and/or consecutive-fault threshold)",
         "Distinguishes it from per-item retry-cap/circuit-break and from the single-poison-item dead-letter path"
       ]
+    },
+    {
+      "id": "a-consequential-action-needs-approver-not-equal-requester-distinct-from-idor-cross-principal",
+      "prompt": "A payout system requires an 'approve' step before a payout executes. The IDOR/authorization review passed: a user can only see and act on their own team's payouts. But one finance user can both create a payout AND click approve on it. Is the authz complete — and if the team asks whether they're legally required to have this control, what do you tell them?",
+      "expected_output": "No — that's a segregation-of-duties gap, orthogonal to the IDOR/cross-principal check that passed. IDOR ensures principal A can't touch principal B's object; SoD ensures the SAME principal can't both initiate and approve a consequential action. Here one user completes the whole payout chain alone, so a single compromised or malicious account moves money unchecked. Fix: enforce approver != requester server-side on a stable principal id (not a client flag or display name) for consequential actions (payout, credential issue, privilege grant, protected-surface merge); ensure a user can't self-grant the approver role to satisfy it. Whether the target is legally required to (SOX/PCI/NIST AC-5) routes to counsel, not this gate.",
+      "expectations": [
+        "Identifies SoD as distinct from the IDOR/cross-principal access check — the same principal must not both initiate and approve a consequential action",
+        "Requires approver != requester enforced server-side on a stable principal id (not a client field/display name), scoped to consequential actions",
+        "Notes a user must not be able to self-grant the approver role; routes the compliance-mandate question to counsel/business-ops"
+      ]
+    },
+    {
+      "id": "segregation-of-duties-must-be-server-side-on-a-stable-id-not-a-client-approved-by-field",
+      "prompt": "A workflow blocks self-approval by checking `request.body.approved_by != request.body.requester`. Separately, users with the 'admin' role can edit their own role assignments. The same team also proposes requiring a second approver before anyone can change their own profile avatar. Review the SoD design.",
+      "expected_output": "Two real defects plus one over-reach. (1) approved_by is read from a CLIENT field (request body) — trivially forgeable, so the check proves nothing; SoD must compare the authenticated approver's stable principal id (from the session/token, server-side) against the requester's, never a client-supplied name/flag. (2) An admin who can edit their own role assignments can self-grant the approver role, collapsing 'two distinct principals' back to one — the role grant must be outside the requester's control (a separate admin / an out-of-band process). (3) But requiring dual approval to change an avatar is scope over-reach: SoD guards genuinely consequential actions (moving money, issuing credentials, granting access), and gating a trivial write is friction that trains users to rubber-stamp, not control. Fix: derive both identities server-side from authenticated context, put the approver-role grant behind a distinct principal, and scope the control to consequential actions only.",
+      "expectations": [
+        "Identifies the client-supplied approved_by field as forgeable — SoD must compare server-side authenticated principal ids, not a client field/name",
+        "Identifies that an admin editing their own role assignments can self-grant the approver role, collapsing two principals to one — the role grant must be outside the requester's control",
+        "Flags dual-approval on a trivial action (avatar change) as scope over-reach — SoD is scoped to consequential actions; gating trivial writes is friction, not control"
+      ]
     }
   ]
 }

@@ -102,6 +102,27 @@ route: replay A's request with B's id / B's token / B's tenant. Expected:
 `Decisions needed`, not a skip. Most production authz bugs are
 authenticated-but-unauthorized; reading code for IDOR is not enough.
 
+**Segregation of duties — a consequential action needs a distinct *second*
+principal, and this is not the two-principal matrix above.** The matrix tests
+that principal A cannot reach principal B's *object* (cross-principal access,
+IDOR). Segregation of duties is the orthogonal axis: the **same** principal must
+not be able to both **initiate and approve** a high-consequence action — issue
+and approve a payout, create and activate a credential, request and grant
+elevated access, submit and merge to a protected surface. Check that
+**`approver != requester` is enforced server-side on a stable principal id** (not
+a client field, not a display name), that a user cannot **self-grant** the
+approver role to satisfy it, that it is scoped to genuinely consequential actions
+(gating every write is friction, not control), and that the maker-checker
+decision is **audit-trailed** — who requested, who approved, when (cross-ref
+`observability.md` § Audit trail & repudiation; don't restate). Absent, one
+compromised or malicious account completes the whole chain alone. (SOX, PCI DSS,
+and NIST 800-53 AC-5 mandate this control; whether a given target is legally
+required to enforce it routes to `business-ops` / counsel, not this gate.)
+- **🚩** a consequential action (payout, credential issue, privilege grant,
+  protected-surface merge) whose initiate and approve steps accept the **same**
+  principal id; an `approver` / `approved_by` read from a client field or equal
+  to the requester; an approver role a user can grant themselves.
+
 **Cache / CDN is an authorization surface.** Responses derived from identity must
 be `Cache-Control: private` / `no-store` (or keyed by principal). Check
 framework static vs dynamic decisions for pages that read cookies/headers;

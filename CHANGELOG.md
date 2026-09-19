@@ -3,6 +3,26 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.202.0] — 2026-09-19
+
+### deep-code-review — wave 123 segregation of duties / maker-checker (closes #472)
+
+Standalone-backlog drain (domain B / AppSec A01). A new "Segregation of duties" lens in
+`security-appsec.md`, orthogonal to the two-principal (IDOR) matrix it sits beside: the matrix tests
+that principal A cannot reach principal B's *object* (cross-principal access); SoD tests that the
+**same** principal cannot both **initiate and approve** a consequential action (issue and approve a
+payout, create and activate a credential, request and grant access, submit and merge to a protected
+surface). Checks that `approver != requester` is enforced server-side on a stable principal id (not a
+client field), that a user cannot self-grant the approver role, that it is scoped to genuinely
+consequential actions (gating every write is friction, not control), and that the maker-checker
+decision is audit-trailed (cross-ref `observability.md`, not restated). SOX, PCI DSS, and NIST 800-53
+AC-5 mandate the control by-name; whether a target is legally required routes to `business-ops` /
+counsel, not this gate.
+
+Independent dogfood review returned FIX-FIRST (the audit-trail conjunct from #472's acceptance line
+was unshipped; one eval narrated its own answer; the scope-gate — #472's named regression risk — was
+untested); all fixed and re-confirmed PASS before merge. +2 evals (228 -> 230).
+
 ## [1.201.0] — 2026-09-19
 
 ### deep-code-review — wave 122 workflows/jobs §W cluster (closes #467, #430)
