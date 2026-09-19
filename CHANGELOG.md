@@ -3,6 +3,31 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.201.0] — 2026-09-19
+
+### deep-code-review — wave 122 workflows/jobs §W cluster (closes #467, #430)
+
+Standalone-backlog drain (domain W jobs/scheduling + M observability). Three method-level additions to
+`domain-checklists.md` §W, each closing a filed issue:
+
+- **#467 firing-suppression** — a signal->action system needs firing-suppression distinct from
+  delivery-idempotency: a cooldown window per (entity, signal type), suppression-with-audit (never a
+  silent drop), and a deterministic firing key over (entity, signal type, event instance) so repeated
+  observations of one real event fold into a single firing. Distinct from the delivery-idempotency key
+  (same-message re-execution).
+- **#430a progress-emission** — liveness signals are end-of-window (a heartbeat proves only
+  process-alive; a stale last-success catches a zero-success run only after its staleness window, and
+  never fires for a partial grind that keeps last-success fresh), so catching a systemic fault in-flight
+  needs progress emission: processed/total + a fault count + a fault-rate alert.
+- **#430b lane-fault-budget** — bound the lane as a whole, not only each item: a per-item retry cap
+  still lets thousands of individually-bounded-but-failing items burn the run, so a high
+  consecutive-fault fraction (upstream down) aborts the remaining lane fast (wall-clock and/or
+  consecutive-fault budget).
+
+Independent dogfood review returned FIX-FIRST (a self-contradiction in the #430a prose vs the liveness
+sentence it extended, baked into the eval; a lone soft "Ideally" expectation; #467 shipping 2 of 3
+named legs); all fixed and re-confirmed PASS before merge. +3 evals (225 -> 228).
+
 ## [1.200.0] — 2026-09-19
 
 ### deep-code-review — wave 121 bulkheads / resource isolation + gate-on-success (reliability-error-handling.md)

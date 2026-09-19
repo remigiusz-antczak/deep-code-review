@@ -2382,6 +2382,35 @@
         "Identifies that the consumer gates on artifact EXISTENCE not producer SUCCESS (existence != freshness != success)",
         "Requires gating on a success signal (exit/marker/checksum) + atomic write or last-good preservation"
       ]
+    },
+    {
+      "id": "a-signal-to-action-system-needs-per-condition-cooldown-not-just-delivery-idempotency",
+      "prompt": "An alerting system fires a Slack message every time its 1-minute poll sees CPU > 90%. It already dedups by message id so a redelivered queue message won't double-send. During a 2-hour incident it sent 120 identical alerts. The dedup 'works' — why the flood, and what's the fix?",
+      "expected_output": "Delivery-idempotency (dedup by message id) stops the SAME message firing twice; it does nothing about REPEATED REAL firings of the same underlying condition — each poll while CPU stays >90% is a genuinely new firing, so 120 polls = 120 alerts. Fix: firing-suppression — a cooldown window per (entity, signal type): after firing for host X's high-CPU, suppress re-fires for N minutes — with suppression-with-audit (increment a counter + record last-suppressed timestamp, never a silent drop) so a real re-fire after the cooldown still gets through and an over-suppression bug is visible. A distinct mechanism from delivery-idempotency.",
+      "expectations": [
+        "Distinguishes delivery-idempotency (same message twice) from repeated REAL firings of the same condition — dedup can't stop the latter",
+        "Requires a cooldown window per (entity, signal type) to suppress re-fires of the same condition",
+        "Requires suppression-WITH-AUDIT (counter + last-suppressed timestamp, not a silent drop) so real re-fires and over-firing stay visible"
+      ]
+    },
+    {
+      "id": "an-unattended-lane-grinding-through-a-systemic-fault-needs-progress-emission-not-just-liveness",
+      "prompt": "An overnight job processes 5000 records. Its upstream API is down, so every record fails, but the job catches each error and continues; a process heartbeat keeps pinging so the liveness check stays green, and it 'completes' at dawn having done nothing. The team says 'add a dead-man switch.' Is that enough, and what's actually missing?",
+      "expected_output": "A process heartbeat only proves the process is alive, not that work is succeeding — so it stays green through a total grind; a dead-man switch is better but not enough. A dead-man on LAST-SUCCESS would eventually fire here (zero items succeeded, so last-success goes stale) — but only AFTER its staleness window closes, which on an overnight run can be the whole run; and it never fires for a PARTIAL grind, where some items still succeed and keep last-success fresh. What's missing is IN-FLIGHT visibility: progress emission — processed/total + a running FAULT count and a fault-rate alert — so a stalled-but-alive run is caught while the window is still burning, early enough to abort. Bounding the lane (abort on a high consecutive-fault fraction) is the complementary fix. A green heartbeat is not evidence of progress.",
+      "expectations": [
+        "Distinguishes a process heartbeat (proves alive, not succeeding) from a last-success dead-man, and notes the dead-man catches a zero-success grind only AFTER its staleness window — and not at all for a partial grind that keeps last-success fresh",
+        "Requires in-flight progress emission — processed/total + a running fault count (+ fault-rate alert) — so a silent grind is visible while the window is still burning"
+      ]
+    },
+    {
+      "id": "a-per-item-retry-cap-does-not-bound-a-lane-a-consecutive-fault-budget-does",
+      "prompt": "A batch lane processes 1400 items; each has a retry cap of 3 with backoff, so no single item retries forever. The upstream is down for hours; the lane dutifully retries all 1400 items × 3 = thousands of failing calls, consuming the whole run window. The per-item cap was respected. What's the design gap?",
+      "expected_output": "A per-item retry cap bounds EACH item's own retries, not the LANE as a whole — so 1400 individually-bounded-but-failing items still burn the entire run when the upstream is down. The gap is a lane-level budget: when a large fraction of CONSECUTIVE items fault (signaling the upstream itself is down, not one poison item), abort the remaining lane fast — a wall-clock cap and/or a consecutive-fault threshold — rather than exhausting every item's retries against a dead dependency. Distinct from the per-item circuit-break/retry-cap and from the dead-letter path for a single poison item.",
+      "expectations": [
+        "Identifies that a per-item retry cap bounds each item, not the lane — many bounded-but-failing items still consume the whole run",
+        "Requires a lane-level budget: abort the remaining batch on a high consecutive-fault fraction (wall-clock and/or consecutive-fault threshold)",
+        "Distinguishes it from per-item retry-cap/circuit-break and from the single-poison-item dead-letter path"
+      ]
     }
   ]
 }
