@@ -2451,6 +2451,16 @@
         "States that an empty profile in a low-observability class means 'not observed,' not 'inactive'",
         "Requires labeling a public-footprint class and not letting a ranking read unobserved as low-activity (penalizing the unseen)"
       ]
+    },
+    {
+      "id": "a-source-file-git-classifies-as-binary-nul-byte-is-unreviewable",
+      "prompt": "A reviewer opens a PR that adds a new TypeScript module. The diff shows `data.ts | Bin 0 -> 11857 bytes` instead of a text diff, and `grep` for a function defined in it prints only `Binary file data.ts matches`, never the line — though the code clearly runs and its tests pass. What happened and what's the finding?",
+      "expected_output": "The module embeds a raw NUL (0x00) — most likely a delimiter constant written literally instead of escaped — so git classifies the file as BINARY (git's heuristic keys on the NUL). That makes it undiffable (git diff / git show / git log -p print 'Binary files differ'; git diff --stat shows 'Bin'; git blame still runs but only garbled attribution is left) and effectively un-greppable (grep/ripgrep print only 'Binary file matches' by default; -a / --text forces the line), so the change can't be reviewed as text and the codebase can't be searched for the file's identifiers as written. It is runtime-safe — tests pass — which is exactly why a correctness-focused pass misses it; this is a reviewability/maintainability defect orthogonal to correctness. Finding: replace the literal NUL with the language's escape (\\0) — ASCII, diffable, greppable, byte-identical at runtime — and add a commit/CI gate that flags any tracked source-path file git treats as binary (or containing a NUL), which is cheap and deterministic. (A non-NUL control byte like 0x1F stays text-classified but renders invisibly in the diff — the same escape fix applies.)",
+      "expectations": [
+        "Identifies a raw NUL byte as the cause of git's binary classification (undiffable; greppable only with -a/--text) — not a general 'any control byte' claim",
+        "Frames it as a reviewability/maintainability defect orthogonal to correctness (tests pass; the diff is just unreadable), not a runtime bug",
+        "Requires replacing the literal control byte with an escape (byte-identical) AND a deterministic commit/CI gate for source files git treats as binary"
+      ]
     }
   ]
 }

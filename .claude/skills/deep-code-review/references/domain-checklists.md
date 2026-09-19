@@ -307,13 +307,33 @@ Apply to any pipeline, ETL, enrichment, scraping, or dataset producer. Judge the
   `references/dependency-currency-and-upgrades.md` (currency + safe-bump
   discipline; A03 for supply-chain integrity). Consistency with the surrounding
   code.
+- **A source file git classifies as binary is unreviewable — never embed a raw NUL
+  byte; escape other control bytes.** A tracked source file containing a raw **NUL**
+  (`0x00`) — e.g. a delimiter constant written literally instead of escaped — is
+  classified **binary** by git (the heuristic keys on the NUL): `git diff` /
+  `git show` / `git log -p` print `Binary files … differ` (and `git diff --stat`
+  shows `Bin`) instead of a text diff, so the change can't be read in its PR
+  (`git blame` still runs, but garbled attribution is the only view left). `grep` /
+  `ripgrep` won't print the matching line by default (suppressed, or reported only as
+  `Binary file … matches`); `-a` / `--text` (grep) or `--text` (rg) forces it — so
+  the file's identifiers can't be searched as written. A **non-NUL control byte**
+  (`0x1F` etc.) does *not* flip git to binary — the file stays text — but the byte
+  renders invisibly in the diff and is untypeable / un-greppable as written: a
+  milder but real form of the same defect. Either way the code may run perfectly —
+  this is a reviewability/maintainability defect **orthogonal to correctness**,
+  invisible to a test- or correctness-focused pass. Use the language's escape (`\0`,
+  `\x1f`) — ASCII, diffable, greppable, byte-identical at runtime. A commit/CI gate
+  can flag any tracked source-path file git treats as binary (or containing a NUL) —
+  cheap and deterministic (domain K).
 - **Feature-flag lifecycle**: each flag has an owner, a kill-switch, a test for
   both states, and a staleness/removal policy; dead flags are removed.
 - **Lockstep surfaces** enumerated — the file sets that must change together
   (schema ↔ validator ↔ type ↔ prompt ↔ docs ↔ test).
 - 🚩 commented-out blocks, `v2`/`_old`/`copy` files, duplicate helpers, dead
   flags, unused imports/deps, god-functions, byte-identical duplicated modules
-  (per-plane, vendored) with no parity guard.
+  (per-plane, vendored) with no parity guard; a tracked source file git classifies
+  as binary (a raw NUL byte) — undiffable, greppable only with `-a`/`--text`; a
+  non-NUL control byte rendering invisibly in the diff.
 - **Prioritize debt by team behavior (hotspot).** Rank the maintainability findings above by
   **change-frequency × complexity** from the target's own git history: the debt in the files the
   team keeps touching costs the most to live with. Severity stays the **primary** sort — a

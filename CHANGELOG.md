@@ -3,6 +3,24 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.204.0] — 2026-09-19
+
+### deep-code-review — wave 125 a NUL/control-byte source file is git-binary-unreviewable (closes #479)
+
+Standalone-backlog drain (domain H maintainability / reviewability + a domain-K CI-gate candidate). A
+new bullet in `domain-checklists.md` §H: a tracked source file containing a raw **NUL** (`0x00`) is
+git-classified **binary** — `git diff` / `git show` / `git log -p` print "Binary files differ"
+(`git diff --stat` shows `Bin`) and `grep`/`ripgrep` print only "Binary file matches" unless forced
+with `-a`/`--text`, so the change is undiffable in its PR and the file's identifiers are un-searchable,
+though it runs fine — a reviewability defect orthogonal to correctness. A non-NUL control byte stays
+text-classified but renders invisibly (milder, same escape fix). Use the language escape (`\0`);
+a commit/CI gate can flag any tracked source path git treats as binary. +1 eval (232 -> 233).
+
+Independent review returned FIX-FIRST after empirically testing (live git 2.50.1): the filed issue's
+own text overclaimed that `git blame` shows "Bin N bytes" (it runs fine) and that "any control byte"
+triggers binary classification (only NUL does) — both corrected against empirical behavior before
+merge, in the bullet and the eval; re-confirmed PASS.
+
 ## [1.203.0] — 2026-09-19
 
 ### deep-code-review — wave 124 data-quality: per-hop pivot graph + observability-class bias (closes #468)
