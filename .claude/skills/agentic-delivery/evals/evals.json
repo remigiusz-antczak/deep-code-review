@@ -510,6 +510,16 @@
         "Requires killing the helper process the moment its step ends, not at end-of-run where it can hold the turn open past finalize",
         "Requires bounding the flaky finalize step to a cap that fails to a report (diff + Verify note) rather than looping"
       ]
+    },
+    {
+      "id": "gate-a-tool-at-the-host-not-with-a-prompt-level-prohibition",
+      "prompt": "To stop a cost-sensitive subagent from calling an expensive advisor tool, the orchestrator adds 'do not use tool X' to the subagent's prompt. The subagent calls X anyway on some runs. Why is the prompt-level prohibition insufficient, and what's the enforceable fix?",
+      "expected_output": "A prompt-level 'do not use tool X' is a PROTOCOL control only — model instructions are not a sandbox, so the worker can still call X (non-deterministically, on some runs). The enforceable fix is HOST-ENFORCED: spawn the subagent with an allowed-tools set that excludes X (or deny X at the real execution boundary), so the capability is absent, not merely discouraged — policy the worker cannot edit. Where host-level exclusion isn't available, fall back to a protocol-level audit of the tool calls in the receipt after the fact, and narrow/deny the dependent action rather than assuming the prohibition held. Declare tool/capability access at the level you can actually enforce (per-control), not once for the whole host; a prompt prohibition is not a cap.",
+      "expectations": [
+        "Identifies that a prompt-level prohibition is protocol-only — model instructions aren't a sandbox, so the worker can still call the tool",
+        "Requires the host-enforced fix: spawn with an allowed-tools set excluding the tool (or deny at the execution boundary) — a capability the worker can't edit",
+        "Notes the protocol-level fallback (audit tool calls in the receipt; narrow/deny the dependent action) when host exclusion isn't available"
+      ]
     }
   ]
 }

@@ -3,6 +3,21 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.220.0] — 2026-09-19
+
+### deep-code-review + agentic-delivery — wave 141 cheap-lane delegation discipline (closes #504, #498)
+
+- **model-tiering.md (#504):** tier by **correctness-subtlety, not diff size** — a small change can hide a
+  structural/ordering trap a cheap model ships plausible-but-wrong and self-reports green on (a proxy pass,
+  not the outcome). Verify against real acceptance (independent check / rendered geometry / the criterion);
+  re-derive a cheap-tier miss from the acceptance criterion, not "make the failing tests pass". Lever-6
+  caveat: a consult cap that must bound cost needs harness-level exclusion, not a prompt cadence.
+- **host-enforcement.md (#498):** tool/capability access named as a declared per-control level; a prompt-level
+  "do not use tool X" is protocol-only (the worker can still call X — model instructions aren't a sandbox);
+  the host-enforced form is spawning with an allowed-tools set excluding X, with a protocol-audit fallback.
+
++2 evals (deep-code-review 257 -> 258, agentic-delivery 49 -> 50).
+
 ## [1.219.0] — 2026-09-19
 
 ### deep-code-review — wave 140 enforce data-honesty invariants by construction, not render convention (closes #502)

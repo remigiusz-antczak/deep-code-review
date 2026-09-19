@@ -14,8 +14,10 @@ skill runs on most often.
 ## The three tiers (vendor-neutral)
 
 **Default and ceiling.** Default every task or lane to the cheapest tier that
-clears its own gate; promote only on evidence — a failed cheap attempt, or a
-stated high-blast decision — never start at frontier for routine work. State a
+clears its own gate; promote only on evidence — a failed cheap attempt, a
+stated high-blast decision, or a change whose correctness is subtle out of
+proportion to its size (the third negative result below) — never start at
+frontier for routine work. State a
 reason before exceeding frontier/reasoning-class for anything short of the
 lead-verify and adversarial-design work the mapping below names; an unstated
 escalation is a budget drain, not a judgment call.
@@ -73,14 +75,18 @@ provider with an equivalent primitive, even where the exact mechanism differs.
    on nearly every step and the pairing costs several times more for no quality
    gain. This is the lighter alternative to a fully independent `idea-critic`
    session for low-to-medium-blast decisions — see that skill's Independence
-   step for when a full second session is required instead.
+   step for when a full second session is required instead. A prompt-level consult
+   cadence is advisory only; if the consult's cost must be bounded (each leaked call is
+   real spend), cap it at the
+   harness level (a rate or allowed-tools limit the executor cannot override), not by
+   prompt (`agentic-delivery`'s `host-enforcement.md`).
 7. **Only then, swap the whole task to a stronger model — and judge it by cost
    per *solved* task, never cost per token.** A pricier-per-token model at
    modest effort can solve meaningfully more tasks for *less* total cost than a
    cheaper model that fails more often; on harder tasks this gap widens, because
    pass rate rises faster than price across model generations.
 
-## Two negative results to guard against explicitly
+## Three negative results to guard against explicitly
 
 - **Don't fan out or delegate when the work is one dependent chain or fits a
   single context.** An orchestrator earns its cost only when there is real bulk
@@ -94,6 +100,18 @@ provider with an equivalent primitive, even where the exact mechanism differs.
   measured at several times the cost for no quality gain. Prompt the executor
   for a bounded cadence (on the order of one consult before substantive work and
   one before finishing), not a per-turn habit.
+- **Don't tier by diff size when a small change can hide a structural trap.** Routing a change to the
+  cheapest model because it "looks atomic" (one file, few lines) treats *size* as a proxy for
+  *correctness-subtlety* — but a one-line change can hide a structural or ordering trap (a DOM-order
+  vs visual-order mismatch, an off-by-one at a boundary, a broken invariant) that a cheap model ships
+  plausible-but-wrong and even self-reports green on — a **proxy** pass, not the outcome
+  (`report-format.md`, "Beware the proxy"). Tier by the *subtlety of getting it
+  right*, not the line count; and when a cheap-tier attempt misses, **re-derive the fix from the
+  acceptance criterion**, not from "make the failing tests pass" (the failing tests may be the least
+  of it). Verify a cheap-tier result against real acceptance — an **independent** check (the hat that
+  builds never signs off its own build — `agentic-delivery`'s `roles.md`), rendered geometry for a
+  layout claim (`testing-and-evals.md`), or the criterion itself — never the model's own green
+  self-report.
 
 ## Mapping onto this skill's own units and hats
 

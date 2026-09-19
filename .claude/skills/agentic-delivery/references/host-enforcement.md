@@ -20,13 +20,20 @@ the third:
 | **Host-enforced** | A tested adapter intercepts the real action boundary and denies disallowed actions using policy/state the worker cannot edit | Covers only the tested events/actions/host versions; other paths stay protocol-only |
 
 Declare capability **per control** (state, permission, spend, isolation, model
-choice, receipt capture), not once for a whole host. Record host + version, the
+choice, tool/capability access, receipt capture), not once for a whole host. Record host + version, the
 date observed, the level, the probe evidence, and the paths still unsupported. A
 skill directory, a model name, a worktree, or a hook *example* is not evidence of
 enforcement. Probe the actual tool/auth/model-control availability; label
 inherited or unavailable controls as such, and **fail or narrow the dependent
 action when a required control is absent** — never convert an unavailable check
 into a pass or into authority.
+
+A prompt-level "do not use tool X" is a **protocol** control only — model instructions are not a
+sandbox, so the worker can still call X; the **host-enforced** form is spawning the worker with an
+allowed-tools set that excludes X (or denying the tool at the real execution boundary), with a
+protocol-level fallback of auditing the tool calls in the receipt after the fact. Declare
+tool/capability access at the level you can actually enforce, and narrow the dependent action when
+only the prompt-level control exists.
 
 ## Optional adapter interface (proposed, not shipped)
 

@@ -2701,6 +2701,16 @@
         "States the general rule: enforce a data-honesty invariant by construction (make the illegal value unrepresentable/unbuildable in the type or constructor), not as a render/call-site convention, plus a 'never emits X' test",
         "Gives the reviewer check: ask whether the dishonest value can even be constructed; if yes the invariant rests on a violable convention"
       ]
+    },
+    {
+      "id": "tier-a-change-by-correctness-subtlety-not-diff-size-verify-against-real-acceptance",
+      "prompt": "A one-line CSS/DOM change is routed to the cheapest model because it 'looks atomic.' The model ships it, the unit tests pass, and it self-reports green — but the element renders in the wrong visual position. What went wrong in the tiering decision, and how should a cheap-tier miss be handled?",
+      "expected_output": "The tiering used diff SIZE (one line, 'atomic') as a proxy for correctness-SUBTLETY, but a small change can hide a structural/ordering trap — here a DOM-order vs visual-order mismatch — that a cheap model ships plausible-but-wrong and self-reports green on (passing unit tests that don't check rendered geometry). Tier by the subtlety of getting it right, not the line count. And a green self-report is not acceptance: verify against real acceptance — an independent check, rendered geometry for a layout claim, or the acceptance criterion itself — never the model's own 'tests pass.' When a cheap-tier attempt misses, re-derive the fix from the acceptance criterion (what the change must actually achieve), not from 'make the failing tests pass' — the failing tests may be the least of what's wrong; escalate to a stronger model for the subtle part rather than iterating the cheap one against a proxy.",
+      "expectations": [
+        "Identifies that diff size was used as a proxy for correctness-subtlety, and a small change can hide a structural/ordering trap a cheap model ships wrong while self-reporting green",
+        "Requires tiering by the subtlety of getting it right (not line count) and verifying against real acceptance (independent check / rendered geometry / the criterion), not the model's own green self-report",
+        "Requires re-deriving a cheap-tier miss from the acceptance criterion, not from 'make the failing tests pass'"
+      ]
     }
   ]
 }
