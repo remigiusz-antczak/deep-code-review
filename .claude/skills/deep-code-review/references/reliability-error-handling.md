@@ -138,6 +138,41 @@ Retrying naively double-publishes.
   compensation (`domain-checklists.md`), which sequences several operations — this is
   the atomicity of **one** write plus **one** publish.
 
+## State-machine / lifecycle correctness — model transitions, guard them, leave no impossible or stuck state
+
+Any entity with a **status / lifecycle** (`order: pending→paid→shipped→refunded`, a
+subscription, a document draft→published, a job, a ticket) is a state machine, usually
+**implicit**. Review it as one — distinct from multi-step **saga** compensation
+(`domain-checklists.md`) and from the dual-write atomicity above; this is the correctness of
+the entity's own transitions.
+
+- **Model the valid transition set.** Are the legal `from→to` transitions explicit (a table,
+  a typed union, a guard), or can the field be set to any value? A bare `UPDATE status = ?`
+  with no from-state check lets `refunded → shipped` happen.
+- **Guard each transition atomically — compare-and-set, not read-then-write.** The transition
+  asserts its current state **in the write** (`UPDATE … SET status='shipped' WHERE
+  status='paid'`, then check rows-affected), never read-state-then-write — which races two
+  concurrent transitions into a double effect (pay twice, ship twice). This is the
+  state-machine face of the concurrency CAS rule (`concurrency-shared-state.md`).
+- **Make impossible states unrepresentable.** Prefer one state enum over a soup of booleans
+  (`isPaid`, `isShipped`, `isRefunded`) that admits contradictions (`isRefunded && !isPaid`);
+  where the language allows, encode the state so an illegal combination cannot be constructed
+  (genuinely orthogonal flags like `isArchived` + `isFeatured` are not soup — the smell is
+  booleans that jointly encode one entity's **mutually exclusive** lifecycle stages).
+- **No stuck / orphan states.** Every non-terminal state has an exit that does **not depend on
+  one specific actor** always acting — a timeout / escalation, a reclaim / reassignment path any
+  eligible actor can take, or a deadline. A "someone will get to it" path assigned to one person
+  is **not** an exit: a `processing` with no timeout, or an approval assigned to one person that
+  never expires, silently strands the entity. Terminal states are truly terminal (nothing
+  transitions out of `refunded`).
+- **Transition side effects fire once.** The effect on a transition (charge, email, webhook)
+  is guarded so a re-entered or retried transition does not double-fire — cross-ref the
+  idempotency-key rule above and the dual-write section (a publish on a transition is itself a
+  cross-system write).
+
+**Scope:** applies when the target has an entity with a status / lifecycle field or an explicit
+state machine; if none, say so and move on (do not invent a state machine to audit).
+
 ## Crash, SIGINT, resume
 
 - Long jobs: catch SIGINT/SIGTERM (or platform equivalent), flush cursors,
@@ -174,4 +209,7 @@ retry; work lost on crash; status not checked before body read; emergency stop
   **staleness-tolerant** downstream gate (degrade to last-good instead); a local
   write followed by a separate publish / remote call with no transactional outbox,
   idempotent consumer, or reconciliation (a dual-write that loses or phantoms an
-  event on a crash between the two).
+  event on a crash between the two); a status/lifecycle transition via a bare `UPDATE status = ?`
+  with no from-state guard (read-then-write, not compare-and-set); a boolean soup encoding one
+  entity's mutually-exclusive lifecycle stages (admits impossible combinations); a non-terminal
+  state whose only exit depends on one specific actor (no timeout / reassignment).

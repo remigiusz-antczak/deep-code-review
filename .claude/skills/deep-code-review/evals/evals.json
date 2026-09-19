@@ -1932,6 +1932,26 @@
         "States the generator must be free to produce inputs that VIOLATE the property (uppercase/mixed-case here) — i.e. must not encode the property's conclusion; notes a precondition constraint is legitimate, but pre-satisfying the checked property is the smell",
         "Notes passing on thousands of cases proves nothing here, and gives the fix (generate arbitrary inputs, assert on the output)"
       ]
+    },
+    {
+      "id": "status-transition-needs-a-from-state-guard-compare-and-set-not-bare-update",
+      "prompt": "A refund handler runs `UPDATE orders SET status = 'refunded' WHERE id = ?` — with no check of the current status. An order can be pending, paid, shipped, or refunded, and the refund also triggers a money-movement side effect. Any issue?",
+      "expected_output": "Yes, two. (1) No valid-transition guard: the bare UPDATE sets status='refunded' from ANY current state, so it permits illegal transitions — refunding a `pending` (never-paid) order, or re-refunding an already-`refunded` one. Model the legal from→to set and assert the from-state in the write: `... WHERE id = ? AND status = 'paid'`, then check rows-affected (0 rows = the row is absent OR not in the required from-state — distinguish a bad id from an illegal transition before reporting). (2) Read-then-write / no compare-and-set race: two concurrent refund requests can both pass and both fire the money-movement side effect — a double refund. The from-state predicate in the UPDATE is the CAS that makes the transition atomic (only one request flips paid→refunded; the other sees 0 rows). Also ensure the money-movement side effect is idempotent / fires once. (reliability-error-handling.md, state-machine correctness.)",
+      "expectations": [
+        "Flags the missing from-state guard: a bare UPDATE with no current-status check permits illegal transitions (refund a pending / re-refund a refunded order) — model the valid transition set and assert the from-state in the write",
+        "Flags the read-then-write / no-CAS race: without the from-state predicate in the UPDATE (check rows-affected), two concurrent transitions both succeed and double-fire the side effect",
+        "Notes the transition side effect (money movement) must fire once / be idempotent"
+      ]
+    },
+    {
+      "id": "non-terminal-state-with-no-timeout-or-exit-strands-the-entity",
+      "prompt": "A document workflow has states draft → in_review → published. `in_review` is entered when an author submits; it leaves only when a reviewer approves (→published) or rejects (→draft). There is no timeout or reassignment path. Review the lifecycle.",
+      "expected_output": "The `in_review` state is a stuck/orphan-state hazard: it is non-terminal but its only exits require a specific reviewer to act, and there is no timeout, escalation, or reassignment. If the reviewer leaves, is unavailable, or simply never acts, the document strands in `in_review` indefinitely with no automatic recovery. Every non-terminal state must have an exit that does not depend on a single actor always acting — a timeout (auto-return to draft or escalate after N days), a reassignment/manual-reclaim path, or a reminder+deadline. (Terminal states like a final `published`/`archived` are correctly terminal — the rule is about non-terminal states.) (reliability-error-handling.md, state-machine correctness.)",
+      "expectations": [
+        "Identifies `in_review` as a stuck/orphan state: non-terminal but with no exit that doesn't depend on a specific reviewer acting, so the entity can strand indefinitely",
+        "Requires every non-terminal state to have an actor-independent exit — a timeout/escalation, a reassignment/reclaim path, or a deadline",
+        "Does not flag a genuinely terminal state as stuck (the rule is about non-terminal states with no exit)"
+      ]
     }
   ]
 }
