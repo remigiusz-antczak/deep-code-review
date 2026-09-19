@@ -26,7 +26,19 @@ age (Fowler's four):
   date or tracking issue, is carrying-cost debt, not a feature.
 - **Experiment toggle** — A/B or cohort routing. Lifetime tracks the
   experiment, not a fixed window; flag it only if the experiment itself looks
-  abandoned (no metrics wired, no end date).
+  abandoned (no metrics wired, no end date). **And the assignment code itself is reviewable, not
+  just the readout:** bucketing must be a **deterministic hash of a stable randomization unit + an
+  experiment salt** (`hash(unit + experimentKey) % 100`), never `Math.random()` / session-scoped /
+  re-rolled per request, and the unit stays constant across a logged-out→logged-in transition; the
+  **exposure event fires at the point the variant actually changes rendered behavior**, not at
+  assignment or page load (logging exposure for units that never reach the branched code dilutes
+  the effect); and a **sample-ratio-mismatch (SRM) guard** — observed group sizes vs the intended
+  split — is wired. SRM is a **high-sensitivity signal that something in the assignment/exposure
+  pipeline is broken** — a symptom with several causes (telemetry filtering, trigger/exposure
+  misconfiguration, or the bucketing itself), not a pointer to one, and it in most cases
+  invalidates the results outright (Fabijan et al., KDD 2019; Kohavi et al., *Trustworthy Online
+  Controlled Experiments* — by name). Read-side validity (peeking, always-valid bounds) stays in
+  `growth-analytics`; this is the code side.
 - **Ops toggle** — an operator kill-switch/degrade lever. Meant to be
   long-lived; the finding here is a *missing* one on a risky rollout, not an
   old one.
@@ -40,6 +52,24 @@ flags treated as inventory nobody counts — "savvy teams view feature toggles i
 their codebase as inventory which comes with a carrying cost," and the classic
 failure mode of stale toggle debt is a launched-and-forgotten switch nobody
 dares remove.
+
+**Flag evaluation (runtime), not just lifecycle:**
+- **Pin the evaluated value once per logical request / transaction.** Re-evaluating the same flag
+  mid-request — across async continuations, retries, or separate service calls in one operation —
+  can render a **composite of both code paths** in a single response. This is a config-read
+  *consistency* bug, not a data race (nothing is mutated — distinct from the check-then-act TOCTOU
+  in `domain-checklists.md` / `concurrency-shared-state.md`). It is the **complement, not a
+  contradiction,** of caching the flag *fetch* with a TTL (`performance-db-cost.md`): cache the
+  fetch, but **pin the evaluated value** for the life of the request and pass it down rather than
+  re-reading — the same shape as the lifetime-mismatch rule in `concurrency-shared-state.md`
+  (thread a per-run value as a parameter).
+- **Set the provider-unreachable default per flag category, and disambiguate "closed."** When the
+  flag service is unreachable the code takes a default, and **fail-open is the bug for a risky or
+  incomplete feature** exactly as a fail-open rate-limiter store is (`security-appsec.md` — the
+  store-unreachable-defaults-open case). For a flag, "closed" is ambiguous: a **release toggle**
+  closed = the *old code path* (safe), but an **ops kill-switch**'s safe default is *engaged*
+  (feature degraded), not disengaged. Name the safe default **per category**, so an outage
+  neither silently enables a half-built feature nor disables a safety lever.
 
 ## Canary / blue-green — claims need config, not prose
 

@@ -2112,6 +2112,36 @@
         "Names the real defect as no reweighting + no recorded sampling design, and notes outcome-stratified sampling is legitimate when probabilities are known",
         "Limits the genuinely-unrecoverable case to unknown/unrecorded probability or a zero-probability hard drop (a never-sampled stratum)"
       ]
+    },
+    {
+      "id": "experiment-bucketing-must-be-a-deterministic-hash-with-an-srm-guard-not-random-assignment",
+      "prompt": "An A/B test assigns each request to a variant with `Math.random() < 0.5`, logs an exposure event at page load, and reads results off whichever users converted. The variant looks like it wins. What's wrong with the assignment CODE (not the stats readout)?",
+      "expected_output": "Several code-side defects. (1) `Math.random()` is per-call, not sticky — a user is re-bucketed on every request/page, so the 'variant' isn't a stable cohort; bucket by a deterministic hash of a stable randomization unit + an experiment salt (hash(userId+experimentKey)%100), constant across a logged-out→logged-in transition. (2) Exposure logged at page load, not at the point the variant changes rendered behavior, counts units that never reached the branched code and dilutes the effect — fire exposure at the actual variant divergence. (3) No sample-ratio-mismatch (SRM) guard: observed vs intended group sizes is a high-sensitivity signal that something in the assignment/exposure pipeline is broken (a symptom with several causes, not a pointer to one) and it usually invalidates the result — and it's absent. (Read-side validity — peeking, always-valid bounds — is a separate growth-analytics concern.)",
+      "expectations": [
+        "Flags Math.random()/per-request assignment as non-sticky — requires a deterministic hash of a stable unit + salt, constant across logout→login",
+        "Flags exposure logged at page load instead of at the point the variant changes rendered behavior (dilutes the effect)",
+        "Requires a sample-ratio-mismatch (SRM) guard as a high-sensitivity signal something in the assignment/exposure pipeline is broken (not a pointer to one specific cause); separates code-side from read-side statistical validity"
+      ]
+    },
+    {
+      "id": "a-feature-flag-must-be-evaluated-once-per-request-not-re-read-mid-request",
+      "prompt": "A request handler checks `isEnabled('new_checkout')` at the start to pick a template, then again deeper in the same request to pick pricing logic; the flag service re-evaluates each call. Occasionally a response mixes the old template with new pricing. Race condition?",
+      "expected_output": "Not a data race — nothing is mutated; it's a config-read CONSISTENCY bug. Re-evaluating the same flag mid-request (across calls, async continuations, or retries) can return different values, rendering a composite of both code paths in one response. Evaluate the flag ONCE per logical request/transaction and pin that value for its lifetime; pass the pinned value down rather than re-reading (thread it as a parameter). Distinct from a check-then-act TOCTOU (a mutation race). Aside: this complements, not contradicts, TTL-caching the flag fetch — cache the fetch, pin the evaluated value per request.",
+      "expectations": [
+        "Identifies a config-read consistency bug, not a data race (nothing mutated) — re-eval mid-request yields a composite of both paths",
+        "Requires evaluating once per request/transaction and pinning that value for its lifetime (thread it down, don't re-read)",
+        "Distinguishes it from a check-then-act TOCTOU mutation race (this is read-read inconsistency, nothing mutated)"
+      ]
+    },
+    {
+      "id": "flag-provider-unreachable-default-must-be-set-per-category-and-disambiguate-closed",
+      "prompt": "A feature-flag client defaults every flag to its 'on' value when the flag service is unreachable, so the product 'keeps working.' Review finding?",
+      "expected_output": "Blanket fail-open on flag-provider-unreachable is the bug for any risky or incomplete feature — defaulting a half-built release toggle ON ships broken code during an outage, exactly as a fail-open rate-limiter store is a bug (security-appsec.md A06 / insecure design — the store-unreachable-defaults-open case). The default must be set PER FLAG CATEGORY, and 'closed' disambiguated: for a release toggle, closed = old code path (safe); for an ops kill-switch, the safe default is ENGAGED (feature degraded), not disengaged. A blanket default-on (or a blanket default-off that disables a safety lever) is wrong — name the safe default per category so an outage neither enables a half-built feature nor disables a kill-switch.",
+      "expectations": [
+        "Identifies blanket fail-open (default-on) as the bug for a risky/incomplete feature, analogous to a fail-open rate-limiter store",
+        "Requires the unreachable-default set per flag category, not blanket",
+        "Disambiguates 'closed' (release toggle → old path; ops kill-switch → engaged/degraded) so an outage neither enables a half-built feature nor disables a safety lever"
+      ]
     }
   ]
 }

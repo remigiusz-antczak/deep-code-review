@@ -3,6 +3,33 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.191.0] — 2026-09-19
+
+### deep-code-review — wave 112 feature-flag & experiment correctness (release-engineering.md, domain K)
+
+From an industry-research scout (verified genuine at source; lifecycle / kill-switch / both-states /
+PII already covered — these three were the absent slivers, on the code-review side vs growth-analytics'
+read side).
+
+- **Experiment assignment is reviewable code** — deterministic hash(unit+salt), not Math.random /
+  session-scoped; unit stable across logout→login; exposure fires at variant-render, not page load; an
+  SRM guard wired (a high-sensitivity signal the assignment/exposure pipeline is broken — several
+  causes, not one). Extends the Experiment-toggle bullet.
+- **Pin the evaluated flag value once per request/transaction** — re-eval mid-request renders a
+  composite of both paths; a config-read consistency bug, not a data race; complements TTL-caching the
+  fetch (cache the fetch, pin the value).
+- **Provider-unreachable default per flag category, and disambiguate "closed"** — fail-open is the bug
+  for a risky feature; release-toggle-closed = old path, ops-kill-switch safe default = engaged.
+
+Three evals (deep-code-review 198 -> 201). Sources by name (Fabijan KDD-2019 SRM; Kohavi et al.). Trio
+-> 1.191.0. `SHA256SUMS` regenerated last.
+
+Dogfood reviewer (sonnet): PASS-WITH-NITS -> applied. Must-fix: a cross-ref to a non-existent
+"migration-parity.md consistency rule" was repointed to the real lifetime-mismatch rule in
+`concurrency-shared-state.md` (verify-before-cite). Also: corrected an eval's OWASP section (A06 not
+A07), scoped the SRM claim to a multi-cause symptom (not a pointer to the bucketing code), and dropped
+an uncued TTL sub-expectation from the pin-once eval.
+
 ## [1.190.0] — 2026-09-19
 
 ### deep-code-review — wave 111 telemetry / analytics-event correctness (data-quality.md)
