@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.235.0] — 2026-09-20
+
+### deep-code-review — wave 156 base-branch identity as a merge-eligibility axis (closes #565)
+
+- **`branch-and-merge-hygiene.md`**: a PR-open without an explicit base falls back to the tool's default (for `gh pr create`, a `gh-merge-base` git config if set, else the repo default branch); when the intended integration branch is not the default, a lane that omits the base flag silently opens against the protected default, and a merge gate checking only green + mergeable merges it there — a governance breach. New subsection: every PR-open passes the base explicitly; base-branch identity is a merge-eligibility axis (refuse a PR whose base is not the expected integration branch); recovery for an already-merged-to-protected PR is an owner decision + a port to the integration branch, never an auto-revert of the protected branch.
+- +1 eval. Closes #565. Reviewer FIX-FIRST applied: the `gh pr create` default-base mechanism is stated as its true two-tier fallback, not over-claimed as always the repo default.
+
 ## [1.234.0] — 2026-09-20
 
 ### deep-code-review — wave 155 duplicate-detection depth: orphaned straggler + unassembled molecule (closes #582)

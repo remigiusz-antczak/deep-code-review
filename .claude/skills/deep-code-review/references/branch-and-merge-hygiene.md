@@ -497,6 +497,24 @@ standing-producer generalization of the merge-train ordering rule (§5). The
 message-payload sibling — a new **required field** breaking old producers and
 in-flight messages — is `api-contracts.md`.
 
+### The merge gate verifies WHERE a PR merges, not only that it is green — check the base branch
+
+A PR-open command run without an explicit base falls back to whatever the tool picks — for `gh pr create`, a per-branch `gh-merge-base` git config if one was set, otherwise the **repo default branch** (the common case for a lane that never configured that). When the
+intended integration branch is *not* the default (work lands on `development`, but `main` is the
+protected / owner-gated default), a lane whose brief says "base `development`" in prose but runs
+`gh pr create` / the API call **without the base flag** silently opens against the protected
+branch — and a merge step that verifies checks-green + mergeable but **not the base** then merges
+it into the protected branch, a governance breach even when the code is green.
+
+- **Every PR-open passes the base explicitly** (`--base <integration-branch>`); never rely on the
+  command's default-to-repo-default behavior.
+- **Base-branch identity is a merge-eligibility axis**, next to state / mergeable / checks-green:
+  the gate reads the PR's *actual* base and **refuses** anything whose base is not the expected
+  integration branch — a green PR against the wrong branch is not mergeable.
+- **Recovery when a PR already merged to the protected branch**: do **not** auto-revert the
+  protected branch (that is itself a gated, owner-level change) — surface it for an owner decision,
+  and separately port the change onto the integration branch so the two do not diverge.
+
 ### Self-reported evidence is not a trusted control; a local hook is advisory
 
 A merge decision rests on **trusted** evidence — a run the forge verified on the **exact commit

@@ -2961,6 +2961,16 @@
         "Explains the divergence is in the ASSEMBLY decisions (a11y attributes, native title vs shared tooltip, sizing), not the primitives, and one site's fix doesn't propagate",
         "Prescribes detecting via a repeated scaffolding/attribute pattern (not the label) and fixing by building the one shared atom, not merely reconciling wording"
       ]
+    },
+    {
+      "id": "a-pr-opened-without-an-explicit-base-can-merge-into-the-protected-branch",
+      "prompt": "An autonomous lane's brief says 'open the PR against the `development` integration branch.' The lane runs `gh pr create` with a title and body but no `--base` flag. The merge step checks that all required checks are green and the PR is mergeable, then squash-merges. `main` is the protected, owner-gated default branch. What's the risk?",
+      "expected_output": "`gh pr create` without an explicit `--base` falls back to a `gh-merge-base` git config if one was set, otherwise the repo's default branch — here `main` — so the PR silently targets the protected/owner-gated branch instead of `development`, despite the brief. The merge step checks green + mergeable but NOT the base, so it merges the change into the protected branch: a governance breach even though the code is green. Fixes: (1) every PR-open passes the base explicitly (`--base development`), never relying on the default; (2) add base-branch identity to the merge-eligibility check next to state/mergeable/checks-green — the gate reads the PR's actual base and refuses anything not targeting the expected integration branch; (3) if a PR already merged to the protected branch, do NOT auto-revert the protected branch (reverting it is itself a gated change) — surface for an owner decision and separately port the change onto the integration branch so they don't diverge.",
+      "expectations": [
+        "Identifies that a PR-open without an explicit base defaults to the repo default (protected) branch, so the PR silently targets the wrong branch despite the brief",
+        "Requires the merge gate to verify base-branch identity (refuse a PR whose base is not the expected integration branch), not only checks-green + mergeable",
+        "For an already-merged-to-protected PR, requires NOT auto-reverting the protected branch (itself a gated change) — surface for owner + port to the integration branch"
+      ]
     }
   ]
 }
