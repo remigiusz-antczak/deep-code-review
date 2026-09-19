@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.238.0] — 2026-09-20
+
+### deep-code-review — wave 159 shared accessor silently no-ops for the nested-key polymorphic shape (closes #559)
+
+- **`data-quality.md`** §5: a shared exact-key filter matching a hardcoded OR-list of top-level field names (`[row.fooId, row.barKey, …].filter(Boolean).includes(key)`) silently returns empty — no error — for any polymorphic record shape whose id is nested under a sub-object (`metadata`/`frontmatter`/…): the candidate list is empty so `[].includes(key)` is always false, and that collection reads as "nothing ever matches" instead of failing loudly. It survives review because the other shapes work and a correctly-written per-shape accessor masks it. Catch: enumerate every shape and check its real field nesting at the schema/type; cross-check a correct sibling accessor; if the endpoint documents the parameter as uniform, the gap is a broken promise (`api-contracts.md`). Fix: a per-shape accessor registry (a closed, type-checkable enumeration), not another ad-hoc top-level entry; regression-test one fetch-by-real-key per shape. Framed as the read-side sibling of the erosion-guard rule.
+- +1 eval. Closes #559. Reviewer nits applied (registry-vs-open-ended-write-sites clarification; doc-promise cross-ref).
+
 ## [1.237.0] — 2026-09-20
 
 ### deep-code-review — wave 158 TLS enforced is not TLS validated (client cert-validation bypass, A04)

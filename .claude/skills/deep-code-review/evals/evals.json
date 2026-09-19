@@ -2991,6 +2991,16 @@
         "Distinguishes 'TLS enforced' (the https:// scheme) from 'TLS validated' (the client validates the received certificate)",
         "Rejects the self-signed-staging justification and prescribes pinning the specific internal CA/cert instead of disabling validation — internal/service-to-service TLS is not exempt"
       ]
+    },
+    {
+      "id": "a-shared-key-filter-with-a-hardcoded-field-list-silently-no-ops-for-a-nested-key-shape",
+      "prompt": "One `GET /items?type=<x>&key=<y>` endpoint serves several record collections from one code path. Its exact-key match is `const c = [row.fooId, row.barKey, row.bazId].filter(Boolean); if (!c.includes(key)) return null;`. Smoke tests pass. One collection (`docs`) stores its id under `row.metadata.slug`. A reviewer sees the smoke tests green and moves on. What's wrong?",
+      "expected_output": "The shared filter silently no-ops for the `docs` collection. Its candidate list only checks top-level fields (fooId/barKey/bazId); `docs` nests its id under `row.metadata.slug`, so none of the candidates is ever truthy, the list is empty, and `[].includes(key)` is always false — every `docs` lookup by key returns null with no error, reading as 'nothing ever matches' rather than failing loudly. It survived review because the other shapes work and (usually) a correctly-written per-shape search accessor reaches `metadata.slug`, so smoke tests on the common shapes pass. Catch: enumerate EVERY shape the filter serves and check each one's real field nesting at its schema/type (not by assumption); a sibling accessor that already reads the nested key correctly confirms the gap; if the endpoint documents `key` as uniform, this is a broken promise. Fix: replace the hardcoded OR-list with a per-shape accessor registry (shape -> (row) => key), not just bolt `metadata.slug` onto the list, and add one fetch-by-real-key regression test per shape.",
+      "expectations": [
+        "Identifies that the hardcoded top-level candidate list never matches the nested-key shape (metadata.slug), so the list is empty and [].includes(key) is always false — the lookup silently returns empty with no error",
+        "Explains why it survives review: the other shapes work and a correctly-written per-shape accessor masks it, so smoke tests on the common shapes pass",
+        "Prescribes enumerating every shape and checking nesting at the schema/type, cross-checking a correct sibling accessor, and fixing with a per-shape accessor registry + per-shape regression tests — not merely adding metadata.slug to the top-level list ad hoc"
+      ]
     }
   ]
 }

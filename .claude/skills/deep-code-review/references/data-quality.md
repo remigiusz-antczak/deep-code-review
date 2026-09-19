@@ -242,6 +242,26 @@ rate), validity (schema/format/range). For each:
   the primitives and check each. The test that proves guard coverage must
   **discover** write-sites (grep/AST), never hardcode a list that goes stale as
   new sites are added.
+- **A shared accessor over polymorphic shapes silently no-ops for the shape whose
+  key it doesn't reach — the read-side sibling of the erosion-guard rule above.** A
+  generic exact-key filter serving several record shapes from one path often matches
+  against a **hardcoded OR-list of top-level field names**
+  (`[row.fooId, row.barKey, …].filter(Boolean).includes(key)`, or an equivalent `??`
+  chain). It works for every shape whose id is a plain top-level property and
+  **silently returns empty — no error** — for any shape whose id is **nested** under a
+  sub-object (`metadata` / `frontmatter` / `attributes` / `config`): none of the
+  top-level candidates is ever truthy, so the list is empty and `[].includes(key)` is
+  always `false`, and that collection reads as "nothing ever matches" instead of
+  failing loudly. It survives review because each shape works alone and a **per-shape**
+  search/scope accessor (built correctly, reaching into the nested field) usually masks
+  it, so a smoke test on the common shapes passes. Catch it: enumerate **every** shape
+  the filter serves and check each one's real field nesting **at its schema/type, not
+  by assumption**; if a sibling accessor already reaches the nested key correctly while
+  the shared filter does not, that inconsistency confirms a genuine gap, not a
+  limitation; and if the endpoint documents the parameter as working uniformly across
+  shapes, the silent per-shape gap is a broken promise (a contract breach on par with a public-API change, `api-contracts.md`). Fix: a per-shape accessor
+  registry (`shape → (row) => key | null`), mirroring the per-shape accessors the code
+  already has for other concerns — not another ad-hoc entry bolted onto the top-level list. Unlike the erosion-guard’s open-ended write-site surface above, the shape set is closed and type-checkable, so the registry can be exhaustiveness-checked rather than discovered. Regression-test one fetch-by-real-key per shape, not just the first-tested one.
 
 ## 6. Idempotency, ownership & lifecycle
 
