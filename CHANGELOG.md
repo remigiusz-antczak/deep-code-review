@@ -12,8 +12,9 @@ Filed-backlog drain (issues surfaced by concurrent-lane delivery runs). Two addi
 - **A worktree does not isolate repo-global refs (#536)** — `git stash` is a single repo-wide stack
   (`refs/stash`), not per-worktree, so a sibling lane's push/pop consumes or reorders this lane's entry
   (silent WIP loss). Never bare stash push/pop under concurrency — commit-then-reset, a second worktree,
-  or a unique-message stash matched by `stash@{N}`. (#536's scratch-path-collision half was already
-  covered; this ships the genuinely-new stash half.)
+  or `git stash create` (a dangling commit SHA that never touches the shared `refs/stash`), restored via
+  `git stash apply`. (#536's scratch-path-collision half was already covered; this ships the
+  genuinely-new stash half.)
 - **Land the fix, then finalize separately (#506, #528)** — a lane that opens a draft PR early and does
   async finish-work can orphan the draft when a lingering helper process or a retry loop holds the turn
   open past the promote step. Decouple fix-landing from finalize (ready the PR once code+gates are green;
@@ -21,8 +22,9 @@ Filed-backlog drain (issues surfaced by concurrent-lane delivery runs). Two addi
   every flaky finalize step to a cap that fails to a report, and have the orchestrator sweep-and-adopt
   orphan drafts.
 
-+2 evals (47 -> 49 agentic-delivery). Triage confirmed #525 / #519 / #528-F3 already covered
-(concurrency pkill / auto-close-hygiene / host-sizing) — not rebuilt.
++2 evals (47 -> 49 agentic-delivery). Triage confirmed #525 / #519 already covered
+(concurrency pkill / auto-close-hygiene) — closed with cited evidence, not rebuilt. #528-F3
+(load1 back-off for an I/O-heavy fan-out) was found not actually actionable and is shipped here.
 
 ## [1.211.0] — 2026-09-19
 

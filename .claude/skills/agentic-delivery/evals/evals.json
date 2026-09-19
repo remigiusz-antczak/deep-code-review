@@ -493,11 +493,11 @@
     {
       "id": "git-stash-is-repo-global-across-worktrees-not-per-lane",
       "prompt": "Two agent lanes run concurrently in separate git worktrees off one repo. Each lane does `git stash push` before a rebase and `git stash pop` after. Lane A's changes vanish. What happened and what's the fix?",
-      "expected_output": "A worktree isolates HEAD, the index, and the working tree — but NOT repo-global refs, and git stash is a single repo-wide stack (refs/stash), not per-worktree. So lane B's stash push/pop operated on the same shared stack as lane A's: B's pop consumed (or reordered) the entry A pushed, losing A's WIP — and B's popped changes might not even apply cleanly onto B's tree. The mistake is assuming a worktree isolates stash the way it isolates the branch. Fix: never bare stash push/pop in a lane running concurrently with siblings off the same repo — commit-then-reset onto the lane's own branch, use a second worktree for throwaway state, or tag your own entry with a unique message (git stash push -m '<lane-id>...' then git stash pop 'stash@{N}' by that message), never the bare top of stack. Same hazard for other repo-global state (branches, config).",
+      "expected_output": "A worktree isolates HEAD, the index, and the working tree — but NOT repo-global refs, and git stash is a single repo-wide stack (refs/stash), not per-worktree. So lane B's stash push/pop operated on the same shared stack as lane A's: B's pop consumed (or reordered) the entry A pushed, losing A's WIP — and B's popped changes might not even apply cleanly onto B's tree. The mistake is assuming a worktree isolates stash the way it isolates the branch. Fix: never bare stash push/pop in a lane running concurrently with siblings off the same repo — commit-then-reset onto the lane's own branch, use a second worktree for throwaway state, or capture a private snapshot with git stash create (it returns a dangling commit SHA that never touches the shared refs/stash stack), record that SHA in a lane-private file, and restore it with git stash apply <sha> — never a bare stash push/pop or a positional stash@{N}. Same hazard for other repo-global state (branches, config).",
       "expectations": [
         "Identifies that a worktree does NOT isolate repo-global refs, and git stash is a single repo-wide stack (refs/stash) not per-worktree — so a sibling lane's push/pop consumes/reorders this lane's entry",
         "Explains the WIP-loss mechanism (B's pop takes A's entry; popped changes may not apply cleanly onto B's tree)",
-        "Requires not using bare stash push/pop under concurrency — commit-then-reset, a second worktree, or a unique-message stash matched by stash@{N}"
+        "Requires not using bare stash push/pop (or a positional stash@{N}) under concurrency — commit-then-reset, a second worktree, or git stash create capturing a dangling SHA restored with git stash apply"
       ]
     },
     {
@@ -508,7 +508,7 @@
         "Identifies that coupling promote-to-ready to a fragile finalize tail (held open by a lingering process / retry loop) orphans a green-but-unpromoted draft",
         "Requires decoupling: ready the PR once code+gates are green, and make finalize a separate idempotent step any actor can complete",
         "Requires killing the helper process the moment its step ends, not at end-of-run where it can hold the turn open past finalize",
-    "Requires bounding the flaky finalize step to a cap that fails to a report (diff + Verify note) rather than looping"
+        "Requires bounding the flaky finalize step to a cap that fails to a report (diff + Verify note) rather than looping"
       ]
     }
   ]
