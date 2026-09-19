@@ -2981,6 +2981,16 @@
         "Identifies that consumers/mirrors have nothing to verify when the release assets carry no signature/attestation/provenance, despite internal SLSA provenance",
         "Requires the publish job to attach a consumer-checkable signature (cosign/Sigstore, npm --provenance, PyPI Trusted Publishing, GPG/.asc/.sig, or .intoto.jsonl) AND that the signing step actually runs, not just be documented"
       ]
+    },
+    {
+      "id": "tls-enforced-is-not-tls-validated-certificate-bypass-in-a-client",
+      "prompt": "Review this Python service's outbound HTTP client for cryptographic failures (OWASP A04):\n\n```python\nimport requests\nBILLING_API = \"https://billing.internal.example.com/v1/charge\"\ndef charge_card(token, amount_cents):\n    # internal cert is self-signed; verification kept failing in staging\n    resp = requests.post(BILLING_API, json={\"token\": token, \"amount\": amount_cents}, verify=False, timeout=5)\n    resp.raise_for_status()\n    return resp.json()\n```\nEvery URL in this codebase uses `https://`. Is transport security handled here?",
+      "expected_output": "No. `verify=False` disables TLS certificate validation (CWE-295, Improper Certificate Validation): the client accepts any certificate from any host, so a man-in-the-middle can terminate and re-originate the connection and read or alter the card token and amount — despite the `https://` URL. 'TLS everywhere' (the URL scheme) is not 'TLS validated' (the client checks who it is talking to); this code satisfies the former and fails the latter. The self-signed-staging-cert justification is not a reason to disable validation — pin the specific internal CA or self-signed certificate instead (ASVS v5.0.0-12.3.2 requires TLS clients validate certificates before communicating; -12.3.4 requires internal services trust only specific internal CAs/self-signed certs). Remove `verify=False`. (This is TLS validation — distinct from a JWT `verify=False`, which is signature verification.)",
+      "expectations": [
+        "Names verify=False (disabled TLS certificate validation, CWE-295) as the vulnerability — not merely 'use HTTPS', which is already true here",
+        "Distinguishes 'TLS enforced' (the https:// scheme) from 'TLS validated' (the client validates the received certificate)",
+        "Rejects the self-signed-staging justification and prescribes pinning the specific internal CA/cert instead of disabling validation — internal/service-to-service TLS is not exempt"
+      ]
     }
   ]
 }

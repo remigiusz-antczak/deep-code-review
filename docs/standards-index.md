@@ -616,3 +616,12 @@ determination routes to counsel).
 | Standard / source | URL | What was confirmed |
 |---|---|---|
 | OpenSSF Scorecard — Signed-Releases check | https://github.com/ossf/scorecard/blob/main/docs/checks.md | "Risk: `High` (possibility of installing malicious releases)". "This check tries to determine if the project cryptographically signs release artifacts." "Signed releases attest to the provenance of the artifact." "Note: The check does not verify the signatures." (The Signed-Releases section; distinct from the other Scorecard rows above that cite the same catalog URL.) Fetched + verified 2026-09-20. |
+
+## Verified by direct fetch (2026-09-20) — TLS certificate validation bypass (A04)
+
+| Standard / source | URL | What was confirmed |
+|---|---|---|
+| OWASP ASVS v5.0.0-12.3.2 (Secure Communication) | https://github.com/OWASP/ASVS/blob/v5.0.0_release/5.0/en/0x21-V12-Secure-Communication.md | Level 2: "Verify that TLS clients validate certificates received before communicating with a TLS server." Verified 2026-09-20 at tag v5.0.0_release. |
+| OWASP ASVS v5.0.0-12.3.4 (Secure Communication) | https://github.com/OWASP/ASVS/blob/v5.0.0_release/5.0/en/0x21-V12-Secure-Communication.md | Level 2: "Verify that TLS connections between internal services use trusted certificates. Where internally generated or self-signed certificates are used, the consuming service must be configured to only trust specific internal CAs and specific self-signed certificates." Verified 2026-09-20. |
+| CWE-295 — Improper Certificate Validation | https://cwe.mitre.org/data/definitions/295.html | "Improper Certificate Validation" — "The product does not validate, or incorrectly validates, a certificate." Fetched + verified 2026-09-20. |
+| CWE-297 — Improper Validation of Certificate with Host Mismatch | https://cwe.mitre.org/data/definitions/297.html | "Improper Validation of Certificate with Host Mismatch" — a child of CWE-295; the specific case of an all-accepting `HostnameVerifier`. Fetched + verified 2026-09-20. |

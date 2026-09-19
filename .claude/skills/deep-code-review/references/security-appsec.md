@@ -278,6 +278,24 @@ generation, `random.random()` for secrets, hard-coded keys/IVs, `password` +
 ChaCha20-Poly1305) with unique nonces; CSPRNG for all security-relevant
 randomness; keys in a managed store.
 
+**TLS enforced is not TLS validated.** "TLS everywhere" above is about the wire; it
+says nothing about whether the *client* checks who it is talking to. A client with
+certificate validation disabled — `verify=False` (Python `requests`),
+`rejectUnauthorized: false` / `NODE_TLS_REJECT_UNAUTHORIZED=0` (Node),
+`InsecureSkipVerify: true` (Go), an all-accepting `TrustManager` / `HostnameVerifier`
+(Java), `curl -k` / `--insecure` — still shows `https://` in every URL and satisfies
+"TLS everywhere" by the letter while trusting **any** certificate from **any** host, so
+a MITM terminates and re-originates the connection for free (CWE-295, "Improper
+Certificate Validation"; the hostname-mismatch sub-case is CWE-297). It is commonly a debugging shortcut against a
+self-signed internal cert that shipped un-reverted. Internal / service-to-service TLS
+is **not** exempt — pin the specific internal CA or self-signed cert, do not disable
+validation to reach it (ASVS v5.0.0-12.3.2 requires TLS clients validate certificates;
+-12.3.4 requires internal services trust only specific internal CAs / self-signed
+certs). **🚩 grep**: `verify\s*=\s*False` near `requests.` / `urllib3`,
+`rejectUnauthorized:\s*false`, `NODE_TLS_REJECT_UNAUTHORIZED`, `InsecureSkipVerify:\s*true`,
+an empty or always-true `TrustManager` / `HostnameVerifier`, `ssl._create_unverified_context` (Python), `curl .*(-k|--insecure)`.
+(Distinct from the JWT `verify=False` in A07 — that is signature verification, not TLS.)
+
 **Crypto-agility & post-quantum readiness.** Beyond using strong *current*
 primitives, check the code can **change** them: algorithm choices named in
 config / metadata (a versioned suite id), not hard-coded at each call site, so a

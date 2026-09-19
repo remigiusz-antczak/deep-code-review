@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.237.0] — 2026-09-20
+
+### deep-code-review — wave 158 TLS enforced is not TLS validated (client cert-validation bypass, A04)
+
+- **`security-appsec.md`** (A04): new rule — "TLS everywhere" is about the wire; it says nothing about whether the client validates the certificate. A client with validation disabled — `verify=False` (requests), `rejectUnauthorized:false`/`NODE_TLS_REJECT_UNAUTHORIZED=0` (Node), `InsecureSkipVerify:true` (Go), an all-accepting `TrustManager`/`HostnameVerifier` (Java), `ssl._create_unverified_context`, `curl -k` — still uses `https://` but trusts any certificate from any host, so a MITM terminates and re-originates for free (CWE-295; the hostname-mismatch sub-case is CWE-297). Internal/service-to-service TLS is not exempt — pin the internal CA, don't disable validation. Explicitly disambiguated from the JWT `verify=False` in A07 (signature verification, a grep false-positive collision).
+- +1 eval; +1 standards section (OWASP ASVS v5.0.0-12.3.2/-12.3.4 both L2, CWE-295, CWE-297 — all quoted verbatim via raw fetch 2026-09-20). Reviewer nits applied (softened frequency claim; grep list made a superset of the shallow index; CWE-297 precision).
+
 ## [1.236.0] — 2026-09-20
 
 ### deep-code-review — wave 157 producer-side signed releases (consumer-verifiable)
