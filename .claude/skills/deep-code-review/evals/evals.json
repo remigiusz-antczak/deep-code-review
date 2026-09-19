@@ -2501,6 +2501,26 @@
         "Explains the read-modify-write round-trip mechanism (the old client never sends the new field, so the server clears it)",
         "Requires either treating it as a breaking change or using partial-update / field-mask semantics where an omitted field means leave-unchanged"
       ]
+    },
+    {
+      "id": "a-pseudonymized-export-still-needs-a-linkability-re-identification-check",
+      "prompt": "A data team ships an 'anonymized' analytics export: user emails are replaced with SHA-256(email), and it includes each user's age band, home region, and signup week. Legal minimization was applied (no raw PII columns). Is it safe to publish?",
+      "expected_output": "No — minimization (dropping raw PII) is a different axis from LINKABILITY, and this export is still re-identifiable. (1) SHA-256(email) is a stable pseudonym anyone holding the email can recompute, and it's the same token across any other dataset that hashed emails the same way — a linkage key, not anonymization; salt it and keep the mapping server-side, or rotate per purpose. (2) age band + region + signup week is a quasi-identifier combination: each field is coarse alone but the combination can be unique to one person (singling-out). Fix: check the smallest-cohort size and report it (don't assert 'anonymous' without one), scope/rotate the pseudonym per purpose, and test the field combination for uniqueness — not just each column. The k-anonymity / DP threshold and any legal anonymity determination are the owner's / counsel's call, but the linkability check itself is required; absent it, this is a re-identification finding, the same tier as a raw-identifier leak.",
+      "expectations": [
+        "Identifies linkability/re-identification as distinct from minimization — the export is re-identifiable despite no raw PII columns",
+        "Flags the recomputable/stable pseudonym (SHA-256 of email) as a linkage key across datasets — needs salting/server-side mapping or per-purpose scoping",
+        "Flags the quasi-identifier COMBINATION (age band + region + week) as singling-out, and requires reporting the smallest-cohort size rather than asserting 'anonymous'"
+      ]
+    },
+    {
+      "id": "different-login-and-reset-responses-leak-account-existence-enumeration",
+      "prompt": "A login form returns 'No account with that email' when the email is unknown and 'Wrong password' when it exists; the password-reset page says 'Check your inbox' only when the email is registered, otherwise 'Email not found.' The auth review already passed (rate limiting, MFA, secure cookies). Any issue?",
+      "expected_output": "Yes — account enumeration, a detectability leak (CWE-203 Observable Discrepancy / LINDDUN Detectability) that the auth review missed because it's about the response DIFFERENCE, not the credential check. An unauthenticated outsider can enumerate valid accounts: the login distinguishes 'no account' from 'wrong password,' and the reset page distinguishes 'registered' from 'not found' — each reveals existence. Fix: return one GENERIC response for the exists/not-exists pair — login: a single 'invalid email or password'; reset: always 'if an account exists, we've sent an email' — and equalize response TIME (constant-time path) so timing doesn't leak existence either. This is not about removing validation; it's about not making existence observable in status, body, redirect, or timing.",
+      "expectations": [
+        "Identifies account enumeration / detectability (CWE-203) as the issue — distinguishable responses for exists vs not-exists on login AND password-reset leak account existence to an unauthenticated outsider",
+        "Notes the auth review missed it because it's about the response difference, not the credential check itself",
+        "Requires one generic response for the exists/not-exists pair (login and reset) AND a constant-time path so timing doesn't leak existence"
+      ]
     }
   ]
 }

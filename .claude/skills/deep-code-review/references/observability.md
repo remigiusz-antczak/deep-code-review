@@ -117,6 +117,13 @@ of a request or config struct; `setTag`/`setAttribute` with a raw payload.
   impersonation/admin-on-behalf-of explicitly. A failed audit write must fail the
   operation or raise loudly, never a silent `catch` (cross-ref
   `reliability-error-handling.md`).
+- **Non-repudiation cuts both ways.** The append-only trail above is a *security*
+  goal — the system can prove who did what, protecting the operator. From the **data
+  subject's** side it is LINDDUN's *Non-repudiation* privacy *threat*: an immutable,
+  over-broad log can strip a whistleblower's or abuse-victim's ability to plausibly
+  deny a presence or action. Scope what the trail captures **about subjects** (as
+  opposed to operators) to what a genuine dispute needs — the minimization bar in
+  `privacy-compliance.md`, not "log everything about everyone forever."
 
 ---
 

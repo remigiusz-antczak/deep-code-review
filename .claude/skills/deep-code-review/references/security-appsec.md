@@ -329,7 +329,10 @@ Secure defaults, or must the operator remember to turn safety on?
 **STRIDE** (per element: Spoofing / Tampering / Repudiation / Info-disclosure / DoS /
 Elevation) for a component or data flow; **PASTA** when the model must tie threats to
 business impact; **attack trees** to decompose one attacker goal; **LINDDUN** for *privacy*
-threats (STRIDE's privacy counterpart); **MAESTRO** for an *agentic-AI* system — the agentic
+threats (STRIDE's privacy counterpart — its **Linkability** / **Identifiability**
+threats have a concrete lens in `privacy-compliance.md` § Linkability &
+re-identification, its **Detectability** threat in A07 account-enumeration below);
+**MAESTRO** for an *agentic-AI* system — the agentic
 threat-modeling method, complementary to the OWASP ASI / MITRE ATLAS catalogs in
 `security-ai-agents.md`. The review lens is **coverage, not ceremony**: a change that
 introduces a new trust boundary, principal, or state transition the existing model never
@@ -401,6 +404,17 @@ expiry/audience check; password reset tokens that are guessable or long-lived.
 **🚩 grep**: `jwt.decode(… verify=False)`, `algorithms=['none']`, no `exp`
 claim, session id reused across privilege change, `password == input` (plaintext
 compare), reset tokens from a non-CSPRNG.
+
+**Account enumeration is a detectability leak (CWE-203 Observable Discrepancy).**
+On signup, login, and password-reset, diff the response — status code, body / error
+text, redirect target, **and response time** — between *subject exists* and *subject
+does not exist*. A distinguishable response on any of those axes lets an
+unauthenticated outsider enumerate valid accounts (LINDDUN's *Detectability*
+threat): a different string for "invalid username" vs "invalid password"; a
+`409`/`422` on signup revealing "email taken"; a reset endpoint that emails-or-not
+based on existence. Fix: one **generic response** for the exists/not-exists pair and
+a **constant-time** path so existence is not observable — not the removal of
+per-field validation.
 
 **Session cookie flags (server-side checklist — read the `Set-Cookie` bytes, not
 the config object).** Every session/auth cookie: `Secure` (never sent over

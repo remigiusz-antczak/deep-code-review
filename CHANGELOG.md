@@ -3,6 +3,28 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.208.0] — 2026-09-19
+
+### deep-code-review — wave 130 privacy threat modeling: linkability + account-enumeration (research round 5)
+
+Comparative vs LINDDUN + NIST Privacy Framework. Two GENUINE-NEW privacy lenses plus a polarity note:
+- **Linkability & re-identification** (new section, `privacy-compliance.md`): minimization limits what
+  you hold; linkability is whether a pseudonymized/aggregated export can still single out an
+  individual — small-cohort singling-out (report the smallest group size, don't assert "anonymous"),
+  a recomputable/stable pseudonym reused across purposes as a linkage key, a quasi-identifier
+  COMBINATION. Measure-don't-certify (the k / DP threshold is the owner's call; legal anonymity routes
+  to counsel). 2nd source: NIST PF CT.DP-P Disassociated Processing.
+- **Account enumeration / detectability** (`security-appsec.md` A07): diff signup/login/reset responses
+  (status/body/redirect/TIMING) between exists/not-exists — CWE-203 Observable Discrepancy / LINDDUN
+  Detectability; fix is a generic response + constant-time path.
+- **Non-repudiation polarity flip** (`observability.md`): the audit trail is a security goal but
+  LINDDUN's Non-repudiation privacy threat from the subject's side. Unpacked the bare "LINDDUN"
+  mention in the threat-model list with cross-refs.
+
++2 evals (237 -> 239). SRC fetched + verified 2026-09-19: CWE-203, NIST PF CT.DP-P (logged). LINDDUN
+cited by-name only (established, like STRIDE). Independent review PASS-WITH-NITS; nit applied
+(cross-ref direction above->below).
+
 ## [1.207.0] — 2026-09-19
 
 ### deep-code-review — wave 128 API-contracts batch: long-running operations, RFC 9457 errors, PATCH-replacement break (research round 5)

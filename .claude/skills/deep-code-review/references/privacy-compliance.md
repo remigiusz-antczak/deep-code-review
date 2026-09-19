@@ -53,6 +53,37 @@ legal advice — jurisdiction and scope are owner decisions.
 
 ---
 
+## Linkability & re-identification
+
+Minimization limits what you *hold*; **linkability** is a separate axis — whether
+what you export, join, or publish can still **single out an individual** even after
+pseudonymization or aggregation. Pseudonymous ≠ unlinkable. Whenever a pipeline
+emits a minimized / pseudonymized / aggregated dataset, check:
+
+- **Small-cohort singling-out.** An aggregate whose smallest group is a handful of
+  people re-identifies them. Report the **actual smallest group size**; never assert
+  "anonymous" without one (honest-empty applied to privacy — the *threshold* itself,
+  a k-anonymity `k` or a differential-privacy budget, is the owner's call, not this
+  gate's).
+- **A stable pseudonym / device id reused across purposes, or joinable to another
+  dataset, is a linkage key.** The same token in analytics and billing, or a hash of
+  an email any holder of the email can recompute, re-links the "anonymized" rows —
+  scope / rotate the pseudonym per purpose, and salt-and-keep-server-side a hash a
+  third party could brute-force over a small input space.
+- **A "derived" field can still be a quasi-identifier in combination.** Age band +
+  region + a timestamp can be unique to one person though each field alone looks
+  coarse; minimizing each column is not testing the **combination** for uniqueness.
+
+Absent a linkability check, a pseudonymized or aggregated export is a
+re-identification finding — the same tier as a raw-identifier leak, one join away.
+(NIST Privacy Framework **CT.DP-P "Disassociated Processing"** carves this out as its
+own control family — limit observability / linkability, identification, and
+inference; LINDDUN's *Linkability* / *Identifiability* threats, named in
+`security-appsec.md`, are the threat-model side. This gate measures and surfaces; a
+legal adequacy / anonymity determination routes to counsel.)
+
+---
+
 ## Retention, DSAR & erasure
 
 - Every personal-data store has a **stated retention period**, a job enforcing
