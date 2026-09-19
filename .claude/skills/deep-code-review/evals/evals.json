@@ -3021,6 +3021,16 @@
         "Explains coverage-guided fuzzing finds new bugs only when run continuously against live coverage feedback (names OSS-Fuzz/ClusterFuzzLite/go test -fuzz or an equivalent CI-wired form)",
         "Requires wiring it to a recurring job AND a triaged crash corpus committed as regression tests (a crash must reach a human), not merely the target's existence"
       ]
+    },
+    {
+      "id": "a-worktree-cut-from-a-stale-ref-runs-stale-scripts-not-a-live-gate-bug",
+      "prompt": "An agent orchestration runs each lane in a git worktree branched off the local clone's remote-tracking ref. A merge-preflight script in one lane's worktree refuses every PR with 'required CI job never ran.' The current workflow on the remote no longer defines that job — it was removed last week. The local clone last fetched two weeks ago. The operator is about to file 'the merge gate is broken.' Is it?",
+      "expected_output": "No — this is a stale checkout, not a live gate bug. The worktree was branched off a remote-tracking ref the local clone hasn't fetched in two weeks, so it runs the OLD merge-preflight that still requires a CI job the current remote workflow removed — it refuses every PR for a job that no longer exists, while the fixed script on the true remote HEAD passes. Filing 'the gate is broken' chases a phantom. Fixes: (1) fetch the base ref immediately before creating the worktree (or hard-reset/rebase the worktree onto the freshly-fetched remote ref before running any script); (2) for any check that must reflect current remote/CI state (merge gates, required-check verification), query the forge/server API for the actual check-runs rather than trusting a local script copy — immune to local staleness. Rule: never infer 'the gate is broken' from a worktree without confirming its base ref is current.",
+      "expectations": [
+        "Identifies the false failure as a stale checkout (the worktree ran an old script requiring a since-removed CI job), not a live gate bug",
+        "Prescribes fetching/resetting the worktree base to the current remote ref before running any script",
+        "Prescribes querying the forge/server API for actual check-runs (immune to local staleness) for checks that must reflect current remote/CI state, rather than trusting a local script copy"
+      ]
     }
   ]
 }

@@ -322,6 +322,21 @@ is a **provisioning gap, not a defect in either gate** — each gate does
 exactly what it is supposed to; the worktree was simply not fully set up for
 the one it tripped.
 
+## An isolation worktree inherits the parent clone's stale refs — verify freshness, or query the server
+
+A worktree branched off the local clone's **remote-tracking ref** runs whatever version of the build / CI /
+merge scripts that ref points at. If the clone has not fetched recently, the worktree silently runs **stale**
+scripts and produces **false** results — a merge-preflight that still requires a CI job the current workflow
+has since **removed** will refuse every PR with "required job never ran," while the fixed script on the true
+remote HEAD passes. It looks like a live gate bug; it is a stale checkout, and it can flip a diagnosis back and
+forth. Two fixes: (1) **fetch the base ref immediately before creating the worktree** (or hard-reset / rebase
+the worktree onto the freshly-fetched remote ref before running any script); (2) for any check that must
+reflect **current** remote / CI state — merge gates, required-check verification — **query the forge/server API
+for the actual check-runs** rather than trusting a local script copy, which is immune to local staleness (the
+same "trusted evidence is a forge run pinned to the reviewed SHA" discipline in `deep-code-review`'s
+`branch-and-merge-hygiene.md`). 🚩 an agent that infers "the gate is broken" from a worktree without confirming
+its base ref is current; a merge or CI decision made from a local script in a worktree of unknown freshness.
+
 ## Out-of-tree shared scratch crosses commit metadata — worktree-per-lane doesn't cover it
 
 Concurrent write-lanes that each generate per-lane content — a commit-message file, a

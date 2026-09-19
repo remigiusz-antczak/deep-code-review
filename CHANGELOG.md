@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.241.0] — 2026-09-20
+
+### agentic-delivery — wave 162 isolation worktree inherits the parent clone's stale refs (closes #560)
+
+- **`fast-agentic-delivery.md`**: a worktree branched off the local clone's remote-tracking ref runs whatever build/CI/merge scripts that ref points at; if the clone hasn't fetched recently it silently runs STALE scripts and produces FALSE results — e.g. a merge-preflight that still requires a since-removed CI job refuses every PR ("required job never ran") while the fixed script on the true remote HEAD passes. Looks like a live gate bug; is a stale checkout. Fixes: (1) fetch the base ref immediately before creating the worktree (or hard-reset/rebase onto the freshly-fetched remote ref before running any script); (2) for checks that must reflect current remote/CI state (merge gates, required-check verification), query the forge/server API for actual check-runs — immune to local staleness — not a local script copy. New worktree-isolation-gotcha section; cross-refs the gate-epistemology discipline in `branch-and-merge-hygiene.md`.
+- +1 eval. Closes #560. Reviewer FIX-FIRST applied (a misplaced modifier had inverted the "immune to local staleness" claim).
+
 ## [1.240.0] — 2026-09-20
 
 ### deep-code-review — wave 161 continuous coverage-guided fuzzing as CI infrastructure
