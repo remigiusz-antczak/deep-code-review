@@ -378,6 +378,17 @@
         "Fix: iterate all candidates per cycle and advance PAST a refused item to the next, rather than break/re-select the same head",
         "Adds a cooldown / skip-set for persistently-refused items (with periodic re-eval) and distinct per-item log lines so a spin is visible, not mistaken for idle"
       ]
+    },
+    {
+      "id": "auto-merger-scopes-by-manufactured-ownership-not-author",
+      "prompt": "Our auto-merge bot merges any green+mergeable PR 'authored by us' -- but all our agent lanes run gh under my personal token, so every PR shows me as author, including a big design PR I'm still working on myself. How should the auto-merger decide what it's allowed to merge?",
+      "expected_output": "Authorship is useless as a discriminator here: agents auth as you, so every PR (agent- or human-made) shows the same author -- an auto-merger keyed on it would merge your unfinished design PR the moment it goes mergeable. Fixes: (1) the clean one -- give agents a DISTINCT identity (a bot account or a separate GITHUB_TOKEN) so authorship is a real signal again; (2) if identity must stay shared, key the auto-merger on an explicit convention -- an allowlist of agent-created PRs, a denylist of human-owned branches, a label (agent-mergeable), or a branch prefix (agents bot/*, humans feat/*). DEFAULT-DENY anything not positively marked agent-owned; never let it act on a PR it can't positively confirm is agent-owned and safe. General: automation acting on shared artifacts needs a reliable ownership signal -- when identity is shared, manufacture one (convention/label), don't infer ownership from a field every actor shares. (fast-agentic-delivery.md.)",
+      "expectations": [
+        "Identifies that shared identity (agents run gh under the owner's token) makes author useless as a discriminator -- every PR shows the same author",
+        "Warns the author-scoped auto-merger would merge the human's own unfinished PR once it goes mergeable",
+        "Clean fix: give agents a distinct identity (bot account / separate GITHUB_TOKEN) so authorship discriminates again",
+        "Fallback: an explicit convention (allowlist / denylist / label / branch-prefix) with DEFAULT-DENY of anything not positively marked agent-owned -- never merge a PR it can't confirm is agent-owned"
+      ]
     }
   ]
 }

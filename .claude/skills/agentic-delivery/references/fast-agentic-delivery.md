@@ -198,6 +198,30 @@ while failing the final gate, so "retry the front of the queue" is a starvation 
   `queue[0]` each cycle; or a *cheap* pre-filter (green + mergeable) used as the loop's selection
   key while a stricter final gate does the real admission.
 
+## An auto-merger scopes by a manufactured ownership signal, not by author — shared identity makes authorship useless
+
+The drainer above iterates the candidate set; this decides **which** PRs are *in* it. An auto-merge
+(or auto-rebase) system must act on **agent-produced** PRs and **never** on a **human's own** (a
+human may be mid-work, want to self-review, or own the domain — a large design build). The obvious
+scope — "only merge PRs **authored by the bot**" — **fails when agents authenticate as the
+human**: agent lanes run `gh` under the owner's token, so every PR, agent- or human-made, shows the
+**same author**. Authorship is then useless as a discriminator, and an auto-merger keyed on it
+merges a human's unfinished PR the moment it goes mergeable (observed: a drainer excluded a risky
+set by PR *number*, but a human-owned design PR shared the agent author — only a semantic read of
+branch / diff / subject told them apart).
+- **Give agents a distinct identity** — a bot account or a separate `GITHUB_TOKEN` — so authorship
+  is a *real* discriminator. The clean fix.
+- **If identity must be shared, key the auto-merger on an explicit convention** — an allowlist of
+  agent-created PRs, a denylist of human-owned branches, a label (`agent-mergeable`), or a branch
+  prefix (agents `bot/*`, humans `feat/*`). **Default-deny anything not positively marked
+  agent-owned;** never act on a PR you cannot *positively confirm* is agent-owned and safe.
+- The general rule: automation acting on **shared artifacts** needs a **reliable ownership
+  signal**, and when identity is shared you must **manufacture** one (a convention/label), never
+  infer ownership from a field every actor shares.
+- **🚩 tell:** an auto-merger scoped by PR author (`author:@me` / `gh pr list --author @me`) in a repo where agents run
+  under the owner's token; or any auto-merge/auto-rebase with no positive agent-ownership mark
+  (label / branch-prefix / allowlist) and no default-deny.
+
 ## A third gate-epistemology case: a correct, external, fleet-wide finding
 
 Principle 3 separates *the check could not run* (`UNVERIFIED` — never a pass, and
