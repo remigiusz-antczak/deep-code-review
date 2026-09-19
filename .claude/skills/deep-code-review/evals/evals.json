@@ -2352,6 +2352,36 @@
         "Requires nacking/returning the current job on shutdown (or finishing if short/safely resumable) so it's redelivered",
         "Requires idempotent processing so redelivery is safe, and stopping new-message pull first"
       ]
+    },
+    {
+      "id": "one-shared-pool-for-a-slow-and-a-critical-dependency-needs-a-bulkhead",
+      "prompt": "A service calls a slow third-party enrichment API and its own critical primary database through one shared connection/HTTP pool. When the enrichment API degrades (slow, not down), the whole service's latency spikes and even pure-DB requests start timing out. Why, and what's the fix?",
+      "expected_output": "No bulkhead: one shared pool couples the two dependencies. When the slow enrichment API holds pool slots waiting on its own timeouts, there are no slots left for the healthy critical DB path — every caller starves behind the saturated one, a cascading failure (Release It!, Bulkheads). Fix: partition the pool by dependency/traffic class — give the risky/optional enrichment call its own bounded pool (and its own timeout + circuit breaker) so its saturation can't consume the critical path's capacity; and fail fast (admission check) rather than queueing new work when that pool/breaker is exhausted. Distinct from tenant-vs-tenant noisy-neighbour isolation (that's a different axis).",
+      "expectations": [
+        "Identifies the shared pool coupling: the slow dependency exhausts shared slots so the healthy/critical path starves (cascading failure)",
+        "Requires partitioning the pool per dependency/traffic class (separate bounded pool for the risky/optional call) + its own timeout/breaker",
+        "Adds fail-fast/admission-check when the pool or breaker is exhausted, rather than queueing"
+      ]
+    },
+    {
+      "id": "a-fixed-downstream-capacity-must-be-divided-per-replica-with-a-floor-on-scale-out",
+      "prompt": "A worker holds a connection pool of 20 to a database that accepts at most 100 connections. It works at 3 replicas. Ops scales it to 8 replicas under load and the database starts refusing connections. What was missed?",
+      "expected_output": "A fixed downstream capacity (the DB's 100-connection limit) is a shared budget that divides across replicas — 8 replicas × 20 = 160 > 100, so the pool sizing that was safe at 3 replicas (60) oversubscribes the DB at 8. The per-instance pool size must be derived from the downstream's total capacity divided by the replica count (with headroom/a floor), not treated as a fixed per-instance constant that survives fan-out. Fix: size per-replica against the shared downstream budget (e.g. a global limit enforced centrally, or per-instance = capacity/replicas with margin), and alert when replica-count × per-instance-pool approaches the downstream ceiling. (A bulkhead concern: unbalanced capacity under scale-out.)",
+      "expectations": [
+        "Identifies that the fixed downstream capacity is shared and divides across replicas — per-instance pool × replica count oversubscribes it on scale-out",
+        "Requires sizing the per-instance pool against the downstream's total capacity / replica count (with a floor/headroom), not a fixed per-instance constant",
+        "Notes monitoring replica-count × per-instance-pool vs the downstream ceiling"
+      ]
+    },
+    {
+      "id": "a-downstream-step-must-gate-on-the-producer-succeeding-not-on-the-artifact-existing",
+      "prompt": "A pipeline: step A writes data.json, step B reads data.json. Someone adds a timeout-abort to step A (it used to hang). Now step A sometimes aborts mid-write, leaving a truncated data.json; step B reads it as if valid and ships garbage. What are the two defects?",
+      "expected_output": "(1) Adding the abort to step A is a WRITE-PATH change: an abort mid-write leaves a truncated/half-written artifact — the abort must preserve last-good (skip/atomic-rename) and signal failure, never write-then-throw (leave a partial file). (2) Step B gates on the artifact's EXISTENCE, not step A's SUCCESS: existence ≠ freshness ≠ success, so a present-but-invalid file from a crashed/aborted producer is consumed as valid. Fix: A writes atomically (temp + rename) or preserves last-good on abort and reports failure; B gates on A's success signal (exit status / a completion marker / a checksum), not merely that the file is there. Present ≠ valid.",
+      "expectations": [
+        "Identifies the abort-added-to-a-formerly-hanging-step as a write-path change that can leave a truncated artifact — must preserve last-good / write atomically, not write-then-throw",
+        "Identifies that the consumer gates on artifact EXISTENCE not producer SUCCESS (existence != freshness != success)",
+        "Requires gating on a success signal (exit/marker/checksum) + atomic write or last-good preservation"
+      ]
     }
   ]
 }

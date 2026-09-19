@@ -295,6 +295,9 @@ design-quality checklist in `references/migration-parity.md` (#124).
   operate loop. Named by name only.
 - **Chaos engineering (Principles of Chaos)** — steady-state hypothesis + blast-radius-limited
   fault injection to verify resilience. Named by name only.
+- **Release It! (Michael Nygard, 2nd ed.)** — stability patterns/antipatterns (bulkheads, circuit
+  breaker, timeouts, fail-fast, steady state, shed load, cascading failure). Backs the bulkhead /
+  resource-isolation section in `reliability-error-handling.md`. Named by name only (book).
 - **OpenTelemetry GenAI semantic conventions** (`gen_ai.*`) — LLM/agent telemetry attribute names
   (token usage, model, operation, outcome). **Still at *Development* stability and revised often —
   cite the convention names by name only; pin no version and no specific attribute list.**

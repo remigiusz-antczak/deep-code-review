@@ -23,8 +23,11 @@ the checklist.
    **Soft-no-op persistence:** returning `[]` / empty rows is clean only if the
    CLI does **not** then write that empty artifact over last-good bytes that a
    merge or reader treats as present data. Skip the write (leave prior file) or
-   mark skipped; present-empty ≠ absent. Cross-ref `data-quality.md`
-   artifact→consumer census.
+   mark skipped; present-empty ≠ absent. And a **downstream consumer gates on the producing step's
+   SUCCESS, not the mere existence** of its artifact — existence ≠ freshness ≠ success, so a
+   half-written or stale file from a crashed/aborted producer is present-but-invalid. (Adding an
+   abort to a formerly-hanging step is itself a **write-path change**: it must preserve last-good
+   and signal failure, never write-then-throw.) Cross-ref `data-quality.md` artifact→consumer census.
 
 ---
 
@@ -82,6 +85,35 @@ sitting beside the project's own retry/timeout wrapper that every other call
 uses.
 
 ---
+
+## Bulkheads — isolate resource pools so one saturated dependency can't sink the rest
+
+A shared resource pool (a connection pool, an outbound HTTP/SDK client, a worker/thread pool, a
+semaphore) is a **single point of coupling**: if one dependency saturates it — a slow or failing
+downstream holding every connection while its calls time out — every *other* caller of that pool,
+including healthy critical paths, starves behind it. That is a **cascading failure** (Release It!,
+*Bulkheads*), and it is the enforcement the architecture lens already promises (`role-coverage.md`:
+a failure "bounded by timeouts, **bulkheads**, and circuit breakers"). Review:
+
+- **Partition the pool by dependency / traffic class.** For every shared pool, list what draws from
+  it; one pool serving both a slow/optional call and a fast/critical one is unpartitioned — give the
+  risky dependency its own bounded pool so its saturation can't consume the critical path's capacity.
+- **Fail fast when the resource is exhausted or the breaker is already open.** A new request to a
+  *different, healthy* dependency should reject immediately, not queue behind requests that will time
+  out anyway — an admission check before expensive work, not an unbounded wait that becomes blocked
+  threads.
+- **A fixed downstream capacity divides per replica — with a floor.** When the caller scales out, a
+  fixed connection limit / per-key rate budget split across N instances can starve each; size it
+  per-replica with a floor, don't assume the single-instance budget survives fan-out.
+- **Under self-overload, shed or degrade low-priority work.** A synchronous service with no path to
+  shed low-priority load under overload collapses *all* callers uniformly (critical and optional
+  alike) instead of protecting the critical ones (the queue/async shed-load case is in
+  `domain-checklists.md` §W; this is the synchronous-service case).
+- **🚩** one global pool/client shared by a critical and a background/optional call; no admission
+  check before expensive work when that dependency's breaker is already open; a fixed downstream
+  capacity silently shrinking per replica with no floor; a synchronous service with no self-overload
+  shed/degrade path. (Sibling to the circuit-breaker rule above; distinct from tenant-vs-tenant
+  noisy-neighbour isolation in domain T — a different axis.)
 
 ## Partial failure & persisted state
 

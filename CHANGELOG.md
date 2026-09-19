@@ -3,6 +3,28 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.200.0] — 2026-09-19
+
+### deep-code-review — wave 121 bulkheads / resource isolation + gate-on-success (reliability-error-handling.md)
+
+From the COMPARATIVE research round (Release It! stability patterns benchmark): Bulkhead / resource
+isolation was the one gap — and the architecture lens already promised it (`role-coverage.md`: "bounded
+by timeouts, bulkheads, and circuit breakers (cross-ref F)") while F had no bulkhead content. New
+section (repairs that dangling cross-ref):
+
+- Partition a shared pool by dependency/traffic class; fail fast when a pool/breaker is exhausted;
+  divide a fixed downstream capacity per replica with a floor; shed/degrade low-priority work under
+  self-overload (folds Fail-Fast + sync Shed-Load + Blocked-Threads + Unbalanced-Capacities).
+- Also (closes filed **#455** net-new): a downstream consumer gates on the producing step's SUCCESS,
+  not the artifact's existence (existence != freshness != success); adding an abort to a formerly-
+  hanging step is a write-path change (preserve last-good, don't write-then-throw). (rule-1 skip-write
+  was already covered; this is the rule-3 net-new.)
+
+Three evals (deep-code-review 222 -> 225). Source: Release It! (Nygard) by name. Trio -> 1.200.0.
+`SHA256SUMS` regenerated last.
+
+Closes #455.
+
 ## [1.199.0] — 2026-09-19
 
 ### agentic-delivery — wave 120 delivery-lane hygiene (closes #492, #494, #496)
