@@ -53,18 +53,20 @@ not fake synchrony (block the caller, or return a fake `200` before the work is
 done). It returns **202 Accepted** plus a second, independently-versioned
 **operation / job resource**: a **stable id**; an explicit **status enum with real
 terminal states** (`succeeded` / `failed` / `canceled`, never a bare boolean that
-conflates "not done" with "failed"); an **error payload only on the failed state**
-and a **result only on succeeded**; and a documented way to discover and poll it (a
-`Location` / `Operation-Location` header or a documented poll URL, with
-`Retry-After`). A polling client must **distinguish poll-transport failure from
+conflates "not done" with "failed" — the make-impossible-states-unrepresentable rule,
+`reliability-error-handling.md`); an **error payload only on the failed state** and a
+**result only on succeeded**; and a documented way to discover and poll it (a
+`Location` header — or a vendor `Operation-Location`-style header — or a documented
+poll URL, with `Retry-After`). A polling client must **distinguish poll-transport failure from
 operation failure** — the poll `GET` returning `500` is not the same as it returning
 `200` with `status: failed` (the async cousin of "check status before reading the
 body", cross-ref `reliability-error-handling.md`).
 
 - **The start call needs provider-side idempotency.** If the client retries the
   start request because the `202` was lost in transit, an **idempotency key on the
-  start call** (enforced server-side; `409` on a reused key with a differing body)
-  must fold the retry into the **same** operation — without it, a lost `202`
+  start call** (enforced server-side; reject a reused key carrying a **differing
+  body** with a `4xx` + the RFC 9457 envelope above) must fold an identical retry
+  into the **same** operation — without it, a lost `202`
   silently spawns a **second** operation and the work runs twice. This is the
   provider half of the caller-side idempotency rule in
   `reliability-error-handling.md`; the job's own internal durability / compensation
