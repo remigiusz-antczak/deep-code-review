@@ -3041,6 +3041,16 @@
         "Names OWASP API6 / sensitive business flow, distinct from API1/BOLA and from the generic A06 rate-limit check; the signal is automation, not per-account volume",
         "Prescribes an automation/human-detection control (fingerprinting, CAPTCHA/behavioral biometrics, non-human-timing per ASVS realistic-human-timing) and notes the fresh-account pattern as a corroborating automation signal"
       ]
+    },
+    {
+      "id": "a-cancel-in-progress-concurrency-race-can-leave-the-head-with-no-ci-run",
+      "prompt": "A repo uses a CI concurrency group with cancel-in-progress (a new push cancels the older run) to save runner minutes. A contributor pushes three commits in quick succession. A merge bot checks 'the latest run on the branch is green' and merges. Later prod breaks from a bug CI would have caught on the final commit. What went wrong?",
+      "expected_output": "The cancel-in-progress race left the FINAL head with no CI run: the rapid pushes cancelled the intermediate run, and the run for the last commit was cancelled as a superseded sibling (or never created). The 'latest green' the merge bot trusted belonged to an EARLIER, since-cancelled head — nothing ever ran against the final SHA it merged. This is an ABSENT check, not a failure, and 'the branch has a recent green' is the wrong signal. Fix: before trusting/merging, confirm a run exists AND concluded for the EXACT head SHA (not just a recent branch green); treat 'no run for this SHA' as a distinct third state (not passed, not failed) — re-dispatch a run for that head and decide from it (the passed/failed/absent distinction in branch-and-merge-hygiene.md). Reduce the race at source: scope cancel-in-progress so it never cancels the newest run.",
+      "expectations": [
+        "Identifies the cancel-in-progress race left the final head with NO run (absent), and the 'latest green' belonged to an earlier since-cancelled head — nothing ran against the merged SHA",
+        "States 'the branch has a recent green' is the wrong signal — require a run that exists AND concluded for the EXACT head SHA before merging",
+        "Treats 'no run for this SHA' as a third state (not passed, not failed) → re-dispatch a run for that head, and/or scope cancel-in-progress so it never cancels the newest run"
+      ]
     }
   ]
 }

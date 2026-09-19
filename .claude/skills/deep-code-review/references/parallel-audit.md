@@ -431,7 +431,14 @@ the fan-out's *shape***, reported **once** with a remedy — not one finding per
   **browser / a11y / e2e matrices** for a readiness signal — a `full-ci` label, manual
   dispatch, or the final pre-merge gate — not every push to every draft.
 - **Cancel superseded runs** with a concurrency group keyed by PR/ref, so a new push
-  does not leave its predecessor's full matrix running.
+  does not leave its predecessor's full matrix running. **But the cancel race cuts both
+  ways:** under rapid successive pushes the run for the **final** head can be cancelled as
+  a superseded sibling (or never created), leaving the newest SHA with **no run at all** —
+  not a failure, an **absent** check. Two wrong reads follow, and they are **not symmetric**: a strict gate merely refuses a branch that is actually fine (safe but noisy); **worse**, a human sees the last green (belonging to an earlier, since-cancelled head) and merges believing the final head passed — a silent **fail-open** merge of an unverified head. Before
+  trusting or merging, confirm a run **exists and concluded for the exact head SHA** —
+  never infer from "the branch has a recent green"; treat "no run for this SHA" as a
+  third state (not passed, not failed → re-dispatch a run for this head, then decide), matching the required-check-must-report discipline in `branch-and-merge-hygiene.md`. Reduce the race
+  at source: scope cancel-in-progress so it never cancels the newest run. That silent fail-open merge is a merge-safety defect, **not** this cost section’s default Medium: its severity is inherited from the unverified head it lands, not from runner cost.
 - **Path filters must fail closed.** A filter that **skips** a gate on an
   *unrecognized* path silently drops it — a **gate exclusion**, and a path filter is
   exactly the config `method.md`'s *enumerate what the gates exclude* rule tells you to

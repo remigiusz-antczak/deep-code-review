@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.243.0] — 2026-09-20
+
+### deep-code-review — wave 164 cancel-in-progress concurrency race leaves the head with no CI run (closes #366)
+
+- **`parallel-audit.md`**: extended the "Cancel superseded runs with a concurrency group" bullet with its downside — under rapid successive pushes the run for the FINAL head can be cancelled as a superseded sibling (or never created), leaving the newest SHA with NO run (an ABSENT check, not a failure). The two wrong reads are not symmetric: a strict gate merely refuses a fine branch (safe but noisy); worse, a human trusts the last green (belonging to a since-cancelled head) and silently fail-open merges an unverified head. Confirm a run exists AND concluded for the exact head SHA before trust/merge; treat "no run for this SHA" as a third state (re-dispatch); scope cancel-in-progress so it never cancels the newest run. This is a merge-safety defect, not the cost section's default Medium.
+- +1 eval. Closes #366. Reviewer FIX-FIRST applied (restored the fail-closed/fail-open asymmetry; added the merge-safety severity disclaimer).
+
 ## [1.242.0] — 2026-09-20
 
 ### deep-code-review — wave 163 API6 unrestricted access to sensitive business flows
