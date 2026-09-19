@@ -343,6 +343,24 @@ Same root cause as `deep-code-review`'s `concurrency-shared-state.md` (two write
 path) but where its mitigations don't reach: **out-of-tree** scratch, and the
 corrupted thing is **commit metadata** a diff review never sees.
 
+## A worktree does not isolate repo-global refs — never bare `git stash` across lanes
+
+A `git worktree` per lane isolates HEAD, the index, the working tree, and (with a
+copied deps dir) `node_modules` — but **not** repo-global plumbing that lives in the
+one shared `.git`. `refs/stash` is the sharp case: **`git stash` is a single repo-wide
+stack, not per-worktree**, so lane B's `stash push` and later `pop` can consume or
+reorder an entry lane A pushed — silent cross-lane WIP loss, and the popped changes
+may not even apply cleanly onto B's tree. (Other repo-global state — branches under
+`refs/`, config — shares the hazard; the stash is just the one lanes reach for
+reflexively.) Never run a bare `stash push` / `stash pop` in a lane that runs
+concurrently with siblings off the same repo: **commit-then-reset** onto the lane's
+own branch, use a **second worktree** for throwaway state, or — if you must stash —
+tag your own entry with a **unique message** (`git stash push -m "<lane-id>…"`, then
+`git stash pop "stash@{N}"` matched by that message), never the bare top of stack.
+Complements the foreign-WIP rule above (*don't stash another lane's uncommitted
+work*) with the deeper reason: the stash **stack itself** is shared, so even your own
+push/pop is unsafe under concurrency.
+
 ## A worktree assignment is a path, not an adjective — an integrator on a shared branch detaches
 
 Brief N lanes with *"work in an isolated worktree off `<branch>`"* and the phrase splits
@@ -415,6 +433,30 @@ file the parent **explicitly reads after** the process ends. Never end a turn
 waiting on a background task whose completion notifies only the exited turn. A
 machine-readable last-run status file (some runners write one) lets the parent read
 the verdict without re-running.
+
+## Land the fix, then finalize separately — a helper process or a retry loop must not orphan a draft PR
+
+A lane that opens a **draft PR early**, then does async finish-work (screenshots that
+need a dev server, a changelog fragment, evidence capture), can leave an **orphan
+draft** — code green, but no evidence and never promoted to ready — when the finalize
+tail never completes: a lingering child process (a dev server holding the turn open)
+or a retry loop on a flaky step burns the turn before the promote step runs. The draft
+reads as abandoned, and its banked work is invisible until someone adopts it.
+
+- **Decouple fix-landing from finalize.** The moment code + gates are green, ready the
+  PR (or open it non-draft); make finalize (evidence, changelog fragment, promote) a
+  **separate, idempotent step any actor can complete** — not a tail the same turn must
+  reach or the work is lost.
+- **Kill a lane-owned helper the moment its step ends**, never deferred to end-of-run
+  where it can hold the turn open past finalize (teardown mechanics — own a process
+  group, terminate by pgid — in `deep-code-review`'s `concurrency-shared-state.md`).
+- **Bound every flaky finalize step** to N attempts / a wall-clock cap, then **fail to
+  a report** (the diff + a text `Verify:` note) rather than loop — a can't-run is not a
+  found-problem (principle 3), and a retry loop must never stand in for delivery.
+- **Orchestrator sweep:** a lane that reported done, or was killed, while its branch
+  has a draft PR missing changelog/evidence is **adopt-and-verify or explicitly
+  discard**, never left to rot. (Sibling to *run verification in the foreground* above:
+  there a **verdict** is lost to a background task; here the **promotion** is.)
 
 ## Confirm a subagent is idle before dispatching a duplicate — a "completed" is not proof of terminal completion
 

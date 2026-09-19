@@ -489,6 +489,26 @@
         "Requires tying the workaround to its trigger condition at install time and restoring the primary mechanism when the blocker clears (track active workarounds; 'still works' != 'still the right mechanism')",
         "Notes the fallback was heavier than necessary — a broken part need not collapse the whole vehicle to serial; keep batching on the runnable subset rather than downgrading everything"
       ]
+    },
+    {
+      "id": "git-stash-is-repo-global-across-worktrees-not-per-lane",
+      "prompt": "Two agent lanes run concurrently in separate git worktrees off one repo. Each lane does `git stash push` before a rebase and `git stash pop` after. Lane A's changes vanish. What happened and what's the fix?",
+      "expected_output": "A worktree isolates HEAD, the index, and the working tree — but NOT repo-global refs, and git stash is a single repo-wide stack (refs/stash), not per-worktree. So lane B's stash push/pop operated on the same shared stack as lane A's: B's pop consumed (or reordered) the entry A pushed, losing A's WIP — and B's popped changes might not even apply cleanly onto B's tree. The mistake is assuming a worktree isolates stash the way it isolates the branch. Fix: never bare stash push/pop in a lane running concurrently with siblings off the same repo — commit-then-reset onto the lane's own branch, use a second worktree for throwaway state, or tag your own entry with a unique message (git stash push -m '<lane-id>...' then git stash pop 'stash@{N}' by that message), never the bare top of stack. Same hazard for other repo-global state (branches, config).",
+      "expectations": [
+        "Identifies that a worktree does NOT isolate repo-global refs, and git stash is a single repo-wide stack (refs/stash) not per-worktree — so a sibling lane's push/pop consumes/reorders this lane's entry",
+        "Explains the WIP-loss mechanism (B's pop takes A's entry; popped changes may not apply cleanly onto B's tree)",
+        "Requires not using bare stash push/pop under concurrency — commit-then-reset, a second worktree, or a unique-message stash matched by stash@{N}"
+      ]
+    },
+    {
+      "id": "decouple-fix-landing-from-finalize-so-a-lingering-process-cant-orphan-a-draft-pr",
+      "prompt": "An agent lane opens a draft PR as soon as its code is written, then in the same turn boots a dev server to capture screenshots and write a changelog fragment before marking the PR ready. The dev server never exits, the turn ends, and the PR sits as a draft with green code but no evidence and no promotion. How should the lane be structured?",
+      "expected_output": "The failure is coupling fix-landing to a fragile finalize tail: the lingering dev server held the turn open past the promote step, orphaning a draft whose banked work is now invisible. Fix: (1) Decouple — the moment code + gates are green, ready the PR (or open it non-draft); make finalize (evidence, changelog, promote) a separate, idempotent step any actor can complete, not a tail this turn must reach. (2) Kill the dev server the instant the screenshot step ends, never at end-of-run where it can hold the turn open. (3) Bound the flaky finalize step to N attempts / a wall-clock cap, then fail to a report (diff + Verify note) rather than loop. (4) An orchestrator sweep adopts-and-verifies or explicitly discards any lane that reported done/killed while its branch has a draft PR missing changelog/evidence — never leave it to rot. Sibling to running the gate in the foreground: there a verdict is lost to a background task; here the promotion is.",
+      "expectations": [
+        "Identifies that coupling promote-to-ready to a fragile finalize tail (held open by a lingering process / retry loop) orphans a green-but-unpromoted draft",
+        "Requires decoupling: ready the PR once code+gates are green, and make finalize a separate idempotent step any actor can complete",
+        "Requires killing the helper process the moment its step ends (not end-of-run) AND bounding the flaky step to a cap that fails to a report rather than looping"
+      ]
     }
   ]
 }
