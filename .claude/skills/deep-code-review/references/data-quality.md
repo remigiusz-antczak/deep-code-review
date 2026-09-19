@@ -450,7 +450,9 @@ rate), validity (schema/format/range). For each:
   low-observability class renders as *not observed*, never *inactive*, and a
   ranking must not read *unobserved* as *low-activity* — that systematically
   penalizes the very members the public surface can't see. Empty-beats-fabricated
-  at the coverage layer.
+  at the coverage layer. (Distinct from §7's per-row coverage flag, which is
+  *post-hoc* — which inputs a given run populated; a public-footprint class is
+  *a priori*, a structural property of the class known before any fetch runs.)
 - **A freshness *window* is observable; a freshness *decay curve* is fabricated.** A **binary
   in-window gate** — `now − retrieved_at ≤ window_for_type` — is honest: elapsed time is an
   observable input, and a per-signal-type window that gates routing ("act on this only within N
@@ -492,8 +494,8 @@ rate), validity (schema/format/range). For each:
   identity / fanout gate (§1 fanout arm, §3 false-merge) **before** attribution —
   not once at the end of the chain. (2) **Identity-disclosure risk multiplies:**
   each hop contacts a new host directly, so a pivot toward a gated host routes
-  through a licensed broker under the declared identity policy (anonymous /
-  identified / brokered) — never spoof (above) — and a pivot must not become a
+  through a contracted broker under a declared collection-identity policy
+  (anonymous / identified / brokered) — never spoof (above) — and a pivot must not become a
   rate-limit-evasion fan-out. A pivot graph without per-hop guards is both a
   fanout amplifier and an identity-exposure amplifier.
 - Enforce data-subject suppression/erasure **once at the export/publish
@@ -589,7 +591,8 @@ band wider than the decision range; a config/enum map never tested against a
 blanket-blocks a newly-shared standing value; new enrichment scoped before
 existing-source coverage was measured; a per-row score with no coverage/provenance
 flag or no recoverable derivation; a time/activity score that reads an unobserved
-window as a decline; a non-monotone recency curve; a boolean parser that recognises
+window as a decline; an entity's structurally-low-observability class read as
+inactive rather than not-observed; a non-monotone recency curve; a boolean parser that recognises
 only `"true"`, or an exclusion gate defaulting an unrecognised value to `false`; a
 substring `includes`/`indexOf` driving a categorical status / suppression decision;
 an external-source feasibility sign-off with no max-timestamp freshness check; a
