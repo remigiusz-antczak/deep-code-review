@@ -1624,6 +1624,39 @@
         "VEX complements, not replaces, the SBOM",
         "A not_affected claim needs a reachability justification, not a bare assertion"
       ]
+    },
+    {
+      "id": "ml-data-leakage-split-first-never-fit-on-test",
+      "prompt": "An ML pipeline reports 98% test accuracy. Reading it: a StandardScaler is `.fit()` on the full dataset before the train/test split, and one feature is computed from a 30-day forward window of the label. Unit tests pass. Sign off?",
+      "expected_output": "No -- two data-leakage defects inflate the 98% (a false metric). (1) The scaler is fit on ALL data before the split, so the test distribution leaks into training -- scikit-learn: 'never call fit on the test data'; split into train/test FIRST and fit preprocessing on the training subset only (use a Pipeline so cross-validation and tuning can't leak). (2) A feature from a 30-day FORWARD window of the label is target / temporal leakage -- 'information that would not be available at prediction time.' Both give 'overly optimistic performance estimates.' A leaked split passes too well -- the tell is the implausibly high score, not a test failure. Re-run with the split first and a leakage-free feature; the honest number will be lower. (testing-and-evals.md.)",
+      "expectations": [
+        "Scaler fit on full data before the split = leakage -> split first, fit preprocessing on train only (Pipeline)",
+        "The 30-day-forward-window feature = target/temporal leakage (not available at prediction time)",
+        "Both inflate the metric (overly-optimistic estimates)",
+        "The tell is an implausibly high score, not a test failure"
+      ]
+    },
+    {
+      "id": "ml-training-reproducible-seed-and-pin-so-a-metric-delta-is-attributable",
+      "prompt": "A model's eval score dropped 0.91 -> 0.88 after a change; the team can't tell if the change caused it. Training uses an unseeded RNG and pulls 'latest' training data; model/code versions aren't pinned per run. Finding?",
+      "expected_output": "The score delta is unattributable -- you can't separate a real regression from run-to-run noise or a shifted dataset. Training must be reproducible: retraining on the same data should yield the same model. Seed the training RNG and pin the data + model + code version behind each reported number, so a delta is attributable to the change under review (Breck et al., The ML Test Score, 2017). Until training is reproducible, 0.91 -> 0.88 is not evidence of a regression. (testing-and-evals.md.)",
+      "expectations": [
+        "The delta is unattributable -- can't separate the change from RNG noise / shifted 'latest' data",
+        "Retraining on the same data should yield the same model",
+        "Seed the RNG + pin data/model/code version per reported number",
+        "Until reproducible, the delta is not evidence of a regression"
+      ]
+    },
+    {
+      "id": "ml-check-label-quality-inter-annotator-agreement-not-just-that-labels-exist",
+      "prompt": "An eval uses an expert-labeled test set treated as ground truth. A reviewer asks how good the labels are; the team says 'they're expert-labeled.' What is the check?",
+      "expected_output": "Requiring expert labels sets the bar but doesn't verify it. Label errors in a held-out set both distort the metric AND re-rank models -- test sets carry at least 3.3% errors across the 10 benchmarks studied, and correcting them can flip which model wins (Northcutt et al., NeurIPS 2021). Check: inter-annotator agreement across independent labelers (it bounds label noise and caps the achievable metric -- a model can't beat the label ceiling), spot-audit the flagged errors, and handle class imbalance honestly (a 99%-majority 'accuracy' is the base rate, not skill). Note: agreement among independent HUMANS is signal about the labels; agreement among MODELS is not precision. (data-quality.md.)",
+      "expectations": [
+        "Expert-labeled is not verified -- check the labels themselves",
+        "Measure inter-annotator agreement (bounds label noise, caps the achievable metric)",
+        "Label errors distort the metric and can re-rank models",
+        "Distinguish human-agreement (label signal) from model-agreement (not precision); handle class imbalance honestly"
+      ]
     }
   ]
 }

@@ -340,6 +340,28 @@ needs its own harness:
   answer reached via a lucky or unsafe path is a latent failure, and a wrong tool
   choice is invisible to an output-only bench.
 
+## ML pipeline correctness — data leakage & training reproducibility
+
+Distinct from AI evals above (which score a model's *output*): these are the
+*pipeline* defects that make a reported metric **false** — the classical-ML sibling
+of the LLM golden-set contamination rule. (Temporal / as-of *feature* leakage in a
+train/serve pipeline is in `data-quality.md` §12; this is the train/test
+split-hygiene and reproducibility half.)
+- **Split first; never fit on test.** Data leakage is "information that would not be
+  available at prediction time is used when building the model," giving "overly
+  optimistic performance estimates" (scikit-learn). Check: the data is **split into
+  train/test before any preprocessing**; a scaler / encoder / imputer is **fit on the
+  training subset only** (fitting on all data leaks the test distribution — a
+  Pipeline keeps cross-validation and tuning from leaking); **no target leakage** (a
+  feature derived from the label or from the future); and **no duplicate rows across
+  splits**. A leaked split doesn't fail — it *passes too well*, so the tell is an
+  implausibly high score, not an error.
+- **Training is reproducible, so a metric delta is attributable.** Retraining on the
+  same data should yield the same model; unseeded RNG and unpinned data / model / code
+  versions make a score change unattributable — you can't tell a real regression from
+  noise. Seed the training RNG and pin the data + model + code version behind each
+  reported number (Breck et al., *The ML Test Score*, 2017).
+
 ## Business rules as executable specs
 
 Encode load-bearing business rules as acceptance tests so the build fails if the

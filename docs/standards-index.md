@@ -450,3 +450,15 @@ encoded (business-ops routes applicability to counsel).
 |---|---|---|
 | EU Cyber Resilience Act (CRA) — Regulation (EU) 2024/2847 | https://eur-lex.europa.eu/eli/reg/2024/2847/oj | "Regulation (EU) 2024/2847 … on horizontal cybersecurity requirements for products with digital elements." Manufacturer obligation categories confirmed: security-by-design; vulnerability handling + coordinated-vulnerability-disclosure + a security-update / support period; automatic-update + end-of-support transparency; stricter conformity assessment for "important"/"critical" categories. Exact timelines/class routed to counsel (not encoded). Fetched 2026-09-19. |
 | CISA VEX — Vulnerability Exploitability eXchange (status & justification) | https://www.cisa.gov/resources-tools/resources/vulnerability-exploitability-exchange-vex-status-justification-document-june-2022 | CISA-published (June 2022, community-led). A producer-issued per-CVE assertion of whether a product is affected; status values NOT AFFECTED (with a justification), AFFECTED, FIXED, UNDER INVESTIGATION; complements (does not replace) an SBOM. Fetched 2026-09-19. |
+
+## Verified by direct fetch (2026-09-19) — ML pipeline correctness (leakage, reproducibility, label quality)
+
+Verification date for the rows below: **2026-09-19**. Added for the deep-code-review
+`testing-and-evals.md` ML-pipeline-correctness lens (leakage + reproducibility) and
+`data-quality.md` label-quality bullet.
+
+| Standard / tool | URL | What was confirmed |
+|---|---|---|
+| scikit-learn — Common pitfalls (data leakage) | https://scikit-learn.org/stable/common_pitfalls.html | "data leakage occurs when information that would not be available at prediction time is used when building the model" → "overly optimistic performance estimates"; "Always split the data into train and test subsets first, particularly before any preprocessing"; "never call `fit` on the test data"; a Pipeline prevents leakage in CV/tuning. Fetched 2026-09-19. |
+| Breck et al. (2017), "The ML Test Score" | https://research.google/pubs/the-ml-test-score-a-rubric-for-ml-production-readiness-and-technical-debt-reduction/ | IEEE Big Data 2017; a rubric of "28 specific tests and monitoring needs" for ML production-readiness. Cited for the reproducible-training principle (retrain on the same data → the same model; seed the RNG). The specific rubric-item text was NOT reproduced on the fetched landing page — cited by paper for the principle, not a verbatim quote. Fetched 2026-09-19. |
+| Northcutt, Athalye, Mueller (2021), "Pervasive Label Errors in Test Sets…" | https://arxiv.org/abs/2103.14749 | NeurIPS 2021 (Datasets & Benchmarks). "Errors in test sets are numerous and widespread: we estimate an average of at least 3.3% errors across the 10 datasets"; correcting them can flip benchmark rankings (smaller models can overtake larger); ~half of algorithmically-flagged errors confirmed genuine by crowdsourcing. Fetched 2026-09-19. |

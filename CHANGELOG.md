@@ -3,6 +3,16 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.154.0] — 2026-09-19
+
+Wave 75 — **ML-pipeline correctness** (data leakage, training reproducibility, label quality), from research issue **#384** (a new area; dcr-only). Perun's AI coverage was security / output / governance-shaped; this adds the *correctness of a classical ML training/eval pipeline* — where a leaked split makes the reported metric **false** (the anti-fabrication thesis in classical-ML clothing).
+- **`testing-and-evals.md` (new subsection):** split train/test before any preprocessing, fit preprocessing on the train subset only (a Pipeline stops CV/tuning leaking), no target/temporal leakage, no duplicate rows across splits — a leaked split *passes too well* (scikit-learn); and training must be reproducible (seed the RNG, pin data/model/code per reported number) so a metric delta is attributable (Breck et al., *The ML Test Score*, 2017).
+- **`data-quality.md`:** requiring expert labels sets the bar but doesn't verify it — measure inter-annotator agreement (bounds label noise, caps the achievable metric), spot-audit errors, handle class imbalance honestly; label errors distort the metric *and* re-rank models (Northcutt et al., NeurIPS 2021, ≥3.3% avg errors across the 10 benchmarks studied). The *opposite* lesson from inter-model agreement.
+
+Three sources verified by direct fetch (2026-09-19), in a new `docs/standards-index.md` section. Three evals (deep-code-review 151 → 154). Trio → 1.154.0. Closes #384.
+
+Dogfood reviewer: PASS-WITH-NITS → scoped the Northcutt figure to "across the 10 benchmarks studied" (it had read as a universal property) and dropped a stray "~" in the eval; sources otherwise verified verbatim.
+
 ## [1.153.0] — 2026-09-19
 
 Wave 74 — **EU Cyber Resilience Act (name-and-route) + VEX**, from research issue **#358** (cartography survivor — a new regulatory area + a supply-chain artifact).

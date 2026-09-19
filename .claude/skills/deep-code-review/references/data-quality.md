@@ -274,6 +274,16 @@ rate), validity (schema/format/range). For each:
   quality as *unmeasured* until an expert rates a frozen, labeled cohort; don't
   stack features on an unvalidated base. See `testing-and-evals.md` for the
   eval-harness pattern.
+- **Requiring expert labels sets the bar; check the labels themselves are any
+  good.** Label errors in a held-out set both distort the metric *and* re-rank
+  models — test sets carry "an average of at least 3.3% errors" across the 10 benchmarks studied, and correcting them
+  can flip which model wins (Northcutt et al., NeurIPS 2021). So measure
+  **inter-annotator agreement** across independent labelers (it bounds label noise
+  and caps the achievable metric — a model can't beat the label ceiling), spot-audit
+  the flagged errors, and handle **class imbalance** honestly (99%-majority
+  "accuracy" is the base rate, not skill). This is the *opposite* lesson from
+  inter-**model** agreement above: agreement among independent *humans* is signal
+  about the labels; agreement among *models* is not precision.
 - **Backtest a proxy-derived metric against ground truth before shipping it — a
   plausible formula that passes unit tests can be near-useless.** For any
   derived/scored value built from indirect proxies (estimating runway from
