@@ -537,6 +537,38 @@ wide as the environment it ran in, so **name the scope and re-run the authoritat
 the stale-verdict case above: there the verdict is current-scope but a *moved head*; here it is a
 *current head* but *partial scope*.
 
+## A completion claim in a PR body or handback carries a `Verify:` line, or it is unverified
+
+A delivery lane's PR body, handback, or status that asserts a **verified outcome** — "confirmed
+in the browser," "it renders," "tested and working," "manually checked" — is a **self-reported
+claim, not evidence**: the trusted control is the forge run pinned to the reviewed SHA
+(`deep-code-review` `branch-and-merge-hygiene.md`), and even a delegated lane's bare `verify:
+green` is only a lead (above). What makes the claim **auditable** is a line naming **how** it was
+checked — a `Verify:` line: the exact command run, the surface / URL exercised, the two-principal
+or anon probe, the evidence link. Without it a reviewer or the next agent cannot tell a real check
+from a hallucinated one, and a false "done" is the most expensive rerun there is — it is trusted,
+built on, and surfaces late, far from its cause.
+
+So a delivery artifact that claims a verified result **and carries no `Verify:` line stating the
+method is treated as `unverified`** — the reviewer asks for the method, not the adjective. This is
+the constructive form of the over-claim rule (**name the evidence surface**, `deep-code-review`)
+applied to the delivery artifact, and it is a **claim-quality** requirement, **not** a trusted
+control: a typed `Verify:` line is still self-reported — it makes the claim checkable, it does not
+replace the forge run.
+
+- Especially when PRs are **agent-authored and reviewed by people who weren't watching**, "the
+  gates are green" is a claim about the *code*; the `Verify:` line is a claim about how the
+  *interface* was actually exercised. Pair it with visual evidence — the screenshot shows *what*
+  changed, the `Verify:` line shows *how* it was confirmed.
+- **Gate on it only if the producers emit it.** Landing a `Verify:`-required merge gate strands
+  every automated lane that does not yet write the line — co-evolve the lane template in the same
+  change, or ramp it (the co-evolve-a-body-gate-with-its-producers rule, `deep-code-review`
+  `branch-and-merge-hygiene.md`).
+- **🚩 tell:** a PR body / handback asserting "tested," "verified," "it works," or
+  "confirmed" with no `Verify:` line naming the command, the surface, and the evidence — an
+  unbacked completion claim, `unverified` until the method is stated (and still self-reported
+  after — the forge run is the control).
+
 ## Boot-the-dev-server lanes need a copy, not a symlink, of the dependencies dir
 
 Any worktree that runs the **heavy gates** needs its own real install — run
@@ -927,6 +959,8 @@ Fetched fresh for this file (entries 1–5 verified 2026-09-09; entry 6, 2026-09
   claim check ("B included A") that the verify-first-before-laning section reuses
   pre-laning, the evidence-before-a-destructive-close discipline, and the
   mergeable-is-a-snapshot / freeze-the-merge-sweep-while-a-resolver-runs rule a
-  fleet coordinator applies when batching merges.
+  fleet coordinator applies when batching merges; and the self-reported-evidence-is-not-a-
+  trusted-control rule plus the co-evolve-a-body-gate-with-its-producers rule that this file's
+  `Verify:`-line section reuses.
 - `docs/standards-index.md` — fetch dates and full citations for the six
   sources above.

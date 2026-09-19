@@ -389,6 +389,16 @@
         "Clean fix: give agents a distinct identity (bot account / separate GITHUB_TOKEN) so authorship discriminates again",
         "Fallback: an explicit convention (allowlist / denylist / label / branch-prefix) with DEFAULT-DENY of anything not positively marked agent-owned -- never merge a PR it can't confirm is agent-owned"
       ]
+    },
+    {
+      "id": "pr-body-verified-claim-without-a-verify-line-is-unverified",
+      "prompt": "An agent-authored delivery PR is ready to land. Its body says 'Tested and working -- confirmed the new checkout flow renders and submits in the browser.' The CI gates (lint, unit tests, type-check) are green. No screenshot, no command, no surface named. A reviewer who did not watch the work is about to approve on the strength of that sentence. Sound?",
+      "expected_output": "No. 'Tested and working / confirmed in the browser' is a self-reported CLAIM, not evidence -- and the green CI gates certify the code, not that the interface was exercised (they do not run the browser flow). The claim carries no `Verify:` line naming HOW it was checked: the exact command, the surface/URL exercised, the evidence (screenshot / recording / link). Treat it as UNVERIFIED and ask for the method, not the adjective -- a false 'done' is trusted, built on, and surfaces late. The `Verify:` line is a claim-quality requirement that makes the assertion auditable; it is NOT itself a trusted control (still self-reported -- the SHA-pinned forge run is the control). And if a `Verify:`-line gate is added, co-evolve the lane template so agent PRs emit it, or every automated PR strands. (agentic-delivery fast-agentic-delivery.md; deep-code-review branch-and-merge-hygiene.md self-reported-evidence.)",
+      "expectations": [
+        "Identifies 'tested and working / confirmed in the browser' as a self-reported claim, and notes green CI gates certify the code, not that the interface/browser flow was exercised",
+        "Requires a `Verify:` line naming the method (command run, surface exercised, evidence link) before trusting it -- treat as unverified, ask for the method not the adjective",
+        "Notes the `Verify:` line is a claim-quality requirement, NOT a trusted control (still self-reported; the SHA-pinned forge run is the control)"
+      ]
     }
   ]
 }
