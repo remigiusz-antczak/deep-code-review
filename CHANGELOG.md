@@ -3,6 +3,31 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.196.0] — 2026-09-19
+
+### deep-code-review — wave 117 DB migration depth + concurrency transaction-isolation
+
+Two verified depth findings (postgres/mysql backend correctness), all facts fetched from primary docs.
+
+- **db-migration** (`performance-db-cost.md`): lock ACQUISITION (not just duration) — a pending
+  ACCESS EXCLUSIVE blocks the table via the lock-manager wait-queue rule; backfill throttles on an
+  observed backpressure signal; the constraint-add hazard is a family (UNIQUE/FK/CHECK/type-change),
+  fixed by two-phase `NOT VALID` + `VALIDATE` / `CREATE UNIQUE INDEX CONCURRENTLY`; `migrate` is
+  dual-write + a zero-gap completion proof.
+- **concurrency isolation** (`concurrency-shared-state.md`): a transaction boundary is not the
+  concurrency guard — at the default level (Read Committed in PG, REPEATABLE READ in MySQL/InnoDB) it
+  gives atomicity+durability, not isolation; the guard is FOR UPDATE / CAS / SERIALIZABLE, and a
+  40001/deadlock abort retries the whole transaction.
+
+Three evals (deep-code-review 213 -> 216). Sources logged: postgres transaction-iso / sql-altertable /
+explicit-locking / lock-manager README + mysql innodb-transaction-isolation (fetched 2026-09-19).
+Trio -> 1.196.0. `SHA256SUMS` regenerated last.
+
+Dogfood reviewer (sonnet): FIX-FIRST -> applied. Corrected a lock-mode overclaim (ADD FOREIGN KEY
+takes SHARE ROW EXCLUSIVE, not ACCESS EXCLUSIVE); fixed an ACID term (BEGIN gives atomicity, the guard
+gives isolation); co-evolved the stale bare-"transaction" peer + both 🚩 footers the new rules refute;
+re-attributed head-of-line blocking to the lock-manager wait-queue rule.
+
 ## [1.195.0] — 2026-09-19
 
 ### deep-code-review — wave 116 web frontend security (browser-native controls, frontend-a11y.md)

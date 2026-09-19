@@ -64,6 +64,34 @@ A migration is a deploy-time hazard, not just a query. Check:
 - **Take the rollback snapshot before the mutation, not after.**
 - A migration that transforms data must not degrade it — cross-reference the
   monotonic-quality invariant in `data-quality.md`.
+- **Lock *acquisition* is a hazard, not only lock *duration*.** Even an instant, metadata-only DDL
+  must first **acquire** its lock; in PostgreSQL `ALTER TABLE` takes an `ACCESS EXCLUSIVE` lock that
+  conflicts with every other mode. A single long-running transaction on the target makes the fast
+  DDL wait — and because the lock manager grants a request only if it conflicts with no existing
+  **or already-waiting** lock (`src/backend/storage/lmgr/README`), the pending `ACCESS EXCLUSIVE`
+  then makes **every later request queue behind it** — a fast migration becomes a table-wide stall
+  (the wait-queue / FIFO rule; the user-facing `explicit-locking` docs describe the wait but not
+  this queue effect by name). Check: run DDL with a bounded `lock_timeout` + retry/backoff, and
+  confirm no long transaction is open on the target.
+- **Backfill throttles on an observed backpressure signal, not just batch size.** Bounded batches
+  cap transaction-log growth, not replica lag or I/O saturation; the loop reads a live signal
+  (replication lag, load, error rate) and pauses above a documented ceiling — a fixed inter-batch
+  sleep with no signal is not a throttle (gh-ost's replica-lag throttling, already named above, is
+  the reference shape).
+- **The constraint-add hazard is a family, not just `NOT NULL`.** Adding `UNIQUE` / `FOREIGN KEY` /
+  `CHECK`, or changing a column type, on a populated table triggers the same full-table
+  validation-scan-under-lock already flagged for `NOT NULL` — a reviewer matching the literal
+  `NOT NULL` misses the siblings. Use the two-phase form: `ADD CONSTRAINT … NOT VALID` (commits
+  immediately, no scan) then a separate `VALIDATE CONSTRAINT` (weaker `SHARE UPDATE EXCLUSIVE` lock,
+  existing rows only); for uniqueness, `CREATE UNIQUE INDEX CONCURRENTLY` then `ADD CONSTRAINT …
+  USING INDEX`; treat a type change as a rewrite hazard on the same expand-contract path. (Distinct
+  from the soft-delete `UNIQUE` partial-index rule in `data-quality.md`, a NULL-semantics bug, not a
+  lock/scan-cost one.)
+- **`migrate` is dual-write plus a completion proof, not one step.** While the backfill runs, every
+  write path writes **both** the old and new location so no row lands only in the old shape; before
+  cutting reads over, the two are verified to **agree** with an explicit zero-remaining-gap check —
+  not "the backfill job exited 0" — gating the enforce/contract step. Distinct from the cross-system
+  dual-write in `reliability-error-handling.md` (DB + bus atomicity); this is the same-table case.
 
 ## External / API / LLM calls — the cost-and-value lens
 
@@ -197,7 +225,8 @@ same full-collection scan run twice in one operation; a fresh SDK/HTTP client
 constructed per call; a pool checkout not returned on the error path (connections trending to max =
 pool exhaustion); no `timeout=`/`AbortController` on network calls; `while
 True` poll loops; `CREATE INDEX` without `CONCURRENTLY`; `ADD COLUMN … NOT NULL`
-with no default; unbounded in-memory caches/dicts as module globals; retry loops
+with no default; `ADD CONSTRAINT` with no `NOT VALID`; `ALTER COLUMN … TYPE` on a big table; DDL with
+no `lock_timeout`; a backfill loop with a fixed `sleep` and no lag/health read; unbounded in-memory caches/dicts as module globals; retry loops
 with no cap; a custom retry loop wrapping an auto-retrying SDK; a prompt-cache
 marker on per-call-varying content (or a long static prefix with none); a
 `countTokens` call before every generation; cost math charging cache-read/write

@@ -97,7 +97,7 @@ Common in agent/tooling repos: JSON/YAML "DB" files, append logs, lockfiles.
 
 ## DB / store TOCTOU
 
-- `SELECT` then act without `UNIQUE`/transaction/`SELECT … FOR UPDATE` (or
+- `SELECT` then act without `UNIQUE` / `SELECT … FOR UPDATE` (or
   compare-and-swap version column) → lost update or double spend.
 - "Insert if not exists" without a uniqueness constraint is still racy under
   concurrency — the constraint is the source of truth.
@@ -107,6 +107,16 @@ Common in agent/tooling repos: JSON/YAML "DB" files, append logs, lockfiles.
   without re-reading (or versioning) after the suspension races with other
   writers — including single-process JSON/Postgres JSON stores. Re-read or CAS
   after the await before persisting.
+- **A transaction boundary is not itself the concurrency guard.** Under the isolation level engines
+  ship by default — **Read Committed** in PostgreSQL, **REPEATABLE READ** in MySQL/InnoDB — wrapping
+  a check-then-act in `BEGIN`/`COMMIT` prevents neither a lost update (two read-modify-write cycles
+  on a plain read) nor write skew; the **concurrency guard** comes from `UNIQUE` / `SELECT … FOR
+  UPDATE` / a CAS version column above, or an explicitly elevated `SERIALIZABLE` — the `BEGIN` gives
+  atomicity and durability, **not isolation** from a concurrent read-modify-write. And a
+  serialization-failure or deadlock abort (PostgreSQL SQLSTATE `40001` — "applications … must be
+  prepared to retry"; a MySQL/InnoDB deadlock-victim rollback) is an **expected, retryable** outcome
+  whose retry unit is the **whole transaction** (re-run from `BEGIN` with fresh reads), not the one
+  failed statement — retrying just the statement silently reintroduces the lost update.
 
 ---
 
@@ -158,9 +168,10 @@ for acting on it without collateral damage.
 
 **🚩 red flags**: shared mutable globals; a per-request/run field held on a
 singleton/long-lived object, or a subscription/listener outliving its subscriber (lifetime mismatch); missing `await`; non-atomic
-read-modify-write; load→await→write without re-read/CAS; lock held across I/O;
+read-modify-write; load→await→write without re-read/CAS; retrying only the failed statement after a `40001`/deadlock
+instead of the whole transaction; lock held across I/O;
 two writers on one file; corrupt/unreadable store wiped to empty; check-then-act
-without a constraint/transaction; tests/jobs writing a real tracked/shared data
+without a constraint or row lock (a bare default-isolation transaction is not enough); tests/jobs writing a real tracked/shared data
 path; stage-all from a multi-agent checkout; multiple concurrent-agent write
 lanes sharing one working tree with no worktree-per-lane isolation; a stray or
 stale worktree with no corresponding open PR; duplicate open PRs/branches

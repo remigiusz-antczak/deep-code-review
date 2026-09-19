@@ -2262,6 +2262,36 @@
         "Notes XSS defenses (output encoding, script-src) don't address framing — it's a distinct threat",
         "Requires frame-ancestors (CSP) on authenticated/state-changing pages, with X-Frame-Options as legacy fallback"
       ]
+    },
+    {
+      "id": "a-fast-metadata-migration-can-still-cause-a-table-wide-stall-via-lock-acquisition",
+      "prompt": "A migration runs an ALTER TABLE the team knows is instant (metadata-only). In staging it's fine; in production, running it during business hours briefly freezes ALL queries to that table for minutes. The DDL itself is fast. What happened?",
+      "expected_output": "Lock ACQUISITION, not DDL duration, is the hazard. The ALTER TABLE needs an ACCESS EXCLUSIVE lock (PostgreSQL), which conflicts with every other mode. A long-running transaction held a conflicting lock, so the fast DDL had to wait — and because PostgreSQL's lock manager grants a request only if it conflicts with no existing OR already-waiting lock, the pending ACCESS EXCLUSIVE then made every later query queue behind it, freezing the table until the long transaction finished. Fix: run DDL with a bounded lock_timeout (+ retry/backoff) so it gives up rather than holding the queue, and confirm no long-running transaction is open against the target before running it. 'Instant' says nothing about how long the DDL waits to acquire its lock.",
+      "expectations": [
+        "Identifies lock ACQUISITION (not DDL duration) as the cause — ACCESS EXCLUSIVE waits behind a long transaction, then (via the wait-queue rule) blocks all later queries on the table",
+        "Notes a long-running transaction holding a conflicting lock is the trigger",
+        "Requires a bounded lock_timeout + retry and checking for open long transactions before running DDL"
+      ]
+    },
+    {
+      "id": "adding-a-unique-or-foreign-key-to-a-big-table-needs-the-two-phase-not-valid-validate-form",
+      "prompt": "A migration adds a FOREIGN KEY, a UNIQUE constraint, and widens a varchar column, all on a large live table with plain DDL. Reviewers approved it because 'none of these is a NOT NULL, so it's fine.' Correct?",
+      "expected_output": "No — UNIQUE/FOREIGN KEY/CHECK and a column type change trigger the same full-table validation-scan-under-lock that NOT NULL does; the 'only NOT NULL is risky' heuristic misses the family. A plain ADD CONSTRAINT scans the whole table under a lock that blocks writes for the duration — ACCESS EXCLUSIVE for UNIQUE/CHECK/PRIMARY KEY, though ADD FOREIGN KEY itself takes the weaker SHARE ROW EXCLUSIVE (still blocking writes, not reads). Use the two-phase form: ADD CONSTRAINT ... NOT VALID (commits immediately, no scan) then a separate VALIDATE CONSTRAINT (weaker SHARE UPDATE EXCLUSIVE lock, existing rows only) for FK/CHECK; for the UNIQUE, CREATE UNIQUE INDEX CONCURRENTLY then ADD CONSTRAINT ... USING INDEX. Treat the varchar widening as a rewrite hazard on the same expand-contract path.",
+      "expectations": [
+        "Identifies that UNIQUE/FK/CHECK/type-change trigger the same full-table-scan-under-lock as NOT NULL — the 'only NOT NULL' heuristic misses the family",
+        "Requires the two-phase ADD CONSTRAINT NOT VALID + VALIDATE CONSTRAINT (and CREATE UNIQUE INDEX CONCURRENTLY + USING INDEX for uniqueness); notes ADD FOREIGN KEY's lock (SHARE ROW EXCLUSIVE) is weaker than ACCESS EXCLUSIVE but still blocks writes",
+        "Treats the column type change as a rewrite hazard on the same expand-contract path"
+      ]
+    },
+    {
+      "id": "wrapping-a-check-then-act-in-a-transaction-does-not-prevent-a-lost-update-at-default-isolation",
+      "prompt": "A 'decrement inventory if in stock' does SELECT qty; if qty>0 UPDATE qty=qty-1, wrapped in BEGIN/COMMIT. Under load, stock goes negative. The dev says 'it's in a transaction, so it's atomic.' What's the misconception and the fix?",
+      "expected_output": "A transaction boundary is not a concurrency guard. At the default isolation level (Read Committed in PostgreSQL, REPEATABLE READ in MySQL/InnoDB), two concurrent transactions can both read qty=1 on the plain SELECT and both UPDATE — a lost update; BEGIN/COMMIT gives atomicity+durability, not isolation from a concurrent read-modify-write. Fix: take a row lock (SELECT ... FOR UPDATE), use a conditional/CAS update (UPDATE ... WHERE qty>0 and check rows-affected), a UNIQUE/CHECK constraint, or elevate to SERIALIZABLE. Any approach that can abort under contention — a serialization failure at SERIALIZABLE, or a deadlock with FOR UPDATE — must retry the WHOLE transaction with fresh reads (SQLSTATE 40001 / an InnoDB deadlock rollback), not just the failed statement, which would reintroduce the bug.",
+      "expectations": [
+        "Identifies that at the default isolation (Read Committed / InnoDB REPEATABLE READ) BEGIN/COMMIT does not prevent a lost update on a plain read-modify-write — atomicity is not isolation",
+        "Requires FOR UPDATE / a conditional-CAS update / UNIQUE / SERIALIZABLE, not the transaction boundary alone",
+        "Notes any approach that can abort under contention (serialization failure at SERIALIZABLE, or a deadlock with FOR UPDATE; 40001 / InnoDB rollback) must retry the WHOLE transaction with fresh reads, not the single statement"
+      ]
     }
   ]
 }
