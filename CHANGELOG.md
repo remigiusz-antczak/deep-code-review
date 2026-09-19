@@ -3,6 +3,24 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.198.0] — 2026-09-19
+
+### deep-code-review — wave 119 graceful shutdown & disposability (reliability-error-handling.md)
+
+From the COMPARATIVE research round (12-Factor App benchmark): factor IX Disposability was the one gap
+— the crash/resume rules covered the batch/cron shape, but a long-running listening service / queue
+worker disposed on every deploy had no graceful-shutdown home. New subsection:
+
+- Order: fail readiness BEFORE closing the listener (else the LB routes to a closed socket).
+- Drain is bounded (timeout >= p99, force-close + log survivors); zero/unbounded drain both wrong.
+- The platform grace window + LB deregistration delay is a separate additive clock, not the app's drain.
+- A worker nacks/returns its in-flight job on shutdown (at-least-once redelivery), not "exit as-is".
+- Release lease + flush telemetry before exit; a mid-write kill must be retry-safe.
+
+Three evals (deep-code-review 219 -> 222). Source: 12factor.net/disposability (fetched 2026-09-19);
+Kubernetes preStop/terminationGracePeriod named as examples only (not a pinned spec). Trio -> 1.198.0.
+`SHA256SUMS` regenerated last.
+
 ## [1.197.0] — 2026-09-19
 
 ### deep-code-review — wave 118 branch-and-merge cluster (closes #448, #469, #483)

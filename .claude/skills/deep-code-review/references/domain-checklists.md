@@ -251,7 +251,9 @@ Apply to any pipeline, ETL, enrichment, scraping, or dataset producer. Judge the
   policy/permission gate stops a write/paid op, surface the exact blocked
   operation and how to run it; never route around it.
 - Long jobs are SIGINT-clean, cursor-resumable, idempotent, with append-only
-  progress so a crash loses no work; a **two-key confirmation** guards the
+  progress so a crash loses no work; a **listening service or queue worker shuts down
+  gracefully** — fail readiness before closing the listener, bound the drain, and a worker nacks its
+  in-flight job (`references/reliability-error-handling.md`); a **two-key confirmation** guards the
   highest-consequence irreversible actions; every credentialed integration
   degrades to a **clean no-op** without its key — unsafe if the CLI still
   **persists an empty/zero artifact** that downstream merge/read treats as data

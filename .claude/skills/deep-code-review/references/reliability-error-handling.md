@@ -188,6 +188,48 @@ state machine; if none, say so and move on (do not invent a state machine to aud
 
 ---
 
+## Graceful shutdown & disposability — a listening service is not a batch job
+
+The crash/resume rules above are the **batch/cron** shape (flush a cursor, exit, re-run). A
+long-running **listening service or queue worker**, disposed on every deploy / scale-down /
+preemption, needs a different, *ordered* shutdown (12-Factor *Disposability*: a web process shuts
+down by "ceasing to listen on the service port … allowing any current requests to finish, and then
+exiting"; a worker by "returning the current job to the work queue"). Behind a load balancer or orchestrator
+the ordering below adds a step 12-Factor does not state — a readiness flip *first* — because the LB's
+view of the instance lags its socket state.
+
+- **Order: fail readiness *before* you stop accepting.** On SIGTERM the readiness probe flips to
+  **unready first**, so the load balancer takes the instance out of rotation; only then does the
+  listener stop accepting. The reverse (close the listener first) leaves the LB routing to a closed
+  socket — connection-refused/reset on every rolling deploy or scale-down.
+- **Drain is bounded.** After going unready, let in-flight requests finish, but with a **timeout ≥
+  the slowest legitimate request** (p99); force-close the survivors and **log the count**. Unbounded
+  drain hangs the deploy; zero drain is not graceful.
+- **The platform grace window is a separate, additive clock.** The platform's kill-after grace period
+  and the LB's deregistration-propagation delay are **not** the app's drain budget — size the drain
+  against the real in-flight duration and ensure the platform window exceeds it, or the very race the
+  handler exists to prevent reappears (`terminationGracePeriodSeconds` / `preStop` on Kubernetes are
+  examples, not a pinned spec).
+- **A worker returns (nacks) its in-flight job, it doesn't drop it.** On shutdown a queue consumer
+  nacks/returns the current message (or finishes it if short and safely resumable) so an
+  at-least-once queue redelivers it; "exit after whatever was in memory" silently drops or
+  double-processes work on every deploy (make processing idempotent so redelivery is safe).
+- **Release the lease and flush before exit.** A shutting-down replica releases any lock/lease/claim
+  it holds (e.g. a distributed lock or a leader-election lease) and flushes buffered telemetry — else a scaled-down
+  instance blocks its replacement for the lease TTL and loses its last logs/metrics.
+- **A request killed mid-write at shutdown must be retry-safe** — the same idempotency-key discipline
+  the retry rules above require, applied at the shutdown boundary.
+- **🚩** a SIGTERM handler that stops the listener before failing readiness; an unbounded or zero
+  drain; a worker that exits without nacking its in-flight job; a readiness endpoint hardcoded to
+  `200` (it can neither gate a drain nor signal unhealthy — the always-200 health check flagged in
+  `observability.md` breaks safe rolling deploys, not just monitoring).
+
+**Scope:** a long-running listening service or
+queue worker (load-balanced / orchestrated); a standalone process with no LB or readiness probe needs
+only the finish-in-flight goal above.
+
+---
+
 ## Silent no-op of whole subsystems
 
 A load-order, feature-flag, or registration bug can leave a paid/optional
@@ -212,4 +254,6 @@ retry; work lost on crash; status not checked before body read; emergency stop
   event on a crash between the two); a status/lifecycle transition via a bare `UPDATE status = ?`
   with no from-state guard (read-then-write, not compare-and-set); a boolean soup encoding one
   entity's mutually-exclusive lifecycle stages (admits impossible combinations); a non-terminal
-  state whose only exit depends on one specific actor (no timeout / reassignment).
+  state whose only exit depends on one specific actor (no timeout / reassignment); a listening service
+that closes its listener before failing readiness, or drains unboundedly; a worker that exits without
+nacking its in-flight job.

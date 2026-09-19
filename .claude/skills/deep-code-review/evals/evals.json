@@ -2322,6 +2322,36 @@
         "Detects the hang by the gate job's OUTPUT liveness (no new output past ~2x normal), not elapsed time alone — noting the base head is stationary during the gate run by design (base-head movement is the drain-phase signal); cancels+root-causes",
         "Treats a hung gate as can't-check/UNVERIFIED — timebox + fall back to the runnable subset as proof-of-record (never merge on it), emit progress, keep heavy gates in per-change checks"
       ]
+    },
+    {
+      "id": "graceful-shutdown-must-fail-readiness-before-it-stops-accepting-requests",
+      "prompt": "A service's SIGTERM handler immediately closes the HTTP listener, then waits for in-flight requests, then exits. On every rolling deploy, clients see a burst of connection-refused/reset errors. What's the ordering bug?",
+      "expected_output": "The listener is closed BEFORE the load balancer stops routing to the instance. On SIGTERM the readiness probe must flip to unready FIRST so the LB takes the instance out of rotation; only then stop accepting. Because it closes the listener first while the LB still considers it in rotation, new requests keep arriving at a closed socket → connection-refused/reset. Correct order (12-Factor's finish-in-flight goal, extended for a load balancer): fail readiness → LB deregisters → stop accepting new connections → drain in-flight requests (bounded) → exit. The reverse order is the bug.",
+      "expectations": [
+        "Identifies the reverse ordering: the listener closes before readiness fails / the LB deregisters, so new requests hit a closed socket (connection-refused/reset)",
+        "Requires failing readiness FIRST (LB takes it out of rotation), THEN stop accepting, THEN drain",
+        "Names the correct SIGTERM sequence: unready → stop accepting → bounded drain → exit"
+      ]
+    },
+    {
+      "id": "shutdown-drain-must-be-bounded-and-sized-against-the-real-in-flight-duration",
+      "prompt": "A service drains in-flight requests on shutdown by waiting for all of them to finish, with no timeout, relying on the platform's default kill-after grace period. Deploys sometimes hang; other times requests get cut off. What's wrong?",
+      "expected_output": "Two problems. (1) Unbounded drain: waiting for ALL in-flight requests with no timeout lets one slow/stuck request hang the whole deploy — bound the drain to a timeout >= the slowest legitimate request (e.g. p99), force-close survivors and log the count; zero drain isn't graceful either. (2) The platform grace period (and the LB's deregistration-propagation delay) is a SEPARATE, additive clock the app doesn't control — sizing the drain against the platform default rather than real in-flight duration reproduces the race: the platform hard-kills mid-drain (cut-off requests) or the LB still routes during the window. Size the app's own drain against real request duration, and ensure the platform grace window exceeds it.",
+      "expectations": [
+        "Identifies unbounded drain (no timeout) as hanging the deploy — requires a bounded drain (timeout >= p99, force-close + log survivors)",
+        "Identifies that the platform grace period / LB deregistration delay is a separate additive clock, not the app's drain budget",
+        "Requires sizing the drain against real in-flight duration and the platform window exceeding it"
+      ]
+    },
+    {
+      "id": "a-queue-worker-must-return-its-in-flight-job-on-shutdown-not-drop-it",
+      "prompt": "A queue worker on an at-least-once queue processes a message; on SIGTERM (deploy) it just exits. Occasionally a message in flight at deploy time is neither completed nor retried — work silently disappears. Cause and fix?",
+      "expected_output": "The worker exits without returning (nacking) its in-flight message, so whatever was mid-processing is lost. On an at-least-once queue, graceful shutdown means nack/return the current job (or finish it if short and safely resumable) so it's redelivered — per 12-Factor disposability ('returning the current job to the work queue'). 'Exit after whatever was in memory' silently drops (or, once the broker's visibility timeout redelivers a partially-applied job, double-processes) work on every deploy. Fix: on SIGTERM stop pulling new messages, nack/return the in-flight one, and make processing idempotent so redelivery is safe.",
+      "expectations": [
+        "Identifies the worker exits without nacking/returning its in-flight job, so it's dropped (or later double-processed) on an at-least-once queue",
+        "Requires nacking/returning the current job on shutdown (or finishing if short/safely resumable) so it's redelivered",
+        "Requires idempotent processing so redelivery is safe, and stopping new-message pull first"
+      ]
     }
   ]
 }
