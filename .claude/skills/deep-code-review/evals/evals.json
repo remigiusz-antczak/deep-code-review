@@ -2691,6 +2691,16 @@
         "Names the fixture/gate contract as the defect (not the contributors' environments), reading the repeated copy-in-real-data workaround as the signal of a shared standing defect",
         "Requires the fix (enrich the fixture, or scope real-data-only assertions to a real-bundle run) and verification from a truly clean clone"
       ]
+    },
+    {
+      "id": "enforce-a-data-honesty-invariant-by-construction-not-a-render-time-convention",
+      "prompt": "A dashboard must never show an uncollected month as a measured zero (the data has no per-month collection-coverage flag, so 'collected zero' and 'not collected' look identical). One implementation builds all 12 month cells and styles the empty ones 'faintly, remember to treat as unknown'; another builds a cell only for months with >=1 observed row. Which is the stronger guarantee against shipping the fabrication, and what's the general rule?",
+      "expected_output": "The second (build a cell only for an observed month) is stronger. The first relies on a render-time CONVENTION — 'remember to style empty cells as unknown' — that lives in reviewers' heads and scattered call sites; one forgotten style edit reintroduces the fabrication (uncollected rendered as a measured zero). The second makes the dishonest value UNREPRESENTABLE by construction: a 'collected-zero' cell has no constructor, so 'uncollected renders as zero' isn't a rule to remember, it's impossible, and a 'never emits a zero-count bin' unit test pins it. General rule: for any anti-fabrication/data-honesty invariant, prefer enforcing it by construction (make the illegal value unbuildable in the type/constructor) over a render-time or call-site convention — 'make impossible states unrepresentable' applied to data honesty. Reviewer check: for each honesty invariant, ask whether the dishonest value can even be constructed; if yes, the invariant rests on a convention a future edit can silently violate.",
+      "expectations": [
+        "Picks the by-construction option (emit a cell only for an observed period) as stronger, and explains why the render-time convention is weak (lives in heads/call sites; a later edit silently ships the fabrication)",
+        "States the general rule: enforce a data-honesty invariant by construction (make the illegal value unrepresentable/unbuildable in the type or constructor), not as a render/call-site convention, plus a 'never emits X' test",
+        "Gives the reviewer check: ask whether the dishonest value can even be constructed; if yes the invariant rests on a violable convention"
+      ]
     }
   ]
 }

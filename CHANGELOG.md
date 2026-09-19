@@ -3,6 +3,20 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.219.0] — 2026-09-19
+
+### deep-code-review — wave 140 enforce data-honesty invariants by construction, not render convention (closes #502)
+
+`data-quality.md` §2: for any anti-fabrication / data-honesty invariant, prefer enforcing it **by
+construction** (shape the type/return so the dishonest value has no constructor — e.g. emit a bin only for an
+observed period, so a "collected-zero" cell can't be built) over a render-time / call-site convention a later
+edit silently violates; pin with a "never emits X" test. The how-to-guarantee companion to "make impossible
+states unrepresentable" (`reliability-error-handling.md`), the open-world third state
+(`product-ux-quality.md`), and "an absent window is not a decline" (§8). Reviewer check: can the dishonest
+value even be constructed?
+
++1 eval (256 -> 257 deep-code-review).
+
 ## [1.218.0] — 2026-09-19
 
 ### deep-code-review — wave 139 a gate's committed fixture is part of its contract (closes #507)

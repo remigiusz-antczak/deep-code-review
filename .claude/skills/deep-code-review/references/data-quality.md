@@ -114,6 +114,17 @@ accepted overwrite with the grades, so the arbitration is auditable.
 - **UI chrome is itself a claim.** A tab, heading, count, or label asserts that
   something sits beneath it — render it only when backing data exists. "Empty
   beats fabricated" applies to layout, not just fields.
+- **Make a dishonest value unrepresentable; don't rely on a render-time convention.** When an output
+  must not assert what it can't back — an uncollected period shown as a measured zero, a fabricated
+  score, a placeholder rendered as data — enforcing that with a *convention* ("remember not to draw a
+  zero cell") lives in reviewers' heads and scattered call sites, and a later edit silently ships the
+  fabrication. Prefer enforcing the invariant **by construction**: shape the type/return so the
+  dishonest value has **no code path that can build it** (emit a bin only for an observed period, so a
+  "collected-zero" cell has no constructor), then pin it with a "never emits X" test. This is
+  `reliability-error-handling.md`'s *make impossible states unrepresentable* applied to data honesty —
+  the how-to-guarantee behind the open-world third state (`product-ux-quality.md`) and "an absent
+  window is not a decline" (§8). Reviewer check for each honesty invariant: *can the dishonest value
+  even be constructed?* If yes, it rests on a convention a future edit can silently violate.
 
 ## 3. Entity resolution — bias false-exclude over false-merge
 
