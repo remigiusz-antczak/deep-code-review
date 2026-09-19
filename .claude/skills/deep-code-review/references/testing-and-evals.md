@@ -439,6 +439,54 @@ checks that guard training.
   specializes the generic canary/rollback discipline in `release-engineering.md` to the ML case,
   where the load-bearing signal is delayed prediction quality, not error rate.
 
+## ML fairness — detect it in review, never certify it
+
+**Scope gate — apply this first.** This lens applies only when the model makes a
+**consequential decision about people** (credit, hiring, housing, moderation, benefits,
+ranking that gates access) **and** the data carries at least one group dimension or a proxy
+for one. If you cannot name the decision, the affected people, and a group dimension present
+in the data, the lens **does not apply — say so and stop**. Hunting fairness in a model with
+no protected-group dimension manufactures a finding — the "stricter than the standard" defect
+(`method.md`).
+
+Where it applies, bias is **systemic, statistical, and human** (NIST SP 1270); computational
+metrics are necessary, not sufficient. The review question mirrors this suite's own thesis —
+*not just whether the model is biased, but whether it does what is claimed* (NIST SP 1270).
+Detect, do not grade:
+
+- **Protected attributes and proxies.** Is a protected characteristic (race, sex, age, …) used
+  as a feature — **disparate treatment** — or **not used but proxied** by a correlated feature
+  (zip, name, device, purchase history) — **disparate impact**? A proxy claim is **demonstrated**
+  — show the feature's correlation with the group attribute *in this data* — never asserted from
+  a stereotype; and **absence of the protected attribute does not establish fairness**, since a
+  model can discriminate through proxies alone. Dropping a suspected proxy without measuring
+  outcomes is not a fix — it removes signal untested and other proxies may remain.
+- **Fairness is measured, and the metric is chosen on purpose.** A consequential model gated
+  only on **aggregate** accuracy carries no fairness signal — it can be accurate overall and
+  systematically worse for a subgroup. Require a **disaggregated** evaluation by group, and
+  require the team to **state which fairness metric they target and justify it against the
+  decision** (demographic parity and error-rate balance answer different questions — the metric
+  must fit the decision, not be picked for looking best). The **absence of any stated, justified
+  choice** is the finding — not your preferred metric. Show coverage; never a fabricated
+  "0% bias" (the coverage-not-grade rule; `product-output-safety` MEASURE).
+- **Documentation.** On a consequential model, flag a **missing model card** — intended use,
+  out-of-scope uses, and **per-subgroup** measured performance (Mitchell et al., 2019).
+  `product-output-safety` (when installed) prescribes *producing* the card; in review, flag that
+  it is **absent**.
+- **Dataset bias is a data-quality dimension.** Group representativeness in the training set is
+  the statistical-bias leg — measure it as a completeness/representativeness dimension under
+  `data-quality.md` §4, do not re-derive it here.
+
+**🚩** a consequential-decision model whose only gate is aggregate accuracy; a protected
+attribute or a demonstrated proxy in the feature set with no disaggregated evaluation; a
+"fair" / "unbiased" claim carrying no named metric, no per-group numbers, and no model card.
+
+This is the **detection** lens for a default review; the output-harm guardrail — inventory the
+bias harm, never certify "unbiased", report residual risk — is the `product-output-safety`
+overlay, not restated here. Whether a demonstrated disparity is **unlawful
+discrimination** is a legal determination — route it to counsel (`business-ops` Lane R names the
+regime); the code finding is the **missing measurement or unstated metric**, never a legal verdict.
+
 ## Business rules as executable specs
 
 Encode load-bearing business rules as acceptance tests so the build fails if the

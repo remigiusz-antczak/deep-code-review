@@ -1822,6 +1822,36 @@
         "Requires the exact, untruncated command be shown before running -- approved bytes must equal executed bytes; the truncated summary hides a chained remote-code-execution command",
         "Notes pinning/vetting the package does not cover the launch command; recommends showing the full command + flagging dangerous patterns + sandboxing"
       ]
+    },
+    {
+      "id": "consequential-model-fairness-needs-disaggregated-eval-not-aggregate-accuracy",
+      "prompt": "A loan-approval model is reviewed. Its test suite gates on aggregate AUC and accuracy, both high, on a held-out set. The team says race and gender are not used as features, so the model is fair. Approve the fairness posture?",
+      "expected_output": "No -- and first confirm the lens applies: loan approval is a consequential decision about people, so it does. Two defects. (1) Aggregate accuracy/AUC carries no fairness signal -- a model can be accurate overall yet systematically worse for a subgroup; require a DISAGGREGATED evaluation by group, and require the team to state which fairness metric they target and justify it against the lending decision (different metrics answer different questions). (2) 'We don't use race/gender' addresses only disparate treatment; it does NOT establish fairness, because the model can discriminate through PROXIES (zip, name, income history correlated with a protected group) -- disparate impact. Fix: MEASURE disaggregated outcomes, do not infer fairness from the attribute's absence. Absence of a disaggregated eval + a stated metric on a consequential model is the finding; show coverage, never a fabricated '0% bias' (coverage-not-grade; product-output-safety MEASURE). (testing-and-evals.md, ML fairness.)",
+      "expectations": [
+        "Confirms the lens applies (a consequential decision about people) rather than skipping the scope check",
+        "States aggregate accuracy/AUC is not a fairness signal -- requires a disaggregated-by-group evaluation AND a stated, justified choice of fairness metric",
+        "Rejects 'we don't use race/gender so it's fair': that covers only disparate treatment; disparate impact via proxies remains, so fairness must be MEASURED, not inferred from the attribute's absence"
+      ]
+    },
+    {
+      "id": "fairness-proxy-must-be-demonstrated-in-data-not-asserted-nor-blindly-dropped",
+      "prompt": "In a hiring-screen model review, a colleague flags that `zip_code` is a feature and says 'zip code is a proxy for race -- drop it and the model is fair.' The model makes a shortlisting decision. How should the review handle this?",
+      "expected_output": "The instinct (proxy risk) is right, but both the claim and the fix are wrong as stated. (1) A proxy is DEMONSTRATED, not asserted: whether `zip_code` proxies a protected group in THIS data is empirical -- show the correlation between zip and the group attribute on the actual data; 'zip is always a race proxy' is a context-dependent stereotype, not evidence. (2) Dropping the feature is not a fix and can be counterproductive: it removes signal without measuring the outcome, other features may still proxy the group, and there is no evidence the result improved. Correct move: MEASURE disaggregated outcomes by the protected group (with a stated, justified fairness metric), decide on the evidence, and document it (model card, per-subgroup performance). Absence of the protected attribute is not fairness; a dropped feature with no measurement is untested. Also confirm the lens applies -- a shortlisting model is a consequential decision, so it does. (testing-and-evals.md ML fairness; product-output-safety for the output-harm side.)",
+      "expectations": [
+        "Requires the proxy be DEMONSTRATED empirically (correlation with the group attribute in this data), not asserted from a stereotype",
+        "Rejects 'drop the feature' as a fix on its own -- it removes signal without measuring outcomes, other proxies may remain, and improvement is unverified",
+        "Prescribes measuring disaggregated outcomes (with a stated metric) + documenting, and notes absence-of-attribute is not fairness"
+      ]
+    },
+    {
+      "id": "fairness-lens-does-not-apply-to-a-non-consequential-model-do-not-manufacture-a-finding",
+      "prompt": "A review covers a demand-forecasting model that predicts next-week warehouse inventory from historical sales, seasonality, and promotions. Its features are product SKUs, dates, and store-region codes; there is no person-level or protected-group dimension in the data, and it makes no decision about people. A reviewer proposes flagging it for 'no disaggregated fairness evaluation by protected group.' Is that a valid finding?",
+      "expected_output": "No -- the fairness lens does not apply here, and flagging it manufactures a finding. Apply the scope gate first: the lens applies only to a model making a consequential decision ABOUT PEOPLE with a group dimension (or a proxy for one) present in the data. This model forecasts inventory, decides nothing about people, and carries no person-level/protected-group dimension -- name those absences and STOP. Demanding a disaggregated fairness eval here is the 'stricter than the standard' defect (method.md): inventing a requirement the situation does not warrant, which wastes effort and erodes trust in real findings. (If a feature like store-region were later used in a people-affecting consequential decision, or shown to proxy a protected group there, the lens would re-engage -- but not on this forecasting model as described.) Correct review output: fairness lens N/A, with the reason. (testing-and-evals.md ML fairness, scope gate.)",
+      "expectations": [
+        "States the fairness lens does NOT apply and that flagging it would be a manufactured / invalid finding",
+        "Applies the scope gate explicitly: names the absent consequential-decision-about-people and the absent person-level/protected-group dimension, and stops",
+        "Identifies demanding a fairness eval here as the 'stricter than the standard' / fabricated-requirement defect (method.md), not a real gap"
+      ]
     }
   ]
 }

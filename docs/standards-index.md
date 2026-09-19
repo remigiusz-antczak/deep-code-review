@@ -484,3 +484,16 @@ as a **beta** regime only; its category IDs are not walked as current.
 | MCP Security Best Practices (official spec) | https://modelcontextprotocol.io/docs/tutorials/security/security_best_practices | Names, with `MUST`/`SHOULD` controls: **Confused Deputy** (OAuth proxy w/ static client-id + dynamic registration + consent cookie -> per-client consent MUST run before the third-party flow; exact `redirect_uri` match; `state` set only after consent); **Token Passthrough** ("MCP servers MUST NOT accept any tokens that were not explicitly issued for the MCP server"); SSRF on OAuth metadata discovery; one-click local-server consent (show the exact command); scope minimization. Fetched 2026-09-19. |
 | OWASP MCP Top 10 | https://owasp.org/www-project-mcp-top-10/ | Official OWASP project, "OWASP MCP Top 10," **Phase-3 Beta Release and Pilot Testing** ("We are here right now"); lead Vandana Verma Sehgal; scope = MCP-enabled systems lifecycle, ten risk categories (`MCPxx:2025`). Named as a beta regime; categories NOT enumerated as current. Fetched 2026-09-19. |
 | Tool-description poisoning & rug-pull (Willison / Invariant Labs) | https://simonwillison.net/2025/Apr/9/mcp-prompt-injection/ | Post dated 2025-04-09. Tool-description poisoning: instructions in a tool docstring are "visible to the LLM, not normally displayed to users" (Invariant Labs demo: an `add()` docstring makes the model read a private file and pass it as a parameter). Rug pull: "MCP tools can mutate their own definitions after installation"; clients "do not notify users about changes to the tool description" -> mitigation: alert on description change. Fetched 2026-09-19. |
+
+
+## Verified by direct fetch (2026-09-19) — ML fairness / bias
+
+Verification date for the rows below: **2026-09-19**. Added for the deep-code-review
+`testing-and-evals.md` ML-fairness detection lens. No legal disparate-impact threshold is
+encoded (the code check is measure + deliberate handling + documentation; the legal
+determination routes to counsel).
+
+| Standard / tool | URL | What was confirmed |
+|---|---|---|
+| NIST SP 1270 — Bias in AI | https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.1270.pdf | "Towards a Standard for Identifying and Managing Bias in Artificial Intelligence" (March 2022, 86 pp). Identifies **three categories of bias** — systemic, statistical/computational, human; three mitigation challenges — datasets, testing-and-evaluation (TEVV), human factors. Framing: computational fairness metrics are necessary but "human and systemic institutional and societal factors are significant sources of AI bias as well, and are currently overlooked"; and "Trustworthy and Responsible AI is not just about whether a given AI system is biased, fair or ethical, but whether it does what is claimed." PDF read directly 2026-09-19. |
+| Model Cards for Model Reporting (Mitchell et al., 2019) | https://arxiv.org/abs/1810.03993 | FAT* '19. Proposes model cards documenting benchmarked evaluation "across different cultural, demographic, or phenotypic groups (e.g., race, geographic location, sex, Fitzpatrick skin type) and intersectional groups," plus the model's intended-use context, performance-evaluation procedures, and limitations. Fetched 2026-09-19. |
