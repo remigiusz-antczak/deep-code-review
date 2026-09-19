@@ -1852,6 +1852,16 @@
         "Applies the scope gate explicitly: names the absent consequential-decision-about-people and the absent person-level/protected-group dimension, and stops",
         "Identifies demanding a fairness eval here as the 'stricter than the standard' / fabricated-requirement defect (method.md), not a real gap"
       ]
+    },
+    {
+      "id": "event-gated-check-green-can-be-stale-confirm-it-ran-against-the-current-head",
+      "prompt": "A PR's required 'policy-scan' check is green. The check runs on push events. After it passed, a bot edited the PR body to inject a config block the policy-scan reads, and a maintainer retargeted the PR from `main` to `release`. No new commit was pushed. The merge queue shows the check still green. Merge?",
+      "expected_output": "No -- the green is stale. The policy-scan re-evaluates on PUSH events only; neither the body edit (which changed an input the scan reads) nor the base retarget fired that trigger, so the check still shows its LAST verdict, computed against the pre-edit state -- a real green certifying a state that no longer exists. This is trigger-coverage staleness, distinct from a moving-base failure (the base did not move under a fresh check; the reviewed object mutated via an event the check never saw) and from a check that never ran at all. Before merging: read the SHA / input the passing check actually ran against and compare it to the merge target; know the gate's trigger model (push-only here) so a body/metadata/base mutation it ignores is recognized as invalidating. Re-trigger the scan against the current head + inputs and require a fresh green before merge. (branch-and-merge-hygiene.md.)",
+      "expectations": [
+        "Identifies the green as STALE -- the check runs on push only, so the body edit + base retarget did not fire its trigger and the verdict certifies an earlier state",
+        "Distinguishes this trigger-coverage staleness from a moving-base failure (the reviewed object mutated via an event the check never saw, not the base moving under a fresh check)",
+        "Requires confirming the SHA/inputs the check ran against vs the merge target, and re-triggering a fresh green before merge"
+      ]
     }
   ]
 }

@@ -276,6 +276,39 @@ breaks *mergeability* here, not a gate's diff. A fleet coordinator applies this
 whenever it batches merges; `agentic-delivery`'s `fast-agentic-delivery.md`
 cross-references here rather than restating it.
 
+### A finished check's green can be stale off a prior evaluation — confirm it ran against the current head, and know each gate's trigger model
+
+A green that already **finished** is not durable either — the reviewed object can change under it,
+so the check you see may not have run against what you are about to **merge**. This is distinct from
+the moving-base cases (the mergeability-snapshot above; the stale-base gate-diff below): here the
+base need not move at all. Two ways a finished green goes stale:
+
+- **Trigger coverage — the check never re-ran.** Most gates re-evaluate only on a **subset of
+  events** (typically a new push / new head). A mutation **outside** that set — **editing the body
+  or metadata**, **retargeting the base**, a bot **amending the description**, or a gate reading a
+  **cached artifact / body** captured at an earlier run — never fires the check, so its last verdict
+  certifies the **pre-mutation** state.
+- **Timing — the check will re-run but has not yet.** A mutation that **does** fire the trigger — a
+  **rebuild / rebase** that pushes a new head — has a run **still in flight**, so the green you
+  currently see belongs to the **pre-rebuild** head. Merging now lands an **intermediate** state the
+  gate never certified for the final head: wait for the fresh run to conclude, and do not merge a
+  change another lane is still rebuilding.
+
+Either way the green is real; it just certifies a state that no longer exists. So before merging,
+**confirm the green reflects the current head / inputs**: read the **SHA (or input digest)** the
+passing check actually ran against and compare it to what you are about to merge (the
+pin-the-verdict-to-the-exact-SHA discipline, `method.md`). And **know each gate's trigger model** —
+which events re-evaluate it and which do not — so a mutation the triggers **do not cover**, or a run
+**still in flight**, is recognized as **invalidating**, not trusted. These are the verdict-staleness
+siblings of the moving-base cases: there the *base* moved under a still-valid check; here the
+*reviewed object* changed — via an event the check never saw, or one whose run has not concluded.
+(Distinct, too, from a required check that simply never ran for this PR — the config-gap blocker
+below.)
+
+- **🚩** merging on a green produced **before** a body/metadata edit, a base retarget, or a rebuild
+  the gate's triggers ignore; a "these are green" batch snapshot consumed after any such mutation;
+  trusting a check's **colour** without reading the head / input digest it actually ran against.
+
 ### Red base: discharge the deadlock with a train, never an override
 
 When the target branch itself is red, a merge preflight that requires the base
@@ -742,6 +775,10 @@ squash). Mark any PR column `unverified` when forge auth was absent (§1).
   re-check**, or a **merge sweep run concurrently with a conflict-resolution lane**
   against the same base — the moving base head flips later members back to
   `CONFLICTING` while their checks stay green.
+- A merge on a **finished green that no longer matches the merge target** — a body/metadata edit,
+  base retarget, or description amend the gate's trigger ignored, or a **rebuild whose fresh run is
+  still in flight** — trusting the check's colour without reading the head / input digest it ran
+  against.
 - A PR closed as duplicate/superseded on title or branch similarity with no tip-diff
   evidence in the close comment.
 - A local hook, a `Tests: N/N` line, or a checked PR-template box logged as a passing
