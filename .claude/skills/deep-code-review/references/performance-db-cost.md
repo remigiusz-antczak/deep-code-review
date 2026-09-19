@@ -160,6 +160,23 @@ Every billable or slow call must map to value delivered.
   where results differ) and correct **invalidation** (a stale-cache bug is worse
   than no cache). No caching of sensitive/per-user data in a shared cache.
 - Bounded size / TTL / eviction; a cache that only grows is a leak.
+- **Stampede / thundering herd on expiry.** A hot key expiring lets N concurrent
+  misses all hit the origin at once — an outage amplifier on an expensive origin.
+  Require **single-flight** (coalesce concurrent recomputes behind one lock/lease)
+  or a **soft-TTL / early-recompute** with jitter; the de-dupe under *External
+  calls* above is the same mechanism applied at cache-expiry.
+- **Cache-aside write race.** Read-miss → load → set can interleave with a
+  concurrent write so the cache ends up holding a value already superseded. Order
+  it **write-store-then-invalidate** (not set-after-write), use versioned keys, or
+  a delayed double-delete — a naive read-through caches a stale value with no
+  conflict to warn.
+- **Negative caching.** Caching a not-found / error masks a later create or a
+  transient failure (stale 404s, cached errors); give negatives a **short,
+  re-checkable TTL**, never the positive TTL.
+- **Authoritative vs advisory — state which.** A cache treated as **source of
+  truth** (write-only-to-cache, no durable store behind it) turns an eviction into
+  **data loss**. (Identity-keyed caching as an authorization surface —
+  `private`/`no-store`, per-principal keys — is `security-appsec.md` A01.)
 
 ## Concurrency, memory & payloads
 
@@ -182,4 +199,5 @@ marker on per-call-varying content (or a long static prefix with none); a
 tokens at the full input rate; a per-run cap whose default is `0`/unlimited; a
 `catch` that sets a spend accumulator to empty; `SELECT sum(...)` then an
 app-side spend decision; a `globalThis`/in-process job guard shared across
-processes.
+processes; a cache read → origin recompute with no single-flight (stampede on
+expiry); a cache that stores a not-found/error under the positive TTL.

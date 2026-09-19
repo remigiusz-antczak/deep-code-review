@@ -1892,6 +1892,26 @@
         "Explains same-domain collapse is necessary but insufficient; corroboration must collapse DERIVATION (cites/derives-from = same origin), via a citation/link/via signal or known-aggregator list",
         "Where derivation can't be established deterministically, prefer the conservative count over assuming independence — and notes 1 does not clear a 2+ threshold"
       ]
+    },
+    {
+      "id": "cache-behind-an-expensive-origin-needs-stampede-protection-not-just-a-ttl",
+      "prompt": "An endpoint caches an expensive aggregate (a 2s analytics query) in Redis under a fixed 60s TTL; on a miss it recomputes from the origin. Traffic is high and steady. The cache has a correct key and correct invalidation. Ship it?",
+      "expected_output": "Not yet — the key/invalidation are right but it has no stampede protection. When the hot key expires at 60s, every concurrent request misses at once and they all fire the 2s origin query simultaneously (thundering herd), so expiry becomes a periodic origin overload / latency spike — worse under high traffic. Add single-flight (coalesce concurrent recomputes behind one lock/lease so only one request recomputes and the rest await it) or a soft-TTL / early-recompute with jitter (refresh just before expiry, serve the slightly-stale value meanwhile). A bare TTL alone does not prevent the stampede. (performance-db-cost.md, Caching.)",
+      "expectations": [
+        "Identifies the cache stampede / thundering herd: on expiry N concurrent misses all hit the expensive origin at once (a periodic overload), which a correct key + TTL does not prevent",
+        "Requires single-flight (coalesce concurrent recomputes) or a soft-TTL / early-recompute with jitter",
+        "Does not accept 'correct key + invalidation + TTL' as sufficient for an expensive origin under load"
+      ]
+    },
+    {
+      "id": "local-write-plus-remote-publish-is-a-dual-write-needs-outbox-or-idempotent-reconcile",
+      "prompt": "A create-order handler runs `order = db.save(order)` then `bus.publish(OrderCreated)`, in that order, no transaction spanning the two. On success both happen. Review the reliability of this.",
+      "expected_output": "This is the dual-write problem: the local DB write and the remote publish are two separate systems with no atomicity between them. A crash, timeout, or deploy after the commit but before/ during the publish loses the event (order exists, no OrderCreated fired); a publish that succeeds before a later rollback would phantom an event; a naive retry double-publishes. The fix is a transactional outbox — write the event to an outbox row in the SAME transaction as the order, and a relay publishes from the outbox (at-least-once), so the event is durable iff the order committed — or CDC. Keep commit-before-publish ordering. If an outbox is impractical, require an idempotent consumer (dedup by a stable key) AND a reconciliation path that detects and repairs divergence — never rely on both writes usually succeeding. (This spans DB + bus, so the lens applies; it is distinct from saga compensation.) (reliability-error-handling.md.)",
+      "expectations": [
+        "Names the dual-write problem: the local write and the remote publish are non-atomic, so a crash/failure between them loses the event (or phantoms one on rollback), and naive retry double-publishes",
+        "Prescribes a transactional outbox (event in the same transaction, relay publishes) or CDC, with commit-before-publish ordering",
+        "Gives the fallback (idempotent consumer + reconciliation) and does not accept 'both usually succeed' as reliable"
+      ]
     }
   ]
 }

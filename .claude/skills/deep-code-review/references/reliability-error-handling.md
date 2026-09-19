@@ -112,6 +112,32 @@ uses.
 
 ---
 
+## The dual-write problem — a local write + a remote publish are not atomic
+
+A handler that **persists state and then publishes an event / calls another
+service** as two separate steps (`db.save(x); queue.publish(e)`) has no atomicity
+across the two systems. A crash, timeout, or deploy **between** them — or a publish
+that fails after the commit — diverges them: the state exists but no event fired
+(**lost**), or the event fired but the transaction rolled back (**phantom**).
+Retrying naively double-publishes.
+
+- **Transactional outbox / CDC.** Write the event to an **outbox row in the same
+  transaction** as the state change; a relay publishes from the outbox and marks it
+  sent (at-least-once), so the event is durable **iff** the state committed. Or
+  capture the DB change log (**CDC**) for the same guarantee without app-side dual
+  writes.
+- **Order: commit first, publish after** — never publish before the local commit (a
+  phantom event on rollback).
+- **Fallback when an outbox is impractical:** an **idempotent consumer** (dedup by a
+  stable key — `api-contracts.md`: design for at-least-once + idempotent consumer)
+  **and** a **reconciliation** path that detects and repairs divergence — never rely
+  on both writes "usually" succeeding.
+- **Scope:** applies when one logical operation spans two systems that cannot share
+  a transaction (DB + bus, DB + third-party API, two datastores); a single-store /
+  single-transaction operation does not need this. Distinct from multi-step **saga**
+  compensation (`domain-checklists.md`), which sequences several operations — this is
+  the atomicity of **one** write plus **one** publish.
+
 ## Crash, SIGINT, resume
 
 - Long jobs: catch SIGINT/SIGTERM (or platform equivalent), flush cursors,
@@ -145,4 +171,7 @@ retry; work lost on crash; status not checked before body read; emergency stop
   no-op; missing-key path that **writes empty artifacts** over last-good data;
   `finally`-only cleanup on a process that calls `exit`; a fail-closed preflight
   doing a **live** read that aborts on any failure while the same data feeds a
-  **staleness-tolerant** downstream gate (degrade to last-good instead).
+  **staleness-tolerant** downstream gate (degrade to last-good instead); a local
+  write followed by a separate publish / remote call with no transactional outbox,
+  idempotent consumer, or reconciliation (a dual-write that loses or phantoms an
+  event on a crash between the two).
