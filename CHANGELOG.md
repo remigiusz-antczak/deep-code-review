@@ -3,6 +3,27 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.214.0] — 2026-09-19
+
+### deep-code-review — wave 135 CI-gate correctness: false-green pass-through holes + build-regenerated tracked files (closes #520, #514)
+
+Two ways a required check reports green over code it never validated. `branch-and-merge-hygiene.md`:
+- **A pass-through that fires on the wrong event is a false-green hole (#520).** A required check's
+  pass-through job (exit 0 for out-of-scope PRs) is legitimate only when nothing was in scope. When the
+  real job runs on `push`/`synchronize` but the pass-through also fires on an `edited` (title/body) event,
+  a title edit reports a conclusive Success for code the checker never re-ran. Make the pass-through
+  reachable only on the paths/events where the real check is genuinely N/A; the real job's own conclusion
+  (or a re-run on the current head) must back the required status for an in-scope PR.
+- **A git-tracked file the build regenerates poisons a clean-tree gate run in the same working tree (#514).**
+  A build that rewrites a committed, tracked artifact makes any same-tree clean-tree assertion
+  (`git diff --exit-code`, a merge preflight, a pre-commit hook) red on a build-created diff. Fix at the
+  source (don't track a build output; or regenerate deterministically as its own step and scope the check
+  to exclude the path), or run the clean-tree check in a fresh checkout the build never ran in.
+
++2 evals (246 -> 248 deep-code-review). SRC fetched + verified 2026-09-19:
+docs.github.com/en/webhooks/webhook-events-and-payloads (pull_request activity types — `edited` and
+`labeled`/`unlabeled` are distinct actions).
+
 ## [1.213.0] — 2026-09-19
 
 ### deep-code-review — wave 134 concurrent & distributed correctness: memory visibility + trace propagation (research round 8)

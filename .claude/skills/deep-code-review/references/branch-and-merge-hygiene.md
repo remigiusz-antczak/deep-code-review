@@ -400,7 +400,15 @@ saw this PR — `SKILL.md` principle 2). Two ways it happens:
   or don't name a legitimately-absent workflow in the required list. **Contrast** a
   **job** skipped by a job-level `if:` inside a workflow that *did* run — the forge
   reports it **skipped/Success**, which satisfies the required check and needs no
-  pass-through. The trap is the **missing status**, not the skip itself. A
+  pass-through. The trap is the **missing status**, not the skip itself. But the
+  pass-through **cuts both ways**: it is legitimate only when **nothing was in scope**
+  (a path filter genuinely excluded this diff). It is a **false-green hole** when there
+  **is** something to check and the *event* — not the paths — routed around the real
+  checker: a required workflow whose real job runs on `push` / `synchronize` but whose
+  pass-through also fires on an `edited` (title/body) event reports a conclusive
+  **Success** for a PR whose code the checker never re-ran. Make the pass-through
+  reachable **only** on the paths/events where the real check is genuinely N/A — never
+  an unconditional `exit 0` that green-lights an event the real job ignores. A
   **locally-added merge preflight** can invert this: when the forge itself reports a job
   **skipped/Success** — a job-level cost-gate `if:` an agent cannot flip without an
   owner-only label or a manual dispatch — a preflight that **refuses** that green verdict
@@ -522,6 +530,19 @@ is **advisory**, never a passing control:
   don't bake an absolute hooks path a sibling worktree will inherit. A hook that silently gates
   the wrong files is worse than none: it reports green over unexamined changes — another reason
   the hook tier is advisory and the forge run is the trusted gate.
+- **A git-tracked file the build regenerates poisons a clean-tree gate run in the same working tree.** If a build step
+  rewrites a **committed, tracked** file (a generated bundle, a `dist/` artifact, a lockfile a
+  postinstall touches), any gate that asserts a clean working tree — a merge preflight, a
+  pre-commit/pre-push hook, `git diff --exit-code` in CI — goes **red on a dirty tree the build
+  itself created**, not on a real defect, so running the build to satisfy one gate breaks the
+  next. Fix at the source: **don't track a build output** (gitignore it, generate at build
+  time), or if it must be tracked, regenerate deterministically and commit it as its own step,
+  and scope the clean-tree check to **exclude the generated path**, or run the clean-tree check in a
+  **fresh checkout the build never ran in** (the merge-train's throwaway integration branch, above, does
+  exactly this) — never "run the build, then assert the tree is clean" in the same working tree.
+  (Distinct from the run-twice idempotency check, which is about an *untracked* generated artifact
+  polluting a later step across runs; this is a *git-tracked* artifact whose committed baseline the
+  build invalidates on every run.)
 
 ### A worktree-relative hook runs its base's copy — land the safe hook everywhere first
 

@@ -2591,6 +2591,26 @@
         "Explains the mechanism: the write may never become visible (the compiler hoists the read out of the loop, or the write isn't fenced/flushed), the loop can spin forever, and it's architecture-dependent (passes x86, hangs ARM) so a green test proves little",
         "Requires naming a synchronization edge — atomic / volatile+publication / channel — not a plain shared field; notes a data race is UB (C/C++/Rust) or incorrect/torn (Go), not benign"
       ]
+    },
+    {
+      "id": "a-required-check-pass-through-that-fires-on-the-edited-event-is-a-false-green-hole",
+      "prompt": "A required CI check `app-tests` uses a pass-through job that exits 0 so out-of-scope PRs (docs-only) aren't blocked. The real test job runs on `push`/`synchronize`; the pass-through is wired to fire on any event including `edited`. A reviewer edits a code PR's title, the `edited` event fires the pass-through, and the PR shows `app-tests: Success` — but the tests never ran on that code. Sound?",
+      "expected_output": "No — this is a false-green hole. A pass-through is legitimate ONLY when nothing was in scope (a path filter genuinely excluded the diff); here there IS code to check, but the EVENT (edited — a title/body mutation), not the paths, routed around the real test job while the pass-through still reported a conclusive Success. So the required check reads green over code its checker never re-ran. Distinguish nothing-to-check (pass-through honest) from checker-skipped-but-reported-green (a hole). Fix: make the pass-through reachable only on the paths/events where the real check is genuinely N/A — not an unconditional exit 0 that green-lights an event the real job ignores; the real test job's own conclusion (or a re-run on the current head) must back the required status for an in-scope PR.",
+      "expectations": [
+        "Identifies the false-green hole: the pass-through reported Success on an edited event while the real checker (push/synchronize) never ran on that code",
+        "Distinguishes a legitimate pass-through (nothing in scope, path-filtered) from this hole (there IS something to check; the event, not the paths, skipped the real job)",
+        "Requires scoping the pass-through to only the paths/events where the real check is genuinely N/A — not an unconditional exit 0 covering events the real job ignores"
+      ]
+    },
+    {
+      "id": "a-build-regenerated-tracked-file-fails-every-clean-tree-gate",
+      "prompt": "A repo commits its dist/bundle.js (tracked in git), and the CI build regenerates it. The merge preflight runs the build, then asserts `git diff --exit-code` is clean — and fails every time, because the build rewrote the tracked bundle. The team keeps re-committing the regenerated file to get green. What's the real problem and fix?",
+      "expected_output": "The clean-tree gate is asserting something the build itself makes false: a git-TRACKED file (dist/bundle.js) that the build regenerates means git diff --exit-code after the build is red on a dirty tree the build created, not on a real defect — so running the build to satisfy the gate breaks the next clean-tree check, and re-committing the artifact is churn that never converges. Fix at the source: don't track a build output — gitignore dist/bundle.js and generate it at build/deploy time; or if it must be tracked (consumed without a build step), regenerate it deterministically and commit it as its own explicit step, and scope the clean-tree check to exclude the generated path. Never 'run the build, then assert the tree is clean' in the same working tree — or run the clean-tree check in a fresh checkout the build never ran in. Distinct from the run-twice idempotency check, which catches an untracked generated artifact polluting a later step across runs; this is a git-tracked artifact whose committed baseline the build invalidates on every run.",
+      "expectations": [
+        "Identifies that a git-tracked, build-regenerated file makes the clean-tree gate red on a build-created diff, not a real defect — running the build to pass one gate breaks the next",
+        "Requires fixing at the source: don't track a build output (gitignore + generate at build time), or regenerate deterministically as its own committed step",
+        "Requires scoping the clean-tree check to exclude the generated path — not 'run the build then assert clean' in the same working tree"
+      ]
     }
   ]
 }
