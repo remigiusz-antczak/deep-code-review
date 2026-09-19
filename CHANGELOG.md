@@ -3,6 +3,21 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.225.0] — 2026-09-19
+
+### deep-code-review — wave 146 webhooks — provider (outbound) side (breadth research)
+
+`api-contracts.md`: the webhooks section was inbound-only. Renamed it "Webhooks — consuming (inbound)" and
+added "Webhooks — providing (outbound)": sign every outbound payload (HMAC over `msg_id.timestamp.payload`,
+the Standard Webhooks convention — space-delimited multi-signature for zero-downtime rotation, ed25519 also
+allowed); the tenant-registered callback URL is an SSRF surface (validate / resolve-pin / block internal
+ranges per A01, re-validate at connect time for DNS rebinding); bounded retry into a visible dead-letter, not
+a silent drop; a stable delivery id + monotonic sequence so the consumer's inbound dedup works, and
+state/disclaim ordering.
+
++1 eval (267 -> 268 deep-code-review). SRC fetched + verified 2026-09-19: Standard Webhooks community spec
+(cited as a convention, not an IETF/W3C standard).
+
 ## [1.224.0] — 2026-09-19
 
 ### deep-code-review — wave 145 timestamp / parity / SSR-clock correctness (closes #558, #370, #561)

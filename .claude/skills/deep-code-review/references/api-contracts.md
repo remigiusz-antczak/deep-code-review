@@ -113,7 +113,7 @@ flag is a contract, which is the SDK-boundary scope this file's header claims.
 
 ---
 
-## Webhooks & inbound integrations
+## Webhooks — consuming (inbound)
 
 - **Verify the signature** with the configured secret; reject on mismatch.
   Timing-safe compare.
@@ -127,6 +127,34 @@ flag is a contract, which is the SDK-boundary scope this file's header claims.
 **Grep leads:** `webhook` / `stripe` / `github` handlers without `crypto`
 verify; `JSON.parse` of raw body after a verifier that needed the raw bytes
 (body already consumed); no timestamp check.
+
+---
+
+## Webhooks — providing (outbound)
+
+Sending webhooks is the mirror of consuming them; the provider owes the consumer the guarantees the
+inbound rules above rely on.
+
+- **Sign every outbound payload; rotate without a flag-day.** HMAC over a canonical string — the
+  *Standard Webhooks* community convention signs `msg_id.timestamp.payload` (concatenated,
+  full-stop-delimited) with HMAC-SHA256 (the spec also allows asymmetric ed25519) and emits
+  `webhook-id` / `webhook-timestamp` /
+  `webhook-signature` headers; the signature header is **space-delimited so two secrets can be valid
+  at once**, giving zero-downtime rotation instead of a cutover. 🚩 a single static secret with no
+  rotation path, or a home-grown scheme with no test vectors.
+- **The registered callback URL is attacker-controlled input into your own SSRF surface.** A
+  tenant-supplied endpoint makes your dispatcher an outbound client aimed at a target you don't
+  control — validate it exactly as `security-appsec.md` A01 audits any user-supplied URL (allowlist,
+  resolve-validate-**pin** the IP, block loopback / RFC-1918 / CGNAT / link-local / cloud-metadata — A01
+  maintains the full range list in one place, so this copy stays indicative),
+  and re-validate **at connect time**, not only at registration, to catch DNS rebinding.
+- **Bounded retry into a *visible* dead-letter, not a silent drop.** Retry on 5xx/timeout with backoff
+  and a cap, then move an exhausted delivery to a dead-letter the consumer/operator can see and replay
+  — retry-forever burns resources and a silent stop loses events invisibly.
+- **Give every delivery a stable id + monotonic sequence, and state (or explicitly disclaim) ordering.**
+  The delivery id is exactly what the consumer's inbound dedup/idempotency (above) needs; without it the
+  two ends can't cooperate. Emit `webhook-timestamp` so the consumer can enforce a replay-tolerance
+  window, and don't imply an ordering guarantee you don't provide.
 
 ---
 
@@ -190,7 +218,9 @@ Treat persisted and in-flight payloads like DB schemas:
 
 **🚩 red flags**: unverified webhook; unvalidated body; silent contract change;
 required field added to a live message schema; inconsistent error shapes;
-identity taken from webhook body alone; unbounded list endpoints; no version/
+identity taken from webhook body alone; an **outbound** webhook sent unsigned or on a
+non-rotatable static secret; a dispatcher POSTing to a tenant-registered URL with no SSRF guard;
+outbound retry-forever with no dead-letter; no stable delivery id; unbounded list endpoints; no version/
 compatibility story for queued payloads; a whole-payload golden snapshot as the
 only contract test for an evolving cross-boundary payload (fails on cosmetic churn,
 and a `--update-snapshots` re-record reflex rubber-stamps a real break).

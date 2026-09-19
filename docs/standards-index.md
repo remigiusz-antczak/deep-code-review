@@ -569,3 +569,9 @@ determination routes to counsel).
 | Standard / source | URL | What was confirmed |
 |---|---|---|
 | Google — Overlapping Experiment Infrastructure | https://research.google/blog/overlapping-experiment-infrastructure-more-better-faster-experimentation/ | "Google's infrastructure supports this vast experimentation by using orthogonal diversion criteria for experiments in different 'layers' so that each event (e.g. a web search) can be assigned to multiple experiments." Basis for isolating concurrent experiments (orthogonal layers / mutual exclusion) so they don't confound. Companion paper: Tang et al., "Overlapping Experiment Infrastructure," KDD 2010 (by name). Fetched + verified 2026-09-19. |
+
+## Verified by direct fetch (2026-09-19) — webhooks (provider side)
+
+| Standard / source | URL | What was confirmed |
+|---|---|---|
+| Standard Webhooks (community spec) | https://github.com/standard-webhooks/standard-webhooks | Outbound-webhook signing convention: the message's "ID, timestamp and body are concatenated (delimited by full-stops) and then signed" with HMAC-SHA256 (`msg_id.timestamp.payload`); headers `webhook-id` / `webhook-timestamp` / `webhook-signature`; the signature header is "a space delimited list of signatures" to "support zero downtime secret rotation"; verify `webhook-timestamp` "is within some allowable tolerance ... to prevent replay attacks." A multi-vendor community spec (guided by an ~8-company technical steering committee), not an IETF/W3C standard — cite as a convention. Fetched + verified 2026-09-19. |

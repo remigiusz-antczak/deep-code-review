@@ -2801,6 +2801,16 @@
         "Distinguishes the testability-injection default (a test convenience) from a request clock",
         "Requires passing the request time + user/target time zone explicitly on rendered paths, not relying on a server-evaluated default"
       ]
+    },
+    {
+      "id": "a-webhook-provider-must-sign-outbound-bound-retries-and-guard-the-callback-url-ssrf",
+      "prompt": "A service sends webhooks to customer-registered URLs. Payloads are sent unsigned, the dispatcher POSTs to whatever URL the customer saved, failed deliveries are retried forever, and there's no delivery id. A security review and a reliability review both flag it. What are the provider-side fixes?",
+      "expected_output": "Four provider-side gaps. (1) SIGN every outbound payload — HMAC over a canonical id.timestamp.body string (e.g. Standard Webhooks' HMAC-SHA256 over msg_id.timestamp.payload with webhook-id/webhook-timestamp/webhook-signature headers) so consumers can verify authenticity, and support rotation with multiple concurrent valid signatures (space-delimited) rather than a flag-day cutover — not a single static secret. (2) The customer-registered callback URL is attacker-controlled input into YOUR SSRF surface — validate it like any user-supplied URL (allowlist, resolve-validate-pin the IP, block loopback/RFC-1918/CGNAT/link-local/cloud-metadata) and re-validate at CONNECT time (not just registration) to catch DNS rebinding. (3) Bound retries (backoff + cap) and move exhausted deliveries to a VISIBLE dead-letter the consumer/operator can replay — retry-forever burns resources and a silent stop loses events invisibly. (4) Emit a stable DELIVERY ID + monotonic sequence/timestamp so the consumer's idempotency/replay-window checks (the inbound side) can work, and state or explicitly disclaim an ordering guarantee.",
+      "expectations": [
+        "Requires signing outbound payloads (HMAC over a canonical id.timestamp.body string) with a zero-downtime rotation path (multiple concurrent valid signatures), not a static secret",
+        "Identifies the customer-registered callback URL as an SSRF surface — validate + resolve-pin + block internal ranges, re-validated at connect time (DNS rebinding), not only at registration",
+        "Requires bounded retry into a visible dead-letter (not retry-forever or silent drop) and a stable delivery id + sequence so the consumer's dedup/idempotency works"
+      ]
     }
   ]
 }
