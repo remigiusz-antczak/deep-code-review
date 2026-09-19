@@ -3,6 +3,15 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.229.0] — 2026-09-19
+
+### deep-code-review — wave 150 reconcile a self-inconsistent design reference before building (closes #500)
+
+- **`product-ux-quality.md`**: caveat to the "the reference is the styling source of truth" rule — a real design reference often contradicts *itself* (the same component drawn two ways on two screens, a spacing token whose value disagrees with its own usage, a flow whose steps don't match its summary). Copying it verbatim ports the contradiction into the product as an *implementation* bug (harder to spot and fix than a design one), and "match the reference" cannot adjudicate a reference that disagrees with itself. Surface the specific conflict, reconcile to one canonical interpretation first (pick the reading the rest of the design implies, or raise it as an owner A/B decision), and record that interpretation as its own reviewable artifact kept separate from the build.
+- Reviewer FIX-FIRST applied: the eval prompt now states only observable symptoms (two button shades across screens; a documented 16px token vs actual 12px spacing) so it tests diagnosis rather than recall; the third expectation now requires the reconciliation be recorded as its own reviewable artifact.
+
++1 eval (275 → 276). Closes #500.
+
 ## [1.228.0] — 2026-09-19
 
 ### deep-code-review — wave 149 streaming transports (WebSocket / SSE) contract & reliability

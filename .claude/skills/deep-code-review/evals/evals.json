@@ -2881,6 +2881,16 @@
         "Identifies vanished clients holding connection slots/subscriptions; fix = ping interval + track pongs + reclaim on a missed pong",
         "Notes pinging alone (without acting on a missed pong) doesn't reclaim — both are per-live-connection concerns, not queue/outbound-call rules"
       ]
+    },
+    {
+      "id": "reconcile-a-self-inconsistent-design-reference-to-one-interpretation-before-building",
+      "prompt": "An implementation is being aligned to a Figma reference. On the login screen the primary button is one shade of blue; on the signup screen the same primary button is a different shade. The spacing token documented for the card grid is 16px, but every card in the file is actually laid out 12px apart. The builder is copying each screen exactly as drawn. What's the risk and the right process?",
+      "expected_output": "The reference contradicts itself — the same primary button is two shades across screens, and the documented 16px card-grid token disagrees with the actual 12px layout. Copying each screen verbatim ports the CONTRADICTION into the product (the button now renders two shades in the implementation), which is an IMPLEMENTATION bug (harder to spot and fix) rather than a design one, and 'match the reference' can't adjudicate because the reference disagrees with itself. The reference is the styling source of truth EXCEPT where it contradicts itself. Right process: surface the specific conflict and reconcile to ONE canonical interpretation first — pick the reading the rest of the design implies, or raise it as an owner decision (an A/B of the two) — and record that chosen interpretation as its own reviewable artifact (a decision note or a separate reconciliation commit), kept separate from the build, so it is explicit and reviewable rather than silently resolved by whichever screen was copied last. Don't copy the inconsistency.",
+      "expectations": [
+        "Identifies that the reference contradicts itself (same primary button in two shades; the documented card-grid token disagrees with the actual spacing) and that copying it verbatim ports the contradiction into the product as an implementation bug — 'match the reference' cannot adjudicate a reference that disagrees with itself",
+        "Requires reconciling to one canonical interpretation first — pick the reading the rest of the design implies, or raise it as an owner decision (an A/B of the two)",
+        "Requires recording the chosen interpretation as its own reviewable artifact (a decision note or a separate reconciliation commit), separate from the build — not silently resolving it by whichever screen was copied last"
+      ]
     }
   ]
 }

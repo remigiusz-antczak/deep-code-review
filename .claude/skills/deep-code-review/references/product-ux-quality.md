@@ -808,6 +808,18 @@ Y and compare the **specific element, at the specific breakpoint, in the specifi
 theme** — styling differs by all three; a remembered impression of Y is not a
 comparison.
 
+**A self-inconsistent reference is reconciled to one canonical interpretation before you build —
+you do not copy the inconsistency.** The reference is the styling source of truth (above), but a real design reference
+often **contradicts itself**: the same component drawn two ways on two screens, a spacing token
+whose value disagrees with its own usage, a flow whose steps don't match its own summary. Copying
+that verbatim ports the contradiction into the product — now it is an *implementation* bug (harder
+to spot and fix) rather than a design one, and "match the reference" cannot adjudicate a reference
+that disagrees with itself. When the reference conflicts with itself, **surface the specific
+conflict and reconcile to one interpretation first** — pick the reading the rest of the design
+implies, or raise it as an owner decision (an A/B of the two) — and keep the **reconciliation
+separate from the build**, so the chosen interpretation is explicit and reviewable, not silently
+resolved by whichever screen you happened to copy last.
+
 **Match by measured device-pixels, not user-space units — equal user-units ≠ equal
 pixels.** When two renderers apply different transforms or zoom (a thumbnail beside a
 full view; an SVG drawn at ~1.4× device scale beside one that fills its container at
