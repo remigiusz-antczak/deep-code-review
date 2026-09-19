@@ -2971,6 +2971,16 @@
         "Requires the merge gate to verify base-branch identity (refuse a PR whose base is not the expected integration branch), not only checks-green + mergeable",
         "For an already-merged-to-protected PR, requires NOT auto-reverting the protected branch (itself a gated change) — surface for owner + port to the integration branch"
       ]
+    },
+    {
+      "id": "a-release-with-slsa-provenance-but-no-consumer-verifiable-signature",
+      "prompt": "A team's CI generates SLSA build provenance internally and the deploy step verifies it before rollout. But their GitHub Releases (the tarballs users download) carry no signature, attestation, or provenance file. A reviewer says 'they have SLSA provenance, so releases are covered.' Right?",
+      "expected_output": "No — two different things. SLSA build provenance verified at the DEPLOY step protects the team's own internal pipeline (deploy-side verification); it gives a DOWNSTREAM consumer nothing to check. The published GitHub Release tarballs carry no signature/attestation/provenance asset, so a user or a mirror cannot verify the artifact they download matches what the project built — OpenSSF Scorecard's Signed-Releases check rates this high-risk ('possibility of installing malicious releases'). A project can have internal SLSA provenance and still ship nothing consumer-verifiable. Fix: the publish job must attach a consumer-checkable signature to the release — cosign/keyless Sigstore, `npm publish --provenance`, PyPI Trusted Publishing, a GPG-signed tag or .asc/.sig, or a SLSA provenance file (.intoto.jsonl) as a release asset — and a reviewer confirms the signing step actually runs in the workflow, not just that docs claim it.",
+      "expectations": [
+        "Distinguishes deploy-side SLSA provenance verification (the team's internal pipeline) from a consumer-verifiable signature attached to the published release",
+        "Identifies that consumers/mirrors have nothing to verify when the release assets carry no signature/attestation/provenance, despite internal SLSA provenance",
+        "Requires the publish job to attach a consumer-checkable signature (cosign/Sigstore, npm --provenance, PyPI Trusted Publishing, GPG/.asc/.sig, or .intoto.jsonl) AND that the signing step actually runs, not just be documented"
+      ]
     }
   ]
 }

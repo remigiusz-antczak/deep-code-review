@@ -610,3 +610,9 @@ determination routes to counsel).
 | Standard / source | URL | What was confirmed |
 |---|---|---|
 | OpenSSF Scorecard — Binary-Artifacts check | https://github.com/ossf/scorecard/blob/main/docs/checks.md | "Risk: `High` (non-reviewable code)". "This check determines whether the project has generated executable (binary) artifacts in the source repository." Remediation steps: "Remove the generated executable artifacts from the repository." / "Build from source." (The Binary-Artifacts section specifically; distinct from the other Scorecard rows above that cite the same catalog URL.) Fetched + verified 2026-09-20. |
+
+## Verified by direct fetch (2026-09-20) — supply chain: signed releases
+
+| Standard / source | URL | What was confirmed |
+|---|---|---|
+| OpenSSF Scorecard — Signed-Releases check | https://github.com/ossf/scorecard/blob/main/docs/checks.md | "Risk: `High` (possibility of installing malicious releases)". "This check tries to determine if the project cryptographically signs release artifacts." "Signed releases attest to the provenance of the artifact." "Note: The check does not verify the signatures." (The Signed-Releases section; distinct from the other Scorecard rows above that cite the same catalog URL.) Fetched + verified 2026-09-20. |

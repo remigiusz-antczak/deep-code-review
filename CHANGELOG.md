@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.236.0] — 2026-09-20
+
+### deep-code-review — wave 157 producer-side signed releases (consumer-verifiable)
+
+- **`release-engineering.md`**: new section — does the release process produce a signature a downstream CONSUMER can check (cosign/keyless Sigstore, `npm publish --provenance`, PyPI attestations/PEP 740, a GPG-signed tag or `.asc`/`.sig`, or a SLSA `.intoto.jsonl` release asset)? Distinct from deploy-side SLSA build-provenance verification (`infra-iac-containers.md`) and the depth of `security-appsec.md` A03's one-line "signed vs same-channel-checksummed" question, which it now cross-links. A project can have internal SLSA provenance yet ship nothing consumer-verifiable — that gap is the finding; and presence is not validity (Scorecard itself does not verify signatures).
+- +1 eval; +1 standards row (OpenSSF Scorecard Signed-Releases, risk/description/caveat verbatim via raw fetch 2026-09-20). Reviewer FIX-FIRST applied (cross-link to A03) + nits (PEP 740 precision; validity caveat; 🚩 line convention).
+
 ## [1.235.0] — 2026-09-20
 
 ### deep-code-review — wave 156 base-branch identity as a merge-eligibility axis (closes #565)

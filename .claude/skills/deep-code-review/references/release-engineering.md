@@ -185,6 +185,27 @@ no deployment-frequency or lead-time signal anywhere (no tagged releases, no
 deploy-event log) — DORA is structurally `UNMEASURED` for that pipeline, and
 that absence is itself worth naming once, not per-PR.
 
+## Signed releases — a consumer-verifiable signature, not just build provenance
+
+Distinct from build provenance / attestation (SLSA), which `infra-iac-containers.md` covers as a **deploy-side**
+gate the team verifies on its *own* pipeline: does the release process also **produce a signature a downstream
+consumer can check**? A GitHub Release, package publish, or image push should ship a signature next to the
+artifact — cosign / keyless Sigstore (`*.sigstore` / `*.sigstore.json`), `npm publish --provenance`, PyPI attestations (PEP 740, produced under Trusted Publishing), a GPG-signed tag or `*.asc` / `*.sig`, or a SLSA provenance file (`*.intoto.jsonl`) attached
+as a release asset. OpenSSF Scorecard's Signed-Releases check is **"Risk: `High` (possibility of installing
+malicious releases)"** and "tries to determine if the project cryptographically signs release artifacts"
+("Signed releases attest to the provenance of the artifact"). A project can have SLSA build provenance
+internally yet attach **no** consumer-verifiable signature to what it ships — that gap is the finding. (`security-appsec.md` A03 poses the same producer-side question in one line — *is a released artifact signed, or only checksummed over the same channel it ships on?* — this section is its depth.)
+
+- **Find the signature artifact next to the release**, and confirm the publish job actually runs the signing
+  step — a documented "we sign our releases" with no signing step in the actual `release` / `publish` workflow
+  is not signing. And presence is not validity — a signature a consumer cannot chain to a trusted key is
+  the producer-side echo of "generated provenance is not verified provenance" (Scorecard's own check "does
+  not verify the signatures").
+
+**🚩**: a Release/publish with no signature, attestation, or provenance asset; a signing step present in docs
+but absent from the workflow that ships the artifact; a signature present but not validatable against a
+trusted key.
+
 ## Cross-references
 
 - `dependency-currency-and-upgrades.md` — the other half of domain K (build,
