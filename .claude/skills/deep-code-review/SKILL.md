@@ -11,7 +11,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.174.0"
+  version: "1.175.0"
 ---
 
 # Deep Code Review
@@ -65,7 +65,7 @@ Batch-mark untouched domains N/A; escalate on any blast-radius 🚩. Procedure:
 | web | A B E F J O P | `security-appsec.md`, `frontend-a11y.md`, `product-ux-quality.md` |
 | api / service | A B E F I J | `security-appsec.md`, `api-contracts.md` |
 | data / ETL | A D E F G J | `data-quality.md`, `performance-db-cost.md` |
-| agent / LLM | A B C E F J | `security-ai-agents.md`, `security-agent-skills.md`, `security-appsec.md` |
+| agent / LLM / MCP | A B C E F J | `security-ai-agents.md`, `security-agent-skills.md`, `security-appsec.md` |
 | IaC / platform | B K L N | `infra-iac-containers.md` |
 | lib / SDK | A H I J K | `api-contracts.md`, `dependency-currency-and-upgrades.md` |
 

@@ -2,7 +2,7 @@
 
 Read this when the code calls an LLM, embeds/retrieves (RAG), or runs an agent
 that plans, calls tools, executes code, keeps memory, or coordinates with other
-agents. Expands section C of `SKILL.md`.
+agents, or is / hosts / connects to an MCP server. Expands section C of `SKILL.md`.
 
 Standards tracked (verified URLs + dates in `docs/standards-index.md`): OWASP
 Top 10 for LLM Applications **2026** (titles quoted 2026-09-08 from
@@ -151,6 +151,68 @@ threat-modeling method — the method-side complement to these catalogs (`securi
 A06 names the general threat-model catalog: STRIDE / PASTA / attack trees / LINDDUN / MAESTRO).
 
 ---
+
+## MCP (Model Context Protocol) server / client security
+
+When the target **is, hosts, or connects to** an MCP server, it inherits a new
+principal (the tool/server) and three surfaces the general lenses above do not
+cover by default: an OAuth **proxy** authorization topology, a **local-server
+execution / consent** surface, and **tool metadata** the model reads as instructions. Walk the three deltas below; each specializes a general
+lens named in parentheses — do not re-walk the general form. The **OWASP MCP Top 10**
+(`owasp.org/www-project-mcp-top-10`, lead V. Verma Sehgal) catalogs this layer but is
+**Phase-3 beta** — name it if a target cites it, but do **not** walk its `MCPxx:2025`
+IDs as current (cf. the 2025 compatibility map above). The concrete `MUST`/`SHOULD`
+controls below are from the official MCP security spec
+(`modelcontextprotocol.io/docs/tutorials/security/security_best_practices`, fetched
+2026-09-19).
+
+**1 — Authorization in the proxy topology** (specializes A01/A07 `security-appsec.md`;
+ASI03 confused deputy).
+- **OAuth-proxy confused deputy.** An MCP proxy that uses **one static client-id** to a
+  third-party authorization server, **allows dynamic client registration**, and rides a
+  third-party **consent cookie** lets an attacker skip consent: register a malicious
+  `redirect_uri`, reuse the victim's cookie, steal the MCP authorization code. The proxy **MUST** run its
+  own **per-client consent before** the third-party flow, exact-match the `redirect_uri`,
+  and set the `state` cookie only **after** consent. The general confused deputy (ASI03)
+  and exact-`redirect_uri`/`aud` checks (A07) apply; the delta is the shared static
+  client-id across all MCP clients.
+- **Token passthrough is forbidden.** An MCP server **MUST NOT** accept a token whose
+  `aud` is not itself, nor forward an upstream token to a downstream API — that recreates
+  the confused deputy and bypasses the downstream's rate/audit controls. (A07 already
+  requires verifying `aud`; the delta is the **passthrough** anti-pattern on the
+  server-to-server hop.)
+- **Least-privilege scopes.** No wildcard/omnibus MCP scopes (`*`, `admin:*`); prefer
+  progressive step-up over one broad grant.
+- **🚩** an MCP server reading a bearer token without checking `aud` == itself; a
+  proxy with a static client-id + dynamic registration and no per-client consent;
+  `scopes_supported` advertising `*`.
+
+**2 — Consent-UI fidelity & local-server execution** (a local MCP server is code-exec;
+ASI05, ASI09).
+- A one-click "add local server" flow runs a config-supplied command **with the client's
+  privileges** — arbitrary code execution on the user's machine. The client **MUST**
+  display the **exact, untruncated** command before running it: the bytes the user
+  approves must equal the bytes executed. A truncated or obfuscated command is consent the
+  user never really gave (cf. ASI09 — the approval must name the real action). Spawned
+  `stdio` children **SHOULD** be sandboxed.
+- **🚩** a one-click server-install flow that runs a command it does not show in
+  full; a spawned child process with no sandbox or privilege bound.
+
+**3 — Tool metadata is untrusted, model-read instruction surface** (specializes ASI01
+goal-hijack; extends ASI04 pin-and-vet — the tool-**metadata** trust leg beside
+*transport* and *payload*, cf. "trust the transport, not the payload" below).
+- **Tool-description poisoning.** A tool's description/schema is read and acted on by the
+  model but often **not shown to the user**; a hidden directive in a docstring (e.g. read
+  `~/.ssh/id_rsa` and pass it as a parameter) exfiltrates before the tool returns
+  (Invariant Labs, via Willison 2025-04-09). Treat tool metadata as **untrusted content**
+  behind an injection boundary, never as trusted instructions.
+- **Rug pull.** A tool's definition can **mutate after approval** (approved as safe, then silently rerouting
+  credentials on a later run); many clients do not alert on description changes.
+  **Pin/hash the approved description and re-approve on change** — a TOCTOU on tool
+  metadata, the ASI04 pin-and-vet rule extended from the artifact to its *description*.
+- **🚩** tool descriptions concatenated into the model's context with no
+  untrusted-content boundary; no hash / re-approval of a tool's description across
+  sessions.
 
 ## Prompt-injection & jailbreak test set (write these tests)
 
