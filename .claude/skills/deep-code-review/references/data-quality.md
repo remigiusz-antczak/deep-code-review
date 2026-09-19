@@ -102,6 +102,15 @@ accepted overwrite with the grades, so the arbitration is auditable.
   sure you are (a deterministic score is preferred over a model-assigned one).
   Keep provenance tags honest — "live-queried" (a command that returns the same
   answer on re-run) is not the same as counting a static document.
+- **Backward lineage: a wrong output must be traceable to the transform that produced it.**
+  Record/field provenance (above) says *where a value entered*; it does not say *which step made a
+  wrong derived value*. When a downstream field is wrong, can you trace it back to the specific
+  transform — and ideally the specific input columns — that produced it? Without that, every data
+  bug is an unbounded search across every stage. The reviewable property is **column-level
+  lineage**: each output column mapped to the input columns and the transformation (a direct copy
+  vs. an aggregation / join / filter) that produced it, so "which root inputs construct column X?"
+  and its inverse "what breaks if column Y changes?" are answerable — the backward, transform-level
+  counterpart to forward provenance (origin, above) and the forward consumer census (§5).
 - **UI chrome is itself a claim.** A tab, heading, count, or label asserts that
   something sits beneath it — render it only when backing data exists. "Empty
   beats fabricated" applies to layout, not just fields.

@@ -151,6 +151,20 @@ Treat persisted and in-flight payloads like DB schemas:
   field crossing a serialization / storage / language boundary, its exact-representable range at
   each hop — the same class as the cents-vs-dollars unit breach in `data-quality.md`, at the
   representation layer.
+- **A convention is not a gate — enforce message-schema compatibility mechanically.** The rules
+  above ("evolve with optional + default," "keep a reader for N-1") are conventions a human forgets;
+  the message boundary deserves the same *mechanical* break-detector the HTTP surface gets
+  (`oasdiff` / `buf breaking`, above). A **schema registry** with a compatibility mode rejects an
+  incompatible schema at register / CI time, before it reaches a topic. The mode is a function of
+  **deploy order**, and the wrong mode ships a break the registry would have caught: **BACKWARD**
+  (a new schema reads data written with the old — add optional fields, remove fields) requires
+  **upgrading consumers before producers**; **FORWARD** (the old schema reads data written with the
+  new — add fields, remove optional fields) requires **producers before consumers**; **FULL**
+  (add / remove optional only) lets them upgrade independently. The `*_TRANSITIVE` variants check
+  against **all** prior versions, not only the last — a non-transitive mode lets a two-step
+  evolution smuggle a break past a per-step check. `NONE` disables the check entirely. A registry
+  whose mode doesn't match how the system actually deploys, or `NONE` on a cross-team topic, is the
+  finding.
 
 ---
 

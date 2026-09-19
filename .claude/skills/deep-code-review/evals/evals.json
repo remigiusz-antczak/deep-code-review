@@ -2631,6 +2631,26 @@
         "Requires propagating the remaining deadline downstream (each timeout derived from the inbound deadline minus elapsed/buffer) rather than resetting a fresh full timeout per hop",
         "Requires checking the deadline still has room before a retry, and distinguishes this from merely having a timeout on each call"
       ]
+    },
+    {
+      "id": "a-message-schema-registry-needs-a-compatibility-mode-matched-to-deploy-order",
+      "prompt": "A team publishes Avro events to a shared Kafka topic. Their review says schema changes 'follow the convention: add optional fields with defaults.' A producer ships a new schema and several consumer teams break in production. What mechanical control is missing, and how is it configured?",
+      "expected_output": "A human convention ('add optional fields') is not a gate — it's forgotten, and nothing rejected the incompatible schema before it hit the topic. The missing control is a SCHEMA REGISTRY with a compatibility mode that rejects an incompatible schema at register/CI time (the message-boundary counterpart to oasdiff/buf breaking on the HTTP surface). The mode must match DEPLOY ORDER: BACKWARD (a new schema reads old data — add optional/remove fields) requires upgrading consumers before producers; FORWARD (old schema reads new data — add/remove-optional fields) requires producers before consumers; FULL (add/remove optional only) allows independent upgrade. Use the *_TRANSITIVE variant to check against all prior versions, not just the last (else a two-step evolution smuggles a break past a per-step check). NONE disables the check — a red flag on a shared topic. The finding: no registry/compat enforcement, or a mode that doesn't match how the system deploys.",
+      "expectations": [
+        "Identifies that a human convention is not a mechanical gate — a schema registry compatibility check must reject an incompatible schema at register/CI time (message-boundary counterpart to oasdiff/buf breaking)",
+        "Ties the compatibility mode to deploy order: BACKWARD = consumers-before-producers, FORWARD = producers-before-consumers, FULL = independent",
+        "Notes TRANSITIVE checks all prior versions (not just the last) and flags NONE on a shared topic"
+      ]
+    },
+    {
+      "id": "a-pipeline-must-trace-a-wrong-output-value-back-to-the-transform-that-made-it",
+      "prompt": "A data pipeline enriches and joins records, and a downstream dashboard shows a metric that's clearly wrong. The team can see where each raw record was sourced from (provenance) but spends days bisecting the pipeline to find which step corrupted the value. What property is the pipeline missing?",
+      "expected_output": "Record-origin provenance answers where a value entered the pipeline, but not which transform step produced a wrong derived value — so debugging a bad output is an unbounded search across every stage. The missing property is BACKWARD (column-level) LINEAGE: each output column mapped to the input columns and the transformation (a direct copy vs. an aggregation/join/filter) that produced it, so 'which root inputs construct column X?' and its inverse 'what breaks if column Y changes?' are answerable. This is the backward, transform-level counterpart to forward provenance (origin) and the forward consumer census (who reads a field). A pipeline that can enrich and join but can't answer 'why is this value wrong' is under-instrumented for correctness; the fix is to capture transform-level (ideally column-level) lineage.",
+      "expectations": [
+        "Distinguishes record-origin provenance (where a value entered) from backward transform-level lineage (which step produced a wrong derived value)",
+        "Requires column-level lineage: output columns mapped to input columns + the transformation, so root-input and impact-analysis questions are answerable",
+        "Frames the absence as under-instrumentation for correctness (debugging becomes an unbounded search across stages), not merely a missing feature"
+      ]
     }
   ]
 }

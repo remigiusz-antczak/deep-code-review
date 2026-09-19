@@ -3,6 +3,24 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.216.0] — 2026-09-19
+
+### deep-code-review — wave 137 data-pipeline contract & lineage: schema-registry compatibility + backward lineage
+
+Two data-pipeline correctness gaps, each with its own fetched source.
+- **A convention is not a gate — enforce message-schema compatibility mechanically** (`api-contracts.md`).
+  A schema registry compatibility mode rejects an incompatible schema at register/CI time; the mode is a
+  function of deploy order (BACKWARD = consumers-before-producers, FORWARD = producers-before-consumers,
+  FULL = independent; `*_TRANSITIVE` checks all prior versions; NONE disables). The message-boundary
+  counterpart to the `oasdiff`/`buf breaking` gate on the HTTP surface.
+- **Backward lineage: a wrong output must be traceable to the transform that produced it** (`data-quality.md`
+  §2). Column-level lineage maps each output column to the input columns + the transformation — the
+  backward, transform-level counterpart to forward provenance (origin) and the forward consumer census (§5).
+
++2 evals (250 -> 252 deep-code-review). SRC fetched + verified 2026-09-19:
+docs.confluent.io/platform/current/schema-registry/fundamentals/schema-evolution.html,
+openlineage.io/docs/spec/facets/dataset-facets/column_lineage_facet.
+
 ## [1.215.0] — 2026-09-19
 
 ### deep-code-review — wave 136 reliability under stress: retry budgets + deadline propagation (research round 9)
