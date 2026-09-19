@@ -109,7 +109,12 @@ growing; back off the instant swap starts ballooning, before free RAM alone
 would look low. CPU idle is a useful secondary confirmation of real
 headroom. **Do not gate on `load1` alone** — at most a weak corroborating
 signal, never the deciding term, because it cannot distinguish CPU
-contention from disk I/O. Whatever the exact predicate, **spawn one heavy
+contention from disk I/O — but the asymmetry cuts the safe way: a **sustained**
+elevated `load1` during a heavy-setup fan-out (many concurrent dependency installs or
+dev-server boots saturating disk I/O) may **corroborate a back-off** even when RAM and
+swap read healthy — never a *licence* to spawn, but a legitimate independent **cap on
+concurrent I/O-heavy setup**, since the RAM/swap gate alone won't catch an I/O-bound
+crawl. Whatever the exact predicate, **spawn one heavy
 lane at a time, re-sample after a settle window, then decide on the next** —
 never compute a ceiling and dispatch straight up to it, and **leave a burst reserve
 even when the predicate says go** — a later spiky lane (a browser gate, a dependency
@@ -320,7 +325,7 @@ the one it tripped.
 ## Out-of-tree shared scratch crosses commit metadata — worktree-per-lane doesn't cover it
 
 Concurrent write-lanes that each generate per-lane content — a commit-message file, a
-plan/notes file — and write it to the **same hardcoded path in a shared temp/scratch
+plan/notes file, a screenshots / evidence dir — and write it to the **same hardcoded path in a shared temp/scratch
 directory** collide: lane B overwrites lane A's file before lane A consumes it, so
 lane A commits with **B's message** (`git commit -F <shared-path>`) or attaches the
 wrong note. Each branch's **code diff is correct**; only the **metadata** is crossed —
@@ -355,9 +360,13 @@ may not even apply cleanly onto B's tree. (Other repo-global state — branches 
 reflexively.) Never run a bare `stash push` / `stash pop` in a lane that runs
 concurrently with siblings off the same repo: **commit-then-reset** onto the lane's
 own branch, use a **second worktree** for throwaway state, or — if you must stash —
-tag your own entry with a **unique message** (`git stash push -m "<lane-id>…"`, then
-`git stash pop "stash@{N}"` matched by that message), never the bare top of stack.
-Complements the foreign-WIP rule above (*don't stash another lane's uncommitted
+use `git stash create` (it returns a **dangling commit SHA** and never touches the
+shared `refs/stash` stack), record that SHA in a lane-private file, and reapply with
+`git stash apply <sha>`. Avoid bare `stash push`/`pop` and `stash@{N}` **by index**
+entirely: the index is positional on the shared stack, so a sibling's push between
+your lookup and your pop shifts it and you pop the wrong entry — the same race, one
+level down.
+Complements the foreign-WIP rule below (*don't stash another lane's uncommitted
 work*) with the deeper reason: the stash **stack itself** is shared, so even your own
 push/pop is unsafe under concurrency.
 

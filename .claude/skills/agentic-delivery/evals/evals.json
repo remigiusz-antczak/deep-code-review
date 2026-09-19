@@ -507,7 +507,8 @@
       "expectations": [
         "Identifies that coupling promote-to-ready to a fragile finalize tail (held open by a lingering process / retry loop) orphans a green-but-unpromoted draft",
         "Requires decoupling: ready the PR once code+gates are green, and make finalize a separate idempotent step any actor can complete",
-        "Requires killing the helper process the moment its step ends (not end-of-run) AND bounding the flaky step to a cap that fails to a report rather than looping"
+        "Requires killing the helper process the moment its step ends, not at end-of-run where it can hold the turn open past finalize",
+    "Requires bounding the flaky finalize step to a cap that fails to a report (diff + Verify note) rather than looping"
       ]
     }
   ]
