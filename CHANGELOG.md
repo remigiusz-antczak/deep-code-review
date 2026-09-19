@@ -3,6 +3,29 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.210.0] — 2026-09-19
+
+### deep-code-review — wave 131 frontend accessibility & performance depth (research round 6)
+
+Comparative vs WAI-ARIA Authoring Practices + WCAG 2.2 + web.dev Core Web Vitals. Six additions to
+`frontend-a11y.md` (the covered 6 WCAG-2.2 A/AA criteria + first-rule-of-ARIA confirmed already present):
+- **Phantom focus (4th rule of ARIA)** — hidden interactive content (closed off-canvas menu, collapsed
+  accordion, CSS-hidden dropdown) must leave the tab order (`inert` / unmount / `tabindex=-1`);
+  `aria-hidden="true"` must never sit on a container with a focusable child. The mirror of the
+  open-dialog focus-trap.
+- **Timing & motion** — WCAG 2.2.1 (a time limit that logs out / discards input needs a
+  warn-and-extend affordance; the security-vs-a11y tension is resolvable — keep the short timeout, add
+  the affordance) and 2.2.2 (auto-moving/updating content > 5s needs pause/stop/hide); plus a
+  reduced-motion JS-path note (2.3.3: a CSS media query doesn't reach a `requestAnimationFrame` /
+  motion-library animation — the JS must consult `matchMedia`).
+- **Core Web Vitals lab-vs-field** — the p75 is a FIELD measurement (CrUX/RUM); a green Lighthouse
+  lab run is not "meets Core Web Vitals" (same lab-necessary-not-sufficient caveat as an a11y scanner);
+  plus a frontend byte-weight budget as a CI ratchet, and CLS-from-late-chrome / long-tasks-from-3p
+  detail.
+
++3 evals (240 -> 243). SRC fetched + verified 2026-09-19: WAI-ARIA using-aria (Rule 4), WCAG 2.2.1,
+WCAG 2.2.2, web.dev Core Web Vitals (all logged in docs/standards-index.md).
+
 ## [1.209.0] — 2026-09-19
 
 ### deep-code-review — wave 129 crash-case fail-open batch proof + P0 throughput-gate (closes #378)

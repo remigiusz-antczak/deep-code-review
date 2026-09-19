@@ -2531,6 +2531,36 @@
         "Requires treating a throughput-gating tool as P0 (blast radius = whole delivery rate, jumps the queue), distinct from a gate that fails one PR",
         "Distinguishes the crash case (definitively broken, route around now) from a hung gate (unknown validity, timebox + escalate), while holding the floor that fail-open does not license merging a member whose essential validation the gate provided"
       ]
+    },
+    {
+      "id": "hidden-interactive-content-must-leave-the-tab-order-no-phantom-focus",
+      "prompt": "An off-canvas mobile menu is hidden by translating it off-screen with CSS (transform: translateX(-100%)); its wrapper gets aria-hidden=\"true\" when closed. The links inside still exist in the DOM. A keyboard user tabbing through the closed page lands on invisible links. What's wrong and how is it fixed?",
+      "expected_output": "The closed menu's focusable descendants are still in the tab order ('phantom focus'): CSS translate hides it visually but doesn't remove its links from keyboard navigation, so a keyboard user tabs into controls they can't see. Worse, aria-hidden=\"true\" on a container with focusable children violates the 4th rule of ARIA (never put aria-hidden or role=\"presentation\" on a focusable element) — the links are focusable but unannounced by a screen reader, so a keyboard+SR user hits 'nothing.' Fix: when closed, remove the descendants from the tab sequence — the inert attribute on the wrapper (removes focus AND hides from the a11y tree together), conditional unmount, or tabindex=\"-1\" on each focusable child. This is the mirror of the open-dialog focus-trap: an open dialog keeps focus in, a closed region keeps focus out. Detector: tab through the closed page and confirm focus never enters the hidden menu.",
+      "expectations": [
+        "Identifies that CSS-hiding leaves focusable descendants in the tab order (phantom focus) — a keyboard user tabs into invisible controls",
+        "Flags aria-hidden=\"true\" on a container with focusable children as the 4th-rule-of-ARIA violation (focusable but unannounced)",
+        "Requires removing descendants from the tab sequence when hidden (inert / unmount / tabindex=-1), not just visual hiding"
+      ]
+    },
+    {
+      "id": "a-security-idle-timeout-still-needs-a-warn-and-extend-affordance-2-2-1",
+      "prompt": "For security, a banking app logs the user out after 5 minutes idle, dropping whatever they'd typed in a multi-step form. Security is happy. Is there an accessibility problem, and does fixing it undo the security control?",
+      "expected_output": "Yes — a silent idle-logout that discards unsaved input fails WCAG 2.2.1 Timing Adjustable (Level A): a user who needs more time (motor, cognitive, or just interrupted) loses work with no chance to react. The fix does NOT undo the security control: 2.2.1 doesn't forbid a short timeout, it requires a warn-and-extend affordance before it fires — warn before expiry and let the user extend with one simple action (at least 20 seconds to respond), or turn off / lengthen the limit. So the security-vs-a11y tension is real but resolvable: keep the short idle timeout, add a 'you'll be signed out in 60s — stay signed in?' prompt that extends the session (and ideally preserve the draft). Exceptions (real-time events, essential limits, >20h) don't apply to a routine session timeout.",
+      "expectations": [
+        "Identifies the silent idle-logout with data loss as a WCAG 2.2.1 Timing Adjustable (Level A) failure — no warning, no chance to extend",
+        "States the fix is a warn-before-expiry + extend-with-one-action affordance (at least 20s), not removing the timeout — so the security control stands",
+        "Frames it as a resolvable security-vs-a11y tension rather than a forced trade-off"
+      ]
+    },
+    {
+      "id": "lighthouse-lab-pass-is-not-a-field-p75-core-web-vitals-pass",
+      "prompt": "A team's CI runs Lighthouse on every PR; the score is green (LCP/INP/CLS all in range), so the PR description says 'meets Core Web Vitals.' Is that claim justified?",
+      "expected_output": "Not as stated. Core Web Vitals thresholds (LCP <=2.5s, INP <=200ms, CLS <=0.1) are defined at the 75th percentile of FIELD data — real users (CrUX / RUM / PageSpeed Insights field section). A Lighthouse CI run is a LAB measurement: one synthetic environment, one network/CPU profile, no real-user distribution — it can't produce a field p75. So 'Lighthouse passed' proves a lab snapshot is in range, not that real users meet the thresholds (INP especially is field-oriented — Lighthouse can't measure it the same way). The claim should cite the field source and say which was measured. This is the same lab-vs-field caveat the review already applies to automated accessibility scanners: a passing tool is necessary, not sufficient. Fix: back a CWV claim with field data (CrUX/RUM), and treat the lab run as a fast regression signal, not the conformance proof.",
+      "expectations": [
+        "Distinguishes CWV's field p75 (CrUX/RUM real-user data) from a Lighthouse lab/synthetic run — the lab run can't produce a field p75",
+        "Concludes 'Lighthouse passed' is not 'meets Core Web Vitals' — the claim needs a field-data source",
+        "Draws the lab-necessary-not-sufficient parallel (same as an automated a11y scanner) and requires stating which was measured"
+      ]
     }
   ]
 }
