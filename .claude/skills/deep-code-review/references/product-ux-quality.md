@@ -204,7 +204,7 @@ date?" has no on-screen answer) or overstating what is known. Rule each chart:
 - **Don't imply the unmeasured.** Mark real samples (a dot per reading) and never
   smooth or fill a **line across sparse points** — nothing between measured points
   is implied. Two or three readings drawn as a continuous trend is a fabricated
-  trajectory, the visual form of principle 4 (empty beats fabricated).
+  trajectory, the visual form of principle 3 (empty beats fabricated).
 - **Non-visual access to the numbers.** The chart is *additive* to a table or an
   `aria` summary, never the only path to the data; and series are distinguished by
   pattern/label, not colour alone (*Never colour alone*).
@@ -395,7 +395,7 @@ unreadable and the two scopes feel inconsistent.
 - **Keep the section set consistent across scopes** unless a per-scope variant is
   deliberate and stated — and at aggregate scope specifically, **hide a view whose
   number would be a *misleading aggregate*** (a rate or total that is meaningless
-  across heterogeneous entities): computed-not-fabricated (principle 4) beats
+  across heterogeneous entities): computed-not-fabricated (principle 3) beats
   symmetry, exactly as in `migration-parity.md`'s misleading-aggregate exception.
 
 A **different axis** from the neighbours: not the *prop* axis (#123 above — one

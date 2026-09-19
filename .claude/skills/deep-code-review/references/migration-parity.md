@@ -37,7 +37,7 @@ divergence is structural, not per-screen.
   subset — so absence reads as "nothing here yet," not "this entity is different."
   **The one exception is load-bearing:** if a view would render a **misleading
   aggregate** at that scope (a rate/total that is wrong or meaningless for this
-  entity), keep it **hidden** — **computed-not-fabricated (principle 4) beats
+  entity), keep it **hidden** — **computed-not-fabricated (principle 3) beats
   tab-count symmetry**. Symmetry is the default; a hidden view is justified only by
   "the number it would show is wrong here," stated in the finding.
 - **Unify a control that exists in two *behaviors* by its styling, not by one
