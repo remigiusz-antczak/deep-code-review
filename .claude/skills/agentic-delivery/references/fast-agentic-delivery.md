@@ -940,7 +940,7 @@ First, the workaround is often **heavier than necessary**: a broken part need no
 collapse the whole vehicle to serial — the fast batch mechanism can keep running on
 the **runnable subset**, skipping only the broken term, rather than downgrading
 everything (a tool broken *in this environment* is a **can't-check, not a red** —
-`SKILL.md` principle 2; and a merely **hung** gate is timeboxed and escalated, its
+`SKILL.md` principle 3; and a merely **hung** gate is timeboxed and escalated, its
 reduced subset a proof-of-record that does **not** license merging an unvalidated
 member — see `deep-code-review`'s `branch-and-merge-hygiene.md`). Downgrading the
 whole vehicle to serial is a bigger regression than routing around the one broken
