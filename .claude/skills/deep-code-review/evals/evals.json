@@ -2741,6 +2741,16 @@
         "Requires storing wall-clock + tz-id and re-resolving the instant late (near occurrence), not freezing it at creation",
         "Requires treating tzdata/ICU as a pinned dependency with an update path so future conversions reflect rule changes"
       ]
+    },
+    {
+      "id": "concurrent-experiments-on-the-same-surface-must-be-layered-or-mutually-excluded",
+      "prompt": "A team runs two A/B experiments at once, both changing the checkout button area, each with correct deterministic bucketing and its own SRM guard. The readouts disagree with a later holdback. What experiment-infrastructure flaw is likely, and how is it prevented in the assignment code?",
+      "expected_output": "Two experiments mutating the SAME surface concurrently with no isolation CONFOUND each other: a unit can land in both, so each experiment's treatment effect is contaminated by the other's variant, and per-experiment bucketing + SRM (which only check one experiment's own assignment split) won't catch cross-experiment interference. The fix is in the assignment infrastructure: put concurrent experiments in ORTHOGONAL LAYERS (orthogonal diversion, so an event can join multiple experiments that don't interfere — as in Google's overlapping-experiment infrastructure), or MUTUALLY EXCLUDE experiments that touch the same surface (a unit in experiment A can't also be in B). An ad-hoc second experiment bolted onto the same surface with neither layering nor mutual exclusion is the finding. This is the code/infra side; over-time effects like novelty/primacy and multiple-comparison correction across many metrics are read-side analysis (growth-analytics).",
+      "expectations": [
+        "Identifies that two concurrent experiments on the same surface with no isolation confound each other (a unit in both; per-experiment bucketing/SRM don't catch cross-experiment interference)",
+        "Requires isolating the two — for experiments that mutate the same surface, mutual exclusion (or a layer design that guarantees they do not co-mutate the same element); orthogonal layers alone do not isolate two experiments changing the same element",
+        "Keeps it on the code/infra side (distinct from read-side analysis like novelty/primacy or multiple-comparison correction)"
+      ]
     }
   ]
 }

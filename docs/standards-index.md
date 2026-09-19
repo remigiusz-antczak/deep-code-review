@@ -563,3 +563,9 @@ determination routes to counsel).
 | PEP 495 — Local Time Disambiguation | https://peps.python.org/pep-0495/ | "A local time that falls in the fold is called ambiguous"; "A local time that falls in the gap is called missing"; "The `fromutc()` method should never produce a time in the gap." Basis for fold/gap disambiguation at DST transitions. Fetched + verified 2026-09-19. |
 | IANA tz database — Theory and pragmatics | https://data.iana.org/time-zones/tzdb/theory.html | "The `tz` database predicts future timestamps, and current predictions will be incorrect after future governments change the rules ... software can mess up after the rule change if it blithely relies on conversions made before the change." Basis for treating tzdata as a stale-able dependency + re-resolving future wall-clock times. Fetched + verified 2026-09-19. |
 | Google — Leap Smear | https://developers.google.com/time/smear | "instead of applying leap seconds to our servers using clock steps, we have 'smeared' the extra second across the hours before and after each leap." Basis for the leap-second / duration caveat (choose a consistent approach; don't assume 86,400 s/day). Fetched + verified 2026-09-19. |
+
+## Verified by direct fetch (2026-09-19) — online experimentation infrastructure
+
+| Standard / source | URL | What was confirmed |
+|---|---|---|
+| Google — Overlapping Experiment Infrastructure | https://research.google/blog/overlapping-experiment-infrastructure-more-better-faster-experimentation/ | "Google's infrastructure supports this vast experimentation by using orthogonal diversion criteria for experiments in different 'layers' so that each event (e.g. a web search) can be assigned to multiple experiments." Basis for isolating concurrent experiments (orthogonal layers / mutual exclusion) so they don't confound. Companion paper: Tang et al., "Overlapping Experiment Infrastructure," KDD 2010 (by name). Fetched + verified 2026-09-19. |

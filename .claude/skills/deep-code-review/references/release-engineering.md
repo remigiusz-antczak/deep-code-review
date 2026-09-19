@@ -37,8 +37,17 @@ age (Fowler's four):
   pipeline is broken** — a symptom with several causes (telemetry filtering, trigger/exposure
   misconfiguration, or the bucketing itself), not a pointer to one, and it in most cases
   invalidates the results outright (Fabijan et al., KDD 2019; Kohavi et al., *Trustworthy Online
-  Controlled Experiments* — by name). Read-side validity (peeking, always-valid bounds) stays in
-  `growth-analytics`; this is the code side.
+  Controlled Experiments* — by name). **Concurrent experiments on the same surface must be
+  isolated:** two experiments that both mutate the same UI or flow with no layering and no mutual
+  exclusion **confound** each other's readouts (a unit lands in both), and per-experiment bucketing
+  + SRM — which only check one experiment's own assignment — won't catch it. The assignment infra
+  must put overlapping experiments in **orthogonal layers** (Google's overlapping-experiment
+  infrastructure uses "orthogonal diversion criteria for experiments in different 'layers' so that
+  each event ... can be assigned to multiple experiments") or **mutually exclude** experiments that
+  touch the same surface; an ad-hoc second experiment bolted on with neither is a code-side finding.
+  Read-side validity (peeking, always-valid bounds) stays in `growth-analytics`; interpreting the
+  effect over time (**novelty/primacy**) and correcting across many metrics (**multiple-comparison /
+  false-discovery**) are read-side statistical analysis too — not the code side covered here.
 - **Ops toggle** — an operator kill-switch/degrade lever. Meant to be
   long-lived; the finding here is a *missing* one on a risky rollout, not an
   old one.

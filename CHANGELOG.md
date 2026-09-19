@@ -3,6 +3,20 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.222.0] — 2026-09-19
+
+### deep-code-review — wave 143 experimentation infrastructure: isolate concurrent experiments (breadth research)
+
+`release-engineering.md` Experiment-toggle bullet extended (code side, respecting the read-side boundary to
+`growth-analytics`): concurrent experiments that both mutate the same surface with no layering and no mutual
+exclusion **confound** each other — per-experiment bucketing + SRM don't catch cross-experiment interference;
+the assignment infra must use orthogonal layers (Google overlapping-experiment infra) or mutually exclude
+overlapping experiments. Read-side concerns (novelty/primacy over-time effects, multiple-comparison / FDR)
+named as `growth-analytics` (read-side) analysis, not built here.
+
++1 eval (261 -> 262 deep-code-review). SRC fetched + verified 2026-09-19:
+research.google/blog/overlapping-experiment-infrastructure (Tang et al., KDD 2010, by name).
+
 ## [1.221.0] — 2026-09-19
 
 ### deep-code-review — wave 142 NEW DOMAIN: time, dates & time zones (breadth research)
