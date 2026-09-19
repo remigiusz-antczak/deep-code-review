@@ -1657,6 +1657,18 @@
         "Label errors distort the metric and can re-rank models",
         "Distinguish human-agreement (label signal) from model-agreement (not precision); handle class imbalance honestly"
       ]
+    },
+    {
+      "id": "mergeable-is-a-snapshot-recheck-before-each-merge",
+      "prompt": "Our release bot snapshots the set of green + mergeable PRs each morning, then merges them one by one into main. Lately the later PRs in the batch keep going CONFLICTING partway through, even though they were mergeable when the batch started and their CI is still green. Separately, a conflict-resolution lane rebasing our worst PRs against main never seems to converge while the bot is running. What's wrong, and what should the bot do?",
+      "expected_output": "\"Green + mergeable\" is a snapshot against the current base head, not a durable property: merging one PR can flip an overlapping later PR from MERGEABLE to CONFLICTING (it touches a file the merged PR touched, so it now needs a rebase) while its checks stay green -- they ran against the old base, so only mergeability changed. Two fixes. (1) Re-check mergeability immediately before EACH merge, never once at the top of the batch -- mergeable has a shelf life of 'until the next overlapping merge'; and group the batch by the file sets each PR touches, merging serial-with-rebase within a group and in parallel only across disjoint groups (treating two PRs that share a hot file as independent is the bug). (2) The resolver never converges because the bot's own sweep is re-dirtying it: every merge moves the base head and invalidates the resolution just computed. Freeze the MERGE step -- not the build step -- while a resolver is active against the base: lanes keep taking PRs to green and green PRs queue instead of merging; land the hardest-to-rebase set first against a now-stable base, then drain the queue back-to-back. This is the stale-base failure at the mergeability layer -- a quantity computed against one base head, consumed against another. (deep-code-review/references/branch-and-merge-hygiene.md.)",
+      "expectations": [
+        "Identifies 'green + mergeable' as a snapshot against the current base head, not durable -- green CI is NOT evidence of current mergeability (the checks ran against the OLD base); an overlapping merge flips a later PR to CONFLICTING, changing only its mergeability, not its checks",
+        "Prescribes re-checking mergeability immediately before EACH merge, not once at the top of the batch",
+        "Groups the batch by file sets: serial-with-rebase within a group, parallel only across disjoint groups (PRs sharing a hot file are not independent)",
+        "Diagnoses the non-converging resolver as the sweep re-dirtying it (each merge moves the base head, invalidating the resolution) and prescribes freezing the MERGE step -- not the build step -- while the resolver runs (queue greens, land hardest-to-rebase first)",
+        "Frames it as the stale-base failure at the mergeability layer -- a quantity computed against one base head, consumed against another"
+      ]
     }
   ]
 }

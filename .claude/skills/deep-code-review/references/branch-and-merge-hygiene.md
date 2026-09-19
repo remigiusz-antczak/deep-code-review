@@ -233,6 +233,49 @@ gate that didn't exist when it was authored — extra round-trips for no benefit
 When triaging several ready branches at once, check whether any changes
 required-CI/gate configuration and put it at the back of the landing order.
 
+### Mergeable is a snapshot against a moving base head — re-check before each merge; freeze the sweep while a resolver runs
+
+"Green + mergeable" is a **snapshot against the current base head, not a durable
+property**. Landing PR A can flip an overlapping PR B from MERGEABLE back to
+CONFLICTING — A touched a file B also touches, so B now needs a rebase — while
+**B's checks stay green** (they ran against the old base; only its mergeability
+changed). This bites at two scales:
+
+- **Snapshot-then-batch (the coordinator *reads* staleness).** A coordinator that
+  snapshots "these five are green + mergeable" and merges them one by one finds
+  PRs 2..5 increasingly CONFLICTING as earlier ones land — then stalls, or (worse)
+  force-merges onto a base the PR was never tested against. **Re-check mergeability
+  immediately before *each* merge, never once at the top of the batch** — mergeable
+  has a shelf life of "until the next overlapping merge." **Group the batch by the
+  file sets each PR touches: serial-with-rebase *within* a group, parallel only
+  *across* disjoint groups.** Merging two PRs that share a hot file as if
+  independent is the bug. (The merge-train union above surfaces these collisions up
+  front and proves the *combination builds* — but it does **not** make a conflicting
+  member mergeable: the union branch is thrown away and the member branches are left
+  unchanged, so each member still resolves against the moving target and the
+  per-merge re-check still applies at step 3. Sequence the resolver first, *then* run
+  the train.)
+
+- **Sweep-while-resolving (the coordinator *causes* the staleness).** Running a
+  **merge sweep** (landing green PRs into a shared base) **concurrently with** a
+  **resolver lane** (rebasing a conflict-prone set against that same base) makes
+  the sweep the very thing re-dirtying the cluster it is trying to land: every
+  merge moves the base head and invalidates the resolution the resolver just
+  computed, so the PRs it was making mergeable flip back to conflicting — an
+  unbounded treadmill where the broadest, hottest-file PRs never converge.
+  **Freeze the *merge* step — not the build step — while a resolver is active
+  against the base:** lanes keep taking PRs to green (no stall, no visible
+  slowdown), green PRs **queue** instead of merging, the **hardest-to-rebase set
+  lands first** against a now-stable base, then the queue drains back-to-back.
+  Freezing the merge rather than pausing all work removes the invalidation without
+  dropping throughput.
+
+Both are the **stale-base failure below at the mergeability layer** — a quantity
+computed against one base head, consumed against another — except the moving head
+breaks *mergeability* here, not a gate's diff. A fleet coordinator applies this
+whenever it batches merges; `agentic-delivery`'s `fast-agentic-delivery.md`
+cross-references here rather than restating it.
+
 ### Red base: discharge the deadlock with a train, never an override
 
 When the target branch itself is red, a merge preflight that requires the base
@@ -631,6 +674,10 @@ squash). Mark any PR column `unverified` when forge auth was absent (§1).
   approval nor handed off by URL, or an unpushed rebase abandoned off the remote.
 - A PR merged after another that absorbed its files at an older SHA — a stale subset
   silently reverting the later fix, with no conflict to warn.
+- A batch merged off one up-front green + `MERGEABLE` snapshot with **no per-merge
+  re-check**, or a **merge sweep run concurrently with a conflict-resolution lane**
+  against the same base — the moving base head flips later members back to
+  `CONFLICTING` while their checks stay green.
 - A PR closed as duplicate/superseded on title or branch similarity with no tip-diff
   evidence in the close comment.
 - A local hook, a `Tests: N/N` line, or a checked PR-template box logged as a passing

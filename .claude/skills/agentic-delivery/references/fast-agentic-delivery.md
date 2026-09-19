@@ -807,6 +807,8 @@ Fetched fresh for this file (entries 1–5 verified 2026-09-09; entry 6, 2026-09
   authoring-time counterpart for the project's own fleet, not a target's.
 - `deep-code-review`'s `branch-and-merge-hygiene.md` — the grep-the-tree-not-the-
   claim check ("B included A") that the verify-first-before-laning section reuses
-  pre-laning, and the evidence-before-a-destructive-close discipline.
+  pre-laning, the evidence-before-a-destructive-close discipline, and the
+  mergeable-is-a-snapshot / freeze-the-merge-sweep-while-a-resolver-runs rule a
+  fleet coordinator applies when batching merges.
 - `docs/standards-index.md` — fetch dates and full citations for the six
   sources above.
