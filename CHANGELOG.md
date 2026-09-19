@@ -3,6 +3,30 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.207.0] — 2026-09-19
+
+### deep-code-review — wave 128 API-contracts batch: long-running operations, RFC 9457 errors, PATCH-replacement break (research round 5)
+
+Research-derived (comparative vs Google AIP / Zalando / Microsoft API guidelines). Three additions to
+`api-contracts.md`:
+
+- **Long-running operations** (new section): an endpoint that can't finish in the sync budget must not
+  fake synchrony — return 202 + an independently-versioned operation/job resource (stable id; status
+  enum with real terminal states, not a boolean; error-only-on-failed / result-only-on-succeeded; a
+  documented poll mechanism), and the client distinguishes poll-transport failure from operation
+  failure. The **start call needs provider-side idempotency** so a retried start (lost 202) folds into
+  the same operation instead of spawning a second (the provider half of reliability's caller-side
+  idempotency; internal durability is domain W).
+- **RFC 9457 error envelope** (extend Typed-errors): one consistent machine-readable envelope across
+  the surface (`application/problem+json`; obsoletes RFC 7807) instead of an ad-hoc per-endpoint shape,
+  and the stable code is part of the versioned contract (frozen post-release; changing it is breaking).
+- **PATCH/PUT full-replacement break** (6th non-obvious breaking-change): adding a new mutable field to
+  a full-replacement resource breaks an old round-tripping client, which clears the field it predates
+  (AIP-134).
+
++3 evals (234 -> 237). SRC fetched + verified 2026-09-19: RFC 9457 (obsoletes 7807; media type +
+members), AIP-134 (full-replacement new-field data loss) — logged in docs/standards-index.md.
+
 ## [1.206.0] — 2026-09-19
 
 ### agentic-delivery — wave 126 revert a degradation workaround when the blocker clears (closes #454)
