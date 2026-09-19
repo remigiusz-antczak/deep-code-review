@@ -32,10 +32,43 @@ Standards (URLs + dates in `docs/standards-index.md`): OWASP API Security Top 10
   header) and a documented migration — silent response-shape changes are
   breakages even when status stays 200.
 - Inputs validated at the boundary (schema); outputs match the documented
-  schema. **Typed errors** with stable machine codes; do not leak upstream
-  bodies (cross-ref B secrets/logging).
+  schema. **Typed errors** with stable machine codes, in **one consistent,
+  machine-readable envelope across the whole surface** — a registered structure
+  (RFC 9457 `application/problem+json`: `type` / `status` / `title` / `detail` /
+  `instance` plus extension members; obsoletes RFC 7807) rather than an ad-hoc
+  shape per endpoint, so a consumer writes a single error-parsing path; do not
+  leak upstream bodies (cross-ref B secrets/logging). The **stable machine code is
+  itself part of the versioned contract** — changing or repurposing a code is a
+  breaking change (below), so freeze it post-release and treat it as an extensible
+  enum a consumer may not yet know.
 - Pagination/filter/sort parameters are bounded; "return everything" defaults
   are a reliability and cost finding (cross-ref E).
+
+---
+
+## Long-running operations — an async job is its own contract
+
+An endpoint that can't finish its work inside the request's synchronous budget must
+not fake synchrony (block the caller, or return a fake `200` before the work is
+done). It returns **202 Accepted** plus a second, independently-versioned
+**operation / job resource**: a **stable id**; an explicit **status enum with real
+terminal states** (`succeeded` / `failed` / `canceled`, never a bare boolean that
+conflates "not done" with "failed"); an **error payload only on the failed state**
+and a **result only on succeeded**; and a documented way to discover and poll it (a
+`Location` / `Operation-Location` header or a documented poll URL, with
+`Retry-After`). A polling client must **distinguish poll-transport failure from
+operation failure** — the poll `GET` returning `500` is not the same as it returning
+`200` with `status: failed` (the async cousin of "check status before reading the
+body", cross-ref `reliability-error-handling.md`).
+
+- **The start call needs provider-side idempotency.** If the client retries the
+  start request because the `202` was lost in transit, an **idempotency key on the
+  start call** (enforced server-side; `409` on a reused key with a differing body)
+  must fold the retry into the **same** operation — without it, a lost `202`
+  silently spawns a **second** operation and the work runs twice. This is the
+  provider half of the caller-side idempotency rule in
+  `reliability-error-handling.md`; the job's own internal durability / compensation
+  is domain W (`domain-checklists.md`).
 
 ---
 
@@ -52,7 +85,11 @@ flag is a contract, which is the SDK-boundary scope this file's header claims.
   param/field (callers that relied on the old default silently get new behavior); a **new required** param on a direct
   call (not only a queued-message field); a **widened output** (a field goes non-null → nullable, or
   a returned union grows a case the consumer's exhaustive handling does not cover); and an **added
-  enum / union member** a strict or exhaustive-`switch` consumer must now handle. The mirror is a
+  enum / union member** a strict or exhaustive-`switch` consumer must now handle; and — for a
+  resource with **full-replacement update** (`PUT`, or `PATCH` with an `update_mask` of `*`) —
+  **adding a new mutable field**, because an old client that round-trips (reads the object, changes one
+  field, writes the whole object back) never learned to send the new field and silently clears it
+  (AIP-134). The mirror is a
   **forward-compatibility** guarantee to state and test — a consumer tolerates an unknown field or a
   new enum value rather than crashing (the flip side of the extra-fields-tolerated note above).
 - **Add a mechanical surface-diff gate, distinct from hand-written contract tests.** The contract

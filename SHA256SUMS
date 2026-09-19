@@ -28,8 +28,8 @@ cc52f678848b814373757b460383bf61960e4943c203735adde0a350b3e50989  .claude/skills
 bb541f96bd7d0c3bb4adff8dcaac0f50efa2493b8215b6aa671805bfbb89c42b  .claude/skills/contribution/references/contribution-procedure.md
 6b5e9261adfe7825b690b35403f3d32232227b6411d3e9c3350485df11d5ed98  .claude/skills/deep-code-review/SKILL.md
 1ff7af7d58ed3174e55f140824a1096e4326b5e7a95e8cf75e7856c6ccd1cbd9  .claude/skills/deep-code-review/VERSION
-10a167157d084eba645c326ac043d872aec0c695c453dfb7a5a7a6e5803af7eb  .claude/skills/deep-code-review/evals/evals.json
-d9e90e8b0ea52e3272863c685a54e21a4e22f618edfb9521f28f906e35d7bdcd  .claude/skills/deep-code-review/references/api-contracts.md
+6563472e3025e89af0219b11ee2173cf325a1e1c0cebc45a81f90956fe90cde4  .claude/skills/deep-code-review/evals/evals.json
+ca3c8ad347642313226e3318a57f95b8f9ff96dbc2b5fd66df7bb7beb5a2f3fb  .claude/skills/deep-code-review/references/api-contracts.md
 93d695b99b448a59b1b7e4de3449692847089ba36e9530d0e24d19c04650efc1  .claude/skills/deep-code-review/references/billing-correctness.md
 c3061c64670c2cab4028d60acf8803b12bcceb98d82b5a9c5ad58667d0298794  .claude/skills/deep-code-review/references/branch-and-merge-hygiene.md
 4e5177c58a3f4a1357fd64c8c3e4c7b3ec27b76d4be2fdb7bcfd79705ab51984  .claude/skills/deep-code-review/references/concurrency-shared-state.md

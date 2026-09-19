@@ -2471,6 +2471,36 @@
         "Requires a test that forces the triggering condition (breaker open / dependency down) and asserts the fallback output, not merely that it doesn't crash",
         "Names the rot risk: an unexercised fallback is silently broken by an unrelated edit with no red test, invisible until the real failure occurs"
       ]
+    },
+    {
+      "id": "a-long-running-operation-returns-an-operation-resource-not-a-fake-synchronous-response",
+      "prompt": "An endpoint kicks off a data export that takes minutes. To keep the client simple, it holds the HTTP connection open and returns 200 with the result when done; on timeout it returns 200 with an empty body. Review the API design.",
+      "expected_output": "Faking synchrony for a long-running operation is the defect. Blocking the request for minutes ties up connections and hits gateway/client timeouts, and returning 200-with-empty-body on timeout conflates 'not done' with 'done, no data' and with 'failed' — the caller can't tell which. Fix: return 202 Accepted plus an independently-versioned operation/job resource — a stable id, an explicit status enum with real terminal states (succeeded/failed/canceled, not a boolean), an error payload only on failed and a result only on succeeded, and a documented poll mechanism (Location/Operation-Location header + Retry-After). The polling client must distinguish poll-transport failure (the GET 500s) from operation failure (GET 200, status: failed). And the start call needs a provider-side idempotency key so a retried start (lost 202) folds into the same operation instead of spawning a second one.",
+      "expectations": [
+        "Identifies faking synchrony (blocking + 200-empty-on-timeout) as the defect — it conflates not-done / no-data / failed",
+        "Requires 202 + an operation/job resource with a stable id, a real terminal-state status enum (not a boolean), error-only-on-failed / result-only-on-succeeded, and a documented poll mechanism",
+        "Requires distinguishing poll-transport failure from operation failure, and provider-side idempotency on the start call so a retried start doesn't spawn a second operation"
+      ]
+    },
+    {
+      "id": "api-errors-need-one-machine-readable-envelope-and-a-code-frozen-as-contract",
+      "prompt": "A REST API returns errors as a 200 with {ok:false, msg:'...'} on some endpoints, a 400 with {error:'...'} on others, and a 500 with an HTML page on a third. Each message is human-written and gets reworded across releases. What's wrong and what's the fix?",
+      "expected_output": "Two problems. (1) No consistent, machine-readable error envelope: three different shapes (and a 200 carrying a failure) force every consumer to write a different parser per endpoint, and a 200-on-error defeats status-based handling. Fix: one registered envelope across the whole surface — RFC 9457 application/problem+json (type/status/title/detail/instance + extension members; it obsoletes RFC 7807) — with the HTTP status reflecting the outcome. (2) The error is identified only by a human-written, reworded message: a consumer can't branch on prose. Fix: carry a stable machine-readable code (a reason/domain identifier) that is FROZEN post-release and treated as part of the versioned contract — changing or repurposing a code is a breaking change, and the message stays freely rewordable but non-load-bearing.",
+      "expectations": [
+        "Identifies the inconsistent per-endpoint error shapes (and the 200-carrying-a-failure) as forcing a different parser per endpoint — requires one machine-readable envelope across the surface (names RFC 9457 / problem+json)",
+        "Identifies that a human-written, reworded message is not a stable branch point — requires a stable machine code separate from the message",
+        "States the code is part of the versioned contract (frozen post-release; changing it is a breaking change)"
+      ]
+    },
+    {
+      "id": "adding-a-mutable-field-breaks-a-full-replacement-patch-client",
+      "prompt": "A resource is updated via PUT (send the whole object). The team adds a new mutable field notifications_enabled (default true) and considers it a backward-compatible, non-breaking addition since no field was removed. Are they right?",
+      "expected_output": "No — for a resource updated by full replacement (PUT, or PATCH with update_mask=*), adding a new mutable field IS a breaking change even though nothing was removed. An existing client round-trips: it reads the object (without the new field, or ignoring it), changes one field, and writes the whole object back — never sending notifications_enabled, so the server sees it absent and silently clears it (or resets it to a default), turning every old client's update into an unintended wipe of the new field (AIP-134). Fix: treat it as breaking (SemVer MAJOR or a versioned surface), or move updates behind partial-update (field-mask) semantics where an omitted field means 'leave unchanged' rather than 'clear', and document and test that forward-compat behavior.",
+      "expectations": [
+        "Identifies that adding a mutable field to a full-replacement (PUT / update_mask=*) resource is breaking despite nothing being removed — an old round-tripping client silently clears the new field",
+        "Explains the read-modify-write round-trip mechanism (the old client never sends the new field, so the server clears it)",
+        "Requires either treating it as a breaking change or using partial-update / field-mask semantics where an omitted field means leave-unchanged"
+      ]
     }
   ]
 }
