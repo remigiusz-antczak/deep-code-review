@@ -375,6 +375,40 @@ Read the check's **conclusion**, never the bare colour; a required check with no
 for this PR is a **High** merge-blocker in its own right — name it a config gap (the
 check is unsatisfiable as wired), not a flake to wait out.
 
+### A new PR-body / artifact gate is a contract with its producers — co-evolve them, or every automated PR silently fails it
+
+Adding a gate that requires a convention in the PR **body** or a committed
+**artifact** — a `Verify:` line, a changelog fragment, an evidence image, a commit
+trailer — silently fails **every producer that does not yet emit it**. Sequencing
+the gate last in one landing batch (§5, *merge trains*) handles the PRs already
+*in flight*; it does nothing for **standing** producers — the PR template,
+Dependabot / Renovate, a release-drafter bot, an agent delivery swarm — which keep
+emitting the old shape on **every future run** until their **definition** is
+updated. A human author adapts on their next PR; automation cannot, and piles up
+green-but-refused PRs until someone notices.
+
+- **Co-evolve the gate and its producers in one change.** Landing a body / artifact
+  gate means updating the PR template, the bot/agent prompts, and any PR-generating
+  scaffolding **together** — the gate and every client of its contract move as one
+  commit.
+- **Grandfather or ramp.** A warn-only period — or a *future* cutover date *T* — buys
+  time while the producers catch up. A past-dated grandfather exempts only the in-flight
+  backlog: a standing producer's next run is always after *T*, so it strands anyway.
+- **Make the failure name the exact fix** — the literal line or field to add — so
+  any producer, human or agent, can self-correct from the failure text alone.
+- **Inventory the producers before adding the gate.** The template, Dependabot /
+  Renovate, release bots, and agent swarms are each a **client** of the new
+  convention; the one you do not list is the one that strands.
+
+A gate is a contract with its producers: change the contract without moving the
+producers and you break them silently — and an **automated** producer cannot "just
+adapt" the way a human reviewer does. **In review**, a diff that adds or tightens a
+PR-body / commit-trailer / committed-artifact requirement is incomplete unless the
+same change updates that artifact's producers (or ramps the gate) — the
+standing-producer generalization of the merge-train ordering rule (§5). The
+message-payload sibling — a new **required field** breaking old producers and
+in-flight messages — is `api-contracts.md`.
+
 ### Self-reported evidence is not a trusted control; a local hook is advisory
 
 A merge decision rests on **trusted** evidence — a run the forge verified on the **exact commit
@@ -692,6 +726,10 @@ squash). Mark any PR column `unverified` when forge auth was absent (§1).
   and no graduation marker.
 - A merge-train batch landing a gate-adding PR before the PRs it would force to
   retrofit that gate.
+- A new PR-body / commit-trailer / committed-artifact gate landed with **no update to
+  its standing producers** (PR template, Dependabot/Renovate, release/agent bots) — every
+  automated PR is refused (green on its real work, red on the new gate) until noticed (§5
+  covers only in-batch ordering).
 - A union/integration branch merged or squashed in place of its member PRs, or
   already-green members held waiting on the union's aggregate CI.
 - An `--admin`/force-merge used to escape a red base, instead of discharging it with

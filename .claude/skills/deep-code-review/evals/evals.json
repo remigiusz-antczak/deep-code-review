@@ -1792,6 +1792,16 @@
         "Names the cross-file invisibility (guard in one file, boundary-crossing wiring in another) as a DIFF blast-radius escalation a per-file review misses",
         "Flags the excused defect now reaching the public surface (e.g. false attribution) and/or compares against the always-published sibling path whose stronger guard exposes the asymmetry"
       ]
+    },
+    {
+      "id": "new-body-gate-must-co-evolve-its-producers",
+      "prompt": "A PR adds a required CI check that refuses any pull request whose body lacks a `Verify:` line. The diff touches only the CI workflow and a shell script implementing the check. This repo's PRs come from human authors, a Renovate bot, a release-drafter bot, and a nightly agent that opens dependency-bump PRs from a fixed template. Nothing else changes. Review the change.",
+      "expected_output": "A finding that the new gate will silently fail every automated producer — Renovate, the release-drafter, and the nightly agent — because none emits a `Verify:` line, stranding their PRs green-but-unmergeable on every future run (not just in-flight ones). The primary fix is to co-evolve the producers in the same change (update the PR template and each bot/agent's PR-body output); a warn-only period or a *future* cutover date is a valid bridge while they catch up, but a bare 'apply only to PRs opened after today' is not — a standing producer's next run is always after any past date, so it still strands. Not a clean approval of a well-formed check.",
+      "expectations": [
+        "Identifies that the gate ships with no matching producer update, so every automated PR producer (bot/template/agent) fails it on its next run — the standing-producer case, not merely in-flight PRs",
+        "Recommends co-evolving the producers with the gate in the same change (updating the PR template and each bot/agent's PR-body definition); treats a ramp as only a bridge — warn-only, or a *future* cutover date — and does NOT accept a bare 'apply to PRs opened after today', since a standing producer's next run is always after any past date",
+        "Does NOT approve the change as clean merely because the check itself is correctly implemented"
+      ]
     }
   ]
 }
