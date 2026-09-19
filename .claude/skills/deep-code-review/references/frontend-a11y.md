@@ -246,6 +246,31 @@ production-like server).
   shipped to the browser is public.
 - No sensitive data in `localStorage`/`sessionStorage`; tokens in
   httpOnly+Secure+SameSite cookies where possible.
+- **A `message` listener validates `event.origin` (and the message shape) before trusting
+  `event.data`.** Any origin can `postMessage` to a window, so a handler that reads `event.data`
+  with no allow-list check on `event.origin` is an origin-validation flaw (CWE-346); and a trusted
+  sender can still relay a malformed payload, so validate the message syntax too (MDN
+  *Window.postMessage*: "always verify the sender's identity using the `origin` and possibly
+  `source` properties").
+- **Third-party / CDN `<script>` and `<link>` carry Subresource Integrity.** An
+  `integrity="sha384-…"` hash plus `crossorigin` lets the browser refuse a resource a compromised
+  CDN has altered — without it, one CDN compromise rewrites what every user's browser executes
+  (MDN *Subresource Integrity*).
+- **Trusted Types as a DOM-XSS backstop on top of output encoding, not instead of it.** The
+  `require-trusted-types-for 'script'` CSP directive forces DOM injection sinks (`innerHTML`,
+  `eval`, `script.src`) to take policy-created typed values, turning a raw-string sink into a
+  `TypeError` — a browser-enforced backstop (MDN *Trusted Types API*: Baseline 2026; a tinyfill keeps older browsers from throwing
+  but enforces nothing there), layered on the output-encoding rule above.
+- **`Referrer-Policy` does not leak a token-bearing URL cross-origin.** The `Referer` header sends
+  the full URL (path + query) to other origins; the modern default is already
+  `strict-origin-when-cross-origin` (MDN *Referrer-Policy*), so the finding is a **weakened** policy
+  (`unsafe-url`, `no-referrer-when-downgrade`) — or secrets/ids placed in a URL at all, which then
+  ride the `Referer` to a third party (prefer keeping them out of the URL).
+- **Clickjacking is a named threat, not just a header in a list.** Every page rendering an
+  authenticated or state-changing action confirms `frame-ancestors` (CSP) — or legacy
+  `X-Frame-Options` — restricts who may frame it; an unset framing policy lets an attacker overlay
+  it in a transparent iframe (`security-appsec.md` A02 lists the header among misconfig; this is the
+  threat and the per-page verification).
 - Works across the project's target browsers/devices; responsive at real
   breakpoints; internationalization-ready (no hardcoded user-facing strings,
   correct locale-aware formatting — see section i18n in `SKILL.md`).
@@ -255,4 +280,6 @@ production-like server).
 `alt`; `<input>` with no associated `<label>`; `outline: none` with no
 replacement focus style; hardcoded `#hex` text colors to spot-check contrast;
 `localStorage.setItem('token'`; API keys in `NEXT_PUBLIC_`/`VITE_`/`REACT_APP_`
-env names.
+env names; `addEventListener('message'` with no `event.origin` check; a `<script>`/`<link>` to a
+third-party origin with no `integrity=`; a weakened `Referrer-Policy` (`unsafe-url`); no
+`frame-ancestors`/`X-Frame-Options` on a page with authenticated or state-changing actions.

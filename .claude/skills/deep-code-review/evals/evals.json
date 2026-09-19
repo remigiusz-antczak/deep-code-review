@@ -2232,6 +2232,36 @@
         "Explains why the enforced per-request token cap doesn't address it — the cap bounds a call before dispatch; this is wasted spend on a call already in flight (cancellation, not a ceiling)",
         "Requires wiring the consumer abort/close (req.on('close')/AbortController/context) through to the model call"
       ]
+    },
+    {
+      "id": "a-postmessage-handler-must-validate-event-origin-before-trusting-the-data",
+      "prompt": "A web app embeds a payment widget in an iframe and listens for results: `window.addEventListener('message', e => applyDiscount(e.data.code))`. It works in testing. Security concern?",
+      "expected_output": "Yes — the handler trusts `e.data` with no check on `e.origin`. Any origin (including an attacker's page that frames or opens the app) can `postMessage` to the window, so a malicious sender can call `applyDiscount` with a forged payload — an origin-validation flaw (CWE-346). Verify `event.origin` against an allow-list of expected sender origins before using `event.data`, and validate the message shape too (a trusted sender can still relay malformed data). MDN: 'always verify the sender's identity using the origin and possibly source properties.'",
+      "expectations": [
+        "Identifies that the handler trusts event.data with no event.origin check — any origin can postMessage (CWE-346 origin-validation)",
+        "Requires validating event.origin against an allow-list of expected origins before using the data",
+        "Also requires validating the message shape/syntax (a trusted sender can relay a malformed payload)"
+      ]
+    },
+    {
+      "id": "third-party-cdn-scripts-need-subresource-integrity-or-a-cdn-compromise-runs-arbitrary-code",
+      "prompt": "An app loads a charting library and a font-loader from public CDNs via plain `<script src=\"https://cdn.example.com/…\">` tags. Security review of the frontend — anything missing?",
+      "expected_output": "Yes — no Subresource Integrity. If the CDN (or its account) is compromised and the file is altered, every user's browser executes the attacker's code — a supply-chain vector. Add an `integrity=\"sha384-…\"` hash (sha256/384/512) and `crossorigin` to each third-party `<script>`/`<link>` so the browser refuses a resource whose hash doesn't match; regenerate the hash on legitimate version bumps (or pin+vendor the dependency). Cross-origin SRI needs the `crossorigin` attribute + CORS headers.",
+      "expectations": [
+        "Identifies the missing Subresource Integrity on third-party/CDN scripts — a CDN compromise runs arbitrary code in every user's browser",
+        "Requires an integrity hash (sha256/384/512) + crossorigin on the third-party script/link tags",
+        "Notes the hash must be regenerated on version bumps (or the dep pinned/vendored)"
+      ]
+    },
+    {
+      "id": "a-state-changing-page-needs-a-framing-policy-or-it-is-clickjackable",
+      "prompt": "A banking app's 'transfer funds' confirmation page sets no `frame-ancestors` and no `X-Frame-Options`. Output encoding and CSP script-src are otherwise solid. Is the page safe?",
+      "expected_output": "No — with no framing policy the page can be loaded in a transparent iframe on an attacker's site and overlaid so a user's click lands on the real 'confirm transfer' button (clickjacking / UI redress). Output encoding and script-src stop XSS, not framing. Every page rendering an authenticated or state-changing action must restrict who may frame it: `Content-Security-Policy: frame-ancestors 'self'` (or an explicit allow-list), with legacy `X-Frame-Options: DENY/SAMEORIGIN` as a fallback for old browsers. Clickjacking is its own threat class, independent of XSS defenses.",
+      "expectations": [
+        "Identifies clickjacking/UI-redress: with no framing policy the state-changing page can be framed and overlaid to hijack a click",
+        "Notes XSS defenses (output encoding, script-src) don't address framing — it's a distinct threat",
+        "Requires frame-ancestors (CSP) on authenticated/state-changing pages, with X-Frame-Options as legacy fallback"
+      ]
     }
   ]
 }

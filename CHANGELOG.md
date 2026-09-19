@@ -3,6 +3,29 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.195.0] — 2026-09-19
+
+### deep-code-review — wave 116 web frontend security (browser-native controls, frontend-a11y.md)
+
+From the COMPARATIVE research round (benchmark vs OWASP ASVS 5.0): V3 "Web Frontend Security" was the
+one category-level gap — the existing Security section covered XSS/CSP/secrets/localStorage but not the
+browser-native control cluster. Five deltas added to `frontend-a11y.md`, each MDN-verified this session
+and scoped (not overclaimed):
+
+- **postMessage** — a `message` listener must validate `event.origin` (+ message shape) before trusting
+  `event.data` (any origin can post; CWE-346).
+- **Subresource Integrity** — `integrity` + `crossorigin` on third-party/CDN `<script>`/`<link>` so a
+  CDN compromise can't run arbitrary code in every browser.
+- **Trusted Types** — `require-trusted-types-for` as a DOM-XSS backstop on top of output encoding
+  (Baseline 2026; tinyfill for older browsers — scoped, not claimed universal).
+- **Referrer-Policy** — the modern default is already safe, so the finding is a *weakened* policy or a
+  token-bearing URL leaking via `Referer`.
+- **Clickjacking** — promoted from a bare header-name in A02 to a named threat + per-page
+  `frame-ancestors`/`X-Frame-Options` verification on authenticated/state-changing pages.
+
+Three evals (deep-code-review 210 -> 213). Sources: 4 MDN pages fetched + logged; OWASP ASVS 5.0 V3
+by name. Trio -> 1.195.0. `SHA256SUMS` regenerated last.
+
 ## [1.194.0] — 2026-09-19
 
 ### deep-code-review — wave 115 LLM streaming / completion-delivery review (security-ai-agents.md)
