@@ -3171,6 +3171,16 @@
         "Uses the sibling function's already-stricter (kind, id) contract as the signal that this is a self-inconsistent regression, not an accepted risk",
         "Reports the latent defect while honestly stating current reachability (no collision today / no live caller), and frames it as the false-merge to avoid (bias false-exclude over silent merge)"
       ]
+    },
+    {
+      "id": "ssti-user-input-compiled-as-a-template-not-passed-as-data",
+      "prompt": "A reporting feature lets users save a 'custom label' string that the server later renders with `render_template_string(user_label)` in a Jinja2 app (so users can interpolate `{{ order.id }}` into their label). A reviewer says 'we HTML-escape all output, so this is XSS-safe.' Is the feature safe?",
+      "expected_output": "No — this is server-side template injection (SSTI, CWE-1336), and HTML-escaping does not address it. The bug is not that user DATA is rendered into HTML (that would be XSS, fixed by output escaping); it is that the user's string is compiled and evaluated as TEMPLATE SOURCE by the engine. render_template_string(user_label) passes user input AS the template, so an attacker submits a label like `{{ ''.__class__.__mro__[1].__subclasses__() ... }}` (object-graph traversal) that Jinja2 evaluates server-side — typically a path to remote code execution, not just markup injection. Output escaping runs on the RESULT and does nothing about code the engine already executed. Jinja2's SandboxedEnvironment is a mitigation with documented escapes, not a trust boundary. Fix: never compile a template from user input — render a statically-defined template and pass the user's label only as a BOUND CONTEXT VARIABLE (data cannot introduce template syntax); if user-authored templates are a genuine feature, use a logic-less engine (Mustache) or a locked-down allow-listed sandbox and treat that path as an RCE-grade trust boundary.",
+      "expectations": [
+        "Identifies SSTI (not XSS): the user string is compiled/evaluated as template SOURCE by the engine (render_template_string passes input AS the template), distinct from untrusted data rendered into output",
+        "Explains that HTML output-escaping does NOT fix it (it acts on the result, not the engine's evaluation) and that server-side SSTI is typically an RCE path via object-graph traversal; an engine sandbox is a mitigation, not a boundary",
+        "Prescribes never compiling a template from user input — pass the user value only as a bound context variable to a static template; for genuine user-template features use a logic-less engine / locked-down sandbox treated as an RCE-grade boundary"
+      ]
     }
   ]
 }

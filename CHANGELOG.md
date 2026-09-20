@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.254.0] — 2026-09-20
+
+### deep-code-review — wave 175 server-side template injection (SSTI) depth in A05 (CWE-1336)
+
+- **`security-appsec.md`** (A05 Injection): SSTI given proper depth (previously only named in the injection list). Distinct from XSS — SSTI is untrusted input that becomes part of the **template source** the engine compiles and evaluates, so output escaping does nothing; in a server-side engine (Jinja2/Twig/Freemarker/Velocity/ERB) it is usually an **RCE** path via object-graph traversal, and an engine sandbox is a mitigation, not a boundary. Detect input passed *as the template* (`render_template_string(user_input)`, `Template(...).render`, `env.from_string`). Fix: never compile a template from user input — pass values only as bound context variables to a static template; for genuine user-template features use a logic-less engine or a locked-down sandbox treated as an RCE-grade boundary.
+- +1 eval. CWE-1336 verified at MITRE; example payloads (Jinja2, FreeMarker) verified at PortSwigger. Independent reviewer PASS-WITH-FIXES (replaced a mis-attributed SpEL payload with engine-correct verified payloads).
+
 ## [1.253.0] — 2026-09-20
 
 ### deep-code-review — wave 174 data-correctness trio: UTC-date bucketing, timestamp-tie diff cursor, cross-kind bare-id diff merge (closes #620, closes #618, closes #619)
