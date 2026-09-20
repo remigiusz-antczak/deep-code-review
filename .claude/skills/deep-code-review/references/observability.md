@@ -160,6 +160,68 @@ of a request or config struct; `setTag`/`setAttribute` with a raw payload.
 
 ---
 
+## Metric type & shape correctness
+
+- **A histogram/percentile can look measured and still lie, two ways.** A
+  **classic (fixed-bucket) histogram** needs a bucket boundary exactly *at*
+  the SLO threshold for a fraction-under-threshold query
+  (`rate(..._bucket{le="0.3"}[5m])`) to resolve — Prometheus: no matching
+  bucket means "no result is returned at all"; if only some of the
+  aggregated histograms (e.g. some replicas) have one, "an incomplete result
+  is returned, but without any warning…" Native/exponential-bucket
+  histograms interpolate around this and largely avoid this silent dropout
+  (the interpolated estimate stays approximately accurate, not exact). Separately,
+  `avg()`/`mean()` over a `quantile="0.95"`-labeled (Summary) or
+  `_p9[0-9]`-suffixed series — pooling replicas or windows — is invalid:
+  Prometheus, on the replica case, "averaging the quantiles yields
+  statistically nonsensical values." The reason generalizes: a quantile
+  isn't linear in the distribution, so pooling means summing the raw
+  buckets and recomputing the quantile once, never averaging ones already
+  computed. Distinct from the head-sampling bullet above — that one is
+  about the trace *source*'s representativeness; this one assumes an
+  already-unsampled histogram (that bullet's own fix) and shows the
+  bucket/aggregation math can still lie.
+- **Instrument-type mismatch reads clean and lies.** Prometheus: "if the
+  value can go down, it is a gauge," and "you should never take a rate() of
+  a gauge" — `rate()`/`increase()` automatically adjust for *any* counter
+  reset (Prometheus: "Breaks in monotonicity … are automatically adjusted
+  for"), on the built-in assumption a reset means a process restart; a
+  "counter" zeroed by anything else — a manual or scheduled reset, a
+  business-logic zero — still triggers that same adjustment, but the
+  assumption no longer holds, so the reading right at each reset silently
+  saws or mis-counts, no error thrown. (OpenTelemetry, **Development**-status) An
+  `UpDownCounter` incremented and decremented under different attribute sets
+  forks into two never-reconciled series — "those increments and decrements
+  will end up as different timeseries," e.g. `active_requests` incremented
+  at request-start, decremented at request-end with one extra attribute
+  (`status_code`, known only at the end) added on the decrement.
+- **A metric absent until first occurrence is a blind spot, not a zero.**
+  Prometheus: such series are "difficult to deal with... export a default
+  value such as 0 for any time series you know may exist in advance." Until
+  then, a ratio built on it (`errors_total{type="x"} / requests_total`)
+  returns no data, not 0 — easy to misdiagnose as "monitoring is broken" —
+  and a deadman/absence health check can't tell "healthy and quiet" from
+  "crashed and emitting nothing," both reading as no series. Distinct from
+  the golden-signals bullet on a quota/transport failure miscategorized as a
+  result — that's a wrong *value*; this is no series at all.
+- **One unit per metric identity, never mixed.** Mixing seconds and
+  milliseconds under one metric name corrupts `sum()`/`avg()` and can
+  silently miscalibrate an alert threshold 1000x when the unit changes.
+  Prometheus suffixes the unit into the name; OpenTelemetry keeps it out of
+  the name (instrument metadata) — only "one unit, never mixed" is
+  stack-agnostic; don't prescribe either naming convention as universal.
+
+**Grep leads:** `rate(`/`increase(` applied to something not named
+`*_total`/`*_count`; `avg(`/`mean(` wrapping a `quantile=`-labeled or
+`_p9[0-9]`-suffixed series; a `Histogram`/`Summary` constructor with no
+`buckets=`/`objectives` backing a stated SLO; a `Gauge`/`.set(`/`.dec(` call
+on something named like a counter; an `UpDownCounter` `.add()` whose
+attribute set differs between its increment and decrement call sites; an
+error/outcome counter incremented only inside a conditional branch with no
+unconditional zero-init at startup.
+
+---
+
 ## Audit trail & repudiation
 
 - Destructive, financial, permission, and configuration changes need an audit
@@ -199,7 +261,10 @@ of a request or config struct; `setTag`/`setAttribute` with a raw payload.
 **🚩 red flags**: no alert on the critical path; alerts only on causes; averages
 only; health check that always returns 200; quota/transport failure counted as a
 result; raw request/response/headers logged; secrets or PII in spans; user input
-concatenated into log lines; unbounded metric labels; destructive action with no
+concatenated into log lines; unbounded metric labels; a latency SLO with no
+histogram bucket at the objective threshold; a dashboard/alert averaging
+pre-computed percentiles across instances; an alert or ratio denominator built
+on a metric that only exists after first occurrence; destructive action with no
 audit record; audit table the app can UPDATE/DELETE; stateful store with no
 backup, no off-site copy, or no dated restore drill; a correlation/trace id
 assumed to prove an unbroken trace with no verified context propagation across

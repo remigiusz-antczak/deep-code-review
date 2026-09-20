@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.311.0] — 2026-09-20
+
+### deep-code-review — metric type & shape correctness (histogram buckets, instrument type, lazy-create, units)
+
+- **`observability.md`** new "Metric type & shape correctness" subsection: (1) a classic fixed-bucket histogram needs a bucket boundary *at* the SLO threshold or a fraction-under-threshold query returns no/incomplete result **silently**; averaging pre-computed percentiles (`avg(p95)`) across replicas is statistically invalid — recompute from raw buckets. (2) instrument-type mismatch — `rate()` of a gauge is meaningless; `rate()`/`increase()` adjust for a reset **unconditionally**, so a counter zeroed by anything other than a restart still triggers the adjustment and mis-counts at the reset; an OTel `UpDownCounter` recorded with differing attribute sets forks into two series. (3) a metric absent until first occurrence is a **blind spot, not a zero** (breaks ratio denominators + deadman/absence checks). (4) one unit per metric (Prometheus suffixes the unit into the name, OTel keeps it in metadata — only "never mixed" is stack-agnostic). +5 curl-verified `docs/standards-index.md` rows (Prometheus histograms / functions / instrumentation / naming, OTel semconv); +3 evals.
+- Research-derived expansion (no filed issue). Built by a worktree builder subagent, independently reviewed **PASS-WITH-FIXES**: the reviewer re-curled all sources and pulled the default-bucket constants from four Prometheus client libraries — catching a **fabricated eval premise** (a histogram on default buckets queried at `le="0.25"` was claimed to render blank, but 0.25 is a default boundary in Go/Python/Node/Java; corrected to `le="0.3"`, which the prose already used) — and a **misstated mechanism** (a non-restart reset was said to "defeat" `rate()`'s compensation, but Prometheus adjusts unconditionally; reworded to the violated-assumption framing, verified against a fresh fetch). Plus quote-fidelity fixes (a restored "…" elision; the OTel units carve-out added) and a new `functions/` standards row for the now load-bearing rate() quote.
+
 ## [1.310.0] — 2026-09-20
 
 ### deep-code-review — two data-state review folds: partial-apply response type drops computed failure detail (#699); a shared honest signal is only as good as its least careful consumer (#700)
