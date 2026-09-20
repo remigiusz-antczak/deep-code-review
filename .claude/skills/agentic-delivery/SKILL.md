@@ -10,7 +10,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.330.0"
+  version: "1.331.0"
 ---
 
 # Agentic delivery
@@ -164,8 +164,8 @@ framing, or density. It is the positive, build-time companion to
 record with a single writer, the resume / crash-after-effect reconciliation
 procedure, and the artifact-receipt contract for design/data/published
 deliverables: `references/project-state.md` — **read it when** beginning
-multi-step work, changing objectives, checkpointing, or recovering after a
-reset.
+multi-step work, changing objectives, checkpointing, recovering after a
+reset, or deciding what keeps an unattended run alive.
 
 **Claimed vs enforced** — before asserting state, permission, or spend is
 *enforced* rather than merely followed (or when designing a host adapter), grade
@@ -197,7 +197,8 @@ channel instead of one orchestrator's own lanes:
 claim/lock registry, a pre-write collision probe, a peer-liveness check, a
 shared-board reader, reconciling two peers' crossed work-splits, coordinating
 a shared machine-wide resource budget across peers, routing an action one peer
-is persistently denied, or vetting a peer's correction before acting on it.
+is persistently denied, vetting a peer's correction before acting on it, or breaking a
+mutual pause where two peers each wait on the other.
 
 **A work item's own completion is G7, not G8.** Once a lane's change is
 integrated (G7), the work item it closes is done; G8 Release is a separate,
@@ -382,6 +383,10 @@ Copied as principles, not as anyone's private playbook:
     accessibility floor, a monotonic-quality rule — already mandates the answer; if it does,
     applying it is a lane's **mechanical** job, and escalating spends an owner decision on a
     settled question while the lane stalls. Gate only the genuine forks the invariants leave open.
+    Conversely, a change that would **reverse** a ratified invariant or decision is not a lane's
+    mechanical call either — stop and queue it to the owner rather than silently applying it (the
+    code-level instance — never loosening a ratified assert-absent test to ship a conflicting
+    feature — is `deep-code-review`'s `testing-and-evals.md`).
 
 ---
 

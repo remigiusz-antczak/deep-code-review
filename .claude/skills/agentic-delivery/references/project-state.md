@@ -69,3 +69,15 @@ unaffected criterion or rerun the check. Whether a control is *claimed* or
 4. Cancel or reassign obsolete work with acknowledged ownership transfer,
    preserving its artifacts, failures, and cost; choose the next action against
    the *current* objective; checkpoint the reconciled record, then proceed.
+
+## Session lifetime
+
+This record and its resume protocol assume something restarts the run — they are
+silent on **what**. `host-enforcement.md` already notes that no durable runtime ships
+with these instructions; the operational consequence is that **session-only
+automation dies when the session or its host closes**. An unattended run therefore
+has exactly one required operator action by default — **keep the session/host alive
+for the run's duration** — unless the platform offers a **durable scheduler** (a
+cron-triggered job, a queue worker, a managed agent runtime) able to restart the run
+itself. Prefer that where it exists: it turns "someone must not close the laptop"
+into a property of the infrastructure instead of a standing human obligation.

@@ -3,6 +3,15 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.331.0] — 2026-09-20
+
+### agentic-delivery — autonomous-mode gap-fill: open-ended-lane timebox + checkpoint (#754), spare capacity → hardening at terminus (#757), disk-sized fan-out (#765); partial #763/#386
+
+- **`fast-agentic-delivery.md`**: (**#754**) an open-ended lane is briefed with an explicit wall-clock timebox + a required interim durable checkpoint (a pushed WIP branch/commit at a stated milestone), so liveness and sunk cost are judged by artifact, not runtime/transcript; prefer decomposing into checkpoint-able sub-lanes. (**#757**) at a genuine terminus, spare capacity redirects to verification/hardening of already-landed work (adversarial re-review, coverage, evidence) — a named alternative to idling, still not fan-out or busywork. (**#765**) disk arithmetic: per-heavy-lane footprint ≈ build output + deps; cap concurrent build lanes at ~`disk_free ÷ per_lane_footprint`; an ENOSPC lane death is a sizing bug (the spawn gate omitted disk), never a flaky-lane retry. (**#386**, partial) an orchestrator-owned reaper for orphaned heavy processes, advisory/approval-gated.
+- **`multi-session-coordination.md`**: (**#765**) disk on a multi-machine fleet is *not* pooled — each machine gates on its own disk (contrast with the shared-host RAM/heavy-lane aggregation of #740). (**#763**, partial) two peers that mutually paused need an explicit un-pause trigger.
+- **`SKILL.md`** (**#386**, partial): a change that would *reverse* a ratified invariant/decision is not a lane's mechanical call — stop and queue it to the owner (companion to principle 12). Plus two routing-trigger widenings (mutual-pause; unattended-run session lifetime). **`project-state.md`** (**#385/#386**, partial): session-only automation dies when the session/host closes — state the required operator action or prefer a durable scheduler.
+- **#763's central "the only spawn gate is machine resources / never idle a tick" thesis was NOT imprinted** — it contradicts the free-RAM-is-a-veto, WIP-cap-by-landed-artifacts, and aggregate-distress-shed rules; only its non-contradicting fragment (a utilization-ratchet self-check: track active-lanes ÷ machine-capacity so a chain of individually-justified holds can't silently drift the fleet to idle) was added, explicitly deferring to those three gates. +5 evals. Built by a worktree builder; independently reviewed **PASS-WITH-FIXES** (the #763 fold verified not to weaken the three gates; two eval must-fixes applied — a dangling (a)/(b) prompt reference and a telegraphed utilization ratio). **Closes #754, #757, #765.** #763 and #386 remain open for the owner (the rejected #763 headline; #386 §7's fail-open-evidence request, rejected as contradicting the UNVERIFIED-never-a-pass rule; the operating-mode-doc question).
+
 ## [1.330.0] — 2026-09-20
 
 ### deep-code-review — NEW: WebAuthn/passkey credential-layer review depth (#778)

@@ -147,7 +147,17 @@ under this kind of thrash, where dying lanes release RAM as the machine fails, i
 read healthiest exactly as delivery collapses. The swap trend (sampled twice for
 direction, as above) stays the primary gate. Add to the probed predicate **free disk,
 worktree count, and live-lane count** — a fan-out sized against memory alone dies of
-disk (worktree lifecycle, below). And treat a collapse in observable **work rate** —
+disk (worktree lifecycle, below). Size the disk term with real arithmetic, not a guess:
+a per-heavy-lane disk footprint is roughly **build output + installed deps** (a fresh
+`node_modules`-equivalent per worktree — the per-worktree install the dev-server-lane
+section below requires, never a shared symlink), so the concurrent **build**-lane
+ceiling is roughly `disk_free ÷ per_lane_footprint`, the same shape as the RAM/swap
+ceiling above applied to disk. Read an **ENOSPC** death on a heavy lane as what it is —
+**a sizing bug, the spawn gate omitted disk** — never retry it blind as a flaky lane
+(the same asymmetry as *a subagent's own crash report overrides a healthy probe*,
+below), and the same *contention, not a defect, until reproduced at low concurrency*
+shape as the probe procedure above: a fan-out-only ENOSPC is the resource cap, not the
+code. And treat a collapse in observable **work rate** —
 lanes not completing, tool calls timing out, nothing landing — as itself the resource
 signal, outranking any green metric (distinct from the delivery-ratio drain above:
 that asks whether lanes convert to artifacts, this asks whether the machine can still
@@ -191,6 +201,17 @@ branches escape the usual merged-branch cleanup.
   directory is gone; worktrees whose branch is merged, whose PR is closed, or idle
   past a threshold **and** holding no uncommitted changes — and executes only on
   explicit approval.
+- **The orchestrator also owns reaping orphaned heavy processes, held to the same
+  bar.** A lane that dies mid-step — killed, crashed, or simply abandoned — can skip
+  its own cleanup, so its child processes (a dev server, a browser, a build) outlive
+  it as orphans. *Kill a lane-owned helper the moment its step ends* (below) is what a
+  **live** lane does for itself; this is the **backstop** for when that didn't fire.
+  Sweeping these orphans is **advisory and approval-gated**, never an autonomous
+  kill — the identical propose-with-the-exact-command, execute-only-on-approval bar
+  the worktree GC above already sets, not a separate, looser one for processes.
+  Termination mechanics (own a process group, terminate by pgid) stay in
+  `deep-code-review`'s `concurrency-shared-state.md`; this bullet is only about
+  **whose job the sweep is** and **what bar it clears**, not how a kill is executed.
 - **Fully pushed is its own reclaim signal, independent of merge state** — once a lane
   has reported done *and* local `HEAD` equals `origin/<branch>` with a clean tree, the
   worktree is redundant whether or not its PR has merged (the branch lives durably on the
@@ -203,7 +224,8 @@ branches escape the usual merged-branch cleanup.
   never become the mechanism that loses a lane's only copy of its work.
 - **Scratch is a probed resource** — free disk and worktree count are ceilings the
   spawn probe enforces (the swap-trend section above); this section keeps that term
-  from going red, it does not re-specify how to read it.
+  from going red, it does not re-specify how to read it. The per-lane disk arithmetic
+  and the ENOSPC-is-a-sizing-bug reading live in that section, not here.
 
 ## Sweep the whole ready queue on every trigger, not just the triggering item
 
@@ -619,6 +641,23 @@ rule ("read status, not the raw transcript" — do not consume the transcript as
 this is not reading its **file stat** as *liveness*. And distinct from the idle-before-
 duplicate section above: that is a false-**positive** "completed" leading to a duplicate
 dispatch; this is a false-**negative** liveness read leading to a destructive **kill**.
+
+## An open-ended brief gives the judge nothing to judge — timebox it and require an interim checkpoint
+
+The section above says how to **judge** a lane once you're looking at it — from its actual
+product, never the transcript's stat. This is the upstream half: a lane dispatched open-ended,
+with no stated **wall-clock timebox** and no **required interim durable checkpoint**, can leave
+nothing to look at until it finally reports — no pushed branch, no commit, nothing but a running
+transcript for however long it runs, which is exactly the state the section above warns against
+trusting *or* distrusting on the stat alone. Brief every open-ended lane with both up front: an
+explicit **wall-clock timebox** for the whole lane, and a **required interim checkpoint** — a
+pushed WIP branch or commit at a named milestone inside that window, not only a final one — so
+liveness and sunk cost are always judged the same way the *progress is a durable artifact, not a
+spawned lane* rule (below, in the unattended-time-budget section) already grades a lane: by
+artifact, never by elapsed runtime or transcript activity. Prefer decomposing an open-ended lane
+into **smaller, checkpoint-able sub-lanes** over dispatching one long opaque one — each sub-lane's
+own finish is then itself a checkpoint, rather than manufacturing an artificial one partway
+through a task that had none.
 
 ## Release verification runs on a frozen, quiescent head — a discovery pass runs during integration
 
@@ -1172,8 +1211,24 @@ burning budget and adding risk to look busy.
   there the risk is **silence** (going quiet reads as working), here it is **filler** (motion to
   look busy).
 - **At a genuine terminus the highest-value moves are non-fan-out** — drain the merge queue,
-  close delivered items, surface the decisions that gate the rest. When even those are done,
-  **hold and say so**; busywork under observation is still busywork.
+  close delivered items, surface the decisions that gate the rest, or turn spare capacity onto
+  **verification/hardening of what already landed** (an adversarial re-review, added test
+  coverage, an evidence receipt for a claim that shipped without one) — still not fan-out, and it
+  only counts once it produces a genuinely **new** artifact, never a re-report of already-known-fine
+  state (the 🚩 tell below). When even those are exhausted, **hold and say so**; busywork under
+  observation is still busywork.
+- **A chain of individually-correct holds can still drift the machine to idle — self-check the
+  utilization ratchet.** *Distinguish stalled from correctly holding* judges one decision at a
+  time; it doesn't catch **accumulation** — each hold above can be separately justified in the
+  moment, and the sum can still ratchet toward near-zero utilization, because nothing re-examines
+  the pattern itself. Make the drift visible instead of assumed-fine: track **active-lanes ÷
+  machine-capacity** alongside queue depth. This is an **orchestrator-internal diagnostic**, not
+  the owner-facing status (*report the artifact, not the activity*, above, still governs what's
+  said) and not an admission signal — a low ratio is a prompt to **re-examine why the holds
+  accumulated**, never authorization to spawn past the WIP-cap-by-landed-artifacts gate, the
+  free-RAM/swap-trend veto (*a veto, not a licence*, above), or a legitimate aggregate-distress
+  shed (`multi-session-coordination.md`); a machine correctly held idle by any of those gates is
+  not the drift this guards against, and this check never overrides them.
 - **🚩 tell:** a new lane whose outcome is *already-delivered* / *nothing-changed*, or a finding
   filed only because a pressure prompt fired — activity manufactured to answer a clock.
 

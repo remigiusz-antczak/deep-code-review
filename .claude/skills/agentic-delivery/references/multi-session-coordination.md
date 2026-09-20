@@ -119,6 +119,32 @@ within its own stated heavy-lane cap while the machine shows aggregate
 distress (`load1` far above core count, swap climbing, multi-minute git
 operations) — the caps were never coordinated, only summed by accident.
 
+**Disk does not pool the same way.** RAM and heavy-lane count sum across peers on one
+**shared host**, which is the whole reason the aggregate reservation above exists —
+but on a **multi-machine fleet**, disk is the opposite: each machine's disk is local
+to that machine, not a shared pool, so one peer reporting "out of disk" is true for
+**that peer's machine alone**, never a fleet-wide signal. Gate disk-heavy work
+per-machine against that machine's own probe (`fast-agentic-delivery.md`'s disk
+arithmetic); don't fold a disk shortfall into the shared heavy-lane budget above, and
+don't shed fleet-wide on one peer's local disk pressure the way the aggregate shed
+above correctly does for RAM/swap/load.
+
+## Two peers that mutually paused need an explicit un-pause condition, not a vibe check
+
+Shedding under aggregate distress (above), or backing off for any other peer-visible
+reason, can leave **two peers each paused waiting on the other** — peer A holds
+because it read B as still working the shared resource, B holds because it read A the
+same way, and neither is wrong at the moment it paused. Nothing about a mutual pause
+makes either side re-check; each can wait indefinitely on a condition it never stated.
+This is the peer-coordination instance of `fast-agentic-delivery.md`'s *a degradation
+workaround is temporary by default — tie its removal to the condition that caused it*
+rule, not a new mechanism: a pause is a workaround for a perceived conflict, so name
+the **un-pause condition** explicitly when pausing — the aggregate reading clear, the
+other peer's own explicit resume post, or a stated timeout — and poll or watch for it,
+rather than waiting for the other side to move first. **🚩 tell:** two peers each
+citing the other's activity as the reason they are still paused, with neither having
+posted (or checked for) the condition that would end it.
+
 ## A persistent cross-peer permission asymmetry silently stalls the blocked peer — route the action, never launder it
 
 Distinct from `fast-agentic-delivery.md`'s classifier-asymmetry section,
