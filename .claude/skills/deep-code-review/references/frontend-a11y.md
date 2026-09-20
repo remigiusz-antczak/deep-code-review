@@ -519,6 +519,48 @@ production-like server).
   budget. (Chrome Lighthouse, *critical request chains*.) The same accidental-serialization
   shape inside a server handler's own loader — no browser round trip involved, hurting TTFB
   rather than LCP — is `performance-db-cost.md`'s Concurrency section.
+- **A `<Suspense>` boundary whose subtree never *suspends* has a dead fallback — the
+  "loading state" it looks like it adds renders nothing.** A Suspense fallback paints only
+  while a descendant actually suspends — throws a promise the boundary catches — which is what
+  a `lazy()`/`React.lazy` component (before its chunk arrives), a `use(promise)`/`use(Context)`
+  on a still-pending value, a suspense-enabled data library, or an `async` Server Component the
+  boundary streams do. **The discriminator is *where the awaiting happens*, not whether the
+  child holds data:** the fallback is live when an **unresolved** promise (or the async child
+  itself) crosses the boundary and something under it does the waiting; it is dead when the
+  slow `await` already ran **above** the boundary, so the value handed in is fully resolved and
+  nothing under it can throw. Two common shapes look like they added a loading state and
+  didn't: (a) a client component that fetches in a `useEffect` and `setState`s — it mounts and
+  renders **synchronously** with its data still `null` (typically a blank or empty-state
+  branch), then re-renders when the effect resolves, so the wrapping
+  `<Suspense fallback={<Spinner/>}>` shows the child's `null`-data render for the whole wait,
+  not the spinner; (b) a child handed only already-resolved plain props because the slow
+  `await` ran earlier in the same or a parent async function, before this JSX was built —
+  contrast the *live* case, where a parent threads an **unawaited** promise down for the child
+  to `use()` and the boundary suspends correctly; the fault is awaiting above the boundary, not
+  passing data through it. In neither dead shape is the fallback ever reachable. It hides
+  because the JSX visibly contains a fallback and a fast local connection makes the missing
+  feedback imperceptible; on a real network the surface is a frozen/blank wait or a false
+  empty flash — a frequent, invisible contributor to "the app feels heavy/slow." Fix by
+  intent: if the fallback is genuinely wanted, move the data-loading into a mechanism that
+  suspends — a `use(promise)` on a promise created **above** the boundary and passed through
+  it, a suspense-enabled query hook, or a nested `async` child the boundary streams — and/or
+  add the framework's route-level loading convention (a Next.js `loading.tsx` wraps the route
+  in a real boundary) when the whole route is the wait; if the fetch legitimately stays
+  effect-based, **remove the dead `<Suspense>`** (it is a false sense of a loading state) and
+  render an explicit loading branch from the component's own state
+  (`if (loading) return <Skeleton/>`), separating not-yet-loaded from genuinely-empty. This is
+  the precondition behind curing a blank-screen route by wrapping it in `<Suspense>`: the wrap
+  works only once the slow work moves **inside** the boundary — leaving the `await` at the top
+  of the render, or resolving the props before the JSX, leaves the fallback dead. Detection:
+  for each `<Suspense>`, trace its subtree for a real suspension source (`lazy()`, `use()` on a
+  pending value, a suspense-enabled hook, an awaited `async` child) and for any unresolved
+  promise crossing the boundary; finding none, flag the fallback as dead, and sweep the broader
+  shape — an effect-fetching or resolved-before-render page with a Suspense fallback (or no
+  adjacent route-level loading file) that shows no feedback on navigation. **Distinct** from the
+  `role="status"`/`aria-busy` loading bullet under Accessibility above (whether a loader that
+  *does* render announces itself) — this is whether it renders at all; and from a real,
+  explicit `if (loading) return <Skeleton/>` state, which is not this bug. Regression-test on a
+  throttled network, or assert the fallback actually mounts — not a fast local load.
 - **A memoized callback needs a memoized recipient — stable props alone don't stop
   re-renders.** In a list/queue rendering N rows via `.map()`, if the parent holds shared
   per-row state (a selection set, per-row drafts, a filter) that changes on ordinary
@@ -764,7 +806,10 @@ third-party origin with no `integrity=`; a weakened `Referrer-Policy` (`unsafe-u
 small lookup helper imported from a shared module that also builds a derived singleton over
 an entire large dataset (walk the client import graph, stripping type-only imports, for an
 edge into that module); a loading/skeleton component with `aria-busy` and/or a label prop but
-no `role="status"`/`role="alert"`/`aria-live` on it or an ancestor; a static `aria-label` that
+no `role="status"`/`role="alert"`/`aria-live` on it or an ancestor; a `<Suspense fallback={…}>`
+whose subtree loads data only via `useEffect`+`setState` or receives already-resolved props, with
+no `lazy()`/`use()`/suspense-enabled hook and no unresolved promise crossing it (the fallback is
+dead); a static `aria-label` that
 doesn't contain the element's own visible text (WCAG 2.5.3); an icon/label swap keyed off an
 `open`/`expanded` boolean with no matching `aria-expanded` on the same control; a
 `Content-Security-Policy` header/meta containing `unsafe-inline` with no `nonce`/hash, or missing

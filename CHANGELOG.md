@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.359.0] — 2026-09-21
+
+### deep-code-review — a Suspense boundary with no async gap inside it is dead code; the fallback never renders (#845)
+
+- **`frontend-a11y.md`** (Reliability & performance): a React `<Suspense fallback={…}>` paints its fallback only while a descendant actually *suspends* (a `lazy()` component, a `use()`/suspense-enabled data read, an awaited async Server Component). A subtree that fetches in `useEffect`→setState (or receives already-resolved plain props) never suspends, so the boundary is **inert** — it renders the spinnerless children immediately, the fallback is unreachable, and the "loading state" the author thought they added does nothing. Discriminator: WHERE the await happens (an unresolved promise crossing the boundary = live; an await above it = dead). Fix by intent — move the fetch into a suspending mechanism (or `loading.tsx`), or remove the dead boundary and add an explicit `if (loading)` branch. Distinct from the a11y of a *real* loader (`role="status"`/`aria-busy`). +1 eval.
+
 ## [1.358.0] — 2026-09-21
 
 ### deep-code-review — a read failure defaulted to the worst-case verdict is indistinguishable from genuine non-compliance (#821)
