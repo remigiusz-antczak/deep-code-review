@@ -485,7 +485,26 @@ never the first callsite alone. Stopping at one site under-scopes the finding an
 second fix into a later increment — the review analogue of the *one component per concept*
 duplicate-twin sweep (`product-ux-quality.md`), for a bug pattern rather than a duplicated
 component; after the fix, a re-grep of the idiom confirms none remain (the class is closed
-only when that search returns clean — a zero-survivor check, principle 2). Also identify
+only when that search returns clean — a zero-survivor check, principle 2). **A fix that already scoped itself to an
+enumerated list is judged against that list — but a green test pinning the list proves
+non-regression, not completeness.** The same class discipline runs in reverse when the
+fix is the review *target*: a change that lands as *apply treatment T to instances
+[named list]* — the routes a bug report named, the handlers an investigation walked —
+ships a regression test over exactly those entries, and that test can only prove the
+**named** instances do not regress; it is structurally incapable of proving the list
+complete against the rest of the tree (the *a green gate clears only the surface it
+enumerated* rule above, at remediation scope). The report enumerates the symptoms
+someone hit — a **sample** of the qualifying shape, not its population — so re-derive the
+shape precisely (a shared wrapper, a fetch shape, a missing guard) and run the same
+independent sweep this bullet prescribes, then **diff the full match set against the
+fix's named list**: whatever the sweep finds that the list omits is the gap, named. Such
+a fix passes intent-conformance against the ticket and is still incomplete against the
+code — the Phase 2 / Phase 4 seam. Separate an **acknowledged** boundary from a
+**silent** one: a *category X stays a follow-up* note is legitimate when drawn after a
+full enumeration, a real gap only when the search never left the ticket; and an
+**easier**-to-fix sibling skipped while harder ones were fixed is the tell of an
+accidental miss, not a deliberate deferral. (The field-shape version — patching a shared
+request-body builder only where reported — is `domain-checklists.md` Domain H.) Also identify
 **compounds** — findings from
 different domains where one disables another's safeguard; a compound's severity
 is the joint effect, which can exceed either part, so state it as one finding

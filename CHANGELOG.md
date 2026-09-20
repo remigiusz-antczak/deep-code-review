@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.356.0] — 2026-09-20
+
+### deep-code-review — a fix scoped to a bug report's named list is a sample, not the population; sweep for unnamed same-shape siblings (#814)
+
+- **`method.md`** (Phase 4): a bug report enumerates the instances someone hit — three routes, two components — and a fix that patches exactly those is judged complete against the report, but the same defect shape often recurs at siblings nobody filed. The enumerated remediation list is a **sample**; a green regression test pinning that list proves **non-regression, not completeness**. Sweep the codebase for the bug's *shape* (grep/AST) and confirm every instance is fixed or genuinely different — an acknowledged/named defer is legitimate, a silent gap is the failure, and an easier sibling skipped is the accidental-miss tell. Cross-refs the reviewer's own class-finding sweep and the green-gate-clears-only-the-enumerated-surface rule. +1 eval.
+
 ## [1.355.0] — 2026-09-20
 
 ### agentic-delivery — static domain-partition of a shared backlog is structurally collision-free; stronger than a tighter claim-recheck (#834)
