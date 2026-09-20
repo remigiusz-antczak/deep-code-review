@@ -112,6 +112,49 @@ legal adequacy / anonymity determination routes to counsel.)
 `do_not_contact` used in one exporter but not another; a `retention` constant
 referenced nowhere; no scheduled task issuing a delete at all.
 
+## Cross-border data transfer & residency — a distinct reviewable surface
+
+Where personal data is allowed to live, geographically, is a product decision —
+recorded as a data-residency option (default region, region pinning, the named
+transfer mechanism) in `privacy-by-design.md` §5. This section is the code/config
+check that what is actually deployed honors that promise. It is a distinct axis
+from minimization (what you hold) and from the erasure discipline above (whether
+a copy is gone) — here the question is where a copy sits.
+
+- **Check the promise against where data actually lands, not against the
+  contract or the marketing page.** A region selector with a default or fallback
+  outside the promised boundary, or a cross-region replica/backup that exists
+  outside it, is the finding — independent of whether a legal transfer mechanism
+  covers it. This generalizes the multi-tenancy isolation check's residency
+  clause (`domain-checklists.md` §T: a tenant promised its own encryption key or
+  data residency that a shared-pool default silently violates) beyond the
+  tenant case — the same promise-vs-actual check applies to every stated
+  residency commitment, tenant-scoped or not.
+- **Backups, logs, and analytics/CDC sinks are their own residency surface,
+  separate from primary storage.** The copy-set the erasure check above
+  enumerates — replicas through backups — is where residency drifts too: a
+  correctly region-pinned primary database paired with a backup target, a
+  change-data-capture (CDC) stream, or an analytics sink that replicates to a
+  default or different region is the common gap, invisible from reading the
+  primary's own config. Verify actual placement in the infra config itself — a
+  Terraform/IaC bucket or replica resource's region and replication attributes
+  sit alongside the public-access and encryption settings already checked in
+  `infra-iac-containers.md`'s Terraform/IaC section.
+- **Every third-party subprocessor receiving personal data has its own
+  processing region.** A SaaS vendor, an LLM API, or an analytics tool already
+  flagged as a data export below (Analytics, telemetry & third-party SDKs) can
+  process it wherever its own infrastructure runs; check where, not only
+  whether a processing agreement exists.
+- **A named transfer mechanism is a documentation check here, not a legal
+  determination.** GDPR devotes a dedicated chapter to transfers
+  outside the EU/EEA, naming mechanisms: an adequacy decision, appropriate
+  safeguards such as standard contractual clauses, and binding corporate rules.
+  Flag the presence or absence of a **named mechanism** in the transfer's
+  documentation; never assert which one applies to a given transfer or that it
+  is sufficient — that call routes to counsel (cross-ref `privacy-by-design.md`
+  §5, which records the mechanism as a decision to make, not a code check to
+  pass).
+
 ---
 
 ## Consent & lawful basis
@@ -179,8 +222,11 @@ display name. Cross-ref ASI07 (audience) in `security-ai-agents.md`.
 
 **🚩 red flags**: fields collected with no reader; retention policy with no job;
 erasure that misses indexes/caches/warehouse/vendors; DSAR with no timestamps or
-SLA; suppression re-implemented per consumer; boolean consent with no purpose or
-version; tags firing pre-consent; `track(event, props)` passthrough; PII in
-analytics ids or URLs; vendor SDK with no data-flow note; GPL/AGPL or unlicensed
-dependency in a distributed permissive project; a compliance claim no code
-enforces.
+SLA; suppression re-implemented per consumer; a region selector defaulting or
+falling back outside the promised residency boundary; a backup, CDC, or
+analytics sink replicating PII to a region the primary never uses; a
+subprocessor with no documented processing region or transfer mechanism;
+boolean consent with no purpose or version; tags firing pre-consent;
+`track(event, props)` passthrough; PII in analytics ids or URLs; vendor SDK
+with no data-flow note; GPL/AGPL or unlicensed dependency in a distributed
+permissive project; a compliance claim no code enforces.

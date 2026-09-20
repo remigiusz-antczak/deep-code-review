@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.333.0] — 2026-09-20
+
+### deep-code-review — NEW: cross-border data transfer & residency enforcement (#780)
+
+- **`privacy-compliance.md`** (#780): a new "Cross-border data transfer & residency" section treating residency as its own reviewable surface — the code/config-layer companion to `privacy-by-design.md` §5's pre-code residency *promise*. Four rules: a stated residency promise (region selector, contract, "stored in the EU" claim) is checked against where data *actually* lands (a default/fallback region or a cross-region replica/backup outside the boundary is the finding); backups, logs, and analytics/CDC sinks are checked as **separate** residency surfaces from primary storage; third-party subprocessors receiving personal data have their own processing region checked; and a named transfer mechanism (adequacy / SCCs / BCRs) is flagged as a documentation gap and routed to counsel, never asserted. Fills the previously-dangling `domain-checklists.md` cross-ref into privacy. GDPR cited by name only, per the file's own by-name convention (no article numbers/URLs). +2 evals.
+- Research-scout-surfaced. Built by a worktree builder; independently reviewed **PASS** — the builder correctly overrode an instruction to add GDPR article numbers because `privacy-compliance.md`'s own header bars unlogged article numbers (good judgment). Applied two optional polish items (dropped a structural "Chapter V" locator to match the by-name discipline; de-telegraphed one eval prompt).
+
 ## [1.332.0] — 2026-09-20
 
 ### deep-code-review — NEW: transactional/bulk email deliverability & one-click unsubscribe (#779)
