@@ -3,6 +3,15 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.350.0] — 2026-09-20
+
+### deep-code-review — frontier agent-security instruments: lethal-trifecta pre-check, cross-server tool-shadowing, tool-annotation trust boundary (security-ai-agents.md)
+
+- **Lethal-trifecta conjunction probe**: a cheap up-front check — if an agent's tool set simultaneously grants (a) private-data access, (b) exposure to untrusted content, and (c) an exfiltration channel, it is critical regardless of per-leg mitigations; the fix is to **remove a leg** (guardrails don't suffice), via the existing "quarantine the reader from the actor" structure or a runtime egress-after-untrusted-source gate. Sourced to Willison's *lethal trifecta*.
+- **Cross-server tool-shadowing**: a third MCP-metadata pattern, distinct from tool-poisoning (a tool lying about itself) and rug-pull (a tool mutating over time) — one server's tool description hijacking/intercepting calls to a *different* server's trusted tool.
+- **Tool-annotation trust boundary**: a confirmation gate that skips itself because a tool's self-declared `annotations` (`readOnlyHint`) claim read-only, without verifying the server is trusted, violates the MCP spec's MUST ("clients MUST consider tool annotations to be untrusted unless they come from trusted servers"); extends the existing `readOnly`-flag grep.
+- +3 evals; OWASP/Willison/MCP-spec standards-index rows verified by direct fetch 2026-09-20. (Found by an internal frontier agent-security scout.)
+
 ## [1.349.0] — 2026-09-20
 
 ### deep-code-review — switch/case control flow & unreachable code, as a cross-language reversal (language-stack-redflags.md)

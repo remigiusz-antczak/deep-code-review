@@ -143,6 +143,32 @@ than the prompt named is a finding — even if the bytes look like a private DM.
 Key the protocol on a stable tenant/uid, never a display name (names are
 per-owner and collide).
 
+**Lethal-trifecta conjunction probe (cheap, before any per-leg mitigation
+review).** An agent is at critical data-theft risk the instant its tool set
+gives it, simultaneously: **(a)** access to private/sensitive data, **(b)**
+exposure to untrusted content (a retrieved document, fetched page, email, or
+tool result — anything that did not come from the trusted prompt), and **(c)**
+an exfiltration channel — broader than an obvious "send" tool: "If a tool can
+make an HTTP request—to an API, or to load an image, or even providing a link
+for a user to click—that tool can be used to pass stolen information back to
+an attacker" (Willison 2025-06-16). **Probe before walking any single tool's
+mitigations:** enumerate the target's full tool set and check whether one
+agent identity holds all three legs at once. If so, flag it **critical
+regardless of each leg's own control** — a scoped read, a sanitized fetch, and
+an allowlisted send can each be individually sound and the conjunction is
+still exploitable, because the attacker only needs the content-exposure leg to
+smuggle an instruction the model follows; no single leg's own mitigation has
+to fail for the conjunction to work. Willison's conclusion: "we still don't
+know how to 100% reliably prevent this from happening" and "the only way to
+stay safe there is to avoid that lethal trifecta combination entirely" — **the
+fix is to remove one leg, not stack a fourth guardrail on the other three**.
+Two remedy shapes: **(1) structural** — quarantine the reader from the actor
+(below) so the identity that reads untrusted content never also holds the
+egress leg; **(2) a lighter runtime fallback** where the architecture can't be
+split — block or require human approval on an egress action whenever the
+session has touched an untrusted source since the last checkpoint, so legs (b)
+and (c) are never both live in the same turn even inside one identity.
+
 Attacker techniques against agent tool ecosystems are also catalogued in **MITRE
 ATLAS** (e.g. poisoned agent tools, sandbox/host escape) — useful for building
 the red-team test set below. To *model* an agentic system's threats systematically rather
@@ -214,9 +240,23 @@ goal-hijack; extends ASI04 pin-and-vet — the tool-**metadata** trust leg besid
   credentials on a later run); many clients do not alert on description changes.
   **Pin/hash the approved description and re-approve on change** — a TOCTOU on tool
   metadata, the ASI04 pin-and-vet rule extended from the artifact to its *description*.
+- **Cross-server tool shadowing.** A third, distinct pattern from the two bullets
+  above — poisoning is a tool lying about *itself*, a rug pull is a tool *changing
+  over time*; **shadowing is one server's tool description hijacking or intercepting
+  calls meant for a different server's (trusted) tool.** "With multiple servers
+  connected to the same agent, a malicious one can override or intercept calls made
+  to a trusted one" (Cross, via Willison 2025-04-09). A newly added, low-scope server
+  (a formatter, a search helper) can carry this even though it declares no sensitive
+  capability of its own — the hijack lives in the text the model reads, not in that
+  server's declared permission scope, so a per-server scope review misses it. Check
+  it directly: when the target connects to more than one MCP server in the same
+  session, grep every connected server's tool descriptions for an imperative that
+  names or redirects to a tool belonging to a *different* server ("when calling
+  `<other-server>.<tool>`, first/instead do …").
 - **🚩** tool descriptions concatenated into the model's context with no
   untrusted-content boundary; no hash / re-approval of a tool's description across
-  sessions.
+  sessions; a multi-server session where one server's tool description names or
+  redirects to a tool belonging to a different, trusted server.
 
 ## Prompt-injection & jailbreak test set (write these tests)
 
@@ -418,7 +458,7 @@ LLM-backed feature, add cases that assert the guardrail holds:
 - **Falsify asserted-but-unenforced safety properties.** A safety parameter set
   at a call site but silently **dropped or overridden by the layer below** — so
   the code (and often a comment) *claims* a property that is not in force. Worse
-  than a missing safeguard because it reads as present. Two sub-cases:
+  than a missing safeguard because it reads as present. Three sub-cases:
   - *Dropped by a lower layer.* e.g. `temperature: 0` "so the verifier is
     deterministic" is omitted by the payload builder for a model tier that
     rejects a non-default temperature (HTTP 400) — so the determinism claim is
@@ -430,6 +470,21 @@ LLM-backed feature, add cases that assert the guardrail holds:
     risk that holds **regardless** of the guarantee and rest severity on the code
     you can test; convert the unverifiable part into a single owner-run check in
     "Decisions needed."
+  - *Self-declared by the untrusted party the gate is supposed to check.* An MCP
+    tool's own `annotations` — e.g. `readOnlyHint` (schema reference, fetched
+    2026-09-20) — are hints the **tool/server asserts about itself**, and the
+    spec's Warning is explicit: "For trust & safety and security, clients MUST
+    consider tool annotations to be untrusted unless they come from trusted
+    servers" (`specification/2025-06-18/server/tools`, fetched 2026-09-20). A
+    confirmation/approval gate that reads `readOnlyHint === true` and skips
+    itself — without first checking the server is on a trusted/vetted list —
+    asserts a safety property (no human check needed) that the very party being
+    gated supplied. This is **not** the model reading tool metadata as an
+    instruction (MCP section 3 above); it is the **client/harness's own gating
+    logic** treating a self-declared annotation as a verified fact. Grep the
+    same `readOnly` sites above for this shape: does the gate check server trust
+    **before** honoring the hint, or does the hint alone short-circuit the
+    confirmation?
 
   **A comment asserting a safety property is the highest-value thing to falsify.**
 
