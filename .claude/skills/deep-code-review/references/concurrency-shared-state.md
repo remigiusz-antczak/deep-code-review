@@ -186,6 +186,27 @@ Common in agent/tooling repos: JSON/YAML "DB" files, append logs, lockfiles.
   have a CAS?" review waved through on the wrong column is the tell. Guard every field the
   decision consumed — a whole-row version / `updated_at` CAS, or re-read and compare each input
   under the same lock — not only the state enum.
+- **A CAS placed *after* a non-idempotent side-effect does not guard that side-effect — only the
+  state column recording it.** A transition that (1) performs a slow external side-effect — charges
+  a card, sends an email, opens a PR, writes to a third-party API — and only *then* (2) runs a
+  compare-and-swap to record the new state has already committed the side-effect by the time the CAS
+  finds out it lost. Under concurrency (two transitions racing the same CAS) or after a lease expires
+  mid-side-effect and the transition gets reassigned, **both** actors can run the side-effect while
+  only one CAS wins — the loser's side-effect already happened: unrecorded (its losing branch has no
+  field for "here's what I did before I found out I lost"), and on a non-idempotent operation,
+  duplicated. Distinct from the CAS-covers-the-wrong-field bullet above (there the guard sits on the
+  wrong column; here it sits on the right column and simply cannot retroactively cover an action that
+  already fired) and from the paused-holder lock-liveness race below (`Distributed lock/lease
+  TOCTOU`) — that's a holder losing exclusivity it still believes it has; this is ordering, where a
+  guard placed after an irreversible action protects nothing about that action no matter how sound
+  the guard itself is. **Fix, in order of preference:** (a) claim/CAS the transition *first* and run
+  the side-effect only once the claim is won, so a loser never acts; (b) if the side-effect must run
+  before the outcome is known, make it idempotent/keyed (the idempotency-key rule above — the same
+  idempotency fallback the fencing-token bullet below reaches for when it can't instrument the
+  resource, applied here to a different cause) so a duplicate run is harmless; (c) failing both,
+  record the side-effect's outcome atomically with the state transition so a losing branch's result
+  stays discoverable instead of silently dropped. Read the order top to bottom — "do the slow thing,
+  then CAS" is the red flag, independent of how correct the CAS itself is.
 - **A transaction boundary is not itself the concurrency guard.** Under the isolation level engines
   ship by default — **Read Committed** in PostgreSQL, **REPEATABLE READ** in MySQL/InnoDB — wrapping
   a check-then-act in `BEGIN`/`COMMIT` prevents neither a lost update (two read-modify-write cycles
@@ -379,4 +400,6 @@ plain (non-atomic, non-`volatile`) flag or field shared across threads with no
 named synchronization edge — a memory-visibility bug, not only an interleaving race; a
 distributed lock/lease (Redis/Redlock, ZooKeeper, etcd, a DB-row lease) guarding a write to
 a shared resource with no fencing token on the write path and no idempotency/CAS fallback —
-especially a "re-check the lease, then write" pattern, which reads as safe but isn't.
+especially a "re-check the lease, then write" pattern, which reads as safe but isn't; a
+non-idempotent side-effect (a charge, a send, a third-party write) performed before the CAS/claim
+meant to guard its transition — the guard covers the state, not the action that already fired.

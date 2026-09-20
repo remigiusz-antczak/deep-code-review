@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.322.0] — 2026-09-20
+
+### deep-code-review — a CAS after a non-idempotent side-effect does not guard the side-effect (#646)
+
+- **`concurrency-shared-state.md`** (DB / store TOCTOU): a CAS / optimistic guard placed *after* a non-idempotent side-effect (a charge, a send, a third-party write) protects only the **state column** recording it, not the side-effect that already fired — under concurrency (or a lease expiring mid-side-effect) the loser's side-effect already committed, unrecorded or duplicated. Fix in preference order: (a) **claim/CAS first** (reserve, then act), (b) idempotent/keyed side-effect, (c) record the outcome atomically with the transition. Distinct from the wrong-field-CAS bullet (a *right* column that still can't retroact), the fencing-token/paused-holder race (exclusivity vs ordering), and the idempotency-key rule (cross-reffed). +2 evals. Closes #646.
+- Built by a worktree builder subagent, independently reviewed **PASS**: confirmed genuinely absent and distinct — eval-1 uses a plain version CAS with **zero lease mechanics** and the flaw still fully reproduces, structural proof it's independent of the lock-liveness race; advisor had caught and fixed an eval domain-collision + telegraph pre-review.
+
 ## [1.321.0] — 2026-09-20
 
 ### agentic-delivery — NEW reference: multi-session / peer coordination (independent sessions, no shared conductor)
