@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.361.0] — 2026-09-21
+
+### deep-code-review — a multi-backend store fails on the backend the tests never instantiate; a faithful fake can't catch it (#853)
+
+- **`testing-and-evals.md`**: when one store interface has several implementations chosen at runtime (an in-memory/file store for dev/CI, a SQL database in prod), a field added to the model must be threaded through **every** backend's write/read/serialize path. The trap is that this is **not** a drifting-double problem — the in-memory store keeps the whole object (it retains the new field for free, so there's no place for the omission to live), while the SQL backend has a failure surface the fake structurally lacks: a hand-written `INSERT`/`UPDATE` column list (or a migration, or a DTO mapping) with no compile-time tie to the model type. So the field is silently dropped on the **production** path while every test stays green — because the suite ran the fast fake, not SQL. Check: a green suite proves the SQL path only if the tests instantiate it (read the test config, not the diff); grep the SQL backend's `INSERT`/`UPDATE`/`SET` for the new column (present in the type, absent from a `SET` is the signature) and round-trip through the real backend. +1 eval.
+
 ## [1.360.0] — 2026-09-21
 
 ### agentic-delivery — absent CI checks are a distinct third gate-state, not a slow "pending"; bounded-wait then re-trigger (#849)

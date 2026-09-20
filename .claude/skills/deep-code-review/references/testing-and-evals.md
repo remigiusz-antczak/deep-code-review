@@ -247,6 +247,25 @@ explicit third choice), not which one this review prefers.
   (a port, a re-implementation, a circular-import copy), link the source of
   truth in a comment **and** add a test that runs one fixture through both paths
   and asserts identical output.
+- **A store with interchangeable backends fails on the one the tests never instantiate — and a
+  faithful fake cannot catch it.** When one interface has several implementations chosen at runtime
+  (an in-memory/file store for dev/CI, a SQL database in prod), a field added to the model must be
+  threaded through **every** backend's write/read/serialize path. The trap is that this is *not* a
+  drifting double: the in-memory store keeps the whole object, so it retains the new field for free
+  and has **no place for the omission to live**, while the SQL backend carries a failure surface the
+  fake's mechanics don't possess at all — a hand-written `INSERT`/`UPDATE` column list (or a
+  migration, or a DTO mapping) with no compile-time tie to the model type, so the field is silently
+  dropped on the production path while every test stays green. The check a reviewer skips: **a green
+  run proves nothing until you read which implementation the harness instantiated** — that lives in
+  the test config, not the diff, and if it's the fast fake, the SQL path was never run. Detection:
+  grep the SQL backend's `INSERT`/`UPDATE`/`SET` (and any history/mirror sync) for the new column — a
+  field present in the type but absent from an `UPDATE`'s `SET` is the signature — and round-trip the
+  new field create→edit→read-back through the **production** backend, not the default fake (the
+  both-paths coherence test above), or derive the column list from the type so it can't drift.
+  Distinct from the test-double-fidelity rule in the taxonomy (a double whose *returned shape* is
+  wrong; here the fake is behaviorally correct, just more permissive than the real store) and from
+  `data-quality.md` §6's dual-registered-entity rule (which store *owns* a field across two co-existing
+  stores; this is one write through one of two implementations of the same store).
 - **Honest coverage taxonomy.** State what is automated vs. operationally
   checked vs. human-reviewed vs. not-applicable-with-reasoning. Document
   coverage gaps and skipped tests; never claim an assurance you don't have.
