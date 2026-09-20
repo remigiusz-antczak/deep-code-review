@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.296.0] — 2026-09-20
+
+### deep-code-review — wave 217 change-detection gate must derive its diff base, not hardcode a release ref (closes #665)
+
+- **`branch-and-merge-hygiene.md`** new bullet (in the "required check must be satisfiable" section): a **change-detection / path-filter** gate (a "did `app/` change? / did a migration touch?" step deciding whether a downstream job runs) must diff against the branch's **actual base** (`@{u}`, the PR's declared target, or a computed `<base>...HEAD` merge-base), never a **hardcoded release-branch constant**. A constant fails two ways: **loud** — the branch outruns the stale cut, the diff balloons, every push false-positives as "changed" (noise, not a correctness bug); **silent (dangerous)** — a literal ref that isn't present in a shallow/partial CI checkout (`fetch-depth: 1`) makes `git diff origin/release-v2...HEAD` **error**, and a naive `| grep -q` swallows the failure as "no match," so the job **skips** a real change with nothing red. Fix: derive the base at run time, ensure it's fetched, **fail closed** on an errored/unresolved base, and name the base diffed against. Built by a worktree builder subagent; independent reviewer **BLOCK** caught a git-mechanism error — the original claimed the *silent* skip came from the branch being *positionally behind* the ref (empirically false: three-dot/merge-base correctly reports downstream commits) — corrected to the ref-**resolvability** mechanism, git-repro-verified before merge. +1 eval. Closes #665.
+
 ## [1.295.0] — 2026-09-20
 
 ### deep-code-review — wave 216 data-quality: per-group ratio attribution + asymmetric percent guard (closes #686, #654)

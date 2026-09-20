@@ -449,6 +449,34 @@ saw this PR — `SKILL.md` principle 2). Two ways it happens:
   clears them all. Sync the integration branch on **each** additive `main` merge, not only
   before the final train; and a new gate that baselines on `origin/main` must **document that
   assumption** (prefer the PR base for a long-lived-branch workflow).
+- **A change-detection gate's hardcoded base is the scope-selection sibling of stale-base —
+  loud when the branch outruns the stale ref, silently skipped when that ref won't resolve.** The bug above corrupts a gate's *verdict*; the same mistake in
+  a **change-detection** step — a path filter / "did `app/` change?" / "did any migration
+  touch?" check deciding whether a downstream job **runs at all** — corrupts its *scope decision*
+  instead. Anti-pattern: a diff pinned to a **hardcoded release-branch constant**
+  (`git diff origin/release-v2...HEAD -- app/`) instead of the branch's actual base — its
+  configured upstream `@{u}`, the PR's declared target (`github.event.pull_request.base.ref` in
+  CI), or a computed merge-base (`git diff "$(git merge-base <base> HEAD)" HEAD`, i.e. `<base>...HEAD`) (the pinned *ref* is the defect; merge-base diff
+  semantics are the right choice for a scope check, not the problem). A hardcoded constant fails
+  **two** ways. **Loud:** once the branch runs **ahead** of the stale cut, the diff span balloons
+  to the branch's whole history since the cut, so the filter reports every gated path touched on
+  **every** push (a "changed" verdict that no longer reflects this push — noise and wasted CI, not
+  a correctness bug by itself). **Silent (the dangerous one):** a literal ref is a **resolvability**
+  hazard the computed forms mostly avoid — in a shallow / partial CI checkout (`fetch-depth: 1`,
+  `origin/release-v2` never fetched) `git diff origin/release-v2...HEAD` **errors**
+  (`fatal: bad revision`), and a naive `… | grep -q '^db/migrations/'` reads the empty/failed
+  output as **no match**, so the job **skips** a real change with nothing turning red. (The
+  positional "branch is *behind* the ref" case does **not** empty the diff — three-dot / merge-base
+  semantics correctly report the branch's downstream commits; the silent skip comes from the ref
+  failing to *resolve*, not from the branch's position.) Fix: derive the base at run time (never a
+  literal branch/tag name), **ensure that base ref is actually present in the checkout** (fetch it /
+  adequate depth), **fail closed** — a change-detection diff that errors or can't resolve its base
+  must run the job (or fail the run), never silently skip — and **have the gate name the base it
+  diffed against** (and whether the diff resolved) in its output, so a bare true/false can't hide a
+  wrong-base or unresolved-ref result behind a correct-looking "nothing in scope." Distinct from the PR-*targeting* wrong-base
+  rule (below — which branch a PR opens/merges against) and a pre-push hook's hardcoded range
+  (below — fixed via stdin-derived pushed refs, since a hook has no upstream to read); three
+  mechanisms, one root cause: a constant standing in for a computed base.
 - **A long `in_progress` shard is diagnosed by its log, not by waiting or re-running.** Past
   ~2× a shard's normal duration, **read that shard's log before acting**: a **hang** (no new
   output for minutes — a deadlocked browser, a port that never opened) is cancelled and
