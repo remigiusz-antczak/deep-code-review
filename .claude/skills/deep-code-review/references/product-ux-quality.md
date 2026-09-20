@@ -99,13 +99,28 @@ Every view is intentional and honest in **all five** states, each ruled on
 - **error** — what failed and how to recover, **never a raw stack or blank**;
 - **partial** — some data present, some missing/degraded, shown honestly;
 - **overflow** — too many rows → scroll/paginate/virtualize **inside the
-  component's own container**, never breaking the page layout.
+  component's own container**, never breaking the page layout; a capped or
+  sliced list also needs an explicit **remainder indicator** whenever more rows
+  exist than are shown (below).
 
 A blank screen or a raw error on a **reachable** state is a P0 "not-at-home"
 defect, not a nit — severity by reachability, like any other defect. (Nielsen:
 visibility of system status; help users recover from errors.) `frontend-a11y.md`
 owns the *phrasing/consistency* of empty states across routes; this owns whether
 each state **exists and is honest**.
+
+**A capped or sliced list needs an explicit remainder indicator whenever more
+rows exist than are shown.** A `.slice(0, N)`, SQL `LIMIT N`, or `take(N)` that
+renders fewer rows than the underlying `total` is truncating, not paginating,
+unless the cut is visible: a correct top-line summary count ("142 issues") does
+**not** prove the itemized list beneath it is complete — the count and the
+rendered rows are two independent reads of the same data, and nothing on screen
+forces them to agree. A silently-truncated list reads as the whole set.
+Whenever `total > shown`, render an explicit remainder — "+12 more," a page
+control, a "Show all N" — never a list that just stops (Nielsen: visibility of
+system status). **🚩**: a `.slice(0, N)` / `LIMIT` / `take(N)` render path whose
+length can be less than a known `total`/count, with no adjacent remainder text
+or pagination control.
 
 **An empty state must not imply a conclusion it hasn't earned.** "No rows shown"
 is not "nothing happened": an empty activity feed, an all-green board with no
@@ -117,6 +132,23 @@ is evidence only after a positive control fires*) at the UI layer. Name the
 coverage, not only the remedy: a bare "Nothing here" over an unprobed source is a
 false all-clear, not an honest empty. (`data-quality.md` §8 owns the same rule
 where the number is *scored* rather than *shown*.)
+
+**A hardcoded empty-state message that asserts a cause is a fabricated cause
+the moment more than one path reaches it.** "No results — try changing
+filters" names one specific cause (an over-narrow filter) and one specific
+remedy; it is honest only if a filtered-to-zero query is the *only* way
+`count === 0` renders. The moment a fetch error, a permission denial, and a
+genuine empty all fall through to the same zero-rows branch, that copy is a
+guess dressed as a diagnosis: a permission-denied user is told to change
+filters that were never the problem, and a fetch failure reads as "no
+matches" (Nielsen: help users recognize, diagnose, and recover from errors).
+Before trusting the copy, enumerate every path that can reach the empty
+branch and confirm each is actually the case the message describes; where the
+paths diverge, branch the copy per cause or fall back to a cause-neutral
+empty, rather than let one hardcoded string speak for all of them. This
+extends, not restates, the coverage rule above: that rule asks whether the
+*source was queried at all*; this asks whether the empty state's *named
+cause* is true on every path that reaches it.
 
 ## A reversible action reads as a delete when nothing shows the record persists
 
@@ -592,7 +624,9 @@ name-only diff both miss. (Nielsen: consistency and standards.)
 **🚩 grep**: a data-fetch / `useQuery` / `await` render path with no
 `isLoading`/`isError`/empty branch, a `.map(` over a list with no length-0 case, a
 table/grid with no `overflow`/pagination, a `catch` rendering `err.message`/stack
-into the DOM (states) · a colour scale keyed on a field that also drives an
+into the DOM, or a `.slice(0, N)`/`LIMIT`/`take(N)` render whose length can be
+less than a known `total`/count with no adjacent remainder/pagination text
+(states) · a colour scale keyed on a field that also drives an
 icon/shape, or `>1` semantic use of one `--color-*` token (encoding) · a
 status/delta rendered by `color`/`background` with no sibling icon/text node, or a
 colour-coded status dot with no `aria-label` (colour-alone) · a delta coloured
@@ -688,7 +722,7 @@ often lost — the on-screen chart carries axes and a readout the serialiser dro
 
 ## Pre-ship checklist (mirror SKILL.md's report discipline)
 - [ ] Does it need explaining? If yes, redesign until it doesn't (or demote the text to progressive disclosure).
-- [ ] All five data states handled and honest — empty / loading / error / partial / overflow — and an empty state names its **coverage** (no-data-collected vs collected-and-genuinely-none), never implying a false all-clear?
+- [ ] All five data states handled and honest — empty / loading / error / partial / overflow — an empty state names its **coverage** (no-data-collected vs collected-and-genuinely-none), never implying a false all-clear, and any **named cause** in its copy holds on every path that reaches it, not only the one it describes; and a capped/sliced overflow list carries an explicit **remainder indicator** whenever `total > shown`?
 - [ ] One channel per dimension; nothing colour-only; reads correctly in greyscale?
 - [ ] Deltas are caret + magnitude, coloured by sentiment; flat is a muted `—` with a period anchor?
 - [ ] Confidence / score / priority shown as a **defined labeled tier** (text + a colourblind-safe cue), not a raw `%` or point score, and no model-authored number published as precision?
@@ -714,7 +748,7 @@ often lost — the on-screen chart carries axes and a readout the serialiser dro
 - [ ] Told "not the same" → **asked which axis** before acting (after one wrong guess, asked not guessed), and compared the **reference itself** at the element × breakpoint × theme, not from memory?
 - [ ] Parity target expressed in **measured device-pixels at the actual render scale** (not user-space units — equal user-units ≠ equal pixels), and same-axis oscillation treated as a **duplicate-implementation-at-different-scale** signal (measure the ratio, don't tune)?
 - [ ] No status is green-with-a-caveat — a status the author can immediately qualify is **downgraded**, not asserted beside a hedge (`report-format.md`)?
-- [ ] UI change: headed-browser receipt on the exact route after the action (screenshot or equivalent) — and the receipt is a **valid non-empty image**, not a proxy/504-wiped stub that passes a bare existence check (existence is not content — `SKILL.md` principle 2), captured from a **clean or separate tree** (a shots script that stashes uncommitted changes discards the very diff under review), and the image **shows the target feature**, not an error / login / empty-state wall (a login page is itself a valid non-empty image — confirm the feature is present, and capture in a dev/identity-bypass mode not a route-auth-walling production build, `testing-and-evals.md`)? Unit tests alone are not this box.
+- [ ] UI change: headed-browser receipt on the exact route after the action (screenshot or equivalent) — and the receipt is a **valid non-empty image**, not a proxy/504-wiped stub that passes a bare existence check (existence is not content — `SKILL.md` principle 2), captured from a **clean or separate tree** (a shots script that stashes uncommitted changes discards the very diff under review), and the image **shows the target feature**, not an error / login / empty-state wall (a login page is itself a valid non-empty image — confirm the feature is present, and capture in a dev/identity-bypass mode not a route-auth-walling production build, `testing-and-evals.md`); and where the receipt is embedded in a PR body, it **renders for a cold reviewer** — an uploaded attachment or an in-repo image file, never a bare link to a private raw-content host that shows broken outside an authenticated session? Unit tests alone are not this box.
 - [ ] **Layout invariants hold across the sweep's matrix** — no content under sticky chrome, gutters present, optional slots reserve space, no reflow on a state change, tabular numerals in columns — checked **mid-scroll and on state transitions**, both themes, not only at the top of a fresh desktop render; and **footprint tracks information** (no empty record at a populated card's size; grid dense enough at the wide viewport)?
 - [ ] **Charts are legible** — a value axis or direct labels, a **keyboard-reachable** hover/focus readout of value + its date/category, real samples marked and no trend implied across sparse points — and **interaction states are consistent per component class** (hover/active/focus parity across instances; every hover affordance also reachable by keyboard and touch; tooltips add information, not a repeat of the label)?
 - [ ] **Every export / print / share path inspected as its own surface** — the downloaded artifact doesn't clip off-viewport content, bakes in the axis/legend/labels that live only in interactive chrome, honors or normalizes the theme, is self-describing (title / as-of), and exports each data state honestly (never a blank canvas)?
@@ -941,6 +975,25 @@ task:
    *post-hydration* render; it needs a snapshot taken inside the SSR → hydration window (a
    pre-hydration or CPU-throttled capture, `testing-and-evals.md`), and where the harness
    cannot take one the item is *could-not-check*, not clean.
+
+   **A PR-body image embed is not evidence unless it renders for the reviewer,
+   not just the author.** A `![...](<url>)` pointing at a private raw-content
+   host — a raw-file URL that requires an auth header or an authenticated
+   session a markdown renderer's plain `<img>` fetch cannot supply — **may render only
+   for a viewer already authenticated to that host** (and can break even for the author,
+   under cross-origin cookie scoping), and shows a broken-image icon for everyone
+   else viewing the PR; on a private repo, that is every reviewer reading the PR
+   body cold. The markdown tag *exists* in the diff; the evidence does not
+   (existence is not content — SKILL.md principle 2, the same gap the pre-ship
+   receipt check above closes for a captured-but-blank image; this closes it for
+   a captured-but-invisible one). Gate on **visibility, not presence**: an
+   **uploaded attachment** (the review platform's own image upload, served
+   through its own proxy) or an **in-repo, diff-able image file** committed with
+   the change both satisfy the bar; a link to a private raw-content host does
+   not, even when the file behind it is a real, correct screenshot. **🚩**: a
+   PR-body `![...]` whose URL is a raw-content-host link — not an uploaded
+   attachment or proxied URL — on a private repo, with no in-repo image file
+   backing it.
 
    A screenshot with an unstated inspection is an artifact read as the verification
    it is not.

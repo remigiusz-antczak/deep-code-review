@@ -3880,6 +3880,26 @@
         "Explains both failure directions: a branch running ahead of the constant balloons the diff to the branch's whole history so every push false-positives as 'changed' (noise/cost); and the dangerous silent direction is the literal ref failing to RESOLVE in a shallow/partial checkout (not a positional 'behind' -- merge-base/three-dot correctly detects downstream commits), so the diff errors and a naive grep swallows it as 'unchanged' -> the job skips. Requires failing closed on an errored/unresolved base.",
         "Requires the gate to name the base ref it actually diffed against in its output so a spurious 'changed'/'unchanged' result is diagnosable, and distinguishes this from a PR opened against the wrong target branch (PR targeting) -- a different mechanism sharing the same hardcoded-constant-instead-of-computed-base root cause"
       ]
+    },
+    {
+      "id": "capped-list-remainder-and-hardcoded-empty-cause",
+      "prompt": "A support-ticket list component fetches `{ tickets, total }` for the current filter. The header reads `${total} open tickets` (currently \"47 open tickets\", a correct separate count query). The body renders `tickets.slice(0, 10)` with no page control, footer link, or \"+N more\" text -- it just stops after 10 rows. Separately, whenever `tickets.length === 0` the component renders \"No tickets match -- try adjusting your filters,\" and that same branch is what renders on a fetch error, on a 403 from a permission check, and on a genuinely empty filtered result -- the component does not distinguish them. Sign off this list view as done?",
+      "expected_output": "No, two separate defects. First: the \"47 open tickets\" header being correct does not prove the 10 rendered rows are the whole set -- the count and the sliced list are two independent reads of the same data, and a user has no way to know 37 more exist. Add an explicit remainder indicator (\"+37 more\", a page control, or \"Show all 47\") whenever `total > shown`. Second: \"No tickets match -- try adjusting your filters\" asserts a specific cause (an over-narrow filter) and is only honest when a filtered-to-zero query is the *only* way the empty branch renders -- here a fetch error and a permission denial reach the same branch, so a permission-denied user is wrongly told to change filters, and a fetch failure reads as \"no matches.\" Enumerate every path that reaches `tickets.length === 0` and either branch the copy per cause or fall back to a cause-neutral empty state, rather than trust one hardcoded string for all of them. (product-ux-quality.md.)",
+      "expectations": [
+        "Flags the missing remainder indicator: a correct top-line count (47) does not prove the sliced list of 10 is complete, and requires an explicit \"+N more\"/pagination/\"show all\" affordance whenever total exceeds shown",
+        "Flags the hardcoded empty-state copy as a fabricated cause because the same zero-rows branch is reachable via a fetch error and a permission denial, not only the filtered-empty case the message names",
+        "Requires enumerating every path that reaches the empty branch and either branching the copy per cause or falling back to a cause-neutral empty state, rather than trusting one hardcoded string for all paths"
+      ]
+    },
+    {
+      "id": "pr-body-raw-host-image-not-evidence",
+      "prompt": "A PR against a private repository changes a dashboard's layout. The PR body's \"Screens-changed evidence\" section contains only `![dashboard after](https://raw.acme-vcs.example/AcmeWidgets/app/main/artifacts/dashboard-after.png)`, and the status line reads \"Screenshot attached -- dashboard renders correctly at 390/1440.\" A teammate opens the PR cold to review it and sees a broken-image icon where the screenshot should be. Does the screens-changed gate pass?",
+      "expected_output": "No. A markdown image tag pointing at a private raw-content host is not evidence unless it actually renders for the reviewer -- that host requires an authenticated session or an auth header a plain `<img>` fetch cannot supply, so it renders for the PR's author (who is signed in) and shows broken for a cold reviewer on a private repo. The tag existing in the PR body is not the same as the evidence existing (existence is not content, SKILL.md principle 2) -- the author has verified a link, not a screen. Gate on visibility, not presence: re-attach the image as an uploaded attachment served through the review platform's own proxy, or commit an in-repo diff-able image file; a raw-content-host link does not satisfy the bar even when the file behind it is a real, correct screenshot. (product-ux-quality.md.)",
+      "expectations": [
+        "Answers no / gate not satisfied -- a markdown image linking to a private raw-content host is not valid screens-changed evidence",
+        "Explains the mechanism: the raw host needs auth a reviewer's plain image fetch can't supply, so it renders broken for a cold reviewer on a private repo even though the markdown tag exists (existence is not content)",
+        "Requires the fix to be an uploaded attachment or an in-repo diff-able image file, not re-verifying the same raw-content-host link"
+      ]
     }
   ]
 }

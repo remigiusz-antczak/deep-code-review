@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.297.0] — 2026-09-20
+
+### deep-code-review — product-ux: capped-list remainder, empty-state cause-honesty, PR-body image visibility (closes #604, #568)
+
+- **`product-ux-quality.md`** three additions. **#604(a)** — a capped/sliced list (`.slice(0,N)`/`LIMIT N`/`take(N)`) needs an explicit **remainder indicator** when `total > shown`; a correct top-line count doesn't prove the itemized list is complete. **#604(b)** — a hardcoded empty-state message that asserts a **cause** is a fabricated cause once `count===0` is reachable by more than one path (fetch error / permission denial / genuine empty); enumerate the paths, branch copy per cause or fall back to cause-neutral (distinct from the coverage-honesty rule — that asks whether the source was queried; this asks whether the stated cause is true on every path). **#568** — a PR-body `![](private-raw-host-url)` doesn't render for a cold reviewer (auth header a plain `<img>` can't send), and can break even for the author under cross-origin cookie scoping; gate on **visibility** (uploaded attachment / in-repo diff-able file), not presence. Pre-ship checklist + master grep-collector synced; gate numbering verified intact (4 files cite gates by number). Built by a worktree builder subagent, independently reviewed **PASS** (gate-numbering intact, no fabrication/vendor-naming, principle-2 cite resolves, non-duplication clean). +2 evals. Closes #604, closes #568.
+
 ## [1.296.0] — 2026-09-20
 
 ### deep-code-review — wave 217 change-detection gate must derive its diff base, not hardcode a release ref (closes #665)
