@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.277.0] — 2026-09-20
+
+### deep-code-review — wave 198 observability: toil is reviewable, SLI measurement-point blind spot, saturation target below 100% (from a Google SRE comparative pass)
+
+- **`role-coverage.md`** — (1) the "Toil & rollback" bullet, previously all rollback, now names **toil as a reviewable signal**: a page whose documented response is a scripted, judgment-free runbook step is toil wearing an alert's clothes — automate the response or demote it to a ticket (a human is not a cron); adding on-call headcount spreads toil, it doesn't remove it. (2) The SLI bullet: **where** an SLI is measured is itself a blind spot — server-side metrics can read all-green while client-side rendering/JS breaks the real experience; use a client-perceived signal (RUM / field data, `frontend-a11y.md`'s CrUX / Core Web Vitals lens).
+- **`observability.md`** Golden signals — saturation's alert line is a utilization **target below 100%** (systems degrade before full; ~70-80% workload-dependent), tracked per constrained resource, and the target is itself a *cause* alert to pair with a user-facing *symptom* alert. +2 evals. Independent reviewer PASS-WITH-FIXES: dropped a "USE method" name-drop that lacked a standards-index entry (kept the substance), added the cause/symptom-pairing clause, and de-leaked + tightened the saturation eval. Closes no filed issue (proactive coverage from a Google SRE diff).
+
 ## [1.276.0] — 2026-09-20
 
 ### deep-code-review — wave 197 an `or`/`||` fallback chain over JSON/config fields drops a legitimate falsy value

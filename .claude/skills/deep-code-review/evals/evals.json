@@ -3580,6 +3580,26 @@
         "Prescribes resolving by PRESENCE not truthiness: a presence / `is not None` check in Python; `??` (nullish coalescing) in JS (falls back only on null/undefined)",
         "Prescribes testing the resolver with a falsy-but-present value (`0`/`False`/`\"\"`) to confirm it is kept"
       ]
+    },
+    {
+      "id": "an-alert-whose-only-response-is-a-scripted-runbook-step-is-toil-not-a-page",
+      "prompt": "An on-call rotation gets paged nightly for 'disk usage > 80% on the log volume'; the documented response is always the same three commands to rotate and compress logs, then acknowledge. The team asks to add more people to the rotation to share the load. Is that the right fix?",
+      "expected_output": "No — adding people spreads the toil, it doesn't remove it. A page whose documented response is a fixed, judgment-free runbook step (rotate + compress + ack, every time) is toil wearing an alert's clothes: a page should require human intelligence, and this one doesn't. The fix is to automate the response — a log-rotation cron / logrotate policy / size-based retention that runs without a human — or, if a human is genuinely needed eventually, demote it from a page to a ticket and alert only when the automation fails or the trend is abnormal. Rote-response paging is a reviewable signal of toil, not an org-only metric; more on-call headcount treats the symptom (load) and leaves the cause (a human doing a machine's job) in place.",
+      "expectations": [
+        "Identifies that a page whose response is a fixed, judgment-free runbook step is toil, and that adding on-call people spreads the toil rather than removing it",
+        "Prescribes automating the rote response (a human is not a cron) — or demoting the page to a ticket / alerting only when automation fails or the trend is abnormal",
+        "Frames rote-response paging as a reviewable toil signal (not just an org metric) — treat the cause, a human doing a machine's job, not the symptom of on-call load"
+      ]
+    },
+    {
+      "id": "saturation-alerting-only-at-100-percent-misses-the-degradation-window",
+      "prompt": "A service's only resource alert fires when CPU or connection-pool utilization hits 100%. Users report latency, but every resource dashboard looks 'green' — nothing is at 100%. A reviewer says 'we alert on saturation, so we're covered.' What's the flaw?",
+      "expected_output": "Many systems degrade in latency/throughput well before a resource reaches 100% utilization — a connection pool at 85% is already queueing, a CPU at 90% is already adding scheduling latency — so a 100%-only alert line misses the entire degradation window, which is exactly when users feel it. The useful threshold is a utilization TARGET below full (often ~70-80%, workload-dependent, tuned to where this system's latency curve bends), not saturation itself. Track utilization/saturation/errors per resource: watch utilization against a target, not just the 100% ceiling. Also don't alert on `load average` alone — set the target on the actual constrained resource (pool, CPU, memory, IO) and page when it crosses the target, not when it's already exhausted.",
+      "expectations": [
+        "Identifies that systems degrade before 100% utilization, so a 100%-only alert misses the degradation window where users already feel latency",
+        "Prescribes a utilization TARGET below full (e.g. ~70-80%, tuned to where the latency curve bends) as the alert line, not saturation/100%",
+        "Prescribes setting the target on the actual constrained resource (pool/CPU/memory/IO) rather than alerting on `load average` alone"
+      ]
     }
   ]
 }

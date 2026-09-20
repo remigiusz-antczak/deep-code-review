@@ -30,6 +30,12 @@ failure paths that *produce* these signals are section F /
   plus, for batch/pipeline work, *freshness* (time since last successful run) and
   *volume* (records processed vs. expected). Average latency hides the outage;
   use percentiles (p50/p95/p99).
+- **Saturation's alert line is a utilization *target below 100%*, not full.** Many systems
+  degrade in latency/throughput well before a resource reaches 100% utilization, so the useful
+  threshold is a target (often ~70-80%, workload-dependent), not saturation itself — track
+  utilization / saturation / errors for each constrained resource. Alerting only at 100% (or on
+  `load average` alone) misses the whole degradation window. (The target is itself a *cause*
+  alert — pair it with a user-facing *symptom* alert per the bullet below, don't ship it alone.)
 - **Alert on the symptom, not only the cause.** "CPU > 80%" without "checkout
   error rate > 1%" or "no successful run in 2× the schedule interval" means a
   frozen job or dependency outage pages nobody. Cause alerts are for diagnosis;

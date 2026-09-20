@@ -129,7 +129,11 @@ An SLO with no SLI you actually measure is aspirational — hold it to principle
   internal proxy: availability, latency at a percentile (P95/P99), error rate,
   freshness, or — for a data/AI pipeline — a **quality** dimension (D's six),
   since "up" isn't "correct." Name where each SLI is actually computed
-  (cross-ref M); an SLI defined only in a doc is `unverified`.
+  (cross-ref M); an SLI defined only in a doc is `unverified`. **Where it is *measured* is
+  itself a blind spot:** server-side latency/error metrics can read all-green while client-side
+  rendering/JS breaks the real user experience — a client-perceived signal (RUM / field data,
+  `frontend-a11y.md`'s CrUX / Core Web Vitals lens) catches what a server-side metric
+  structurally cannot.
 - **SLO — a target over a rolling window** (e.g. 99.9% over 30 days) that reflects
   a real user need, not a round number. State the window; a target with no window
   is unmeasurable.
@@ -145,9 +149,12 @@ An SLO with no SLI you actually measure is aspirational — hold it to principle
   over 3d/6h — a short window exists so the alert clears minutes after the issue
   resolves rather than staying hot on stale data). Alerts on the control path
   route above the limiter (F).
-- **Toil & rollback.** A documented, *tested* rollback path (cross-ref E
-  migrations, F) and a clean no-op degrade without each credential (N) are part of
-  the reliability contract, not extras.
+- **Toil & rollback.** **Toil is a reviewable signal, not only an org metric:** a page whose
+  documented response is a scripted, judgment-free runbook step is toil wearing an alert's
+  clothes — automate that response or demote the alert to a ticket (a page should require
+  intelligence; a human is not a cron). A documented, *tested* rollback path (cross-ref E
+  migrations, F) and a clean no-op degrade without each credential (N) are part of the
+  reliability contract, not extras.
 
 ### Release & docs — release owner sign-off
 
