@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.332.0] — 2026-09-20
+
+### deep-code-review — NEW: transactional/bulk email deliverability & one-click unsubscribe (#779)
+
+- **`api-contracts.md`** (#779): first email-deliverability coverage in the suite — a new outbound-contract section. SPF/DKIM/DMARC published and aligned (a DKIM `d=` domain not matching the visible From:, or a DMARC policy with no aligned SPF/DKIM, is a silent deliverability failure). RFC 8058 one-click unsubscribe: `List-Unsubscribe` (one HTTPS URI) + `List-Unsubscribe-Post: List-Unsubscribe=One-Click`, DKIM covering those headers, the endpoint returning no redirect — a confirm-click-through defeats one-click because RFC 8058 makes the provider's automated POST *be* the unsubscribe action. DKIM must cover the unsubscribe headers themselves (a relay adding them post-signing silently breaks it). Bounce/complaint suppression. +2 evals; +1 curl-verified standards-index row (RFC 8058). Cross-refs `reliability-error-handling.md` + `privacy-compliance.md`.
+- Research-scout-surfaced; RFC 8058 curl-verified by the parent. Independently reviewed **PASS-WITH-FIXES**: all five RFC 8058 quotes confirmed verbatim, but the reviewer caught a **rule-misapplication** — the confirm-redirect scenario had been pinned on the no-cookies/no-context MUST-NOT, which actually governs what the provider's POST may *contain* (privacy linkage), not what the endpoint returns. Corrected in the fold and in both eval grading spots to cite only "MUST NOT return an HTTPS redirect" plus the §3.2 purpose argument. Also softened an uncited "providers now require" claim to "increasingly enforce" and tightened DKIM `d=` alignment wording.
+
 ## [1.331.0] — 2026-09-20
 
 ### agentic-delivery — autonomous-mode gap-fill: open-ended-lane timebox + checkpoint (#754), spare capacity → hardening at terminus (#757), disk-sized fan-out (#765); partial #763/#386

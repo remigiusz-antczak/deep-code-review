@@ -294,6 +294,40 @@ Treat persisted and in-flight payloads like DB schemas:
 
 ---
 
+## Transactional / bulk email — an outbound deliverability & unsubscribe contract
+
+Any product that sends transactional or marketing email owes the receiving mailbox provider a
+small, enforced contract; getting it wrong fails **silently** — mail is dropped or spam-foldered
+with no exception thrown. Distinct from outbound webhooks above (a signed HTTP callback to one
+consumer): this is deliverability to shared mailbox providers plus an unsubscribe endpoint contract.
+
+- **Sender authentication is published and aligned.** SPF (RFC 7208), DKIM (RFC 6376), and DMARC
+  (RFC 7489) exist for the sending domain and *align* — a DKIM `d=` domain that doesn't match the
+  visible From: domain, or a DMARC policy with no aligned SPF/DKIM beneath it, is a silent
+  deliverability failure, not an error. Major mailbox providers increasingly enforce all three for
+  bulk senders.
+- **One-click unsubscribe, per RFC 8058.** Marketing/subscribed mail carries a `List-Unsubscribe`
+  header ("MUST contain one HTTPS URI") **and** `List-Unsubscribe-Post: List-Unsubscribe=One-Click`;
+  the message "MUST have a valid DomainKeys Identified Mail (DKIM) signature that covers at least
+  the `List-Unsubscribe` and `List-Unsubscribe-Post` headers." The endpoint handling that POST
+  "MUST NOT return an HTTPS redirect" and the POST "MUST NOT include cookies, HTTP authorization, or
+  any other context information." A "click through to a page to confirm unsubscribe" flow looks
+  compliant but violates the explicit "MUST NOT return an HTTPS redirect" and defeats one-click
+  entirely — RFC 8058 makes the provider's automated POST *be* the unsubscribe action, so a confirm
+  step means that POST unsubscribed no one. (The separate no-cookies/no-context MUST-NOT governs
+  what the provider's POST may *contain* — privacy-linkage to prior activity — not what the endpoint
+  returns.) (RFC 8058, curl-verified — `docs/standards-index.md`.)
+- **DKIM must cover the unsubscribe headers themselves**, not only body/subject: a downstream relay
+  that appends or rewrites `List-Unsubscribe` *after* signing silently breaks the one-click
+  guarantee, even though each part looks correct read in isolation.
+- **Bounce and complaint feedback is consumed to suppress future sends.** With no suppression list,
+  hard-bounced and spam-reporting addresses keep being mailed, sender reputation degrades, and
+  deliverability drops for *every* recipient — a silent, compounding failure with no application
+  signal. (Delivery-reliability cross-ref: `reliability-error-handling.md`; unsubscribe as a
+  consent record: `privacy-compliance.md`.)
+
+---
+
 ## Contract tests
 
 - **Assert the contract, not a giant golden dump.** For a cross-boundary payload (an API
