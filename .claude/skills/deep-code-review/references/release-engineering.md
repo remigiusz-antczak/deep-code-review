@@ -205,9 +205,24 @@ internally yet attach **no** consumer-verifiable signature to what it ships — 
   the producer-side echo of "generated provenance is not verified provenance" (Scorecard's own check "does
   not verify the signatures").
 
+- **A valid signature proves who signed, not where the build ran.** A GPG-signed tag or a cosign/Sigstore
+  signature satisfies the check above even when the actual build, tag, and publish steps all ran on a
+  maintainer's own laptop rather than a hosted build platform — the check observes the identity that signed,
+  never the machine the artifact was built on. A stolen publish credential or a compromised workstation
+  produces an artifact that still tags, signs, and verifies cleanly, because the compromise sits upstream of
+  the cryptography the check re-derives. This is the producer-side half of the question `security-appsec.md`
+  poses on the verify side — its L1/L2/L3 build-provenance ladder (depth there, not restated here)
+  presupposes an answer to *where the build ran*, which a bare signature check never asks. Before crediting a
+  release with any level above the trivial-to-forge provenance-exists floor, confirm the publish/release job
+  actually ran on hosted CI, or a recognized hosted-builder integration — GitHub Actions OIDC `npm publish
+  --provenance`, PyPI Trusted Publishing — not a local `npm publish` / `twine upload` / manual `git tag` +
+  upload, by reading the workflow run, not the signature.
+
 **🚩**: a Release/publish with no signature, attestation, or provenance asset; a signing step present in docs
 but absent from the workflow that ships the artifact; a signature present but not validatable against a
-trusted key.
+trusted key; a release credited with a build-provenance level despite no publish/release job in
+`.github/workflows/` (or equivalent CI config) — just `RELEASING.md` / `CONTRIBUTING.md` or a `Makefile`
+target a human runs by hand (`npm publish`, `twine upload`, `git tag -s` + manual asset upload).
 
 ## Cross-references
 

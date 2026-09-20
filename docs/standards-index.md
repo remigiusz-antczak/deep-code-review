@@ -919,3 +919,14 @@ Verification date for the row below: **2026-09-20**. Added for the deep-code-rev
 | Standard / source | URL | What was confirmed |
 |---|---|---|
 | Google Engineering Practices — What to look for in a code review (Design section) | https://google.github.io/eng-practices/review/reviewer/looking-for.html | A distinct page from the already-indexed `.../reviewer/standard.html` ("The Standard of Code Review," 2026-08-13 table above) — this page opens with a note to take that Standard into account "when considering each of these points," then its first section (`<h2 id="design">Design</h2>`) states, verbatim: "The most important thing to cover in a review is the overall design of the CL. Do the interactions of various pieces of code in the CL make sense? Does this change belong in your codebase, or in a library? Does it integrate well with the rest of your system? Is now a good time to add this functionality?" Basis for the Domain A placement/timing bullet. Fetched + verified 2026-09-20. |
+
+## Verified by direct fetch (2026-09-20) — SLSA v1.0 Build requirements (Hosted)
+
+Verification date for the row below: **2026-09-20**. Added for the deep-code-review
+`release-engineering.md` producer-side signed-releases fold (a valid signature proves who signed,
+not where the build ran). Distinct URL from the existing SLSA v1.0 levels row above — the
+technical requirements table, not the informal levels overview. Fetched via `curl` (raw HTML).
+
+| Standard / source | URL | What was confirmed |
+|---|---|---|
+| SLSA v1.0 — Build track requirements | https://slsa.dev/spec/v1.0/requirements | Verbatim, the Build-platform "Isolation strength" row: "**Hosted** — All build steps ran using a hosted build platform on shared or dedicated infrastructure, not on an individual's workstation. Examples: GitHub Actions, Google Cloud Build, Travis CI." The requirements table's own checkmarks place **Hosted** at **L2 and L3** (blank at L1) — the precise level assignment behind the existing SLSA v1.0 levels row above. Fetched + verified 2026-09-20. |

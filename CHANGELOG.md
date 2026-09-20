@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.344.0] — 2026-09-20
+
+### deep-code-review — a valid signature proves who signed, not where the build ran: SLSA producer-side hosted-build (#806)
+
+- **`release-engineering.md`**: a new "Signed releases" bullet. A GPG-signed tag or a cosign/Sigstore keyless signature verifies cleanly even when tag, build, and sign all ran on a maintainer's laptop — proving *who* signed, not *where* the build ran. Confirm the publish/release job runs on hosted CI (or a recognized hosted-builder integration: GitHub Actions OIDC `npm publish --provenance`, PyPI Trusted Publishing), not a local `npm publish` / `twine upload` / manual tag+upload, before crediting a SLSA level above the provenance-exists floor — SLSA v1.0 makes **Hosted** a Build **L2** requirement. Producer side of the provenance story `security-appsec.md` already covers on the consumer/verify side. +1 eval.
+- **`docs/standards-index.md`**: SLSA v1.0 Build requirements (Hosted) row — the requirements table (distinct from the existing levels row), verified by direct fetch 2026-09-20.
+
 ## [1.343.0] — 2026-09-20
 
 ### deep-code-review — design-fit ("does this change belong here?") on the default audit path, not only the Architect role overlay (#805)
