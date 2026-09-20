@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.299.0] — 2026-09-20
+
+### deep-code-review — domain-checklists §H lockstep folds: generator/allow-list, shared-body-builder sweep, initials-family privacy (closes #649, #681, #682)
+
+- **`domain-checklists.md`** §H ("copies that must stay in lockstep") gains three concrete recipes. **#649** — a hand-maintained allow-list of value combinations (e.g. `(kind, category)` pairs) is a generated-vs-source pair with its generator; diff the list against every combination the generator can emit (an emitted-but-omitted combo is silently dropped). **#681** — a shared request/mutation body-builder fix needs an all-callsite sweep + field-set diff (identical code, but caller-supplied *arguments* diverge — invisible to Phase 4's copy-idiom grep; this is the fix-time instance of the adapters clause, one-implementation-drifting-at-its-callers). **#682** — *two duplicated implementations* of a derived display value (avatar initials, short label, masked id) drift the same way; grep the name *family*, and when the canonical helper encodes a data-minimization cap, a divergent copy showing more is a **compliance gap**, not a style nit (cross-ref Q). Built by a worktree builder subagent, independently reviewed PASS-WITH-FIXES: #681-vs-Phase-4 distinctness confirmed at source; reworded #682's opener to break a "same-drift" parallelism that read as continuing #681, and broadened the allow-list framing past 2-tuples. +2 evals. Closes #649, closes #681, closes #682.
+
 ## [1.298.0] — 2026-09-20
 
 ### deep-code-review — streaming-transport reliability: reconnect jitter, cross-replica registry, gRPC keepalive/flow-control

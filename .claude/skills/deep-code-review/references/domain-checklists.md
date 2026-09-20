@@ -312,11 +312,29 @@ Apply to any pipeline, ETL, enrichment, scraping, or dataset producer. Judge the
   pairs — need a **parity test or a single generated source**, or they silently
   drift; flag the *missing guard*, not the duplication itself (a drifting second
   copy of a crypto/auth module would encrypt/decrypt or authorize differently on
-  each plane — a security hazard, cross-ref B). **One** implementation with **no** duplicate can
+  each plane — a security hazard, cross-ref B). A hand-maintained **allow-list of value
+  combinations** (e.g. `(kind, category)` pairs) is a generated-vs-source pair like the others
+  above — coupled to whatever generator/emitter actually produces those
+  combinations: diff the allow-list against **every combination the generator can
+  emit**; a combo the generator emits but the list omits silently drops or rejects
+  it downstream. **One** implementation with **no** duplicate can
   still drift at its *callers*: when a single shared classifier/scorer/function serves two call
   sites that each build its inputs differently, the divergence lives in the **adapters**, not the
   core — test that the two call sites **agree on a shared fixture**, and derive their inputs from
   **one spec**, or one caller silently feeds the shared logic a different shape than the other.
+  The same adapter drift shows up **at fix time**: patching a shared
+  request/mutation body-builder (or a shared endpoint client) only where the bug
+  was reported leaves its siblings on the old shape — grep every other call site
+  to the same endpoint/mutation before closing the fix and **diff the field sets**
+  each one sends, the field-shape analogue of scoping a fix to its full instance
+  set rather than the first callsite (Phase 4). **Two duplicated *implementations* drift the same
+  way on a semantic value** (distinct from the one-implementation-drifting-at-its-callers case
+  just above): any **derived display value** computed as more than one helper — avatar initials,
+  a truncated/short label, a masked id: grep the name *family* (every
+  initials/short-label helper), not just the one function a report names. Where
+  the canonical helper encodes a **data-minimization cap** (initials-only,
+  last-4-only), a sibling that shows more is a **compliance gap, not a style
+  nit** (cross-ref Q privacy).
 - **Complexity**: one thing per function; shallow nesting; named constants/enums
   over magic values in one place. **Naming & structure** navigable by human and
   AI. **Dependencies current and safely upgraded** — see K and
