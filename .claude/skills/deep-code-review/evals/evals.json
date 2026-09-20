@@ -3523,7 +3523,7 @@
     },
     {
       "id": "an-edit-tool-writes-the-wrong-store-for-a-dual-registered-entity",
-      "prompt": "A company record exists both as a row in a legacy `companies.csv` and as a newer per-company `companies/<id>.json` file. The app's read path now loads the `description` field from the JSON file, but the admin edit tool writes an edited `description` back to the CSV row. Edits 'succeed' but never appear in the app. Why, and what's the rule?",
+      "prompt": "A company record exists both as a row in a legacy `companies.csv` and as a newer per-company `companies/<id>.json` file (both stores are still in use; the app reads companies fine). An admin edits a company's `description`; the edit tool reports success, but the app never shows the new text. What's the likely cause, and what's the rule?",
       "expected_output": "The edit tool writes `description` to the CSV, but the read/compile path reads `description` from the JSON file — so the write lands in a store nobody reads for that field, and the edit is a silent no-op (it 'succeeds' but never shows). The rule: a dual-registered entity has one write target PER FIELD — the store the read path treats as authoritative for that field. Map read-authority field-by-field, point each write at the store the reader uses, and test that an edit is observable through the read path. Writing BOTH stores without a defined precedence is also wrong — they drift into two disagreeing values. Fix: write `description` to the JSON file (the authoritative read source), or migrate fully and retire the CSV field.",
       "expectations": [
         "Identifies that the write targets a store (CSV) the read path doesn't use for that field (it reads JSON), so the edit is a silent no-op despite 'succeeding'",

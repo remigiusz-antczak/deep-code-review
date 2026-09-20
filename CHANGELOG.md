@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.272.0] — 2026-09-20
+
+### deep-code-review — wave 193 data-quality idempotency: a dedup key over a truncated slug collides; a dual-registered entity's write target is per-field
+
+- **`data-quality.md`** §6, two new bullets. (1) A dedup/idempotency key must hash the **full** content, not a truncated display slug — an id like `slug(source, key, text.slice(0,N))` collides for any two payloads sharing the first N characters, so if it gates a dedup/idempotency upsert the second is silently dropped or overwrites the first; keep the readable slug and the collision-resistant key separate, and test two inputs differing only past the cut. (2) A dual-registered entity (a legacy CSV/row + a newer per-entity file/record) has one write target **per field** — the store the read/compile path treats as authoritative for that field; writing the other store makes the edit a silent no-op, writing both without precedence drifts. Both carry 🚩 red-flag entries and cross-ref §5's artifact→consumer census and the dual-write family. +2 evals. Independent reviewer PASS-WITH-FIXES: added the two 🚩 rollup clauses, widened the #648 cross-ref neighborhood (§5 field-granularity + dual-write family), and tightened the dual-registered eval so its first expectation requires diagnosis rather than restating the prompt. Closes #653, closes #648.
+
 ## [1.271.0] — 2026-09-20
 
 ### deep-code-review — wave 192 retry/idempotency error-handling: success-scoped existence checks and a "never throws" function's coverage

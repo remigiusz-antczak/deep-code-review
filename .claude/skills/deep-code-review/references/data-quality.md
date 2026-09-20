@@ -304,7 +304,10 @@ rate), validity (schema/format/range). For each:
   Writing the legacy row for a field the reader now takes from the new file makes the edit a
   **silent no-op** (the change never shows); writing both without a defined precedence lets them
   **drift** into two disagreeing values. Map read-authority per field first, point the write
-  there, and test that an edit is observable through the read path. (Distinct from §1's
+  there, and test that an edit is observable through the read path. (This is the field-granularity
+  case of §5's artifact→consumer census — the target store *has* readers, just not for **this**
+  field — and the steady-state sibling of the dual-write family in `reliability-error-handling.md`
+  (cross-system) and `performance-db-cost.md` (same-table migration); distinct from §1's
   write-authority arbitration over one field's *value*, and §12's train/serve data contract —
   this is *which store* to write.)
 - **Never mass-close, expire, or delete records on a failed or partial upstream
@@ -679,13 +682,15 @@ rate), validity (schema/format/range). For each:
 ---
 
 **🚩 red flags**: unconditional `UPDATE`/upsert that ignores existing
-confidence; `merge` on a single fuzzy field; dedup on non-normalized keys;
+confidence; `merge` on a single fuzzy field; dedup on non-normalized keys; a dedup/idempotency
+key hashed over a truncated display slug;
 "latest wins" clobbering verified data; a metric scored `0` where it doesn't
 apply; failure types excluded from the denominator; absent/empty/false/list
 collapsed in completeness or CAS; freshness derived from `fetched_at`; a model
 call that returns a score or a boolean gate; weights inlined in code with no
 snapshot; a consumer/export that re-queries raw instead of the filtered set;
-written artifact with no reader; mass status-change on an upstream error; a read / JOIN / COUNT on a soft-delete table with no `deleted_at IS NULL`
+written artifact with no reader; an edit written to a store the read path does not
+read for that field; mass status-change on an upstream error; a read / JOIN / COUNT on a soft-delete table with no `deleted_at IS NULL`
 filter (deleted rows leak into results); a `UNIQUE` column on a soft-delete table with no
 partial-index carve-out (cannot re-create a soft-deleted value); a hard delete leaving dangling
 foreign keys on an unenforced/`SET NULL` FK, or an `ON DELETE CASCADE` that over-deletes
