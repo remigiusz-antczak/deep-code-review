@@ -44,6 +44,18 @@ paths. Expands section G of `SKILL.md`. Cross-ref J /
   deregister on teardown. The stack-agnostic form of the goroutine-leak footgun in
   `language-stack-redflags.md`: a spawned task or subscription with no cancellation reachable from
   its owner's teardown.
+- **A connection/subscription registry lives in *one process* — it does not span horizontal
+  replicas.** A WebSocket/SSE server that keeps its live-connection or subscription map in **local
+  process memory** (`Map<userId, socket>`) is correct on a single instance and **silently wrong once
+  scaled to N replicas**: a publish handled by replica A never reaches a subscriber whose socket happens
+  to be held open on replica B — no error, no exception, just a message that never arrives. This is not
+  the lifetime mismatch above (the registry's *lifetime* is fine; its **scope** is the bug — every
+  replica holds a private, incomplete view of who's connected) and it is not a backpressure, liveness, or
+  DoS finding (those all assume the message *would* reach the right process if sent). Fix: move the
+  fan-out through a layer shared across processes — a pub/sub adapter (Redis pub/sub, NATS) every replica
+  subscribes to, or a broker in front of the sockets — or pin each user's traffic to the one replica
+  holding their socket with **sticky routing** (consistent-hash or session-affinity load balancing) so
+  the single-process assumption becomes true by construction.
 - **Non-atomic read-modify-write** (`x = load(); x.f++; store(x)`) under
   concurrency needs a lock, atomic primitive, or single-writer queue.
 - **Memory visibility is a separate axis from atomicity — name the synchronization
@@ -216,7 +228,10 @@ for acting on it without collateral damage.
 ---
 
 **🚩 red flags**: shared mutable globals; a per-request/run field held on a
-singleton/long-lived object, or a subscription/listener outliving its subscriber (lifetime mismatch); missing `await`; non-atomic
+singleton/long-lived object, or a subscription/listener outliving its subscriber (lifetime mismatch); an
+in-process connection/subscription registry (`Map<userId, socket>`) with no shared fan-out or sticky
+routing across replicas — a publish on one replica silently never reaching a subscriber on another (a
+scope mismatch, not a lifetime one); missing `await`; non-atomic
 read-modify-write; load→await→write without re-read/CAS; retrying only the failed statement after a `40001`/deadlock
 instead of the whole transaction; lock held across I/O;
 two-plus locks acquired in a different order across call sites (ordering deadlock);

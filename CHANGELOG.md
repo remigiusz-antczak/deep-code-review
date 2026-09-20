@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.298.0] — 2026-09-20
+
+### deep-code-review — streaming-transport reliability: reconnect jitter, cross-replica registry, gRPC keepalive/flow-control
+
+- From a streaming-transport comparative pass (the WS/SSE section was already deep; these are the verified-absent deltas). **`api-contracts.md`** — (1) bounded reconnect backoff needs **jitter**: a server-side **mass-disconnect** (deploy/restart) drops every connection at one instant, synchronizing all clients' retry schedules → a re-storm on the server that just came back (distinct from one-caller retry jitter and from cache-key stampede); (2) **gRPC streaming** shares the WS/SSE reliability shapes — aggressive client keepalive on a sparse RPC gets the *sender* killed with `GOAWAY(too_many_pings)` when it outpaces the server's `PERMIT_KEEPALIVE_TIME` (the connecting `ping_strikes`/`MAX_PING_STRIKES` mechanism per gRPC proposal **A8**, curl-verified), and a bidi RPC where both ends write without reading can **deadlock** under manual flow control. **`concurrency-shared-state.md`** — an in-process socket/subscription registry (`Map<userId,socket>`) **silently drops delivery once the server is horizontally replicated** (publish on replica A never reaches a subscriber on replica B) — a wrong-answer bug (a `if(socket)` map-miss no-ops with no error), distinct from the single-process lifetime-mismatch bugs; fix = a shared pub/sub adapter or sticky routing. +3 evals. Built by a worktree builder subagent, independently reviewed PASS-WITH-FIXES (all quotes re-curled verbatim; applied: split the jitter comparison clause, source-neutral eval wording, added the A8 proposal as the source that connects ping-cadence→GOAWAY). Closes no filed issue (comparative research find).
+
 ## [1.297.0] — 2026-09-20
 
 ### deep-code-review — product-ux: capped-list remainder, empty-state cause-honesty, PR-body image visibility (closes #604, #568)
