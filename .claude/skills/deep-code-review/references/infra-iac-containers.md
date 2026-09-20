@@ -104,18 +104,26 @@ them before the domain audits, because they fail late and silently otherwise:
 ## Kubernetes
 
 - **Pod security**: `runAsNonRoot: true`, `readOnlyRootFilesystem: true`,
-  `allowPrivilegeEscalation: false`, `privileged: false`, dropped capabilities,
-  a seccomp profile; no `hostPath`/`hostNetwork`/`hostPID` unless justified.
+  `allowPrivilegeEscalation: false`, `privileged: false`, **drop `ALL`** capabilities then
+  add back only what's needed — Pod Security Standards *Restricted* permits only
+  `NET_BIND_SERVICE` back (see the Docker section above), a seccomp profile set to **`RuntimeDefault` or `Localhost`**
+  (`Unconfined` or an **absent** profile is the finding); no
+  `hostPath`/`hostNetwork`/`hostPID`/`hostIPC` unless justified.
 - **Resource requests/limits** on every container; **liveness/readiness**
   probes.
 - **Secrets** via a secret manager (External Secrets / CSI / KMS-encrypted), not
   plaintext `ConfigMap`; RBAC least-privilege (no wildcard `*` verbs/resources,
-  no cluster-admin to app service accounts); **NetworkPolicy** default-deny with
-  explicit allows.
-- Images pinned by digest; `imagePullPolicy` sane; admission control / policy
-  (OPA-Gatekeeper/Kyverno) enforcing the above.
+  no cluster-admin to app service accounts); **`automountServiceAccountToken: false`** on any
+  ServiceAccount/Pod that never calls the API server — the token mounts **by default**, so an
+  unused one is a free credential any in-pod RCE inherits (and being a *missing* field, no
+  bad-value grep catches it — it must be asserted present-and-false); **NetworkPolicy**
+  default-deny with explicit allows.
+- Images pinned by digest; `imagePullPolicy` sane; admission control enforcing the above —
+  the built-in **Pod Security Admission** (a `pod-security.kubernetes.io/enforce: restricted`
+  namespace label — the free, zero-dependency way to make the *Baseline*/*Restricted* profile
+  non-optional) and/or a policy engine (OPA-Gatekeeper/Kyverno) for rules beyond those profiles.
 
-**🚩 grep**: `privileged: true`, `hostPath:`, `runAsUser: 0`, `verbs: ["*"]`,
+**🚩 grep**: `privileged: true`, `hostPath:`, `hostIPC: true`, `runAsUser: 0`, `seccompProfile: Unconfined`, `verbs: ["*"]`,
 `kind: ClusterRoleBinding` to `cluster-admin`, secrets in a `ConfigMap`.
 
 ## Terraform / IaC

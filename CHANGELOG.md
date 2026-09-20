@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.275.0] — 2026-09-20
+
+### deep-code-review — wave 196 Kubernetes Pod Security hardening (from a Pod Security Standards comparative pass)
+
+- **`infra-iac-containers.md`** Kubernetes section, from a comparative pass vs the Kubernetes Pod Security Standards: (1) **`automountServiceAccountToken: false`** on any ServiceAccount/Pod that never calls the API server — the token mounts by default, so an unused one is a free credential an in-pod compromise inherits, and being a *missing* field no bad-value grep catches it; (2) name the built-in **Pod Security Admission** enforcer (`pod-security.kubernetes.io/enforce: restricted` namespace label) alongside OPA-Gatekeeper/Kyverno (policy engines are for rules beyond the built-in Baseline/Restricted profiles); (3) tightened the pod-security bullet — **drop `ALL`** capabilities (Restricted permits only `NET_BIND_SERVICE` back), seccomp **`RuntimeDefault`/`Localhost`** (`Unconfined` or absent is the finding), and `hostIPC` added to the host-namespace list + 🚩 grep. +2 evals. Sourced from kubernetes.io Pod Security Standards / Security Context / ServiceAccount docs (no CIS/NSA control numbers — those sources were not fetchable). Independent reviewer PASS-WITH-FIXES: split a joined grep code-span, corrected a cross-ref, named the one permitted capability.
+
 ## [1.274.0] — 2026-09-20
 
 ### deep-code-review — wave 195 DB/store TOCTOU: an idempotency short-circuit must diff real state; a CAS must guard the decision's fields, not just status

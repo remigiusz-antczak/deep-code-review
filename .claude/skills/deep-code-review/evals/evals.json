@@ -3550,6 +3550,26 @@
         "Explains that 'it has a CAS' is insufficient when the guard covers the wrong column — the guard must cover every field the decision consumed",
         "Prescribes including the decision fields in the guard (WHERE on the read value, a whole-row version/updated_at CAS, or re-read-and-revalidate under lock), not just the state enum"
       ]
+    },
+    {
+      "id": "k8s-pod-mounts-an-unused-service-account-token-by-default",
+      "prompt": "A Kubernetes Deployment for a stateless web frontend that never calls the Kubernetes API passes a Pod Security review: non-root, read-only rootfs, dropped capabilities, resource limits, NetworkPolicy all present. A reviewer says 'the security context is fully locked down.' What's still missing?",
+      "expected_output": "`automountServiceAccountToken: false`. Every pod mounts its ServiceAccount's API token BY DEFAULT, even one that never calls the API server — so a frontend with no API needs still ships a live Kubernetes credential inside the container that any RCE/SSRF/path-traversal in the app inherits and can turn against the API. The locked-down securityContext doesn't address it because it's a MISSING field, not a bad value — no `privileged: true`-style grep catches an absent opt-out. Set `automountServiceAccountToken: false` on the ServiceAccount (or the Pod spec) for any workload that doesn't call the API, and mount it only where an in-cluster client genuinely needs it (then scope that SA's RBAC tightly).",
+      "expectations": [
+        "Identifies that a pod mounts its ServiceAccount API token BY DEFAULT (opt-out, not opt-in), so a workload that never calls the API still carries a live credential an in-pod compromise inherits",
+        "Prescribes `automountServiceAccountToken: false` on the SA/Pod for any workload that doesn't call the API server",
+        "Notes this is a MISSING-field risk a bad-value grep / securityContext review doesn't surface (must be asserted present-and-false), not something the locked-down context already covers"
+      ]
+    },
+    {
+      "id": "k8s-hardening-in-the-manifest-is-not-enforced-without-admission-control",
+      "prompt": "A team documents a hardened Pod spec (non-root, drop ALL caps, seccomp RuntimeDefault, no host namespaces) and puts it in their Helm chart. A reviewer says 'the pods are hardened, so the cluster is compliant.' What's the gap, and what's the cheapest enforcement?",
+      "expected_output": "A hardened spec in one chart is not enforcement — nothing stops a different manifest, a `kubectl apply`, an operator, or a future chart edit from deploying a privileged/host-mounting pod into the same namespace; 'the pods we wrote are hardened' is not 'the cluster rejects unhardened pods.' The cheapest enforcement is the built-in Pod Security Admission controller: label the namespace `pod-security.kubernetes.io/enforce: restricted` (plus `warn`/`audit` for rollout), which rejects any pod violating the Restricted profile at admission with zero extra dependencies. A policy engine (OPA-Gatekeeper/Kyverno) is for rules beyond the built-in Baseline/Restricted profiles, not a prerequisite for this baseline. Compliance is a property of the admission gate, not of one reviewed manifest.",
+      "expectations": [
+        "Identifies that a hardened spec in one chart/manifest is not cluster-wide enforcement — another manifest/apply/operator can still deploy an unhardened pod to the namespace",
+        "Prescribes the built-in Pod Security Admission (`pod-security.kubernetes.io/enforce: restricted` namespace label) as the free, zero-dependency enforcement, with warn/audit for rollout",
+        "Correctly scopes a policy engine (OPA-Gatekeeper/Kyverno) as for rules BEYOND the built-in profiles, not a prerequisite for baseline enforcement"
+      ]
     }
   ]
 }
