@@ -632,6 +632,57 @@ production-like server).
   getting an inert stub (a functional bug); this is a **Client** Component reaching
   a large payload through an unmarked shared module (a bundle-size bug) — the
   boundary direction and the failure mode are both reversed.
+- **A barrel re-export, or a pure export co-located with a heavy import, ships that heavy
+  code even when the imported symbol never touches it.** Kin to the dataset-leak bullet
+  above, but the tree-shaking failure comes from the **file/module boundary itself**, not
+  from the helper depending on the data. Two shapes: (a) a *barrel* — an `index.ts`
+  re-exporting many sibling modules — where `import { x } from '../shared'` drags the
+  top-level side-effecting imports of *every* re-exported sibling (a chart lib, a compiled
+  JSON, an analytics client) into the chunk, because the bundler resolves the barrel as one
+  module; (b) a single module that side-effect-imports a large blob (`import DATA from
+  './compiled.json'`) at its top level *and also* exports genuinely pure, blob-independent
+  values — a static label map, a bare string constant, a pure formatter — where importing one
+  of those pure symbols still pulls the whole file, blob included. The reason is **module-level
+  granularity**: a bundler drops unused *modules*, not unused *properties of a module it must
+  keep*, so any live (value, not `import type`) binding taken from the module keeps the entire
+  file — and keeps it *conservatively* unless the first-party package/module is marked
+  `"sideEffects": false`, the flag that lets the bundler prove the unused parts are safe to
+  drop. This is exactly where the "bundle split and tree-shaken" checklist item above reads
+  green but is silently false. **Partial credit does not exist here.** Once the one symbol that
+  genuinely reads the blob is moved server-side and its resolved value prop-threaded (the
+  dataset-leak bullet's fix), it is tempting to call the file clear — but if the same client
+  component, or any sibling in the route's client graph, still imports even one pure constant
+  from that blob-backed module (or via the same barrel), the module is still reachable and
+  still pulled in whole, so the saving is zero: either *every* runtime import into the client
+  graph is gone or the full blob ships. Detect by walking each client entry point's
+  **transitive** runtime import graph (strip `import type` first — a component can ship the
+  blob by rendering a child that imports it, without naming it itself) for any edge into the
+  blob-backed module or the barrel; for each edge, read the *actual definition* of the imported
+  symbol in that module's source — a pure literal, or a value that reads the parsed blob? —
+  never infer it from a comment or the import line. Confirm in the bundler's analyzer: does the
+  produced chunk carry a byte-size outlier or a string fragment that could only be there if the
+  blob is embedded? A "this file imports only pure things" review is not proof until the built
+  artifact is checked. Fix: import the **specific submodule path** (`../shared/labels`) instead
+  of the barrel; **split** the blob-backed module so the pure exports live in a sibling that
+  imports the blob *nowhere* in its own file or its transitive imports, and have the blob-backed
+  module re-export them from that free sibling (single source of truth kept for its legitimate
+  server callers) while every client importer points at the free module; mark a genuinely
+  side-effect-free package `"sideEffects": false`; and keep large static data out of any module
+  that also exports hot small utilities. Guard it with a **source-level reachability check** — a
+  small import-graph walk (not a runtime bundle-size assertion, which may be unavailable where
+  tests run) that fails when any client-side module reaches the blob-backed module — run as a
+  *shrink-only allowlist* so new offenders fail loudly while known ones stay visible debt. That
+  check is necessary but **not sufficient alone**: its module/symbol list goes stale, so
+  acceptance pairs it with the built-artifact check above. Distinct from the dataset-leak bullet
+  above by **whether the imported symbol depends on the blob**: there the helper closes over a
+  singleton derived from the whole dataset, so the data is a genuine dependency and the fix is
+  architectural (structural-parameter form); here the imported symbol is genuinely independent
+  and only the file boundary or barrel edge binds them, so a mechanical split / submodule-path
+  import / `sideEffects` flag severs it outright. Distinct from the heavy-optional-library
+  bullet above too: that library is needed only behind an interaction gate and deferring the
+  *import* fixes it; here the pure symbol is typically needed unconditionally (first paint), so
+  deferral alone leaves the blob riding in beside it — the blob must be severed from the pure
+  export, not lazy-loaded with it.
 
 ## Security & compatibility
 

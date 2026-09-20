@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.354.0] — 2026-09-20
+
+### deep-code-review — a barrel/side-effectful import ships a heavy data blob into the bundle even when the imported symbol doesn't use it (#812)
+
+- **`frontend-a11y.md`** (Reliability & performance): a new bullet. Tree-shaking drops unused *modules*, not unused *named exports of a module it must keep* — so importing one pure symbol from (a) a **barrel** `index.ts` that re-exports a blob-carrying sibling, or (b) a module that top-level-imports a large JSON / heavy dep *and* also exports pure symbols, ships the whole blob. All-or-nothing: one remaining runtime import re-ships it. Fixes: import the **submodule path**, not the barrel; split pure exports into a blob-free sibling; mark genuinely side-effect-free packages `"sideEffects": false`; keep large static data out of hot-util modules. Verify at the **built artifact** (bundle analyzer), not the source import line. Distinct from the dataset-leak bullet (that helper genuinely depends on the data; here the symbol is independent, dragged in only by the module boundary). +1 eval.
+
 ## [1.353.0] — 2026-09-20
 
 ### agentic-delivery — a remembered constraint-state is a guess; recheck a tripped limit (and a quiet lane) before acting on it (#835)
