@@ -163,7 +163,10 @@ the detected model (§2) — `develop` under git-flow, else the default branch.
 6. **Diverged (ahead + behind) or behind the target** → **rebase or merge the
    target in** to make it land cleanly, then re-triage (usually → step 3). Rebase
    only unshared/personal branches; a **shared** branch is merged, not rebased
-   (§6).
+   (§6). For a **long-open** branch this is necessary but not sufficient — rebasing
+   and re-running CI does not prove the merge won't revert work the target landed
+   since the branch forked; verify its effect against current HEAD first (§6,
+   long-open-PR bullet).
 7. **Stale + WIP + no clear owner intent** → **escalate to the owner** (a
    "Decisions needed" item) with the age, the unique-commit count, and the last
    author; do not guess whether abandoned work should ship.
@@ -722,6 +725,45 @@ explicit approval** — the same opt-in bar as the Phase 6 imprint.
   first** and rebase B onto it, replaying only B's unique commits, **or** fold A's
   missing commits into B and merge B once. After landing, **grep the live tree for
   the fixed symbol** (the guard, the hard limit); never trust "B included A."
+- **A long-open PR is reviewed against its own fork point, so its diff cannot
+  reveal a revert of work the base shipped after it branched.** Distinct from the
+  subset-absorb case above (two open PRs, B holding a stale subset of A): here
+  **one** PR sat open while the integration branch raced hundreds of commits ahead,
+  and the trap is that the **review surface itself is merge-base-relative**. A PR's
+  "Files changed" view is **typically** merge-base-relative — as is `git diff
+  <base>...<branch>`, which `git-diff(1)` defines as `git diff $(git merge-base <base>
+  <branch>) <branch>` — showing only what the branch changed *since it forked*. That
+  looks correct because it **is** the intended change seen from the old fork point, and
+  it is **blind by construction** to everything the base landed on those same files
+  afterward. So green + mergeable + a clean Files-changed is a **false all-clear**:
+  where the branch edited a file the base has since advanced (a landed fix, a
+  hardening), merging can drop that newer work. A plain three-way merge would at least
+  **conflict loudly** where both sides edited the same lines — but the silent paths
+  don't: a **squash-merge** lands the branch's tree for the files it changed (the
+  base's newer content in them goes with it — the §5 squash trade-off / §3 cherry
+  trap), an automated resolution **toward the branch** (`--theirs`, the §6 hazard
+  below) takes the stale side outright, and even a **textually clean** merge can defeat
+  the fix **semantically** when the branch edited a different region (a caller) than
+  the base hardened (the callee). The branch's own green proves nothing either — it ran
+  against its fork-point view of the world. **Two-dot `git diff <base>..<branch>` is the mirror trap:** it
+  *over*-reports, flagging every file the base advanced but the branch never touched as
+  a **phantom reversion** the real three-way merge would not produce — a lead to
+  triage, never the verdict. Take the verdict against **current HEAD**: list the paths
+  the PR touches (`git diff --name-only $(git merge-base <base> <branch>) <branch>`),
+  ask whether the base landed commits on any of them since the fork
+  (`git log $(git merge-base <base> <branch>)..<base> -- <those paths>` — non-empty
+  means the PR's tree predates real work there), and prove the actual effect by
+  **trial-merging onto current HEAD** — the throwaway integration branch of §5, cut off
+  HEAD — and diffing that result against HEAD. **Notation follows the question:**
+  merge-base-relative (three-dot) is right for *what did this branch write* and
+  correctly suppresses the two-dot phantom reversions (the duplicate-close bullet below
+  picks notation the same way), but it **cannot** answer *would merging undo shipped
+  work* — that needs the base's post-fork side, which three-dot excludes. **"Rebase and
+  re-run CI" is necessary, not sufficient:** a rebase can silently keep the stale side
+  of exactly those files. If the PR's intent already landed on the base (its linked
+  issues closed elsewhere), it is **verify-then-close**, not merge; closing someone
+  else's PR is an owner call (§6 opening) — surface the touched-path-vs-HEAD evidence,
+  don't act unilaterally.
 - **Before closing a PR as duplicate or superseded, diff the two tips — title or
   branch similarity is not patch equality.** Two PRs that look like the same fix can
   differ in a hunk only one carries (one tip gates a `useReducedMotion` check behind
@@ -908,6 +950,11 @@ squash). Mark any PR column `unverified` when forge auth was absent (§1).
   approval nor handed off by URL, or an unpushed rebase abandoned off the remote.
 - A PR merged after another that absorbed its files at an older SHA — a stale subset
   silently reverting the later fix, with no conflict to warn.
+- A **long-open PR** approved on its "Files changed" / own-base diff (fork-point-relative,
+  so blind to what the target shipped on those files since it branched) — or waved through
+  on "rebase + re-run CI" — with no check of the target's post-branch commits on the paths
+  it touches; a squash, a toward-the-branch resolution, or a semantically-coupled clean
+  merge then drops that newer work with no conflict to catch it.
 - A batch merged off one up-front green + `MERGEABLE` snapshot with **no per-merge
   re-check**, or a **merge sweep run concurrently with a conflict-resolution lane**
   against the same base — the moving base head flips later members back to

@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.351.0] — 2026-09-20
+
+### deep-code-review — a long-open PR can silently revert work the base shipped after it branched; verify against current HEAD (#818)
+
+- **`branch-and-merge-hygiene.md`** (§6): a long-open PR reviewed on its "Files changed" / own-base diff is judged against its **fork point** — `git diff <base>...<branch>` = `git diff $(git merge-base <base> <branch>) <branch>`, blind by construction to everything the base landed on those files afterward. So green + mergeable + a clean Files-changed is a **false all-clear**: where the branch edited a file the base has since advanced, merging can drop the newer work. A plain 3-way merge conflicts loudly, but the silent paths don't — a **squash-merge**, a toward-the-branch (`--theirs`) resolution, or a textually-clean-but-semantically-coupled edit. Take the verdict against **current HEAD**: list the PR's touched paths, ask whether the base landed commits on any since the fork (`git log $(git merge-base <base> <branch>)..<base> -- <paths>`), and **trial-merge onto HEAD and diff**. "Rebase + re-run CI" is necessary, not sufficient. Two-dot `<base>..<branch>` is the mirror trap (over-reports phantom reversions). +1 eval.
+
 ## [1.350.0] — 2026-09-20
 
 ### deep-code-review — frontier agent-security instruments: lethal-trifecta pre-check, cross-server tool-shadowing, tool-annotation trust boundary (security-ai-agents.md)
