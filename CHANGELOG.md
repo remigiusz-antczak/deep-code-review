@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.293.0] — 2026-09-20
+
+### deep-code-review — wave 214 classify a DIFF's hunks by kind (mechanical / behavioral / new-surface) → matched review depth
+
+- **`method.md`** Phase 2 gains a DIFF-scope triage step: **the PR's title and line-count are not the review's depth budget.** Bucket each changed hunk into **mechanical** (rename, format-only reflow), **behavioral** (logic changed on an existing path), or **new-surface** (a brand-new route/endpoint/handler/consumer/permission — a new trust boundary), and route each at matched depth — a mechanical hunk gets a fast *confirm-it-is-mechanical* read (no moved guard / flipped default / widened type rode in on the rename), a behavioral hunk the full domain audit, and a **new-surface hunk the full Phase 3 adversarial opener set (every opener, not a subset) regardless of the PR's stated size or title** — a new endpoint buried in a PR titled "refactor" is the highest-risk change and the easiest to wave through. A hunk fitting none cleanly defaults to the behavioral read. Distinct from Phase 0's blast-radius *ordering* (which ranks what to review *first*; this sets *depth*). +2 evals. From the competitor-tool comparison (CodeRabbit "Change Stack"). Independent reviewer PASS-WITH-FIXES: cross-referenced the Phase 3 opener list instead of re-enumerating a subset (the original dropped the dual-surface caller check — the one the eval's export example most needs), removed the dependency-bump from the "mechanical" bucket (its risk is off-diff in the changelog, so the mechanical clearing read can't clear it), and added the behavioral default. Closes no filed issue (comparative research find).
+
 ## [1.292.0] — 2026-09-20
 
 ### deep-code-review — wave 213 self-audit cleanup-B: de-duplicate two restated passages

@@ -334,17 +334,19 @@ each, produce findings with `file:line` + impact + fix. Load the domain's
 N/A with a one-line reason. Start from Phase 0's triage-first hits and blast-
 radius order. **On a `DIFF`, classify each changed hunk by *kind* before walking
 domains — the PR's title and line-count are not the review's depth budget.** Bucket
-the change into **mechanical** (a rename, a format-only reflow, a dependency bump with
-no call-site logic change), **behavioral** (logic changed on an *existing* path), and
+the change into **mechanical** (a rename, a format-only reflow), **behavioral** (logic
+changed on an *existing* path), and
 **new-surface** (a brand-new route / endpoint / handler / consumer / permission — a new
 trust boundary), and route each at matched depth: a mechanical hunk gets a fast
 *confirm-it-is-mechanical* read (no behavior rode in on the rename — a moved guard, a
 flipped default, a widened type); a behavioral hunk gets the full domain audit for the
 paths it touches; and a **new-surface hunk gets the full Phase 3 adversarial opener set
-(anon-GET sweep, two-principal object-swap, then injection/SSRF/traversal) regardless of
-the PR's stated size or title** — a new endpoint buried in a PR titled "refactor" is both
-the highest-risk change and the easiest to wave through at the diff's face value. The
-bucket, not the PR's framing, sets the depth. (Distinct from Phase 0's blast-radius
+(below) — every opener, not a subset (the dual-surface caller check is the one most
+easily skipped) — regardless of the PR's stated size or title** — a new endpoint buried
+in a PR titled "refactor" is both the highest-risk change and the easiest to wave through
+at the diff's face value. The bucket, not the PR's framing, sets the depth. A hunk that
+fits none cleanly — a pure deletion, a test-only or config-only change — defaults to the
+**behavioral** read (toward more scrutiny, not less). (Distinct from Phase 0's blast-radius
 *ordering*, which ranks what to review *first*; this sets what *depth* each hunk earns.)
 **Intent-conformance — a lens distinct from correctness.** Besides "is the
 code right," ask "does the change do what it *claimed*": does the diff satisfy its PR
