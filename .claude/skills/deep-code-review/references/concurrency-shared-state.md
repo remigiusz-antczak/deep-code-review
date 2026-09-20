@@ -149,8 +149,8 @@ Common in agent/tooling repos: JSON/YAML "DB" files, append logs, lockfiles.
   writers — including single-process JSON/Postgres JSON stores. Re-read or CAS
   after the await before persisting.
 - **A CAS / version guard must cover the field the decision depends on — not just a status
-  column.** A transition guarded by `UPDATE … WHERE status = 'approved'` (or a version CAS on the
-  row) still races if the decision also read an **independently-mutable** field — an `amount`, an
+  column.** A transition guarded by `UPDATE … WHERE status = 'approved'` — a guard on the **state
+  column only** — still races if the decision also read an **independently-mutable** field — an `amount`, an
   `approved_by`, an evidence/answer column — that another writer can change between the read and
   the CAS: the status CAS passes, but the action fires on **stale** decision inputs. A "does it
   have a CAS?" review waved through on the wrong column is the tell. Guard every field the

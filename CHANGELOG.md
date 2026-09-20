@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.274.0] — 2026-09-20
+
+### deep-code-review — wave 195 DB/store TOCTOU: an idempotency short-circuit must diff real state; a CAS must guard the decision's fields, not just status
+
+- **`concurrency-shared-state.md`** §DB/store TOCTOU, two new bullets. (1) An idempotency / no-op short-circuit (`apply(current, next)` skips when equal) is only correct if `current` is the store's **real** state — a DB adapter that passes an empty array / `{}` / a fabricated blank as `current` defeats it: every apply looks changed, re-writing rows and re-firing events/webhooks each run. Load the real current rows before the diff; test the DB path with a **pre-seeded** existing value (an empty-baseline in-memory test passes while the DB path is broken). (2) A CAS/version guard must cover the field the decision **depends on** — a guard on the state column only (`WHERE status='approved'`) still races if the decision also read an independently-mutable field (`amount`, `approved_by`, an evidence column) another writer can change between the read and the CAS; the CAS passes, the action fires on stale inputs. Guard every consumed field — a whole-row version/`updated_at` CAS, or re-read and compare under the same lock. +2 evals. Independent reviewer PASS-WITH-FIXES: removed a self-contradictory parenthetical (a whole-row version CAS is a *valid* guard — the flaw is a state-column-only guard, now stated as such). Closes #642, closes #647.
+
 ## [1.273.0] — 2026-09-20
 
 ### agentic-delivery — wave 194 issue-lifecycle discipline: read comments before laning, verify every acceptance criterion before closing
