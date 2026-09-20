@@ -153,6 +153,19 @@ signal, outranking any green metric (distinct from the delivery-ratio drain abov
 that asks whether lanes convert to artifacts, this asks whether the machine can still
 run them; a nothing-landing stretch trips both).
 
+**A subagent's own crash / low-memory / OOM report is a first-class back-off trigger, even when
+the orchestrator's own probe reads fine.** The probe above samples the orchestrator's outside view
+of the machine at an interval — necessarily steady-state — and can straddle the exact moment
+several concurrent heavy lanes peak simultaneously (a build, a browser boot, and a test run
+spiking RAM in the same window between two samples). A subagent that reports its own process was
+OOM-killed, crashed on a low-memory / allocation-failure error, or self-observed swap thrash is not
+a flaky lane to retry blind — it **is** the peak reading the periodic probe missed, filed from
+inside the spike instead of around it. This is the same asymmetry as *free RAM is a veto, not a
+licence* above, one level out: a healthy outside-view reading could not there authorize a spawn,
+and it cannot here overrule a worker's own inside-view crash — back off concurrency immediately on
+the worker's report (the same swap-trend response above), and re-probe before the next heavy lane,
+rather than waving off a real crash because the orchestrator's own check said there was headroom.
+
 ## A worktree is a resource with a lifecycle — creation without teardown leaks it
 
 Worktree-per-lane is the right isolation, but a worktree is a **resource with a
@@ -261,6 +274,26 @@ surface the reason ("merges routed to a delegated lane in auto mode") rather tha
 swallows; and (3) **document the routing** so the orchestrator delegates merges by design, not by
 trial-and-error. **🚩** an auto-mode loop whose merge tick runs but lands zero PRs while sub-agent merges
 succeed — a classifier asymmetry, not a slow agent.
+
+**A second, compounding denial: the dirty-working-tree preflight (and its bypass flag) is itself
+denied to the orchestrator.** An orchestrator that must hold uncommitted state for its own work — a
+WIP commit, edits mid-task — while also draining the merge queue can face two stacked denials, not
+one: the classifier above denies its own `merge`, and a dirty-working-tree preflight (plus whatever
+flag would skip it) is *also* orchestrator-denied. Both routes close on the same tick, and the
+orchestrator can **land nothing across many ticks** while the queue sits green and ready — the same
+classifier-denies-orchestrator asymmetry, compounded rather than resolved by either single fix. The
+doctrine fix (not a script): **delegate the merge itself to a subagent in its own clean, isolated
+worktree.** This does not need a second laundering test: the existing carve-out just above already
+covers the merge itself (these PRs already independently passed the gate); what the clean tree adds
+is the other half — its dirty-tree preflight predicate becomes genuinely true rather than skipped
+through a passed-along bypass flag, so nothing is laundered there either. Don't let this become a
+heavyweight lane per PR either — the caution above still holds: **size the delegated lane to the
+batch, not to one merge.**
+Amortize one clean-worktree lane across 2-3 small, disjoint, already-green PRs that merge
+in sequence through it, rather than spinning a fresh isolated worktree per PR. Whether that batch
+also clears the project's own merge-authority bar as a train or a cascade is the cascade section's
+question (below), not this one — this only sizes the lane doing the merging, never the authority
+that admits what merges.
 
 ## When no autonomous path exists, surface the human-run escape hatch up front — don't narrate "holding"
 
@@ -822,6 +855,21 @@ implements.
 - **Count the re-briefs** — more than one or two scope-extending messages to the same
   in-flight lane is the signal that the scope was mis-sized: **split it**, don't send a
   third.
+
+**The inverse case: a correction to a brief already dispatched to a whole cohort is two actions,
+not one.** The rule above covers new scope arriving for a *single* lane that polls its own file; a
+fix to a shared brief or template already fanned out to N lanes is a different shape — unless every
+lane in that cohort was itself set up to poll a shared file per the discipline above, a lane briefed
+with the content **inlined at spawn time** holds its own frozen copy and has nothing left to poll,
+so the fix does not reach it on its own. Treat the correction as two actions, always: (1) **fix the
+template** so every future dispatch carries the correction, and (2) **enumerate the in-flight
+cohort still running the stale version and remediate each one directly** — a targeted re-brief, a
+kill-and-respawn, or an explicit accept-as-is — never assume fixing the source alone reaches lanes
+already spawned from it. Catch this before it costs N corrections: **discover the brief's own
+format/gate requirements with one dry run before fanning it out** — one lane through the brief,
+checked against the actual downstream format/gate it will be judged by — the *pilot before full
+fan-out* rule above, narrowed to one lane because the target is the brief's own correctness, not
+the task boundary.
 
 ## An ownership map blocks a dual *write*, not dual *work* — and "assigned" is not "in progress"
 

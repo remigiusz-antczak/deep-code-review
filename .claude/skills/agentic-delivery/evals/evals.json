@@ -560,6 +560,36 @@
         "Applies a staleness threshold: last progress hours old → treat as dead, cross-check for a real liveness signal, then reconcile (adopt-and-re-verify or reclaim)",
         "Notes that respecting a stale claim forever lets a crashed lane lock its objective permanently — bound the claim's freshness so a dead lane is reclaimable"
       ]
+    },
+    {
+      "id": "dirty-tree-preflight-denies-orchestrator-delegate-to-clean-worktree",
+      "prompt": "My auto-mode orchestrator is stuck: it has a WIP commit staged for its own task, and the merge queue has three small, disjoint, already-green PRs sitting ready. Every tick, the permission classifier denies the orchestrator's own merge (expected), but this time the dirty-working-tree preflight ALSO denies the orchestrator -- and there's no bypass flag it's allowed to pass either. I've been re-running the merge tick for an hour and nothing lands. What's going on and what do I do?",
+      "expected_output": "Two separate denials are stacking, not one: the classifier denies the orchestrator's own `merge`, and now the dirty-working-tree preflight (plus its bypass flag) is ALSO denied to the orchestrator -- so every tick both possible workarounds are closed and nothing lands, even though the queue is green and ready. This is the classifier-denies-orchestrator asymmetry, compounded. Fix: delegate the merge itself to a subagent spun up in its own clean, isolated worktree -- that tree holds no uncommitted state, so the dirty-tree preflight passes on its own merits, no bypass flag needed. That is NOT the laundering workaround (a subagent told to pass the bypass flag would be laundering the same denial through a proxy) -- here the predicate the preflight actually checks (clean tree) becomes genuinely true. Don't spin a fresh worktree per PR either: since all three PRs are small, disjoint, and already green, amortize one clean-worktree lane across all three and merge them back-to-back through it. Whether that batch also needs a full union-proven merge train (rather than each just independently re-checked) is the project's own merge-authority / cascade question, separate from how the lane is sized. (fast-agentic-delivery.md.)",
+      "expectations": [
+        "Names the compounding cause: the dirty-working-tree preflight and its bypass flag are ALSO orchestrator-denied, stacking with the merge-classifier denial -- not a single blocked call",
+        "Fix is delegate the merge to a subagent in its own clean, isolated worktree, distinguished from laundering because the clean tree makes the preflight's predicate genuinely true rather than skipping it",
+        "Sizes the delegated lane to the batch -- amortizes one clean-worktree lane across the 2-3 small disjoint already-green PRs rather than spinning one per PR, and does not conflate that with deciding whether a full union-proven train is required"
+      ]
+    },
+    {
+      "id": "stale-brief-correction-must-reach-the-already-dispatched-cohort",
+      "prompt": "I fanned out a brief to twelve agents an hour ago -- each one got the brief's text inlined directly in its own spawn prompt, no shared file. I just found a mistake in the brief's own template (a wrong flag name that will make every PR fail the same lint gate). I already fixed the template for next time. Am I done?",
+      "expected_output": "No. Fixing the template only helps future dispatches -- it is not the same situation as new scope for a single lane that polls a shared file it re-reads at checkpoints; here the brief was inlined into each of the twelve prompts at spawn time, so each of those twelve lanes is holding its own frozen, now-stale copy with nothing left to poll, and none of them will pick up your fix on their own. Treat this as two actions, not one: (1) the template fix you already made, for every future dispatch, and (2) enumerate all twelve in-flight lanes still running the old wrong-flag version and remediate each directly -- a targeted re-brief, a kill-and-respawn, or an explicit accept-as-is for any that are unaffected -- never assume the template fix alone reaches agents already spawned from it. Going forward, catch this class of bug before a fan-out this wide: run one lane through the brief first as a dry run and check its output against the actual lint gate it will be judged by, before committing the other eleven. (fast-agentic-delivery.md.)",
+      "expectations": [
+        "Says fixing the template alone is not sufficient -- rejects 'done' after only step (1)",
+        "Requires enumerating and directly remediating all twelve in-flight lanes carrying the stale inlined brief (re-brief, kill-and-respawn, or explicit accept-as-is), since they have no shared file to poll and won't self-correct",
+        "Recommends a one-lane dry run against the actual format/gate requirement before fanning out the next brief this wide"
+      ]
+    },
+    {
+      "id": "subagent-oom-report-overrides-a-healthy-orchestrator-probe",
+      "prompt": "I have four heavy build lanes running. My orchestrator just re-probed and free RAM reads 40% with swap flat -- looks healthy, so I was about to spawn a fifth lane. But lane 3 just reported back that its own process was OOM-killed mid-build. Do I still spawn the fifth lane since my probe says we have headroom?",
+      "expected_output": "No -- don't spawn. Lane 3's own OOM report is a first-class back-off signal, even though your own probe just read healthy: the periodic probe samples the orchestrator's outside view at an interval, which is necessarily steady-state, and it can straddle the exact moment several concurrent heavy lanes peak simultaneously -- your 40%-free-RAM sample can simply have landed between spikes. Lane 3's crash was filed from inside that spike, not around it, so it IS the peak reading your probe missed, not a flaky lane to blindly retry. This is the same asymmetry as free RAM being a veto and never a licence, one level out: a healthy outside-view reading could not by itself authorize a spawn, and it cannot now overrule a worker's own inside-view crash either. Back off concurrency immediately on lane 3's report, and re-probe before spawning lane 5 rather than trusting the orchestrator's own check over the worker that actually hit the wall. (fast-agentic-delivery.md.)",
+      "expectations": [
+        "Refuses to spawn the fifth lane despite the orchestrator's own probe reading healthy (40% free RAM, flat swap)",
+        "Explains the periodic probe samples steady-state and can miss a peak that concurrent heavy lanes hit simultaneously -- the crashing worker's report IS that peak reading",
+        "Ties it to the free-RAM veto-not-licence asymmetry: a healthy outside-view probe cannot overrule a worker's own inside-view crash/OOM report"
+      ]
     }
   ]
 }

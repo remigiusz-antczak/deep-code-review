@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.301.0] — 2026-09-20
+
+### agentic-delivery — fleet-coordination doctrine: delegate-merge-to-clean-worktree, stale-brief cohort fix, subagent-OOM back-off (closes #548, #666, #676)
+
+- **`fast-agentic-delivery.md`** three doctrine additions. **#548** — the dirty-working-tree preflight (and its bypass flag) is *also* orchestrator-denied, compounding the classifier-denies-orchestrator asymmetry so a lane can land nothing; fix = **delegate the merge to a subagent in its own clean isolated worktree** (the preflight passes there, no bypass), + a sizing rule (amortize one clean-worktree lane across 2-3 small disjoint already-green PRs; defers train-vs-cascade authority to the cascade section). **#666** — correcting a fan-out **brief already dispatched to a cohort** is two actions (fix the template for future + enumerate/remediate the in-flight cohort, since an inlined brief has nothing left to poll), + a one-lane dry-run before fanning out N. **#676** — a subagent's own crash / low-memory / OOM report is a **first-class back-off trigger** even when the orchestrator's periodic probe reads fine (a probe samples steady-state, misses the peak concurrent heavy lanes hit). +3 evals (agentic-delivery suite 54 → 57). Built by a worktree builder subagent, independently reviewed PASS (advisor-caught + removed a duplicate laundering test pre-review; applied the one wording tweak "back-to-back" → "in sequence" to drop a merge-train vocabulary echo). Closes #548, closes #666, closes #676.
+
 ## [1.300.0] — 2026-09-20
 
 ### deep-code-review — a test that shells a real external binary must probe function + supply its own config (closes #678)
