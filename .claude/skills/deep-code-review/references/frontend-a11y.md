@@ -74,7 +74,7 @@ without regressing a deliberate design.
   numeric bar: the indicator's colour must reach **>=3:1** against what it sits on — WCAG **1.4.11
   Non-text Contrast** (AA) requires 3:1 for "visual information required to identify user interface
   components and states," and **2.4.13 Focus Appearance** (AAA) requires **both** that the indicator's **area** be at
-  least that of a **2 CSS px thick perimeter** of the component **and** a **>=3:1** contrast
+  least that of a **2 CSS px thick perimeter** of the **unfocused** component (or sub-component) **and** a **>=3:1** contrast
   "between the same pixels in the focused and unfocused states" — a thin 1px ring that clears
   the contrast floor still fails the area prong. An automated focus check that
   captures computed style, calls `.focus()`, and flags only when *nothing changed* validates the

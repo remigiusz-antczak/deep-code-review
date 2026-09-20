@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.280.0] — 2026-09-20
+
+### deep-code-review — wave 201 WCAG 2.2 precision: Consistent Help is order-not-location; Focus Appearance has an area prong
+
+- **`frontend-a11y.md`** aligns two WCAG 2.2 SC bullets to the skill's own already-verified `docs/standards-index.md` rows: **3.2.6 Consistent Help** is the *relative order* of repeated help mechanisms in the content, not pixel/visual location (corrects the prior "consistent location" wording); **2.4.13 Focus Appearance** (AAA) requires **both** an area >= a 2 CSS px thick perimeter of the unfocused component (or sub-component) **and** >=3:1 focused/unfocused contrast — a 1px ring that clears contrast still fails the area prong. +2 evals. Independent reviewer PASS-WITH-FIXES: completed the "unfocused component (or sub-component)" quote and tightened the eval's area-vs-thickness reasoning. Closes no filed issue (WCAG 2.2 comparative pass; backed by existing verified standards-index rows).
+
 ## [1.279.0] — 2026-09-20
 
 ### deep-code-review — wave 200 review-method dedup: filed findings must dedupe against recently-closed issues, not only open
