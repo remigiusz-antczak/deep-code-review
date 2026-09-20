@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.315.0] — 2026-09-20
+
+### deep-code-review — cryptographic-usage correctness (nonce/IV reuse, constant-time comparison, KDF cost floor, DEK/KEK separation)
+
+- **`security-appsec.md`** A04, four folds: (1) **nonce/IV reuse** — AES-GCM nonce reuse recovers the auth subkey → ciphertext forgery (NIST SP 800-38D App. A); CBC/CFB need an *unpredictable* IV, stricter than merely unique (SP 800-38A); a reused CTR/OFB keystream is a two-time-pad break across the full message overlap (CWE-323). (2) **constant-time comparison** as a general rule for any secret (HMAC / session / CSRF / OTP / API-key), CWE-208, with the Node `timingSafeEqual` equal-length gotcha + Java `MessageDigest.isEqual` + Go `subtle.ConstantTimeCompare`. (3) **password-KDF cost floor** — check the work factor, not just the algorithm name (OWASP Password Storage), framed as a moving target. (4) **DEK/KEK key-purpose separation** for hand-rolled envelope encryption (OWASP Cryptographic Storage). ECB / weak-RNG / cert-verify-disabled / JWT alg-confusion confirmed already covered. +6 curl-verified `docs/standards-index.md` rows (both NIST PDFs processed with `pdftotext`); +3 evals.
+- Research-derived expansion (no filed issue). Built by a worktree builder subagent, independently reviewed **PASS-WITH-FIXES**: the reviewer processed both NIST PDFs and byte-verified every quote, cross-checking the two CVEs against NVD; fixes applied — extended the DEK/KEK quote back to OWASP's most-direct statement ("At least two separate keys are required for this:"), corrected the CTR/OFB reuse scope (full overlapping length / two-time-pad, not "just the repeated blocks"), and reworded the nonce eval's severity to derive from the exposure-boundary discriminator rather than a flat "Critical" label.
+
 ## [1.314.0] — 2026-09-20
 
 ### deep-code-review — structural cleanup: dedup SKILL.md, reclaim ~920 bytes of routing headroom, fix a thesis-violating SSRF-list drift
