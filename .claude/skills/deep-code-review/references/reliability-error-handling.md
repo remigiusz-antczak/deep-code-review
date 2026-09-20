@@ -58,6 +58,14 @@ the checklist.
   with jittered backoff and a hard cap. Non-idempotent POST/charge/send: retry
   only behind an idempotency key or after echo-verify that nothing applied.
   **Retry-forever** and **retry-without-jitter** are findings.
+- **An idempotent-retry existence check must scope to *success* states.** Before
+  re-doing work, code that asks "did a prior attempt already do this?" must match
+  only **completed/succeeded** records — a status-agnostic lookup (`state=all`, or
+  any row with the key) also matches a **reverted, cancelled, or failed** prior
+  attempt (a closed-not-merged PR, a cancelled-not-fulfilled order) and misreports
+  the work as done, so the retry silently **skips real work**. Filter the existence
+  query by a terminal-**success** status, and test it against a key whose only prior
+  record is non-success (confirm the work re-runs).
 - **Cap retries with an aggregate budget, not only a per-request limit.** A
   per-request hard cap (above) bounds a single call, but if *every* failing call
   retries during a partial outage the combined retry traffic multiplies load on an
@@ -160,6 +168,15 @@ Review:
 - Batch loops: **per-item** try/catch (or equivalent); one poison item must not
   abort the whole run unless the product explicitly requires all-or-nothing —
   and then that must be transactional.
+- **A "never throws" function must guard every throwing call it makes — not lean on
+  one outer `try`.** A parse/identity helper whose contract is "returns a default,
+  never throws" is only as safe as its coverage: a `decodeURIComponent` (URIError on
+  a stray `%`), `JSON.parse`, `atob`/base64, or `new URL()` sitting in a `.map`
+  callback, a default-argument expression, or any statement **outside** the guarded
+  block throws **past** the contract and crashes the caller that trusted it and
+  omitted its own guard. Wrap each decode/parse in its own try/catch (or prove it
+  sits inside the outer one), and test the helper with malformed input for every
+  such call.
 - **Echo-verify writes** when the cost of silent drift is high: compare the
   store's returned record to what was sent (field-by-field or hash), not only
   "HTTP 200."

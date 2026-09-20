@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.271.0] — 2026-09-20
+
+### deep-code-review — wave 192 retry/idempotency error-handling: success-scoped existence checks and a "never throws" function's coverage
+
+- **`reliability-error-handling.md`** two new bullets. (1) An idempotent-retry "did a prior attempt already do this?" existence check must match only terminal-**success** records — a status-agnostic lookup (`state=all` / any row with the key) also matches a reverted, cancelled, or failed prior attempt (a closed-not-merged PR, a cancelled-not-fulfilled order) and misreports the work as done, so the retry silently skips real work; filter by success status and test against a key whose only prior record is non-success. (2) A "never throws" function is only as safe as its coverage: a decode/parse (`decodeURIComponent`, `JSON.parse`, `atob`, `new URL()`) in a `.map` callback, a default-argument expression, or any statement outside the guarded block throws *past* the contract and crashes trusting callers; wrap each decode/parse in its own try/catch or prove it sits inside the outer one, and test malformed input per call. +2 evals. Independent reviewer PASS (both mechanisms reproduced empirically). Closes #643, closes #645.
+
 ## [1.270.0] — 2026-09-20
 
 ### deep-code-review — wave 191 an LLM self-report boolean gated with a loose comparison fails open

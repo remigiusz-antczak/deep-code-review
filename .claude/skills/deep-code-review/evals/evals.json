@@ -3490,6 +3490,26 @@
         "Prescribes fail-closed handling: require the field present and correctly typed, demand an explicit affirmative (`=== true`) for the permissive branch, and route every other case to block/deny",
         "Identifies that a model self-grading its own output is not a trustworthy sole gate — it must corroborate, not replace, a deterministic check (allowlist / argument validation at the tool boundary)"
       ]
+    },
+    {
+      "id": "idempotent-retry-existence-check-matches-a-reverted-prior-attempt",
+      "prompt": "A job retries by first checking \"did we already create the order for this cart?\" with `SELECT id FROM orders WHERE cart_id = ? LIMIT 1` (any status) and skips creation if a row exists. A prior attempt created an order that was later cancelled. A reviewer says 'it's idempotent — it won't double-create.' What's wrong?",
+      "expected_output": "The existence check is status-agnostic, so it fails in the OTHER direction: it matches the CANCELLED prior order and skips creation, so the cart never gets a valid order — the retry misreports already-done work and silently drops a real task. 'Idempotent' here only prevents duplicates; it does not guarantee the found record represents SUCCESSFUL completion. An idempotent-retry existence check must scope to terminal-success states (e.g. `status IN ('completed','fulfilled')`), not 'any row with the key' — a reverted, cancelled, or failed prior attempt must not count as done. Fix: filter the lookup by success status, and test it with a key whose only prior record is non-success, confirming the work re-runs.",
+      "expectations": [
+        "Identifies that the status-agnostic existence check matches a non-success (cancelled/reverted/failed) prior attempt and wrongly skips the work — the retry misreports 'done' and drops a real task",
+        "Prescribes scoping the existence query to terminal-SUCCESS status, not 'any row with the key'",
+        "Prescribes a regression test with a key whose only prior record is non-success, confirming the work re-runs"
+      ]
+    },
+    {
+      "id": "a-decode-in-a-never-throws-function-escapes-its-error-contract",
+      "prompt": "A helper `parseIds(raw)` is documented 'never throws — returns [] on bad input'. Its body is: `const ids = raw.split(',').map(x => decodeURIComponent(x)); try { return ids.map(normalize); } catch { return []; }`. Production shows a `URIError` escaping `parseIds`. How is that possible, and what's the fix?",
+      "expected_output": "The `decodeURIComponent` runs in the `.map` BEFORE the `try` block, so a malformed token (a stray `%`, e.g. `%zz`) throws a `URIError` the outer catch never sees — the function violates its 'never throws' contract and crashes the callers that trusted it and omitted their own guard. A 'never throws' guarantee is only as strong as its coverage: every throwing call (`decodeURIComponent`, `JSON.parse`, `atob`/base64, `new URL()`), including ones in a `.map`/filter callback, a default-argument expression, or any statement outside the guarded block, must be individually wrapped or provably inside the outer try. Fix: move the decode inside the try (or wrap each decode in its own try/catch returning the default), and add a test feeding malformed input to every decode/parse path, asserting the contract holds (returns [], no throw).",
+      "expectations": [
+        "Identifies that the decode runs OUTSIDE the outer try (in the pre-try `.map`), so malformed input throws past the function's 'never throws' contract and crashes trusting callers",
+        "States that a 'never throws' contract must cover EVERY throwing call (decode/parse/URL), including those in callbacks, default-args, or statements outside the guarded block — wrap each or prove it's inside the outer try",
+        "Prescribes a test feeding malformed input to each decode/parse path, asserting the default is returned and nothing throws"
+      ]
     }
   ]
 }
