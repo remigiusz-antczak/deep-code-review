@@ -53,7 +53,9 @@ failure paths that *produce* these signals are section F /
   **structured telemetry: counts and metadata, never the raw prompt/response payload** (redact per
   *Logs & traces* below; token *counts* need no prompt text). The **OpenTelemetry GenAI semantic
   conventions** (`gen_ai.*`) name these signals — adopt the convention **names** for portability,
-  but that spec is still at *Development* stability, so **pin no version and expect churn**. A
+  but that spec was **moved to a separate GenAI semantic-conventions repository** (the
+  `gen_ai.*` entries in the main registry are now marked *Deprecated*), so **pin no version and
+  re-fetch the current source before citing**. A
   silent, un-traced agent that errors or burns tokens with no signal is the finding (cross-ref the
   cost-and-value lens in `performance-db-cost.md`).
 

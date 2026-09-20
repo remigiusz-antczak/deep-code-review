@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.287.0] — 2026-09-20
+
+### deep-code-review — wave 208 telemetry carries a stable resource identity (service/version/environment)
+
+- **`observability.md`** new bullet in the correlation-id/trace family: every emitted signal should stamp a stable **resource identity** — *which service, version, and instance* produced it and *which environment/tier* — via the OpenTelemetry resource attributes `service.name`/`service.version`/`service.instance.id`/`service.namespace` and `deployment.environment.name` (all **Stable**), or an equivalent version+environment dimension. Without it, two things the skill already demands quietly break: a **canary's named halt metric** (`release-engineering.md`) is uncomputable as canary-vs-baseline unless telemetry is partitioned by `service.version`/cohort; and **multi-window burn-rate SLO math** (`role-coverage.md`) corrupts when environments collide in one backend — which is the **default**, since per the OTel spec `deployment.environment.name` "does not affect the uniqueness constraints" so `service.name=frontend` in prod and staging "MUST be considered to be identifying the same service." **`release-engineering.md`** canary bullet gains a partition-by-cohort clause. Two dated `docs/standards-index.md` rows (OTel service + deployment attributes, curl-verified 2026-09-20). +2 evals. Independent reviewer PASS-WITH-FIXES: dropped an unverified "gen_ai.* is Development" comparison (the gen_ai conventions were in fact **moved to a separate repo / marked Deprecated** — also corrected the same stale claim pre-existing at `observability.md`'s GenAI bullet), and made the OTel-citation in one eval sufficient-but-not-necessary. Closes no filed issue (comparative research find).
+
 ## [1.286.0] — 2026-09-20
 
 ### deep-code-review — wave 207 author a disposable probe test to *discover* an unsuspected bug (Phase 3)
