@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.330.0] — 2026-09-20
+
+### deep-code-review — NEW: WebAuthn/passkey credential-layer review depth (#778)
+
+- **`security-appsec.md`** (#778): extends the session/MFA block (previously 100% session-tokens/OTP) with the passkey credential layer — the first WebAuthn coverage in the suite. Four rules: (1) **RP ID pinned server-side** to the expected origin, never derived from a client `Host`/`Origin` (verify `origin` + `rpIdHash` against a fixed value); (2) **signature-counter clone detection** — a new `signCount` ≤ the stored value (when either is non-zero) is a possible-clone/replay signal to surface, while an always-zero counter is legitimate (flag a *regression*, not absence); (3) **no silent downgrade** to a non-phishing-resistant factor (password, SMS/TOTP) on a WebAuthn failure; (4) **attestation verified only where the threat model needs provenance** — most consumer flows correctly skip it. Sourced to W3C WebAuthn L3 and NIST SP 800-63-4, both curl-verified. +2 evals; +2 standards-index rows. Research-scout-surfaced, sources curl-verified by the parent.
+- Independently reviewed **PASS-WITH-FIXES**: applied all three citation-fidelity must-fixes the reviewer caught against the primary sources — a spliced W3C `signCount` quote missing its "if either is non-zero" qualifier (restored, with the elision marked); a cross-RP-privacy quote misattributed to "an authenticator" instead of "Relying Parties" (reattributed); and a logic bug in the `signCount` eval that graded "both non-zero" when the spec requires "either non-zero" (a regression stored=7 → new=0 must be flagged) — plus the optional NIST syncable-AAL3 quote and a "phishing-resistant when properly configured" hedge.
+
 ## [1.329.0] — 2026-09-20
 
 ### deep-code-review — frontend quality: caller-side memo defeat (#756), view-switch drops the active filter (#750), shared search highlights-behind-a-fold on a sibling renderer (#751)

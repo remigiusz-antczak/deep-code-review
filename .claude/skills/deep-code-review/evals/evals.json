@@ -4450,6 +4450,26 @@
         "Identifies the concrete failure: a match inside a user-collapsed cluster renders its highlight behind the fold, so the search has zero visible effect -- a combined state neither feature's own tests cover",
         "Prescribes deciding filter-vs-highlight per renderer and aligning any caption, then keying collapse/fold state off search (force-open a matching ancestor or show an 'N matches inside' indicator), and a combined-state test asserting the match is visible or signposted"
       ]
+    },
+    {
+      "id": "passkey-login-silently-downgrades-to-sms-otp",
+      "prompt": "A signup flow advertises 'passkey login -- phishing-resistant sign-in.' The WebAuthn assertion is verified server-side (origin and RP ID checked). But the client: on any WebAuthn error (user cancels, no authenticator, timeout), it catches the error and automatically renders an SMS one-time-code fallback that completes the same login and issues the same session. A reviewer sees the WebAuthn verification is correct and approves. Anything wrong with the fallback?",
+      "expected_output": "Yes -- the automatic SMS-OTP fallback defeats the phishing resistance the flow advertises. WebAuthn/passkeys are phishing-resistant because the credential is cryptographically bound to the origin; SMS (or TOTP) manual codes are not -- they can be phished and relayed. A flow that silently downgrades to SMS on any WebAuthn error means an attacker (or a coerced user) can force the weaker path every time, so the account's real assurance is the weakest offered factor, not the passkey. NIST SP 800-63-4 requires AAL2 to offer at least one phishing-resistant option and AAL3 a phishing-resistant authenticator with a non-exportable key; an unconditional silent fallback provides neither in practice. The server-side verification being correct is necessary but not sufficient -- the fallback path is the finding. Fix: do not auto-downgrade on any error; treat a genuine no-authenticator case as a deliberate, rate-limited, ideally step-up-only alternative (or require re-enrollment), not a transparent same-session fallback, and do not advertise phishing resistance a fallback silently removes.",
+      "expectations": [
+        "Identifies that an automatic/silent fallback to SMS-OTP (or TOTP) on WebAuthn failure defeats the advertised phishing resistance -- effective assurance drops to the weakest offered factor and an attacker can force the weak path",
+        "Notes the server-side WebAuthn verification being correct is necessary but not sufficient; the fallback PATH is the defect (manual OTP is not phishing-resistant; NIST AAL2 must offer a phishing-resistant option)",
+        "Prescribes not auto-downgrading -- a deliberate, rate-limited or step-up-only alternative rather than a transparent same-session fallback on any error, and not advertising phishing resistance the fallback removes"
+      ]
+    },
+    {
+      "id": "webauthn-signcount-stored-but-never-compared",
+      "prompt": "A WebAuthn implementation stores each credential's `signCount` at registration. On every assertion it verifies the signature, the origin, and the RP ID, then overwrites the stored `signCount` with the value from the latest assertion. It never compares the new value to the stored one. Over time, two distinct devices are observed authenticating with the same credential (the private key was extracted from a non-resident authenticator and cloned). Does the implementation have a gap, and what should it do with `signCount`?",
+      "expected_output": "Yes -- by overwriting the stored `signCount` without comparing it, the implementation throws away the counter's only purpose: clone detection. The WebAuthn signature counter exists to aid Relying Parties in detecting cloned authenticators -- each successful assertion from a genuine authenticator should present a strictly increasing counter, so if a clone and the original are both used, one will eventually present a `signCount` less than or equal to the value the server already stored. The server must compare the incoming `signCount` to the stored value on every assertion: if the new value is <= the stored value (and at least one is non-zero), treat it as a possible cloned authenticator or replay -- surface it, step up, or revoke -- not silently accept and overwrite. Caveat: some authenticators always report 0 (or omit the counter); a persistently-zero counter is legitimate and must not be flagged -- the check is on a regression from a previously-higher value, not on the counter's presence. Fix: store AND compare; alert/act on a non-increasing counter; tolerate always-zero counters.",
+      "expectations": [
+        "Identifies that overwriting signCount without comparing discards its clone-detection purpose -- a genuine authenticator's counter strictly increases, so a clone eventually presents a value <= the stored one",
+        "Prescribes comparing incoming signCount to stored on every assertion and treating new <= stored (at least one non-zero) as a possible-clone/replay signal to surface/step-up/revoke, not silently overwrite",
+        "Notes the legitimate always-zero/absent-counter case must not be flagged -- the check is on a regression from a higher value, not on presence"
+      ]
     }
   ]
 }

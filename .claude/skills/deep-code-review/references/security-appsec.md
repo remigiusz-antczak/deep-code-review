@@ -761,6 +761,29 @@ affordance in `frontend-a11y.md` before it fires.)
 token lifetimes + server-side revocation; verify JWT signature/alg/exp/aud; MFA
 where warranted.
 
+**Passkey / WebAuthn credential-layer checks — the block above is about session *tokens*; this
+is the *credential*.** WebAuthn/passkeys are the platform-default sign-in and the credential NIST
+treats as phishing-resistant when properly configured (its verifier-name binding is exactly rules
+1–2 below), so a project shipping "passkey login" earns a
+credential-layer pass, not just a session-token one:
+- **RP ID pinned server-side** to the expected origin, never derived from a client-supplied
+  `Host`/`Origin` header. A credential is *scoped to* its Relying Party ID — "a valid domain
+  string identifying the WebAuthn Relying Party" (W3C WebAuthn L3) — so an attacker-influenced RP
+  ID lets a credential validate for the wrong origin; verify `origin` and `rpIdHash` against a
+  fixed expected value on every assertion.
+- **Signature counter checked for clone detection.** Its "purpose is to aid Relying Parties in
+  detecting cloned authenticators" (W3C WebAuthn L3): a new `signCount` **≤** the stored value is
+  a possible-clone/replay signal to surface, never silently ignore. (A counter that is always
+  `0`/absent is legitimate on some authenticators — flag a *regression*, not its absence.)
+- **No silent downgrade to a weaker factor.** A WebAuthn failure that quietly falls back to a
+  password or SMS/TOTP defeats the phishing resistance the flow advertises — NIST SP 800-63-4
+  requires AAL2 to **offer at least one phishing-resistant option** and AAL3 a phishing-resistant
+  authenticator with a **non-exportable** key. The silent fallback path is the finding.
+- **Attestation verified only where the threat model needs authenticator provenance**
+  (regulated/high-assurance tiers); most consumer flows correctly skip it — don't over-flag its
+  absence. Syncable ("multi-device") passkeys have exportable keys, so NIST bars them at AAL3 —
+  check the assurance tier before requiring *or* forbidding sync.
+
 **🚩 CSRF guard mistaken for authentication.** An `Origin` / `Referer` /
 `Sec-Fetch-Site` check is CSRF defense only — (1) any non-browser client sets
 those headers freely, and (2) browsers omit `Origin` on many same-site **GET**

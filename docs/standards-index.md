@@ -838,3 +838,15 @@ Verification date for the row below: **2026-09-20**. Added for the deep-code-rev
 | Standard / source | URL | What was confirmed |
 |---|---|---|
 | GitHub Docs — Scopes for OAuth apps | https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/scopes-for-oauth-apps | Verbatim: the `workflow` scope "Grants the ability to add and update GitHub Actions workflow files." (The doc's next sentence adds that workflow files can be committed without this scope when identical to a file already on another branch.) Fetched + verified 2026-09-20. |
+
+## Verified by direct fetch (2026-09-20) — WebAuthn / passkey credential-layer
+
+Verification date for the rows below: **2026-09-20**. Added for the deep-code-review
+`security-appsec.md` passkey/WebAuthn fold: RP ID origin-scoping, the signature counter as a
+clone-detection signal, and NIST's phishing-resistance requirements (no silent downgrade to a
+weaker factor). Both fetched via `curl` (raw HTML), not a summarizer.
+
+| Standard / source | URL | What was confirmed |
+|---|---|---|
+| W3C Web Authentication (WebAuthn) Level 3 | https://www.w3.org/TR/webauthn-3/ | Verbatim: a Relying Party Identifier is "a valid domain string identifying the WebAuthn Relying Party," and cross-RP privacy holds — "Relying Parties are not able to detect any properties, or even the existence, of credentials scoped to other Relying Parties" — basis for pinning RP ID server-side. On the signature counter, verbatim: "The signature counter's purpose is to aid Relying Parties in detecting cloned authenticators," and "If either is non-zero, and the new signCount value is less than or equal to the stored value, a cloned authenticator may exist ..." — basis for the `signCount <= stored` clone-detection check (the "either is non-zero" qualifier is why a regression such as stored=7 → new=0 is flagged, while an always-zero counter is not). Fetched + verified 2026-09-20. |
+| NIST SP 800-63-4B (Digital Identity Guidelines — Authentication) | https://pages.nist.gov/800-63-4/sp800-63b.html | Verbatim: "Applications assessed at AAL2 must offer a phishing-resistant authentication ... option"; "AAL3 authentication requires a phishing-resistant authenticator ... with a non-exportable authentication key"; "Verifiers SHALL offer at least one phishing-resistant authentication option at AAL2."; "Since syncable authenticators ... require the private key to be exportable, syncable authenticators SHALL NOT be used at AAL3." Basis for the rule that a WebAuthn flow must not silently downgrade to a non-phishing-resistant factor, and that syncable (exportable-key) passkeys are barred at AAL3. Fetched + verified 2026-09-20. |
