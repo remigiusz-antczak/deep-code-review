@@ -638,6 +638,24 @@ rate), validity (schema/format/range). For each:
   that would not have been available at prediction time (label leakage's cousin). Flag a feature
   transformed in two places, a training join with no as-of bound, or no monitoring of the
   train-vs-serve feature distribution.
+- **A vector index is a derived dataset whose *embedding model + version* is part of its
+  contract.** Embeddings from two different models (or two versions of one) live in
+  **different latent spaces**, so a similarity search across them is meaningless — and if
+  both produce the **same dimension** there is **no error**, just silently wrong
+  nearest-neighbours (a *different* dimension is the loud, easy case: a dimension-typed
+  `vector(n)` column rejects it). Two failure modes a shape-check misses: **(a)
+  mixed-version index** — a model upgrade that re-embeds only *new* rows (or backfills
+  incrementally) leaves the store comparing vectors from two spaces; upgrading requires
+  **re-embedding the whole corpus** and an **atomic index swap**, with the query path pinned
+  to the **same** model+version the index was built with (tag each vector with its embedding
+  model+version; refuse cross-version compares). **(b) stale index** — source documents
+  changed or were re-chunked but not re-embedded, so retrieval returns outdated content with
+  no error; needs a re-embed-on-source-change pipeline and a freshness/version gate. This is
+  the *correctness* face of a vector store — distinct from the **security** face (RAG
+  access-control / embedding-inversion, `security-ai-agents.md` LLM09) and the **cost** face
+  (don't re-embed unchanged inputs, §11). (`pgvector` enforces one dimensionality per typed
+  `vector(n)` column, so a different-dimension mix errors loudly; a same-dimension
+  cross-model mix does not — it performs no model-provenance check.)
 
 ---
 
@@ -676,4 +694,4 @@ that ships raw events where the consumer scores on aggregates, or a claimed
 provider-input never reconciled against the provider's live output before it feeds a
 downstream score; a deserializer that trusts a serialized computed field (a count
 read verbatim, not re-derived from the validated collection) or checks only a
-primitive type, not element shape — weaker than its own builder; a corroboration / fusion step that raises a fused confidence past its **entity-attribution** component on agreement that only evidences occurrence; a hand-rolled composite / score / tiering where a citable external standard exists and wasn't used, or per-metric spec URLs over a **tool-chosen metric set** (the invented index one level up); a non-empty value-A→value-B overwrite with no source-grade arbitration; a join / corroboration key not weighted by value-commonness (a value shared by dozens treated as a confirming match); a corroboration count that collapses same-domain duplicates but not derivation; a per-dimension volume-floor drop acked or blocked with no fold investigation after an identity/roster/entity-resolution change (a correction and a regression are identical from the count); an identity cluster built from raw connected components with no bridge / centrality check (transitive over-merge); a fabricated freshness decay curve (`0.5^(days/half_life)`) or an adopted vendor half-life in place of an observable in-window gate; a diff / index keyed on a **bare `id`** over a list mixing multiple entity **kinds** (a `(kind, id)` collision that silently merges two entities into one delta).
+primitive type, not element shape — weaker than its own builder; a corroboration / fusion step that raises a fused confidence past its **entity-attribution** component on agreement that only evidences occurrence; a hand-rolled composite / score / tiering where a citable external standard exists and wasn't used, or per-metric spec URLs over a **tool-chosen metric set** (the invented index one level up); a non-empty value-A→value-B overwrite with no source-grade arbitration; a join / corroboration key not weighted by value-commonness (a value shared by dozens treated as a confirming match); a corroboration count that collapses same-domain duplicates but not derivation; a per-dimension volume-floor drop acked or blocked with no fold investigation after an identity/roster/entity-resolution change (a correction and a regression are identical from the count); an identity cluster built from raw connected components with no bridge / centrality check (transitive over-merge); a fabricated freshness decay curve (`0.5^(days/half_life)`) or an adopted vendor half-life in place of an observable in-window gate; a diff / index keyed on a **bare `id`** over a list mixing multiple entity **kinds** (a `(kind, id)` collision that silently merges two entities into one delta); a vector index mixing embeddings from two model versions, queried with a different model than it was built with, or not re-embedded after its source docs changed.

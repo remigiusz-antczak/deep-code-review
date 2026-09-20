@@ -3430,6 +3430,26 @@
         "Prescribes an inventory of expiring credentials + an ahead-of-time expiry alert (lead time / a synthetic check), not alerting on the outage itself",
         "Prescribes automated renewal/rotation before expiry (ACME/cert-manager for TLS; a rotation job with an overlap window for secrets/keys), not a manual reminder"
       ]
+    },
+    {
+      "id": "vector-index-mixing-two-embedding-model-versions-gives-meaningless-similarity",
+      "prompt": "A RAG service upgrades its embedding model from v1 to v2 (both output 1536-dim vectors). To save cost it re-embeds only newly-added documents with v2 and leaves existing v1 vectors in place; queries are embedded with v2. Retrieval quality quietly drops but nothing errors. Why, and what's the fix?",
+      "expected_output": "Embeddings from different models (or versions) occupy different latent spaces, so a v2 query vector compared against v1 document vectors is a meaningless similarity — cosine/distance across spaces doesn't correspond to semantic relatedness. Because v1 and v2 are both 1536-dim, the vector store accepts both and raises NO error (a dimension mismatch would have failed loudly; same-dimension cross-model is the silent case), so it degrades quietly instead of crashing — exactly the observed 'quality drops, nothing errors.' The incremental re-embed left a mixed-version index. Fix: on a model change, re-embed the WHOLE corpus with the new model and swap the index atomically (don't backfill incrementally into the same index), and pin the query path to the SAME model+version the index was built with. Tag each vector with its embedding model+version so a cross-version comparison can be refused/detected rather than silently mis-ranking. The cost saving is illusory — it trades a one-time re-embed for silently-wrong retrieval.",
+      "expectations": [
+        "Identifies that vectors from different embedding models/versions occupy different latent spaces, so cross-version similarity is meaningless — and that same-dimension makes it SILENT (no error), unlike a loud dimension mismatch",
+        "Names the root cause: an incremental re-embed left a mixed-version index (query v2 vs stored v1)",
+        "Prescribes re-embedding the whole corpus + atomic index swap, pinning the query to the index's model+version, and tagging vectors with model+version to detect/refuse cross-version compares"
+      ]
+    },
+    {
+      "id": "vector-index-not-re-embedded-after-source-docs-change-serves-stale-retrieval",
+      "prompt": "A knowledge-base RAG app lets editors update source articles. The app re-embeds and upserts a document's vectors only when a document is created, not when it's edited. Users report the assistant citing outdated facts even though the articles were corrected. What's the bug and the fix?",
+      "expected_output": "The vector index is stale: edits change the source article's text but the pipeline only re-embeds on create, so the index still holds vectors (and the stored chunk text) for the OLD content — retrieval returns and the model cites the outdated version, with no error to signal it. A vector index is a derived dataset that must be kept consistent with its source; a source change (edit, re-chunk, delete) must trigger re-embedding/upsert (or delete) of the affected chunks. Fix: re-embed on every source change (hook the edit/delete path, or run a reconciliation that diffs source-vs-index by a content hash/updated-at), version or timestamp each indexed chunk so staleness is detectable, and delete vectors for removed/deleted_at content so retrieval can't surface it. Add a freshness check (max index-vs-source lag) so a broken re-embed pipeline is caught, not discovered via a user citing a corrected-but-still-served fact.",
+      "expectations": [
+        "Identifies the stale index: re-embedding only on create leaves edited documents' vectors (and stored chunk text) reflecting the OLD content, retrieved and cited with no error",
+        "Prescribes re-embedding/upsert (or delete) on every source change — edit, re-chunk, and delete paths — not just create",
+        "Prescribes a detectability control: version/timestamp indexed chunks + a freshness/reconciliation check (index-vs-source lag) so a broken re-embed pipeline is caught"
+      ]
     }
   ]
 }

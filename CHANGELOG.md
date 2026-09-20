@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.267.0] — 2026-09-20
+
+### deep-code-review — wave 188 vector-index correctness: embedding model-version mismatch & staleness
+
+- **`data-quality.md`** §12: a vector index is a derived dataset whose **embedding model + version** is part of its contract. Vectors from two models/versions occupy different latent spaces, so cross-version similarity is meaningless — and if both are the **same dimension** there is **no error**, just silently wrong nearest-neighbours (a different dimension is the loud case a typed `vector(n)` column rejects). (a) A mixed-version index (incremental re-embed) → re-embed the whole corpus + atomic swap, pin the query to the index's model+version, tag vectors with version. (b) A stale index (source changed, not re-embedded) → re-embed-on-source-change + a freshness/version gate. The **correctness** face — distinct from the security face (LLM09) and the cost face (don't re-embed unchanged, §11).
+- +2 evals + a red-flag entry. Independent reviewer PASS-WITH-FIXES: moved the bullet ahead of the section separator so it doesn't absorb the master red-flag rollup (a CommonMark do-no-harm fix), dropped an unverifiable OpenAI-guide attribution (kept the fetch-verified `pgvector` behaviour), and qualified pgvector's dimensionality rule to a typed `vector(n)` column.
+
 ## [1.266.0] — 2026-09-20
 
 ### deep-code-review — wave 187 credential/cert expiry lifecycle: an unmonitored expiring secret is a scheduled outage
