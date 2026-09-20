@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.345.0] — 2026-09-20
+
+### agentic-delivery — gate each merge on a not-red base, not a fully-green one (#801); an opt-in throughput lever is inert until default-wired (#803)
+
+- **`fast-agentic-delivery.md`** (#801): within a single merge seat's drain, gate each merge on the base reading merely **not-red** (pending/in-progress is admissible; only a confirmed-failing base check blocks) rather than fully-green-between-members — the fully-green gate makes the seat pay the base's own CI cycle once per merge, re-serializing the very wait the merge-train lever exists to remove. Drain every own-green, still-mergeable member; prove the union up front where members interact; close with one post-batch green re-confirmation. Does not loosen the red-base discharge floor (a confirmed-red base needs a proven union, `branch-and-merge-hygiene.md` §5); distinct axis from the independent-queue-cascade section's cadence — the two compose (a not-red threshold applied at whatever cadence). +1 eval.
+- **`fast-agentic-delivery.md`** (#803): an opt-in throughput lever (a `test:affected` script, a `--affected` flag) is inert until it is DEFAULT-ON on the real surface the pipeline runs — merging it moves no number, and if the default-wiring is blocked the lever is dead-weight while any speedup that session came from something else (find it; don't mis-attribute). Measure the default path (p50/p95 of the real job window), not the merge. Applies the existing "a merged PR is a proxy, not the outcome" / "a cap that defaults to off is not a cap" discipline to a throughput lever. +1 eval.
+
 ## [1.344.0] — 2026-09-20
 
 ### deep-code-review — a valid signature proves who signed, not where the build ran: SLSA producer-side hosted-build (#806)

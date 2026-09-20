@@ -418,8 +418,10 @@ honest "stale — recheck") when it cannot cleanly resolve its diff against a ra
 and (b) concurrency-cancellation groups discarding in-flight check runs that were about to pass, as
 competing merges churn shared state faster than runs complete. Net **slower**, not faster. The real
 merge-rate lever is **single-seat, back-to-back draining**: one merger takes **all** currently-green
-PRs inside one green-base window (many in a short burst — the wait only bites *between* windows),
-plus CI speed-ups, plus a **union-proven merge train** (above) where queued PRs might still conflict.
+PRs inside one green-base window (many in a short burst — the wait only bites *between* windows;
+what the window's own admission check does with a base run still in flight *between* members is
+sharpened just below), plus CI speed-ups, plus a **union-proven merge train** (above) where queued
+PRs might still conflict.
 Keep the merge seat a single `exclusive_role` in the claim registry (`multi-session-coordination.md`)
 — a second seat is not throughput, it is base churn. Distinct from `branch-and-merge-hygiene.md`'s
 *freeze merges while a resolver is active* rule — that is merger-vs-**resolver** (protecting the
@@ -428,6 +430,84 @@ PR's base-diff gate and in-flight runs). This is the flip side of the merge-trai
 draining from *one* seat is the win; a *second* seat is the loss. **🚩 tell:** two agents offering
 to "split merge duty to go faster," then a wave of PRs failing a base-diff gate closed and in-flight
 runs cancelled — the seat was split, the base-invalidation rate doubled.
+
+## The window's admission check is not-red, not fully-green-between-members — a base run still in flight is not a hold
+
+This sharpens the single-seat, back-to-back draining lever above: that lever names *who* holds the
+seat and *when* it drains (one green-base window — it **opens** on a known-green base and
+**closes** on the post-batch green re-confirmation below), not what the window's own admission
+check does, in its interior, with a base run still in flight *between* members. Pending is
+admissible *inside* the window; only its open and close are required to read green. It is not a
+new claim so much as the same logic
+`branch-and-merge-hygiene.md`'s merge-train section already states for the *union* branch's CI:
+treating "union CI still pending or red" as a reason to hold members that are each already green
+re-serializes the very wait the train exists to remove. Applied here to the **integration base's
+own post-merge run** instead of a union's: a shared base commonly triggers a multi-minute
+CI run on every new head. If the seat's admission check demands that run **resolve green** before
+it will admit the *next* member, the seat pays the base's own CI cycle once per merge, and
+throughput serializes at (batch size) / (CI-cycle time) — the identical per-PR base-CI wait the
+merge-train lever (above) exists to remove, reappearing *inside* the single seat instead of
+between competing seats.
+
+The fix is the admission predicate, not a new draining mechanism: gate the window on the base
+reading merely **not red** — pending / in-progress is admissible, only a **confirmed-failing**
+check on the base blocks — and drain every member that is (a) own-green on its own required
+checks and (b) still mergeable, re-checked per PR since a sibling landing can flip one to
+`CONFLICTING` (`branch-and-merge-hygiene.md`'s mergeability-is-a-snapshot rule; not restated
+here). Where the queue might interact, prove the union once up front, exactly as the merge-train
+lever above already directs (`SKILL.md` gate epistemology principle 6; not restated). Close the
+window with **one post-batch check**: re-confirm the base actually resolved green after the
+drain, so a combination that reds it despite every member's own green is caught and fixed
+forward — never assumed safe merely because no single merge paused to watch its own run resolve.
+
+This does not loosen the **red-base discharge** floor: a base already **confirmed** red is a
+deadlock that needs a proven union to discharge (`branch-and-merge-hygiene.md` §5), not a
+not-red-gate bypass — not-red admission covers the ordinary *pending* case that rule doesn't
+address, never a base already known to have failed. Nor does it touch *cadence* (the
+independent-queue-cascade section above, on how **often** the seat re-evaluates the queue) — this is the check's
+**threshold** (which base state admits the next merge); the two **compose** — a not-red threshold applied at whatever cadence — they do not overlap. It is exactly as narrow as the serial-fallback carve-out
+already states: wait for the base between merges only where a true dependency stack cannot share
+one union.
+
+**🚩** a seat that requeries the base's full check suite to **green** before admitting each next
+member — paying a base-CI cycle per merge inside what was supposed to be one draining window — or
+a batch that closes with no post-drain check confirming the union of merges actually landed green.
+
+## An opt-in throughput lever is inert until the default path takes it — attribute the gain to what runs by default, not to the merge
+
+The throughput-lever instance of `SKILL.md` G2's "a cap that defaults to off is not a cap": when a
+CI/delivery optimization ships as an **opt-in** capability — a `test:affected` script, an
+`--affected` flag, a gate mode gated behind an env var — *merging* it speeds nothing up. The
+number moves only once the capability is wired into the **default** path the pipeline actually
+runs: the CI job, the default gate script, the drainer's own gate invocation (the diff-affected
+lever named above is the concrete case this attaches to — run only diff-affected tests **by
+default**, not as a flag a caller must remember). This is the general **beware-the-proxy**
+discipline — a merged PR is a proxy for the outcome, not the outcome itself
+(`deep-code-review`'s `report-format.md`; gate epistemology principle 11 lists "Integrated to the
+mainline (G7)" among the same proxy states) — applied to a throughput lever specifically, not a
+restatement of it. The identical shape already gates a *safety* control elsewhere in this suite:
+"a shipped default or an opt-in example — a demo gate that lives in `examples/` and is never
+loaded is not a control" (`deep-code-review`'s `security-ai-agents.md`). An opt-in throughput
+lever left unwired is the same non-control, priced in CI minutes instead of risk.
+
+- **Attribute the gain to the default path, not the merge.** Confirm the actually-run surface
+  takes the fast path **now, by default** — not merely that the capability exists behind a flag
+  someone could pass.
+- **Name the wiring-in as its own tracked deliverable.** If it is blocked — a held PR that owns
+  the workflow file, an owner-gated config change — the merged capability is **inert**: real spend
+  already paid, zero throughput gain realized. Say so; don't count an inert capability as the
+  delivered speedup.
+- **Measure before/after on the real job's window, not the capability in isolation** — the same
+  p50/p95-of-time-to-green, attribute-the-percentile-to-a-stage discipline this suite already
+  requires before adopting a build/CI platform (`deep-code-review`'s `release-engineering.md`; not
+  re-taught here). If a speedup *did* show up that session, trace it to a specific, named change
+  before crediting the opt-in lever for it — a different change landing the same session is the
+  more common explanation than an inert flag that nothing's default path invokes yet, and
+  mis-attributing it buries the change that actually worked.
+
+**🚩** a status update crediting "we shipped the `--affected` flag, CI is faster now" without ever
+confirming the default job invocation passes `--affected` (or equivalent) — the merge got
+credited; the wiring, which is what would have actually moved the number, did not happen.
 
 ## CI-offload the heavy gate by default — lane weight, not lane count, drives memory cost
 
