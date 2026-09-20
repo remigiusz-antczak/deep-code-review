@@ -1300,6 +1300,72 @@ re-paying for the same answer. Prefer **adding** a new, non-overlapping loop ove
 existing one's frequency to close a gap — past the resource cap, more frequency only buys more
 reconcile overhead, never more throughput.
 
+## A monitor emits on state-transition or terminal state only — an unchanged poll is not an event
+
+A lane arming a **background monitor** — polling CI, a merge queue, or other remote state on the
+orchestrator's behalf — is a distinct, legitimate pattern from the lane that keeps re-polling its
+*own* already-green PR past its own finish line, which `SKILL.md`'s *Failure* section already bans
+as a **scope** violation ("re-polling a green PR burns turns on unchanged news; report once, then
+stop"): that rule says watching CI after your finish line isn't your job at all; this section
+assumes a monitor that **is** someone's job and governs how it emits. The failure here is not
+that the monitor exists — it's that it reports its raw poll result **on every tick**, "pending"
+indistinguishable from a real change, until the orchestrator's turns are a run of near-identical
+"still pending… still pending…" notifications (and a lane that already delivered re-sends the
+identical final handback on a later wake), burying the tick that is real: a new PR, a base gone
+green, a genuine block.
+
+- **Emit on transition only.** A monitor holds its own last-*emitted* state and diffs the fresh
+  poll against it: unchanged → stay silent, no output at all; changed → emit once, old → new;
+  reaches a terminal state → emit once and **exit** (never re-arm). A `pending → pending` tick is
+  not an event and produces no output — the emission is the state machine's edge, never its level.
+- **The orchestrator retires the monitor once the lane reaches the state that monitor exists to
+  detect** — for a build-to-PR lane that is the pushed branch or opened PR, the same artifact that
+  already separates *in-flight* from *zero* (*progress is a durable artifact, not a spawned lane*,
+  above); for a monitor watching *to* a terminal state (CI gone green, the merge landed) the
+  branch/PR already exists, so the retirement trigger is that terminal state itself — which the
+  monitor also self-signals by exiting under *emit on transition only* above. That is the **live teardown
+  path** — the identical discipline *kill a lane-owned helper the moment its step ends* (above)
+  already states for any lane-owned process, applied here to a monitor instead of a dev server —
+  not the advisory, approval-gated sweep in *the orchestrator also owns reaping orphaned heavy
+  processes* (above), which stays the **backstop** for a monitor that outlives this live path, the
+  same relationship already holding between a worktree's own teardown-at-spawn contract and its GC
+  backstop (*a worktree is a resource with a lifecycle*, above): a monitor is a lane resource with
+  a lifecycle too, and creation without teardown leaks turns instead of disk.
+- **A no-change wake is not itself a mandate to act.** When the orchestrator wakes on its own
+  schedule and the monitor shows nothing new (a rule-1 monitor emits nothing on an unchanged poll,
+  so there is nothing to react to), that is none of the four events the Conductor's attention is
+  triggered by (`SKILL.md`, *Conductor operating rhythm*), so it carries no obligation beyond
+  noting nothing changed and ending the turn — cheap **no-change → end turn**, not manufactured
+  motion. This narrows only that no-change case: it does not relax *on any wake, for any reason,
+  take every currently-admissible action before ending the turn* (above) for whatever other work
+  is independently ready that same turn.
+
+Distinct from *consolidate overlapping fires into a single reconciliation pass* (above): that
+rule merges **N different recurring loops** landing on the same tick into one orchestrator-side
+sweep; this section is **one monitor's** own emission
+discipline plus its lifecycle. The two compose rather than overlap: a correctly-built monitor
+produces no tick at all when nothing changed, so there is less for that reconciliation pass to
+ever need to consolidate on a given turn — this section reduces the N and the tick rate that
+rule's fast no-op is defending against, it does not re-decide how to merge simultaneous fires.
+And distinct from the enclosing *A go-faster signal fires on a clock, not on state* section itself,
+whose "a tick is not a demand for busywork" shape rule 3 above shares: that section governs an
+agent's response to an **external** operator-pressure cadence; rule 3 here classifies a
+**monitor's own** tick against the Conductor's fixed four-event model — the emitter's taxonomy,
+not the responder's.
+
+Also distinct from — and not a restatement of — *confirm a subagent is idle before dispatching a
+duplicate* (above): that section is the **receiver-side** defense for the harness-level case where
+"a subagent that has armed a background monitor/watch cycles stop→wake and emits 'completed' on
+**each** stop" — inferring the signal is unreliable and confirming real state before trusting it.
+This section is the **source-side** fix for the same shape of noise: don't emit the redundant
+signal, and retire the emitter once its artifact lands, so there is less unreliable signal for that
+section's defense to ever have to catch.
+
+**🚩 tell:** an orchestrator turn history that is a run of near-identical "still pending" / "still
+waiting" notifications from the same monitor, or a lane re-delivering its already-captured final
+handback on a later wake — real signal buried in tick noise whose retirement condition (the
+artifact landed several ticks ago) already held.
+
 ## The loop set is add-only when the operator asked for "more" — a decrement needs a stated reason, never a silent side effect
 
 Editing **one existing loop's own instructions in place** is the default and moves no count — always

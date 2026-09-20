@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.342.0] — 2026-09-20
+
+### agentic-delivery — a background monitor emits on state-transition or terminal state only; an unchanged poll is not an event (#795)
+
+- **`fast-agentic-delivery.md`**: a new section. A lane-armed background monitor (polling CI, a merge queue, or other remote state on the orchestrator's behalf) must (1) **emit only on a state edge** — unchanged poll → silent, changed → emit once old→new, terminal → emit once and **exit**; (2) be **retired by the orchestrator** once the lane reaches the state the monitor exists to detect (a build-to-PR lane's pushed branch/opened PR — the live-teardown discipline, with the approval-gated orphan-sweep as backstop; a watch-to-terminal monitor self-exits via rule 1); (3) treat a **no-change wake as no mandate to act**. Cross-referenced (not restated) against the re-poll-a-green-PR scope ban (`SKILL.md`), the reconciliation-pass and go-faster-signal rules, and the subagent-idle receiver-side check (this section is the *source-side* fix). +1 eval.
+
 ## [1.341.0] — 2026-09-20
 
 ### deep-code-review — custom Select/combobox widgets can't expose "required" when the shared field wrapper hides its own asterisk (#800)
