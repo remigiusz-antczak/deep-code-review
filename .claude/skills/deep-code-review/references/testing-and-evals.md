@@ -471,6 +471,21 @@ needs its own harness:
 - A **decorrelated review ensemble** (multiple *different* models/reviewers, all
   must pass) catches a miss or an injection that lands on one reviewer; fail
   soft.
+- **An LLM judge carries known biases — test for them structurally and cheaply,
+  before trusting its scores.** Beyond temperature 0 and the frozen-cohort validation
+  above (Zheng et al., 2023 document position, verbosity, and self-enhancement biases
+  in strong judges): **(a) order-swap consistency** — for any pairwise/comparative
+  judge, run it twice with the candidates' positions swapped; a flipped verdict is
+  **positional bias** in the judge prompt itself, caught with two calls and zero human
+  labels. **(b) judge/subject independence** — when the system under test and the judge
+  share a model or vendor family, flag **self-preference** bias risk explicitly. **(c)
+  verbosity correlation** — on the labeled cohort, check the judge's score against
+  output length; a strong positive correlation with no length-normalized rubric is
+  evidence it rewards length, not quality. And **name the agreement bar** the
+  frozen-cohort check must clear — strong judges reach roughly **≥80%** agreement with
+  human preference (Zheng et al., 2023) — and **re-check it when the judge model version
+  changes**: an unpinned judge is the same latent-bug class as an unpinned embedding
+  model (`data-quality.md`).
 - **A retrieval-augmented (RAG) app is evaluated at the retrieval seam, not only
   end-to-end.** The generation-grounding check above is necessary but not
   sufficient: a faithful answer over the *wrong* retrieved context is still wrong,
@@ -485,6 +500,22 @@ needs its own harness:
   retrieval component over external knowledge — Lewis et al., 2020. The metric names
   are operationalized by open-source eval libraries, e.g. RAGAS — a *tool*, not a
   standard: frame the concept, don't pin a vendor's exact formula.)
+- **A RAG app is also evaluated at the *context-assembly* seam — input budget and
+  chunk placement, not only retrieval.** Two silent-failure checks between "the right
+  chunks were retrieved" and "the model answered": **(a) input-budget overflow** — when
+  the top-k chunks exceed the model's context budget, is the check computed with the
+  target model's **actual tokenizer** (not a char/word estimate), and on overflow are
+  **whole lowest-ranked chunks dropped**, never a chunk **truncated mid-content** (a
+  mid-cut fact or citation the model then completes or misattributes)? Force the overflow
+  in a test and assert no partial chunk reached the prompt, the dropped chunks were the
+  lowest-ranked, and the drop was counted/logged. **(b) placement, not just fit** — even
+  when everything fits, a chunk ranked below #1 but still needed for the answer should sit
+  at the **start or end**, not left buried mid-concatenation in raw retrieval-score order
+  (ranking is imperfect, so the chunk with the answer is not always the #1 hit): models access "relevant
+  information in the middle of long contexts" markedly worse ("Lost in the Middle," Liu et
+  al., 2023). This is **per-call prompt arithmetic** — distinct from a long-running agent's
+  conversation compaction (`security-ai-agents.md`) and from an output `max_tokens` cap
+  (that bounds what comes *out*; this bounds what goes *in*).
 - **An agent (tool-using, multi-step) is evaluated on its trajectory, not only its
   final answer.** Score tool-call *selection* (did it pick the right tool), tool-call
   *arguments* (well-formed, correctly bound), and multi-step *task completion* (the

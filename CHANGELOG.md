@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.290.0] — 2026-09-20
+
+### deep-code-review — wave 211 AI-app quality (RAG context-assembly, LLM-judge bias, vector distance-metric)
+
+- Three folds from an AI-application-engineering comparative pass, all verified absent at source. **`testing-and-evals.md`** (a) **RAG context-assembly seam** — beyond the retrieval-quality seam already covered: budget the prompt with the model's **actual tokenizer** (not char/word count); on overflow **drop whole lowest-ranked chunks, never truncate mid-content** (a mid-cut fact/citation the model then completes or misattributes); and place a needed-but-not-#1 chunk at the **start or end**, not buried mid-concatenation ("Lost in the Middle," Liu et al. 2023) — distinct from a long-running agent's compaction and from an output `max_tokens` cap. (b) **LLM-judge bias tests** — beyond temperature-0 and a frozen human-labeled cohort: an **order-swap** consistency check (positional bias, two calls, zero labels), a **self-preference** flag when judge and subject share a model/vendor family, a **verbosity-correlation** check, and re-validating the agreement threshold when the judge model version changes (position/verbosity/self-enhancement biases: Zheng et al. 2023). **`data-quality.md`** §12 — the vector-index contract includes the **distance metric + normalization** (cosine and dot-product agree on ranking only for unit-normalized vectors; an index built for one metric and queried under another silently reorders neighbours), added to the red-flag line. +2 evals. Independent reviewer PASS-WITH-FIXES (all Low/Nit, applied): re-verified both paper citations at arXiv (accurate, not fabricated); corrected the cosine-normalization phrasing; disambiguated the chunk-placement wording; cued the output-cap distinction in the eval prompt; marked the ≥80%-agreement figure a bonus. Closes no filed issue (comparative research find).
+
 ## [1.289.0] — 2026-09-20
 
 ### deep-code-review — wave 210 self-audit cleanup: principle-7 self-contradiction + a fabricated principle cite

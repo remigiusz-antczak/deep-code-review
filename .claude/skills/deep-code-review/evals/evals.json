@@ -3770,6 +3770,26 @@
         "Grounds it in identity collision — same service.name with no environment/namespace dimension is one identified series, so staging errors land in the prod SLO/error budget (bonus: names the OTel rule that deployment.environment.name does not affect uniqueness)",
         "Fix: add deployment.environment.name / service.namespace and scope every SLO/burn-rate query to production so the environments are distinct series"
       ]
+    },
+    {
+      "id": "rag-context-assembly-tokenizer-budget-no-mid-chunk-truncation-and-placement",
+      "prompt": "A RAG pipeline retrieves the top-8 chunks, concatenates them in retrieval-score order, and if the concatenation exceeds the model's limit it trims the tail by character count to fit, then sends it. Retrieval quality is separately measured and good, and the team already caps `max_tokens` on the response and believes that covers the model's limits. Is the assembly step sound?",
+      "expected_output": "No — two assembly defects sit between good retrieval and the answer. (1) Budget must be measured with the model's ACTUAL tokenizer, not a character/word estimate (chars-per-token varies by content and model, so a char-trim both over- and under-shoots the real limit). (2) On overflow, drop WHOLE lowest-ranked chunks, never truncate mid-content: a character tail-trim can cut a fact or citation in half, and the model then completes or misattributes the fragment — a silent wrongness. Also (3) placement: concatenating in raw retrieval-score order can bury the single most-relevant chunk in the middle, where models use context markedly worse ('Lost in the Middle,' Liu et al. 2023) — position the top chunk at the start or end. Fix + test: compute the budget with the real tokenizer; on overflow drop whole lowest-ranked chunks (assert no partial chunk reached the prompt, the dropped ones were lowest-ranked, and the drop was counted/logged); order so the most-relevant chunk is at an edge. This is per-call prompt assembly — distinct from an output max_tokens cap (bounds what comes out) and from a long-running agent's conversation compaction (security-ai-agents.md). (testing-and-evals.md.)",
+      "expectations": [
+        "Flags char/word budgeting instead of the model's actual tokenizer",
+        "Flags mid-chunk truncation (drop whole lowest-ranked chunks instead; a mid-cut fact/citation is silently completed or misattributed) and prescribes the overflow test (no partial chunk, lowest-ranked dropped, counted)",
+        "Flags placement — most-relevant chunk buried mid-concatenation ('lost in the middle') should sit at start/end; and distinguishes this per-call assembly from an output cap / agent compaction"
+      ]
+    },
+    {
+      "id": "llm-judge-bias-order-swap-self-preference-verbosity-and-agreement-bar",
+      "prompt": "An eval scores output quality with an LLM-as-judge: it shows the judge two candidate answers (the system-under-test's answer always presented first), asks which is better, runs at temperature 0, and reports a high win rate. The judge is the same model family as the system under test. Is this a trustworthy quality measurement?",
+      "expected_output": "Not yet — temperature 0 only makes the judge deterministic, not unbiased, and self-consistency is not precision. Three known judge biases are untested here (Zheng et al. 2023): (a) POSITION — always presenting the SUT's answer first invites positional bias; run each comparison twice with the two answers' positions swapped and treat a flipped verdict as positional bias (two calls, zero human labels). (b) SELF-PREFERENCE — the judge shares a model/vendor family with the system under test, so self-enhancement bias is a live risk; flag it explicitly and prefer an independent judge family. (c) VERBOSITY — check the judge's score against answer length on a labeled cohort; a strong positive correlation with no length-normalized rubric means it may be rewarding length, not quality. And validate against a frozen, human-labeled cohort with a named agreement bar (strong judges reach roughly >=80% agreement with human preference), re-checked when the judge model version changes — an unpinned judge is as unreliable as an unpinned embedding model. The reported win rate is uninterpretable until at least the order-swap and independence checks are done. (testing-and-evals.md.)",
+      "expectations": [
+        "Says temp-0/high-win-rate is not trustworthy yet — determinism and self-consistency are not precision/validity",
+        "Prescribes the order-swap test for positional bias (SUT always first) and flags self-preference bias from the judge sharing the SUT's model/vendor family",
+        "Adds verbosity-correlation check + validation against a human-labeled cohort with a defined agreement threshold (bonus: strong judges reach ~>=80% agreement, Zheng et al.), re-checked when the judge model version changes"
+      ]
     }
   ]
 }
