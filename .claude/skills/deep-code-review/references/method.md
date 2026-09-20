@@ -332,7 +332,21 @@ as documented is a Blocker until proven otherwise.
 each, produce findings with `file:line` + impact + fix. Load the domain's
 `references/*.md` for detection procedures. Domains that don't apply are marked
 N/A with a one-line reason. Start from Phase 0's triage-first hits and blast-
-radius order. **Intent-conformance — a lens distinct from correctness.** Besides "is the
+radius order. **On a `DIFF`, classify each changed hunk by *kind* before walking
+domains — the PR's title and line-count are not the review's depth budget.** Bucket
+the change into **mechanical** (a rename, a format-only reflow, a dependency bump with
+no call-site logic change), **behavioral** (logic changed on an *existing* path), and
+**new-surface** (a brand-new route / endpoint / handler / consumer / permission — a new
+trust boundary), and route each at matched depth: a mechanical hunk gets a fast
+*confirm-it-is-mechanical* read (no behavior rode in on the rename — a moved guard, a
+flipped default, a widened type); a behavioral hunk gets the full domain audit for the
+paths it touches; and a **new-surface hunk gets the full Phase 3 adversarial opener set
+(anon-GET sweep, two-principal object-swap, then injection/SSRF/traversal) regardless of
+the PR's stated size or title** — a new endpoint buried in a PR titled "refactor" is both
+the highest-risk change and the easiest to wave through at the diff's face value. The
+bucket, not the PR's framing, sets the depth. (Distinct from Phase 0's blast-radius
+*ordering*, which ranks what to review *first*; this sets what *depth* each hunk earns.)
+**Intent-conformance — a lens distinct from correctness.** Besides "is the
 code right," ask "does the change do what it *claimed*": does the diff satisfy its PR
 description, linked issue, or stated acceptance criteria? A flawless implementation that does
 X while the ticket asked for Y, or silently drops a stated requirement, is a finding — cited

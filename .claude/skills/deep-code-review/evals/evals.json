@@ -3810,6 +3810,26 @@
         "Prescribes an enforced length AND entropy floor at the point of use (reject weak value at load, fail closed), not only at generation",
         "Notes admit-direction outranks exclude-direction, and detection is grepping for the floor constant/check at the compare site, not the secret's name"
       ]
+    },
+    {
+      "id": "classify-a-diff-by-kind-a-new-endpoint-in-a-refactor-pr-gets-full-phase-3",
+      "prompt": "A PR titled 'refactor: rename UserService methods' is 1,800 lines. Most of it is the mechanical rename, but buried in the diff is a brand-new `POST /admin/export` route. How should the reviewer scope this DIFF — and does the 'refactor' framing set the depth?",
+      "expected_output": "No — the PR's title and size are not the depth budget; classify each hunk by kind and route each at matched depth. The renames are **mechanical**: fast confirm-it-is-mechanical read (verify no behavior rode in — a moved guard, a flipped default, a widened type — on the renamed call sites). The `POST /admin/export` route is **new-surface** (a new endpoint/trust boundary), so it gets the **full Phase 3 adversarial opener set regardless of the 'refactor' title**: anonymous-GET/route sweep (is it reachable unauthenticated?), two-principal object-swap (can principal A export B's data?), then injection/SSRF/traversal on its inputs — and, since it's an export, the export-is-a-sharper-leak-surface check (`security-appsec.md`). A new endpoint buried in a refactor PR is both the highest-risk change and the easiest to wave through at face value; the bucket, not the PR framing, sets the depth. (This is depth classification, distinct from Phase 0's blast-radius ordering, which only ranks what to review first.) (method.md Phase 2.)",
+      "expectations": [
+        "Rejects letting the 'refactor' title/1800-line size set the depth — classify hunks by kind and route each at matched depth",
+        "Identifies POST /admin/export as new-surface → full Phase 3 opener set (anon/route sweep + two-principal object-swap + injection/SSRF) regardless of the PR title; notes export = sharper leak surface",
+        "Treats the renames as mechanical (fast confirm no behavior rode in — moved guard/flipped default), and distinguishes this depth-classification from Phase 0 blast-radius ordering"
+      ]
+    },
+    {
+      "id": "a-bulk-mechanical-diff-with-one-behavioral-hunk-is-not-reviewed-uniformly",
+      "prompt": "A 2,000-line DIFF is almost entirely a repository-wide formatter run (whitespace/quote style), plus one 12-line change to the session-authentication path. The reviewer has limited time. How should they spend it?",
+      "expected_output": "Not by spreading attention evenly across 2,000 lines. Classify by kind: the formatter hunks are **mechanical** — a fast confirm-it-is-mechanical pass (spot-check that it is truly format-only: no logic, no moved guard, no changed default rode in under the reflow — a real risk when a formatter run is used to camouflage a behavioral edit), which can lean on a format-only tool/diff view. Nearly all the depth goes to the **behavioral** 12-line auth-path change: full domain audit (domain B), the failure-direction (fail-open vs fail-closed) weighing, and a Phase 3 probe if it touches a guard/precondition. The 2,000-line size is not the depth budget — the 12 behavioral lines on the auth path carry essentially all the risk. Confirm the formatter didn't also smuggle a behavioral change (the mechanical bucket's whole job is to be sure it's mechanical). (method.md Phase 2.)",
+      "expectations": [
+        "Rejects uniform attention across 2,000 lines — classify by kind; the size is not the depth budget",
+        "Routes nearly all depth to the 12-line behavioral auth-path change (full domain-B audit + fail-open/closed + a Phase 3 probe if a guard/precondition changed)",
+        "Gives the formatter bulk a fast mechanical-confirm pass that verifies no logic/guard/default rode in under the reflow (formatter-as-camouflage risk)"
+      ]
     }
   ]
 }
