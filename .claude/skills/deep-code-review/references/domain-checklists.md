@@ -70,9 +70,8 @@ unwalked domain.
 - **A01 Broken Access Control** (incl. SSRF): server-side authorization on every
   sensitive action; no IDOR; deny-by-default. SSRF guards on any URL from input —
   allowlist, resolve-validate-**pin** the IP, `redirect: manual` and re-validate
-  each hop; the **blocked-range list** (loopback, private, CGNAT, link-local /
-  cloud-metadata, IPv4-mapped, dotless labels) is maintained in the reference, in
-  one place, so a copy here can't drift out of date. Complete the **Identity
+  each hop; the full **blocked-range list** is maintained canonically in
+  `security-appsec.md` (A01), not re-enumerated here (a second copy drifts). Complete the **Identity
   Arrival Map** (document / XHR / bare curl) before proposing any gate —
   especially for iframe / portal embeds. **Dual surface:** for every sensitive
   loader, check API handler **and** every RSC/SSR page that calls it; API redacts

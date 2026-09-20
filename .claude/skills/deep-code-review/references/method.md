@@ -402,8 +402,8 @@ the old spec provided is named as a gap and pinned by a source-level structural 
 and flag its absence as a finding. Procedure: `references/testing-and-evals.md` (*A
 rewritten browser spec names its retired coverage*).
 
-**Phase 3 — Adversarial / red-team pass.** Switch to attacker mindset (section
-below). For any networked app, work these **openers in order** before the
+**Phase 3 — Adversarial / red-team pass.** Switch to attacker mindset (the
+openers below). For any networked app, work these **openers in order** before the
 creative attacks — they are ordered by yield, and each one narrows the next:
 1. **Anonymous GET sweep** — every documented GET with no cookies and no Bearer;
    flag every large or identity-bearing `200`.

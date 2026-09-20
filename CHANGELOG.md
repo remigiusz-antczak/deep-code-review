@@ -3,6 +3,15 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.314.0] — 2026-09-20
+
+### deep-code-review — structural cleanup: dedup SKILL.md, reclaim ~920 bytes of routing headroom, fix a thesis-violating SSRF-list drift
+
+- **`SKILL.md`**: removed the "Adversarial / red-team pass" section — a 100% restatement of the Phase-3 table row + `method.md`'s Phase 3 procedure + `security-appsec.md`'s verification etiquette. Its one non-redundant clause (a red-team pass proves exploitability locally and non-destructively only, never against a system you don't own or aren't authorized to test) is preserved in **principle 7** (the always-loaded core). Folded the domain-P appendix into **row P**'s inline trigger (the two reference files' own "read this when" headers already carry the depth). Reclaims ~920 bytes: SKILL.md 23,957 → 23,033 (headroom 43 → ~967 bytes), unblocking future domain rows.
+- **`domain-checklists.md`**: the SSRF blocked-range list had silently drifted from the canonical list in `security-appsec.md` (A01) — dropping `.internal` — **while claiming a copy here "can't drift out of date,"** exactly the failure the repo's no-duplication thesis warns against; replaced the drifted copy with a pointer to the canonical list.
+- **`method.md`**: fixed a dangling "(section below)" that pointed at no section (the Phase-3 openers are inline).
+- Pure structural dedup + citation fidelity — no behavior or eval change. Surfaced by an independent structural self-audit (all 36 reference files read in full; the suite otherwise confirmed exceptionally clean — every cross-file overlap is a deliberate, marked cross-ref) and verified at source: the deletion's redundancy confirmed at three loci, no dangling references to the removed heading, routing byte-gate green.
+
 ## [1.313.0] — 2026-09-20
 
 ### deep-code-review — a distributed lock/lease guarantees liveness, not exclusivity (fencing tokens)
