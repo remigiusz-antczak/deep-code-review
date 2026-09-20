@@ -462,6 +462,38 @@ production-like server).
   row in `React.memo` (low-risk/high-payoff precisely *because* the props are already stable
   — say so, it defeats the "will memo even help?" objection); acceptance = a render-count
   check: one row's action re-renders that row only, not the visible set.
+- **An unmemoized view-model still recomputes on a sibling's keystrokes — debouncing the
+  fetch doesn't gate the recompute.** A tab/view's per-row or per-tile view-model (joining
+  sources, mapping/filtering a time-series per row, deriving flags) built directly in the
+  render body instead of behind `useMemo`/a selector returns a brand-new array/object on
+  **every** re-render of its parent, not only when its own inputs change — so even a row/tile
+  already wrapped in `React.memo` (the bullet above) can't bail out against it: memo compares
+  the incoming reference, and this one is never stable. The usual trigger: an always-mounted
+  search/filter input sets synchronous "echo" state in the shared parent on every keystroke (a good pattern
+  by itself — it's what makes typing feel instant) while only the **debounced** value later
+  reaches the actual fetch/filter. That harmless-looking synchronous `setState` still
+  re-renders the shared parent and rebuilds the view-model from scratch — the debounce gated
+  the **network call**, not the **work** — so every row/tile, and any real chart it owns,
+  redoes its render work on every keystroke instead of only when the debounced value actually
+  changes. It hides in plain sight because a tab panel that unmounts while inactive confines
+  the cost to whichever tab happens to be open (trace what *else* changes state while that
+  tab is mounted), and because a neighboring derived value in the same component is often
+  correctly memoized already — keep scanning past the first `useMemo` you find; a component
+  can memoize one derived value and skip a costlier one two lines below. Detect: confirm the
+  view-model has no memoization keyed on its real upstream inputs (not on the un-debounced
+  echo state); gate the finding on real cost (tens-to-low-hundreds of rows/tiles doing
+  non-trivial per-row work — a real chart, not a static text cell). Fix: memoize the
+  view-model on its real upstream inputs, then apply the row-level `React.memo` from the
+  bullet above so the now-stable reference actually pays off — and reject a debounce-only
+  patch: "add a debounce to the search input" does not fix this when a debounce already gates
+  the fetch and the recompute still fires underneath it; the missing piece is the memo
+  boundary, not more delay. Same render-count acceptance as above, run on a keystroke in the
+  *unrelated* input: zero re-renders in the view while typing. Distinct from the byte-weight
+  CWV budget above (payload size, not recompute cost); from the memoized-callback bullet
+  above, which owns the row-level `React.memo` boundary triggered by *per-row* shared state
+  such as a selection set, while this owns the derivation going unmemoized, the debounce-echo
+  trigger from a *totally unrelated* sibling, and the realistic-cost gate; and from the
+  dataset-leak bullet below (a client-bundle **size** leak, not render churn).
 - **A heavy optional-feature library must be gated at the *import*, not just the render.** A
   rich-text editor, chart/diagram lib, PDF/export, or syntax highlighter that renders only
   behind an interaction gate (`open`/`editing`/`expanded`) but is **statically imported at

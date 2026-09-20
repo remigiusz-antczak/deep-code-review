@@ -11,7 +11,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.324.0"
+  version: "1.325.0"
 ---
 
 # Deep Code Review

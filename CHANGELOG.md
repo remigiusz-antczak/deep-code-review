@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.325.0] — 2026-09-20
+
+### deep-code-review — frontend-perf: an unmemoized tab/row view-model recomputes on a sibling input's keystrokes, even behind a debounce (#667)
+
+- **`frontend-a11y.md`** (Core Web Vitals / render-perf family): a per-row/per-tile view-model built inline in the render body returns a new reference on every parent re-render, so even a child already wrapped in `React.memo` can't bail out — memo compares the incoming reference and this one is never stable. The usual trigger is an always-mounted search/filter input whose synchronous "echo" state (held in the shared parent) re-renders on every keystroke while only the debounced value reaches the fetch: the debounce gated the network call, not the recompute, so bumping the debounce delay does not fix the jank — the missing piece is the memo boundary (memoize the view-model on its real upstream inputs, then apply the row-level `React.memo`). Detect by confirming the view-model has no memoization keyed on its real inputs and gating the finding on real cost (a real chart, not a static text cell). +2 evals. Closes #667.
+- Built by a worktree builder subagent, independently reviewed **PASS-WITH-FIXES**: applied the must-fix (removed a telegraphing "(non-memo'd)" tell from one eval prompt so the responder must infer non-memoization from the symptom, matching the sibling evals' house style) and two precision fixes (named the shared parent as the owner of the echo state so the re-render mechanism is self-consistent; re-keyed the realistic-cost eval expectation to the prose's own "real chart vs. static text cell" gate rather than a raw point count).
+
 ## [1.324.0] — 2026-09-20
 
 ### agentic-delivery — peer coordination: shared machine-wide budget (#740), routing a persistently-denied action without laundering (#727), a peer's correction is a lead not an order (#732)
