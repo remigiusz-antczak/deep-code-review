@@ -3,6 +3,15 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.263.0] — 2026-09-20
+
+### deep-code-review — wave 184 silent-measurement defects: randomized test order, head-sampling limits, provider-side 429 back-off
+
+- **`testing-and-evals.md`**: a suite that always runs in file order can pass on the one order that works, hiding inter-test state pollution — run randomized order + a logged seed (pytest-randomly / Jest `--randomize` / JUnit `MethodOrderer.Random`); distinct from environment determinism.
+- **`observability.md`**: head (pre-outcome) trace sampling — a *uniform* sampler's aggregate error **rate** stays unbiased, but it still fails on **coverage** (can't guarantee a specific error trace is kept), **variance** (noisy short burn-rate windows), and **p99/tail** estimation; an adaptive/load-shedding sampler biases the rate under load. Use tail sampling that always keeps error traces, and compute SLIs from unsampled counters (OpenTelemetry, verbatim).
+- **`api-contracts.md`**: a throttled `429`/`503` must emit `Retry-After` (and ideally the IETF *RateLimit header fields for HTTP* budget — cited by name, as the draft is actively revised) so clients don't guess backoff — the provider's outbound obligation.
+- +3 evals; 1 standards-index row (OpenTelemetry sampling, verbatim). Independent reviewer PASS-WITH-FIXES: corrected a sampling-bias **overclaim** (a uniform head sampler's rate is unbiased — the real limits are coverage/variance/tail), a **stale** IETF-draft field citation (draft-11 defines `RateLimit`/`RateLimit-Policy`, not the draft-00 `RateLimit-*` triple → cite by name), and an above/below cross-ref.
+
 ## [1.262.0] — 2026-09-20
 
 ### deep-code-review — wave 183 frontend/perf defects: SSR hydration nondeterminism, request waterfalls, OFFSET-pagination correctness

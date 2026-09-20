@@ -43,6 +43,18 @@ Standards (URLs + dates in `docs/standards-index.md`): OWASP API Security Top 10
   enum a consumer may not yet know.
 - Pagination/filter/sort parameters are bounded; "return everything" defaults
   are a reliability and cost finding (cross-ref E).
+- A **throttled response carries a back-off signal**: when the API returns `429 Too Many
+  Requests` (or a `503` under load), emit **`Retry-After`** so clients back off by
+  instruction, not by guess — HTTP's `Retry-After` tells a client how long to wait before
+  retrying, and in a `429` it is the throttle duration. Better still, emit a
+  machine-readable rate-limit budget (see the IETF *RateLimit header fields for HTTP* draft
+  for the current field set — the draft is actively revised, so cite it by name, not a
+  pinned field list) so a well-behaved client self-paces **before** it trips the limit. A
+  `429`/`503` with no `Retry-After` leaves every client to hammer immediately or back off
+  blindly; "the docs say retry with backoff" is not a substitute for the on-the-wire signal
+  (docs can't say how long *this* throttle lasts). This is the provider's *outbound*
+  obligation — distinct from a caller *honoring* `Retry-After` on its own retries
+  (`performance-db-cost.md`) and from the async-job poll cadence below.
 
 ---
 

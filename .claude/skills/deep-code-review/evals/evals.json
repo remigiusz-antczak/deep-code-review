@@ -3331,6 +3331,36 @@
         "Explains why tests miss it (no insert/delete between page fetches)",
         "Prescribes keyset/seek pagination on a stable unique (sort_key, id) cursor, and notes the cursor key must be unique/tie-broken (cross-ref the non-unique-timestamp-cursor trap)"
       ]
+    },
+    {
+      "id": "test-suite-must-run-in-randomized-order-with-a-seed-to-catch-order-dependence",
+      "prompt": "A test suite is green on every CI run and always executes in file/declaration order. A dev asks whether it's safe to parallelize or reorder the tests. What should a reviewer check, and why isn't 'it's always green' sufficient?",
+      "expected_output": "'Always green' only proves the suite passes in the ONE order it always runs — it can be hiding inter-test state pollution (a module-level cache, a shared fixture, a leaked singleton, an env var one test sets and another reads) that only manifests under a different order. The check: run the suite with RANDOMIZED test order and a LOGGED seed (pytest-randomly; Jest --randomize with --seed; JUnit MethodOrderer.Random). A failure that appears only under randomization is real order-dependence, and re-running with the same seed reproduces it deterministically for debugging. Until that passes, reordering/parallelizing is unsafe — the green is an artifact of the fixed order, not evidence of test independence. Fix the exposed coupling (isolate/reset shared state per test, remove the cross-test dependency), then keep randomized order on in CI so a regression surfaces immediately. Distinct from environment determinism (no real network/clock) — this is execution-order coupling between tests.",
+      "expectations": [
+        "Explains 'always green' only proves the one fixed order works and can hide inter-test state pollution (shared cache/fixture/singleton/env) that appears under a different order",
+        "Prescribes randomized test order with a logged/reproducible seed (pytest-randomly / Jest --randomize --seed / JUnit MethodOrderer.Random) as the detection method",
+        "Says reordering/parallelizing is unsafe until that passes; fix the coupling then keep randomized order on in CI (distinct from environment determinism)"
+      ]
+    },
+    {
+      "id": "head-sampled-traces-bias-the-error-rate-and-latency-metrics-computed-from-them",
+      "prompt": "A dashboard computes service error rate and p99 latency from traces collected with a fixed 1% head-based sampler. The numbers look healthy. A reviewer says 'sampling is fine, it's statistically representative.' Is the error rate / p99 trustworthy?",
+      "expected_output": "Partly — but not for the reason either naive framing implies. For a UNIFORM fixed-rate head sampler the sampled error PROPORTION is an unbiased estimate of the true rate in aggregate, so the headline error rate is not systematically biased ('statistically representative' is right about that much). The real problems are: (a) coverage — head sampling cannot guarantee a SPECIFIC error trace was kept (OpenTelemetry: 'you cannot ensure that all traces with an error within them are sampled with head sampling alone'), so it is unreliable for pulling up a given incident's traces; (b) variance — at 1% the error/slow counts in a short burn-rate window are tiny and noisy, under-reading an incident more often than not; (c) tail estimation — p99/p999 from a thinned tail is unstable and biased. And an adaptive / load-shedding head sampler that drops more under load DOES bias the rate, precisely during incidents. So p99 is not trustworthy, per-incident trace coverage is not guaranteed, and short-window SLIs are noisy — even though the aggregate rate is roughly right. Fix: tail sampling with an always-keep-error/high-latency policy, and compute error-rate & latency SLIs from unsampled counters/histograms, not the sampled trace set.",
+      "expectations": [
+        "Corrects both naive answers: a uniform head sampler's aggregate error RATE is ~unbiased (not 'systematically biased'), but head sampling still fails on coverage (can't guarantee a specific error trace is kept), variance at low counts in short windows, and p99/tail estimation — and an adaptive/load-shedding sampler does bias the rate under load",
+        "Notes the practical impact: short-window burn-rate/error-budget SLIs are noisy and under-read incidents, per-incident traces may be missing, and p99/tail is unstable from a thinned sample",
+        "Prescribes tail sampling with an always-keep-error/high-latency policy and computing rate/latency SLIs from unsampled counters/histograms, not the sampled trace set"
+      ]
+    },
+    {
+      "id": "a-throttled-429-response-must-emit-retry-after-so-clients-do-not-guess-backoff",
+      "prompt": "An API returns `429 Too Many Requests` under load with an empty body and no `Retry-After` header. Clients are told in the docs to 'retry with backoff.' Is the throttling contract complete?",
+      "expected_output": "No. The provider is throttling but giving clients nothing to act on: with no Retry-After header, every client must GUESS a backoff — typically retrying immediately (hammering the already-overloaded service) or backing off far more than necessary (hurting its own latency). The provider's obligation is to emit Retry-After on its 429/503 responses so clients back off by instruction, not by guess — HTTP's Retry-After tells a client how long to wait before a new request, and in a 429 it is the throttle duration. Better still, emit a machine-readable budget signal (the IETF 'RateLimit header fields for HTTP' draft — cite it by name for the current field set, as the draft is actively revised) so a well-behaved client self-paces BEFORE it trips the limit. 'Docs say retry with backoff' is not a substitute for the on-the-wire signal — docs can't tell a client how long THIS particular throttle lasts. This is the provider's outbound obligation, distinct from a caller honoring Retry-After on its own retries. Fix: set Retry-After (a seconds value or HTTP-date), and ideally RateLimit-*, on every throttled response.",
+      "expectations": [
+        "Identifies that a 429/503 with no Retry-After forces every client to guess backoff (hammer immediately or over-back-off); the provider must emit Retry-After so clients back off by instruction",
+        "Adds the machine-readable budget signal (IETF RateLimit-* header fields) so clients self-pace before tripping the limit",
+        "Notes docs are not a substitute for the on-the-wire signal, and frames it as the provider's outbound obligation (distinct from a caller honoring Retry-After on its own retries)"
+      ]
     }
   ]
 }

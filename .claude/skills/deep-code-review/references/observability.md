@@ -67,6 +67,23 @@ failure paths that *produce* these signals are section F /
   not make a leak safe — a 1%-sampled secret is still leaked, into a third-party
   store. Log/trace retention counts as personal-data retention
   (`privacy-compliance.md`).
+- **Head-based trace sampling limits what you can conclude — mind coverage, variance, and
+  tail percentiles.** A fixed-rate, *pre-outcome* (**head**) sampler decides keep/drop
+  before it knows the trace errored or ran slow. For a *uniform* sampler the sampled error
+  *proportion* is still an unbiased estimate of the true rate — the real problems are
+  elsewhere: **(a) coverage** — you cannot guarantee a *specific* error trace was kept ("you
+  cannot ensure that all traces with an error within them are sampled with head sampling
+  alone", OpenTelemetry), so tracing is unreliable for "pull up *this* incident's traces";
+  **(b) variance** — at a low sample rate the error/slow counts in a short burn-rate window
+  are tiny and noisy, under-reading an incident more often than not; **(c) tail estimation**
+  — a thinned tail makes p99/p999 unstable and biased. An *adaptive / load-shedding* head
+  sampler that drops more under load is worse: it correlates keep/drop with system state,
+  biasing the rate exactly when it matters. Fix: use **tail sampling** (decide "considering
+  all or most of the spans within the trace", OpenTelemetry) with a policy that always keeps
+  error / high-latency traces, and compute rate & latency SLIs from **unsampled** counters /
+  histograms (the SLO/burn-rate lens in `role-coverage.md`), not the sampled trace set.
+  (Distinct from the privacy point above — a sampled leak is still a leak — and from
+  analytics event-stream reweighting in `data-quality.md` §8.)
 - **Log injection**: user-controlled strings must be emitted as structured
   fields, never concatenated into a line — embedded `\n`/`\r` lets an attacker
   forge entries and break the parser (CRLF/log-forging, CWE-117 — name only,

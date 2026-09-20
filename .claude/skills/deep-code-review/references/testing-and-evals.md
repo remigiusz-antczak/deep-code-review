@@ -164,6 +164,15 @@ explicit third choice), not which one this review prefers.
   import. Sanitize the environment passed to any spawned subprocess down to an
   explicit allowlist — children inherit the full parent env by default, which
   both leaks secrets and lets a test operate on real shared state.
+- **Randomized test order + a logged seed.** A suite that always runs in file / declaration
+  order can pass not because its tests are independent but because they always run the one
+  order that happens to work — hiding inter-test state pollution (a module-level cache, a
+  shared fixture, a leaked singleton, an env var one test sets and another reads). Run with
+  **randomized order and a recorded seed** (`pytest-randomly`; Jest `--randomize` +
+  `--seed`; JUnit `MethodOrderer.Random`); a failure that appears only under randomization
+  is real order-dependence, and the same seed reproduces it. Keep it on in CI so a new
+  coupling surfaces immediately. Distinct from the *environment* determinism above
+  (network/DNS/clock) — this is **execution-order** coupling between tests.
 - **Tests must not write real shared/production data paths.** A suite that
   points the server-under-test at a tracked, shared, or default data directory
   (no temp-dir / network-dir override) will intermittently corrupt real state —
