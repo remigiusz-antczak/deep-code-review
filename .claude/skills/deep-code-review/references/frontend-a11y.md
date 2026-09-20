@@ -494,6 +494,29 @@ production-like server).
   such as a selection set, while this owns the derivation going unmemoized, the debounce-echo
   trigger from a *totally unrelated* sibling, and the realistic-cost gate; and from the
   dataset-leak bullet below (a client-bundle **size** leak, not render churn).
+- **A correct child memo is silently defeated by an inline collection literal at the call
+  site.** Kin to the unmemoized-view-model bullet above, but with nothing for a reviewer to notice: here the child *is* memoized correctly
+  — its expensive derivation (build a tree, join lists) is behind `useMemo`/`React.memo` keyed
+  on exactly the right prop — but the parent passes that prop as a literal built **inline in
+  JSX**, e.g. `<Child matchIds={new Set(items.map(x => x.id))} />` (also a spread `[...]`, `new
+  Map(`, or an object literal `{…}`). The literal takes a **brand-new identity on every parent
+  render** — including renders driven by something unrelated to its contents (a sibling input's
+  un-debounced keystroke echo, a hover toggle, a re-render cascade) — and memo compares deps by
+  reference, so a same-contents-new-identity value is indistinguishable from a real change: the
+  child's memo invalidates and the expensive work reruns on every parent render. It reads clean
+  in either file alone — the child's memo is textbook, the parent's prop is an unremarkable
+  one-liner. Detect: grep call sites for a prop whose value is an inline `new Set(`/`new
+  Map(`/`[...`/`{…}` that is **not** itself from a `useMemo`/stable state, then confirm the
+  receiving component keys a memo/effect dependency on it; verify by counting the child's
+  recompute while triggering an *unrelated* parent state change. Fix: hoist the literal into the
+  parent's `useMemo` keyed on its true upstream (`const ids = useMemo(() => new Set(items.map(x
+  => x.id)), [items])`) and pass the stable reference down. Distinct from the two bullets above by
+  *what is unstable and whether anything flags it*: the memoized-callback bullet has **no
+  `React.memo` on the child at all**; the unmemoized-view-model bullet has an unstable **named
+  derivation** (a view-model a reviewer can see and memoize); here the child's memo is **already
+  correct and correctly keyed** and the unstable value is a **bare inline literal** with no named
+  derivation to notice — so the only fix is to stabilize the literal's identity, never to add
+  memoization the child already has.
 - **A heavy optional-feature library must be gated at the *import*, not just the render.** A
   rich-text editor, chart/diagram lib, PDF/export, or syntax highlighter that renders only
   behind an interaction gate (`open`/`editing`/`expanded`) but is **statically imported at

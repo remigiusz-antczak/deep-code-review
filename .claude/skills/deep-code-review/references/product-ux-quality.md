@@ -637,6 +637,42 @@ domain H) with a UX consequence, so it is ruled on here too.
   a `role` on a `<tr>` overrides its native row semantics, and a stretched link changes
   text selection over the row. Name every renderer of the row type in a "make row X
   clickable" ticket's acceptance criteria, not just the page that prompted it.
+- **A view/tab-switch link built from a narrow param allow-list silently drops the active
+  filter.** Sibling *view* tabs (list / table / chart / map) over one dataset, all addressed by a
+  shared `?view=` param, plus a cross-cutting search/filter (`?q=`, facet params) meant to apply
+  to every view. The tab strip's href-builder encodes only the base route + `?view=` and does
+  **not** read and forward the *current* query string — so clicking a sibling tab while a filter
+  is active navigates to a URL that has dropped it: the destination renders unfiltered and the
+  search box comes up empty, reading as "switching views clears my search." Same family as the
+  row-affordance bullet above — the inconsistency lives in one renderer's own link-building, is
+  invisible from the shared control, and no per-tab review sees it. Detect: find the tab/view
+  href-builder and classify whether it composes the destination URL from the **full current
+  param set** (overriding only `view`) or from a fixed allow-list; a builder that names only
+  `view` drops everything else. Fix: build the target href by merging over the current params
+  (change `view`, preserve `q`/facets/sort), and add a test that switches view with a filter
+  active and asserts the filter survives. Decide per param whether it is view-scoped (may reset)
+  or cross-cutting (must persist) — never drop cross-cutting state by omission.
+- **A shared search *filters* on one renderer but only *highlights* on a sibling — and the
+  highlight can land behind a fold.** One dataset rendered through two layouts (a tree/list and a
+  diagram/grid) sharing one search input. The first-hardened renderer, on a match, **filters**
+  non-matches out **and force-expands** the match's collapsed ancestors so it is guaranteed
+  visible; a later, structurally-different renderer wires the same value only to a **cosmetic
+  highlight** (ring/background) — it never filters, and a match nested inside an independent,
+  user-collapsed fold is neither force-opened nor annotated, so a term that clearly worked on the
+  first layout appears to do **nothing** on the second (its one visible effect sits behind a fold
+  the user cannot see). Same family as the two bullets above: the divergence is in each renderer's
+  own handling of the shared value, invisible from the shared input, and a caption near it may
+  already claim "search narrows every view" without distinguishing *filters* from *merely
+  highlights*. Detect: per renderer, classify the search value's use as **filter** (participates
+  in an include/exclude decision) vs **highlight-only** (only a className/style); for a
+  highlight-only renderer, check whether any collapse/fold boolean references the search/match
+  state at all — if a fold is computed with zero reference to it, a match inside renders with a
+  class the user cannot see. Fix: decide per renderer whether search filters or only highlights,
+  and make the UI copy match (a caption claiming "narrow" over a highlight-only control is itself
+  a defect); where highlight-only sits behind independent fold state, key that state off the active
+  search — force the section open (mirroring the sibling) or show a "N matches inside" count on the
+  collapsed ancestor. Test the combined state: a match nested inside a manually-collapsed ancestor
+  must be visible or explicitly signposted, not merely present in the DOM with an invisible class.
 
 ## One component at two scopes — single-entity vs aggregate needs scope-aware copy
 

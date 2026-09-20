@@ -3,6 +3,14 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.329.0] — 2026-09-20
+
+### deep-code-review — frontend quality: caller-side memo defeat (#756), view-switch drops the active filter (#750), shared search highlights-behind-a-fold on a sibling renderer (#751)
+
+- **`frontend-a11y.md`** (#756): a correct child memo is silently defeated by an **inline collection literal at the call site** — a parent passes `new Set(...)`/`new Map(...)`/a spread/an object literal inline in JSX, which takes a new identity on every parent render, so the child's (correctly-keyed) `useMemo`/`React.memo` invalidates and the expensive work reruns. Distinct from the two neighbouring memo bullets by *what is unstable and whether anything flags it*: no `React.memo` at all / an unstable **named derivation** (a view-model) / here a **bare literal** with no derivation to notice and a child memo that is already correct. Fix: hoist the literal into the parent's `useMemo`; don't add memoization the child already has.
+- **`product-ux-quality.md`** (#750): a view/tab-switch href built from a narrow param allow-list (`?view=` only) silently drops a cross-cutting `?q=`/facet filter on navigation — build the href by merging over the current params, classifying each as view-scoped vs cross-cutting. (#751): a shared search **filters + force-expands** on one renderer but only **highlights** on a sibling, so a match inside an independent user-collapsed fold has zero visible effect — key the fold state off the active search (force-open a matching ancestor or show an "N matches inside" count), and make the caption match reality. Both extend the #707 "sibling renderers diverge" family.
+- +3 evals. Built in-tree; independently reviewed **PASS-WITH-FIXES**: applied the must-fix (corrected the #756 distinctness axis — the reviewer caught that the neighbouring unmemoized-view-model bullet is *also* a caller-side unstable-reference defeat, so the original "callee side" framing was wrong) and the optional (de-telegraphed the #751 eval prompt).
+
 ## [1.328.0] — 2026-09-20
 
 ### deep-code-review — a shared sort comparator that returns NaN silently corrupts the whole sort (#761); a single-entity detail overlay that returns the whole collection and is uncached (#755)
