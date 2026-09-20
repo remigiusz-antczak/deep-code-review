@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.257.0] — 2026-09-20
+
+### deep-code-review — wave 178 ML split-hygiene: grouped/temporal CV leakage + resampling inside the fold
+
+- **`testing-and-evals.md`** (ML pipeline correctness): the cross-validation **split structure itself** leaks when rows aren't i.i.d. A plain `KFold` scatters a group's correlated rows (many samples per patient/user/device) across train/test → use `GroupKFold`. Shuffled `KFold`/`ShuffleSplit` on time-ordered data trains on the future to predict the past → use forward-chaining `TimeSeriesSplit`. Class-imbalance resampling (SMOTE/over/under) belongs inside the fold on train only — resampling the whole dataset before the split both leaks and makes the test set artificially balanced, so the metric describes a distribution production never sees. Distinct from the as-of *feature* leakage in `data-quality.md` §12 (this is split structure).
+- +2 evals. `docs/standards-index.md`: scikit-learn cross_validation + imbalanced-learn common_pitfalls rows (verbatim, fetched/verified 2026-09-20). Independent reviewer **PASS** (verbatim quotes verified character-exact at source).
+
 ## [1.256.0] — 2026-09-20
 
 ### deep-code-review — wave 177 parallel-audit: CANCELLED-run merge-guard fail-closed + collision-check must page a PR's files (closes #605, closes #609)

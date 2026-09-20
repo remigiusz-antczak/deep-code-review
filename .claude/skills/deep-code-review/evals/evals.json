@@ -3221,6 +3221,26 @@
         "Prescribes the paginated REST read (gh api .../pulls/<n>/files --paginate) for the file list",
         "Generalizes: a gh read returns a truncated view without erroring; treat every gh read as paginated-until-proven-complete before a collision/absence conclusion"
       ]
+    },
+    {
+      "id": "cross-validation-must-respect-group-and-time-structure-not-plain-kfold",
+      "prompt": "A model is validated with shuffled 10-fold KFold and reports 0.94 AUC. The data has multiple rows per patient (up to 20 visits each) and is timestamped over 3 years. In production on new patients it scores 0.71. What went wrong and how should cross-validation be set up?",
+      "expected_output": "The CV split violated the data's structure, so 0.94 was leakage, not skill. Two problems. (1) Grouped leakage: plain KFold scatters a patient's correlated visits across train and test, so the model memorizes patient-specific signal rather than a generalizable pattern — the i.i.d. assumption is broken when the generative process yields groups of dependent samples. Split by the group key with GroupKFold so the same patient is never in both train and test; CV then estimates performance on a genuinely new patient, which is what production faces (~0.71). (2) Temporal leakage: shuffled KFold on 3 years of time-ordered data trains on future rows to predict past ones, which autocorrelation rewards; use a forward-chaining TimeSeriesSplit so each test fold is strictly after its train fold. The tell was the implausibly high CV score that collapsed on new patients/time — a leaked split passes too well, it doesn't error. If both group and time matter, combine (group-aware, time-ordered splitting).",
+      "expectations": [
+        "Identifies grouped leakage: plain KFold scatters a group's (patient's) correlated rows across train/test, inflating the score; fix = GroupKFold so the same group is never in both sets and CV reflects a new group",
+        "Identifies temporal leakage: shuffled KFold on time-ordered data trains on the future to predict the past; fix = forward-chaining TimeSeriesSplit",
+        "Explains the tell (an implausibly high CV score that collapses in production / on new groups — leakage passes too well, doesn't error), not merely 'tune the model'"
+      ]
+    },
+    {
+      "id": "class-imbalance-resampling-belongs-inside-the-fold-on-train-only-not-whole-dataset",
+      "prompt": "To fix class imbalance a pipeline runs SMOTE on the full dataset, THEN does a train/test split and reports 0.97 F1. Is that F1 trustworthy?",
+      "expected_output": "No. Resampling the entire dataset before the split has two separable problems. (1) Test-set realism: the test set is made artificially balanced, so the reported metric describes a class distribution that does not exist in production — the model will not be tested on a dataset with class distribution similar to the real use-case; it should be evaluated on the natural, imbalanced distribution. (2) Leakage: synthetic/oversampled points can be generated using information from rows that land in the test set (and duplicates cross the split), inflating the score further. Fix: split first, then resample the TRAINING data only, inside each CV fold (an imblearn Pipeline refits the resampler per fold); keep the test/validation set at the real imbalanced distribution and judge with imbalance-appropriate metrics (PR-AUC / per-class recall, not raw accuracy or a balanced-by-construction F1). The realism failure is separate from and additional to the leakage one — even with zero leakage, a balanced test set reports a number production never sees.",
+      "expectations": [
+        "Identifies that resampling the whole dataset before the split makes the TEST set artificially balanced, so the metric describes a distribution that doesn't exist in production (distinct from leakage)",
+        "Identifies the leakage half (synthetic/duplicate samples informed by rows in the test split) as an additional, separate problem",
+        "Prescribes split-first-then-resample-train-only (inside the CV fold / imblearn Pipeline) and evaluating on the natural imbalanced distribution with imbalance-appropriate metrics"
+      ]
     }
   ]
 }
