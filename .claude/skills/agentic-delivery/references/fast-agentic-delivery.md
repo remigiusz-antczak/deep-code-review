@@ -1043,6 +1043,29 @@ owner's message cadence is not the loop's clock* bullet: that stops owner-quiet 
 the loop **down** (*don't stop while the backlog has work*); this stops a pressure tick from
 driving it **up** into busywork (*don't fake work once it doesn't*).
 
+## The loop set is add-only when the operator asked for "more" — a decrement needs a stated reason, never a silent side effect
+
+Editing **one existing loop's own instructions in place** is the default and moves no count — always
+fine, no ceremony. This discipline is about the **operator-visible count**: when someone asks for
+**more** recurring loops / self-reminders to sustain throughput, do not satisfy it by **consolidating**
+N loops into fewer "richer" ones. That is *functionally* an upgrade but **reduces the count** — and
+operators often track the loop count as a **proxy for delivery health**, so a drop reads as "you did the
+opposite of what I asked," whatever the intent. Practices:
+- **Improve by editing in place or adding** — never delete-then-recreate to "upgrade," and don't
+  consolidate in response to a request for *more*.
+- **Prune only a genuine, named defect** — an exact duplicate, a dead/broken loop, or two loops giving
+  contradictory instructions — and **say so explicitly**, with the reason. Removing a broken loop is
+  correct; the sin is removing it *silently* or as a *side effect* of an optimization nobody asked for.
+- **Account for the count after any change**: it may hold or rise freely, and decreases **only** with a
+  stated reason (prune-one-dup-and-add-one nets to zero — fine, because the prune was explained).
+
+**General principle:** when a user's mental model tracks a **countable resource** (loops, open PRs,
+agents, dashboards), never move that count the wrong way as a **silent or unexplained** side effect of an
+optimization they did not ask for — the trust violation is the *surprise*, not the decrement itself. A
+justified, explicitly-surfaced decrement is fine (closing a PR that leaks a secret; killing a genuinely
+dead loop). Distinct from the go-faster-signal section above (which governs how to *respond* when a
+pressure tick fires): this governs the **loop set itself**, independent of any tick.
+
 ## A degradation workaround is temporary by default — tie its removal to the condition that caused it
 
 When a fast mechanism is blocked by a broken dependency, the reflex is a slower

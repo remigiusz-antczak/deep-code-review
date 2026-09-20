@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.252.0] — 2026-09-20
+
+### agentic-delivery — wave 173 add-only loop discipline: a decrement needs a stated reason, never a silent side effect (closes #473)
+
+- **`fast-agentic-delivery.md`**: when an operator asks for MORE recurring loops to sustain throughput, the operator-visible count is add-only. Editing one loop's instructions in place is the default (no count movement); do not satisfy "more" by consolidating N loops into fewer richer ones — operators track loop count as a delivery-health proxy, so a silent drop reads as doing the opposite of the request. Prune only a genuine named defect (exact duplicate, dead/broken, or contradictory loop), stated explicitly with the reason; the count decreases only with a stated reason. General principle: never move a user-tracked countable resource (loops, open PRs, agents) the wrong way as a SILENT/unexplained side effect of an unrequested optimization — the trust violation is the surprise, not the decrement itself.
+- +1 eval. Closes #473. Independent reviewer PASS (re-review after an initial PASS-WITH-FIXES: broadened the prune carve-out beyond exact-duplicate to any named defect, reframed the invariant around silent-vs-explained decrement, moved the section beside the loop cluster with a differentiating cross-ref).
+
 ## [1.251.0] — 2026-09-20
 
 ### deep-code-review — wave 172 a wrapping `<label>` does not name a control built on a non-labelable host element (closes #569)
