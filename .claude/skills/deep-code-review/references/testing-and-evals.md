@@ -28,6 +28,15 @@ explicit third choice), not which one this review prefers.
   from I/O.
 - **Integration** — the real seams between modules/services/DB (not everything
   mocked into a tautology).
+- **A test double must not drift from what the real dependency actually returns.** A mock/stub
+  that returns a **shape, null-vs-empty, status code, or error the live dependency never
+  produces** leaves the suite green while the real integration is broken — the most common
+  "all tests pass, prod is down." Verify the double against the real contract: a shared
+  contract-test suite run against **both** the real service and the double, a recorded real
+  interaction (VCR/cassette), or a type/schema generated from the provider — not a hand-written
+  fixture encoding the author's *assumption* of the response. (Distinct from the tautology smell
+  above — that's a mock that makes the assertion trivially pass; this is a mock whose *behavior*
+  is wrong.)
 - **End-to-end** — the actual pipeline/user flow, start to finish.
 - **Regression** — a failing test written **first** for every bug fixed (fails
   on the old code, passes after). No bug is "done" without one.
@@ -173,6 +182,15 @@ explicit third choice), not which one this review prefers.
   is real order-dependence, and the same seed reproduces it. Keep it on in CI so a new
   coupling surfaces immediately. Distinct from the *environment* determinism above
   (network/DNS/clock) — this is **execution-order** coupling between tests.
+- **A chronically flaky test is quarantined and fixed, not retried until green.** A test that
+  passes and fails on the same code is a real signal (a race, an order/time/network dependence,
+  a leaked fixture) — a blanket **retry-until-green** in CI masks it, manufactures false
+  confidence, and once the team learns to re-run red a *genuine* regression hides in the noise.
+  Move a known-flaky test to a **non-blocking quarantine** with a tracked owner and a fix
+  deadline (not a permanent dumping ground), and fix the underlying nondeterminism (pin the
+  clock/seed, remove the shared state, await the real condition instead of `sleep`). A standing
+  CI retry count `> 0` used to paper over flakes — rather than a bounded retry on a genuinely
+  external flake with the rate tracked — is the finding.
 - **Tests must not write real shared/production data paths.** A suite that
   points the server-under-test at a tracked, shared, or default data directory
   (no temp-dir / network-dir override) will intermittently corrupt real state —

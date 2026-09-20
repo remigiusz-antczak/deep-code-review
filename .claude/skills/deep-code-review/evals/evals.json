@@ -3600,6 +3600,36 @@
         "Prescribes a utilization TARGET below full (e.g. ~70-80%, tuned to where the latency curve bends) as the alert line, not saturation/100%",
         "Prescribes setting the target on the actual constrained resource (pool/CPU/memory/IO) rather than alerting on `load average` alone"
       ]
+    },
+    {
+      "id": "a-mock-returns-a-shape-the-real-dependency-never-returns",
+      "prompt": "A service's tests mock the payment gateway client to return `{ status: 'ok', id: '123' }`. All tests pass. In production the real gateway returns `{ result: 'success', txn_id: '123' }` (different field names) and also a `{ result: 'pending' }` state the mock never emits. A reviewer says '100% of tests green, ship it.' What's the risk?",
+      "expected_output": "The mock has drifted from the real dependency: it returns a shape (`status`/`id`) the live gateway never produces (`result`/`txn_id`) and omits a real state (`pending`) — so the suite validates code against a fiction. Tests are green while the real integration is broken (the code reads `status`/`id`, which the gateway never sends): the classic 'all tests pass, prod is down.' Green/coverage means nothing when the double is wrong. Fix: verify the double against the real contract — a contract-test suite run against BOTH the real gateway and the mock, a recorded real interaction (VCR/cassette), or types/schema generated from the provider — not a hand-written fixture encoding the author's guess; and test the states the real dependency actually emits (including `pending`).",
+      "expectations": [
+        "Identifies that the mock returns a shape/state the real dependency never produces (and omits a real state), so the green suite validates code against a fiction — integration is broken despite passing tests",
+        "Explains that green/coverage is meaningless when the test double's behavior is wrong (the 'all tests pass, prod down' failure)",
+        "Prescribes verifying the double against the real contract (a contract test run against both real+double, a recorded interaction, or provider-generated types) and testing the states the real dependency actually emits"
+      ]
+    },
+    {
+      "id": "a-provider-surface-diff-passes-a-change-that-breaks-one-consumers-pinned-field",
+      "prompt": "A provider API runs `oasdiff` on every change to catch breaking changes vs its last released spec; the diff is clean, so it ships. One consumer relied on an optional field the provider quietly stopped populating (still present in the schema, now always null). That consumer breaks in production. Why did the surface diff miss it, and what would have caught it?",
+      "expected_output": "A surface diff compares the provider against its OWN previous spec — structurally the field still exists (optional, in the schema), so `oasdiff` sees no breaking change. But it has no knowledge of which fields THIS consumer actually reads or that the consumer requires it populated, so a provider-vs-self check can't catch a consumer-specific break (a dropped/nulled field one consumer depends on, or an added enum member a consumer's exhaustive switch doesn't handle). A consumer-driven contract (e.g. Pact) would catch it: the consumer publishes, from its own tests, the exact responses it relies on (including that field populated); the provider replays and verifies that contract in its own CI, and a broker `can-i-deploy` gate blocks the provider from shipping a change that fails a live consumer's contract. It complements the surface diff, not replaces it.",
+      "expectations": [
+        "Explains that a surface diff (oasdiff/buf) compares provider-vs-its-own-previous-spec and doesn't know which fields a specific consumer reads, so it can't catch a consumer-specific break",
+        "Prescribes a consumer-driven contract (e.g. Pact): the consumer publishes its real expectations and the provider replays/verifies that contract in its own CI",
+        "Notes a broker can-i-deploy gate blocks shipping the break before production, and that CDC complements (not replaces) the surface diff"
+      ]
+    },
+    {
+      "id": "a-flaky-test-is-configured-to-retry-until-green-in-ci",
+      "prompt": "A test intermittently fails ~10% of runs. The team configures CI to retry each test up to 3 times and fail the build only if all 3 fail; the pipeline is green again. A reviewer says 'flakiness handled.' Is it?",
+      "expected_output": "No — retry-until-green masks the flake, it doesn't handle it. A test that passes and fails on the same code is a real signal (a race, an order/time/network dependence, a leaked fixture, a `sleep` instead of awaiting a condition); blanket retries hide that signal, manufacture false confidence, and — worse — once the team is trained to accept red-then-green, a GENUINE regression that fails ~1/3 of the time slips through the same retry. Fix: move the known-flaky test to a non-blocking quarantine with a tracked owner and a fix deadline (not a permanent dumping ground), and fix the underlying nondeterminism (pin clock/seed, remove shared state, await the real condition). A standing retry-count > 0 used to paper over flakes is the finding; a bounded retry on a genuinely external flake is acceptable only with the flake rate tracked.",
+      "expectations": [
+        "Identifies that retry-until-green masks a real signal (race/order/time/leaked-fixture) rather than handling it, and manufactures false confidence",
+        "Explains the compounding risk: a genuine intermittent regression slips through the same retry policy once red-then-green is normalized",
+        "Prescribes quarantine (non-blocking) + tracked owner + fix deadline + fixing the root nondeterminism; a standing retry>0 to paper over flakes is the finding (bounded retry on a truly external flake only with the rate tracked)"
+      ]
     }
   ]
 }

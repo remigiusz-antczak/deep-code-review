@@ -252,6 +252,15 @@ Treat persisted and in-flight payloads like DB schemas:
   rubber-stamps the next genuine break. Reserve a golden fixture for a small, stable,
   whole-value **identity** (`testing-and-evals.md` snapshot / identity-pinning), not a large
   evolving payload.
+- **Consumer-driven contract testing catches what a one-sided surface diff can't.** A mechanical
+  surface diff (the breaking-change taxonomy above; `oasdiff` / `buf breaking`) compares the
+  provider against its **own** last version — it does not know which fields **this** consumer
+  actually reads, so it can pass a change that breaks a specific consumer (an added enum member an
+  exhaustive `switch` doesn't handle; a field only one consumer depends on being dropped). A
+  **consumer-driven contract** (e.g. Pact): each consumer publishes, from its own tests, the exact
+  requests/responses it relies on; the **provider replays and verifies that contract in its own
+  CI**, and a broker `can-i-deploy` gate blocks either side from shipping a break before it reaches
+  production. Complements the surface diff (provider-vs-self) with a consumer-vs-provider check.
 - Webhook: unit-test invalid signature, expired timestamp, duplicate delivery
   id.
 - OpenAPI/proto generated types: assert the implementation still matches (or
