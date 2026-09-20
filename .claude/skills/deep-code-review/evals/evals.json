@@ -3510,6 +3510,26 @@
         "States that a 'never throws' contract must cover EVERY throwing call (decode/parse/URL), including those in callbacks, default-args, or statements outside the guarded block — wrap each or prove it's inside the outer try",
         "Prescribes a test feeding malformed input to each decode/parse path, asserting the default is returned and nothing throws"
       ]
+    },
+    {
+      "id": "idempotency-key-hashed-over-a-truncated-slug-collides",
+      "prompt": "Ingested items get a readable id `${source}-${slugify(title.slice(0,40))}` which is ALSO the primary dedup key (upsert on conflict). Two articles are titled 'Quarterly earnings report for the fiscal year 2025 — Q1 segment detail' and the same with 'Q2 segment detail'. A reviewer says 'the titles are unique, so the ids are unique.' What breaks?",
+      "expected_output": "Both titles share their first 40 characters ('Quarterly earnings report for the fiscal...'), so `title.slice(0,40)` is identical and the two ids collide — the upsert treats the second article as the first and silently overwrites it (or drops it as a duplicate). 'The titles are unique' is irrelevant because the id is computed over the TRUNCATED prefix, not the full title — uniqueness past the 40th character is discarded before the key is formed. A dedup/idempotency key must be computed over the full, untruncated content (or a natural unique key) and kept separate from the human-readable display slug. Fix: hash the full title/content for the key; let the 40-char slug be display-only. Test two inputs that differ only past the truncation point and confirm both survive.",
+      "expectations": [
+        "Identifies that both ids collide because the key is computed over the TRUNCATED prefix (first 40 chars), which is identical, so the upsert silently overwrites/drops the second item",
+        "Explains that 'the titles are unique' does not help — uniqueness past the truncation point is discarded before the key is formed",
+        "Prescribes computing the dedup/idempotency key over the full untruncated content (or a natural unique key), separate from the display slug; test two inputs differing only past the cut"
+      ]
+    },
+    {
+      "id": "an-edit-tool-writes-the-wrong-store-for-a-dual-registered-entity",
+      "prompt": "A company record exists both as a row in a legacy `companies.csv` and as a newer per-company `companies/<id>.json` file. The app's read path now loads the `description` field from the JSON file, but the admin edit tool writes an edited `description` back to the CSV row. Edits 'succeed' but never appear in the app. Why, and what's the rule?",
+      "expected_output": "The edit tool writes `description` to the CSV, but the read/compile path reads `description` from the JSON file — so the write lands in a store nobody reads for that field, and the edit is a silent no-op (it 'succeeds' but never shows). The rule: a dual-registered entity has one write target PER FIELD — the store the read path treats as authoritative for that field. Map read-authority field-by-field, point each write at the store the reader uses, and test that an edit is observable through the read path. Writing BOTH stores without a defined precedence is also wrong — they drift into two disagreeing values. Fix: write `description` to the JSON file (the authoritative read source), or migrate fully and retire the CSV field.",
+      "expectations": [
+        "Identifies that the write targets a store (CSV) the read path doesn't use for that field (it reads JSON), so the edit is a silent no-op despite 'succeeding'",
+        "States the rule: a dual-registered entity's write target is per-field — the store the read/compile path treats as authoritative for that field",
+        "Prescribes mapping read-authority per field, pointing the write there, testing that an edit is observable through the read path; warns that writing both stores without precedence causes drift"
+      ]
     }
   ]
 }
