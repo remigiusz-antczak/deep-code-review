@@ -4,7 +4,7 @@ cc52f678848b814373757b460383bf61960e4943c203735adde0a350b3e50989  .claude/skills
 88050cca15857922a837c12d24766dde903807271523c156849d890485c1e338  .claude/skills/agentic-delivery/SKILL.md
 10f0ba920c601e458b9483664d85d10fc278a0bebf21b2b04912db89e1fe1b3a  .claude/skills/agentic-delivery/VERSION
 921aa24741caadb71f694eb5163d0b998f5386a6245bca72ad169840d4a6f311  .claude/skills/agentic-delivery/evals/evals.json
-9f6cc5be9afe19d9e46c933fa44dd9f2ab84b1eb4206d37f49c1b7b4c24b23ff  .claude/skills/agentic-delivery/references/fast-agentic-delivery.md
+5c4b0aa6d9eba3a712098662599524380841b891bcf1701b22025070cdcf3965  .claude/skills/agentic-delivery/references/fast-agentic-delivery.md
 22bd0d6be59ffb5e10e6de8d059957168c6ae864cf55f1fe1861d99ef3cf1519  .claude/skills/agentic-delivery/references/host-enforcement.md
 1b8d16e76c453aef8ac31e1c096935268d2cea9347ee78e643f7da7c77815e2c  .claude/skills/agentic-delivery/references/incident-response.md
 1febf84fd4545d6a554f465c774ecefb3e8221f6840310d44d01c50a2dba2dfa  .claude/skills/agentic-delivery/references/production-grade-product-playbook.md
