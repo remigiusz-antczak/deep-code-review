@@ -3241,6 +3241,36 @@
         "Identifies the leakage half (synthetic/duplicate samples informed by rows in the test split) as an additional, separate problem",
         "Prescribes split-first-then-resample-train-only (inside the CV fold / imblearn Pipeline) and evaluating on the natural imbalanced distribution with imbalance-appropriate metrics"
       ]
+    },
+    {
+      "id": "rust-unsafe-impl-send-silences-the-check-does-not-prove-thread-safety",
+      "prompt": "A Rust struct wraps a raw FFI pointer: `struct Conn(*mut ffi::Handle);`. It won't compile when moved to another thread ('`Conn` cannot be sent between threads safely'). A dev adds `unsafe impl Send for Conn {}`; it compiles and the tests pass. Is this correct?",
+      "expected_output": "Not necessarily — and 'compiles + tests pass' is not evidence it is correct. `unsafe impl Send for Conn {}` does not make the type thread-safe; it silences the compiler's Send check and asserts a guarantee the compiler can no longer verify. If the underlying ffi::Handle is not actually safe to move to / use from another thread (thread-affinity, interior aliasing, a non-thread-safe library), this is silent undefined behaviour with no backstop — a normal test run won't exercise the UB. Send/Sync are unsafe to implement precisely because the author takes over a proof the compiler otherwise does. Correct approach: establish and write down the safety argument at the unsafe impl (the pointee is genuinely safe to send: no thread-affinity, no aliasing); if it isn't, don't send it — keep it on its thread or make it genuinely Send (an owned, movable resource). Verify unsafe with cargo miri / sanitizers, or mark it unverified — never trust the green build.",
+      "expectations": [
+        "Identifies that `unsafe impl Send` silences the compiler's check and asserts an unverified guarantee (it does NOT make the type thread-safe); 'compiles + tests pass' is not evidence because a normal run doesn't exercise UB",
+        "Explains the consequence: if the pointee has thread-affinity/aliasing/non-thread-safety, this is silent UB with no compiler backstop",
+        "Prescribes a written safety argument per unsafe impl (or not sending it) and verification via miri/sanitizers, not trusting the green build"
+      ]
+    },
+    {
+      "id": "go-loop-variable-capture-fix-is-gated-by-go-mod-version-not-the-toolchain",
+      "prompt": "A Go repo has `for _, task := range tasks { go func() { process(task) }() }`. A reviewer runs `go version` -> go1.23, concludes each goroutine gets its own `task` (Go 1.22+ loop-var semantics), and passes it. The module's go.mod says `go 1.20`. Is the reviewer right?",
+      "expected_output": "No. The Go 1.22 loop-variable change (each iteration creates a fresh variable, instead of one variable updated per iteration) is gated by the MODULE's declared language version in go.mod, not by the installed toolchain. With `go 1.20` in go.mod, the module keeps the old semantics even when built by a go1.23 compiler — so every goroutine still captures the one shared `task` and most will observe the last element (a classic lost-update/wrong-item bug). Checking `go version` is the wrong signal; check the `go` directive in go.mod. Fixes: bump the module's go version to 1.22+, or capture explicitly (`task := task` inside the loop body, or pass task as a goroutine argument) — the explicit capture is correct under every version and is the safest review recommendation.",
+      "expectations": [
+        "Identifies the loop-var fix is gated by the module's go.mod go-version, not the installed toolchain — so `go version` is the wrong check and a go1.20 module keeps the old shared-variable semantics",
+        "Explains the resulting bug: all goroutines capture one shared task, most see the last value",
+        "Prescribes checking the go.mod directive and/or an explicit per-iteration capture (task := task or a param), correct under every version"
+      ]
+    },
+    {
+      "id": "java-mutating-a-hashcode-field-after-insertion-corrupts-hashmap-lookup",
+      "prompt": "Java: `Set<Order> s = new HashSet<>(); Order o = new Order(\"A1\", PENDING); s.add(o); o.setStatus(SHIPPED); s.contains(o);` where Order's equals/hashCode cover (id, status). What does contains return, and why?",
+      "expected_output": "It returns false — even though `o` is the same object that was added. equals/hashCode include status; when o was added, HashSet placed it in the bucket for hashCode(A1, PENDING). setStatus(SHIPPED) mutated a field used in hashCode, but the element stays physically in the old bucket. contains(o) now computes hashCode(A1, SHIPPED), looks in a different bucket, and doesn't find it — no exception, just a silent wrong answer (iteration and remove are corrupted the same way). Root cause: a hash-key must be effectively immutable over its hashCode fields while it is in the collection. Fixes: don't mutate hashCode fields after insertion (remove -> mutate -> re-add if you must), or exclude the mutable field from equals/hashCode (often key on a stable id only). Common real-world trigger: a JPA @Entity or Lombok @EqualsAndHashCode over a mutable id/status. (Also: every field used in hashCode must be in equals — a hashCode field that equals ignores makes two equal objects hash differently, breaking the contract; excluding an equals-only field from hashCode only hurts bucket distribution.)",
+      "expectations": [
+        "States contains returns false because mutating a hashCode field after insertion leaves the object in the old bucket while the new hash looks in a different one — a silent wrong answer, no exception",
+        "Identifies the rule: a hash-key must be effectively immutable over its hashCode fields while in the collection (and names the JPA @Entity / Lombok classic trigger)",
+        "Prescribes not mutating hashCode fields post-insert (or excluding the mutable field / keying on a stable id), preserving the equal-objects-share-a-hashCode contract"
+      ]
     }
   ]
 }

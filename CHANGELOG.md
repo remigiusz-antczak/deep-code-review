@@ -3,6 +3,15 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.258.0] — 2026-09-20
+
+### deep-code-review — wave 179 language defect classes: Rust `unsafe` soundness, Go concurrency idioms, Java equals/hashCode
+
+- **`language-stack-redflags.md`**: NEW `## Rust` section (none existed) — `unsafe` as a proof obligation: `transmute` to an invalid enum/bool/char value is immediate UB; `unsafe impl Send`/`Sync` silences the thread-safety check without proving it ("compiles + tests pass" is not evidence); other unsafe tells; verify with `cargo miri` (+ ASan/TSan across an FFI boundary) or mark `unverified`.
+- **`## Go`** += loop-variable capture (the fix follows the module's `go.mod` go-version, **not** the toolchain — check go.mod, not `go version`); channel-close discipline (send/close on a closed channel, or closing a nil channel = run-time panic); concurrent map access can abort the process (`fatal error: concurrent map writes`) — best-effort, so a clean run isn't proof.
+- **`## Java / Kotlin`** += mutating a field used in `hashCode()` after inserting into a `HashMap`/`HashSet` strands the entry in the old bucket → silent not-found; keys must be effectively immutable over their `hashCode` fields (every field `hashCode()` uses must also be in `equals()`).
+- +3 evals. Sources verified at primary docs (rust-lang transmute/nomicon, go.dev go1.22/LoopvarExperiment/spec/faq, Oracle Object javadoc). Independent reviewer PASS-WITH-FIXES (corrected the equals/hashCode contract direction, softened the Go map-crash to best-effort + cross-referenced `concurrency-shared-state.md`, fixed the sanitizer naming).
+
 ## [1.257.0] — 2026-09-20
 
 ### deep-code-review — wave 178 ML split-hygiene: grouped/temporal CV leakage + resampling inside the fold
