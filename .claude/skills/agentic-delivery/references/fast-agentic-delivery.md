@@ -194,6 +194,21 @@ branches escape the usual merged-branch cleanup.
   below — committed work survives on the branch ref, but truly-uncommitted work is lost
   to `git worktree remove`). A lane that cannot guarantee teardown runs under a
   supervisor that does.
+- **Stopping a lane's turn is not teardown — and a "cleaned up" claim is unverified until
+  checked.** Ending a lane's *turn* (a harness stop/kill — e.g. `TaskStop` — or the lane simply
+  returning) frees the *unit*, not its **worktree**: the checkout survives on disk with its branch
+  still attached. So **redispatching** the same issue is two required sub-steps — stop the old lane
+  **and** teardown-or-adopt its worktree — never one; skip the second and each redispatch generation
+  strands another orphan (the leak this section opens with). And a lane (or the orchestrator)
+  reporting "cleaned up / worktree reclaimed" is a **claim, not a fact** — verify it against actual
+  state (`git worktree list`, the directory's existence) before trusting it: the
+  *report the artifact, not the activity* rule (above) applied to teardown, since a narrated reap
+  that never ran leaks silently. When the redispatch is the orchestrator's **own** successive
+  generations of one issue (not a peer's stalled lane), the *ownership map blocks a dual write, not
+  dual work* rule below still governs each generation — **adopt-and-re-verify** the prior
+  generation's worktree/branch, don't spawn a fresh one beside it (and never trust its state blind). **🚩 tell:** a
+  redispatch cadence where `git worktree list` grows by one each cycle while the transcript says
+  "cleaned up."
 - **The orchestrator owns garbage collection**, because lanes die in ways that skip
   their own cleanup — but GC is **advisory and approval-gated, never an autonomous
   destructive sweep** (the same confirm-before-shared-state bar as any delete). At an

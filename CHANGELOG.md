@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.336.0] — 2026-09-20
+
+### agentic-delivery — a stop/kill of a lane's turn is not worktree teardown; a "cleaned up" claim is unverified until checked (#777)
+
+- **`fast-agentic-delivery.md`** (worktree-lifecycle, #777): ending a lane's *turn* (a harness stop/kill — e.g. `TaskStop` — or the lane returning) frees the *unit*, not its worktree (the checkout survives on disk with its branch attached), so **redispatching** the same issue is two steps — stop the old lane **and** teardown-or-adopt its worktree; skip the second and each generation strands an orphan. A "cleaned up / reclaimed" report is a claim, not a fact — verify it against `git worktree list` / the directory (the *report the artifact, not the activity* rule applied to teardown). For an orchestrator's own successive generations of one issue, **adopt-and-re-verify** the prior worktree/branch rather than spawn a fresh one (a naive fresh-spawn on the same branch hard-fails anyway — git refuses to check out a branch already in another worktree). +1 eval.
+- Built in-tree; independently reviewed **PASS-WITH-FIXES**: applied the must-fix (a mis-numbered cross-reference — "principle 11" is Confidentiality, not the over-claim bar; replaced with this file's own *report the artifact, not the activity* idiom) and two nits (adopt-**and-re-verify** to import the ownership-map rule's re-verify half; de-telegraphed the eval prompt).
+
 ## [1.335.0] — 2026-09-20
 
 ### deep-code-review — a11y: colour-only state chip not in the accessible name (#774); async outcome unmounts the focused control with no live region (#775)

@@ -790,6 +790,16 @@
         "Prescribes tracking active-lanes / machine-capacity alongside queue depth as a self-check layered on top of (not replacing) the existing holding-is-valid rule",
         "Frames the ratchet as an orchestrator-internal diagnostic that does not authorize spawning past the WIP-cap, the free-RAM/swap-trend veto, or an aggregate-distress shed, and does not replace the artifact-based status line"
       ]
+    },
+    {
+      "id": "redispatch-worktree-survives-stop-and-cleanup-claim-unverified",
+      "prompt": "An orchestrator redispatches a stuck issue: it calls TaskStop on the old lane, then spawns a fresh lane for the same issue with a new worktree. It does this three times over an afternoon as the issue keeps stalling. Each time, the orchestrator's log says 'stopped previous lane, cleaned up.' At the end, disk is unexpectedly full and the redispatch never seems to make progress. What went wrong?",
+      "expected_output": "TaskStop ended each old lane's turn but never removed its worktree -- stopping the unit frees the process, not the checkout, which survives on disk with its branch still attached. Redispatch is two steps (stop the old lane AND teardown-or-adopt its worktree); the orchestrator did only the first, so each of the three redispatches stranded another orphan worktree (four total for one issue). Compounding it, the log's 'cleaned up' was a claim, not a fact -- nothing verified it against `git worktree list` or the directory, so a reap that never ran leaked silently (the report-the-artifact-not-the-activity / over-claim bar applied to teardown). And because these are the orchestrator's OWN successive generations of one issue, it should have ADOPTED the prior generation's worktree/branch rather than spawning a fresh one beside it each time (the ownership-map 'dual write, not dual work' rule). Fix: make teardown-or-adopt a required second step of redispatch; verify the cleanup against actual worktree state before claiming it; and adopt the prior worktree/branch for the same issue instead of creating a new one.",
+      "expectations": [
+        "Identifies that TaskStop frees the unit, not the worktree -- the checkout survives on disk -- so redispatch needs a second teardown/adopt step; skipping it stranded one orphan per generation (four worktrees for one issue)",
+        "Flags the 'cleaned up' log as an unverified claim (nothing checked git worktree list / the directory) -- the over-claim / report-the-artifact bar applied to teardown; a reap that never ran leaks silently",
+        "Notes these are the orchestrator's own successive generations of one issue, so it should adopt the prior generation's worktree/branch rather than spawn a fresh one beside it (dual-write-not-dual-work)"
+      ]
     }
   ]
 }
