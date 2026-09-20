@@ -4260,6 +4260,26 @@
         "Correctly distinguishes this from integer-overflow-before-malloc: recognizes this allocation is oversized exactly as requested (no arithmetic overflow), whose consequence is memory exhaustion/availability, versus the classic bug's undersized allocation whose consequence is buffer overflow/memory corruption",
         "Prescribes clamping the declared width/height (or count/size) fields to an application-level ceiling before allocating -- independent of the wire-level request-size cap -- or allocating incrementally as real bytes arrive, rather than treating the existing 10 KB cap as sufficient"
       ]
+    },
+    {
+      "id": "a-base64-encoded-page-token-is-not-opaque-and-must-not-carry-authorization",
+      "prompt": "A reviewer flags that a paginated endpoint's page token is a raw, readable string like `offset=40&tenant_id=5`, letting any client see and edit the pagination internals. The team's proposed fix is to base64-encode that same string before returning it, so the token now reads like `b2Zmc2V0PTQwJnRlbmFudF9pZD01`. Does base64-encoding the token resolve the reviewer's concern? What, if anything, still needs to change?",
+      "expected_output": "No — base64 is a reversible encoding, not an obfuscation or opacity mechanism: any client can decode the string right back to `offset=40&tenant_id=5`, edit a field, and re-encode it, so nothing about the client-visible contract has actually changed (base64-encoding an otherwise-transparent page token is not a sufficient obfuscation mechanism). The pagination internals (the offset scheme, the field names) are still exposed and still editable, so they remain a de-facto part of the public API that can't be changed later without breaking whoever decoded the format — and because tenant_id rides inside the token, an edited token could also be used to try to page through another tenant's data. The real fix is two things, not one: make the token genuinely opaque (an opaque server-issued reference, or an encrypted/signed payload the client cannot parse or tamper with), and independently verify authorization/tenant scope from the authenticated request context on every page — never from whatever the token itself claims — so even a decoded or replayed token cannot grant access on its own.",
+      "expectations": [
+        "States that base64 is a reversible encoding, not opacity/obfuscation — the decoded content and structure are unchanged and still editable by the client",
+        "Explicitly rejects base64-encoding alone as fixing the exposed-internals/tamperable-token problem, not accepting it as sufficient",
+        "Requires both a genuinely opaque/tamper-resistant token AND that authorization (e.g., tenant scope) be re-checked against the authenticated principal on the request, independent of the token's content"
+      ]
+    },
+    {
+      "id": "limit-offset-with-no-order-by-is-undefined-even-with-zero-concurrent-writes",
+      "prompt": "A team paginates a reporting table with `SELECT * FROM events LIMIT 50 OFFSET 100` — no `ORDER BY` clause. The table is loaded once overnight and is never written to during the day, when users page through it. A developer argues: 'nothing is being inserted or deleted while people are browsing, so plain OFFSET pagination is safe here.' Evaluate that argument.",
+      "expected_output": "The argument is wrong. With no `ORDER BY` that constrains rows to a unique order, SQL makes no promise about row order at all — this isn't only a concurrent-write problem. The query optimizer takes LIMIT/OFFSET into account when building a plan, so it is free to pick a different plan — and therefore a different physical row order — for different LIMIT/OFFSET values against the exact same query text and the exact same, unchanged data. So even on a table nobody is writing to, page 3 can duplicate a row already seen on page 2, or skip one, purely because the query never pinned down an order and the planner isn't obligated to reuse the same plan for every OFFSET. The absence of writes has nothing to do with it. Fix: add an `ORDER BY` on a column set that is unique/total (e.g. a primary key, or a `(sort_key, id)` tiebreak) — that is what makes result order deterministic and pagination correct; it's required whether or not concurrent writes are also happening.",
+      "expectations": [
+        "Rejects the 'no concurrent writes means OFFSET pagination is safe' reasoning as false",
+        "Explains the mechanism as the query planner being free to choose a different plan/row order for different LIMIT/OFFSET values absent a fully-discriminating ORDER BY — not framed as merely a concurrent-write row-shift",
+        "Prescribes a total, unique ORDER BY (not just 'add any ORDER BY') as the fix, independent of whether concurrent writes are occurring"
+      ]
     }
   ]
 }

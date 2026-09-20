@@ -39,7 +39,14 @@ of work earn its keep?**
   everything down and **duplicates a row across pages** (a delete before it **skips** one);
   a `(sort_key, id)` cursor is stable under concurrent writes (the cursor key must be
   unique/tie-broken — see the non-unique-timestamp-cursor trap in
-  `time-date-correctness.md`). (use-the-index-luke, *no-offset*.)
+  `time-date-correctness.md`). (use-the-index-luke, *no-offset*.) This drift isn't only a
+  concurrent-write hazard: `LIMIT`/`OFFSET` with no `ORDER BY` that constrains rows to a
+  unique order is undefined even on a **static table with zero writes**, because the query
+  planner may choose a different plan — and therefore a different row order — for different
+  `LIMIT`/`OFFSET` values on identical data ("you are very likely to get different plans
+  (yielding different row orders) depending on what you give for LIMIT and OFFSET,"
+  PostgreSQL §7.6 *LIMIT and OFFSET*); no writes between page fetches does not make plain
+  `OFFSET` pagination safe — only a total, unique `ORDER BY` does.
 - **Push work to the DB**: filter/aggregate/join in SQL, not by pulling rows into
   app memory and looping. But don't hide an unbounded computation behind a view.
 - **Connections & transactions**: a pooled connection (not one per call) — and

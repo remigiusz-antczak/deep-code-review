@@ -3,6 +3,15 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.317.0] — 2026-09-20
+
+### deep-code-review — pagination correctness (page-token opacity; LIMIT/OFFSET undefined without ORDER BY)
+
+- **`api-contracts.md`**: a cursor/page token is part of the versioned contract — keep it **opaque**, URL-safe, and non-parseable (base64 ≠ opacity — AIP-158), make it **tamper-resistant** (signed/encrypted — the skill's own advice, not AIP-158's), and it must **never carry authorization** (authz is re-checked per request; cross-refs the BOLA/BFLA two-principal matrix in `security-appsec.md`, not restated).
+- **`performance-db-cost.md`**: `LIMIT`/`OFFSET` with no fully-discriminating `ORDER BY` is undefined **even on a static table with zero writes** — the query planner may pick different plans (different row order) per LIMIT/OFFSET; a genuine extension of the existing concurrent-write-drift bullet (PostgreSQL §7.6).
+- +2 curl-verified `docs/standards-index.md` rows (AIP-158, PostgreSQL §7.6); +2 evals. Core offset/cursor-tiebreak drift confirmed already covered (2 existing evals).
+- Research-derived expansion (no filed issue). Built by a worktree builder subagent, independently reviewed **PASS-WITH-FIXES**: AIP-158 + Postgres quotes byte-verified at source; applied the must-fix — AIP-158 was over-credited with "tamper-resistant" (its Opacity section covers non-parseability/confidentiality only), so tamper-resistance is now stated as the skill's own advice and AIP-158 is cited only for what it states.
+
 ## [1.316.0] — 2026-09-20
 
 ### deep-code-review — algorithmic-complexity / resource-exhaustion DoS (hash-flooding, uncontrolled recursion, excessive-size allocation)

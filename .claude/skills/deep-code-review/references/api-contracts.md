@@ -42,7 +42,18 @@ Standards (URLs + dates in `docs/standards-index.md`): OWASP API Security Top 10
   breaking change (below), so freeze it post-release and treat it as an extensible
   enum a consumer may not yet know.
 - Pagination/filter/sort parameters are bounded; "return everything" defaults
-  are a reliability and cost finding (cross-ref E).
+  are a reliability and cost finding (cross-ref E). A cursor/page token is part
+  of the versioned contract even though it looks like an implementation
+  detail: keep it **opaque**, URL-safe, and never user-parseable — a client
+  that can decode, edit, and re-encode it turns your pagination internals into
+  public API you can no longer change without breaking those clients, and
+  **base64-encoding an otherwise-transparent token is not opacity** (AIP-158,
+  *Pagination*). Make it **tamper-resistant** too — signed or encrypted, not
+  merely encoded — so a client can't forge or shift the cursor. A page token must never
+  itself carry authorization: whatever offset/filter/tenant scope it encodes,
+  the object/function check still has to run against the authenticated
+  principal on every page — verify it with the BOLA/BFLA two-principal matrix
+  (`security-appsec.md`, API1+API5) rather than trusting the token.
 - A **throttled response carries a back-off signal**: when the API returns `429 Too Many
   Requests` (or a `503` under load), emit **`Retry-After`** so clients back off by
   instruction, not by guess — HTTP's `Retry-After` tells a client how long to wait before
