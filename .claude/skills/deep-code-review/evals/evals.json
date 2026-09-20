@@ -3790,6 +3790,26 @@
         "Prescribes the order-swap test for positional bias (SUT always first) and flags self-preference bias from the judge sharing the SUT's model/vendor family",
         "Adds verbosity-correlation check + validation against a human-labeled cohort with a defined agreement threshold (bonus: strong judges reach ~>=80% agreement, Zheng et al.), re-checked when the judge model version changes"
       ]
+    },
+    {
+      "id": "a-csrf-guard-on-one-route-plus-a-lax-content-type-parser-is-incomplete",
+      "prompt": "After a CSRF incident on `/transfer`, the team added an Origin check to that one endpoint. Other cookie-authenticated mutating endpoints (`POST /settings`, `POST /delete-account`) were not touched, and the shared JSON body parser also accepts `application/x-www-form-urlencoded`. Is the CSRF fix complete?",
+      "expected_output": "No, on two counts. (1) A CSRF guard on one route is not a guard on the class: grep every cookie-authenticated MUTATING route (POST/PUT/PATCH/DELETE) and confirm the guard is wired into all of them — `/settings` and `/delete-account` are still exposed, the same one-callsite-instead-of-the-whole-class miss the review scopes to its full instance set (Phase 4). (2) The shared parser accepting `application/x-www-form-urlencoded` (or `text/plain` / `multipart/form-data`) is reachable by the classic HTML-form-to-JSON CSRF — a cross-site `<form>` can POST those content-types with no CORS preflight, so 'we only take JSON' is false unless the parser enforces `Content-Type: application/json` and rejects a mismatch. Fix: census every mutating route × {guard present?, parser content-type-gated?}; put the guard on the whole class and make the parser reject non-JSON content-types (and/or add a real anti-CSRF token). (security-appsec.md.)",
+      "expectations": [
+        "Flags that the guard must cover the whole class of cookie-auth mutating routes (grep them all — /settings, /delete-account still open), not just /transfer (Phase 4 full-instance-set)",
+        "Flags the form-urlencoded/text-plain-accepting parser as an HTML-form-to-JSON CSRF bypass (cross-site form, no preflight) — require Content-Type: application/json and reject a mismatch",
+        "Prescribes the census (every mutating route × {guard present, parser content-type-gated}) rather than a single-route patch"
+      ]
+    },
+    {
+      "id": "a-static-admit-secret-needs-a-length-entropy-floor-not-only-constant-time",
+      "prompt": "An admin endpoint admits when `timingSafeEqual(req.header('x-admin-token'), process.env.ADMIN_TOKEN)` returns true — a constant-time comparison. In one deployment `ADMIN_TOKEN` is set to `admin123`. The compare is correct and constant-time. Is the gate sound?",
+      "expected_output": "No — constant-time compare and secret strength are separate properties, and this fails the second. The token gates ADMISSION, so a short/low-entropy value like `admin123` is brute-forceable no matter how the comparison is written; `timingSafeEqual` only closes a timing side-channel, it does not make a weak secret strong. Enforce a minimum length AND entropy where the secret is USED (reject a too-short/low-entropy value at load and fail closed) — not only where a generator would create it, since a strong generator doesn't stop a hand-set env value in one deployment. This is admit-direction weakness, which outranks an exclude-direction gap (a weak admit secret grants access; a weak exclude filter only over-blocks). Detect it by grepping for the floor itself (a length/entropy check at the compare site), not the secret's name — the guard was never written. (security-appsec.md.)",
+      "expectations": [
+        "Says constant-time compare is not sufficient — a short/low-entropy admit secret (admin123) is brute-forceable regardless; strength and timing are separate properties",
+        "Prescribes an enforced length AND entropy floor at the point of use (reject weak value at load, fail closed), not only at generation",
+        "Notes admit-direction outranks exclude-direction, and detection is grepping for the floor constant/check at the compare site, not the secret's name"
+      ]
     }
   ]
 }

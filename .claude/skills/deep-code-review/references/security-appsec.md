@@ -516,6 +516,20 @@ based on existence. Fix: one **generic response** for the exists/not-exists pair
 a **constant-time** path so existence is not observable — not the removal of
 per-field validation.
 
+**A static secret used as an *admit* gate needs an enforced length/entropy floor at
+the point of use — a property separate from constant-time compare.** A shared secret,
+API key, webhook-signing key, or admin token compared against a caller-supplied value
+gates **admission**, so a short or low-entropy secret is **brute-forceable** however
+the comparison is written — constant-time compare closes a timing side-channel, it
+does not make a 6-character secret strong. Enforce a minimum length **and** entropy
+**where the secret is used** (reject a too-short / low-entropy value at load and fail
+closed), not only where it is generated: a strong generator does not stop a hand-set
+`changeme` in one deployment's env. **Admit-direction weakness outranks
+exclude-direction** (a weak admit secret grants access; a weak exclude secret only
+over-blocks). Detect by grepping for the **floor itself** (a length/entropy check at
+the compare site), not the secret's name — the guard was never written, so the
+secret's name won't lead you to the gap.
+
 **Session cookie flags (server-side checklist — read the `Set-Cookie` bytes, not
 the config object).** Every session/auth cookie: `Secure` (never sent over
 plaintext), `HttpOnly` (no JS read — blunts XSS token theft), `SameSite=Lax` or
@@ -580,6 +594,20 @@ navigations, so the check is simultaneously bypassable and leaky. If it is the
 unauthenticated: CWE-352 (CSRF) is not a substitute for CWE-306 (Missing
 Authentication) / CWE-862 (Missing Authorization). Confirm a real identity check
 exists.
+
+**🚩 A CSRF guard on one route is not a guard on the class.** When a CSRF token /
+double-submit / `Origin` check exists, **grep every cookie-authenticated *mutating*
+route** (`POST`/`PUT`/`PATCH`/`DELETE`) and confirm the guard is wired into **all**
+of them — a guard bolted onto the single route an incident exposed leaves its
+siblings open, the same copy-idiom-scoped-to-one-callsite miss the review scopes to
+its full instance set (Phase 4). Second, **verify the shared body parser requires
+`Content-Type: application/json`** (and rejects a mismatched type) *before* it
+parses: a parser that also accepts `text/plain` / `application/x-www-form-urlencoded`
+/ `multipart/form-data` is reachable by the classic **HTML-form-to-JSON CSRF** — a
+cross-site `<form>` can send those content-types with **no CORS preflight**, so a
+"we only accept JSON, so we're safe from forms" assumption is false unless the
+parser actually enforces it. Census: every mutating route × {guard present?, parser
+content-type-gated?}.
 
 ## A08:2025 — Software or Data Integrity Failures
 

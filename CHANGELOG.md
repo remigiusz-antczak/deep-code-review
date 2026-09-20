@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.291.0] — 2026-09-20
+
+### deep-code-review — wave 212 CSRF guard-coverage + admit-secret strength (closes #579, #671)
+
+- **`security-appsec.md`** two additions. **#579** — a new "🚩 A CSRF guard on one route is not a guard on the class" flag beside the existing CSRF-≠-authn flag: (a) when a CSRF token / double-submit / `Origin` check exists, **grep every cookie-authenticated *mutating* route** and confirm the guard is on **all** of them (a guard bolted onto the one route an incident exposed leaves siblings open — the Phase-4 full-instance-set scoping); (b) **verify the shared body parser requires `Content-Type: application/json`** — a parser also accepting `text/plain` / `x-www-form-urlencoded` / `multipart/form-data` is reachable by **HTML-form-to-JSON CSRF** (a cross-site `<form>` sends exactly those three enctypes with no CORS preflight, since the form-enctype set and the CORS-safelisted Content-Type set are identical by design). **#671** — a static secret used as an **admit** gate (API key / webhook key / admin token) needs an enforced **length/entropy floor at the point of use**, a property separate from constant-time compare (a short/low-entropy secret is brute-forceable however the compare is written); enforce at load and fail closed; admit-direction weakness outranks exclude-direction; detect by grepping the floor, not the secret's name. +2 evals. Independent reviewer PASS-WITH-FIXES: the form-to-JSON-CSRF mechanism verified accurate against the Fetch/WHATWG + HTML specs; applied a one-word scoping fix ("exclude filter" → "exclude secret"). Closes #579, closes #671.
+
 ## [1.290.0] — 2026-09-20
 
 ### deep-code-review — wave 211 AI-app quality (RAG context-assembly, LLM-judge bias, vector distance-metric)
