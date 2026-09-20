@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.335.0] — 2026-09-20
+
+### deep-code-review — a11y: colour-only state chip not in the accessible name (#774); async outcome unmounts the focused control with no live region (#775)
+
+- **`frontend-a11y.md`** (#774): a two-state chip/pill differing only by a colour token, with the state word in neither the visible label nor the accessible name (only a hover `title`), fails colour-blind and screen-reader users at once — extends the "don't convey meaning by colour alone" rule to the accessible-name channel. Fix: put the state in visually-hidden (`sr-only`) text inside the chip (joins the accessible name regardless of role) or, if the chip is interactive/labelable, in its `aria-label`; ideally a distinct glyph; test that the two states' computed accessible-name strings differ. (#775): an async action's outcome that unmounts the just-focused control and reports via a plain text node fails twice — no live region (WCAG 4.1.3) *and* focus falls to `<body>`; give the outcome `role="status"`/`"alert"` and keep the control mounted (disabled/relabelled) or move focus explicitly. +2 evals.
+- Independently reviewed **PASS-WITH-FIXES**. Applied the **must-fix (a no-fabrication hit the reviewer caught): a claimed "blue/amber collapses under tritanopia" fact was false** (tritanopia is the blue↔green / yellow↔violet axis, and blue/orange is actually the CVD-safe pairing) — it appeared in the prose *and in a grading criterion*, and was removed from all three sites (the colour-alone point stands on its own: colour is invisible to a screen reader and in greyscale/forced-colours mode regardless of hue). Also applied should-fixes: reframed the `title` gap as browse-mode (not focus-only) and made `sr-only` text the primary role-independent fix; corrected the #775 focus cross-reference to the async-content-insertion rule; and de-telegraphed the #774 eval prompt.
+
 ## [1.334.0] — 2026-09-20
 
 ### deep-code-review — deepen: NIST 800-63-4 reverses forced password rotation/complexity (#781)

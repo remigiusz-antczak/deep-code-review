@@ -122,6 +122,21 @@ without regressing a deliberate design.
   contains the expected text, not only a DOM snapshot. Cross-ref
   `product-ux-quality.md` for whether the skeleton/spinner *design* is right —
   this is only the announcement half.
+- **An async action's *outcome* that unmounts the focused control needs a live region AND explicit
+  focus continuity — two failures, not one.** Distinct from the loading-announce bullet above (an
+  *ongoing wait*): here the action has *resolved*, and the success/error message replaces the very
+  control that was clicked and still holds focus — rendered as a plain text node with no
+  `role="status"`/`role="alert"`/`aria-live`. Two compounding defects: the outcome is never
+  announced (a plain element is not a live region), **and** because the focused element was removed
+  from the DOM rather than disabled/relabelled, keyboard focus silently falls back to `<body>`
+  (focus must be managed on async content insertion — the Keyboard & focus rules below — not left to
+  fall to `<body>`), so a keyboard user loses their
+  place with no signal the action finished. A sighted mouse user sees the message appear, so it
+  ships. Fix: give the success message `role="status"` (polite) and the error `role="alert"`
+  (assertive); and **prefer keeping the original control mounted** — disabled and relabelled with
+  the outcome — over replacing it; if it must be replaced, move focus explicitly to the replacement
+  (`ref.current?.focus()`). Test both halves: `getByRole('status'|'alert')` resolves with the
+  outcome text, **and** `document.activeElement !== document.body` afterward.
 
 **Keyboard & focus** (WCAG 2.1.1, 2.4.3, 2.4.7, and 2.2's 2.4.11)
 - Everything actionable is reachable and operable by keyboard alone; logical tab
@@ -251,6 +266,24 @@ confirm the background does not move.
 **Perceivable**
 - Contrast: text ≥ 4.5:1 (large text ≥ 3:1); UI components & graphical objects
   ≥ 3:1 (1.4.11). Don't convey meaning by color alone.
+- **A two-state chip/pill that differs only by a colour token — with the state word in neither the
+  visible label nor the accessible name — fails colour-blind *and* screen-reader users at once.** A
+  badge whose two branches share an identical icon and text template and differ only in a
+  colour-utility class (colour is invisible to a screen reader, and to anyone in greyscale or
+  forced-colours mode, whatever the hue pair) puts the differentiating word only in a `title`
+  (hover-only, not reliably surfaced to a screen reader in browse mode) and leaves it out of the
+  computed accessible name too. This is the *don't-convey-meaning-by-colour-alone* rule above taken
+  to the **accessible-name** channel: the state must appear in at least one non-colour channel that
+  is actually announced — put the state word in visually-hidden (`sr-only`) text inside the chip
+  (which joins the computed accessible name whatever the element's role) or, if the chip carries an
+  interactive/labelable role, in its `aria-label` (`— at capacity`) — and ideally a distinct glyph,
+  never a `title` alone (a `title` is a mouse-hover convenience, not an accessibility mechanism; and
+  `aria-label` is ignored on a bare `generic`-role element). Detect
+  (source-only): find a chip whose className branches on a state enum; if the two branches' icon +
+  text are byte-identical and only colour classes differ, check whether the state word is in the
+  computed accessible name for **both** branches — absent, or present only in `title`, is the
+  finding. Test: assert the two states' **computed accessible-name strings differ**, not just their
+  class lists.
 - **Guard a deliberately-decorative / sub-AA token at its point of *use*, not its
   value.** A token pinned below the text-contrast threshold and documented
   "decorative only" is only decorative if *no component paints **real, informational
