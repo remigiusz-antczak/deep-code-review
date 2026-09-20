@@ -3061,6 +3061,16 @@
         "Explains the loop runs every tick but lands nothing, silently forcing throughput onto delegation, and the asymmetry is unlogged so it reads as a pace regression",
         "Prescribes a preflight-keyed allow-rule (or symmetric denial + transparency) and documenting the merge-routing so the loop doesn't burn ticks retrying a structurally-blocked call"
       ]
+    },
+    {
+      "id": "api4-metered-downstream-spend-has-no-cap-despite-a-per-ip-rate-limit",
+      "prompt": "An `/auth/send-otp` endpoint sends an SMS via a third-party provider billed per message. It requires a valid pre-authenticated session and is rate-limited to 5 requests/minute per IP — the team considers resource consumption handled. The app has 80,000 registered users. Any remaining API4 exposure?",
+      "expected_output": "Yes — the per-IP rate limit bounds abuse per caller, not total provider spend. 80,000 accounts (or an attacker cycling IPs/accounts) each sending within their own 5/min allowance can still drive unbounded SMS cost system-wide; the damage is the bill, not availability. This is OWASP API4's spend sub-case, distinct from compute exhaustion (CPU/memory/fd caps and GraphQL batching limits are covered elsewhere). Fix: configure a spend ceiling at the SMS provider, or failing that a billing alert ('Configure spending limits for all service providers/API integrations. When setting spending limits is not possible, billing alerts should be configured instead'); and add a per-OPERATION throttle (a per-account daily OTP cap independent of IP), since a generic per-IP/per-account limiter does not bound a low-and-slow spend spread across many legitimate accounts (CWE-770). Don't just tighten the per-IP rate limit.",
+      "expectations": [
+        "States the per-IP rate limit does not cap aggregate provider spend across many accounts/IPs — the damage is the bill, not availability",
+        "Identifies this as OWASP API4's spend/billing sub-case, distinct from compute/CPU/memory exhaustion",
+        "Prescribes a provider-side spend ceiling or billing alert AND a per-operation throttle (per-account daily cap), not merely tightening the per-IP rate limit"
+      ]
     }
   ]
 }

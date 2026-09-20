@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.245.0] — 2026-09-20
+
+### deep-code-review — wave 166 API4 unrestricted resource consumption (spend axis)
+
+- **`security-appsec.md`** (API-overlay): API4 was named-only; now a worked paragraph scoped to the axis nothing else covers — an individually-legitimate request (authenticated, or a valid pre-auth flow like password reset) that triggers a metered PAID downstream call (SMS/OTP, LLM completion, cloud egress, per-lookup data API) with no per-caller cap. Compute exhaustion is covered elsewhere; here the damage is the bill (OWASP's forgot-password SMS scenario: scripted tens of thousands of times, thousands of dollars in minutes). Ask for a provider-side spend ceiling or billing alert per paid integration plus a per-operation throttle; prefer a graduated response (a hard cap trips legitimate OTP/reset sends). Cross-refs `performance-db-cost.md` for in-code spend-governance bugs.
+- +1 eval; +2 standards rows (OWASP API4:2023 "Configure spending limits…"; CWE-770 — verbatim via raw fetch 2026-09-20). Reviewer FIX-FIRST applied (corrected a misattributed OWASP-scenario citation; broadened the pre-auth framing; added the graduated-response nuance).
+
 ## [1.244.0] — 2026-09-20
 
 ### agentic-delivery — wave 165 auto-mode permission gate that denies the orchestrator but allows a sub-agent is a false 'stuck' (closes #515)

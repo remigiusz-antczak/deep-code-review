@@ -634,6 +634,21 @@ serialize through an explicit DTO/field allow-list — returning the whole model
 (or `SELECT *`) leaks internal columns and future ones added later. Test by
 adding a privileged field to a legitimate request and re-reading the object.
 
+**API4 — unrestricted resource consumption, the *spend* axis.** The GraphQL
+batching/depth limits below and the container memory/CPU caps
+(`infra-iac-containers.md`) cover *compute* exhaustion; API4 also names a distinct failure mode neither catches: an individually-legitimate request — authenticated, or a valid pre-auth flow such as password reset — that triggers a **metered, paid downstream call** — an SMS/OTP send, an LLM completion,
+cloud egress, a per-lookup data-provider API — with **no cap on how many times, or
+how fast, a caller can trigger it**. Availability is not the damage here; the **bill** is (OWASP’s own scenario: a forgot-password SMS flow scripted to fire tens of thousands of times, running up thousands of dollars in minutes). Per paid third-party integration
+reachable from a request, ask: is there a **spend ceiling at the provider**, or
+failing that a **billing alert**? — "Configure spending limits for all service
+providers/API integrations. When setting spending limits is not possible, billing
+alerts should be configured instead" (OWASP API4:2023). A per-**operation** throttle
+(OTP sends, password-recovery specifically) is the application-side complement; a
+generic per-IP/per-account limiter does not bound a **low-and-slow** spend spread
+across many legitimate accounts (CWE-770, Allocation of Resources Without Limits or Throttling). Prefer a **graduated** response — alert plus the per-operation throttle before a hard cutoff — since a hard provider spend-cap trips legitimate OTP/reset sends too, converting a cost problem into an availability outage. (In-code spend-governance bugs — a fail-open ledger, a non-atomic reservation — are in `performance-db-cost.md`.) 🚩 any server-initiated call to a metered external API / SMS / LLM
+provider with no per-caller operation throttle and no spend ceiling or billing alert
+configured.
+
 **API6 — unrestricted access to a *sensitive business flow*.** Distinct from the
 rate-limit key/burst check in A06 above: a flow can be **correctly authorized,
 individually within the rate limit, and still harm the business at volume** —

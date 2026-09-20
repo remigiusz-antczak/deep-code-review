@@ -647,3 +647,9 @@ determination routes to counsel).
 | OWASP API6:2023 — Unrestricted Access to Sensitive Business Flows | https://api-security.owasp.org/editions/2023/en/0xa6-unrestricted-access-to-sensitive-business-flows/ | "identify the business flows that might harm the business if they are excessively used." Non-human detection: "analyze the user flow to detect non-human patterns (e.g. the user accessed the 'add to cart' and 'complete purchase' functions in less than one second)." Fetched + verified 2026-09-20. |
 | OWASP ASVS v5.0.0-2.4.2 (Validation and Business Logic) | https://github.com/OWASP/ASVS/blob/v5.0.0_release/5.0/en/0x11-V2-Validation-and-Business-Logic.md | Level 3: "Verify that business logic flows require realistic human timing, preventing excessively rapid transaction submissions." Verified 2026-09-20 at tag v5.0.0_release. |
 
+## Verified by direct fetch (2026-09-20) — API4 unrestricted resource consumption (spend axis)
+
+| Standard / source | URL | What was confirmed |
+|---|---|---|
+| OWASP API4:2023 — Unrestricted Resource Consumption | https://api-security.owasp.org/editions/2023/en/0xa4-unrestricted-resource-consumption/ | "Configure spending limits for all service providers/API integrations. When setting spending limits is not possible, billing alerts should be configured instead." Fetched + verified 2026-09-20. |
+| CWE-770 — Allocation of Resources Without Limits or Throttling | https://cwe.mitre.org/data/definitions/770.html | Title verbatim: "Allocation of Resources Without Limits or Throttling." Fetched + verified 2026-09-20. |
