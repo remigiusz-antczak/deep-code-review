@@ -3,6 +3,15 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.308.0] — 2026-09-20
+
+### deep-code-review — conflict-swallowing write must check the affected-row count (#728); an "N/A" empty-collection accessor silently inverted by a generic filter (#729)
+
+- **`concurrency-shared-state.md`** (DB / store TOCTOU): a conflict-swallowing write (`ON CONFLICT DO NOTHING`, `insertMany({ordered:false})`, `MERGE`) used as a race backstop must report the **actual affected-row count** (rowcount / `RETURNING`), not the size of the batch the app decided to insert — else the race the backstop exists for fires and the loser returns "inserted: 1" while its write was a silent no-op. Distinguished from `data-quality.md` §1 (that degrades a *value*; this misreports a *count*). +🚩.
+- **`data-quality.md`** (§5 Deduplication & consistency): an accessor returning an empty collection to signal "not applicable" is indistinguishable, to a generic membership filter, from "applies but matches nothing" — so the whole type silently drops from results whenever any caller passes that filter; represent inapplicability explicitly (whole-type bypass / sentinel the filter special-cases), never a bare `[]`. Distinct from the nested-key accessor gap (empty *by mistake* vs empty *on purpose*); cross-refs `product-ux-quality.md`'s empty-state rule + `api-contracts.md` (a documented-contract divergence when the filter is documented as narrowing, not excluding whole types). +🚩.
+- +2 evals. No external citation (internal patterns). Closes #728, #729.
+- Built by a worktree builder subagent, independently reviewed **PASS-WITH-FIXES**: both folds confirmed genuinely new and distinct against the owner-filed issues (the dispositive test — applying the neighbor bullet's own prescribed fix to #729 does not resolve it); evals confirmed strictly append-only (prior entries byte-identical) at the branch's true parent; applied the reviewer's optional doc-contract sharpening to the #729 bullet.
+
 ## [1.307.0] — 2026-09-20
 
 ### deep-code-review — payments correctness: multi-currency Money value-object + ledger double-entry / derived-balance

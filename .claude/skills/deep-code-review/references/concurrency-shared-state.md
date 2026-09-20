@@ -146,6 +146,24 @@ Common in agent/tooling repos: JSON/YAML "DB" files, append logs, lockfiles.
   compare-and-swap version column) → lost update or double spend.
 - "Insert if not exists" without a uniqueness constraint is still racy under
   concurrency — the constraint is the source of truth.
+- **A conflict-swallowing write's reported count must come from what the statement actually
+  affected, not from the size of the batch the app decided to insert.** The common batch-upsert
+  shape — read existing rows, reconcile in app code (no row → insert; identical → no-op;
+  different → conflict), then batch-insert the "new" set with `ON CONFLICT DO NOTHING` (or
+  `INSERT ... IF NOT EXISTS`, `MERGE`, Mongo `insertMany({ordered: false})`) as a race backstop
+  against a concurrent caller inserting the same natural key — gets the *data* right (the
+  backstop does its job) but can still misreport the *outcome*: if the code reports
+  `inserted: N` from the length of the array it decided to insert, that number survives
+  unchanged even when the backstop actually fires. Two callers who both read the key as absent
+  and both attempt the insert produce one genuine row and one DB-level no-op; the loser still
+  returns "success, inserted: 1" while its write was silently dropped. When a write uses a
+  conflict-swallowing clause specifically to survive a race, read the statement's *actual*
+  affected-row count (driver rowcount, `RETURNING`, or `MERGE`'s output) and reconcile it
+  against the intended count — a mismatch **is** the race outcome and must be surfaced (re-read
+  and reconcile, report the delta, or fail), never reported as full success. Distinct from
+  `data-quality.md`'s monotonic-quality invariant (§1) — that governs a write silently
+  *degrading a value*; this is a write silently misreporting its own *count* at the exact moment
+  its own concurrency guard does what it was built to do.
 - Idempotency keys for charges/sends: store the key uniquely; retries return
   the first result.
 - **An idempotency / no-op short-circuit must diff against the *real* current state, not a
@@ -309,6 +327,9 @@ instead of the whole transaction; lock held across I/O;
 two-plus locks acquired in a different order across call sites (ordering deadlock);
 two writers on one file; corrupt/unreadable store wiped to empty; check-then-act
 without a constraint or row lock (a bare default-isolation transaction is not enough); a
+conflict-swallowing upsert (`ON CONFLICT DO NOTHING` / `insertMany(ordered: false)`) whose
+result rowcount is ignored, with the reported count taken from the pre-write app-side array
+length instead; a
 NoSQL get-then-put with no conditional/version clause on the write; a read relying on a
 NoSQL store's eventually-consistent default immediately after a write; a DynamoDB GSI
 query assumed read-after-write consistent; mixed lightweight-transaction and plain writes
