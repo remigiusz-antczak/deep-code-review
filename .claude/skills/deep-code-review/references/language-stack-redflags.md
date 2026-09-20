@@ -154,13 +154,11 @@ grep -rInE 'console\.log|print\(|dbg!|System\.out\.print|fmt\.Print' .
 
 - Unquoted expansions (`rm -rf $DIR`), `eval`, `curl … | bash`, parsing `ls`,
   missing `set -euo pipefail`, secrets in `set -x` traces, world-writable temp.
-- `for x in $LIST` as a membership/exclusion check on an unquoted variable —
-  bash word-splits it (works), zsh by default does not (`x` binds to the whole
-  string, the loop body runs once, and a per-item match never fires). A
-  safety-critical exclusion (a held/blocked-id skip list feeding a merge or
-  delete) built this way silently stops excluding anything the moment it runs
-  under a non-word-splitting shell. Use `case "$x" in id1|id2) … ;; esac` or a
-  line-based `grep -qxF` instead — depth: `branch-and-merge-hygiene.md` §6.
+- `for x in $LIST` as a membership/exclusion check on an **unquoted** variable —
+  bash word-splits it, zsh (default) does not, so a safety-critical skip/exclusion
+  list silently stops excluding under the wrong shell. Use `case` or a line-based
+  `grep -qxF`; full mechanism + the merge-guard instance:
+  `branch-and-merge-hygiene.md` §6.
 - **`set -u` + `"${arr[@]}"` on an *empty* array is a fatal `unbound variable`
   under bash 3.2 — still macOS's default `/bin/bash` (verified `3.2.57`).** A
   script that conditionally builds an array (flags, a discovered file list,

@@ -185,16 +185,13 @@ holds more than a few hundred lines of owned surface (mega-files still split by
 named concern per section 0). Record the tier each unit actually ran in the
 manifest's *Unit/tier actually used* column.
 
-**Tier by model capability too, not only by effort.** Running everything cheap
-first and only re-running survivors at full strength has been measured to reach
-the same pass rate for roughly half the cost of running everything strong from
-the start — the same principle this section already applies to *depth of pass*
-applies to *model choice*: run Tier 1 on a fast/cheap model, promote only
-survivors to Tier 2 on a mid/frontier model, and reserve the strongest available
-tier for the lead's own re-verify (section 4) and any candidate that could
-become Blocker/Critical. Spending the strongest tier on every Tier-1 enumeration
-pass burns budget and rate-limit headroom without buying accuracy where it
-matters least. Depth and the vendor-neutral tier definitions: `model-tiering.md`.
+**Tier by model capability too, not only by effort.** Run Tier 1 on a fast/cheap
+model, promote only survivors to Tier 2 on a mid/frontier model, and reserve the
+strongest tier for the lead's own re-verify (section 4) and any candidate that could
+become Blocker/Critical — the escalate-on-failure cost lever (same pass rate for
+roughly half the cost, with the vendor-neutral tier definitions) lives in
+`model-tiering.md`; this section applies it to *model choice* as it already does to
+*depth of pass*.
 
 ---
 

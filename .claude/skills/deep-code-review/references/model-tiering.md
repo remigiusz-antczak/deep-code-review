@@ -61,7 +61,10 @@ provider with an equivalent primitive, even where the exact mechanism differs.
    same pass rate for roughly half the cost of running everything strong from
    the start — this is precisely what `parallel-audit.md`'s Tier-1→Tier-2 split
    already does at the *effort* level; do it at the *model* level too (Tier 1 on
-   fast/cheap, promote only survivors to Tier 2 on mid/frontier).
+   fast/cheap, promote only survivors to Tier 2 on mid/frontier). Over-provisioning
+   the strongest tier on every Tier-1 pass burns budget **and rate-limit headroom** — a
+   fan-out shares one provider quota across concurrent units — without buying accuracy
+   where it matters least.
 5. **Set a per-lane token budget sized to observed usage, then tighten.** A
    generous budget still cuts cost meaningfully; a tight one cuts more, for a
    real but bounded quality cost — start near a loop's 90th-percentile usage,

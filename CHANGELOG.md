@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.292.0] — 2026-09-20
+
+### deep-code-review — wave 213 self-audit cleanup-B: de-duplicate two restated passages
+
+- The self-audit found two concepts each stated **in full in two places** (the repo's thesis forbids duplicated logic — state once, link elsewhere). Both non-canonical copies trimmed to a short pointer, no meaning lost (each canonical home verified to retain the full mechanism): the **`for x in $LIST` word-splitting footgun** in `language-stack-redflags.md` now points to its fuller home in `branch-and-merge-hygiene.md` §6; the **escalate-on-failure model-tiering** paragraph in `parallel-audit.md` keeps the actionable prescription and points to `model-tiering.md` for the "same pass rate, ~half the cost" claim + tier definitions. Independent reviewer PASS-WITH-FIXES: the trim dropped the "rate-limit headroom" rationale, which had no canonical home — restored it to `model-tiering.md`'s escalate-on-failure lever (its natural fan-out/provider-quota home, distinct from the dollar-cost point). No eval change. Closes no filed issue (internal self-audit).
+
 ## [1.291.0] — 2026-09-20
 
 ### deep-code-review — wave 212 CSRF guard-coverage + admit-secret strength (closes #579, #671)
