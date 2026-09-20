@@ -112,6 +112,51 @@ without regressing a deliberate design.
   exists, and from where) and from Consistent Identification below (whether the
   same destination gets the same name across routes): this is whether a name that
   already exists still contains what is on screen.
+- **A Tooltip/description helper that wires `aria-describedby` onto the one child
+  it is handed assumes that child *is* the focusable control; a call site that
+  wraps the real control breaks the association silently.** The common React
+  idiom clones the single child and merges the description link (`aria-describedby`
+  pointing at the tip's id) plus the hover/focus handlers onto it — correct for a
+  bare `<Tooltip><button/></Tooltip>`, where the link lands on the button and a
+  screen reader reads the tip on focus. But nothing constrains the child to be the
+  control: a caller who wraps it for layout or positioning
+  (`<Tooltip><span><button/></span></Tooltip>`), interposes a non-focusable
+  wrapper as the disabled-control workaround (a native `disabled` control fires no
+  hover/focus events, so the reveal handlers have to sit on the wrapper), or passes
+  a `forwardRef`/styled wrapper, lands the description on the wrapper; a **fragment**
+  child, or a child component that doesn't forward the prop, drops it entirely. In
+  the layout and `forwardRef` cases the inner `<button>` still receives focus but
+  now carries no accessible description, so a screen-reader user focusing it hears
+  no tip. The disabled-control case is worse: a native `disabled` `<button>` is not
+  focusable and not in the tab order at all, so the description is unreachable
+  wherever it sits — surfacing the "why is this inert" explanation the tooltip
+  exists to give means making the control `aria-disabled` (which keeps it
+  focusable) *and* routing the description onto that focusable control, not the
+  wrapper. The tip still renders and still appears on hover and keyboard focus (the
+  handlers sit on the wrapper and focus events bubble to it), so a sighted
+  click-through and any pixel/visual-regression snapshot pass — only the
+  accessibility tree shows the focused control's description is empty. This is the
+  failure mode of the Label-in-Name bullet's own advice above — move extra context
+  into a `title`/tooltip — when that tooltip is a clone-onto-child one, and it
+  *extends* the name-sourcing bullets above (there a **name** is unsourced or drops
+  its visible text; here a **description** reaches the wrong node). Distinct from
+  four neighbours: the roving-tabindex bullet above spreads props onto a wrapper
+  that leaves *role and name* absent (here role and name are fine, only the
+  description is misrouted); the required-state combobox bullet (Forms) below is a
+  *state* that never reaches the control; the loading-skeleton bullet below is a
+  *transition* that is never announced; and the dismissible-overlay focus-restore
+  bullet below (Keyboard & focus) is about *restoring focus on dismiss*, not wiring
+  the description at all. Fix — target the control, not the element passed in:
+  document and **dev-time-assert** that the child is the single host element that
+  takes focus (`React.Children.only` catches multi-child input, plus a check that
+  the child is a focusable host node, not a fragment or a component that swallows
+  the prop); or expose the generated id through a ref / render-prop / anchor API so
+  the wrapper can keep the handlers while the description is placed on the focusable
+  descendant (an anchor-ref API that resolves the actual control is the robust
+  shape). Detection/test: assert the **computed accessible description of the
+  focused control** from the accessibility tree (devtools/axe), not the presence of
+  the `role="tooltip"` node in the DOM or a screenshot — the same computed-property
+  harvest the name bullets above rely on.
 - One `<h1>` per page/view; headings describe structure, not styling.
 - Landmarks present; a skip-to-content link for keyboard users.
 - **An unnamed `<section>` is not a poorly-labeled landmark — it is not a landmark at

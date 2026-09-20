@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.369.0] — 2026-09-21
+
+### deep-code-review — a Tooltip that wires `aria-describedby` onto its immediate child breaks when a call site wraps the real control (#837)
+
+- **`frontend-a11y.md`**: a Tooltip/description helper that clones its single child and merges `aria-describedby` onto it assumes that child *is* the focusable control. A call site that wraps the control for layout (`<span><button/></span>`), interposes a non-focusable wrapper as the disabled-control workaround, passes a `forwardRef`/styled wrapper, or a fragment, lands the description on the wrong node (or drops it) — the inner control still takes focus but has no accessible description. The tip still renders and appears on hover/focus, so a click-through and any pixel/snapshot pass; only the accessibility tree shows the focused control's description is empty. Fix: dev-time-assert the child is the single focusable host element, or expose the generated id via a ref/anchor API that targets the actual control (and for a disabled control, `aria-disabled` + route the description onto the still-focusable control). Detect by asserting the computed accessible description of the focused control, not the presence of the `role="tooltip"` node. Extends the name-sourcing / Label-in-Name bullets (there a name is unsourced; here a description reaches the wrong node). +1 eval.
+
 ## [1.368.0] — 2026-09-21
 
 ### deep-code-review — two projections of one dataset each re-load the source, awaited serially (#844)
