@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.294.0] — 2026-09-20
+
+### deep-code-review — wave 215 a11y landmarks & focus (closes #693, #662)
+
+- **`frontend-a11y.md`** two additions. **#693** — an unnamed `<section>` is **not a poorly-labeled landmark, it is not a landmark at all**: HTML maps `<section>` to the ARIA `region` landmark **only when it carries an accessible name** (`aria-label` / `aria-labelledby` / `title` fallback), so an unnamed section vanishes from the landmark/rotor navigation; sibling sections from one component drift on this because the visual output never shows the gap (verified vs MDN + W3C accname). **#662** — restore-focus-to-the-trigger is **not modal-only**: it applies to every dismissible overlay (popover, dropdown/menu, combobox listbox, flyout, click-tooltip); the tell is a bare boolean open state with an Escape/outside-click dismiss handler and **no `.focus()` back to the trigger**, dumping focus to `<body>` (verified vs ARIA APG menu pattern). Built by a worktree builder subagent, independently reviewed **PASS** (both claims confirmed at authoritative source; non-duplication clean repo-wide; no fabricated SC number). +2 evals. Closes #693, closes #662.
+
 ## [1.293.0] — 2026-09-20
 
 ### deep-code-review — wave 214 classify a DIFF's hunks by kind (mechanical / behavioral / new-surface) → matched review depth

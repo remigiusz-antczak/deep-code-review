@@ -55,6 +55,15 @@ without regressing a deliberate design.
   not the DOM — the same computed-name harvest the cross-view-consistency check below performs.
 - One `<h1>` per page/view; headings describe structure, not styling.
 - Landmarks present; a skip-to-content link for keyboard users.
+- **An unnamed `<section>` is not a poorly-labeled landmark — it is not a landmark at
+  all.** By the HTML/ARIA host-language mapping, `<section>` exposes to assistive tech
+  as the ARIA `region` landmark only when it carries an accessible name (`aria-label`,
+  `aria-labelledby`, or, as a fallback, `title`); with none, it maps to no landmark role
+  and is absent from landmark/rotor navigation — a screen-reader user scanning by region
+  skips straight past it. The bug hides well: sibling sections built from the same
+  component (one instance passed a name prop, another not) render identically, so
+  nothing on screen reveals the gap. Detection: pull the page's landmark/rotor list, not
+  the DOM, and confirm every `<section>` you expect as a region actually appears in it.
 
 **Keyboard & focus** (WCAG 2.1.1, 2.4.3, 2.4.7, and 2.2's 2.4.11)
 - Everything actionable is reachable and operable by keyboard alone; logical tab
@@ -88,6 +97,15 @@ without regressing a deliberate design.
   the override so the correct global `:focus-visible` default wins.
 - Focus is managed on route change, modal open/close (trap + restore), and
   async content insertion.
+- **Restore-focus-to-the-trigger is not modal-only — it applies to every dismissible
+  overlay.** A popover, dropdown/select menu, combobox listbox, flyout, or click-triggered
+  tooltip that the user can dismiss (Escape, outside click, selection) must return focus
+  to the element that opened it, same as a modal's close does; skip it and focus falls to
+  `<body>` on dismiss, dumping a keyboard user back at the top of the page with no sense
+  of where they were. The tell: a bare boolean open/close state plus an Escape/outside-click
+  handler with no captured trigger ref and no `.focus()` call back onto it. Contrast: a
+  design-system overlay primitive that captures the trigger ref on open and calls
+  `.focus()` on it in its close path has the correct shape.
 - **Hidden interactive content leaves the tab order — no "phantom focus."** A closed
   off-canvas menu, collapsed accordion, inactive tab panel, or CSS-hidden dropdown must
   remove its focusable descendants from the tab sequence (`inert`, conditional unmount,

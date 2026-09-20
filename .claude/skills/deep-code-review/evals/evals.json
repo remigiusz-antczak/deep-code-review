@@ -3830,6 +3830,26 @@
         "Routes nearly all depth to the 12-line behavioral auth-path change (full domain-B audit + fail-open/closed + a Phase 3 probe if a guard/precondition changed)",
         "Gives the formatter bulk a fast mechanical-confirm pass that verifies no logic/guard/default rode in under the reflow (formatter-as-camouflage risk)"
       ]
+    },
+    {
+      "id": "an-unnamed-section-is-not-a-landmark-at-all",
+      "prompt": "A dashboard renders three <section> panels for 'Recent Orders', 'Recent Refunds', and 'Recent Disputes' via a shared <DashboardPanel> component. The first two pass an aria-label prop; a later contributor copy-pasted the JSX for the disputes panel and dropped the aria-label prop. All three render as visually identical bordered panels with headings. Is there an accessibility problem, and would a visual review catch it?",
+      "expected_output": "Yes, and a visual review would miss it. An HTML <section> is exposed to assistive tech as an ARIA region landmark only when it has an accessible name (aria-label, aria-labelledby, or title); the disputes <section> with no name maps to no landmark role at all -- it is not a badly-labeled region, it is simply absent from landmark/rotor navigation. A screen-reader user browsing by region reaches 'Recent Orders' and 'Recent Refunds' but never 'Recent Disputes', with no visual cue anything is missing, because the three panels render identically. Fix: pass the same aria-label (or aria-labelledby) prop the other two instances already receive. Detection is a landmark/rotor list pulled from the accessibility tree, not the DOM or a screenshot -- the difference between the three instances is a single missing prop, easy to miss by eye across separate call sites.",
+      "expectations": [
+        "Identifies that the unnamed <section> maps to no ARIA landmark role at all (not merely an unlabeled one) and is therefore absent from landmark/rotor navigation",
+        "States that a visual/screenshot review cannot catch this because all three panels render identically -- the gap only shows up in the accessibility tree / landmark list",
+        "Prescribes passing the same aria-label/aria-labelledby the sibling instances already receive, and detecting via the landmark/rotor list rather than the DOM"
+      ]
+    },
+    {
+      "id": "focus-restore-to-trigger-applies-to-every-dismissible-overlay-not-only-modals",
+      "prompt": "A combobox-style filter dropdown opens a listbox on click; pressing Escape or clicking outside closes it via a single isOpen boolean, with no other focus handling. QA confirms the modal dialog elsewhere in the app correctly returns focus to its trigger button when it closes. Is the dropdown's focus handling adequate?",
+      "expected_output": "No. The restore-focus-to-the-trigger rule the modal correctly implements is not modal-specific -- it applies to any dismissible overlay: popover, dropdown/select menu, combobox listbox, flyout, or click-triggered tooltip. A bare isOpen boolean plus an Escape/outside-click handler with no captured trigger ref and no .focus() call back onto it means that on close, focus falls to <body> -- a keyboard user who opened the filter is dumped at the top of the page with no sense of where they were, even though the identical bug is already fixed for the modal elsewhere in the same app. Fix: capture the trigger element's ref when the dropdown opens and call .focus() on it from every path that closes the dropdown (Escape, outside-click, and item-selection alike) -- the same shape the modal's close function already uses.",
+      "expectations": [
+        "States that restore-focus-to-the-trigger is not modal-specific -- it applies to the whole dismissible-overlay class (popover, dropdown/select menu, combobox listbox, flyout, tooltip)",
+        "Identifies the tell: a bare boolean open/close state with an Escape/outside-click handler that never captures a trigger ref or calls .focus() back on close",
+        "States the consequence -- focus falls to <body> on close, disorienting a keyboard user -- and prescribes restoring focus in every dismiss path (Escape, outside-click, selection), mirroring the modal's already-correct pattern"
+      ]
     }
   ]
 }
