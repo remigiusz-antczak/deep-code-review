@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.270.0] — 2026-09-20
+
+### deep-code-review — wave 191 an LLM self-report boolean gated with a loose comparison fails open
+
+- **`security-ai-agents.md`** Defensive patterns: a model's self-report boolean is untrusted input. A **negated** comparison `if (res.safe !== false)` takes the permissive branch for everything except the boolean `false` — an omitted field, `null`, a wrong-typed `"false"`/`0`, or a failed parse all pass, exactly the outputs a hallucinating/prompt-injected/truncated model produces (and bare truthiness `if (res.safe)` is the *inverse* footgun: fails closed on `null`/`0`/omitted but open on truthy junk like the string `"false"`). Require the field present and boolean, demand an explicit `=== true` for the permissive branch, fail closed otherwise; and a model self-grading its own output must corroborate a deterministic check, never replace it — self-reported evidence is not a trusted control (cross-ref `data-quality.md` §7, `branch-and-merge-hygiene.md`, `model-tiering.md`). +1 eval. Independent reviewer PASS-WITH-FIXES: corrected the fail-open scope (the negated comparison, not bare truthiness — which has the inverse hole) and added the self-report-evidence cross-refs. Closes #644.
+
 ## [1.269.0] — 2026-09-20
 
 ### deep-code-review — wave 190 startup dependency-readiness: gate readiness and retry at boot instead of crash-looping

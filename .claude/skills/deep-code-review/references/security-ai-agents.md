@@ -282,18 +282,21 @@ LLM-backed feature, add cases that assert the guardrail holds:
   off-schema output before use.
 - **A model's self-report boolean is untrusted input — compare it strictly, fail closed,
   and never let it be the sole gate.** Gating an allow/skip/"it's safe" decision on an
-  LLM-returned flag with a loose or negated comparison (`if (res.safe !== false)`, or bare
-  truthiness) takes the **permissive** branch whenever the field is **omitted, `null`,
-  wrong-typed (`"false"`, `0`), or the parse failed** — exactly the outputs a model that
-  hallucinated, was prompt-injected, or truncated on a token limit produces. Require the
-  field **present and boolean**, make the permissive branch demand an explicit `=== true`,
-  and route every other case to the deny/safe branch (fail closed — the same discipline as
-  the boolean parser in `data-quality.md` §7: accept the shape set, treat an unknown value
-  as exclude). And a model **self-grading its own output** ("is this compliant/complete/
-  safe?") can be wrong or coerced by the same injection that produced the bad output, so a
-  self-report must **corroborate** a deterministic check (allowlist, argument validation at
-  the tool boundary), never replace it. Test with the field missing, `null`, and wrong-typed,
-  and confirm the safe branch is taken.
+  LLM-returned flag with a **negated** comparison — `if (res.safe !== false)` — takes the
+  **permissive** branch for **everything except the boolean `false`**: an **omitted** field,
+  `null`, a wrong-typed `"false"`/`0`, or a failed parse all pass — exactly the outputs a
+  model that hallucinated, was prompt-injected, or truncated on a token limit produces.
+  (Bare truthiness `if (res.safe)` is the **inverse** footgun: it fails *closed* on
+  `null`/`0`/omitted but *open* on truthy junk like the **string** `"false"` or an object.)
+  Require the field **present and boolean**, make the permissive branch demand an explicit
+  `=== true`, and route every other case to the deny/safe branch (fail closed — the same
+  discipline as the boolean parser in `data-quality.md` §7: accept the shape set, treat an
+  unknown value as exclude). And a model **self-grading its own output** ("is this
+  compliant/complete/safe?") can be wrong or coerced by the same injection that produced the
+  bad output, so a self-report must **corroborate** a deterministic check (allowlist, argument
+  validation at the tool boundary), never replace it — **self-reported evidence is not a
+  trusted control** (cross-ref `branch-and-merge-hygiene.md` and `model-tiering.md`). Test
+  with the field missing, `null`, and wrong-typed, and confirm the safe branch is taken.
 - **Least-privilege tools** with allowlisted actions and argument validation at
   the tool boundary (not left to the model to "please only…"). **Locate the
   actual dispatch path and its one pre-execution chokepoint** (a
