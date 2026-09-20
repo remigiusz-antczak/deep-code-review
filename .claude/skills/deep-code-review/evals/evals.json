@@ -3071,6 +3071,16 @@
         "Identifies this as OWASP API4's spend/billing sub-case, distinct from compute/CPU/memory exhaustion",
         "Prescribes a provider-side spend ceiling or billing alert AND a per-operation throttle (per-account daily cap), not merely tightening the per-IP rate limit"
       ]
+    },
+    {
+      "id": "csv-export-of-stored-strings-needs-formula-injection-escaping-not-html-escaping",
+      "prompt": "Review this export endpoint:\n\n```python\nimport csv\ndef export_customers(rows, out):\n    w = csv.writer(out)\n    w.writerow([\"name\", \"coupon_code\", \"notes\"])\n    for r in rows:\n        w.writerow([r.name, r.coupon_code, r.notes])  # user-editable profile fields\n```\nThe team notes these fields are already HTML-escaped everywhere they render in the web UI, so they consider injection handled. Assess.",
+      "expected_output": "HTML-escaping protects the web UI but does nothing for this CSV export — the output context differs. A stored field whose value starts with `=`, `+`, `-`, `@`, a tab, or a NUL is written verbatim and parsed as a FORMULA by Excel/Sheets/LibreOffice when the file is opened (CWE-1236, CSV/formula injection) — e.g. `=WEBSERVICE(...)` / `=cmd|...` — firing on open, with no injection into the app itself. Fix at EXPORT time: prefix a single quote before any such leading character (ASVS v5.0.0-1.2.10, L3, names exactly '=','+','-','@',tab,null, and requires RFC 4180 escaping for the CSV) — do not rely on the web UI's HTML escaping and do not just reject the field at input time. Applies to XLS/XLSX/ODS exports too, not only CSV.",
+      "expectations": [
+        "States HTML-escaping does not protect the CSV/spreadsheet export — a different output context — so 'already HTML-escaped' is insufficient",
+        "Names the specific dangerous leading characters (=, +, -, @, tab, null) and that they are parsed as a formula by the spreadsheet app on open (CWE-1236 / CSV formula injection)",
+        "Prescribes escaping at EXPORT time (prefix a single quote to a leading dangerous char; RFC 4180 escaping), not input-time rejection and not relying on the UI's HTML escaping"
+      ]
     }
   ]
 }

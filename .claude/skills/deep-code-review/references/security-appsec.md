@@ -368,6 +368,23 @@ entities and DTDs** (XXE, CWE-611) — `defusedxml` in Python,
 `noent: False` for lxml. Same posture for any format with an include/reference
 mechanism (XSLT, SVG `<use>`, YAML anchors, spreadsheet formulas).
 
+**CSV / spreadsheet formula injection (export direction, CWE-1236).** The upload
+checks above guard *inbound* files (the include/reference line even names inbound
+spreadsheet formulas, for XXE); a data **export** — CSV, or an XLS/XLSX/ODS generated
+from stored rows — is the *outbound* mirror and needs its own check. Any stored,
+user-controlled string (a display name, a coupon code, a free-text note) whose value
+**starts with** `=`, `+`, `-`, `@`, a tab, or a NUL is parsed as a **formula** by the
+spreadsheet app that opens the export, not as text — an exfiltration / RCE-adjacent
+chain (`=WEBSERVICE(...)`, `=cmd|...`) that fires the moment a human opens the file,
+with **no injection into your app** required. HTML-escaping the same field for the web
+UI does **nothing** here — a different output context. Fix at **export** time: prefix
+a single quote before any such leading character. ASVS v5.0.0-1.2.10 (L3) names the
+exact set — "special characters (including '=', '+', '-', '@', '\t' (tab), and '\0'
+(null character)) must be escaped with a single quote if they appear as the first
+character in a field value" — and also requires RFC 4180 escaping for the CSV itself.
+🚩 a CSV / XLSX export path (`csv.writer`, `fast-csv`, SheetJS / `xlsx` write, a manual
+comma-join) writing a stored field with no leading-character check.
+
 ## A06:2025 — Insecure Design
 
 A missing control, not a buggy one. **How to detect**: is there a threat model

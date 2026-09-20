@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.246.0] — 2026-09-20
+
+### deep-code-review — wave 167 CSV / spreadsheet formula injection, export direction (A05)
+
+- **`security-appsec.md`** (A05): the upload checks guard *inbound* files; a data EXPORT (CSV, or XLS/XLSX/ODS from stored rows) is the outbound mirror. A stored user-controlled string starting with `=`/`+`/`-`/`@`/tab/NUL is parsed as a formula by the spreadsheet app on open (CWE-1236) — `=WEBSERVICE(...)`/`=cmd|...` — firing with no injection into the app; HTML-escaping for the web UI does nothing (different output context). Fix at export time: prefix a single quote before any such leading character (ASVS v5.0.0-1.2.10, L3) and follow RFC 4180 escaping.
+- +1 eval; +2 standards rows (OWASP ASVS v5.0.0-1.2.10 L3; CWE-1236 — verbatim via raw fetch 2026-09-20). Completes the ASVS/API deep-dive's 5 security-appsec gaps (TLS-cert, smuggling, API6, API4-spend, CSV).
+
 ## [1.245.0] — 2026-09-20
 
 ### deep-code-review — wave 166 API4 unrestricted resource consumption (spend axis)

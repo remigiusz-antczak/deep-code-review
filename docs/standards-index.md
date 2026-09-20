@@ -653,3 +653,11 @@ determination routes to counsel).
 |---|---|---|
 | OWASP API4:2023 — Unrestricted Resource Consumption | https://api-security.owasp.org/editions/2023/en/0xa4-unrestricted-resource-consumption/ | "Configure spending limits for all service providers/API integrations. When setting spending limits is not possible, billing alerts should be configured instead." Fetched + verified 2026-09-20. |
 | CWE-770 — Allocation of Resources Without Limits or Throttling | https://cwe.mitre.org/data/definitions/770.html | Title verbatim: "Allocation of Resources Without Limits or Throttling." Fetched + verified 2026-09-20. |
+
+## Verified by direct fetch (2026-09-20) — CSV / spreadsheet formula injection (A05)
+
+| Standard / source | URL | What was confirmed |
+|---|---|---|
+| OWASP ASVS v5.0.0-1.2.10 (Encoding and Sanitization) | https://github.com/OWASP/ASVS/blob/v5.0.0_release/5.0/en/0x10-V1-Encoding-and-Sanitization.md | Level 3: "protected against CSV and Formula Injection ... when exporting to CSV or other spreadsheet formats (such as XLS, XLSX, or ODF), special characters (including '=', '+', '-', '@', '\t' (tab), and '\0' (null character)) must be escaped with a single quote if they appear as the first character in a field value." Also requires RFC 4180 §2.6/2.7 escaping. Verified 2026-09-20 at tag v5.0.0_release. |
+| CWE-1236 — Improper Neutralization of Formula Elements in a CSV File | https://cwe.mitre.org/data/definitions/1236.html | Title verbatim: "Improper Neutralization of Formula Elements in a CSV File." Fetched + verified 2026-09-20. |
+
