@@ -149,6 +149,66 @@ grep -rInE 'console\.log|print\(|dbg!|System\.out\.print|fmt\.Print' .
   extracted with no size or ratio cap, or XML parsed with entity expansion enabled
   (billion-laughs): a small input that inflates to gigabytes. Cap the decompressed
   size and disable external/DTD entity resolution.
+- **Algorithmic-complexity / hash-flooding on attacker-chosen keys (CWE-407)** — a
+  keyed structure (`dict`/`Map`/`HashMap`/`HashSet`) fed attacker-*chosen* keys, or
+  a user-suppliable sort/dedup/group-by comparator (`sorted(data, key=...)`,
+  `.sort((a, b) => …)`, a custom `Comparator`/`Comparable` driven by request data),
+  degrades from amortized O(1) to O(n) per operation — O(n²) total — when the keys
+  are crafted to collide into the same bucket, **even under a normal-looking
+  item-count cap**: the count is fine, the *keys* are the attack (CWE-407's own
+  observed examples, verbatim: "CPU consumption via inputs that cause many hash
+  table collisions."). `performance-db-cost.md`'s count/iteration cap does not
+  defend against this. Distinct from the GraphQL query-cost/batching/aliasing item
+  in `security-appsec.md` — that's request-*multiplication* (more fields/operations
+  than a per-request budget allows); this is worst-case complexity from
+  attacker-*chosen values* inside one, already count-bounded request. Verify the
+  target's hash-map implementation before prescribing a fix: a randomized hash
+  seed/SipHash or a treeified-bucket fallback are known mitigation shapes for this
+  class in general, but are **not** stated on the CWE-407 page and may already be
+  the runtime's default — don't assert either way without checking.
+- **Uncontrolled recursion on nested untrusted input (CWE-674, alternate term
+  "Stack Exhaustion")** — a recursive-descent parser (hand-rolled, or a
+  JSON/YAML/XML/protobuf library whose depth handling you haven't confirmed)
+  walking attacker-supplied nesting (`[[[[[…]]]]]`, deeply nested objects) exhausts
+  the call stack on a payload of a few KB (CWE-674's own observed example,
+  verbatim: "Deeply nested arrays trigger stack exhaustion."). Distinct from the
+  decompression bomb above — that's *byte-size* amplification, caught by an
+  output-size cap; this is *call-stack depth*, which a tiny, low-byte payload sails
+  through that same cap to reach. Distinct too from `security-appsec.md`'s API10
+  "bound size and recursion" clause — that's the app **consuming an upstream
+  response** (outbound/client direction); this bullet is the **inbound** direction,
+  a public endpoint parsing an attacker-supplied request body. Distinct, too, from
+  the generic "max depth" cost-cap in `performance-db-cost.md` (an efficiency bound,
+  not a stack-crash defense) and from `security-appsec.md`'s GraphQL query-depth
+  limit (which bounds resolver depth over a parsed query AST at the application
+  layer, not a raw deserializer's call-stack depth at the syntax layer). Grep the inbound
+  parse call itself (`json.loads(`, `JSON.parse(`, `yaml.safe_load(`, an XML
+  tree-builder call, `Unmarshal(`, a protobuf `parseFrom`/`ParseFrom`) and check
+  whether a max-depth/recursion-limit option is set **on that specific call** —
+  don't assume a library's default nesting-depth behavior is either safe or unsafe
+  without reading its docs for the version in use. Fix: set or confirm the
+  library's max-depth option, or add an explicit fail-closed recursion counter, on
+  the inbound-parsing path specifically.
+- **Unbounded allocation from a declared/untrusted size value (CWE-789)** — code
+  reads a size, count, or dimension *from inside the payload itself* (a JSON
+  `"count"` field, an image's declared width×height, a multipart part-count) and
+  pre-allocates a buffer/array to that size **before** validating the real bytes
+  received, so a tiny request can claim a multi-gigabyte allocation (CWE-789's own
+  observed examples: "a large value for number of records to return, leading to
+  allocation of a large array"; "memory consumption and daemon exit by specifying a
+  large value in a length field"). Grep an allocation call fed straight from a
+  parsed field — `malloc(declared_size)`, `new byte[declared_size]`,
+  `Buffer.alloc(declared_size)`, `make([]T, declared_len)` — and read backward to
+  confirm whether that size traces to an unclamped value inside the payload.
+  Distinct from the wire-level upload-size cap and the API10 "bound size" clause in
+  `security-appsec.md` — both bound bytes actually *transferred*/received, not a
+  size *claimed inside* a payload before those bytes arrive. Distinct too from the
+  C/C++ section's "integer overflow before `malloc`" above — that's an *undersized*
+  allocation from an overflowed calculation, leading to a buffer overflow (memory
+  corruption); this is an *oversized* allocation from a value trusted as-is,
+  leading to memory exhaustion (availability) — different consequence, different
+  fix. Clamp the declared size to a sane ceiling before allocating, or allocate
+  incrementally as bytes actually arrive.
 
 ## Shell / Bash
 

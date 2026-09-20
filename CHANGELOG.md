@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.316.0] — 2026-09-20
+
+### deep-code-review — algorithmic-complexity / resource-exhaustion DoS (hash-flooding, uncontrolled recursion, excessive-size allocation)
+
+- **`language-stack-redflags.md`** DoS section, 3 CWE-backed folds: (1) **CWE-407 hash-flooding** — attacker-chosen *keys* into a hash-map or comparator force worst-case O(n²), surviving an item-count cap (the attack is in the keys, not the count). (2) **CWE-674 uncontrolled recursion** — a recursive-descent parser on attacker-nested input exhausts the call stack on a few-KB payload; distinct from the decompression bomb (byte-size), API10 upstream-consumption, the generic "max depth" cost-cap, and the GraphQL resolver-depth limit. (3) **CWE-789 excessive-size allocation** — trusting a size/count/dimension declared *inside* the payload to pre-allocate; distinct from the wire-level upload cap and the C/C++ integer-overflow-before-`malloc` bullet (oversized→exhaustion vs undersized→corruption). Mitigation shapes + library depth-defaults are hedged as verify-against-target (not on the CWE pages). +3 curl-verified `docs/standards-index.md` rows; +3 evals.
+- Research-derived expansion (no filed issue). Built by a worktree builder subagent, independently reviewed **PASS-WITH-FIXES**: the reviewer re-curled all three CWE pages and byte-verified every quote including all six CVE lines (append-only proven at object equality); fixes applied — added the CWE-674 cross-refs to the "max depth" cost-cap and GraphQL depth-limit neighbors (airtight the no-restatement distinction), and corrected the standards-index title attribution to "page heading verbatim" (the `<title>` element carries a "CWE - " prefix the quote omits).
+
 ## [1.315.0] — 2026-09-20
 
 ### deep-code-review — cryptographic-usage correctness (nonce/IV reuse, constant-time comparison, KDF cost floor, DEK/KEK separation)
