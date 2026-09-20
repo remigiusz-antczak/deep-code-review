@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.366.0] — 2026-09-21
+
+### deep-code-review — a hand-rolled loading skeleton bypasses the accessible shared loader, so loading is silent to screen readers (#838)
+
+- **`frontend-a11y.md`**: a call site that reimplements a shimmer/skeleton inline (`<div className="skeleton">`, `animate-pulse`) with no `aria-busy`/`role="status"`/`aria-live` — while a *correct* shared `<Loader/>`/`<Spinner/>` (with the right busy-region semantics) already exists — is both inaccessible (an AT user gets no loading announcement or completion update through its whole lifecycle) and needless duplication. The **inverse** of the loading-announce bullet (which is a defect *inside* the shared component): here the shared component is right and the fix is **reuse** (so the announcement propagates), not patching the inline copy. Detection inverts the loading-announce sweep — find inline skeletons where a shared accessible loader is available. +1 eval.
+
 ## [1.365.0] — 2026-09-21
 
 ### agentic-delivery — re-running the generator after the commit re-stamps its own output; a one-shot dirty tree that hangs the push (#854)

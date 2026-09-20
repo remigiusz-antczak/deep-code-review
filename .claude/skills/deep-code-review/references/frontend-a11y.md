@@ -154,7 +154,10 @@ without regressing a deliberate design.
   component and assert `getByRole('status')` (or the role used) resolves and
   contains the expected text, not only a DOM snapshot. Cross-ref
   `product-ux-quality.md` for whether the skeleton/spinner *design* is right —
-  this is only the announcement half.
+  this is only the announcement half. And see the inverse below — a call site
+  that hand-rolls a skeleton while a *correct* shared loader already exists,
+  where the fix is reuse (so the announcement propagates), not patching the
+  copy.
 - **An async action's *outcome* that unmounts the focused control needs a live region AND explicit
   focus continuity — two failures, not one.** Distinct from the loading-announce bullet above (an
   *ongoing wait*): here the action has *resolved*, and the success/error message replaces the very
@@ -170,6 +173,38 @@ without regressing a deliberate design.
   the outcome — over replacing it; if it must be replaced, move focus explicitly to the replacement
   (`ref.current?.focus()`). Test both halves: `getByRole('status'|'alert')` resolves with the
   outcome text, **and** `document.activeElement !== document.body` afterward.
+- **A loading placeholder hand-rolled at a call site while a *correct* shared
+  loader already exists is one defect wearing two hats — needless duplication
+  *and* an accessibility regression the shared fix can't reach.** The
+  loading-announce bullet above is a defect *inside* the shared component (it
+  has `aria-busy`/a label but no live-region role); this is the inverse. The
+  shared `<Loader/>`/`<Spinner/>` is *correct* — its busy-region semantics
+  already announce — and one screen reimplements the same shimmer inline
+  (`<div className="skeleton">` block grids, `animate-pulse`) with **no**
+  `aria-busy`, `role="status"`, or `aria-live` at all, so through its whole
+  loading window an assistive-tech user hears nothing (no "content pending", no
+  update when it arrives) while the sighted reviewer sees a polished shimmer
+  that *matches the rest of the app* and approves. The two faults are coupled,
+  not coincidental: because the copy never renders *through* the shared
+  component, the accessibility baked into that component — and its next a11y
+  fix — never reaches this surface (`product-ux-quality.md`'s "adoption is
+  total" and "a fix to a shared concept lands in the shared component"
+  bullets). Detection inverts the loading-announce sweep: don't audit the
+  shared loader's ARIA — find the correct shared loader, list its importers,
+  and diff that set against components that render loading placeholders (grep
+  bespoke skeleton scaffolding — a `className` containing
+  `skeleton`/`shimmer`/`pulse`, or repeated placeholder block `<div>`s — in
+  files importing no shared loader); each such hit is a call site that
+  hand-rolled instead of reused. Fix in order: **reuse the shared loader** —
+  that, not patching the copy, is what makes every future announcement fix
+  propagate; bolting `role="status"` onto the hand-rolled grid cures today's
+  silence but keeps the duplication and the next drift. Only if a bespoke
+  skeleton is genuinely unavoidable, wrap it in the announced busy region per
+  the loading-announce bullet above. Regression-test the reused path: assert
+  the placeholder renders through the shared loader (its `getByRole('status')`
+  resolves), not a raw div grid. **Distinct** from the dead-`<Suspense>`
+  bullet under Reliability & performance (a fallback that never *renders*) —
+  this loader renders fine and is merely silent.
 
 **Keyboard & focus** (WCAG 2.1.1, 2.4.3, 2.4.7, and 2.2's 2.4.11)
 - Everything actionable is reachable and operable by keyboard alone; logical tab
@@ -875,7 +910,11 @@ third-party origin with no `integrity=`; a weakened `Referrer-Policy` (`unsafe-u
 small lookup helper imported from a shared module that also builds a derived singleton over
 an entire large dataset (walk the client import graph, stripping type-only imports, for an
 edge into that module); a loading/skeleton component with `aria-busy` and/or a label prop but
-no `role="status"`/`role="alert"`/`aria-live` on it or an ancestor; a `<Suspense fallback={…}>`
+no `role="status"`/`role="alert"`/`aria-live` on it or an ancestor; bespoke skeleton/shimmer
+markup (a `className` containing `skeleton`/`shimmer`/`animate-pulse`, or repeated placeholder block
+`<div>`s) in a component that imports **no** shared loader although an accessible one exists elsewhere
+(a hand-rolled copy that both duplicates and stays silent — list the shared loader's importers and
+diff); a `<Suspense fallback={…}>`
 whose subtree loads data only via `useEffect`+`setState` or receives already-resolved props, with
 no `lazy()`/`use()`/suspense-enabled hook and no unresolved promise crossing it (the fallback is
 dead); an identity/singleton-read hook (`useUser`/`useSession`/`useCurrentUser`) that `fetch`es in
