@@ -3,6 +3,14 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.265.0] — 2026-09-20
+
+### deep-code-review — wave 186 React render/bundle perf: memoized-callback needs a memo boundary; heavy lib gated at import not render (closes #629, closes #628)
+
+- **`frontend-a11y.md`** (Core Web Vitals): a memoized callback (`useCallback`) needs a memoized **recipient** — without `React.memo` on the row, a parent state change re-renders every mounted row regardless of stable props (necessary but not sufficient); windowing bounds mount count, not re-render cost. Fix: `React.memo` the row (low-risk *because* props are already stable) + a render-count acceptance check. (#629)
+- **`frontend-a11y.md`**: a heavy optional-feature library (editor/chart/PDF/highlighter) rendered behind an interaction gate but **statically imported** from an always-mounted list/row component ships in **every route's bundle** — the gate that matters for bundle weight is the *import*, not the render. Fix: defer via `next/dynamic` / `React.lazy` / inline `import()`. (#628)
+- +2 evals. Closes #629, #628. Independent reviewer PASS-WITH-FIXES: removed a stray blank line that had turned the tight CWV list loose (a CommonMark-verified do-no-harm regression on untouched bullets), reworded an illustrative figure to the file's generalize-the-principle convention, and tightened the memo eval's prop-stability premise.
+
 ## [1.264.0] — 2026-09-20
 
 ### deep-code-review — wave 185 eval-suite quality: Domain-L/T coverage + de-vacuous/de-dup/de-leak

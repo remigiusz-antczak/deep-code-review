@@ -324,6 +324,34 @@ production-like server).
   returning what the view needs in one round trip), and prefetch/colocate data with the
   route so it fires on navigation. Measure the request-waterfall, not only the bundle
   budget. (Chrome Lighthouse, *critical request chains*.)
+- **A memoized callback needs a memoized recipient — stable props alone don't stop
+  re-renders.** In a list/queue rendering N rows via `.map()`, if the parent holds shared
+  per-row state (a selection set, per-row drafts, a filter) that changes on ordinary
+  actions, React re-invokes and reconciles **every mounted row** on each parent state change
+  — even rows whose own props are unchanged — unless the row is wrapped in `React.memo`.
+  `useCallback`/`useMemo` keeping props referentially stable is **necessary but not
+  sufficient**: a stable callback passed to a *non-memoized* child still triggers a full
+  re-render (React calls the child to get its new element tree regardless).
+  Windowing/pagination bounds how many rows *mount*, not the re-render cost of the mounted
+  ones. The tell is subtle — the stable-callback code looks "already optimized" (often with
+  comments about avoiding prop churn), so a reviewer stops one level too low. Fix: wrap the
+  row in `React.memo` (low-risk/high-payoff precisely *because* the props are already stable
+  — say so, it defeats the "will memo even help?" objection); acceptance = a render-count
+  check: one row's action re-renders that row only, not the visible set.
+- **A heavy optional-feature library must be gated at the *import*, not just the render.** A
+  rich-text editor, chart/diagram lib, PDF/export, or syntax highlighter that renders only
+  behind an interaction gate (`open`/`editing`/`expanded`) but is **statically imported at
+  module scope** by an always-mounted list/row/card component ships in the bundle of **every
+  route** that transitively imports that component — so the majority of visitors who never
+  trigger the gate still download/parse/compile it (illustratively ~130 KB gzip on the
+  highest-traffic routes). It *looks* optimized because the heavy child renders
+  conditionally — but the gate that matters for bundle weight is the **import**, not the
+  render. Detect: grep each heavy/optional dependency's importers; flag any imported
+  statically from a component mounted on a list/index route where the heavy part only
+  renders behind interaction. Fix: defer it (`next/dynamic` / `React.lazy` / an inline
+  `import()`) behind the same gate the render already uses. Strong tell: the codebase
+  already defers a *different* heavy dep correctly — name that precedent, it makes the fix
+  trivially arguable.
 
 ## Security & compatibility
 

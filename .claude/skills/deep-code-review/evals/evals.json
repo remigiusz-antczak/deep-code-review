@@ -3400,6 +3400,26 @@
         "Names both mechanisms: a shared queue with no per-tenant fairness (one tenant starves the pool) and a globally-keyed rate limiter (one tenant 429s everyone)",
         "Prescribes per-tenant quotas/fairness/queues + a per-tenant-keyed limiter + bounding a bulk op's blast radius"
       ]
+    },
+    {
+      "id": "memoized-callbacks-without-a-memoized-recipient-still-re-render-every-row",
+      "prompt": "A list renders ~150 rows via `.map()`; the parent holds a 'selected ids' set and a text filter that change on every click/keystroke. The team carefully wrapped all callback props in `useCallback` (with comments explaining they're avoiding prop churn), and each row receives only stable props on a filter-only update — its item data, an `isSelected` boolean derived from the set, and the memoized handlers — and pagination caps the visible rows. Typing in the filter still janks — every row re-renders on each keystroke. Why, given the stable callbacks + pagination, and what's the fix?",
+      "expected_output": "Because a memoized callback only helps if its RECIPIENT is memoized. The row is a plain function component (not React.memo), so on every parent state change (a keystroke updating the filter, a click updating the selected set) React re-invokes and reconciles every mounted row — even rows whose own props are unchanged — regardless of how stable the callback props are; React still calls the child to produce its new element tree. useCallback/useMemo keeping props referentially stable is necessary but not sufficient. Pagination/windowing bounds how many rows MOUNT, not the re-render cost of the mounted ones, so 150 rows still fully re-render per keystroke. Fix: wrap the row component in React.memo — and note it is low-risk/high-payoff precisely because the props are ALREADY stable (that defeats the 'will memo actually help, or will props churn defeat it?' objection). Acceptance: a render-count check — one row's action should re-render that row only, not the whole visible set. The stable-callback code looking 'already optimized' (with its own comments) is exactly why the missing memo boundary one level up gets overlooked.",
+      "expectations": [
+        "Identifies the missing memo boundary: the row isn't React.memo'd, so parent state changes re-render every mounted row regardless of stable callbacks (stable props are necessary but not sufficient)",
+        "Notes pagination/windowing bounds mount count, not re-render cost, so it doesn't solve this",
+        "Prescribes React.memo on the row (low-risk BECAUSE props are already stable) with a render-count acceptance check (one row's action re-renders only that row)"
+      ]
+    },
+    {
+      "id": "heavy-optional-library-static-imported-from-an-always-mounted-component-bloats-every-route",
+      "prompt": "A card component used across three high-traffic list routes (dashboard, inbox, my-items) statically imports a rich-text editor library at module scope. The editor only renders when the user clicks 'edit' (behind an `editing` gate). A reviewer checks 'is the editor gated?', sees yes, and approves. The editor adds ~130KB gzip. Is the bundle cost handled?",
+      "expected_output": "No. The editor's RENDER is gated, but its IMPORT is not — a static import at module scope means the bundler ships the library in the bundle of every route that transitively imports the card component, so all three high-traffic list routes carry the ~130KB even though most visitors never click 'edit.' The reviewer checked the wrong gate: for bundle weight the gate that matters is the import, not the render. Fix: defer the library behind the same interaction gate the render already uses — next/dynamic / React.lazy / an inline await import(...) triggered on 'edit' — so only users who actually open the editor download it. Detect the class generally by grepping each heavy/optional dependency's importers and flagging any imported statically from a component mounted on a list/index route where the heavy part only renders behind interaction. Strong tell: if the codebase already defers a different heavy dependency correctly (e.g. a doc-export lib via await import() from a click handler), name that precedent — it makes the fix trivially arguable.",
+      "expectations": [
+        "Identifies that a static import ships the heavy lib in every route's bundle regardless of the render gate — the reviewer checked the render gate, but the IMPORT determines bundle weight",
+        "Prescribes deferring the import behind the same interaction gate (next/dynamic / React.lazy / inline import()) so only users who trigger it download it",
+        "Gives the detection method (grep the heavy dep's importers; flag static import from a list-route-mounted component) and/or the existing-precedent tell"
+      ]
     }
   ]
 }
