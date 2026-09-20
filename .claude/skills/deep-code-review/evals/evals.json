@@ -3101,6 +3101,16 @@
         "Requires surfacing a one-action human-run unblock up front on the first denial (a copy-pasteable `! <command>` the user runs, or a GUI action) — noting it is not permission-laundering because the human issues it",
         "Requires tracking banked-verified vs landed and escalating the human ask when banked>0/landed=0 persists, rather than re-narrating the block"
       ]
+    },
+    {
+      "id": "a-branch-protection-required-check-name-that-drifts-from-the-workflows-job-names-blocks-every-pr",
+      "prompt": "Every PR to `main` suddenly shows a required check `build (18.x)` stuck pending forever and can't merge. The CI workflow was just refactored — the job that used to be named `build (18.x)` is now `build (20.x)`. Branch protection still lists `build (18.x)` as a required status check. What's the diagnosis and fix?",
+      "expected_output": "The branch-protection required-check NAME list drifted from the workflow's actual job names: the rename (`build (18.x)` → `build (20.x)`) left branch protection requiring a status name (`build (18.x)`) that no job emits anymore, so that required check never reports, stays pending, and blocks every PR. It reads as 'a required check never ran,' but the cause is a stale hardcoded required name, not a trigger/`on:` gap. Fix: update branch protection to require the current job name (`build (20.x)`), and keep the two enumerations in sync going forward — derive the required-check list from the workflow definition, or add a test/check asserting the required names are a subset of the job names the workflow can emit, so a rename fails CI loudly instead of silently wedging the merge queue. (Mirror case: a check dropped from the workflow but left 'required' blocks the same way.)",
+      "expectations": [
+        "Diagnoses a drift between the branch-protection required-check NAME and the workflow's actual job name (the rename left the old required name with no producer), not a trigger/on: gap or a flake",
+        "States the stale required name reports no status forever and blocks EVERY PR (and names the mirror: a check removed from the workflow but left required)",
+        "Fixes by syncing the two sets — update the required name AND derive the required list from the workflow or add a test asserting required-names ⊆ workflow-job-names, so a future rename fails loudly"
+      ]
     }
   ]
 }

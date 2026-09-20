@@ -459,6 +459,20 @@ saw this PR — `SKILL.md` principle 2). Two ways it happens:
   as normal (*passive wait*) is the mirror error. Cancel with a note naming the evidence (last
   log line, elapsed time) so the next reader knows it was a hang, not a flake or a stale push.
 
+- **The branch-protection required-check *name* list and the workflow’s job names are two
+  enumerations that drift.** Distinct from the trigger-config case above (a check that never
+  fires for a PR): here a job is **renamed or retired** in the workflow while branch protection
+  still *requires* the **old** status-check name — the old name now has no producer, reports no
+  status forever, and blocks **every** PR (and the mirror: a check dropped from the workflow but
+  left required). It reads as "a required check never ran," but the cause is a stale hardcoded
+  name, not a trigger gap. Keep the two sets **in sync**: derive the required-check list from the
+  workflow definition, or add a test asserting `{required-check names} ⊆ {job names the workflow
+  can emit}` so a rename fails CI **loudly** instead of silently wedging the queue (the **Lockstep
+  surfaces** discipline, `domain-checklists.md` — file sets that must change together). A retired
+  check name often has **more than one consumer** — branch protection, a local merge-preflight
+  script, a merge-queue config — so when a gate moves or is renamed, audit **every** consumer,
+  not just the one that surfaced the block.
+
 Read the check's **conclusion**, never the bare colour; a required check with no run
 for this PR is a **High** merge-blocker in its own right — name it a config gap (the
 check is unsatisfiable as wired), not a flake to wait out.

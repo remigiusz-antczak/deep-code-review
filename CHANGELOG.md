@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.249.0] — 2026-09-20
+
+### deep-code-review — wave 170 branch-protection required-check-name drift blocks every PR (closes #549)
+
+- **`branch-and-merge-hygiene.md`** (required-check-satisfiable): distinct from the trigger-config case (a check that never fires for a PR) — a job renamed/retired in the workflow while branch protection still requires the OLD status-check name leaves that name with no producer, so it reports no status forever and blocks EVERY PR (mirror: a check dropped from the workflow but left required). Reads as "a required check never ran," but the cause is a stale hardcoded name. Keep the two enumerations in sync (derive the required list from the workflow, or test required-names ⊆ workflow-emittable job names) so a rename fails CI loudly; and a retired name often has more than one consumer (branch protection, a local preflight, merge-queue config) — audit every consumer. Placed with the section's bullet list (cross-ref the Lockstep-surfaces discipline in `domain-checklists.md`).
+- +1 eval. Closes #549. Reviewer FIX-FIRST applied (retargeted a dangling cross-ref; moved the bullet into its list; folded the multiple-consumers audit).
+
 ## [1.248.0] — 2026-09-20
 
 ### agentic-delivery — wave 169 surface the human-run escape hatch when no autonomous path exists (closes #529)
