@@ -13,6 +13,23 @@ Read this when walking a domain in Phase 2 (or a DIFF quick-path that touches th
 - Does it do what the spec/issue/user actually needs — not a plausible adjacent
   thing? Edge cases: empty, null, zero, negative, max/overflow, unicode,
   duplicate, out-of-order, huge, single-element, off-by-one boundaries.
+- **AI-authored code: a call into a *real* dependency must actually exist on the *pinned* version
+  — not just the package.** Beyond package-name hallucination (a whole invented dependency —
+  `security-appsec.md`, `dependency-currency-and-upgrades.md`), an LLM invents a **nonexistent
+  method/function/parameter on a real, already-installed dependency**, or misuses a real one with
+  plausible-but-wrong arguments ("API hallucination, including invoking non-existent APIs and misusing
+  existing ones," `docs/standards-index.md`). The exposure concentrates exactly where a type-checker
+  **cannot** catch it: dynamically-typed call sites, reflection/dynamic dispatch (`getattr`,
+  `obj[name]`), and stringly-typed integration points (an endpoint path or CLI flag built by
+  interpolation). Check: for a new dependency call in an AI-attributed diff, confirm the exact
+  symbol exists on the **lockfile-pinned** version — a type-checker where one runs, else
+  introspection / a stub-diff / a smoke test. Name the **version-drift** case explicitly: a call
+  valid for a plausible *other* version (what the model's training reflects) but not the pinned one
+  reads as a bare type error, so it is "fixed" without anyone naming the hallucination pattern.
+  Elevate scrutiny (don't routine-pass) on a rarely-used method of a well-known library, newly
+  added by an AI-attributed commit, with no test exercising that exact call path. Reviewing
+  AI-authored code is a core use of this suite, so this is a first-class correctness check,
+  not an edge case.
 - **Money & numeric precision**: currency uses integer-minor-units or `Decimal`,
   **never** binary `float`; rounding mode is explicit and consistent;
   accumulation error bounded. (Float-for-money is a textbook Critical.) Amount and

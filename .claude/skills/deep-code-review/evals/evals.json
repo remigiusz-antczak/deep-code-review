@@ -4540,6 +4540,16 @@
         "Identifies the second, compounding failure: the focused control was unmounted (not disabled/relabelled), so keyboard focus silently falls back to <body> and the user loses their place -- distinct from a loading-only missing-live-region case",
         "Prescribes both a live-region role on the outcome AND focus continuity (keep the control mounted disabled/relabelled, or explicitly move focus to the replacement), and a test asserting the role resolves and activeElement is not body"
       ]
+    },
+    {
+      "id": "ai-authored-call-hallucinated-method-on-real-dependency",
+      "prompt": "Reviewing an AI-authored Python diff. It calls `df.groupby('k').aggregate_rolling(window=7)` on a pandas DataFrame -- the code reads plausibly and the PR says 'used pandas rolling aggregation.' The project's lockfile pins pandas 2.1. The change has no test exercising this call. The reviewer runs the linter (passes) and moves on. Is that review sufficient?",
+      "expected_output": "No. `aggregate_rolling` is not a real pandas method (the real API is `df.groupby(...).rolling(window=7).agg(...)`) -- this is API hallucination: an LLM inventing a nonexistent method on a real, installed dependency, distinct from inventing a whole nonexistent package. The linter passing proves little -- a linter does not attempt symbol resolution against a third-party API at all, and a type-checker with stubs often isn't run on pandas-heavy code (and stub coverage can lag the pinned version) -- so a clean lint/type pass is not meaningful reassurance here. The review must verify the exact symbol exists on the LOCKFILE-PINNED version (pandas 2.1): introspect the installed object, diff against its stubs, or -- most decisively -- run a smoke test that actually executes the call path (there is none here, itself a flag). Watch the version-drift variant too: a method that exists in some other pandas version but not 2.1 surfaces as a plain AttributeError/type error that gets 'fixed' without anyone naming the hallucination pattern. Since reviewing AI-authored code is a core use of this suite, treat symbol-existence-on-the-pinned-version as a first-class correctness check, not an edge case.",
+      "expectations": [
+        "Identifies this as API hallucination -- a nonexistent method invented on a real, installed dependency (distinct from package-name hallucination), not a mere typo -- or, at minimum, that the exact symbol must be verified rather than trusted",
+        "Explains a clean lint/type pass is not sufficient reassurance -- a linter does not resolve third-party symbols, and a type-checker with stubs often isn't run on such code (and stubs can lag the pinned version); prescribes verifying the exact symbol on the lockfile-pinned version via introspection/stub-diff/smoke test (the absent test itself a flag)",
+        "Names the version-drift variant (valid in some other version, not the pinned one, surfacing as a bare type error fixed without naming the pattern) and treats symbol-existence-on-pinned-version as a first-class check for AI-authored code"
+      ]
     }
   ]
 }
