@@ -415,7 +415,14 @@ with the fix order. **Distinguish a live defect from a documented past one:**
 comments often narrate fixed incidents in present tense — before reporting, check
 (a) is there a test pinning the corrected behavior? and (b) does
 `git log -S'<symbol>' --oneline` show the fix already landed? If either is yes,
-it is a historical note, not a finding. **Distinguish a defect from intended
+it is a historical note, not a finding. **When a review files its findings as tracked
+issues, dedupe against recently-*closed* issues, not only open ones** — a finding matching an
+issue closed in the last few weeks may already be fixed, so re-filing it re-lanes shipped work
+and erodes trust in the tracker; search closed issues for the symbol/symptom (the route, the
+guard name) before filing. But **a `wontfix` / `duplicate` / `stale` / bot-triage close is not
+a fix** — check the close **reason**, and if the finding still reproduces at HEAD (the Phase 1
+re-validate-the-`file:line`-still-exists check above), file it anyway rather than suppress a
+live defect. **Distinguish a defect from intended
 behavior a test encodes:** before reporting, check whether the proposed fix would
 break an existing **passing** test **present at the base ref** (`git show <base>:` — not one
 the diff itself ships): a **pre-existing** test enshrining the behavior means it is intended

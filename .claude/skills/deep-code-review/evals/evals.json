@@ -3630,6 +3630,16 @@
         "Explains the compounding risk: a genuine intermittent regression slips through the same retry policy once red-then-green is normalized",
         "Prescribes quarantine (non-blocking) + tracked owner + fix deadline + fixing the root nondeterminism; a standing retry>0 to paper over flakes is the finding (bounded retry on a truly external flake only with the rate tracked)"
       ]
+    },
+    {
+      "id": "filing-review-findings-must-dedupe-against-recently-closed-issues-not-only-open",
+      "prompt": "A review run files each new finding as a GitHub issue, deduping against the list of currently OPEN issues to avoid duplicates. It files 'CSRF guard missing on /profile' as a new issue — but that exact issue was found, fixed, and CLOSED three weeks ago. Why did the dedup miss it, and what's the rule?",
+      "expected_output": "The dedup only checked OPEN issues, so a finding already fixed and closed re-files as a fresh 'new' issue — noise that re-lanes already-shipped work and erodes trust in the tracker. When a review files findings as tracked issues, dedup must include recently-CLOSED issues too, not only open ones: search closed issues for the symbol/symptom (the route `/profile`, the guard name) before filing. This pairs with verifying the finding reproduces on current HEAD — one you can't reproduce may already be fixed — but the closed-issue search is the direct dedup; reproduction is the backstop. Fix: widen the dedup window to closed issues over a recent period, and file only after both the open- and closed-issue searches come back clean. One caveat: a `wontfix`/`duplicate`/`stale`/bot-triage close is not a fix — check the close reason, and if the finding still reproduces at HEAD, file it anyway rather than suppress a live defect.",
+      "expectations": [
+        "Identifies that deduping only against OPEN issues re-files an already-fixed-and-closed finding as new (noise / re-lanes shipped work / erodes tracker trust)",
+        "Prescribes including recently-CLOSED issues in the dedup search (by symbol/symptom) before filing, not only open ones",
+        "Notes that a closed issue isn't automatically fixed (a wontfix/duplicate/stale close resolved nothing) — check the close reason and, if it still reproduces at HEAD, file anyway; reproduction is the backstop, not a substitute for the closed-issue search"
+      ]
     }
   ]
 }

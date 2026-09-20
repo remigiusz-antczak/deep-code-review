@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.279.0] — 2026-09-20
+
+### deep-code-review — wave 200 review-method dedup: filed findings must dedupe against recently-closed issues, not only open
+
+- **`method.md`** Phase 4 (Synthesize & rank): when a review files its findings as tracked issues, dedup against recently-**closed** issues, not only open ones — a finding matching a recently-closed issue may already be fixed, so re-filing re-lanes shipped work and erodes tracker trust; search closed issues by symbol/symptom before filing. Caveat: a `wontfix`/`duplicate`/`stale`/bot-triage close is **not** a fix — check the close reason, and if the finding still reproduces at HEAD (the Phase 1 re-validate-`file:line`-exists check), file it anyway rather than suppress a live defect. +1 eval. Independent reviewer PASS-WITH-FIXES: resolved a dangling backstop cross-ref to the actual Phase 1 rule, and added the closed-is-not-fixed nuance (fail-closed). Closes #657.
+
 ## [1.278.0] — 2026-09-20
 
 ### deep-code-review — wave 199 testing depth: test-double fidelity, consumer-driven contract testing, flaky-test quarantine (from a testing-practice comparative pass)
