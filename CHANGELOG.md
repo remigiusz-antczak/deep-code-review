@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.321.0] — 2026-09-20
+
+### agentic-delivery — NEW reference: multi-session / peer coordination (independent sessions, no shared conductor)
+
+- **NEW `agentic-delivery/references/multi-session-coordination.md`** (routed from `agentic-delivery/SKILL.md`): the doctrine for two-or-more **independent peer sessions / machines** coordinating over a shared async channel with **no single orchestrator** — a distinct axis from `fast-agentic-delivery.md`'s one-conductor + subagent-lanes model. Five folds: (**#593**) commit a machine-readable **claim registry**, not a prose thread; (**#597**) one deterministic **pre-write collision probe** (glob-match the registry + live-PR diff + `exclusive_role` check), never "read the thread and hope"; (**#709**) **verify peer liveness** before spending coordination budget (a board yields zero lift with no live reader); (**#711**) track a **high-water mark** and read the full range each sync, not just the newest entry; (**#713**) reconcile crossed work-splits **deterministically** (in-flight anchor + fixed partition + per-item action-time recheck + first-to-reconcile-wins). +5 evals. Closes #593, #597, #709, #711, #713.
+- Built by a worktree builder subagent, independently reviewed **PASS-WITH-FIXES**: routing gate confirmed (new file routed, both directions); doctrine confirmed genuinely absent and the distinct peer/no-conductor axis (cross-refs, not restates, the single-session ownership-map + transcript-is-not-liveness rules); all five issue numbers verified live. Applied the must-fix — declared the `exclusive_role` field in the registry schema so the collision-probe's "well-known field" reference resolves — and renamed rule 4 to "first-to-reconcile-wins" to match its definition.
+
 ## [1.320.0] — 2026-09-20
 
 ### deep-code-review — enforce the upload/body size cap before buffering, not after (OWASP API4 memory axis, #745)

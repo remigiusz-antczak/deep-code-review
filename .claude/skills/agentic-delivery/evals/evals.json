@@ -630,6 +630,56 @@
         "Prescribes a single self-updating/idempotent command that discovers the eligible green set at run time (e.g. list target-branch PRs, exclude a held/owner-gated set, filter to checks-green) instead of naming specific PR numbers",
         "Notes the human runs the command once and can re-run the same command later to sweep newly-green PRs, eliminating the need for the agent to re-issue updated commands"
       ]
+    },
+    {
+      "id": "claim-registry-not-prose-thread",
+      "prompt": "Two Claude sessions, \"Session Nova\" (on a laptop) and \"Session Vega\" (on a build server), coordinate work on a shared repo under the same GitHub account by posting free-text status to one pinned tracker issue -- e.g. \"Nova is taking the checkout module now.\" The operator asks whether that's an adequate way to stop both sessions claiming the same work, and what to do instead.",
+      "expected_output": "Not adequate. Free-text claims force every peer to semantically parse prose to spot a collision, and claim volume across a long thread gets skimmed past -- that shape is exactly how two independently-claimed items can silently touch the same shared component with nothing mechanically checking it. Replace the prose thread with a small, parseable claim registry: one entry per active peer/lane naming at minimum a stable agent id, the path globs or issue refs it claims, its PR URL once opened (a claim can lag its own PR), and a claimed_at/status pair for staleness. The registry, not the thread, becomes the source of truth for \"is this spoken for.\" (multi-session-coordination.md)",
+      "expectations": [
+        "Identifies free-text/prose claims in a shared thread as inadequate because peers must semantically parse them and volume gets skimmed past",
+        "Recommends a structured/machine-readable claim registry with at minimum an agent id, claimed paths/issues, a PR URL, and a claimed-at/status pair",
+        "States the registry (not the prose thread) is the source of truth for whether something is already claimed"
+      ]
+    },
+    {
+      "id": "mechanical-collision-probe-before-write",
+      "prompt": "Two peer sessions, \"Session Atlas\" and \"Session Borealis\", each about to start new work on a shared repo. Today, each one decides whether it's safe to start by reading the coordination issue's comments and eyeballing the diffs of currently open PRs by hand. Is that sufficient?",
+      "expected_output": "Not sufficient -- manual thread-reading and eyeballing PR diffs before every claim is easy to skip and easy to get wrong once claim volume grows. Fold it into one deterministic pre-write probe, run before opening any write-lane or exclusive step: glob-match the planned paths against the claim registry's active entries, diff the live open-PR file lists against those same paths (a claim can lag its own PR), and check the one well-known exclusive-role field for whether another peer already holds it and is still live. The probe's output is a mechanical go/no-go plus the exact colliding file, issue, or PR -- never a prose inference a peer might miss. (multi-session-coordination.md)",
+      "expectations": [
+        "Says manual thread-reading plus eyeballing PR diffs before every claim is inadequate / easy to skip under volume",
+        "Describes one deterministic pre-write probe combining a claim-registry glob-match, a live open-PR file-list diff, and an exclusive-role-field check",
+        "States the probe's output is a mechanical go/no-go plus the exact colliding file, issue, or PR, not a prose judgment call"
+      ]
+    },
+    {
+      "id": "verify-peer-liveness-before-coordinating",
+      "prompt": "\"Session Halcyon\" has posted a detailed status update and \"guidance for the other agent\" to a shared tracker issue every 20 minutes for six hours. Its counterpart, \"Session Meridian\", has not posted anything in that window. The operator asks whether Halcyon's approach is working well. What should Halcyon actually do?",
+      "expected_output": "Not working well. Halcyon has spent real coordination budget broadcasting to a board that, on the evidence given, likely has no live reader -- a shared board looks like collaboration whether or not anyone reads it, and following \"sync with the peer\" literally into a void produces zero delivery lift. Before writing another hand-off, Halcyon should check an explicit liveness signal -- is Meridian's process/session actually up, has it posted within a recent window -- rather than assuming a live reader from the board's existence. If Meridian reads as not live, Halcyon should stop writing long status essays, drop to solo mode at full tilt, and escalate the apparent absence to the operator instead of quietly compensating for it. (multi-session-coordination.md)",
+      "expectations": [
+        "Flags that six hours of one-sided posting with no reply is a signal the peer may not be live, not evidence coordination is working",
+        "Recommends checking an explicit liveness signal (process/session up, or posted within a recent window) before continuing to write coordination content",
+        "Recommends degrading to solo mode at full tilt and escalating the peer's apparent absence to the operator, rather than continuing to broadcast"
+      ]
+    },
+    {
+      "id": "board-sync-reads-full-thread-not-newest",
+      "prompt": "An agent syncs a shared coordination issue every 15 minutes by fetching only the single most recent comment and reacting to it. Over several hours a peer posted three older comments in between -- an operating note, a collision flag, and a proposed split -- and this agent never acted on any of the three. The operator asks if this sync approach is sound.",
+      "expected_output": "Not sound. Reading only the newest comment feels like syncing -- it is polling -- but it's really a roughly one-comment window: anything a peer posted a few comments back is invisible to a reader that only ever looks at the tail, and the peer reasonably assumes a posted item was received and stops repeating it, so the content is lost rather than merely delayed. The fix is a high-water mark: track the last comment id or timestamp actually processed, and make every sync read and act on the full range of comments since that mark, never just the newest one; after any idle gap, back-read the whole gap. (multi-session-coordination.md)",
+      "expectations": [
+        "Identifies reading only the newest comment as unsound because it misses items posted between syncs, not just the latest one",
+        "Recommends tracking a high-water mark (last processed comment id/timestamp) and reading/acting on the full range since it",
+        "Notes that after an idle gap the reader must back-read the whole gap, not resume from the newest entry"
+      ]
+    },
+    {
+      "id": "deterministic-reconciliation-crossed-handoffs",
+      "prompt": "Two peer sessions on a lock-free shared board each post a work-split within seconds of each other: one says \"I'll take the billing module, you take reporting\"; the other, not yet having seen the first post, says \"I'll take reporting, you take billing\" -- the opposite assignment. Meanwhile the first session already has an open PR against the billing module. How should this be resolved?",
+      "expected_output": "Resolve it by a fixed rule instead of another round of negotiation. The already-open PR against the billing module is in-flight work, so it anchors that module to the session that opened it -- it does not get reassigned. Any work neither session has actually started falls back to a pre-agreed, fixed partition (e.g. by directory/subsystem) rather than re-deriving a split live. Going forward, the real collision-safety mechanism is a per-item claim with an action-time recheck -- claim one item, re-verify it's still unclaimed immediately before acting -- not another coarse two-way split. Whichever session notices the crossed posts first should post the reconciliation (anchor plus partition plus per-item rule) once, and both sides adopt it rather than each re-proposing a new split. (multi-session-coordination.md)",
+      "expectations": [
+        "Anchors the billing module to the session with the already-open PR, treating in-flight work as non-reassignable",
+        "Falls back to a pre-agreed fixed partition for any unstarted work instead of re-negotiating a new split live",
+        "Recommends one session post a single reconciliation (anchor + partition + per-item claim/recheck) that both adopt, rather than repeated re-proposals"
+      ]
     }
   ]
 }

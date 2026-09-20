@@ -10,7 +10,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.320.0"
+  version: "1.321.0"
 ---
 
 # Agentic delivery
@@ -189,6 +189,13 @@ building an intake/triage taxonomy, an SLA, canned-response drafts, or the
 ticket→work-item loop. **Hard gate:** never auto-send an external reply or make
 a promise/refund/commitment — every outward reply is owner-approved, the same
 gate this skill applies to push/deploy.
+
+**Multi-session / peer coordination (independent sessions, no shared
+conductor).** Two or more agent sessions coordinating over a shared async
+channel instead of one orchestrator's own lanes:
+`references/multi-session-coordination.md` — **read it when** designing a
+claim/lock registry, a pre-write collision probe, a peer-liveness check, a
+shared-board reader, or reconciling two peers' crossed work-splits.
 
 **A work item's own completion is G7, not G8.** Once a lane's change is
 integrated (G7), the work item it closes is done; G8 Release is a separate,
