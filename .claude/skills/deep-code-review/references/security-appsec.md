@@ -148,6 +148,21 @@ auth headers). Sweep **through the CDN as well as origin**; compare anonymous
 body vs member body for the same URL. Origin-only anon GET can look clean while
 the edge serves a cached member page.
 
+**Cache poisoning — an unkeyed input that shapes the cached body.** The mirror of the leak
+above. If an attacker-controllable request component **influences the response body but is not
+part of the cache key** — a reflected header (`X-Forwarded-Host`, `X-Forwarded-Scheme`) or a
+routing-override header (`X-Original-URL`, which makes the server serve a different page's body
+under the requested URL), a param the app echoes, any header the response varies on without a matching
+`Vary` — the attacker's value is cached under the normal URL and served to **every** subsequent
+visitor, turning a *reflected* XSS / open-redirect / malicious-script-src into a **stored,
+mass-distributed** one. Census the **cache key** (what the CDN/edge actually keys on) against
+**every input that can change the response** (headers the app reads, not only the path+query);
+anything that varies the body must be **stripped/normalized at the edge, or keyed on** (keying
+on an attacker-settable header risks cache-key cardinality blowup — prefer strip/normalize), and
+never reflect an unkeyed header into a cacheable response. (Distinct from the identity leak above
+— that serves one real user's private body to another; this serves an *attacker's* injected body
+to everyone — and from connection-level request smuggling in A01.)
+
 **Presigned / signed URLs & uploads.** Presigned URLs: one object, short TTL,
 re-issued per request; must die on permission revocation. User uploads: authorize
 per object; never rely on unguessable paths; size/type/magic-bytes checks;
@@ -156,7 +171,7 @@ zip-slip risk (see A05 files block).
 
 **🚩 grep**: `req.params`/`req.body` id → query; ungated routes; `fetch(userUrl)`;
 `role === 'admin'` in UI only; shared loaders across API + page with asymmetric
-redaction; `Cache-Control: public` on auth'd handlers; `tenant_id` from body;
+redaction; `Cache-Control: public` on auth'd handlers; a reflected `X-Forwarded-Host`/`X-Forwarded-*` in a cacheable response; `tenant_id` from body;
 trusted headers read without strip; `getSignedUrl` / long-lived signed links.
 
 **Fix**: deny-by-default authz at the data layer on **every** entry point; strip

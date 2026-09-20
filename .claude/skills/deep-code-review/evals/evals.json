@@ -3680,6 +3680,16 @@
         "Names the Inline exception for the in-sentence text links (2.5.8 doesn't apply to targets in a sentence / sized by non-target line-height) and the Spacing exception for the spaced icon (24px-circle non-intersection)",
         "Notes the remaining exceptions (Equivalent / user-agent-controlled / essential) and prescribes applying the exceptions before reporting"
       ]
+    },
+    {
+      "id": "an-unkeyed-request-header-reflected-into-a-cacheable-response-is-cache-poisoning",
+      "prompt": "A page reflects the `X-Forwarded-Host` header into an absolute URL in its HTML (a `<link>`/redirect), and the response is cacheable at the CDN. The CDN's cache key is just path + query — it does not include `X-Forwarded-Host`. A reviewer says 'that header is from our own load balancer, not user input, so it's fine.' What's the risk?",
+      "expected_output": "Web cache poisoning. `X-Forwarded-Host` is an attacker-settable request header (an attacker can send it directly, and it is often not stripped end-to-end), and it shapes the response body while NOT being part of the cache key — so an attacker sends one request with a malicious `X-Forwarded-Host`, the poisoned response (a `<link>`/script-src/redirect pointing at attacker infrastructure) is cached under the normal URL and then served to EVERY subsequent visitor: a reflected issue becomes a stored, mass-distributed one (XSS, malicious script load, open redirect). 'From our LB / not user input' is false — the header is client-settable. Fix: every input that can change the response must be in the cache key or stripped/normalized at the edge before caching; never reflect an unkeyed header into a cacheable response; census the cache key against every response-affecting input. (Distinct from a shared-cache identity leak, which serves one real user's private body to another.)",
+      "expectations": [
+        "Identifies that `X-Forwarded-Host` is attacker-settable and, being unkeyed, its reflected value is cached and served to every subsequent visitor — a reflected issue becomes stored/mass-distributed (cache poisoning)",
+        "Rebuts 'from our LB / not user input' — the header is client-settable and often not stripped end-to-end",
+        "Prescribes: every response-affecting input must be in the cache key or stripped/normalized at the edge before caching; don't reflect an unkeyed header into a cacheable response; census the cache key vs response-affecting inputs"
+      ]
     }
   ]
 }

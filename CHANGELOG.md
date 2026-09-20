@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.283.0] — 2026-09-20
+
+### deep-code-review — wave 204 web cache poisoning via an unkeyed input that shapes the cached body (A01)
+
+- **`security-appsec.md`** A01 "Cache / CDN is an authorization surface" — new paragraph on the poisoning direction (mirror of the identity-leak already there): an attacker-controllable request component that shapes the response body but is **not part of the cache key** — a reflected header (`X-Forwarded-Host`/`X-Forwarded-Scheme`) or a routing-override header (`X-Original-URL`), an echoed param, a `Vary`-absent header — is cached under the normal URL and served to **every** subsequent visitor, turning a *reflected* XSS/open-redirect/script-src into a **stored, mass-distributed** one. Census the cache key against every response-affecting input; **prefer stripping/normalizing at the edge** over keying on an attacker-settable header (which risks cache-key cardinality blowup); never reflect an unkeyed header into a cacheable response. + 🚩 grep. +1 eval. From a caching-correctness comparative pass (leak/stampede/invalidation/negative-caching already covered; poisoning was the one gap). Independent reviewer PASS + applied fixes (X-Original-URL is routing-override not reflected; strip-preference). Closes no filed issue.
+
 ## [1.282.0] — 2026-09-20
 
 ### deep-code-review — wave 203 WCAG 2.2 Target Size exceptions + a stale LLM-ID cross-ref fix
