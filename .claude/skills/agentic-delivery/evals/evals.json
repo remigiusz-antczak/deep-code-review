@@ -830,6 +830,16 @@
         "Identifies decorrelated cross-peer convergence (independent peers, different scan methods, same conclusion) as the trustworthy signal, because different methods don't share a blind spot -- the corroboration principle",
         "Notes convergence authorizes stopping production/search, not blanket-closing -- each remaining item still gets per-item close-verification -- and the move is non-fan-out (surface the frontier, harden landed work)"
       ]
+    },
+    {
+      "id": "parallel-merge-seat-multiplies-base-churn-single-seat-is-the-lever",
+      "prompt": "Two agents are draining a shared queue of green PRs into `development` via GitHub. Throughput feels slow. Agent B proposes: 'let's both take merge duty -- two mergers will ship PRs twice as fast.' A downstream CI gate diffs each PR against its base and fails closed (reports 'no evidence' rather than 'stale') when the base moves under it; the repo also uses cancel-in-progress concurrency groups. Is two mergers faster, and what actually raises merge throughput?",
+      "expected_output": "No -- two mergers is slower here, because merging is self-invalidating for the whole queue, not merely contended. Every merge advances the base head, and every other open PR's base-diffing gate is valid only against one specific base.sha. A second merger doesn't split the work; it doubles the rate of base-invalidating events hitting every other open PR, compounding two failures: (a) the base-sha-sensitive gate fails CLOSED (a misleading 'no evidence' instead of an honest 'stale -- recheck') when it can't resolve its diff against a rapidly-moving base, and (b) the cancel-in-progress concurrency groups discard in-flight runs that were about to pass, as the competing merges churn shared state faster than runs finish. So two seats multiply base churn and gate failures -- net slower. What actually raises throughput: keep a SINGLE merge seat and drain all currently-green PRs back-to-back inside one green-base window (many in one short burst; the wait only bites between windows), speed up CI, and use a union-proven merge train when queued PRs might still conflict with each other. Model the merge seat as a single exclusive_role in the claim registry -- a second seat is base churn, not throughput.",
+      "expectations": [
+        "States two mergers is slower because merging self-invalidates the whole queue: each merge advances the base head, and a second merger doubles the rate of base-invalidating events hitting every other open PR's base-diff gate",
+        "Names the two compounding failures -- a base-sha-sensitive gate failing closed (misleading no-result, not 'stale/recheck') and concurrency-cancellation discarding in-flight runs -- as what the doubled base churn triggers",
+        "Prescribes the real levers: a single merge seat draining all green PRs back-to-back inside one green-base window, CI speed-ups, and a union-proven merge train for possibly-conflicting PRs (the seat as a single exclusive_role)"
+      ]
     }
   ]
 }

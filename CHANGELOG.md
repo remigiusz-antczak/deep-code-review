@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.338.0] — 2026-09-20
+
+### agentic-delivery — parallelizing the merge *seat* backfires under a base-sensitive gate; single-seat back-to-back draining is the real lever (#790)
+
+- **`fast-agentic-delivery.md`**: a new section — merging is *self-invalidating for the whole queue* (each merge advances the base head; every other open PR's base-diffing gate is valid only against one `base.sha`), so a second merger doubles the rate of base-invalidating events, compounding a base-sha-sensitive gate failing **closed** + concurrency-cancellation of in-flight runs — net slower. The lever is single-seat back-to-back draining inside one green-base window + CI speed-ups + a union-proven train; keep the merge seat a single `exclusive_role`. Distinct from `branch-and-merge-hygiene.md`'s freeze-while-a-resolver-is-active rule (merger-vs-resolver, not merger-vs-merger). +1 eval. Generalized from an observed incident, private identifiers stripped.
+- Independently reviewed **PASS** (GitHub concurrency-cancellation behaviour curl-verified against GitHub Docs; no-dup vs the merge-train/cascade sections confirmed). The reviewer also caught a **privacy leak in the source issue #790's own public body** (private tracker/gate identifiers + quoted internal chatter) — separate from this clean diff; the issue body was redacted immediately (edit-history residual flagged to the owner for a full scrub decision).
+
 ## [1.337.0] — 2026-09-20
 
 ### agentic-delivery — peer-coordination: capability-matched dispatch (#769), read-every-acceptance-branch on gate relay (#783), decorrelated convergence as the terminus signal (#776)

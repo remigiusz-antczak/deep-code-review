@@ -406,6 +406,29 @@ Defensible specifically right after a single common blocker clears and every
 queued PR was already independently green — not a general substitute for a
 train when queued PRs might still conflict with each other.
 
+## Parallelizing the merge *seat* backfires under a base-sensitive gate — single-seat back-to-back draining is the real lever
+
+The scaling reflex — more agents doing the bottleneck action (merging) ship more PRs per minute —
+is **wrong** when the merge action is not merely contended but **self-invalidating for the whole
+queue**. Every merge advances the base head, and every *other* open PR's base-diffing gate state is
+valid only against one specific `base.sha`. A **second merger** does not halve the work — it
+**doubles the rate of base-invalidating events** hitting every other open PR, compounding two
+failures: (a) a base-sha-sensitive gate that **fails closed** (a misleading "no result," not an
+honest "stale — recheck") when it cannot cleanly resolve its diff against a rapidly-moving base,
+and (b) concurrency-cancellation groups discarding in-flight check runs that were about to pass, as
+competing merges churn shared state faster than runs complete. Net **slower**, not faster. The real
+merge-rate lever is **single-seat, back-to-back draining**: one merger takes **all** currently-green
+PRs inside one green-base window (many in a short burst — the wait only bites *between* windows),
+plus CI speed-ups, plus a **union-proven merge train** (above) where queued PRs might still conflict.
+Keep the merge seat a single `exclusive_role` in the claim registry (`multi-session-coordination.md`)
+— a second seat is not throughput, it is base churn. Distinct from `branch-and-merge-hygiene.md`'s
+*freeze merges while a resolver is active* rule — that is merger-vs-**resolver** (protecting the
+resolver's own just-computed rebase); this is merger-vs-**merger** (protecting every *other* open
+PR's base-diff gate and in-flight runs). This is the flip side of the merge-train rule: back-to-back
+draining from *one* seat is the win; a *second* seat is the loss. **🚩 tell:** two agents offering
+to "split merge duty to go faster," then a wave of PRs failing a base-diff gate closed and in-flight
+runs cancelled — the seat was split, the base-invalidation rate doubled.
+
 ## CI-offload the heavy gate by default — lane weight, not lane count, drives memory cost
 
 A lane that runs a project's full local aggregate gate — a real build plus
