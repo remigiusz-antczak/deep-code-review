@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.300.0] — 2026-09-20
+
+### deep-code-review — a test that shells a real external binary must probe function + supply its own config (closes #678)
+
+- **`testing-and-evals.md`** new bullet (after "Deterministic & hermetic"): a test invoking a real external binary (headless browser, `git`, `ffmpeg`, a DB CLI) must (1) gate on a **functional smoke** — the binary actually did the thing — and **skip loudly on any failure**, not a bare `which`/`command -v` presence check (CI is "present but different/broken," not absent: a headless browser crashes without an explicit sandbox setup; `git commit` fails with no configured identity), and (2) **supply its own required launch config** (`git -c user.email=… -c user.name=…` in its own temp repo; explicit browser launch flags) rather than inherit the runner's ambient state. Distinct from the network/DNS/clock/tmpdir hermeticity above, from test-double fidelity (a mock vs a live service — here a real binary behaving differently), and from the gate's cannot-check reporting rule. Built by a worktree builder subagent, independently reviewed PASS-WITH-FIXES: the git-identity claims were **empirically re-run** by both builder and reviewer (`git -c user.email= -c user.name= commit` → `fatal: empty ident name`, exit 128; the truly-unconfigured auto-guess case correctly left unasserted); applied a fix dropping `git --version` from the presence-only examples (it executes, unlike `which`/`command -v`). +1 eval. Closes #678.
+
 ## [1.299.0] — 2026-09-20
 
 ### deep-code-review — domain-checklists §H lockstep folds: generator/allow-list, shared-body-builder sweep, initials-family privacy (closes #649, #681, #682)

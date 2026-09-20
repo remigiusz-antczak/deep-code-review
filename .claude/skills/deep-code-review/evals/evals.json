@@ -3950,6 +3950,16 @@
         "Requires diffing the allow-list against every combination the generator/schema can actually emit, not just pairs seen in current tests or sample data",
         "Ties the climbing rejected_unknown_pair counter to the missing (\"refund\",\"partial\") pair as the live drift, and prescribes deriving the allow-list from the same generated source instead of hand-maintaining it"
       ]
+    },
+    {
+      "id": "external-binary-smoke-test-must-probe-function-and-skip-on-any-failure",
+      "prompt": "An end-to-end test shells out to a headless Chromium binary to render a page and capture a screenshot. It starts with `which chromium && run-render`, treating the binary as available whenever that line succeeds, and only skips when `which` itself fails. In a fresh CI container (the image's default root user, no extra setup beyond installing the browser package), `which chromium` passes — but the render step then crashes before producing an image. A teammate says: 'We already handle the missing-binary case with `which`; a crash after that must be a real product bug, not an environment problem.' Evaluate that reasoning and the test's design.",
+      "expected_output": "The reasoning is unsound. `which`/`command -v` only proves the binary is present on `PATH` — CI is 'present but different/broken,' not 'absent,' so a presence check passing tells you nothing about whether the binary can actually do what the test needs. A headless-Chromium binary run as root in a container commonly needs its sandbox configured explicitly (a non-root user, or an explicit launch flag) or the launch itself crashes before it renders anything — exactly the kind of environment-specific failure a `which` check cannot see, so the crash is at least as likely to be a container/launch-config defect as a product bug, and the team cannot tell which without more evidence. The test's design is the real problem: (1) it must gate on a functional smoke — actually invoke the binary on a trivial real case and confirm it produced output — and skip loudly with the captured error on ANY failure, not just a missing `which`; (2) it should supply its own required launch configuration explicitly (a non-root container user, or the flags its environment needs) instead of inheriting whatever the CI image's ambient defaults happen to be, so the failure is prevented rather than merely reclassified after the fact.",
+      "expectations": [
+        "Identifies that which/command -v only proves PATH presence, not functional success — CI is 'present but different/broken,' not 'absent,' so a crash after a passing presence check is not evidence of a product bug over an environment defect",
+        "Names the concrete mechanism: a headless-Chromium binary run as root in a container commonly needs explicit sandbox configuration (a non-root user or an explicit launch flag) or it crashes before rendering — a failure a PATH check cannot detect",
+        "Prescribes fixing the test: gate on a functional smoke (a real invocation checked for actual success) that skips loudly with the captured error on any failure, and have the test supply its own required launch configuration explicitly rather than depend on the runner ambient setup"
+      ]
     }
   ]
 }

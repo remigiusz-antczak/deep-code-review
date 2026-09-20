@@ -173,6 +173,37 @@ explicit third choice), not which one this review prefers.
   import. Sanitize the environment passed to any spawned subprocess down to an
   explicit allowlist — children inherit the full parent env by default, which
   both leaks secrets and lets a test operate on real shared state.
+- **A test that shells a real external binary must probe it for functional success
+  and skip loudly on any failure — not merely check the binary is on `PATH`.** CI is
+  "present but different/broken," not "absent": a bare presence check (`which chrome`,
+  `command -v ffmpeg`) only proves the binary **exists** — it never executes it; the test
+  then invokes it for real — a headless browser, `git`, `ffmpeg`, a database CLI —
+  and that invocation can fail for reasons a presence check never sees. A
+  headless-Chromium binary running as root in a container commonly needs its
+  sandbox set up explicitly (a non-root container user, or an explicit launch flag)
+  or the launch crashes before it renders anything; a `git commit` depends on a
+  resolvable `user.email`/`user.name` and can fail outright rather than silently
+  falling back — verified directly in a scratch repo: forcing the identity to an
+  explicit empty string (`git -c user.email= -c user.name= commit`) raises `fatal:
+  empty ident name (for <>) not allowed`, exit 128, while the same repo and command
+  with a real identity supplied inline (`git -c user.email=… -c user.name=…`) exits
+  0 regardless of the runner's ambient config. Two requirements: (1) gate on a
+  **functional smoke** — the binary actually produced the artifact or exited 0 on a
+  trivial real invocation — giving a required *binary* the same discipline this
+  file already gives a required *input*: **skip loudly** (above) with the captured
+  failure, never a silent pass; (2) the test **supplies its own required launch
+  configuration** explicitly rather than inheriting the runner's ambient defaults —
+  `git -c user.email=… -c user.name=…` against its **own temp repo**, an explicit
+  launch flag for a browser harness rather than assuming the CI image happens to
+  have the sandbox pre-configured. Distinct from the
+  network/DNS/clock/tmpdir hermeticity above (the test's *own* execution
+  environment), the test-double-fidelity rule above (a **mock** drifting from a
+  **live service**'s contract — this is a **real binary**, present, behaving
+  differently under CI), and the verification-gate cannot-check rule
+  (`reliability-error-handling.md` — governs how a gate **reports** its own harness
+  crashing at setup; this governs the test's **probe**, so the crash is caught by a
+  functional check and prevented by explicit config up front rather than merely
+  reported after the fact).
 - **Randomized test order + a logged seed.** A suite that always runs in file / declaration
   order can pass not because its tests are independent but because they always run the one
   order that happens to work — hiding inter-test state pollution (a module-level cache, a
