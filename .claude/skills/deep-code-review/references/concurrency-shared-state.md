@@ -136,10 +136,26 @@ Common in agent/tooling repos: JSON/YAML "DB" files, append logs, lockfiles.
   concurrency — the constraint is the source of truth.
 - Idempotency keys for charges/sends: store the key uniquely; retries return
   the first result.
+- **An idempotency / no-op short-circuit must diff against the *real* current state, not a
+  stubbed baseline.** A shared `apply(current, next)` that skips the write when `next` already
+  equals `current` is only correct if `current` is the store's actual state. A DB/adapter path
+  that passes an **empty array / `{}` / a fabricated blank** as `current` (a stub the in-memory
+  path never hit) defeats the short-circuit — every apply looks like a change, re-writing rows
+  and re-emitting events/webhooks on every run. Load the real current rows before the diff, and
+  **test the DB path with a pre-seeded existing value** so the no-op branch is actually
+  exercised: an in-memory test that also starts empty passes while the DB path is broken.
 - **Stale RMW across `await`:** `load → await I/O → write computed snapshot`
   without re-reading (or versioning) after the suspension races with other
   writers — including single-process JSON/Postgres JSON stores. Re-read or CAS
   after the await before persisting.
+- **A CAS / version guard must cover the field the decision depends on — not just a status
+  column.** A transition guarded by `UPDATE … WHERE status = 'approved'` (or a version CAS on the
+  row) still races if the decision also read an **independently-mutable** field — an `amount`, an
+  `approved_by`, an evidence/answer column — that another writer can change between the read and
+  the CAS: the status CAS passes, but the action fires on **stale** decision inputs. A "does it
+  have a CAS?" review waved through on the wrong column is the tell. Guard every field the
+  decision consumed — a whole-row version / `updated_at` CAS, or re-read and compare each input
+  under the same lock — not only the state enum.
 - **A transaction boundary is not itself the concurrency guard.** Under the isolation level engines
   ship by default — **Read Committed** in PostgreSQL, **REPEATABLE READ** in MySQL/InnoDB — wrapping
   a check-then-act in `BEGIN`/`COMMIT` prevents neither a lost update (two read-modify-write cycles

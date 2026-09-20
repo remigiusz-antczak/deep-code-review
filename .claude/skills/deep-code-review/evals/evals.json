@@ -3530,6 +3530,26 @@
         "States the rule: a dual-registered entity's write target is per-field — the store the read/compile path treats as authoritative for that field",
         "Prescribes mapping read-authority per field, pointing the write there, testing that an edit is observable through the read path; warns that writing both stores without precedence causes drift"
       ]
+    },
+    {
+      "id": "an-idempotency-no-op-short-circuit-fed-a-stubbed-empty-baseline",
+      "prompt": "A sync uses a shared `apply(current, next)` that returns 'no change' when `next` deep-equals `current`. The in-memory path passes the live map as `current`; the new DB-backed path calls `apply([], rows)` because loading current rows was 'not needed for the diff.' Tests (in-memory, empty start) pass, but in production every sync run re-writes every row and re-fires downstream webhooks. Why?",
+      "expected_output": "The DB path passes `[]` (a stubbed empty baseline) as `current`, so `next` never equals `current` — the no-op short-circuit never triggers and every row reads as changed, re-writing rows and re-emitting events every run. The short-circuit is only correct when `current` is the store's REAL state; the DB adapter skipped loading it. The in-memory test passes only because it also starts empty, so it never exercises the no-op branch against pre-existing state. Fix: load the actual current rows before the diff in the DB path, and add a regression test that seeds a pre-existing value and asserts a re-run is a true no-op (no write, no event) — an empty-baseline test gives false confidence.",
+      "expectations": [
+        "Identifies that the DB path passes a stubbed empty `current`, so the equality/no-op short-circuit never fires and every row is treated as changed (spurious writes + re-fired events)",
+        "States the short-circuit is valid only when `current` is the store's real loaded state — the DB adapter must load current rows before diffing",
+        "Prescribes a regression test that seeds a pre-existing value and asserts a re-run is a true no-op — the empty-baseline in-memory test cannot catch this"
+      ]
+    },
+    {
+      "id": "a-cas-guards-the-status-column-but-not-the-evidence-field-the-decision-used",
+      "prompt": "A payout transition runs `UPDATE payouts SET status='paid' WHERE id=? AND status='approved'` (a status compare-and-swap) after reading `approved_amount` to decide how much to send. Between the read and the UPDATE, another admin lowers `approved_amount`. The CAS succeeds and the original (higher) amount is paid. A reviewer says 'it has a compare-and-swap, so it's race-safe.' What's wrong?",
+      "expected_output": "The CAS guards the `status` column, but the decision also depended on `approved_amount`, which is independently mutable and NOT part of the guard. Another writer changed it between the read and the UPDATE, so the CAS passes on `status='approved'` while the action fires on a stale `approved_amount` — the higher amount is paid. 'It has a CAS' is insufficient when the CAS is on the wrong column: the guard must cover every field the decision consumed. Fix: include `approved_amount` in the WHERE (`AND approved_amount = ?` with the value read), or use a whole-row version / `updated_at` CAS, or re-read and re-validate all decision inputs under the same lock — not just the state enum.",
+      "expectations": [
+        "Identifies that the CAS guards only `status` while the decision also depended on an independently-mutable field (approved_amount) not in the guard, so the action fires on stale inputs despite the CAS succeeding",
+        "Explains that 'it has a CAS' is insufficient when the guard covers the wrong column — the guard must cover every field the decision consumed",
+        "Prescribes including the decision fields in the guard (WHERE on the read value, a whole-row version/updated_at CAS, or re-read-and-revalidate under lock), not just the state enum"
+      ]
     }
   ]
 }
