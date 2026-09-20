@@ -833,7 +833,7 @@ where*, not *is anyone already building this*. Read as a work-lock, it spawns a
 duplicate lane on a feature already in flight. Before starting, check for an
 **active lane on the objective**, not just file ownership — and treat a forge
 **assignment as intent, not progress**: an assigned issue with no draft PR, no
-worktree, and no commits is unclaimed in practice (`assigned` ≠ `in-progress`). That absence-check is only as complete as the surface it runs on: `gh pr list` and issue state show **forge** signals, never a **local-only** branch, worktree, or unpushed commit on another machine or another agent's checkout — so a lane that queries the forge alone can read *unclaimed* while a real one is mid-flight. Scan local git too (`git branch`, `git worktree list`, `git stash list`), but treat any hit as a **lead to check for liveness**, not proof of an active lane — a `worktree list` entry proves only that something *once* ran (the transcript-is-not-liveness rule above); cross-check a real liveness signal, then adopt-and-re-verify the work or reconcile the dead lane, never trust its state blind.
+worktree, and no commits is unclaimed in practice (`assigned` ≠ `in-progress`). That absence-check is only as complete as the surface it runs on: `gh pr list` and issue state show **forge** signals, never a **local-only** branch, worktree, or unpushed commit on another machine or another agent's checkout — so a lane that queries the forge alone can read *unclaimed* while a real one is mid-flight. Scan local git too (`git branch`, `git worktree list`, `git stash list`), but treat any hit as a **lead to check for liveness**, not proof of an active lane — a `worktree list` entry proves only that something *once* ran (the transcript-is-not-liveness rule above); cross-check a real liveness signal, then adopt-and-re-verify the work or reconcile the dead lane, never trust its state blind. A **claim/ownership record** whose last progress predates a stated **staleness threshold** — the liveness signal defined by that rule (a new commit, a PR comment, a touched claim record) gone quiet — is treated as **dead and reconciled**, never respected indefinitely: a crashed lane that left a claim behind otherwise locks its own objective forever, and reclaiming a stale *claim* is cheap and reversible. Declaring a *running lane* dead is the higher bar — that still needs the transcript-is-not-liveness rule's positive actual-product signal, **never elapsed time alone** (killing a live lane is destructive; reconciling a stale claim is not).
 **Announce-then-take:** claim the objective (a draft PR, or a posted "taking this")
 **before** opening the worktree, never after — take-then-announce races two lanes
 onto the same work. And **two lanes reporting the same bug idiom at different callsites is a
@@ -847,6 +847,16 @@ design-token file, a lockfile, a config) is the mirror error — disjoint-surfac
 never touch that artifact are safe to run in parallel, and pausing them idles capacity for
 a conflict that cannot occur. Gate a lane on whether **its own** surface overlaps an
 in-flight write, not on whether **any** shared write is open.
+
+**A commit or PR attribution trailer names the agent that actually did the work.**
+When a fleet commits under a shared template, the co-author / attribution trailer must
+identify the *real* executing agent or model for each lane — a template that
+**hardcodes one model name** into every lane's co-author line makes the history lie
+about who produced what — the same wrong-producer / false-attribution failure mode the
+review side treats as a correctness defect. Parameterize the trailer, or let each lane stamp its own identity at
+commit time; never let a lane silently inherit the orchestrator's identity as a default.
+This is provenance hygiene for a multi-agent fleet — the delivery-side analogue of the
+evidence-provenance the review side already demands.
 
 ## An open tracker issue is not proof the fix is absent — auto-close is default-branch-only
 

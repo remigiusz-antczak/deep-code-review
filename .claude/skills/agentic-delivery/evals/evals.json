@@ -540,6 +540,26 @@
         "Prescribes enumerating EVERY acceptance criterion and verifying each independently against live/merged source, a file:line receipt per criterion",
         "Prescribes leaving the issue open with a named per-criterion gap (or splitting it) when any criterion is unmet, rather than closing on a representative check"
       ]
+    },
+    {
+      "id": "a-shared-commit-template-must-not-hardcode-one-model-in-the-co-author-trailer",
+      "prompt": "An orchestrator fans out work to several lanes — some run on one model, some on another. Its shared commit template stamps every lane's commit with the same trailer: `Co-Authored-By: Model-A`. The commits land and CI is green. Is the attribution fine because the commits are correct?",
+      "expected_output": "No — the commits may be functionally correct while the history lies about who produced them. Hardcoding one model name into every lane's co-author trailer misattributes the work of every lane that ran on a different model — a wrong-attribution/provenance defect (the same class the review side flags: a record that names the wrong producer). Fix: parameterize the trailer so each lane's commit names the agent/model that actually executed it, or have each lane stamp its own identity at commit time; a lane must never silently inherit the orchestrator's identity as a default. Provenance hygiene applies to the fleet's own commits, not only to the code it reviews. (fast-agentic-delivery.md.)",
+      "expectations": [
+        "Says correct-and-green commits can still have wrong attribution — hardcoding one model in every lane's trailer misattributes lanes that ran on a different model",
+        "Names it a provenance/wrong-attribution defect (the fleet's own history must name the real producer), not a cosmetic nit",
+        "Fix: parameterize the trailer or have each lane stamp its real identity at commit time; never inherit the orchestrator's identity by default"
+      ]
+    },
+    {
+      "id": "a-stale-claim-from-a-crashed-lane-is-reconciled-not-respected-forever",
+      "prompt": "A coordinator wants to work objective X. It finds an existing claim — a draft PR titled 'taking X' and a worktree — but the lane's last commit and last PR comment are both hours old, and it cannot observe whether that lane's process is still alive. Should the coordinator respect the claim and leave X alone, since X is 'claimed'?",
+      "expected_output": "No — a claim is only as live as its freshness signal. Liveness is a POSITIVE signal (a recent commit, PR comment, or touched claim record), not the mere existence of a claim artifact; an artifact left behind by a crashed lane proves something once ran, not that it is running now. Because the last progress predates any reasonable staleness threshold, treat the claim as DEAD: cross-check for any real liveness signal, and finding none, reconcile it — adopt-and-re-verify the partial work or reclaim the objective — rather than respect it indefinitely. Respecting a stale claim forever lets one crashed lane lock its objective permanently, which is the failure this guards against. (A live claim, by contrast, is left alone.) Bound every claim's freshness so a dead lane is reclaimable. (fast-agentic-delivery.md.)",
+      "expectations": [
+        "Rejects respecting the stale claim — liveness is a positive freshness signal, and a leftover artifact proves the lane once ran, not that it is running now; a genuinely live claim (a recent commit or comment) is still left alone",
+        "Applies a staleness threshold: last progress hours old → treat as dead, cross-check for a real liveness signal, then reconcile (adopt-and-re-verify or reclaim)",
+        "Notes that respecting a stale claim forever lets a crashed lane lock its objective permanently — bound the claim's freshness so a dead lane is reclaimable"
+      ]
     }
   ]
 }

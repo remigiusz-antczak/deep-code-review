@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.288.0] — 2026-09-20
+
+### agentic-delivery — wave 209 fleet coordination honesty (claim freshness/staleness #596 + commit attribution trailer #660)
+
+- **`fast-agentic-delivery.md`** two additions to the multi-agent-coordination section. **#596 claim staleness:** the existing text said to "check for liveness" and "reconcile the dead lane" but never defined *when* a claim is dead — a **claim/ownership record** whose last progress predates a stated **staleness threshold** is treated as dead and reconciled (cheap, reversible), so a crashed lane's leftover claim doesn't lock its objective forever; declaring a *running lane* dead stays the higher bar (needs a positive actual-product signal, never elapsed time alone — killing a live lane is destructive). **#660 attribution:** a commit/PR co-author trailer must name the **real executing agent/model** per lane — a shared template that hardcodes one model name makes the history misattribute lanes that ran on a different model; parameterize the trailer or let each lane stamp its own identity. +2 evals (agentic-delivery suite 52 → 54). Independent reviewer PASS-WITH-FIXES: trimmed #596's opening clause that re-derived the already-linked transcript-is-not-liveness rule, drew the claim-record-vs-live-lane distinction so the threshold isn't over-applied to a kill decision, softened the #660 `deep-code-review` cross-ref to a failure-mode (not an asserted named class), and tightened the stale-claim eval (removed a prompt giveaway; split the live-claim-left-alone check into its own gradeable expectation). Closes #596, closes #660.
+
 ## [1.287.0] — 2026-09-20
 
 ### deep-code-review — wave 208 telemetry carries a stable resource identity (service/version/environment)
