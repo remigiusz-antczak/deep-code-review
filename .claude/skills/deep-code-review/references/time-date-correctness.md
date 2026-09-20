@@ -38,6 +38,31 @@ windows). The one-line rule in `domain-checklists.md` domain A points here for d
   user's/target zone) explicitly on any rendered path; a `= new Date()` default is a test
   convenience, not a request clock.
 
+## Bucketing a stored instant to a calendar day needs *whose* wall clock, not a shared one
+
+Grouping past events into calendar buckets for a **human** report — "which day / week did this
+happen in" — is a wall-clock question asked of an **instant**, so it needs the **actor's** UTC
+offset, not one shared clock. Truncating a stored UTC timestamp to its own calendar date
+(`timestamp.slice(0,10)`, `new Date(ts).toISOString().slice(0,10)`, a UTC day/week-start helper
+applied to an event time) misfiles every actor outside UTC by a full day — or, for a weekly
+cadence, a full week — for the several hours each day their local date and the UTC date disagree.
+This is a **distinct** bug from the "wrong clock for *now / today*" sibling — computing the
+*present* date off the server's local zone instead of the single shared UTC frame — and equally from
+the SSR default-argument-clock bullet above (whose fix is the *user's* zone, not UTC); both of those
+concern a single "current" frame, whereas this concerns bucketing a **past actor event**. Bucketing a *past actor event* has no single right global clock
+— attributing one person's action to "their day" requires **their** offset. (The bug is a *silent, accidental* frame — the storage zone chosen by truncation, which nobody
+picked — not any shared clock: a **deliberately declared** canonical grid, e.g. an org-wide fiscal or
+trading day in one documented zone for cross-actor comparability, is a legitimate design.) It hides precisely in
+trees that already did the "obvious" UTC-anchoring fix for "today" and therefore look, and get
+cited as, exemplary about dates; a reviewer who sees consistent UTC anchoring for "current date"
+and moves on misses that a *separate* function applies that same principle to the wrong *kind* of
+value. It is worse when the report reads an empty bucket as signal ("nobody reported this week,"
+"silent / overdue"): the mis-bucketed event both lands in the wrong period **and** makes the right
+period look emptier than it was. Fix: bucket by the timestamp **converted to the actor's zone**
+(store or resolve each actor's tz-id). Prove it with a constructed instant — a US-West evening on a
+Sunday whose UTC stamp already reads Monday, plus the mirror case ahead of UTC (early-morning local
+Monday, UTC still Sunday) to show the defect is bidirectional.
+
 ## Ambiguous & missing local times at a DST transition
 
 At a transition a local time is either **ambiguous** or **missing**, and code that
@@ -80,6 +105,29 @@ mitigation is a **leap smear** — Google "'smeared' the extra second across the
 before and after each leap" — but a review confirms the approach is **chosen and
 consistent** across the fleet (a smeared client against a stepped server disagree by up
 to a second), not that `86400` was hard-coded.
+
+## A timestamp is not a unique key — don't use it as a strict-inequality cursor
+
+A "what changed since the last checkpoint" diff that sets its cursor to a **record's own
+timestamp** and filters `record.ts > cursor` silently drops the newest change whenever two records
+share that timestamp: the newest record's timestamp **equals** the cursor, so strict `>` excludes
+it and the diff reports a false "nothing changed." Ties are ordinary, not exotic — one `now()`
+reused for several rows in one transaction, a second- or day-granularity column under any real
+write rate, or a backfill that stamps a batch with one synthetic time. The fix is a **strictly-monotonic tiebreak** — a sequence id / auto-increment compared as the
+composite `(ts, seq)` — not a strict-inequality comparison against a **non-unique** value. An
+**ordinal / positional cursor** ("this record's index in the sorted history is strictly after the
+cursor's index") also works, but **only** for a genuinely append-only, never-resorted log: a
+backfill that inserts a row sorting *earlier* than an already-consumed index (one of the tie-causes
+above) silently reintroduces the drop, whereas a monotonic id does not. Same root cause as the
+incremental-sync-cursor trap in `domain-checklists.md` domain A — that is the **paginated /
+bulk-fetch face** (drops or double-reads rows at a page boundary); this is the **single-comparison /
+since-checkpoint face** (drops the one newest record on a tie). This hides behind code that is
+otherwise scrupulously honest: a module that documents "never fabricate an absence" and correctly
+handles the truly-empty case (fewer than two records) still renders a false absence on the tie,
+because a tie *looks* like the "nothing to compare" empty case when it is really "something to
+compare, compared with the wrong operator." The adversarial input is 2+ records with a deliberately
+engineered identical timestamp, in the stable-sort order the code produces — not the 0/1-record
+empty boundary a reviewer usually tests.
 
 **🚩 red flags**: a recurring wall-clock event stored as one fixed UTC instant; a
 future local time whose offset is frozen at creation; a local↔instant conversion with

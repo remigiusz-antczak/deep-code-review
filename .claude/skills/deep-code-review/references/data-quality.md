@@ -267,6 +267,20 @@ rate), validity (schema/format/range). For each:
 
 - Idempotent, safe to run twice; last-write-wins **only** by a stable key and
   **only** when it does not violate §1.
+- **A diff/index key must be unique across every *kind* the input mixes — a bare `id` over a
+  multi-kind list silently merges two entities.** When a comparison indexes a list that folds more
+  than one entity kind into one array (a discriminated union — `kind` + `id`) with
+  `new Map(list.map(x => [x.id, x]))` or `new Set(list.map(x => x.id))`, two different kinds
+  sharing an id **collide**: `Map`/`Set` keep last-write-wins, so one entity vanishes from the diff
+  with **zero signal** — not flagged added, removed, or ambiguous, just gone (the comparison
+  iterates surviving keys and emits one delta instead of two). Key on the **compound `(kind, id)`**.
+  The tell is cross-referential, not local: each function reads fine alone, but a **sibling** in the
+  same module often already takes a `(kind, id)` key (sometimes with a comment saying why), so the
+  bare-id diff is a **regression against a contract the codebase set for itself**. Report it even
+  when today's data has no collision and the diff has no live caller yet (a latent silent
+  false-merge in shared code), but state plainly whether it is currently reachable. A silent merge
+  is the false-merge §3 warns against — bias to false-exclude (surface both, flag ambiguous) over
+  collapsing two entities into one.
 - **Batch membership is an explicit batch id, never a shared timestamp.**
   Selecting "the latest batch/generation" via `WHERE col = max(col)` (or
   `ORDER BY col DESC LIMIT`-as-batch) is silently repointed by *any* single-row
@@ -662,4 +676,4 @@ that ships raw events where the consumer scores on aggregates, or a claimed
 provider-input never reconciled against the provider's live output before it feeds a
 downstream score; a deserializer that trusts a serialized computed field (a count
 read verbatim, not re-derived from the validated collection) or checks only a
-primitive type, not element shape — weaker than its own builder; a corroboration / fusion step that raises a fused confidence past its **entity-attribution** component on agreement that only evidences occurrence; a hand-rolled composite / score / tiering where a citable external standard exists and wasn't used, or per-metric spec URLs over a **tool-chosen metric set** (the invented index one level up); a non-empty value-A→value-B overwrite with no source-grade arbitration; a join / corroboration key not weighted by value-commonness (a value shared by dozens treated as a confirming match); a corroboration count that collapses same-domain duplicates but not derivation; a per-dimension volume-floor drop acked or blocked with no fold investigation after an identity/roster/entity-resolution change (a correction and a regression are identical from the count); an identity cluster built from raw connected components with no bridge / centrality check (transitive over-merge); a fabricated freshness decay curve (`0.5^(days/half_life)`) or an adopted vendor half-life in place of an observable in-window gate.
+primitive type, not element shape — weaker than its own builder; a corroboration / fusion step that raises a fused confidence past its **entity-attribution** component on agreement that only evidences occurrence; a hand-rolled composite / score / tiering where a citable external standard exists and wasn't used, or per-metric spec URLs over a **tool-chosen metric set** (the invented index one level up); a non-empty value-A→value-B overwrite with no source-grade arbitration; a join / corroboration key not weighted by value-commonness (a value shared by dozens treated as a confirming match); a corroboration count that collapses same-domain duplicates but not derivation; a per-dimension volume-floor drop acked or blocked with no fold investigation after an identity/roster/entity-resolution change (a correction and a regression are identical from the count); an identity cluster built from raw connected components with no bridge / centrality check (transitive over-merge); a fabricated freshness decay curve (`0.5^(days/half_life)`) or an adopted vendor half-life in place of an observable in-window gate; a diff / index keyed on a **bare `id`** over a list mixing multiple entity **kinds** (a `(kind, id)` collision that silently merges two entities into one delta).

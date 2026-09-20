@@ -3,6 +3,14 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.253.0] — 2026-09-20
+
+### deep-code-review — wave 174 data-correctness trio: UTC-date bucketing, timestamp-tie diff cursor, cross-kind bare-id diff merge (closes #620, closes #618, closes #619)
+
+- **`time-date-correctness.md`**: bucketing a stored instant to a human calendar day/week needs the *actor's* zone, not a silent storage-zone-by-truncation frame (a deliberately declared canonical business-day grid is a legitimate exception); distinct from the wrong-clock-for-"today" and SSR-default-clock siblings (#620). A timestamp is not a unique key — a "since last checkpoint" diff using a record's own timestamp as a strict-`>` cursor drops the newest change on a tie; fix with a strictly-monotonic `(ts, seq)` tiebreak (an ordinal cursor only on an append-only, never-resorted log), cross-referenced to the paginated incremental-sync-cursor face in `domain-checklists.md` domain A (#618).
+- **`data-quality.md`**: a diff/index key must be unique across every kind a discriminated-union list mixes — a bare-id Map/Set collides via last-write-wins and silently merges two entities into one delta; fix with a compound `(kind, id)` key; the tell is a sibling's already-stricter contract (#619). Added to the red-flag list.
+- +3 evals. Closes #620, #618, #619. Independent reviewer PASS-WITH-FIXES; all 5 prescribed fixes applied (cross-ref the pre-existing incremental-sync twin, declared-grid exception, name both time siblings, lead with the sequence-id cursor fix, #619 red-flag bullet).
+
 ## [1.252.0] — 2026-09-20
 
 ### agentic-delivery — wave 173 add-only loop discipline: a decrement needs a stated reason, never a silent side effect (closes #473)
