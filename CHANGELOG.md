@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.363.0] — 2026-09-21
+
+### agentic-delivery — a read-only/prohibition brief is necessary but not sufficient; verify a delegate's refraining against its actual effects (#856)
+
+- **`fast-agentic-delivery.md`**: an explicit tool-use prohibition in a subagent's brief ("do not push / open a PR / modify anything") constrains *intent*, not *capability* — a delegate can still call a forbidden tool (misread scope, a retry path, drift on a long or idle run). Completes the verify-the-delegate triple (positive-verdict-is-a-lead → self-reported-claim-needs-a-method → **negative-constraint-claim**): verifying a *negative* capability constraint means checking the **union of effect surfaces** (the tool-call record, the git effects on origin, the artifacts), not a single authoritative source, and **idle/long-run drift** predicts *when* a delegate violates the brief (mitigate by ending the turn while blocked). Keep the prohibition — it lowers the rate, not to zero — but it is not a completion check. Cross-refs the host-enforced `allowed-tools` control-design (`host-enforcement.md`). +1 eval.
+
 ## [1.362.0] — 2026-09-21
 
 ### deep-code-review — an identity/session hook that fetches per-instance with no shared cache fans out to N identical requests per page (#843)

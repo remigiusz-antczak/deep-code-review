@@ -1141,6 +1141,47 @@ replace the forge run.
   unbacked completion claim, `unverified` until the method is stated (and still self-reported
   after — the forge run is the control).
 
+## A prohibition in a delegate's brief is a soft control — verify the refrained action against the effect surface, and expect drift on idle or long runs
+
+The mirror of the two sections above: they verify what a lane *did* (a delegated green verdict, a
+"tested" claim); this verifies what a lane was told **not** to do. A build-only or read-only worker
+instructed "do not push," "do not open a PR," "do not bump `VERSION`/`CHANGELOG`/`SHA256SUMS`," or
+"return a report, change nothing" has been handed an instruction, not a locked door. The line
+constrains the worker's *intent*, not its *capability*, so on some fraction of runs the forbidden
+action happens anyway: a misread scope, a broadly-trained reflex ("consult the reviewer / just fix
+it before finishing") outweighing one line of prompt, an idle stretch where a blocked worker reaches
+for something to do, or a retry that takes the long way. Keep the prohibition — it measurably lowers
+the rate — but **it does not drive the rate to zero**, so it is not a completion check. The
+protocol-vs-host-enforced grading and the hard-control fix are in `host-enforcement.md`, and are
+worth it where the misuse is costly or irreversible.
+
+Neither is the worker's own "no changes made / read-only as instructed" line proof — that is a
+self-report, and a clean self-report is not evidence (the `Verify:`-line rule above is the
+positive-claim form; this is its negative-constraint twin). Confirm compliance from **what the lane
+actually did**.
+
+The catch that makes this its own discipline: a refrained-action claim has an **unbounded
+verification surface**. A positive "verify green" claim has one authoritative source — re-run the
+gate. "It did nothing forbidden" has none; it is a **union of effect surfaces**, and a clean check
+of one clears none of the others. `git status`/`git diff` in the worktree proves only that no
+*tracked file there* changed — nothing about a branch or tag pushed to the remote, a PR opened, an
+issue filed, a comment or message sent, or a paid tool called (the context-inheriting-fork rule in
+`SKILL.md` makes the same point for the narrow-brief fork). So enumerate the surfaces the brief
+actually named and check each: the **per-agent tool-call record** where the harness exposes one;
+**remote refs** (`git ls-remote`) for a pushed branch or tag; **open PRs**; and the **diff scope** —
+did `VERSION`/`CHANGELOG`/`SHA256SUMS` move when the brief said "build only, stamps later"? The
+honest verdict is *"no forbidden effect on surfaces A, B, C,"* never a bare *"complied"*; a surface
+you did not or could not inspect stays `UNVERIFIED`.
+
+**Where the drift clusters.** It is not uniform across the run — it concentrates at **idle moments**
+(a worker blocked on CI or a slow step, filling the gap) and on **long runs** (more turns, more
+chances for a reflex to fire). Two consequences: give a waiting worker an explicit *"while blocked,
+do nothing / end the turn"* line, since that is where the reach happens; and weight the post-hoc
+effect-surface check toward long and idle-heavy lanes, re-checking on resume after an idle gap. This
+is a different use of "idle" from *confirm a subagent is idle before dispatching a duplicate* above —
+there idleness is a **precondition to check before acting**; here it is a **predictor of when a
+delegate drifts past its brief**.
+
 ## Boot-the-dev-server lanes need a copy, not a symlink, of the dependencies dir
 
 Any worktree that runs the **heavy gates** needs its own real install — run
