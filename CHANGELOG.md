@@ -3,6 +3,14 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.260.0] — 2026-09-20
+
+### deep-code-review — wave 181 compliance defect-patterns: PCI cardholder data, HIPAA de-identification, NIST AC-2 IAM lifecycle
+
+- **`privacy-compliance.md`**: NEW "Cardholder data (PCI)" subsection — Sensitive Authentication Data (CVV/CVC, full track data, PIN/PIN block) must never be stored after authorization (encryption-at-rest doesn't excuse it); masking (a *display* control) and truncation (a *storage* control) are not interchangeable. Extended the linkability pseudonym bullet with HIPAA §164.514(c)'s bright line — a de-identification code must be "not derived from or related to information about the individual" (a `hash(name+DOB)` pseudonym fails it).
+- **`infra-iac-containers.md`**: a grant needs a *lifecycle*, not just correct scope at creation — an IAM/DB/service-account grant with no expiry/owner/deprovision path is standing access nothing revisits (the time axis; NIST SP 800-53 AC-2).
+- Doctrine-fit: defect-patterns that name a regime + a code-visible defect and route the legal/adequacy call to counsel (per the repo's own AC-5 / GPC precedent) — not compliance certification. +2 evals; 3 standards-index rows (PCI glossary / CFR §164.514 / NIST AC-2 OSCAL), verbatim. Independent reviewer PASS-WITH-FIXES: corrected a spliced Truncation quote (the "for" was the Masking cross-ref; the real Truncation entry says "relates to") and the AC-2 sub-clause attribution ("notified", not "disabled", is the quoted (h)(2) obligation).
+
 ## [1.259.0] — 2026-09-20
 
 ### deep-code-review — wave 180 suite hygiene: de-duplicate the branch-triage table, close a routing loop, fix a dangling pointer

@@ -122,6 +122,7 @@ them before the domain audits, because they fail late and silently otherwise:
 
 - **Least-privilege IAM**: no `"*"` actions or `"*"` resources; no wildcard
   principals; scoped, named roles. No admin/`Owner` handed to a service.
+- **A grant needs a lifecycle, not just correct scope at creation.** An IAM binding, DB grant, or service-account key that is correctly least-privilege **at grant time** but carries no expiry/condition, no owner annotation, and no link to a deprovisioning path (an offboarding hook, a periodic reconciliation against the IdP roster) becomes standing access nothing ever revisits or revokes — the *time* axis, distinct from grant-time scope. NIST SP 800-53 **AC-2** requires accounts be reviewed "for compliance with account management requirements," account managers notified "when users are terminated or transferred," and account management "align[ed] ... with personnel termination and transfer processes." Flag an IaC grant with no expiry/owner/deprovision linkage (AC-2 is an org process control; the reviewable diff artifact is the ungoverned grant — pair it with the AC-5 SoD note in `security-appsec.md`).
 - **Network exposure**: no security group / firewall rule open to `0.0.0.0/0`
   (or `::/0`) on sensitive ports (SSH 22, RDP 3389, DB ports, admin panels);
   ingress justified and narrow.

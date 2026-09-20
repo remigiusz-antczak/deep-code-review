@@ -3271,6 +3271,26 @@
         "Identifies the rule: a hash-key must be effectively immutable over its hashCode fields while in the collection (and names the JPA @Entity / Lombok classic trigger)",
         "Prescribes not mutating hashCode fields post-insert (or excluding the mutable field / keying on a stable id), preserving the equal-objects-share-a-hashCode contract"
       ]
+    },
+    {
+      "id": "pci-sensitive-authentication-data-must-not-be-stored-after-authorization",
+      "prompt": "A payments diff adds a `cvv` column to the transactions table 'for retrying failed captures' and logs the full magnetic-stripe track data on decline 'for debugging.' PANs in the same table are already truncated to last-4. A reviewer says 'card data is encrypted at rest, so this is fine.' Is it?",
+      "expected_output": "No. Encryption at rest does not make it fine: Sensitive Authentication Data (SAD) — card verification codes (CVV/CVC), full track data, and PINs/PIN blocks — must NEVER be stored after authorization, encrypted or not. It may be used transiently in-flight during the transaction, but persisting it post-auth (a cvv column, track data in logs) is prohibited outright — an absolute rule, stricter than any retention/minimization policy for ordinary PII. Both additions are findings: remove the cvv column and the track-data log line (retry a capture with a token / authorization reference, never the CVV). Separately, masking vs truncation are different controls: truncation protects PAN when stored/processed/transmitted (the last-4 column is truncation — fine), masking conceals PAN when displayed/printed; don't treat them as interchangeable. (Whether this system is PCI-in-scope and the exact DSS requirement numbers route to counsel / a QSA; the code-visible defect — storing SAD post-auth — is the finding.)",
+      "expectations": [
+        "Identifies that SAD (CVV/CVC, full track data, PIN/PIN block) must never be STORED after authorization, and encryption at rest does not make it acceptable (absolute rule, stricter than PII retention)",
+        "Flags BOTH the cvv column and the track-data log line, and prescribes removing them (retry via token/authorization reference, not the CVV)",
+        "Distinguishes masking (display) from truncation (storage) as non-interchangeable, and routes scope/requirement-numbers to counsel while naming the code-visible defect"
+      ]
+    },
+    {
+      "id": "iam-grant-needs-a-lifecycle-not-just-correct-scope-at-creation",
+      "prompt": "A Terraform PR adds a service-account IAM binding with tightly-scoped least-privilege permissions (no wildcards) for a new integration. It has no expiry, no owner tag, and there is no offboarding/reconciliation process that would ever remove it. A reviewer approves it as 'least-privilege, looks good.' Anything missing?",
+      "expected_output": "Yes — the grant is correct on the SCOPE axis but has no LIFECYCLE, a separate axis the least-privilege check doesn't cover. A perfectly-scoped binding with no expiry/condition, no owner annotation, and no link to a deprovisioning path (an offboarding hook, or a periodic reconciliation against the IdP roster) becomes standing access nothing ever revisits or revokes — it outlives the integration it was for, the person who added it, and any later role change. NIST SP 800-53 AC-2 requires accounts be reviewed for compliance, disabled/notified when users are terminated or transferred, and account management aligned with personnel termination/transfer processes. Fix: attach an expiry/condition where the platform supports it, an owner tag, and wire the grant into a reconciliation/deprovision process (or document the review cadence). Flag any IaC grant that adds access with no expiry/owner/deprovision linkage. (AC-2 is an org process control; the reviewable diff artifact is the ungoverned grant itself.)",
+      "expectations": [
+        "Identifies that grant-time SCOPE and LIFECYCLE are different axes — a least-privilege grant with no expiry/owner/deprovision path is standing access nothing revisits or revokes",
+        "Prescribes the concrete fix: expiry/condition, owner annotation, and linkage to a reconciliation/deprovision process (or a documented review cadence)",
+        "Frames it as flaggable in the diff (an IaC grant with no lifecycle metadata) while noting AC-2 itself is an org process control"
+      ]
     }
   ]
 }

@@ -53,6 +53,10 @@ legal advice — jurisdiction and scope are owner decisions.
 
 ---
 
+## Cardholder data (PCI) — a distinct regulated category
+
+Payment-card data is not generic PII. **Sensitive Authentication Data (SAD)** — "card verification codes, full track data (from magnetic stripe or equivalent on a chip), PINs, and PIN blocks" — **must never be stored after authorization** (it may be transmitted/processed in-flight, never persisted): an absolute rule, stricter than any retention policy. A diff that adds a column, log line, or error payload carrying a CVV/CVC, track data, or a PIN/PIN block **anywhere post-auth** is the finding, and encryption-at-rest does **not** make it acceptable. Separately, **masking** and **truncation** are different controls for different contexts — masking is "concealing a segment of PAN when displayed or printed" (a *display* control); truncation renders PAN unreadable "when electronically stored, processed, or transmitted" (a *storage* control) — treating them as interchangeable (a masked value persisted as if truncated; a truncated value where a display-masked last-4 was needed) is a finding. (PCI DSS requirement numbers and whether a target is in scope route to counsel / a QSA; this gate flags the code-visible defect.)
+
 ## Linkability & re-identification
 
 Minimization limits what you *hold*; **linkability** is a separate axis — whether
@@ -69,7 +73,7 @@ emits a minimized / pseudonymized / aggregated dataset, check:
   dataset, is a linkage key.** The same token in analytics and billing, or a hash of
   an email any holder of the email can recompute, re-links the "anonymized" rows —
   scope / rotate the pseudonym per purpose, and salt-and-keep-server-side a hash a
-  third party could brute-force over a small input space.
+  third party could brute-force over a small input space. (Healthcare: HIPAA **§164.514(c)** makes this a bright line — a de-identification code must be "not derived from or related to information about the individual" and not otherwise translatable back to them, so a pseudonym like `hash(name + DOB)` fails it outright, being recomputable over a small input space.)
 - **A "derived" field can still be a quasi-identifier in combination.** Age band +
   region + a timestamp can be unique to one person though each field alone looks
   coarse; minimizing each column is not testing the **combination** for uniqueness.
