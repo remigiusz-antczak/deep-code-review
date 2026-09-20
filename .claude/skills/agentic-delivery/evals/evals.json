@@ -520,6 +520,26 @@
         "Requires the host-enforced fix: spawn with an allowed-tools set excluding the tool (or deny at the execution boundary) — a capability the worker can't edit",
         "Notes the protocol-level fallback (audit tool calls in the receipt; narrow/deny the dependent action) when host exclusion isn't available"
       ]
+    },
+    {
+      "id": "buildability-triage-must-read-issue-comments-not-just-body-and-labels",
+      "prompt": "An autonomous delivery loop triages open issues for buildability using each issue's title, body, and labels. Issue #240's body requests feature X; a reviewer says 'the body is clear and it's unassigned, so dispatch a lane.' What's the risk, and what must triage check first?",
+      "expected_output": "The body is not the whole issue. A later comment may have narrowed the scope, recorded an owner A/B decision, deferred the work, corrected the repro, or marked it superseded — and buildability and priority often live only in that thread. Dispatching from body + labels alone can re-open a lane the owner already redirected or resolved in discussion, spending it on an unwanted or wrong-scoped change. Triage must read the issue's comments too (`gh issue view <n> --comments`) and let a later owner comment outrank the original body before classifying buildability. (This is the pre-laning companion to reproducing the bug on current HEAD before building.)",
+      "expectations": [
+        "Identifies that the issue's comments can override the body (owner A/B decision, narrowed scope, deferral, repro correction, superseded) and that buildability/priority often lives only there",
+        "Explains the risk: dispatching from body+labels alone re-opens a lane the owner already redirected/resolved, wasting effort or producing a wrong-scoped change",
+        "Prescribes reading the comment thread (e.g. gh issue view --comments) and letting a later owner comment outrank the body before classifying buildability"
+      ]
+    },
+    {
+      "id": "closing-a-multi-criterion-issue-needs-every-criterion-verified-not-one",
+      "prompt": "An issue lists four acceptance criteria. An agent confirms criterion 1 is shipped (with a file:line), then runs `gh issue close` with a comment citing that one check. A reviewer says 'it's got a receipt, so the close is evidence-based.' Is that sufficient?",
+      "expected_output": "No. A receipt for one of four criteria does not close the issue — criteria 2-4 are now neither open (visible as a to-do) nor done (actually shipped), which is silent scope-loss. Before closing (manually or via `Closes #N`), enumerate every acceptance criterion and verify each independently against the merged source, one file:line receipt per criterion — not a single representative check the others ride on. If any criterion is unmet, leave the issue open with a named per-criterion gap ('1 shipped at file:line; 2-4 not yet') or split it. 'It has a receipt' is necessary but not sufficient: the receipt must cover every criterion, not one.",
+      "expectations": [
+        "Identifies that verifying one of several acceptance criteria is insufficient — the unverified criteria become silently neither-open-nor-done (scope loss)",
+        "Prescribes enumerating EVERY acceptance criterion and verifying each independently against live/merged source, a file:line receipt per criterion",
+        "Prescribes leaving the issue open with a named per-criterion gap (or splitting it) when any criterion is unmet, rather than closing on a representative check"
+      ]
     }
   ]
 }

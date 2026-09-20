@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.273.0] — 2026-09-20
+
+### agentic-delivery — wave 194 issue-lifecycle discipline: read comments before laning, verify every acceptance criterion before closing
+
+- **`fast-agentic-delivery.md`** two additions. (1) Before opening a fix lane, read the issue's **comments**, not just its title/body/labels — a later owner comment (an A/B decision, a narrowed scope, a "defer this," a "superseded by #M") outranks the body, and buildability/priority often live only there; classifying from body + labels alone re-opens a lane the owner already redirected. (2) New section: before a manual or agentic `gh issue close` (or a `Closes #N`), enumerate **every** acceptance criterion and verify each independently against the merged source — a `file:line` receipt per criterion, not one representative check the rest ride on; a multi-criterion issue closed on one silently drops the others (neither open nor done). Leave open with a named per-criterion gap otherwise, or split; and criterion-verification settles *whether* to close, not *when* ("done" still means merged to the default branch). +2 evals (agentic-delivery suite). Independent reviewer PASS-WITH-FIXES: replaced a coined cross-ref phrase with the review method's actual *Intent-conformance* lens and cross-linked the close-side rule back to the default-branch condition. Closes #611, closes #622.
+
 ## [1.272.0] — 2026-09-20
 
 ### deep-code-review — wave 193 data-quality idempotency: a dedup key over a truncated slug collides; a dual-registered entity's write target is per-field

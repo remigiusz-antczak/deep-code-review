@@ -866,6 +866,12 @@ Reading "open" as "not done" opens a lane to redo finished work — the
 duplicate-work failure one level up from re-searching for code already present
 (*An ownership map blocks a dual write*, above). **Before opening a fix lane for a
 tracked issue:**
+- **Read the issue's comments, not just its title, body, and labels.** A later owner comment
+  — an A/B decision, a narrowed scope, a "defer this," a repro correction, a "superseded by
+  #M" — outranks the original body, and buildability and priority often live **only** in that
+  thread. Classifying from body + labels alone re-opens a lane the owner already redirected or
+  resolved in discussion, spending it on an unwanted or wrong-scoped change (`gh issue view
+  <n> --comments`).
 - **Reproduce the bug on the current integration HEAD before writing a fix.** An inbound bug report
   is a claim about a *past* build — a stale deploy, a cached bundle, or a report filed before an
   intervening fix merged. Reproduce the symptom against current HEAD first; one you cannot
@@ -924,6 +930,22 @@ Two ways it over-fires:
   keyword+number as live wherever it appears: keep it out of any body or commit unless you intend
   the close, and phrase around it otherwise (*the auto-close of #N*, *issue N*, split the `#`) —
   the same reflex a log line uses to describe a secret without printing a live one.
+
+## Before closing an issue, verify every acceptance criterion against live code — not one representative check
+
+The two keyword rules above govern *when* the tracker closes; this governs *whether it
+should*. Before a manual or agentic `gh issue close` (or a `Closes #N` you intend to fire),
+enumerate **every** acceptance criterion the issue states and verify **each** independently
+against the merged source — a `file:line` receipt per criterion, not one representative check
+the issue's other criteria then ride on. A multi-criterion issue closed on a single confirmed
+criterion silently drops the rest: they are now neither open (visible as a to-do) nor done
+(actually shipped). If any criterion is unmet, leave the issue open with a named per-criterion
+gap ("1 and 3 shipped at `file:line`; 2 not yet") or split it. This is the close-side companion
+to the review method's *Intent-conformance* lens (`deep-code-review` `method.md`) and to
+grep-the-tree-not-the-claim (`branch-and-merge-hygiene.md`). Verifying the criteria settles
+*whether* to close; it does not override *when* — "done" still means merged to the **default
+branch** (the inert-keyword section above), so a fix that landed only on an off-default
+integration branch stays open even with every criterion met.
 
 ## An ETA on a fan-out states its parallelism assumption — a serial estimate on parallel lanes is a fabrication
 
