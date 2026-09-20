@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.357.0] — 2026-09-21
+
+### agentic-delivery — a load-flaky required gate is not a confirmed red; bounded-rerun the same commit before concluding a regression (#833)
+
+- **`fast-agentic-delivery.md`**: extends the gate-epistemology (SKILL.md principle 3, #801 red-base discharge) for the autonomous-merge case. A required check that's deterministic in isolation but load-sensitive under merge volume (a busy runner reddens it, or it fails to report) is a **candidate flake, not a verdict** — match it to a known-flaky signature and **bounded-rerun the same commit** (a rebase changes what's tested and can launder a real failure) a small fixed number of times; a first red only becomes a *confirmed* red after the bounded reruns still fail, at which point the red-base-discharge rule applies. **Cap the reruns** — an unbounded retry is its own defect (it masks a gate that needs fixing; surface persistent flakiness). A failure NOT on the known-flaky list (a real assertion, type error, lint) is deterministic — treat it as real immediately, never rerun blind. +1 eval.
+
 ## [1.356.0] — 2026-09-20
 
 ### deep-code-review — a fix scoped to a bug report's named list is a sample, not the population; sweep for unnamed same-shape siblings (#814)

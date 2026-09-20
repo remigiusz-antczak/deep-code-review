@@ -601,6 +601,57 @@ one union.
 member — paying a base-CI cycle per merge inside what was supposed to be one draining window — or
 a batch that closes with no post-drain check confirming the union of merges actually landed green.
 
+## A load-flaky required gate is not a confirmed red — bounded-rerun the same commit to reclassify it before concluding a regression
+
+This expands `SKILL.md` gate-epistemology principle 3 ("if the shape matches a known-flaky
+browser/probe/hydration check, rerun and recheck **before** reverting") for an **autonomous
+merge-drainer** that reads a required check's pass/fail bit after each merge to decide whether to
+keep going. Principle 3 already carries the discriminator — identify the failing job **and step**,
+match it against a known-flaky signature, and revert only once the failure **reproduces** and is
+causally tied to the change; that is not restated here. What the drainer case adds is the **bound**,
+the **halt half**, and the **durable-fix obligation** a single act-on rule can't hold.
+
+The trap is specific: a required gate that shells out to an external probe under a tight timeout is
+deterministic in isolation but **load-sensitive** under merge volume, so a busy runner reddens the
+trunk with no code change from any diff. From the bit alone the drainer cannot separate this
+**load-flake** from a real regression, and both naive reactions are wrong — **halt** the whole queue
+(throughput collapses and an innocent PR is blamed, sometimes auto-reverted) or **force through** (a
+genuinely broken trunk is hidden for the next contributor). Principle 3 governs the premature
+*revert*; the premature *halt* is the other face of the same misread and is just as costly.
+
+- **Reclassify with a bounded rerun of the *same commit*, then conclude.** A first non-green whose
+  shape is on the known-flaky list is a *candidate* flake, not a verdict: rerun that gate a **small
+  fixed number of times** (one or two), on the **identical commit** — never a silent rebase, which
+  changes what is tested and can launder a real failure into a "pass." Green on rerun confirms the
+  flake; proceed. This is how a first red *becomes* a **confirmed** red: only after the bounded
+  reruns still fail is the trunk a confirmed-failing base, at which point the **red-base discharge
+  floor** applies (a confirmed red is a real deadlock needing a proven union to discharge — the red-base
+  discharge floor above, and `branch-and-merge-hygiene.md` §5) and a revert is warranted — name the candidate commits. The
+  first red is never itself the confirmed red.
+- **Cap the reruns — an unbounded retry is its own defect.** The budget *is* the safety property:
+  retry-until-green drains shared CI minutes and, worse, **masks a gate that itself needs fixing**. A
+  shape *not* on the known-flaky list — a real assertion, a type error, a lint — is deterministic:
+  treat it as real immediately and **never rerun it blind** (the lane-level twin: an ENOSPC is a
+  sizing bug, not a flaky lane to retry, above); rerunning a reproducing failure only papers it
+  over.
+- **A rerun that keeps saving a merge is a tracked defect, not a permanent stopgap.** File the flaky
+  gate for a **durable fix** — make the probe fail-open on a can't-check, widen the timeout, or
+  de-parallelize it — and watch the **fraction of reruns that go green**: a rising ratio means the
+  flaky-signature list is outgrowing the fixes and the drainer is leaning on a crutch. The
+  auto-rerun keeps delivery flowing; it is not the fix.
+
+Distinct from **"bound every flaky finalize step"** (below): there the bound's expiry falls back to
+a text `Verify:` report and the change still lands; here the bound's expiry **flips the verdict on
+the code** — flake to suspected real regression — and gates the halt/revert decision itself. Distinct
+too from the **fleet-wide external advisory** (above): that is a *real* finding shared by every open
+change, fixed by one coordinated bump; a load-flake is **not a real finding at all**, and the remedy
+is a rerun, not a fix-forward.
+
+**🚩** a drainer that concludes "regression" — halts the queue or auto-reverts the last merge — on
+the **first** non-green of a load-/infra-shaped required check without a bounded same-commit rerun;
+or one that reruns **unboundedly** (hiding a flaky gate that needs a durable fix); or one that reruns
+a **deterministic** assertion failure instead of treating it as real.
+
 ## An opt-in throughput lever is inert until the default path takes it — attribute the gain to what runs by default, not to the merge
 
 The throughput-lever instance of `SKILL.md` G2's "a cap that defaults to off is not a cap": when a
