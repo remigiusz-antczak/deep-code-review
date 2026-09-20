@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.349.0] — 2026-09-20
+
+### deep-code-review — switch/case control flow & unreachable code, as a cross-language reversal (language-stack-redflags.md)
+
+- **`language-stack-redflags.md`**: a new section. Switch/case fallthrough is a **cross-language reversal**, not a universal rule — "add a `break`" is right in one family, a compiler error to even need in another, a no-op in a third, meaningless in a fourth: C / C++ / JavaScript-TypeScript / Java classic `case X:` fall through by default (missing `break` is a silent bug; ESLint `no-fallthrough`, C++ `[[fallthrough]]` marker); **Go** requires an explicit `fallthrough` keyword; **Swift** doesn't fall through (opt-in `fallthrough`); **C#** rejects implicit fallthrough at compile time (deliberate reuse takes `goto case`); **Rust `match`** and **Java arrow `case L ->`** have no fallthrough at all. Plus unreachable-code-after-`return`/`throw`/`break`/`continue` (ESLint `no-unreachable`, CodeQL `js/unreachable-statement`), lexical declarations leaking across `case` clauses (`no-case-declarations`), and duplicate/mislabeled `case` (`no-duplicate-case`, `js/duplicate-switch-case`). Cross-references Domain H dead-code (a different concern: unreferenced funcs vs a dead branch in a live function). +1 eval. Verified by direct fetch 2026-09-20. (Found by an internal SAST/linter-catalog gap-analysis.)
+
 ## [1.348.0] — 2026-09-20
 
 ### deep-code-review — verify WHICH rule tier a linter/scanner gate enables, not just that it runs (method.md)
