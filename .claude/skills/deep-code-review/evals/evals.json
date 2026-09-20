@@ -4160,6 +4160,26 @@
         "Explains that this makes the decline-rate ratio return no data rather than a true zero, and specifically rejects the on-call engineer's 'monitoring is broken, ignore' conclusion as the wrong read of a correct query",
         "Flags that the absent()-based deadman check is defeated by the same lazy-creation pattern -- a healthy-but-quiet worker and a crashed worker both read as 'no series' -- and recommends exporting a default 0 at startup for any metric/label combination known in advance"
       ]
+    },
+    {
+      "id": "independent-server-loader-awaits-in-series-vs-a-genuine-dependency-chain",
+      "prompt": "A server-side loader for an order-details page returns correct data and every functional test passes, but Time-to-First-Byte on this route regressed by roughly 200ms after a recent change. The loader now reads:\n\n    const order = await fetchOrder(orderId);\n    const customer = await fetchCustomer(order.customerId);\n    const shippingOptions = await fetchShippingOptions(); // static list of carriers\n    return { order, customer, shippingOptions };\n\nWhat's wrong here, and exactly what should change?",
+      "expected_output": "`fetchCustomer(order.customerId)` is a genuine dependency -- it needs `order.customerId`, which only exists after `fetchOrder` resolves, so it correctly stays sequential; that is not a bug to flag. `fetchShippingOptions()` is the accidental serialization: it reads nothing produced by either prior call, yet the natural top-to-bottom order makes it run last, so the loader pays the sum of all three latencies instead of the max, adding an unnecessary round-trip to time-to-first-byte. The fix is not to wrap all three in one blind `Promise.all` (that would incorrectly race `fetchCustomer` before `order.customerId` exists) -- it is to start `fetchOrder` and `fetchShippingOptions` together (e.g. `Promise.all([fetchOrder(orderId), fetchShippingOptions()])`) and await `fetchCustomer(order.customerId)` afterward, once `order` has resolved.",
+      "expectations": [
+        "Identifies fetchOrder -> fetchCustomer as a genuine data dependency (customer fetch needs order.customerId) that correctly stays sequential -- does not flag it as a bug",
+        "Identifies fetchShippingOptions as independent of both order and customer, and flags it as the accidental serialization with no data reason to run last",
+        "Prescribes running fetchShippingOptions concurrently with fetchOrder (e.g. via Promise.all over just the independent pair) and awaiting fetchCustomer afterward -- rejects or avoids a naive blind Promise.all over all three calls"
+      ]
+    },
+    {
+      "id": "client-badge-importing-one-helper-drags-the-whole-catalog-dataset-into-the-bundle",
+      "prompt": "A shared module `catalog.ts` looks like this:\n\n    import CATALOG_DATA from './catalog-data.json'; // 4,000 products\n    const index = buildIndexById(CATALOG_DATA);\n    export function labelForSku(sku: string): string {\n      return index[sku]?.label ?? sku;\n    }\n\nA `\"use client\"` product-badge component imports only `labelForSku` to render a short label next to a SKU, on every product card, visible on first paint. A teammate reviewing the diff says: 'This is fine -- the component only imports one small function that returns a string, it never touches the JSON file.' Are they right? What actually ships to the browser here, and what's the fix?",
+      "expected_output": "No, the teammate is wrong. Importing `labelForSku` still imports the whole `catalog.ts` module at runtime, and because `index` is built by processing the entire `CATALOG_DATA` import into one object at module load time, a bundler cannot tree-shake around it -- the whole 4,000-product JSON dataset ships into the product-badge component's client bundle, not just the small function. This is invisible to typecheck, lint, and tests, and shows up only as an oversized bundle-analyzer entry or a slow page load. Because the label renders on first paint for every card rather than behind an interaction gate, deferring the import with React.lazy or a dynamic import() does not fix it -- the data is still needed immediately. The real fix is architectural: resolve the label server-side and pass only the resolved string down as a prop, or refactor to a structural-parameter form (`labelForSku(sku, index)`) living in a dataset-free module, so the client component supplies its own narrow slice instead of importing the module that holds the full dataset.",
+      "expectations": [
+        "Rejects the teammate's claim -- explains that importing the helper still imports the whole module, and because the module builds its index over the entire dataset at load time, the bundler cannot tree-shake it, so the full dataset ships to the client bundle, not just the small function",
+        "Recognizes that deferring the import (React.lazy / dynamic import) does not fix it here because the label is needed on first paint for every card, not gated behind an interaction -- ruling out lazy-loading alone as the fix",
+        "Prescribes an architectural fix: resolving the lookup server-side and passing the resolved value as a prop, or refactoring the helper to take the dataset as a parameter so it lives in a dataset-free module -- not merely shrinking, renaming, or lazy-loading the helper"
+      ]
     }
   ]
 }

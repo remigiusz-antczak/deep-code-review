@@ -267,6 +267,33 @@ Every billable or slow call must map to value delivered.
 
 - I/O-bound work is async/parallel where safe; CPU-bound work isn't blocking the
   event loop / request thread. Backpressure and timeouts on every external call.
+- **Sequential `await`s with no data dependency are an accidental serialization, not
+  a design choice.** A request handler / page data loader / GraphQL resolver that
+  assembles one response from a few independent backend calls (a main entity fetch
+  plus an unrelated sidebar, count, or config read) is often written in natural
+  top-to-bottom order, `await`-ing each call before the next line runs. A call that
+  reads nothing produced by an earlier call has no data reason to wait for it, yet
+  still runs last — the handler pays the *sum* of every call's latency instead of
+  the *max*, adding a full extra round-trip to time-to-first-byte on every request.
+  The code stays correct (right data, right shape), so nothing fails; it surfaces
+  only as a slow-page field report or a TTFB regression, not a test. Detect by
+  listing, for each `await` in the function, whether its arguments (or a variable it
+  closes over) trace back to a *preceding* `await`'s result in that same function —
+  any call whose inputs don't is a parallelization candidate regardless of what it
+  does. Fix by starting every mutually-independent call together
+  (`Promise.all`/`Promise.allSettled`, `asyncio.gather`, an errgroup) and keeping
+  sequential only the calls that truly consume a prior call's output — a call that
+  reads `main.ids` after fetching `main` is a genuine dependency and correctly stays
+  sequential; that shape is not the anti-pattern. Distinct from **N+1** above (a
+  query *per row* of an existing result — this is a handful of independent
+  *top-level* calls, present even for a single row/request) and from the
+  client-side critical-request-chain waterfall in `frontend-a11y.md`'s Core Web
+  Vitals section (the browser's dependent-fetch chain hurting LCP/TTI, versus the
+  server handler's own `await` ordering hurting TTFB here). And distinct from the
+  terse `async/parallel where safe` line above, which states the principle: this
+  names the concrete failure shape (sum-vs-max latency), the detection trace (each
+  `await`'s arguments back to a prior `await`'s result), and the genuine-dependency
+  carve-out that one-liner leaves implicit.
 - No unbounded growth: ever-growing lists/maps/caches, accumulating `defer`s,
   unclosed resources. Stream large data instead of buffering it all in memory.
 - **Every append-only store on disk names a reaper — unbounded growth fills the disk, a
@@ -305,4 +332,7 @@ tokens at the full input rate; a per-run cap whose default is `0`/unlimited; a
 `catch` that sets a spend accumulator to empty; `SELECT sum(...)` then an
 app-side spend decision; a `globalThis`/in-process job guard shared across
 processes; a cache read → origin recompute with no single-flight (stampede on
-expiry); a cache that stores a not-found/error under the positive TTL.
+expiry); a cache that stores a not-found/error under the positive TTL; a
+handler/loader with independent `await`s run in top-to-bottom order where none
+reads an earlier call's result (accidental serialization, not a genuine
+dependency).

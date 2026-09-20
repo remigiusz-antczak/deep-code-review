@@ -3,6 +3,14 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.312.0] — 2026-09-20
+
+### deep-code-review — front-end / loader performance: serialized independent awaits (#716); a static dataset leaked into the client bundle (#715)
+
+- **`performance-db-cost.md`** (#716): sequential `await`s with no data dependency are an **accidental serialization** (sum-vs-max latency, extra round-trip per call to TTFB), not a design choice — issue independent I/O concurrently (`Promise.all` / `asyncio.gather` / errgroup), keeping genuinely-dependent calls sequential. Distinct from N+1 (per-row), the frontend critical-request-chain waterfall, and the terse "async/parallel where safe" one-liner above it (which states the principle without the failure shape, detection trace, or dependency carve-out).
+- **`frontend-a11y.md`** (#715): a shared data-access module can leak an **entire static dataset into a client bundle** through one "harmless" helper import (tree-shaking defeated by a singleton the module builds over the whole dataset at load); resolve it server-side or split the heavy data behind a separate import, plus a standing import-graph test. Distinct from the heavy-optional-library-gated-at-import bullet and the RSC-proxy section (bundle-size leak vs functional-proxy bug).
+- +2 evals; bidirectional TTFB↔LCP cross-ref. Built by a worktree builder subagent, independently reviewed **PASS-WITH-FIXES**: both folds confirmed genuinely new and distinct (the #716 eval discriminates accidental serialization from a genuine dependency chain, and rejects a blind `Promise.all` over a dependent call); applied the reviewer's must-fix — disambiguating #716 from the terse "async/parallel where safe" line directly above it, per the repo's no-restatement thesis. Closes #716, #715.
+
 ## [1.311.0] — 2026-09-20
 
 ### deep-code-review — metric type & shape correctness (histogram buckets, instrument type, lazy-create, units)

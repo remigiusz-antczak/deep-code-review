@@ -358,7 +358,9 @@ production-like server).
   independent ones (`Promise.all`), collapse the chain server-side (a BFF/single endpoint
   returning what the view needs in one round trip), and prefetch/colocate data with the
   route so it fires on navigation. Measure the request-waterfall, not only the bundle
-  budget. (Chrome Lighthouse, *critical request chains*.)
+  budget. (Chrome Lighthouse, *critical request chains*.) The same accidental-serialization
+  shape inside a server handler's own loader — no browser round trip involved, hurting TTFB
+  rather than LCP — is `performance-db-cost.md`'s Concurrency section.
 - **A memoized callback needs a memoized recipient — stable props alone don't stop
   re-renders.** In a list/queue rendering N rows via `.map()`, if the parent holds shared
   per-row state (a selection set, per-row drafts, a filter) that changes on ordinary
@@ -387,6 +389,36 @@ production-like server).
   `import()`) behind the same gate the render already uses. Strong tell: the codebase
   already defers a *different* heavy dep correctly — name that precedent, it makes the fix
   trivially arguable.
+- **A shared data-access module can leak an entire static dataset into a client bundle
+  through one "harmless" helper import.** A module holding a frontend's full
+  compiled/static dataset (a large JSON import) alongside small lookup helpers
+  (`getThing(id)`, `labelFor(key)`) ships the **whole dataset** to any client
+  component that imports even one helper, whenever the module builds its exports by
+  processing the entire dataset at load time (spreading it into a derived singleton
+  the helpers close over) — a bundler cannot tree-shake around a singleton built
+  from the whole input, so importing one small function drags the rest along. It
+  looks safe because the helper's signature gives no hint of size, and because
+  `import type { Thing } from './data'` really is erased at compile time — training
+  a reviewer to assume any import from that module is free, when a *value* import of
+  a sibling helper is not. Nothing fails: no test, typecheck, or lint rule catches
+  it; it shows up only as a bigger bundle-analyzer entry or a "this page feels slow"
+  report, rarely traced to the import line. Detect by walking each client entry
+  point's **runtime** import graph (stripping type-only imports first) for an edge
+  into the big-dataset module, then confirming a suspect route's bundle size
+  before/after removing the import. Fix by resolving the lookup server-side and
+  passing only the small resolved value down as a prop, or by refactoring the helper
+  to a structural-parameter form (`getX(id, allThings)`) living in a dataset-free
+  module, so a caller supplies its own narrow slice; add a standing import-graph
+  test so a **new** client component reaching the dataset fails CI instead of
+  shipping silently. Distinct from the heavy-optional-library bullet above — that
+  library is needed only behind an interaction gate and the fix is deferring the
+  *import*; a data-lookup helper is typically needed unconditionally at its call
+  site (e.g. rendered on first paint), so deferral alone doesn't remove the cost and
+  the fix is architectural instead. Also distinct from the Server/client boundary
+  proxy above: that is a **Server** Component reading a **client**-marked export and
+  getting an inert stub (a functional bug); this is a **Client** Component reaching
+  a large payload through an unmarked shared module (a bundle-size bug) — the
+  boundary direction and the failure mode are both reversed.
 
 ## Security & compatibility
 
@@ -432,4 +464,7 @@ replacement focus style; hardcoded `#hex` text colors to spot-check contrast;
 `localStorage.setItem('token'`; API keys in `NEXT_PUBLIC_`/`VITE_`/`REACT_APP_`
 env names; `addEventListener('message'` with no `event.origin` check; a `<script>`/`<link>` to a
 third-party origin with no `integrity=`; a weakened `Referrer-Policy` (`unsafe-url`); no
-`frame-ancestors`/`X-Frame-Options` on a page with authenticated or state-changing actions.
+`frame-ancestors`/`X-Frame-Options` on a page with authenticated or state-changing actions; a
+small lookup helper imported from a shared module that also builds a derived singleton over
+an entire large dataset (walk the client import graph, stripping type-only imports, for an
+edge into that module).
