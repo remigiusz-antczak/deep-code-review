@@ -3570,6 +3570,16 @@
         "Prescribes the built-in Pod Security Admission (`pod-security.kubernetes.io/enforce: restricted` namespace label) as the free, zero-dependency enforcement, with warn/audit for rollout",
         "Correctly scopes a policy engine (OPA-Gatekeeper/Kyverno) as for rules BEYOND the built-in profiles, not a prerequisite for baseline enforcement"
       ]
+    },
+    {
+      "id": "an-or-fallback-chain-over-json-fields-drops-a-legitimate-falsy-value",
+      "prompt": "Config loads from JSON and a setting resolves as `timeout = user_cfg.get('timeout') or team_cfg.get('timeout') or 30` (Python; the JS version uses `||`). A user who deliberately sets `timeout: 0` (meaning 'no timeout') finds their setting ignored — they always get the team or default value. Why, and what's the fix?",
+      "expected_output": "`0` is falsy, so `user_cfg.get('timeout') or …` treats a legitimately-present `0` as absent and falls through to the next value — an `or`/`||` fallback chain cannot distinguish 'not set' from 'set to a falsy value' (`0`, `False`/`false`, `\"\"`, `[]`, `NaN`), so the user's explicit `0` is silently dropped. Fix: resolve by presence, not truthiness — in Python `user_cfg['timeout'] if 'timeout' in user_cfg else …` (or an `is not None` check); in JS use `??` (nullish coalescing), which falls back only on `null`/`undefined`. Test the resolver with `0`/`False`/`\"\"` present to confirm the falsy-but-set value is kept.",
+      "expectations": [
+        "Identifies that a falsy value (`0`) makes the `or`/`||` fallback chain skip a legitimately-present value — the chain can't distinguish absent from set-to-falsy",
+        "Prescribes resolving by PRESENCE not truthiness: a presence / `is not None` check in Python; `??` (nullish coalescing) in JS (falls back only on null/undefined)",
+        "Prescribes testing the resolver with a falsy-but-present value (`0`/`False`/`\"\"`) to confirm it is kept"
+      ]
     }
   ]
 }

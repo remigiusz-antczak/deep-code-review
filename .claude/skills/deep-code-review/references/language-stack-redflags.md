@@ -35,6 +35,10 @@ grep -rInE 'console\.log|print\(|dbg!|System\.out\.print|fmt\.Print' .
 - `tempfile.mktemp`, predictable temp paths → TOCTOU.
 - `datetime.now()`/`utcnow()` without tz → naive datetimes; use tz-aware UTC.
 - `float` for money → use `decimal.Decimal`.
+- `a or b or default` over decoded JSON/config → a legitimately-present **falsy** value
+  (`0`, `False`, `""`, `[]`, `{}`) is skipped for the next fallback. Resolve by presence, not
+  truthiness (`x if x is not None else default`; `d[k] if k in d else default`), and test with
+  `0`/`False`/`""`/`[]` present.
 
 ## JavaScript / TypeScript
 
@@ -47,6 +51,9 @@ grep -rInE 'console\.log|print\(|dbg!|System\.out\.print|fmt\.Print' .
 - `==`/`!=` (coercion) vs `===`; `JSON.parse` on untrusted input without a
   schema; prototype pollution via `Object.assign`/merge of untrusted keys
   (`__proto__`, `constructor`, `prototype`).
+- `a || b || default` over decoded JSON/config → the same **falsy**-skip footgun (`0`, `false`,
+  `""`, `NaN` fall through). Use `??` (nullish coalescing) so only `null`/`undefined` fall back,
+  and test with `0`/`false`/`""` present.
 - `Math.random()` for tokens/ids → use `crypto.randomBytes`/`randomUUID`.
 - `any`, `as any`, `@ts-ignore`, `!` non-null assertions → type holes; `TS` set
   to non-`strict`.
