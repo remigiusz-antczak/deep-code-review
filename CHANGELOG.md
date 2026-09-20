@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.248.0] — 2026-09-20
+
+### agentic-delivery — wave 169 surface the human-run escape hatch when no autonomous path exists (closes #529)
+
+- **`fast-agentic-delivery.md`**: distinct from the delegation asymmetry (wave 165) — when an agent is blocked from a gated terminal step (merge/deploy/paid call) with NO autonomous route (own call denied AND delegation unavailable/also gated), a closed gate with verified work piled behind it is an escalation, not a hold. The failure mode is looping "gated/holding" while banked green mergeable work stays at zero landed (invisible to an operator watching only the branch). On the FIRST denial, convert the block into a one-action human ask (a copy-pasteable `! <command>` the user runs — outside the agent's own classifier, not laundering because the human issues it — or one GUI action), track banked-verified vs landed, and escalate when banked>0/landed=0 persists rather than re-narrating the block.
+- +1 eval. Closes #529.
+
 ## [1.247.0] — 2026-09-20
 
 ### deep-code-review — wave 168 notebook review: hidden state & committed-output leakage (data-science code)
