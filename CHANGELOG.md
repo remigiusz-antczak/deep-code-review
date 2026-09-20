@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.320.0] — 2026-09-20
+
+### deep-code-review — enforce the upload/body size cap before buffering, not after (OWASP API4 memory axis, #745)
+
+- **`security-appsec.md`** API4: a raw-body / upload size cap must be enforced **before/while streaming** — reject early on an over-limit `Content-Length` AND enforce a hard streaming byte-ceiling (because `Content-Length` can lie or be absent/chunked). Enforcing it *after* buffering the whole body into memory **is** the DoS the cap should prevent. Distinct from the spend-axis bullet, the A05 upload-size cap (which caps size but not the buffering *order*), CL/TE request smuggling, and CWE-789 (an in-payload *declared*-size field). Coverage by a shared bounded-read middleware ≠ whole-app coverage — a raw-body route that bypasses it still ships the bug. +2 evals; extended the existing OWASP API4 `docs/standards-index.md` row (spend + memory axes). Closes #745.
+- Built by a worktree builder subagent, independently reviewed **PASS**: OWASP API4 quotes byte-verified; the flagged CWE-789→API10 "dangling xref" was independently confirmed a **false alarm** (the "both" coordinates two correct referents — the builder correctly invented no fix); one optional readability fix applied at finalize (tightened a run-on).
+
 ## [1.319.0] — 2026-09-20
 
 ### deep-code-review — a11y: live-region loading announce (#737), Label in Name (#736), disclosure aria-expanded (#735)

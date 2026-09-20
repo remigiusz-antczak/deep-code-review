@@ -918,6 +918,50 @@ across many legitimate accounts (CWE-770, Allocation of Resources Without Limits
 provider with no per-caller operation throttle and no spend ceiling or billing alert
 configured.
 
+**API4 — unrestricted resource consumption, the *memory* axis.** Distinct from
+the spend axis above: the damage here is exhausted server memory, not a
+runaway bill, and the trigger is the request's own body, not a downstream call
+it makes. OWASP's own vulnerability checklist names "Maximum allocable memory"
+and "Maximum upload file size" among the limits an API needs, and its
+prevention list requires you to "Define and enforce a maximum size of data on
+all incoming parameters and payloads, such as maximum length for strings,
+maximum number of elements in arrays, and maximum upload file size (regardless
+of whether it is stored locally or in cloud storage)" (OWASP API4:2023) — but a
+cap that exists is not the same as a cap **enforced in time**. A raw
+(non-JSON) upload route commonly checks its byte-size cap only *after* the
+framework has already fully buffered the whole body into memory: the real
+check runs deep inside the storage call, downstream of an unconditional
+`request.arrayBuffer()`/`.blob()`/`.text()` (or any framework's equivalent
+"read the whole body" convenience call) that has no bound of its own. By the
+time the cap rejects the request, the allocation it exists to prevent has
+already happened — a handful of concurrent oversized uploads exhausts the
+process for every tenant sharing it, not just the caller who sent them. Two
+gaps compound: a pre-check against the declared `Content-Length` is a no-op
+for a chunked or omitted header (a `Number(header ?? '')`-style coercion of a
+missing header commonly evaluates to a value that passes the check regardless
+of the real body size), and the framework's whole-body read has no ceiling of
+its own even when the declared length was honest. Bound the **read**, not the
+result of the read: reject immediately on a declared `Content-Length` already
+over the cap, *and* enforce a hard ceiling via a streaming read — sum bytes
+chunk by chunk, cancel/abort the instant the running total crosses the cap —
+so worst-case memory use is bounded regardless of what the client declares or
+omits. 🚩 grep raw-body reads (`.arrayBuffer()`, `.blob()`, `.formData()` where
+it buffers, a no-`limit` `body-parser`) in any handler and trace whether the
+app's size check runs before that call (safe) or only after (vulnerable — the
+memory is already committed). Test with a chunked, `Content-Length`-omitting
+oversized body and assert both the rejection and that the handler never
+buffers past the cap. Distinct from the upload allow-list/magic-bytes checks
+above (`Files, archives & parsers`) — those gate *type*, not the order size is
+enforced relative to buffering — and from `language-stack-redflags.md`'s
+CWE-789 "declared/untrusted size value" fold: CWE-789 is a size/count/dimension
+field read *from inside* an already-received payload driving a derived
+allocation (a declared width×height, a record count); this fold is about the raw body's
+*own byte count* and whether the cap runs before or after the framework buffers
+it. Coverage by a shared helper is not coverage of the whole app: a codebase
+whose JSON routes sit behind a bounded-read middleware can still ship this bug
+on the one raw-body route that bypasses it — precisely because it isn't a JSON
+route.
+
 **API6 — unrestricted access to a *sensitive business flow*.** Distinct from the
 rate-limit key/burst check in A06 above: a flow can be **correctly authorized,
 individually within the rate limit, and still harm the business at volume** —
