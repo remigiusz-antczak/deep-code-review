@@ -800,6 +800,36 @@
         "Flags the 'cleaned up' log as an unverified claim (nothing checked git worktree list / the directory) -- the over-claim / report-the-artifact bar applied to teardown; a reap that never ran leaks silently",
         "Notes these are the orchestrator's own successive generations of one issue, so it should adopt the prior generation's worktree/branch rather than spawn a fresh one beside it (dual-write-not-dual-work)"
       ]
+    },
+    {
+      "id": "capability-matched-dispatch-not-first-grab",
+      "prompt": "A three-machine agent fleet shares one backlog via a claim registry. Machine A has 8GB free disk, B has 200GB, C has 50GB. Items are dispatched first-come-first-served: whichever machine's loop wakes first claims the next item. A heavy item -- a monorepo build with a ~40GB node_modules + build output -- is claimed by machine A because its loop happened to wake first; 30 minutes in it dies with ENOSPC. The operator asks why a 'flaky' lane failed. Was it flaky, and what should the dispatch model be?",
+      "expected_output": "Not flaky -- a scheduling bug that surfaced late. Machine A had 8GB free; the item needed ~40GB; first-come dispatch handed it to the one machine that could never finish it, and the failure showed up 30 minutes in (ENOSPC mid-build) instead of at assignment. The aggregate-budget rule (don't oversubscribe the shared host) doesn't help here -- this is heterogeneous *routing*, which machine takes which item, not how many lanes run. Fix: tag each queued item with a resource-profile (its heavy-lane footprint -- disk ~= build-dir + deps, peak RAM, browser/GPU need) and pre-assign it to a machine whose free capacity fits, published in the claim registry before dispatch, so peers route by fit rather than by who woke first. Keep it a routing default, not a boundary: the assigned slice is a floor not a ceiling, and any machine may pull an unclaimed item it *can* run -- the tag prevents the predictable misassignment (a 40GB build to an 8GB-free machine), it doesn't fence a capable machine out. Machine B (200GB) should have taken this item.",
+      "expectations": [
+        "States it was not flaky but a late-surfacing scheduling bug: first-come dispatch gave a ~40GB build to the machine with 8GB free, so ENOSPC mid-run was predictable at assignment time",
+        "Distinguishes this from the aggregate-oversubscription rule -- it is heterogeneous routing (which machine takes which item), not lane count -- and prescribes tagging items by resource-profile and pre-assigning to a fitting machine in the registry before dispatch",
+        "Keeps it a routing default not a boundary (slice is a floor not a ceiling; a machine may still pull an unclaimed item it can run) -- the tag prevents the predictable misassignment, not capable-peer participation"
+      ]
+    },
+    {
+      "id": "relay-gate-format-read-every-acceptance-branch",
+      "prompt": "A shared CI gate validates commit messages. Peer A reads the gate's validator, sees it accepts `feat(scope): summary`, and tells peer B 'commits must be `type(scope): summary`.' Peer B follows that exactly, yet B's commits are still rejected by the same gate. What went wrong in A's relay, and what is the rule?",
+      "expected_output": "A relayed a partial reading of the gate. The validator accepts several shapes -- conventional-commits, a `Revert \"...\"` passthrough, a `[skip ci]` form -- but A read the first accepted branch and relayed it as *the* format, so the rule A gave B was wrong for every other accepted shape (B's reverts), and B got bounced by the very gate it was told it satisfied. The rule: before relaying 'gate G accepts format X' to a peer, read *every* function/branch that independently satisfies the check, not the first one found; quote the gate's own failure message / FIX_HINT verbatim rather than paraphrasing (a paraphrase drops the alternatives the code allows); and check the calling layer -- if something hard-errors before the gate runs, the content format isn't the real constraint. A peer re-reporting the same rejection after following the relayed rule is the signal the relay was partial: re-read the gate in full, don't re-send the paraphrase.",
+      "expectations": [
+        "Identifies A relayed one accepted branch of a multi-branch validator as the whole format, so the rule was wrong for the other accepted shape B's commits actually matched, and B was rejected by the gate it was told it met",
+        "Prescribes reading every function/branch that satisfies the check before relaying, and quoting the gate's own failure message/FIX_HINT verbatim rather than paraphrasing (which drops the allowed alternatives)",
+        "Notes a peer re-reporting the same rejection after following the relayed rule signals a partial relay (re-read in full), and to check the calling layer for a hard error before prescribing a content-level format"
+      ]
+    },
+    {
+      "id": "decorrelated-convergence-is-the-terminus-signal-not-a-solo-scan",
+      "prompt": "A fleet of independent agents is draining a shared backlog. Agent X finishes its keyword-filtered scan, finds only owner-gated items left, and posts 'fleet terminus -- closing everything remaining and shutting down.' Two other agents are still mid-sweep on surfaces X's keyword filter never covered. Separately, in a different run, three agents using different scan methods all independently report 'only owner-gated items remain.' Which of these is trustworthy evidence of terminus, and what does it authorize?",
+      "expected_output": "The first is not trustworthy; the second is. Agent X's solo scan cannot see its own blind spot -- a keyword filter misses surfaces it never queried, exactly the case here (two peers still have un-swept surface) -- so 'fleet terminus' from one agent's one method is weak evidence, and 'closing everything remaining' compounds it. Decorrelated convergence -- independent peers using *different* scan methods all arriving at the same 'only owner-gated remains' -- is far stronger, because different methods don't share a blind spot (the same reason a finding two lenses both flag outranks one lens's). But even genuine convergence authorizes only *stopping production/search*, not blanket-closing: each remaining item still gets its per-item close-verification before it is closed or escalated. At that point the right move is non-fan-out -- surface the owner-gated/spend frontier and harden landed work -- not a mass close. So: distrust solo-scan terminus; trust decorrelated convergence to stop producing; still verify each item before closing; escalate the frontier.",
+      "expectations": [
+        "Rejects the solo-scan terminus (a single agent's one method has a blind spot -- here a keyword filter missing surfaces two peers still sweep) and flags the 'close everything' move as compounding it",
+        "Identifies decorrelated cross-peer convergence (independent peers, different scan methods, same conclusion) as the trustworthy signal, because different methods don't share a blind spot -- the corroboration principle",
+        "Notes convergence authorizes stopping production/search, not blanket-closing -- each remaining item still gets per-item close-verification -- and the move is non-fan-out (surface the frontier, harden landed work)"
+      ]
     }
   ]
 }

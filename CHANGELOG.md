@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.337.0] — 2026-09-20
+
+### agentic-delivery — peer-coordination: capability-matched dispatch (#769), read-every-acceptance-branch on gate relay (#783), decorrelated convergence as the terminus signal (#776)
+
+- **`multi-session-coordination.md`**: three new sections. (**#769**) tag backlog items by resource-profile and pre-assign each to the machine whose free capacity fits, published in the claim registry *before* dispatch — a routing default (not a boundary: the slice is a floor, not a ceiling), which prevents the predictable misassignment (a 40GB build to an 8GB-free machine dying ENOSPC mid-run) that first-grab dispatch causes. (**#783**) before relaying "gate G accepts format X" to a peer, read *every* acceptance branch of the gate, quote its own failure message verbatim (not a paraphrase, which drops the alternatives), and check the calling layer — a partial read ships a peer a rule wrong for every other accepted shape. (**#776**) decorrelated cross-peer convergence (independent peers, different scan methods, same conclusion) is the trustworthy backlog-exhausted signal — it authorizes *stopping production*, not blanket-closing (each item still gets per-item close-verification). SKILL.md routing widened for all three. +3 evals.
+- Built in-tree; independently reviewed **PASS-WITH-FIXES** (the #769-vs-"slice is a floor" non-contradiction verified at source). Applied the must-fix — #776 cited a non-existent "corroboration principle"; repointed it to `deep-code-review`'s `parallel-audit.md` (decorrelated second opinions) — plus nits (named the *disk does not pool* neighbor and the RAM/swap probe for the OOM half in #769; de-telegraphed the #783 eval).
+
 ## [1.336.0] — 2026-09-20
 
 ### agentic-delivery — a stop/kill of a lane's turn is not worktree teardown; a "cleaned up" claim is unverified until checked (#777)

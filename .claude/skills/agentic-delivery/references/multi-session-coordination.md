@@ -211,3 +211,58 @@ moment X is already done). **🚩 tell:** a lane silently complying with a
 peer's correction that contradicts its own just-verified state, or a
 coordinator sending a correction built from a snapshot it never re-checked
 immediately before sending.
+
+## Tag backlog items by resource-profile and pre-assign to the machine that fits — before dispatch, not after a crash
+
+The aggregate-budget section above stops a shared host from being *oversubscribed*; it says
+nothing about **which** peer/machine should take **which** item. On a heterogeneous fleet
+(machines differing in RAM, disk, cores, or installed toolchains), dispatching a heavy item — a
+big build, a headless-browser suite, a large-checkout worktree — to whichever peer grabs it first
+lets a disk- or RAM-poor machine take work it cannot finish, and the failure surfaces **late** (an
+ENOSPC or OOM mid-run — the disk arithmetic and the RAM/swap environment probe in
+`fast-agentic-delivery.md`; and disk is **per-machine, not pooled** — *disk does not pool the same
+way*, above) instead of at assignment. Tag each queued item with a **resource-profile** — its heavy-lane footprint (disk ≈
+build-dir + deps, peak RAM, whether it needs a browser/GPU) — and pre-assign it to a machine whose
+free capacity fits, **published in the claim registry before dispatch**, so peers route by fit, not
+by race. This is a **routing default, not a boundary**: the assigned slice is still a floor, never
+a ceiling (`fast-agentic-delivery.md` — an agent that drains its slice broadens into the shared
+remainder), and a machine may pull an unclaimed item it *can* run; the tag prevents the
+**predictable** misassignment, it does not fence a capable peer out. **🚩 tell:** a heavy item
+dispatched round-robin / first-grab across a fleet with mixed disk, then a lane dying of ENOSPC on
+the machine that never had room — a scheduling bug surfaced as a flaky lane.
+
+## Relaying a shared gate's accepted format to a peer: read every acceptance path, not the first one found
+
+When one peer tells another "gate G accepts format X" — a commit-message convention, a required
+file shape, an API a shared CI step enforces — the relay is only as correct as how **completely**
+the relayer read the gate. A gate often accepts **several** shapes (multiple branches in one
+validator, several validators, an allow-list with more than one entry); reading the first
+acceptance path and relaying it as *the* format ships a peer a rule that is wrong for every other
+accepted shape, and the peer's work is then rejected by the very gate it was told it satisfied.
+Before relaying: read **every** function/branch that independently satisfies the check, and quote
+the gate's **own** failure message / `FIX_HINT` **verbatim** rather than paraphrasing it (a
+paraphrase silently drops the alternatives the code allows). Check the calling layer too — if an
+upstream step hard-errors before the gate runs, the content-level format is not the real constraint
+(the fix-the-failing-layer discipline in `deep-code-review`'s `method.md`, applied to a peer
+relay). A peer re-reporting the **same** rejection after following the relayed rule is evidence the
+relay was partial — re-read the gate in full, never re-send the same paraphrase. **🚩 tell:** a
+peer's output bounced by a gate it was explicitly told it met, traced to a relay built from one
+acceptance branch of a multi-branch check.
+
+## Decorrelated cross-peer convergence is the trustworthy backlog-exhausted signal — trust it to stop, then escalate the frontier
+
+One agent's own scan reporting "nothing left" is **weak** evidence of terminus — it cannot see its
+own blind spots (the surface-type / keyword-filter / assignment-partition gaps
+`fast-agentic-delivery.md` catalogs). **Independent** peers, working from **different** scan
+methods, all arriving at the same "only owner-gated items remain" is far stronger: decorrelated
+agreement rules out any single agent's method-specific blind spot — the same reason two
+**decorrelated** reviewers/lenses outrank one (`deep-code-review`'s `parallel-audit.md`:
+same-model-family reviewers are not decorrelated second opinions). When
+peers converge on exhaustion, that authorizes **stopping production** — not blanket-closing:
+convergence is evidence the *search* is done, and each remaining item still gets the per-item
+close-verification bar (`fast-agentic-delivery.md`) before it is closed or escalated. The move at
+that point is non-fan-out — surface the decision/spend frontier to the owner and harden landed
+work, exactly as the terminus rule prescribes; this section is only about **what makes the terminus
+signal trustworthy across peers**, not what to do at it. **🚩 tell:** one peer declaring fleet-wide
+terminus from its solo scan while another peer still has un-swept surface — solo exhaustion is not
+fleet exhaustion.
