@@ -873,6 +873,17 @@
         "Treats wiring the flag into the job's default invocation as a separate, still-open deliverable, not something the merge already accomplished",
         "Prescribes confirming which change altered the job's actual default execution path and measuring the real job's before/after window before crediting a speedup to any one change"
       ]
+    },
+    {
+      "id": "fan-out-stalls-on-a-shared-service-ceiling-not-idle-hardware",
+      "prompt": "An orchestrator sizes its worker fan-out from local headroom: free RAM ~80%, cores mostly idle, swap flat. It widens from a few lanes to many. Throughput then drops instead of rising — a growing fraction of newly spawned lanes fail to start at all or die within seconds, mid-step, before producing anything, and the failing fraction climbs as more lanes are added. Re-probing the host shows the same abundant free RAM, idle cores, and flat swap as before the scale-up. The orchestrator's instinct is to treat this like the machine being overloaded and back off on RAM/swap. What is actually happening, and how should the fan-out be sized?",
+      "expected_output": "The binding constraint is a shared, account-level service budget (the model/API allowance summed across every agent, sub-agent, and lane on the account, across machines), not local hardware — which is why the healthy RAM/swap/CPU re-probe cannot clear it and a RAM/swap back-off is the wrong response. Fan-out must be sized to the minimum of local headroom and the shared budget's headroom, budgeted globally across machines and agents, and paced to that budget — shifting lanes to a non-capped tier or to API-free local work, or holding — rather than widening into lanes that will keep failing.",
+      "expectations": [
+        "Identifies the binding ceiling as a shared, account-level service/token budget summed across all agents and lanes (and across machines), not local resource exhaustion",
+        "Reads the healthy re-probe as evidence against the local-overload diagnosis — a RAM/swap back-off does not address it, and lanes failing at start or dying early is a distinct signal from the machine crawling under load",
+        "Sizes fan-out to the minimum of local headroom and shared-budget headroom, budgeting the shared ceiling globally across machines and agents rather than per-machine",
+        "Paces to the shared budget: shifts lanes to a non-capped model tier or to API-free local work (merges, worktree hygiene, deterministic gates), or holds and checkpoints partial work, rather than spawning more lanes that will keep failing"
+      ]
     }
   ]
 }

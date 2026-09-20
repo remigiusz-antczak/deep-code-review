@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.352.0] — 2026-09-20
+
+### agentic-delivery — size fan-out by the binding shared quota, not just local RAM/CPU (#830)
+
+- **`fast-agentic-delivery.md`**: a new section extending the machine-load fan-out-sizing rules (#740/#763) with the shared-quota dimension. A fleet can look healthy locally (free RAM, idle cores, green gates) while a shared **API/model quota** — summed across every agent, and across every machine on the account (the peer-aggregate reservation one level out) — is the actual ceiling; the effective parallelism limit is min(local-resource headroom, shared-quota headroom), so **size to the binding one**. A rate-limit error on a lane is a **distinct signal from local overload** (don't answer it with the RAM/swap back-off); when the quota binds, move work to a non-capped model tier or pace new lanes to the quota's refill rather than spawning lanes that will error. +1 eval. (Dogfood: this run sized fan-out by machine load while a shared model-tier quota was the real limit.)
+
 ## [1.351.0] — 2026-09-20
 
 ### deep-code-review — a long-open PR can silently revert work the base shipped after it branched; verify against current HEAD (#818)

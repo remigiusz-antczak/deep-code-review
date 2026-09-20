@@ -176,6 +176,59 @@ and it cannot here overrule a worker's own inside-view crash — back off concur
 the worker's report (the same swap-trend response above), and re-probe before the next heavy lane,
 rather than waving off a real crash because the orchestrator's own check said there was headroom.
 
+## A shared API/model quota is a fan-out ceiling no local probe can see — size to the binding one, not the machine
+
+Everything above sizes fan-out to what one machine can *execute* — free RAM and
+the swap trend, disk, CPU. A separate ceiling governs what the provider will
+*serve*: a shared **API or model quota** (requests and tokens per rolling
+window, per account), and once fan-out is wide it is usually the **lower** of
+the two. It is invisible to every probe above — the box can read abundantly
+healthy (high free RAM, flat swap, idle cores, every gate green) while a growing
+fraction of lanes simultaneously fail to start or die seconds in on the
+account's rate limit, because the quota is summed across every agent,
+sub-agent, and lane on the account and a wide fan-out bursts past it. The
+effective parallelism ceiling is the **minimum** of local-resource headroom and
+shared-quota headroom; **size to the binding one.** When the quota binds, extra
+lanes add no throughput — they rate-limit-error and stall, wasting the tokens
+their partial work already spent (#830). This is the ceiling the *token budget*
+in the fan-out-ETA section below already assumes exists.
+
+- **A rate-limit error on a lane is a distinct signal from local overload — do
+  not answer it with the RAM/swap back-off above.** The gates above catch the
+  machine crawling; a lane erroring or failing to start on the provider's rate
+  limit is the *shared* ceiling reporting itself from outside the box, and the
+  local probe keeps reading healthy straight through it. It is the same
+  asymmetry as *a subagent's own crash report overrides a healthy probe*
+  directly above, one axis out — a real signal the orchestrator's own view
+  cannot see — so read it as its own back-off trigger: **narrow** the fan-out
+  or pace it, never retry the same width into the same wall, and never widen
+  further just because RAM still looks free.
+- **The quota sums across machines, so budget it globally.** This is the *peer
+  caps sum on a shared host* failure (`multi-session-coordination.md`'s
+  aggregate reservation) one level out: RAM sums across peers on one host, but
+  the quota sums across every machine on the **account**, so two machines each
+  "within local limits" still add onto one ceiling — budget it against a
+  shared, account-wide counter or coordination channel, never each machine's
+  own headroom alone.
+- **When the shared tier is capped, switch lanes or pace — don't spawn lanes
+  that will error.** Move work to a **non-capped model tier** (model tier is
+  already a per-lane cost-and-concurrency lever in this file; here it is also a
+  quota lever), pace new lanes to the quota's refill rather than assuming a
+  remembered reset window that may no longer hold, or keep a **no-quota
+  fallback lane** productive on local, API-free work — version-control merges,
+  branch/worktree hygiene, deterministic gates — all of which keep delivering
+  while the token budget is exhausted. Prefer **fewer, higher-yield lanes** over
+  many thin ones, and **checkpoint partial work to a durable artifact** (a
+  pushed branch, a saved file) before a lane can die, so a rate-limit stop is
+  resumable rather than tokens spent for zero delivery.
+
+**🚩 tell:** an orchestrator widening lane count because the local probe reads
+healthy — free RAM, idle cores, flat swap — while a rising fraction of lanes
+fail to start or die seconds in; the fan-out was sized to the machine when the
+binding ceiling was the shared quota all along. Track the rate-limit-error rate
+per N lanes dispatched — nonzero under healthy local resources is the proof
+that fan-out is gated on the wrong ceiling.
+
 ## A worktree is a resource with a lifecycle — creation without teardown leaks it
 
 Worktree-per-lane is the right isolation, but a worktree is a **resource with a
