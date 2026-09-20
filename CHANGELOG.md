@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.355.0] — 2026-09-20
+
+### agentic-delivery — static domain-partition of a shared backlog is structurally collision-free; stronger than a tighter claim-recheck (#834)
+
+- **`multi-session-coordination.md`**: a new section. A dispatch-time claim recheck only narrows the read→claim race (worst on a freshly-filed backlog, where loops discover the same new item before any claim is posted); a **static domain partition** gives each peer a disjoint slice — removing the contended item structurally and retiring the per-item claim step — when domains are known and roughly balanced. Trade-off named: a static partition can idle a peer whose domain drains first, so re-partition on drain rather than silently broadening; dynamic claim suits a lumpy backlog. Distinct from capability-matched dispatch (#769, capacity-fit routing) — this is domain-ownership for collision-freedom; qualifies the existing per-item-claim rule (#713) with a forward cross-ref. +1 eval.
+
 ## [1.354.0] — 2026-09-20
 
 ### deep-code-review — a barrel/side-effectful import ships a heavy data blob into the bundle even when the imported symbol doesn't use it (#812)

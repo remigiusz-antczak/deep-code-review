@@ -76,12 +76,75 @@ work-splits seconds apart, each reasonable, each stale the moment the other
 lands (#713). Don't re-negotiate; resolve by a fixed rule: (1) **in-flight
 work is the anchor** — whatever either peer already started stays with that
 peer, never reassigned; (2) unstarted work defaults to a **pre-agreed, fixed
-partition** (by directory/subsystem); (3) real collision-safety is a
-**per-item claim with an action-time recheck**, not the coarse split; (4)
+partition** (by directory/subsystem); (3) real collision-safety for a
+residual that stays shared on this lock-free board is a **per-item claim
+with an action-time recheck**, not the coarse split — but for an
+actively-refreshed backlog whose domains are known and roughly balanced, a
+static domain partition can retire that per-item claim step entirely (*a
+dispatch-time claim recheck only narrows the collision window…*, below); (4)
 **first-to-reconcile-wins** — whoever notices the crossed splits first posts
 the reconciliation and both adopt it, rather than re-proposing. **🚩 tell:**
 two peers each claiming the other's already-claimed area, with a third
 re-proposal instead of rule (4).
+
+## A dispatch-time claim recheck only narrows the collision window on a fresh shared backlog — a static domain partition removes the contended item itself
+
+The pre-write probe above (*collision-check mechanically before you claim or
+write*) re-reads the claim registry at dispatch time so a peer doesn't fire on
+an item another already took. On a shared, **actively-refreshed** backlog it
+still races: the probe reads the board, then the peer claims, and in the window
+between those two steps a second peer runs the same probe, also reads the item
+as unclaimed, and both fire (#834). A **freshly-filed** backlog is the worst
+case — several peers' scan loops discover the same new items at nearly the same
+instant, before any of them has posted a claim, so there is nothing on the
+board yet to re-check against. Observed generically: two produce-loops mined
+the same fresh backlog, both grabbed the same items, and shipped duplicate PRs
+(same file, same title). Tightening or re-running the recheck shrinks the
+window; it never closes it, because the contended item is still shared.
+
+Partition the backlog by **domain** up front instead — give each peer a
+disjoint slice (e.g. app/UX/perf/merge-train/hygiene for one,
+registry/contracts/connectors/CI-infra/security for another), published on the
+shared channel. Each peer's produce-loop enumerates and fires **only within its
+own domain**, and a cross-domain find is **handed over via the channel, never
+fired by the finder**. Two loops now cannot contend the same item, because the
+partition guarantees disjointness — the shared grab is removed, not merely
+checked faster — and no per-item claim round-trip is paid per dispatch. This is
+the stronger, narrower claim the *opposite-splits* section above stops short
+of: there a fixed partition is only the **default** for unstarted work with a
+per-item claim-and-recheck as the real collision-safety layered on top; here,
+for an actively-refreshed backlog whose domains are **known and roughly
+balanced**, a clean domain split **retires** the per-item claim step for the
+common case rather than serving as its fallback. Reserve dynamic
+claim-at-dispatch (the probe above) for genuine within-domain ambiguity or a
+still-unpartitioned residual — and read "still colliding after a claim-board
+fix" as the signal to partition structurally, not to tighten the recheck
+further.
+
+**Not the same axis as** *tag backlog items by resource-profile* below: that
+routes by capacity **fit** — which machine can run a heavy item without an
+ENOSPC/OOM — a capacity-matching default. This partitions by **domain
+ownership** specifically to make claim-races structurally impossible — a
+collision-freedom guarantee. Same "publish the assignment in the registry
+before dispatch" shape, different variable solving a different failure.
+
+Name the trade-off honestly: a static partition can leave a peer **idle** if
+its domain drains first (load imbalance), so it is strongest when the domains
+are roughly balanced. When a partition drains, **re-partition explicitly** on
+the channel; do not let the idle peer silently start firing in the other's
+domain — that reintroduces exactly the race the split removed. This is where
+the peer / no-conductor case **diverges** from `fast-agentic-delivery.md`'s *an
+agent that drains its slice broadens into the shared remainder* (the slice is a
+floor, not a ceiling): that broadening is safe **only while the
+announce-then-take claim layer is retained** to catch the resulting dual grab;
+once a domain partition has **replaced** that claim layer, the boundary is
+load-bearing and broadening means re-partitioning on the channel, not
+free-running into a neighbour's lane. For a genuinely **lumpy or
+unpredictable** backlog, where balanced domains aren't knowable up front,
+dynamic claim-at-dispatch is the better fit — the two are a chosen pairing, not
+a ranking. **🚩 tell:** peers still shipping duplicate/collided PRs after a
+dispatch-time claim recheck was added, answered by tightening the recheck
+further instead of removing the shared grab with a domain split.
 
 ## Every peer honoring its own heavy-lane cap still oversubscribes the machine — coordinate the shared budget, not each session's slice
 
