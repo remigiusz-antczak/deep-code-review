@@ -374,12 +374,9 @@ spreadsheet formulas, for XXE); a data **export** — CSV, or an XLS/XLSX/ODS ge
 from stored rows — is the *outbound* mirror and needs its own check. Any stored,
 user-controlled string (a display name, a coupon code, a free-text note) whose value
 **starts with** `=`, `+`, `-`, `@`, a tab, or a NUL is parsed as a **formula** by the
-spreadsheet app that opens the export, not as text — an exfiltration / RCE-adjacent
-chain (`=WEBSERVICE(...)`, `=cmd|...`) that fires the moment a human opens the file,
-with **no injection into your app** required. HTML-escaping the same field for the web
+spreadsheet app that opens the export, not as text — an exfiltration / RCE-adjacent chain (`=WEBSERVICE(...)`, `=cmd|...`) that runs when a human opens the file — a plain formula evaluates on open; `=WEBSERVICE`/DDE `=cmd|` payloads typically prompt a security warning first — with **no injection into your app** required. HTML-escaping the same field for the web
 UI does **nothing** here — a different output context. Fix at **export** time: prefix
-a single quote before any such leading character. ASVS v5.0.0-1.2.10 (L3) names the
-exact set — "special characters (including '=', '+', '-', '@', '\t' (tab), and '\0'
+a single quote before any such leading character. ASVS v5.0.0-1.2.10 (L3) names them (a non-exhaustive list — the standard says "including") — "special characters (including '=', '+', '-', '@', '\t' (tab), and '\0'
 (null character)) must be escaped with a single quote if they appear as the first
 character in a field value" — and also requires RFC 4180 escaping for the CSV itself.
 🚩 a CSV / XLSX export path (`csv.writer`, `fast-csv`, SheetJS / `xlsx` write, a manual

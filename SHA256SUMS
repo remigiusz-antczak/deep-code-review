@@ -28,7 +28,7 @@ cc52f678848b814373757b460383bf61960e4943c203735adde0a350b3e50989  .claude/skills
 bb541f96bd7d0c3bb4adff8dcaac0f50efa2493b8215b6aa671805bfbb89c42b  .claude/skills/contribution/references/contribution-procedure.md
 740a1486c55c1186b0d2484409c543bed6ad2f19f5492b1e85c4bffa60df0045  .claude/skills/deep-code-review/SKILL.md
 74a47affad8b5e6745fa2027a46494c9ab5b3e22c94aec40bbe6a10d08d43559  .claude/skills/deep-code-review/VERSION
-658a5967ad6c2588f6d6ce3c05949f2af37ba882b045aeda634783a11fa72292  .claude/skills/deep-code-review/evals/evals.json
+81cda335f604fbdb0aacaf0f92019e46c74631a85552dfd3bc5e2c2ef1546f2f  .claude/skills/deep-code-review/evals/evals.json
 e5ceb808cc7aa30d646281140e4e058a2491ee809dc37bb2a407b7322aa161fd  .claude/skills/deep-code-review/references/api-contracts.md
 93d695b99b448a59b1b7e4de3449692847089ba36e9530d0e24d19c04650efc1  .claude/skills/deep-code-review/references/billing-correctness.md
 b9705d38bfe42db598c42aa11d7e4d9e6a2675277ba6caad3797aefeb7a2159d  .claude/skills/deep-code-review/references/branch-and-merge-hygiene.md
@@ -61,7 +61,7 @@ a27afc7d48b403ccfb3e611c82c86a4ec50cac535487402a97e3fb0946b0a20d  .claude/skills
 e4842666073f6dfe8f173758289c7015204c1a504d99b9b6f0b5aa32a0ab9f76  .claude/skills/deep-code-review/references/role-coverage.md
 4e3672bd86fe39b2e2c026072b0c8224b2ff4ca22f365bbbcb0bf1fc5f7c34b9  .claude/skills/deep-code-review/references/security-agent-skills.md
 8ee146f9d317b37b8866889ff400521b35a5e4c944716259ce3ad15807287d23  .claude/skills/deep-code-review/references/security-ai-agents.md
-5bcf681af9e335ca25de8416cabfa14ead46a1f9dbe21412831099d37a030f49  .claude/skills/deep-code-review/references/security-appsec.md
+8b2dd71e8d671b24a11e6a8952d63635f64276dd73f1d65c7d53f17a9baa4a46  .claude/skills/deep-code-review/references/security-appsec.md
 db531493cde2dbb62efaab3890b8187ed39d30926c4ec956fa8319bee9f504af  .claude/skills/deep-code-review/references/skill-authoring-and-size.md
 a0ed7ad061b7e60230601ee9b38a00400841d6ddf3af386edbd4b34a981c9798  .claude/skills/deep-code-review/references/standards-index.md
 a8de91c37a4d09dfba462569f143ca1cedc932c3f1f907c0fc620f5cf9d2d732  .claude/skills/deep-code-review/references/testing-and-evals.md
