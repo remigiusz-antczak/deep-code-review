@@ -3,6 +3,15 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.262.0] — 2026-09-20
+
+### deep-code-review — wave 183 frontend/perf defects: SSR hydration nondeterminism, request waterfalls, OFFSET-pagination correctness
+
+- **`domain-checklists.md`** (domain P): SSR hydration mismatch from **nondeterministic render output** (`Date.now()`/`Math.random()`/`typeof window`/browser-API read during render) — distinct from the invalid-nesting case; state-dependent so it misses local/CI, and `suppressHydrationWarning`-misuse hides it; the framework doesn't reliably patch a mismatch and can leave event handlers on the wrong elements. Fix: gate to a post-hydration effect / `useId`.
+- **`frontend-a11y.md`** (Core Web Vitals): a **sequential data-fetch waterfall** (critical request chain) on the render path hurts LCP/TTI even with green bundle/image/font budgets — chain *depth*, not payload size, is the cost; parallelize / collapse server-side / prefetch.
+- **`performance-db-cost.md`**: `LIMIT/OFFSET` pagination is a **correctness** hazard under concurrent writes (positional shift → duplicate row across pages on insert, skipped row on delete), not only a scan-cost one; use a `(sort_key, id)` keyset cursor.
+- +3 evals. Sources by name (react.dev / Chrome Lighthouse / use-the-index-luke), no unverified verbatim. Independent reviewer PASS-WITH-FIXES: added the missing OFFSET citation, softened the "won't patch" hydration overgeneralization, rewrapped the three bullets to the files' line convention.
+
 ## [1.261.0] — 2026-09-20
 
 ### deep-code-review — wave 182 a rate/spend cap keyed to a cheaply re-mintable token is bypassable (closes #624)

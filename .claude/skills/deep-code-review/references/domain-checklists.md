@@ -540,6 +540,20 @@ reference is a prototype/mockup or the task is a migration to a reference design
   one auth/data state. Check each call site's wrapper against the component's root
   element, and reproduce against the **SSR/static HTML in the specific state** (e.g.
   signed-out), not the convenient live DOM.
+- **SSR / hydration mismatch from *nondeterministic render output*** (distinct from the
+  nesting case above): a component renders **different output server-side vs. the first
+  client render** because it reads `Date.now()`, `Math.random()`, `typeof window !==
+  'undefined'`, or a browser-only API (`matchMedia`, `localStorage`) **during render**. The
+  framework logs it, but two forms defeat that net — **(a) state-dependent** mismatches
+  (only a signed-in user, a non-UTC timezone, a specific random branch) never fire on the
+  author's machine/data; **(b) `suppressHydrationWarning`** applied to a subtree to silence
+  a *real* mismatch rather than a deliberately-expected one (a live timestamp), which one
+  grep finds. The consequence is worse than a corrected DOM: the framework **doesn't
+  reliably** patch a mismatch and can leave **event handlers attached to the wrong
+  elements** (a control that does nothing on first click). Fix: gate nondeterministic /
+  browser-only reads to a post-hydration effect (render a stable server placeholder), use a
+  stable id API (`useId`) not `Math.random()`, and reserve `suppressHydrationWarning` for
+  genuinely-expected diffs. (react.dev, hydration.)
 - **Server/client boundary** (RSC / App Router and similar): a **plain
   non-component value** exported from a `"use client"` module and imported by a
   server component is silently replaced with a **client-reference proxy** — an

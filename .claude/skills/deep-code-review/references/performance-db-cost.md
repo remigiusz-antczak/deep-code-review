@@ -32,9 +32,14 @@ of work earn its keep?**
   (`EXPLAIN`/`EXPLAIN ANALYZE`); a seq scan on a large table is the finding.
   Watch for indexes made unusable by a function/cast on the column, or by
   leading-wildcard `LIKE`.
-- **Over-fetch**: no `SELECT *` when a few columns are needed; select only what
-  is used. Result sets are bounded and paginated (keyset/seek pagination over
-  large `OFFSET`).
+- **Over-fetch**: no `SELECT *` when a few columns are needed; select only what is used.
+  Result sets are bounded and paginated. Prefer **keyset/seek** pagination over a large
+  `OFFSET` — which is not only a scan-cost problem but a **correctness** one: `LIMIT/OFFSET`
+  is *positional*, so a row inserted before the window between two page fetches shifts
+  everything down and **duplicates a row across pages** (a delete before it **skips** one);
+  a `(sort_key, id)` cursor is stable under concurrent writes (the cursor key must be
+  unique/tie-broken — see the non-unique-timestamp-cursor trap in
+  `time-date-correctness.md`). (use-the-index-luke, *no-offset*.)
 - **Push work to the DB**: filter/aggregate/join in SQL, not by pulling rows into
   app memory and looping. But don't hide an unbounded computation behind a view.
 - **Connections & transactions**: a pooled connection (not one per call) — and

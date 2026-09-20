@@ -3301,6 +3301,36 @@
         "Explains that 'correctly counted per token' is irrelevant when the token is re-mintable; the cap's strength equals the cost of obtaining a fresh key (rotating-key vs stable-identity)",
         "Prescribes keying on a scarce/verified identity (verified account, payment instrument, cost-to-create credential) and/or rate-limiting the minting path itself"
       ]
+    },
+    {
+      "id": "ssr-hydration-mismatch-from-nondeterministic-render-not-just-invalid-nesting",
+      "prompt": "An SSR React app renders fine locally and in CI, but production users intermittently report a button that does nothing on first click. A component renders `{new Date().toLocaleTimeString()}` and, for signed-in users only, a `Math.random()`-chosen promo variant, both during render. What's likely happening and how do you fix it?",
+      "expected_output": "A hydration mismatch from nondeterministic render output (distinct from invalid-nesting hydration bugs): the server renders one time/promo variant, the client's first render produces a different one, so server HTML and client tree disagree. The framework won't patch a text/markup mismatch and can reconcile incorrectly — leaving event handlers attached to the wrong elements, which is exactly the 'button does nothing on first click' symptom. It slips past local/CI because it is STATE-DEPENDENT (the promo branch only renders for signed-in users; time/random differ only under real server/client timing), so the author's own run doesn't trip it. Fixes: don't read nondeterministic or browser-only values (Date.now/Math.random/typeof window/matchMedia/localStorage) during render — move them to a post-hydration useEffect and render a stable server placeholder; use useId for generated ids; reserve suppressHydrationWarning for genuinely-expected diffs (a live clock), never to silence a real mismatch. Grep for suppressHydrationWarning as a tell.",
+      "expectations": [
+        "Identifies a hydration mismatch from nondeterministic/browser-only reads during render (Date.now/Math.random/typeof window), distinct from invalid-nesting hydration bugs",
+        "Explains the consequence (framework won't patch it -> event handlers on wrong elements -> dead first click) and why state-dependence hides it from local/CI",
+        "Prescribes gating those reads to a post-hydration effect (stable server placeholder) + useId, and reserving suppressHydrationWarning for expected diffs (grep it as a tell)"
+      ]
+    },
+    {
+      "id": "sequential-data-fetch-waterfall-on-the-critical-path-hurts-lcp-despite-green-budgets",
+      "prompt": "A page's JS bundle, image, and font budgets are all green and each API call returns in under 100ms, but LCP is 3.5s. The page fetches the user, then (after that resolves) the user's org, then (after that) the org's dashboard data — three sequential awaits before first meaningful paint. What's the problem?",
+      "expected_output": "A sequential data-fetch waterfall (a critical request chain) on the render-critical path: each request starts only after the previous resolves, so three sub-100ms calls plus their round-trip latencies serialize into a multi-second blocking chain before first paint — LCP suffers even though every individual request is fast and all byte-budgets are green. A green byte-budget is not a green load; here the chain DEPTH, not payload size, is the cost. Fixes: parallelize independent requests with Promise.all (if org and dashboard don't strictly depend on the prior result, fetch them together); collapse the chain server-side (a BFF / single endpoint / GraphQL returning user+org+dashboard in one round trip); prefetch/hoist what a later step needs; colocate data requirements with the route so they fire on navigation, not after render. Measure the network waterfall / critical-request-chain view, not just the bundle budget.",
+      "expectations": [
+        "Identifies a sequential/dependent-request waterfall (critical request chain) on the critical path — chain depth serializes latency even with fast individual calls and green byte-budgets",
+        "Explains a green bundle/image/font budget doesn't catch it (payload size vs request-chain depth are different axes)",
+        "Prescribes parallelizing independent requests (Promise.all), collapsing the chain server-side (BFF/single endpoint), and prefetch/colocation — measured via the request-waterfall view"
+      ]
+    },
+    {
+      "id": "offset-pagination-duplicates-or-skips-rows-under-concurrent-writes-a-correctness-bug",
+      "prompt": "An API paginates with `ORDER BY created_at LIMIT 20 OFFSET ?`. Under normal load it's fine in tests. A reviewer flags only that a large OFFSET is slow. Is slowness the only issue?",
+      "expected_output": "No — OFFSET pagination is also a CORRECTNESS bug under concurrent writes, not only a scan-cost one. LIMIT/OFFSET is positional: if a row is inserted before the current window between two page fetches, everything shifts down by one, so a row that was the last item of page 1 reappears as the first item of page 2 (a duplicate across pages); symmetrically, a delete before the window skips a row. Tests miss it because they don't insert/delete between page fetches. Fix: keyset/seek pagination — a cursor on a stable, unique, monotonic sort key, e.g. WHERE (created_at, id) > (:last_ts, :last_id) ORDER BY created_at, id LIMIT 20 — which is stable under concurrent inserts/deletes and also avoids the large-OFFSET scan cost. The cursor's sort key must be unique/tie-broken: a non-unique timestamp cursor has its own drop/duplicate trap (time-date-correctness.md).",
+      "expectations": [
+        "Identifies OFFSET pagination as a correctness hazard under concurrent writes (positional shift -> duplicate row across pages on insert, skipped row on delete), not only a scan-cost issue",
+        "Explains why tests miss it (no insert/delete between page fetches)",
+        "Prescribes keyset/seek pagination on a stable unique (sort_key, id) cursor, and notes the cursor key must be unique/tie-broken (cross-ref the non-unique-timestamp-cursor trap)"
+      ]
     }
   ]
 }

@@ -315,6 +315,15 @@ production-like server).
   fails on** when it regresses, the same size-ratchet discipline as
   `skill-authoring-and-size.md` (never a silently-raised ceiling).
 - Degrades under slow/failed network; no infinite spinners.
+- **No sequential data-fetch waterfall on the critical path.** Dependent requests that each
+  start only after the previous resolves (a **critical request chain**) push out LCP/TTI
+  even when every individual request is fast and the bundle/image/font budgets are all green
+  — a green byte-budget is not a green load; the chain *depth*, not payload size, is the
+  cost. Flag chained `await`s / dependent fetches on the render-critical path; parallelize
+  independent ones (`Promise.all`), collapse the chain server-side (a BFF/single endpoint
+  returning what the view needs in one round trip), and prefetch/colocate data with the
+  route so it fires on navigation. Measure the request-waterfall, not only the bundle
+  budget. (Chrome Lighthouse, *critical request chains*.)
 
 ## Security & compatibility
 
