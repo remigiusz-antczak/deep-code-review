@@ -611,6 +611,32 @@ domain H) with a UX consequence, so it is ruled on here too.
   **before** porting screens — a duplicated concept is a defect a reviewer *will*
   find, and retrofitting unification while the owner watches is far slower and
   noisier than building it once up front.
+- **Row-click-affordance inconsistency — a detection gap, not a remedy
+  gap.** An entity-row (same fields, same detail target) is
+  whole-row-clickable — mouse and keyboard — on one page, and only a single
+  inner `<a>`/`<Link>` cell is interactive on a sibling page importing a
+  *different* row component. It clears WCAG (named, reachable,
+  focus-ringed) and has no shared component to check adoption on, so a11y
+  tooling, a per-page review, and the twin-search above all pass it clean —
+  distinct from the *interaction-consistency* bullet below (its row-class
+  parity is *style*-reaction parity across *one* shared component's
+  instances; this is affordance *existence* across *separate* components).
+  Detect by enumerating every renderer of the row type (grep the shared
+  fields/link target, not a literal string) and diffing row-level
+  interactivity against a lone anchor. Fix: one
+  shared row component/hook where feasible; else extend the affordance without a
+  **second tab stop** — the inner `<a>`/`<Link>` stays the single named, focusable
+  control (a `event.target.closest('a,button')`-guarded row `onClick` adds a mouse
+  convenience over it; or a stretched-link `::after` overlay extends the anchor's own
+  hit area, preserving native middle-click / open-in-new-tab / copy-link). Do not add
+  `tabIndex`/`role` to the row while an inner link already reaches the detail: a second
+  focusable with no role or accessible name reads worse to a screen reader than the lone
+  anchor it duplicates (`frontend-a11y.md`'s `role`/`tabindex`-pair grep and keyboard
+  floor). The row needs its own `tabIndex={0}` + Enter/Space **and** an explicit
+  `role`/accessible name only when it has no inner focusable path to the detail — noting
+  a `role` on a `<tr>` overrides its native row semantics, and a stretched link changes
+  text selection over the row. Name every renderer of the row type in a "make row X
+  clickable" ticket's acceptance criteria, not just the page that prompted it.
 
 ## One component at two scopes — single-entity vs aggregate needs scope-aware copy
 

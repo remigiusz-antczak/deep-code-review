@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.327.0] — 2026-09-20
+
+### deep-code-review — product-ux: whole-row click/keyboard affordance hardened on one page's renderer but missed on a sibling page's separate renderer (#707)
+
+- **`product-ux-quality.md`** (interaction-consistency / detection-gap family): an entity-row (same fields, same detail target) is whole-row-clickable on one page but only a single inner `<a>`/`<Link>` cell is interactive on a sibling page that imports a *different*, hand-rolled row component. The sibling clears WCAG in isolation (named, reachable, focus-ringed) and shares no component to check adoption on, so a11y tooling, a per-page review, and a duplicated-string twin-search all pass it clean — the defect is purely relational (a user who learned "click anywhere on the row" is silently punished on the sibling). Detect by enumerating every renderer of the row type (grep the shared fields/detail-link target, not a literal string) and diffing row-level interactivity against a lone anchor; name every renderer in a "make row X clickable" ticket's acceptance criteria, not just the page that prompted it. +1 eval. Closes #707.
+- Built by a worktree builder subagent, independently reviewed **PASS-WITH-FIXES**. Applied the must-fix: the shipped Fix prescribed a row-level `tabIndex={0}` + keydown while keeping the inner `<Link>`, which adds a second, roleless focusable for one destination (a worse screen-reader experience, and a self-contradiction with `frontend-a11y.md`'s own `role`/`tabindex`-pair grep). Corrected to keep the inner link as the single named focusable target and extend the whole-row affordance over it (a guarded row `onClick`, or a stretched-link overlay that also preserves native middle-click / open-in-new-tab), giving the row its own `tabIndex`/`role` only when it has no inner focusable path — which also closes the reviewer's optional finding that native-anchor affordances were forfeited without acknowledgement. De-telegraphed the eval prompt (it had narrated the exact guard/attribute/key tokens the expectation grades on) and re-scoped the eval's prescribed fix to the corrected pattern.
+
 ## [1.326.0] — 2026-09-20
 
 ### agentic-delivery — throughput epistemology: an assigned slice is a floor not a ceiling (#705), decouple action rate from poll-tick rate (#706), consolidate overlapping loop wakes into one pass (#556)
