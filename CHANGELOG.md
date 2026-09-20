@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.284.0] — 2026-09-20
+
+### deep-code-review — wave 205 WCAG 2.2 Accessible Authentication (3.3.8 password-manager support + 3.3.9 Enhanced)
+
+- **`frontend-a11y.md`** SC 3.3.8 Accessible Authentication (AA): the bullet now covers the **Mechanism** exception in full — a password manager is the canonical mechanism, so allow **paste** into password/OTP fields, set correct `autocomplete` tokens (`current-password`/`new-password`/`one-time-code`), and don't intercept clipboard events — not merely "no puzzle." Names SC **3.3.9 (Enhanced, AAA)**, which drops the object-recognition and personal-content exceptions, so an image CAPTCHA passes 3.3.8 but **fails 3.3.9** (hold high-stakes banking/health auth to it). Curl-verified `docs/standards-index.md` rows for 3.3.8 + 3.3.9 added (fetched 2026-09-20). +2 evals. Independent reviewer PASS-WITH-FIXES: dropped an unsourced "browser vendors reject it" clause (kept the WCAG-backed point). Closes no filed issue (WCAG 2.2 comparative pass).
+
 ## [1.283.0] — 2026-09-20
 
 ### deep-code-review — wave 204 web cache poisoning via an unkeyed input that shapes the cached body (A01)
