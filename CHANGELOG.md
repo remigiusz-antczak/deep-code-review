@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.261.0] — 2026-09-20
+
+### deep-code-review — wave 182 a rate/spend cap keyed to a cheaply re-mintable token is bypassable (closes #624)
+
+- **`security-appsec.md`** (A06 Insecure Design, rate-limit-key bullet): a cap is only as strong as the cost of minting a fresh key. A self-service or unauthenticated **session token, device id, or API key** an attacker rotates for free is no better than keying on IP — re-minting resets the counter (the *rotating-key-vs-stable-identity* confusion), so "correctly counted per token" is irrelevant when the token is cheaply re-mintable. Key on a **scarce, verified** identity (a verified account, a payment instrument, a credential that itself costs / is rate-limited to create), or rate-limit the **minting** path itself.
+- +1 eval. Closes #624. Independent reviewer PASS.
+
 ## [1.260.0] — 2026-09-20
 
 ### deep-code-review — wave 181 compliance defect-patterns: PCI cardholder data, HIPAA de-identification, NIST AC-2 IAM lifecycle

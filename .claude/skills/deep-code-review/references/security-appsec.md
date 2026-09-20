@@ -450,7 +450,13 @@ NIST SSDF, OWASP SAMM, BSIMM — measure the org's *program*, not this diff; nam
   without a transaction/lock → race. Verify by firing N concurrent identical
   requests locally and asserting exactly one succeeds.
 - **Rate-limit key, burst, and failure mode.** Ask what the limiter is keyed on
-  (IP alone is bypassable; key on principal **and** target resource), whether
+  (IP alone is bypassable; key on principal **and** target resource) — **and how
+  cheaply that key is minted**: a self-service or unauthenticated **session token,
+  device id, or API key** an attacker rotates for free is no better than IP, because
+  re-minting resets the counter (the *rotating-key-vs-stable-identity* confusion).
+  Key on a **scarce, verified** identity (a verified account, a payment instrument, a
+  credential that itself costs / is rate-limited to create), or rate-limit the
+  **minting** path itself. Then check whether
   burst is bounded (fixed windows allow 2× at the boundary), and what happens
   when the counter store is unreachable — **fail-open on limiter error is the
   bug**, and it is common. Confirm limits are enforced server-side for every

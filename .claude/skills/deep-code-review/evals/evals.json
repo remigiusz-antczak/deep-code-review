@@ -3291,6 +3291,16 @@
         "Prescribes the concrete fix: expiry/condition, owner annotation, and linkage to a reconciliation/deprovision process (or a documented review cadence)",
         "Frames it as flaggable in the diff (an IaC grant with no lifecycle metadata) while noting AC-2 itself is an org process control"
       ]
+    },
+    {
+      "id": "a-rate-or-spend-cap-keyed-to-a-cheaply-re-mintable-token-is-bypassable",
+      "prompt": "A free-tier API enforces '100 calls/day per session' keyed on the session token issued at an unauthenticated `POST /session` (no signup, no verification). Usage is correctly counted per token and blocked at 100. Is the cap effective against a determined abuser?",
+      "expected_output": "No. The cap is only as strong as the cost of obtaining a fresh key, and here a new session token is free and unauthenticated — an abuser just calls POST /session again to mint a new token, resetting the 100-count, so keying on the session token is no better than keying on IP (the rotating-key-vs-stable-identity confusion). 'Correctly counted per token' is irrelevant when the token itself is cheaply re-mintable. Fixes: key the cap on a SCARCE, verified identity — a verified account, a payment instrument, or a credential that itself costs or is rate-limited to create — not on a free-to-mint session/device/API key; and/or rate-limit the minting path (POST /session) itself, with a global/per-subnet backstop and a verification/proof-of-work step before granting a fresh quota. General rule: a per-key limit assumes the key is scarce; if minting a key is free, the limit is only a suggestion.",
+      "expectations": [
+        "Identifies that a cheaply/freely re-mintable key (an unauthenticated session token) makes the per-key cap bypassable — the abuser re-mints to reset the counter, no better than keying on IP",
+        "Explains that 'correctly counted per token' is irrelevant when the token is re-mintable; the cap's strength equals the cost of obtaining a fresh key (rotating-key vs stable-identity)",
+        "Prescribes keying on a scarce/verified identity (verified account, payment instrument, cost-to-create credential) and/or rate-limiting the minting path itself"
+      ]
     }
   ]
 }
