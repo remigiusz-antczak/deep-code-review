@@ -38,6 +38,39 @@ without regressing a deliberate design.
   `<h1..h6>` in order, `<label>`, `<table>` with headers) before ARIA. ARIA
   only to fill gaps; a wrong `role` is worse than none. First rule of ARIA: use
   a native element if one exists.
+- **An element made interactive with `tabIndex={0}` + `onKeyDown`/`onClick` on a
+  non-semantic tag (`<div>`/`<span>`), but given no `role` and no accessible name, has a
+  control's *behaviour* without a control's *identity*.** It is focusable and
+  keyboard-activatable, so a keyboard-only pass "works" and a reviewer signs off — yet with
+  no `role` the element keeps its implicit ARIA **`generic`** mapping ("A nameless container
+  element that has no semantic meaning on its own", WAI-ARIA 1.2), so assistive tech is told
+  no role; and with no `aria-label`/`aria-labelledby`/own text it has no accessible name. An
+  AT user can focus it and press it but is never told what it is — the textbook **WCAG 4.1.2
+  Name, Role, Value** gap (name *and* role must be programmatically determinable). The
+  classic shape is a shared **roving-tabindex** hook (Gmail/Linear-style `j`/`k` list
+  navigation) that spreads `tabIndex`/`onFocus`/`onKeyDown` onto each list item's wrapper
+  `<div>`, with Enter activating it, and never sets a role or name. Distinct from three
+  neighbours: (1) the `<div onClick>` **with no keyboard handling and no `role`/`tabindex`**
+  in the 🚩 grep below is a *lockout* — not operable at all; this one *is* operable and
+  degrades gracefully (the wrapped content's own links/buttons stay tab-reachable), which is
+  exactly why it slips past a keyboard smoke test. (2) The non-labelable-host bullet below is
+  an element that *has* a role and lacks only a name; here **both** are absent, and the
+  `tabIndex`/`onKeyDown` is what makes the JSX look finished. (3) The custom-combobox
+  required-state (Forms) and loading-skeleton bullets are about whether a *state* or a
+  *transition* reaches the tree; this is whether role and name exist at all. Fix in that
+  order — **role first, then name**: prefer the native semantic element (`<button>`/`<a>` —
+  the first rule of ARIA above); or set the `role` the behaviour implies
+  (`button`/`option`/`tab`/`link`) **and then** a computed accessible name — an `aria-label`
+  bolted onto a still-`generic` `<div>` is not a half-fix but *no* fix, because there is no
+  role for the name to attach to (the `generic`-role aside under the colour-alone chip bullet
+  below). For a roving **composite** widget the role goes on **both** the container and its
+  items — the container role (`listbox`/`menu`/`grid`/`tablist`) is what makes the item roles
+  valid (the APG keyboard bullet under Keyboard & focus); where a single activate-role
+  misrepresents rich row content, use `role="group"` + `aria-roledescription` + a computed
+  name. Detection/test: the wrapper's **computed role is not `generic`** and it has a
+  **non-empty accessible name distinct from its verbatim concatenated contents**, read from
+  the accessibility tree (devtools/axe), not the DOM — a keyboard-only pass proves
+  operability, never identity.
 - **A custom control built on a *non-labelable* element is not named by a wrapping
   `<label>` — name it explicitly and verify the computed name.** HTML `<label>` only names
   **labelable** elements (`<input>`, `<button>`, `<select>`, `<textarea>`, `<meter>`,
@@ -829,7 +862,10 @@ production-like server).
   correct locale-aware formatting — see section i18n in `SKILL.md`).
 
 **🚩 grep**: `<div onClick`/`<span onClick` without keyboard handling &
-`role`/`tabindex`; `role="button"` on a non-focusable element; images with no
+`role`/`tabindex`; a `<div>`/`<span>` **with** `tabIndex={0}`/`tabindex="0"` +
+`onKeyDown` but no `role` and no `aria-label`/`aria-labelledby` (focusable and
+key-operable yet roleless and nameless — the operable mirror of the previous
+tell); `role="button"` on a non-focusable element; images with no
 `alt`; `<input>` with no associated `<label>`; `outline: none` with no
 replacement focus style; hardcoded `#hex` text colors to spot-check contrast;
 `localStorage.setItem('token'`; API keys in `NEXT_PUBLIC_`/`VITE_`/`REACT_APP_`

@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.364.0] — 2026-09-21
+
+### deep-code-review — a wrapper spreading only tabIndex/onKeyDown is focusable and key-operable but has no role or name (WCAG 4.1.2) (#839)
+
+- **`frontend-a11y.md`** (Structure & semantics): an element made interactive by spreading `tabIndex`/`onFocus`/`onKeyDown` (a roving-tabindex list row, a custom control) onto a non-semantic `<div>`/`<span>` with no `role` and no accessible name has the *behavior* of a control but not its *identity* — keyboard nav "works" so a reviewer approves, but the implicit `generic` role + absent name means AT announces nothing (WCAG 4.1.2 Name, Role, Value). A roving-tabindex composite needs a `role` on **both** the container and its items. Fix role-first-then-name, or use the native semantic element. Distinct from the clickable-div-with-no-keyboard case (a lockout, not merely nameless), the has-a-role-lacks-a-name case, and the required-state/skeleton siblings (state/transition, not role+name). +1 eval; WAI-ARIA 1.2 `generic`-role row verified by direct fetch 2026-09-21.
+
 ## [1.363.0] — 2026-09-21
 
 ### agentic-delivery — a read-only/prohibition brief is necessary but not sufficient; verify a delegate's refraining against its actual effects (#856)
