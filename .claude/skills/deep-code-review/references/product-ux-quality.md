@@ -248,6 +248,60 @@ only some destructure and branch on its readiness/error field; a consumer
 destructuring only the value field, with no readiness/error check anywhere in
 that render path, while a sibling consumer of the same instance does check it.
 
+## A read-failure that seeds an editable form turns a misleading display into a destructive write
+
+The read-failure-honesty family above governs what a failed read may **render**;
+this is its sharper twin — what a failed read may **write**. When the same
+conflated failure seeds an **editable form** whose save is a **full-object
+replace** (a `PUT`/upsert, not a partial patch), the failed read stops being a
+misleading display and becomes a silent **data-wipe**. A client fetches "the
+current value of X" to seed a create-or-edit form; the loader's `catch` sets an
+error message and leaves the value at the same falsy sentinel (`null`/`{}`) it
+uses for "nothing exists yet," so the form's `initial`/`defaultValue` falls
+through to blanks on **both** a genuine new record and a transient blip (a 5xx, a
+timeout, an auth hiccup, a rotated token). The user, shown a blank "create/claim"
+form, fills it in and saves — and because the write is a replace, it discards
+whatever real value existed before the read failed. The prior value survives only
+in a separate audit/history log if one exists; the current-state pointer the
+dashboards and cards read is now wrong until a human notices.
+
+It is worse than an ordinary missing-data bug because an unconfirmed **read**
+becomes an affirmative, unreviewed **write** — the cost compounds from "misleading
+display" to "corrupted state" — and it passes review because each half is normal
+in isolation: the `catch` sets an error message (fine), a `PUT` that replaces a
+row is ordinary (fine); only their **composition** is the defect, and it lives in
+no single file. Showing the error banner does not close it — that handles the
+display while the destructive write stays wide open.
+
+**Fix — model "do we know the current value" as an explicit three-state**,
+`loading | error | resolved`, where `resolved` covers both *found* and
+*confirmed-empty* and is never the same nullable used for "confirmed absent." Then
+**gate the write on that state**: disable or hide Save while the read is `error`
+(or require an explicit "replace with blank values" confirm); or make the save a
+**partial/merge patch** so an untouched field is never blanked. Never let an
+unresolved read's absence flow into a replace-style write's default seed.
+
+**Detect it** by grepping `catch` blocks that set an error-message state
+**without** flipping a distinct "unresolved" flag consumed by the *same* render
+path that feeds a form's `initial`/`defaultValue`; for each, read the write
+handler to confirm replace/upsert vs patch. If both hold, a transient read error
+yields a false "nothing here" form whose save clobbers real state. Verify live:
+force the seed fetch to reject, open the form, save, and confirm the record is
+**not** blanked — the logic test alone will not show it.
+
+This needs **no concurrent writer** — it is not a lost update, and a
+version-column/CAS guard does not catch it: there *was* a valid prior version, and
+the write simply replaces it with blanks, so the compare-and-set passes.
+(`concurrency-shared-state.md` owns the persistence-layer twin — a
+corrupt/unreadable store must not `catch → write []/{}` and clobber last-good
+bytes, and absent-file empty-init is a different branch — the same wipe with no
+human and no form, plus the lost-update/CAS bullets this is distinct from.)
+
+**🚩**: a load-to-edit form whose `initial`/`defaultValue` is seeded from a fetch
+whose error path collapses to the same empty/nullable as confirmed-absent,
+combined with a full-object replace/upsert on save and no disabled/gated Save
+while the read is unresolved.
+
 ## A reversible action reads as a delete when nothing shows the record persists
 
 When an action **presented as non-destructive** — resolve / archive / dismiss,
@@ -913,7 +967,7 @@ often lost — the on-screen chart carries axes and a readout the serialiser dro
 
 ## Pre-ship checklist (mirror SKILL.md's report discipline)
 - [ ] Does it need explaining? If yes, redesign until it doesn't (or demote the text to progressive disclosure).
-- [ ] All five data states handled and honest — empty / loading / error / partial / overflow — an empty state names its **coverage** (no-data-collected vs collected-and-genuinely-none), never implying a false all-clear, and any **named cause** in its copy holds on every path that reaches it, not only the one it describes; a **definitive-record surface** (audit log, security events, a decision-bearing balance/count) shows a **distinct, retryable error state** on fetch failure rather than degrading to empty — a low-stakes/supplementary value may acceptably degrade, a definitive one may not; and a capped/sliced overflow list carries an explicit **remainder indicator** whenever `total > shown`; and a partial-apply operation's visible success counters reconcile to the input total — a client response type narrower than the endpoint's actual return (a dropped `error_count`/`errors` field) is a silent undercount, not a clean partial state?
+- [ ] All five data states handled and honest — empty / loading / error / partial / overflow — an empty state names its **coverage** (no-data-collected vs collected-and-genuinely-none), never implying a false all-clear, and any **named cause** in its copy holds on every path that reaches it, not only the one it describes; a **definitive-record surface** (audit log, security events, a decision-bearing balance/count) shows a **distinct, retryable error state** on fetch failure rather than degrading to empty — a low-stakes/supplementary value may acceptably degrade, a definitive one may not; and a capped/sliced overflow list carries an explicit **remainder indicator** whenever `total > shown`; and a partial-apply operation's visible success counters reconcile to the input total — a client response type narrower than the endpoint's actual return (a dropped `error_count`/`errors` field) is a silent undercount, not a clean partial state; and a **load-to-edit** form does not let an **unresolved** read (a failed/timed-out fetch, not a confirmed-empty one) seed its `initial`/`defaultValue` into a **full-object replace** on save — the save is gated (disabled, patched, or confirmed) until the value resolves, since here a failed read degrades into a **destructive write**, not merely a misleading display?
 - [ ] Every shared hook/context's readiness/error signal is read the **same way at every consuming surface** — checked independently per consumer, not inferred from the one call site that clearly gets it right; no sibling consumer destructures only the value field while another sibling of the same instance branches on the readiness/error field?
 - [ ] One channel per dimension; nothing colour-only; reads correctly in greyscale?
 - [ ] Deltas are caret + magnitude, coloured by sentiment; flat is a muted `—` with a period anchor?

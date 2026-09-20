@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.367.0] — 2026-09-21
+
+### deep-code-review — a read failure that seeds an editable form turns a misleading display into a destructive write (#850)
+
+- **`product-ux-quality.md`**: an edit form that fetches current values to populate itself, when the initial read fails and falls back to empty defaults (`initial={profile ?? blanks}`), renders a blank form — and a full-object replace on save (`PUT` the whole object) then clobbers the real record with the blanks. The **write-side twin** of the read-failure-honesty family (#821, the read side — what a failed read may *render*): here the failed read seeds an *editable* form whose *save* is destructive, and a version/CAS guard won't catch it (a valid prior version existed; the write just replaces it). Fix: a 3-state `loading | error | resolved` machine that gates the Save affordance on a resolved read (or a partial/merge patch, or an explicit confirm) — a fetch failure must never become a data-wipe. Detection: a render-path grep for `initial`/`defaultValue` seeded from a fetch with no error branch. +1 eval.
+
 ## [1.366.0] — 2026-09-21
 
 ### deep-code-review — a hand-rolled loading skeleton bypasses the accessible shared loader, so loading is silent to screen readers (#838)

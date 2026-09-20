@@ -10,7 +10,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.366.0"
+  version: "1.367.0"
 ---
 
 # Agentic delivery
