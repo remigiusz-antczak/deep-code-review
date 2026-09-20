@@ -106,6 +106,21 @@ before and after each leap" — but a review confirms the approach is **chosen a
 consistent** across the fleet (a smeared client against a stepped server disagree by up
 to a second), not that `86400` was hard-coded.
 
+## Epoch & field-width limits — time as a stored value can overflow
+
+A timestamp is also a **stored value with a width**, and the width can overflow — a scheduled, dated
+failure. A signed **32-bit `time_t`** (seconds since 1970) overflows on **2038-01-19T03:14:07Z** and wraps
+negative (the *Year 2038 problem*) — still live in 32-bit builds, embedded/IoT, and older on-disk/wire
+formats. Related width bombs: a **millisecond epoch in a 32-bit int** overflows in weeks; a
+database/interchange field too **narrow for a far-future date** (a fixed-width or 4-digit-year format, a
+`DATE` capped by the UI) silently truncates or rejects a date a user can legitimately enter (a 100-year
+lease, a long-dated expiry); and a **duration/deadline computed in 32-bit seconds** overflows on a large
+interval. Check: time is stored/transmitted in a **64-bit** (or wider) type end to end (DB column,
+serialization, language type, FFI boundary), user-enterable future dates are representable, and any 32-bit
+`time_t` dependency (an old lib, an embedded target, a legacy format) has a remediation path. **🚩** a
+32-bit `time_t`/`int` holding seconds or ms since epoch; a fixed-width date field narrower than the dates
+the domain allows.
+
 ## A timestamp is not a unique key — don't use it as a strict-inequality cursor
 
 A "what changed since the last checkpoint" diff that sets its cursor to a **record's own

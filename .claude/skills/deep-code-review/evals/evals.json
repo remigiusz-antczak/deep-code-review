@@ -3450,6 +3450,26 @@
         "Prescribes re-embedding/upsert (or delete) on every source change — edit, re-chunk, and delete paths — not just create",
         "Prescribes a detectability control: version/timestamp indexed chunks + a freshness/reconciliation check (index-vs-source lag) so a broken re-embed pipeline is caught"
       ]
+    },
+    {
+      "id": "32-bit-time_t-or-narrow-date-field-is-a-dated-overflow-time-bomb",
+      "prompt": "A service stores event timestamps as a 32-bit signed integer (seconds since epoch) in an embedded agent that reports to a backend, and its 'contract end date' column is a 4-digit-year DATE the UI caps at year 2099. A reviewer says timestamps work fine today. Any time-representation risks?",
+      "expected_output": "Yes — two width/overflow time-bombs. (1) A signed 32-bit time_t (seconds since 1970) overflows on 2038-01-19T03:14:07Z and wraps to a negative value — the Year 2038 problem; the embedded agent will misreport or crash on/after that date, and it works 'fine today' only because the date hasn't arrived (a dated, scheduled failure, not a bug you'll see at runtime now). Fix: store/transmit time in a 64-bit (or wider) type end to end — the embedded type, the wire format, the backend column, any FFI boundary — and give any legacy 32-bit time_t dependency a remediation path. (2) The 2099 cap / narrow date field is the opposite width bomb: a legitimately far-future date (a long-dated contract, a 100-year lease) is truncated or rejected — confirm the column and format represent the full range the domain allows, not an arbitrary cap. General rule: a timestamp is a stored value with a width; check the width against both the 2038 epoch bound and the domain's future-date range.",
+      "expectations": [
+        "Identifies the Year 2038 problem: a signed 32-bit time_t overflows 2038-01-19 and wraps negative; 'works today' only because the date hasn't arrived (a dated, scheduled failure)",
+        "Prescribes 64-bit (or wider) time end-to-end (type, wire format, DB column, FFI) + a remediation path for any legacy 32-bit time_t",
+        "Flags the narrow-date-field / 2099-cap as the opposite width bomb (a legitimate far-future date truncated/rejected) — represent the domain's full date range"
+      ]
+    },
+    {
+      "id": "unbounded-append-only-store-with-no-reaper-fills-the-disk-a-scheduled-outage",
+      "prompt": "A service writes verbose request logs to local disk, keeps an ever-growing `audit_events` table, and never trims its dead-letter queue. Each works and there's plenty of disk today. Is there a reliability finding?",
+      "expected_output": "Yes — three unbounded append-only stores with no reaper, each a slow-motion disk-full outage. Logs, the audit_events table, and the DLQ all grow with traffic and never shrink; 'plenty of disk today' just means the outage hasn't arrived — when the disk fills, the whole host goes down (writes fail, the DB may halt), a total, time-triggered failure no single request reveals. Fixes: give each store a retention/rotation policy with an actual reaper — log rotation with a size+age cap, a TTL or partition-drop on audit_events, DLQ trimming (with alerting on DLQ depth so it isn't silently discarded), and ensure temp/scratch cleanup also runs on the crash path (a crashed process skips its own finally). Add a disk-headroom monitor that alerts on a free-space threshold AHEAD of full, not at the outage. General rule: every append-only store names a reaper; a store that only grows is a scheduled outage.",
+      "expectations": [
+        "Identifies each unbounded append-only store (logs, audit table, DLQ) as a slow-motion disk-full outage — 'plenty of disk today' means the outage hasn't arrived; a full disk downs the whole host",
+        "Prescribes a retention/rotation policy + reaper per store (log rotation size+age, TTL/partition-drop on the table, DLQ trim) plus crash-path cleanup for temp files",
+        "Prescribes a disk-headroom monitor/alert ahead of full (free-space threshold), not alerting at the outage"
+      ]
     }
   ]
 }

@@ -258,6 +258,18 @@ Every billable or slow call must map to value delivered.
   event loop / request thread. Backpressure and timeouts on every external call.
 - No unbounded growth: ever-growing lists/maps/caches, accumulating `defer`s,
   unclosed resources. Stream large data instead of buffering it all in memory.
+- **Every append-only store on disk names a reaper — unbounded growth fills the disk, a
+  total outage.** Distinct from the in-memory growth above: logs, temp/scratch files, an
+  audit/event table, a dead-letter queue, a metrics/trace store, an uploads or cache
+  directory that only ever grows will eventually **fill the disk and take the whole host
+  down** (a slow-motion, time-triggered outage no single request reveals; a full disk can
+  also halt the database). For each, confirm a **retention/rotation policy with an actual
+  reaper** (log rotation with a size+age cap; a TTL / partition-drop on the audit/event
+  table; DLQ trimming with depth alerting; temp-file cleanup that also runs on the **crash
+  path**, since a crashed process skips its own `finally`) and a **disk-headroom
+  monitor/alert ahead of full** (a free-space threshold, not the outage). A store that grows
+  with traffic with no bounding mechanism is the finding. (Outage consequence →
+  `reliability-error-handling.md`; alert wiring → `observability.md`.)
 - Payloads are reasonable; no shipping a megabyte to render a number.
 
 **🚩 grep**: queries inside `for`/`map`/`.each`; `SELECT *`; missing `LIMIT`;
