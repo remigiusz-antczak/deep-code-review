@@ -3,6 +3,14 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.268.0] — 2026-09-20
+
+### deep-code-review — wave 189 dated overflows & disk-full: epoch/field-width time-bombs and unreaped on-disk stores
+
+- **`time-date-correctness.md`** new **Epoch & field-width limits** section: a stored time value has a fixed bit-width capacity, and outgrowing it is a *dated, scheduled* failure — not a present-tense non-issue. A signed 32-bit `time_t` overflows at **2038-01-19T03:14:07Z** (Year 2038) and wraps negative — still live in 32-bit builds, embedded targets, and on-disk/wire formats; a millisecond epoch stored in a 32-bit int overflows in ~3.5 weeks; a too-narrow date/year field (2-digit year, undersized column) carries its own dated ceiling. Distinct from the calendar-arithmetic and monotonic-clock concerns in *Durations*, and from the 2^53 JSON-number-precision limit (a floating-point safe-integer range, not an epoch bit-width).
+- **`performance-db-cost.md`** new bullet under *Concurrency, memory & payloads*: every append-only store **on disk** names a reaper — logs, temp/scratch files, an audit/event table, a dead-letter queue, a metrics/trace store, or an on-disk artifact directory that only grows will eventually fill the disk and take the whole host down (a slow-motion, time-triggered outage no single request reveals). For each: a retention/rotation policy with an actual reaper (size+age cap; TTL/partition-drop; DLQ trim with depth alerting; crash-path temp cleanup) plus a disk-headroom alert *ahead of* full. Explicitly distinct from the in-memory-growth bullet above.
+- +2 evals (each baits the "it works fine today" / "there's plenty of disk today" dismissal and requires rebutting it as a scheduled failure). Independent reviewer PASS; applied the reviewer's optional clarity clause distinguishing the on-disk artifact directory from the in-memory/Redis cache already covered above.
+
 ## [1.267.0] — 2026-09-20
 
 ### deep-code-review — wave 188 vector-index correctness: embedding model-version mismatch & staleness
