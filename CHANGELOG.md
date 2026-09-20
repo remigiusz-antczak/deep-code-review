@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.295.0] — 2026-09-20
+
+### deep-code-review — wave 216 data-quality: per-group ratio attribution + asymmetric percent guard (closes #686, #654)
+
+- **`data-quality.md`** two additions. **#686** — a **per-group ratio** is wrong when the numerator counts a shared/ownerless entity via a broad **fan-out** rule but the denominator uses a **strict single-owner** rule for the same entity: the entity is charged to every group's numerator, counted in no group's denominator, inflating (or, for an all-shared group, undefining) every group's rate — a distortion no single-row check sees. Includes a hand-computed minimal proof (independently re-derived correct by the reviewer). Distinct from the existing "Denominator integrity" bullet (single-metric entity-type eligibility + test-traffic pollution). **#654** — a percent-unit guard that only rejects an unconverted 0-1 fraction (lower bound) is **asymmetric**: a value **above 1** (an attainment/ratio that can exceed 100%, or a double-`*100`) renders wrong with no error; extend the guard with an upper bound set by the metric's own semantics (no invented ceiling). Built by a worktree builder subagent, independently reviewed PASS-WITH-FIXES (arithmetic re-derived correct, non-duplication verified repo-wide; two Minor eval-wording fixes applied: failure-rate vs pass-rate label, "renders wrong" not "unrendered"). +2 evals. Closes #686, closes #654.
+
 ## [1.294.0] — 2026-09-20
 
 ### deep-code-review — wave 215 a11y landmarks & focus (closes #693, #662)

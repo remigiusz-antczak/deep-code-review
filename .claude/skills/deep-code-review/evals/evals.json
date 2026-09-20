@@ -3850,6 +3850,26 @@
         "Identifies the tell: a bare boolean open/close state with an Escape/outside-click handler that never captures a trigger ref or calls .focus() back on close",
         "States the consequence -- focus falls to <body> on close, disorienting a keyboard user -- and prescribes restoring focus in every dismiss path (Escape, outside-click, selection), mirroring the modal's already-correct pattern"
       ]
+    },
+    {
+      "id": "per-group-ratio-numerator-denominator-attribution-mismatch",
+      "prompt": "A shared-services quality dashboard shows a 'check failure rate' per team. A shared internal library has no single owning team, so it is excluded from every team's `checks_total` (denominator) -- ownerless entities aren't attributed to anyone. But when the shared library fails a check, the alerting rule fans the failure out to every team that imports it, incrementing each importing team's `checks_failed` (numerator). Team Falcon's and Team Osprey's failure rates both spiked this week this week even though neither team's own code regressed. What's the review finding?",
+      "expected_output": "The numerator and denominator use different attribution rules for the same shared entity. The numerator attributes the shared library's failure under a broad fan-out rule (every importing team gets charged), while the denominator attributes membership under a strict single-owner rule (the ownerless library has no owner to credit, so it is in no team's checks_total). That charges the failure to every importing team's numerator while it sits in no team's denominator -- inflating the ratio for every team that imports the library, and making it undefined (divide-by-zero) for any team whose entities are all shared/ownerless. Each team's own row-level increment is individually correct, which is why no single-row check catches it -- and this is distinct from denominator integrity's entity-type-eligibility case, since every row here is the right type. Fix: derive the numerator and the denominator from the same membership/attribution rule for the same entity -- both fan-out, or both single-owner, never mixed.",
+      "expectations": [
+        "Identifies that the numerator (fan-out to every importing team) and the denominator (strict single-owner, excludes the ownerless library) apply different attribution rules to the same shared entity",
+        "States the shared library's failure is charged to every importing team's numerator while counted in no team's denominator -- inflating, or making undefined, every affected team's ratio",
+        "Prescribes the fix: numerator and denominator must derive from the same membership/attribution rule for the shared entity, not a mismatched pair"
+      ]
+    },
+    {
+      "id": "percent-unit-guard-needs-upper-bound-not-just-lower",
+      "prompt": "A metrics pipeline renders `attainment_pct` with this guard before appending a '%' sign: `if (value < 1) { value = value * 100 }` -- meant to catch an analyst who passed a raw 0-1 fraction instead of an already-converted percent. A downstream dashboard now shows one key result at '5000%'. What's the review finding?",
+      "expected_output": "The guard is asymmetric by construction: it checks only a lower bound (value < 1) and has no upper bound, so any value that lands above 1 sails through unchanged with no error. Here a value already expressed as a percent (e.g. 0.5 meaning 50%) was run through the conversion twice -- 0.5 * 100 * 100 = 5000 -- and nothing caught it because the guard only ever asks 'is this below 1', never 'is this an implausible percent'. The same hole lets a metric that can legitimately exceed 100% (an attainment or index over par) render correctly by accident but leaves no way to distinguish that from a real double-conversion bug. Fix: extend the guard to a plausible range check with a sane upper bound sized to what this specific metric can actually take -- the question 'can this metric legitimately exceed 100%?' sets the bound -- and fail loud (flag it) rather than silently clamping or rendering whatever number falls out.",
+      "expectations": [
+        "Identifies the guard as asymmetric -- it checks only a lower bound (value < 1) and has no upper bound",
+        "Explains a value above 1 (here, a double *100 conversion producing 5000) passes through rendered wrong (it shows the wrong value, no error) with no error",
+        "Prescribes extending the guard with a plausible upper-bound range check sized to the metric's own semantics, failing loud instead of silently clamping"
+      ]
     }
   ]
 }

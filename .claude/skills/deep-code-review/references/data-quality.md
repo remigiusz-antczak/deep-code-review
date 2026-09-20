@@ -193,6 +193,26 @@ rate), validity (schema/format/range). For each:
   `privacy-compliance.md`'s suppression boundary, not a per-dashboard filter a new consumer omits; an
   `is_test` / `environment` field that rides on the event but isn't enforced at the boundary is
   the red flag.
+- **A per-group ratio's numerator and denominator must share one membership rule for a shared
+  entity.** Denominator integrity (above) is a **single-metric** property — is the failing type in
+  the base at all. A **per-group** rate/score (a per-team, per-segment, or per-cohort ratio) has a
+  distinct failure no single-row check can see: when the **numerator** attributes a shared or
+  ownerless entity's failure under a **broad fan-out** rule (every group it touches gets charged)
+  while the **denominator** attributes membership under a **strict single-owner** rule for that
+  same entity, an ownerless entity has no single owner to credit — so it is **charged to every
+  group's numerator while sitting in no group's denominator**, inflating the ratio for every group
+  it fans out to (and leaving it **undefined** — divide-by-zero — for any group whose entities are
+  *all* shared/ownerless, since the strict rule credits that group nothing). Each row's own
+  increment is individually correct, which is why no single-row check catches it. Fix: derive the
+  numerator and the denominator from the **same** attribution/membership rule for the same entity —
+  both fan-out, or both single-owner, never mixed. Minimal-proof construction: one shared failing
+  entity E with no single owner, fanning out to groups A and B (A otherwise has 8 owned entities
+  with 1 failing; B has 6 owned entities with 1 failing). Hand-compute the ratio both ways: under
+  the **mismatched** rule (E's failure fans into both numerators; E is excluded from both
+  denominators since it has no owner) A reads 2/8 = 25% and B reads 2/6 ≈ 33%; under the
+  **matched** fan-out rule (E also counted in both denominators) A reads 2/9 ≈ 22% and B reads
+  2/7 ≈ 29% — both ratios move once numerator and denominator agree, proving the mismatch inflates
+  every group that shares the entity.
 - **Empty-shape honesty:** distinguish **absent**, **expected-empty**,
   **false**, and **empty-list** when completeness or compare-and-swap logic
   collapses them — treating "blank field" as "no check" or "no prior" mis-scores
@@ -208,6 +228,17 @@ rate), validity (schema/format/range). For each:
 - **Validate what lands in a field:** reject your own pipeline labels leaking in
   as a subject's name; reject shape mismatches (an email in a name field is both
   a quality defect and an unintended PII exposure).
+- **A percent-unit guard needs an upper bound, not just a lower one.** A guard written to catch an
+  unconverted 0–1 fraction rendered under a percent unit (`0.5` shown as `0.5%` instead of `50%`)
+  typically checks only a **lower** bound (`value < 1` ⇒ needs `* 100`); with no **upper** bound it
+  is asymmetric by construction, and a value that lands **above 1** — a metric whose semantics can
+  legitimately exceed 100% (an attainment, ratio, or index that can run over par), or an accidental
+  **double conversion** (`0.5 * 100 * 100` = `5000`) — sails straight through and renders wildly
+  wrong with **no error**. Extend the guard to a **plausible range check with a sane upper bound
+  for that metric's own semantics**, and fail loud (flag, don't silently clamp) outside it. The
+  question that sets the bound is: **can this metric legitimately exceed 100%?** — if no, cap at
+  100 and treat anything above it as the same class of bug as the unconverted fraction below 1; if
+  yes, name the ceiling the domain actually supports instead of leaving the guard one-sided.
 
 ## 5. Deduplication & consistency
 
@@ -725,4 +756,4 @@ that ships raw events where the consumer scores on aggregates, or a claimed
 provider-input never reconciled against the provider's live output before it feeds a
 downstream score; a deserializer that trusts a serialized computed field (a count
 read verbatim, not re-derived from the validated collection) or checks only a
-primitive type, not element shape — weaker than its own builder; a corroboration / fusion step that raises a fused confidence past its **entity-attribution** component on agreement that only evidences occurrence; a hand-rolled composite / score / tiering where a citable external standard exists and wasn't used, or per-metric spec URLs over a **tool-chosen metric set** (the invented index one level up); a non-empty value-A→value-B overwrite with no source-grade arbitration; a join / corroboration key not weighted by value-commonness (a value shared by dozens treated as a confirming match); a corroboration count that collapses same-domain duplicates but not derivation; a per-dimension volume-floor drop acked or blocked with no fold investigation after an identity/roster/entity-resolution change (a correction and a regression are identical from the count); an identity cluster built from raw connected components with no bridge / centrality check (transitive over-merge); a fabricated freshness decay curve (`0.5^(days/half_life)`) or an adopted vendor half-life in place of an observable in-window gate; a diff / index keyed on a **bare `id`** over a list mixing multiple entity **kinds** (a `(kind, id)` collision that silently merges two entities into one delta); a vector index mixing embeddings from two model versions, queried with a different model than it was built with, not re-embedded after its source docs changed, or built for one distance metric / normalization and queried under another.
+primitive type, not element shape — weaker than its own builder; a corroboration / fusion step that raises a fused confidence past its **entity-attribution** component on agreement that only evidences occurrence; a hand-rolled composite / score / tiering where a citable external standard exists and wasn't used, or per-metric spec URLs over a **tool-chosen metric set** (the invented index one level up); a non-empty value-A→value-B overwrite with no source-grade arbitration; a join / corroboration key not weighted by value-commonness (a value shared by dozens treated as a confirming match); a corroboration count that collapses same-domain duplicates but not derivation; a per-dimension volume-floor drop acked or blocked with no fold investigation after an identity/roster/entity-resolution change (a correction and a regression are identical from the count); an identity cluster built from raw connected components with no bridge / centrality check (transitive over-merge); a fabricated freshness decay curve (`0.5^(days/half_life)`) or an adopted vendor half-life in place of an observable in-window gate; a diff / index keyed on a **bare `id`** over a list mixing multiple entity **kinds** (a `(kind, id)` collision that silently merges two entities into one delta); a vector index mixing embeddings from two model versions, queried with a different model than it was built with, not re-embedded after its source docs changed, or built for one distance metric / normalization and queried under another; a per-group ratio whose numerator fans a shared/ownerless entity out to every group while its denominator credits it to a single owner (inflated, or undefined, for every group that shares it); a percent-unit guard with a lower bound only, so a value above 1 (legitimate over-100% semantics, or a double conversion) renders wrong with no error.
