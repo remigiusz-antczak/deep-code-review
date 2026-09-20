@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.323.0] — 2026-09-20
+
+### deep-code-review — gh-CLI gotchas: PR-body full-replace clobber (#739); `.github/workflows/*` needs the `workflow` OAuth scope (#719)
+
+- **`parallel-audit.md`** (gh-gotcha family): (**#739**) `gh pr edit --body`/`-b` **and** `-F`/`--body-file` both REPLACE the whole PR body (not append/merge) — in a multi-lane fan-out a wrong `<N>` clobbers an unrelated PR, and a second editor erases the first's checklist/markers; read-verify-write (`gh pr view --json body`, re-post the merged text) or use `gh pr comment`. (**#719**) editing `.github/workflows/*` needs a token with the `workflow` OAuth scope — a push touching a workflow file is rejected without it; check `gh auth status` scopes and treat a missing scope as fail-closed. +2 evals; +1 curl-verified `docs/standards-index.md` row (GitHub OAuth-scopes doc). Closes #739, #719.
+- Built by a worktree builder subagent, independently reviewed **PASS-WITH-FIXES**: both CLI/scope claims verified via `gh --help` + the GitHub docs; applied both must-fixes — named `-F`/`--body-file` alongside `--body` (the reviewer caught that the original "one flag" claim was false and exempted the very flag #739's incident used), and logged the cited OAuth-scopes doc in `docs/standards-index.md` (the repo's own definition-of-done requires it).
+
 ## [1.322.0] — 2026-09-20
 
 ### deep-code-review — a CAS after a non-idempotent side-effect does not guard the side-effect (#646)

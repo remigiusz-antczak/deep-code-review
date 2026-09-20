@@ -144,6 +144,39 @@ only to sampling inside a unit.
   local worktree (#413): a `gh` read returns a truncated view **without erroring**, and a partial
   read yields a wrong "safe" / "absent" conclusion — treat every `gh` read as
   **paginated-until-proven-complete** before a collision or absence verdict.
+- **`gh pr edit --body`/`-b` sets the body outright — full replace, not append or merge.**
+  Verified in `gh pr edit --help`: `-b, --body string  Set the new body.` (`-B/--base` and
+  `--milestone` are the same single-value replace shape; the `--add-*`/`--remove-*` pairs are
+  incremental, and so is `--attach` — given with no body flag it appends the image/video to the
+  existing body instead of replacing it. Both `--body`/`-b` and `-F`/`--body-file` rewrite the
+  body wholesale — `--body-file` only changes the input *source*, not the replace semantics, and
+  is the form #739's own incident used). In a multi-lane write fan-out (§6) this clobbers two ways, both
+  observed (#739): a **wrong or stale `<N>`** (a typo, or a number carried over from a sibling
+  issue) silently overwrites an unrelated PR's body with no error at all; and even against the
+  **right** PR, a second editor's `--body` call erases whatever the first editor wrote — a prior
+  agent's checklist, review notes, or gate marker — with no diff and no merge, so a body-reading
+  gate (an evidence check, a verify-marker check) then governs the wrong content and fails a lane
+  nobody touched. Reviewable rule: never call `gh pr edit --body`/`--body-file` on a body you didn't just
+  author — read-verify-write (`gh pr view <n> --json body`, confirm it's this PR's own content,
+  re-post the **merged** text) or use a comment (`gh pr comment`) instead of a replace; a central
+  orchestrator batch-editing many PRs' bodies is itself the clobber risk (single writer per PR
+  body).
+- **Editing `.github/workflows/*` needs the OAuth `workflow` scope — the push fails loudly, but
+  only at push, after every earlier gate already went green.** Confirmed against GitHub's
+  OAuth-scopes docs (`workflow`: "Grants the ability to add and update GitHub Actions workflow
+  files") and reproduced (#719): a lane edited a workflow YAML, verified the change, committed
+  locally — then hit `refusing to allow an OAuth App to create or update workflow <path> without
+  workflow scope` at `git push`, because the token carried `gist, read:org, repo` but not
+  `workflow`. A subagent cannot self-heal this (granting the scope needs the human's browser
+  device-auth), so it blocks a whole **class** of lanes — any workflow-editing lane — and a fleet
+  that dispatches several before checking wastes each one identically. One trap inside the trap:
+  a workflow file identical in path *and* contents to one already committed on another branch can
+  push without the scope, so a single past green push is not proof the scope exists. Reviewable
+  rule: before dispatching a lane that touches `.github/workflows/`, check `gh auth status` for
+  `workflow` in the token's scopes (fix once, interactively: `gh auth refresh --scopes
+  repo,workflow,read:org,gist`); route workflow-editing lanes separately from app/tooling lanes so
+  a missing scope fails closed on only the CI slice, and bank a blocked lane's already-good local
+  commit rather than rebuild it once the scope lands.
 
 ### Invariant catalog (pick one per unit — do not invent overlapping "find issues")
 
