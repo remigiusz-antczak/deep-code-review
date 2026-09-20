@@ -181,6 +181,78 @@ Common in agent/tooling repos: JSON/YAML "DB" files, append logs, lockfiles.
 
 ---
 
+## NoSQL / distributed-store TOCTOU
+
+- **Lost update with no conditional write — no transaction/lock escape hatch on a
+  single-item op.** A get-then-put with no conditional/optimistic-write clause silently
+  clobbers a concurrent writer. This is sharper than the SQL CAS/version-column guard
+  above: SQL can always escalate an insufficient single-statement CAS to `SELECT … FOR
+  UPDATE` or `SERIALIZABLE` across an explicit multi-statement transaction, but a
+  single-item **DynamoDB or Cassandra** write has no such escalation path — the conditional
+  clause on the write itself is the only guard that exists, not a backstop on top of one.
+  (MongoDB is the partial exception: a multi-document transaction *does* take a document
+  lock and raise a write-conflict on a raced modify — but it's the costlier, time-capped
+  tool from the batch-limit bullet below, not a first-class default the way SQL's `FOR
+  UPDATE` is; the standalone `findOneAndUpdate` filter is still the right default guard.) Require it on
+  every read-modify-write: DynamoDB `ConditionExpression` (`attribute_not_exists(pk)` for
+  insert-once, or an equality check on the value/version just read) — "This allows the
+  write to proceed only if the item in question does not already have the same primary
+  key," and on a failed match "the condition is false and DynamoDB rejects the write,
+  which prevents an overwrite" (AWS, DynamoDB condition expressions); Mongo a filter that
+  repeats the just-read value or version inside `findOneAndUpdate`, so a raced write
+  matches zero documents instead of overwriting; Cassandra a lightweight transaction
+  (`IF` / `IF NOT EXISTS`, below).
+- **Default-stale read / read-your-writes.** A read issued immediately after a write, with
+  no strong-consistency opt-in, can return the pre-write value — no error, no signal.
+  DynamoDB defaults every read to eventually consistent ("Eventually consistent is the
+  default read consistent model for all read operations") and only returns the latest
+  data when `ConsistentRead` is explicitly set to `true` ("DynamoDB returns a response
+  with the most up-to-date data, reflecting the updates from all prior write operations
+  that were successful" — AWS, DynamoDB read consistency). Cassandra's own default is the
+  weakest per-query level: "The consistency level defaults to ONE for all write and read
+  operations" (DataStax, Cassandra 3.0) — one replica's answer, no cross-replica
+  agreement, unless the caller opts up to `QUORUM`/`LOCAL_QUORUM`. MongoDB's default read
+  concern is `"local"`: "The query returns data from the instance with no guarantee that
+  the data has been written to a majority of the replica set members. Data may be rolled
+  back" (MongoDB Manual, Read Concern) — `"majority"`/`"linearizable"` must be requested
+  explicitly. Check: a read-after-write test that never sets the strong-read option is
+  exercising the silently-weaker default path, not the guaranteed one.
+- **GSI / secondary-index lag — no strong-read escape hatch at all.** A DynamoDB Global
+  Secondary Index has no consistency dial the base table has: "All reads from GSIs and
+  streams are eventually consistent," and "Strongly consistent reads from a global
+  secondary index or a DynamoDB stream are not supported" (AWS, DynamoDB read
+  consistency) — there is no `ConsistentRead:true` to fall back on here. The index is
+  populated out-of-band from the base-table write: "the global secondary indexes on that
+  table are updated in an eventually consistent fashion ... your applications need to
+  anticipate and handle situations where a query on a global secondary index returns
+  results that are not up to date" (AWS, Global Secondary Indexes). An integration test
+  that writes, then immediately queries the GSI, passes reliably in a low-latency
+  dev/staging environment and fails intermittently once real propagation lag shows up in
+  production. Fix: read the base table (or a strongly consistent LSI) for the item just
+  written, or design the caller to tolerate and retry across a bounded staleness window —
+  never assume GSI read-after-write.
+- **Cassandra: mixing LWT and non-LWT writes on one partition bypasses the conditional
+  guard** — the same "a guard must intercept every mutation primitive" shape as an
+  app-level CAS bypassed by a direct write, just enforced at the storage-engine level.
+  DataStax: "mixing LWTs and normal operations can result in errors. If lightweight
+  transactions are used to write to a row within a partition, only lightweight
+  transactions for both read and write operations should be used" (Cassandra 3.0) — a
+  plain `INSERT`/`UPDATE`/`DELETE` (a one-off ops/cleanup script is the canonical
+  offender) doesn't participate in the Paxos round the `IF`/`IF NOT EXISTS` guard relies
+  on, so it can race past it and reintroduce the violation the guard exists to prevent.
+- **Transaction/batch limits vs. assumed SQL-unlimited atomicity** — code ported from an
+  RDBMS assumes one transaction can hold arbitrary writes; NoSQL multi-item transactions
+  are capped and abort past the cap instead of scaling. DynamoDB `TransactWriteItems`
+  groups "up to 100 write actions," targeting "up to 100 distinct items," aggregate size
+  "cannot exceed 4 MB," and "You can't target the same item with multiple operations
+  within the same transaction" (AWS, DynamoDB Transactions). MongoDB also caps by time:
+  "a transaction must have a runtime of less than one minute" by default, or it is
+  "aborted by a periodic cleanup process" (MongoDB Manual, Transactions in Production).
+  Check: any loop building one transaction/batch payload with no chunking against the
+  engine's own item-count/size/time ceiling.
+
+---
+
 ## Tests & jobs vs real shared paths
 
 A high-damage pattern: suite or job writes the **default production/shared data
@@ -236,7 +308,12 @@ read-modify-write; load→await→write without re-read/CAS; retrying only the f
 instead of the whole transaction; lock held across I/O;
 two-plus locks acquired in a different order across call sites (ordering deadlock);
 two writers on one file; corrupt/unreadable store wiped to empty; check-then-act
-without a constraint or row lock (a bare default-isolation transaction is not enough); tests/jobs writing a real tracked/shared data
+without a constraint or row lock (a bare default-isolation transaction is not enough); a
+NoSQL get-then-put with no conditional/version clause on the write; a read relying on a
+NoSQL store's eventually-consistent default immediately after a write; a DynamoDB GSI
+query assumed read-after-write consistent; mixed lightweight-transaction and plain writes
+on one Cassandra partition; a multi-item NoSQL transaction/batch assumed unbounded like a
+SQL transaction; tests/jobs writing a real tracked/shared data
 path; stage-all from a multi-agent checkout; multiple concurrent-agent write
 lanes sharing one working tree with no worktree-per-lane isolation; a stray or
 stale worktree with no corresponding open PR; duplicate open PRs/branches

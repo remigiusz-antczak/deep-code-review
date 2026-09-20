@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.302.0] — 2026-09-20
+
+### deep-code-review — NoSQL / distributed-store consistency (conditional writes, stale reads, GSI lag, LWT mixing, batch limits)
+
+- **`concurrency-shared-state.md`** new "NoSQL / distributed-store TOCTOU" subsection (distinct from the SQL DB/store TOCTOU section and from the in-process cross-replica-registry bullet): (1) **lost update with no conditional write** — a get-then-put with no conditional/optimistic clause silently clobbers; a single-item DynamoDB/Cassandra write has no `SELECT…FOR UPDATE`/`SERIALIZABLE` escalation path (MongoDB's multi-doc transaction is the costlier, time-capped exception, not a first-class default) — require DynamoDB `ConditionExpression` / Mongo filter-scoped `findOneAndUpdate` / Cassandra LWT `IF`; (2) **default-stale reads** — DynamoDB eventual-by-default (`ConsistentRead`), Cassandra CL `ONE`, Mongo readConcern `local`; (3) **GSI lag** — strongly-consistent reads from a global secondary index are *not supported* (no escape hatch); (4) Cassandra **LWT/non-LWT mixing** on one partition bypasses the guard; (5) **transaction/batch limits** vs assumed SQL-unlimited atomicity. Plus a **`performance-db-cost.md`** hot-partition bullet and a **`role-coverage.md`** cross-ref fixing the previously mechanism-less "Consistency model stated" line. 9 curl-verified `docs/standards-index.md` rows (AWS/DataStax/MongoDB, dated). +3 evals. Built by a worktree builder subagent, independently reviewed PASS-WITH-FIXES: all 9 quotes re-curled verbatim, R+W>N correctly omitted (no source), an advisor-caught wrong-mechanism Mongo citation removed pre-review; applied — scoped the "no escalation path" claim (Mongo's multi-doc txn *does* lock) and marked one elided GSI quote lead-in. Closes no filed issue (comparative research find).
+
 ## [1.301.0] — 2026-09-20
 
 ### agentic-delivery — fleet-coordination doctrine: delegate-merge-to-clean-worktree, stale-brief cohort fix, subagent-OOM back-off (closes #548, #666, #676)

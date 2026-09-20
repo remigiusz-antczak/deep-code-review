@@ -51,6 +51,17 @@ of work earn its keep?**
   A10) — a leaked checkout starves the pool under load; watch **pool exhaustion** (active connections
   trending toward max with checkouts never returned) as its own symptom, distinct from constructing a
   fresh client per call above.
+- **Hot partition / partition-key design (NoSQL)**: a low-cardinality or skewed
+  partition key (a status enum, a single active tenant, a monotonically increasing
+  timestamp prefix) concentrates traffic on one physical partition regardless of the
+  table's overall provisioned or on-demand capacity. DynamoDB caps throughput **per
+  partition**, not just per table: "Every partition in a DynamoDB table is designed to
+  deliver a maximum capacity of 3,000 read units per second and 1,000 write units per
+  second" (AWS, DynamoDB partition-key best practices) — a hot key throttles long before the
+  table-level limit is anywhere near reached, and raising table-level provisioned or
+  on-demand capacity does not fix a single-partition hotspot. Fix: choose a
+  high-cardinality key that spreads access evenly, or shard a naturally hot key with a
+  random or calculated suffix (write sharding) and fan the read back in.
 
 ## Schema & data migrations (safety)
 
@@ -281,7 +292,9 @@ constructed per call; a pool checkout not returned on the error path (connection
 pool exhaustion); no `timeout=`/`AbortController` on network calls; `while
 True` poll loops; `CREATE INDEX` without `CONCURRENTLY`; `ADD COLUMN … NOT NULL`
 with no default; `ADD CONSTRAINT` with no `NOT VALID`; `ALTER COLUMN … TYPE` on a big table; DDL with
-no `lock_timeout`; a backfill loop with a fixed `sleep` and no lag/health read; unbounded in-memory caches/dicts as module globals; a write invalidating only the
+no `lock_timeout`; a backfill loop with a fixed `sleep` and no lag/health read; a
+low-cardinality or skewed NoSQL partition key (single-tenant, status enum, monotonic
+timestamp prefix) concentrating traffic on one partition; unbounded in-memory caches/dicts as module globals; a write invalidating only the
 entity's own cache key with no derived-key fan-out; a cache key built from raw/unbounded input; a
 shared/CDN cache with no `Vary` or key dimension for `Accept-Language`/`Accept-Encoding`; `CREATE
 INDEX CONCURRENTLY` inside a transaction block or a left-behind invalid index; retry loops

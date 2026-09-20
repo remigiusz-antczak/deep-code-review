@@ -76,7 +76,10 @@ Beyond the per-function correctness of A and the local perf of E, judge the
   cascading outage. Control-plane paths (kill-switch, approval) route **above** the
   rate limiter (F).
 - **Consistency model stated & matched.** Strong vs eventual consistency is a
-  deliberate choice tied to the need, not an accident of the datastore default.
+  deliberate choice tied to the need, not an accident of the datastore default
+  (cross-ref G — NoSQL/distributed-store TOCTOU, `concurrency-shared-state.md`, for
+  the mechanism: conditional writes, default read-consistency levels, GSI lag, LWT
+  scope, and transaction/batch limits per store).
 - **Evolvability over speculative generality.** Extension points exist where the
   next likely change lands; premature abstraction and one-caller "frameworks" are
   their own cost (cross-ref H — three similar lines beat a wrong abstraction).
