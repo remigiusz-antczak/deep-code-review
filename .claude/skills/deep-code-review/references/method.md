@@ -405,8 +405,10 @@ finding; the openers above attack a *running* security surface. None exercises a
 new or changed **correctness-bearing** unit — a calculation, a state transition, a
 parser/validator, an off-by-one boundary — when no test reaches it. For such logic,
 write a **minimal, disposable** test that calls it at its stated boundary conditions
-in the same throwaway worktree at `START_SHA` the planted-defect probe uses (a
-transient artifact under the same principle-7 bound; never the working tree). A
+in the same throwaway worktree at `START_SHA` the planted-defect probe uses — the
+same transient-worktree-probe mechanism principle 7 permits, never the working tree.
+As Phase 1 reverts and confirms its planted defect, **delete the probe and confirm it
+is gone** when done, so no unprompted write is left standing. A
 **red** result is a finding with a real repro attached — a stronger claim than a
 static read. A **green** result records only *"no defect at the inputs probed,"*
 with the probe and its inputs; it is **not** an invariant, and is promoted to a
@@ -416,9 +418,9 @@ blast radius before you run it:** the throwaway worktree contains *filesystem*
 effects, not *outbound* ones — if the unit cannot be exercised without a network,
 paid, or stateful call (a payment or model-calling handler, a live DB write),
 **stub that boundary or skip**, and record `could-not-check` (distinct from
-found-nothing) rather than fire a real side effect to get a result. Principle 5's
-spend bound and the could-not-check-vs-found-a-problem discipline apply to the
-reviewer's own probe, not only to the target's gates.
+found-nothing) rather than fire a real side effect to get a result. The
+confirm-before-billable-or-shared-state caution and the could-not-check-vs-found-nothing
+discipline bind the reviewer's own probe, not only the target's gates.
 
 **Phase 4 — Synthesize & rank.** Deduplicate, assign severity, separate blocking
 from non-blocking. Note systemic patterns (one root cause behind many symptoms)

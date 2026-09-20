@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.286.0] — 2026-09-20
+
+### deep-code-review — wave 207 author a disposable probe test to *discover* an unsuspected bug (Phase 3)
+
+- **`method.md`** new Phase 3 paragraph: beyond the security openers, **author a minimal, disposable test to discover an unsuspected defect in changed correctness-bearing logic no existing test reaches** — distinct from Phase 1's planted-defect probe (which proves a *gate* catches a *known* injected defect), Phase 4 fix-verification (which runs the *existing* suite against a *suspected* finding), and the Phase 3 security openers (which attack a *running* surface). RED = a finding with a real repro attached; **GREEN is only "no defect at the inputs probed"** (record the probe + inputs), promoted to a `checked_sound` / *Invariants verified to hold* row only if it pins the property across the input class, not one example. **Blast-radius bound:** the throwaway worktree contains *filesystem* effects, not *outbound* ones — a paid/network/stateful unit is **stubbed or skipped** and recorded `could-not-check` (distinct from found-nothing), never fired for a result. The probe reuses the same transient-worktree-probe mechanism principle 7 already permits and is **deleted with its removal confirmed** (as Phase 1 reverts-and-confirms), so no unprompted write is left standing. +2 evals. Independent reviewer PASS-WITH-FIXES: corrected a fabricated "principle 5 spend bound" cite (no such numbered principle — grounded in the real unnumbered confirm-before-billable rule; the fix reached two eval loci), aligned the could-not-check idiom to *found-nothing*, operationalized the probe teardown, and marked the eval's boundary-bug list illustrative. Closes no filed issue (competitor-comparison method gap).
+
 ## [1.285.0] — 2026-09-20
 
 ### deep-code-review — wave 206 delivering & defending a finding (review tone + author-pushback hold-or-concede loop)
