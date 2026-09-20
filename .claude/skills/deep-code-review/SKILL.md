@@ -11,7 +11,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.304.0"
+  version: "1.305.0"
 ---
 
 # Deep Code Review
@@ -207,7 +207,7 @@ footguns: `references/language-stack-redflags.md`.
 | I | API, contracts, integration | `api-contracts.md` |
 | J | Testing & evaluation | `testing-and-evals.md` |
 | K | Build, CI, supply chain, release | `dependency-currency-and-upgrades.md`, `release-engineering.md` |
-| L | Infra / IaC / containers / cloud | `infra-iac-containers.md` (how-to-secure existing), `infra-evolution-by-stage.md` (when-to-add, by stage) |
+| L | Infra / IaC / containers / cloud / serverless | `infra-iac-containers.md` (how-to-secure existing), `infra-evolution-by-stage.md` (when-to-add, by stage) |
 | M | Observability | `observability.md` |
 | N | Config, secrets, environments | `domain-checklists.md` |
 | O | Docs & DX | `docs-and-dx.md`, `docs-evolution-by-stage.md` (which-docs-when, by stage), `readme-authoring.md` (writing/reviewing a README for onboarding) |

@@ -3,6 +3,17 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.305.0] — 2026-09-20
+
+### deep-code-review — serverless event-source correctness: recursive-invocation loops, partial-batch failure contract, and the visibility-timeout redelivery race
+
+- **`infra-iac-containers.md`** new section "Serverless functions & event-source triggers": a recursive event-source invocation loop has **no call stack and no depth counter** — a function whose output targets the resource that triggers it (directly or transitively) self-amplifies, and the cycle lives in a **separate resource's trigger wiring in IaC**, invisible to a review that only reads the function body. Review action: draw the resource→trigger graph and check for a cycle; name the platform's **actual detection boundary** (e.g. AWS Lambda's on-by-default recursive-loop detection covers functions ↔ SQS/S3/SNS, only for a supported AWS SDK, stops at ~16 hops, and does **not** cover a DynamoDB-in-the-loop cycle) rather than assuming protection exists; break a confirmed cycle by routing the derived write to a resource the trigger ignores, filtering on a system-authored marker, or computing the value on read.
+- **`domain-checklists.md` §W** new bullet: on a batch-triggered handler (queue/stream event source), the **platform — not the code — decides** whether the whole batch or only the failed items get retried/deleted; the per-item try/catch is necessary but not sufficient. Two opposite failures: catch-all + bare success → the platform deletes the whole batch (silent data loss); throw on any item → the platform redelivers the whole batch (double-processing). The fix needs **both** halves — a per-item failure list from the handler **and** the event-source-mapping config flag (AWS: `ReportBatchItemFailures`/`batchItemFailures`).
+- **`reliability-error-handling.md`** new bullet: redelivery isn't only shutdown-/failure-triggered — a **slow-but-successful** invocation can lose the visibility-timeout race and be reprocessed by a second worker before it deletes the message, so the idempotent-processing requirement must hold against this non-failed concurrent duplicate too (distinct from the scheduler-level overlapping-run case).
+- **`SKILL.md`** domain-L row now reads "Infra / IaC / containers / cloud / serverless".
+- **`docs/standards-index.md`** +4 rows (AWS Lambda SQS error handling, Lambda-with-SQS, recursive-loop detection, SQS visibility timeout), all fetched + verified 2026-09-20. +2 evals.
+- Built by a worktree builder subagent, independently reviewed PASS-WITH-FIXES: all four source URLs re-curled and every "verbatim" quote programmatically substring-checked (one truncated recursion quote extended to the full sentence); non-duplication confirmed against the existing DLQ/retry-cap bullet, the LLM-agent and GraphQL recursion sections, and the scheduler-overlap case; applied fixes — added the cycle-remediation clause and the supported-SDK precondition to the infra section (grounding the DynamoDB-stream eval), hedged the generic partial-batch mechanism claim to AWS-verified scope, fixed a circular cross-reference, and aligned the reliability bullet to the section's bold-lead house style.
+
 ## [1.304.0] — 2026-09-20
 
 ### deep-code-review — a normalization fix must hold at every query call site, not just build-side (closes #652)

@@ -167,7 +167,13 @@ Review:
 
 - Batch loops: **per-item** try/catch (or equivalent); one poison item must not
   abort the whole run unless the product explicitly requires all-or-nothing —
-  and then that must be transactional.
+  and then that must be transactional. **On a batch-triggered event-source handler
+  (a queue/stream trigger invoking the code with a batch of records), this per-item
+  guard bounds only what your code does; whether the *platform* treats the batch as
+  a partial or total failure — and so retries/deletes only the failed items versus
+  the whole batch — is a separate response contract, set by the invocation's
+  response shape plus an event-source-mapping config flag, not by this try/catch**
+  (depth, failure modes, and the config-flag fix: `domain-checklists.md` §W).
 - **A "never throws" function must guard every throwing call it makes — not lean on
   one outer `try`.** A parse/identity helper whose contract is "returns a default,
   never throws" is only as safe as its coverage: a `decodeURIComponent` (URIError on
@@ -303,6 +309,14 @@ view of the instance lags its socket state.
   nacks/returns the current message (or finishes it if short and safely resumable) so an
   at-least-once queue redelivers it; "exit after whatever was in memory" silently drops or
   double-processes work on every deploy (make processing idempotent so redelivery is safe).
+- **Redelivery isn't only shutdown- or failure-triggered — a slow-but-*successful* invocation can
+  lose the visibility-timeout race.** A slow invocation (cold start, a slow downstream, a GC pause)
+  can still be mid-flight when its message's visibility timeout expires, letting a second worker pick
+  up and process the same message concurrently before the first deletes it (a wall-clock race between
+  the visibility timeout and the processing duration, distinct from the *scheduler*-level
+  overlapping-run case in `domain-checklists.md` §W), so the idempotent-processing requirement
+  above must also hold against this non-failed concurrent duplicate, not only a post-shutdown or
+  post-failure retry.
 - **Release the lease and flush before exit.** A shutting-down replica releases any lock/lease/claim
   it holds (e.g. a distributed lock or a leader-election lease) and flushes buffered telemetry — else a scaled-down
   instance blocks its replacement for the lease TTL and loses its last logs/metrics.

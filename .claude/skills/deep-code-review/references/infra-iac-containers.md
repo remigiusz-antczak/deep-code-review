@@ -1,7 +1,8 @@
 # Infrastructure, IaC, containers & cloud review
 
 Read this when the target ships Dockerfiles, Kubernetes manifests/Helm,
-Terraform/Pulumi/CloudFormation, CI/CD workflows, or any cloud configuration.
+Terraform/Pulumi/CloudFormation, CI/CD workflows, serverless/FaaS functions with
+queue/stream/table event-source triggers, or any cloud configuration.
 Misconfiguration here is a common real-world breach cause tracked under the
 named OWASP category (OWASP Top 10:2025 A02) and a supply-chain surface
 (A03). Benchmark against the relevant **CIS Benchmarks**; adopt **SLSA** for
@@ -125,6 +126,47 @@ them before the domain audits, because they fail late and silently otherwise:
 
 **🚩 grep**: `privileged: true`, `hostPath:`, `hostIPC: true`, `runAsUser: 0`, `seccompProfile: Unconfined`, `verbs: ["*"]`,
 `kind: ClusterRoleBinding` to `cluster-admin`, secrets in a `ConfigMap`.
+
+## Serverless functions & event-source triggers
+
+Read this when the target ships FaaS functions (Lambda, Cloud Functions, Azure
+Functions) invoked by a queue, stream, or table trigger wired up in IaC
+(Terraform/SAM/CDK/Serverless Framework).
+
+- **Recursive event-source invocation has no call stack — trace the resource
+  graph, not the function body.** A function whose output (a write, a republish)
+  targets the same resource that triggers it — directly, or transitively through
+  a chain of resources — is a self-amplifying invocation loop: each invocation
+  causes another, with no call stack and no depth counter, so a generic
+  recursion-depth cap does not apply. The cycle is invisible to a review that
+  only reads the function's source, because it lives in a **separate resource's
+  trigger wiring in IaC** (the event-source-mapping / trigger block between the
+  function and its trigger) — a different file, sometimes a different team's
+  resource, from the function that looks like the whole story. Left unbroken
+  it's a cost/concurrency incident, not merely a logic bug: unintentional loops
+  can bill unexpected charges and use all of an account's available concurrency.
+  Review action: draw the resource→trigger graph (function → its output target →
+  whatever triggers a function from that target) and check for a cycle,
+  including a transitive one (function A writes to table T; T's stream triggers
+  function B; B writes back to T). Name the platform's actual detection boundary
+  rather than assuming protection exists — e.g. AWS Lambda ships on-by-default
+  recursive-loop detection (via AWS X-Ray tracing metadata, and only for a
+  function built on a supported AWS SDK — a function on an unsupported SDK or
+  runtime gets none of it) that currently covers loops between functions, Amazon
+  SQS, Amazon S3, and Amazon SNS, stopping the chain at roughly its 16th hop —
+  but when another service such as DynamoDB forms part of the loop, Lambda can't
+  currently detect or stop it, so the loop runs unchecked until something else (a
+  spend alarm, a manual kill) does. Break a confirmed cycle by routing the derived
+  write to a resource the trigger ignores (a separate table/attribute), filtering
+  the trigger on a system-authored marker so the function's own writes don't
+  re-trigger it, or computing the value on read instead of writing it back.
+  Cross-ref `domain-checklists.md` §W (topology).
+
+**🚩 grep**: a function's write/publish target is also configured as a trigger
+source for the same function or an upstream one — check the event-source-mapping
+/ trigger block in the IaC template (Terraform `aws_lambda_event_source_mapping`,
+a stream/queue trigger in SAM/CDK/Serverless Framework), not the function's own
+source, which never shows the cycle.
 
 ## Terraform / IaC
 
