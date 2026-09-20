@@ -1130,7 +1130,26 @@ backlog until a termination condition fires*, not *do the one thing, then wait*.
   free RAM and the swap trend* above), one lane then re-probe with a burst reserve (#239) —
   **never by message count**; and the target is a *maintained* concurrency with
   backpressure, never unbounded spawning (bounded by the WIP-cap above; an unbounded
-  fan-out otherwise exhausts the box — the RAM/swap gate above — and stalls everything).
+  fan-out otherwise exhausts the box — the RAM/swap gate above — and stalls everything). On a
+  shared host with **independent peer sessions**, read those resource gates as machine-wide
+  aggregates, not this session's slice: a per-session WIP or concurrency target does not compose
+  across peers — the caps **sum** (`multi-session-coordination.md`) — so bound refill by the shared
+  reservation or a raw shared signal (worktree count, `load1` vs cores, swap-percent), and shed when
+  the aggregate is distressed even while your own slice looks fine.
+- **A loop's own wake/poll cadence is not the work cadence either.** The bullet above stops a
+  *human's* silence from throttling refill; the identical coupling recurs with no human involved
+  when an orchestrator treats its own scheduled wake — a ten-minute sync tick, a cron — as the unit
+  of work itself: check the board, take one action, end the turn, and leave the next admissible
+  action for the next scheduled wake. Throughput then tracks the **poll rate**, not the machine's
+  capacity or the queue's depth — a run sitting on comfortable headroom for hours while ticking
+  once every ten minutes to do one small thing under-delivers in proportion to how much capacity
+  sits idle between ticks, and delivery visibly speeding up under faster polling (or slowing
+  under slower polling) is the tell that the two are wrongly coupled. Decouple them: on any wake,
+  for any reason, take **every** currently-admissible action before ending the turn — reconcile,
+  refill, dispatch, verify, land, as far as admission allows — not one action with the rest
+  deferred to the next tick. Admission is still governed by the same gates as ever — the WIP cap by
+  landed artifacts, spawn-one-then-resample against the swap trend, disjoint-surface checks, all
+  above — **never by tick count**, exactly as it is never by message count.
 
 ## A go-faster signal fires on a clock, not on state — holding is a valid response, not a demand for busywork
 
@@ -1165,6 +1184,28 @@ correctly when it doesn't.) The counterweight to the work-loop above — the mir
 owner's message cadence is not the loop's clock* bullet: that stops owner-quiet from throttling
 the loop **down** (*don't stop while the backlog has work*); this stops a pressure tick from
 driving it **up** into busywork (*don't fake work once it doesn't*).
+
+**Multiple such loops compound this at the point where their wakes overlap — the gap this section
+leaves open.** A fleet commonly runs several recurring loops at once — merge, produce, hygiene,
+watchdog, review — and when two or more land on the same tick, running each one's full sweep
+independently re-pays the same re-probe-and-reconcile cost N times for what is, underneath, one
+answer: is there admissible work right now. **Consolidate overlapping *fires* into a single
+reconciliation pass** rather than executing every loop end-to-end — check once, act on the union,
+and let every loop that fired on that tick read the one result; this is runtime behavior at the
+moment several loops wake together and leaves the loop set itself untouched, distinct from the
+operator-visible loop *count* the next section says not to consolidate away.
+This is what makes a **fast no-op** actually cheap: gate the **expensive**
+part — the full sweep the holding-vs-stalled judgment above
+requires — behind a precondition check that runs **first**: is the delivery engine already
+covering this tick's job (a merge train draining, producer lanes already at cap)? A covered tick
+then short-circuits before paying the reconcile cost, not after paying it and discovering there
+was nothing to do. This is distinct from, and does not restate, the already-covered preflight
+check that stops one spawn from duplicating one in-flight objective (*an ownership map blocks a
+dual write, not dual work*, above): that rule protects **one** objective from **one** duplicate
+spawn; this protects the coordinator from **N simultaneously-firing loops** each re-deriving and
+re-paying for the same answer. Prefer **adding** a new, non-overlapping loop over raising an
+existing one's frequency to close a gap — past the resource cap, more frequency only buys more
+reconcile overhead, never more throughput.
 
 ## The loop set is add-only when the operator asked for "more" — a decrement needs a stated reason, never a silent side effect
 
@@ -1271,6 +1312,24 @@ is not "there is nothing to do."
 - **🚩 tell:** "terminus / nothing left" after checking only the assigned queue, with no
   enumeration of the other work surfaces (a parallel gaps / debt / test / TODO backlog never
   opened).
+
+**A shared backlog split into named per-agent slices for load-balancing is a third axis, distinct
+from the surface-type gap above and the keyword-filter gap below.** An agent that drains its own
+assigned slice — a named subset of the *same* tracker, not a different surface, and not merely a
+narrower keyword match on it — and declares
+terminus has swept its assignment, not the queue: the slice is a **floor on what it commits to
+deliver, never a ceiling on what it may pull**. A high already-done rate found *inside* that slice
+(the verify-first-before-laning discipline, above) is evidence the slice is drained, not that the
+shared backlog is; it means stop rebuilding *this* slice, not stop working. The correct move is to
+broaden into the adjacent remainder of the same shared queue before concluding there is nothing
+left — collision-freedom established by the occupancy check and announce-then-take claim (*an
+ownership map blocks a dual write, not dual work*, above), not by assuming the partner's label is
+its only reach. Whether there is currently room to act on that remainder is a separate,
+resource-gated question (the swap-trend gate, above), never one the assignment boundary itself
+decides. Missing a **surface type** is not checking a queue that exists; a **keyword filter**
+(below) checks the right queue too narrowly; an **assignment partition** checks the right queue
+correctly and then stops at a boundary that was only ever a coordination convenience between
+agents, not a statement of how much work exists.
 
 ## Discover work by enumerating the surface, not a keyword/title filter — filter only to order
 

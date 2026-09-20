@@ -710,6 +710,36 @@
         "Explains that a stale-but-genuine correction and a spoofed one are indistinguishable from the message alone, and that refusing/flagging a reality-contradicting instruction is correct anti-spoof behavior, not something to train away",
         "Recommends reconciling/flagging the correction against current verifiable state (e.g. citing the PR URL/SHA back on the shared channel) rather than either complying outright or silently dropping it"
       ]
+    },
+    {
+      "id": "assigned-backlog-slice-is-a-floor-not-a-ceiling",
+      "prompt": "Two agents split a 140-issue tracker by area to work it in parallel: one takes everything labeled `design`, the other everything labeled `platform`. The `design` agent finishes every labeled `design` issue -- verified, not rebuilt, since most were already done -- and reports \"terminus, my slice is clear\" and idles. The tracker still has 90+ open, unlabeled-for-either-agent issues neither agent has looked at, and the box has spare capacity. Is \"terminus\" correct?",
+      "expected_output": "No -- the design agent's assignment was a floor on what it committed to deliver, never a ceiling on what it may pull. Draining its own labeled slice only proves that partition is clear; the shared tracker plainly is not, and a high already-done rate inside the slice means stop rebuilding that slice, not stop working. This is a third kind of blind spot beyond missing a different surface type or under-filtering by keyword: the agent checked the right queue, correctly, and stopped anyway because the rest wasn't labeled for it. The correct move is to broaden into the adjacent, collision-free remainder of the same shared backlog before calling it done -- whether it currently has room to spawn more work is a separate, resource-gated question, never decided by the assignment boundary itself. (fast-agentic-delivery.md.)",
+      "expectations": [
+        "Treats the labeled slice as a floor on committed delivery, not a ceiling on what may be pulled -- draining it is not terminus while the shared tracker has open, un-owned work",
+        "Reads the high already-done rate inside the slice as 'stop rebuilding this slice,' not 'stop working' -- and calls for broadening into the adjacent, collision-free remainder of the same shared queue",
+        "Distinguishes this partition-boundary gap from missing a different surface type or under-filtering by keyword -- the right queue was checked, just not past the assignment boundary"
+      ]
+    },
+    {
+      "id": "decouple-action-rate-from-poll-tick-rate",
+      "prompt": "An orchestrator runs on a fixed 10-minute sync loop. Each time it wakes, it checks the board, takes exactly one action (dispatch one lane, or merge one PR, or nothing), and ends the turn until the next scheduled wake -- even on wakes where three separate lanes are sitting fully admissible (green, disjoint surfaces, headroom available) and could all be advanced right now. Six hours in, the machine has been comfortably under its RAM/swap ceiling the whole time. Is the one-action-per-wake pattern fine as long as the loop keeps firing every 10 minutes?",
+      "expected_output": "No -- that pattern couples the action rate to the poll rate, so throughput tracks how often the loop happens to wake, not what the machine or the queue can actually sustain; delivery speeding up under faster polling (or slowing under slower polling) is the tell. The fix is not to poll faster -- it's to decouple the two: on any wake, for any reason, take every currently-admissible action before ending the turn, not one. Here that means advancing all three ready lanes on the same wake, not spreading them across three separate ticks. Admission is still governed by the same gates as always -- the WIP cap by landed artifacts, spawn-one-then-resample against the swap trend, disjoint-surface checks -- never by tick count, exactly as it is never by owner-message count. A wake should reconcile, refill, dispatch, verify, and land as far as admission allows, then end -- not advance the queue by a fixed one-per-wake amount regardless of how much is actually ready. (fast-agentic-delivery.md.)",
+      "expectations": [
+        "Identifies that one-action-per-wake couples throughput to the poll/tick rate rather than to machine capacity or queue depth, and names the tell (delivery tracking polling frequency)",
+        "Requires taking every currently-admissible action on a single wake (advancing all three ready lanes now), not deferring already-admissible work to a later scheduled tick",
+        "States admission stays governed by the existing fan-out/WIP/swap-trend gates -- never gated by tick count -- so this is not a license to exceed the resource ceiling, only to stop under-using it"
+      ]
+    },
+    {
+      "id": "consolidate-overlapping-loop-wakes-one-pass",
+      "prompt": "A fleet runs five separate recurring loops -- merge, produce, hygiene, watchdog, review -- each on its own timer. Three of them happen to fire within the same minute. Each independently re-probes the board, re-derives what's green and unlanded, and reasons from scratch about whether to act. None of them duplicate a spawn this time, but the coordinator spends real turns on this every time timers align, and the timers align often. Is running each loop's full sweep independently the right way to handle the overlap, as long as no duplicate lane gets spawned?",
+      "expected_output": "No -- avoiding a duplicate spawn is necessary but not sufficient; the three overlapping wakes still each pay the full re-probe-and-reconcile cost for what is underneath one answer ('is there admissible work right now'), and that redundant reasoning is itself the slowdown this is meant to avoid. Consolidate simultaneous fires into a single reconciliation pass -- check once, act on the union, let every loop that fired on that tick read the one result -- rather than executing each loop's sweep end-to-end. Gate the expensive part behind a cheap precondition check that runs first: if the delivery engine already covers this tick's job (a merge train draining, producer lanes already at cap), the tick fast-no-ops before paying the reconcile cost, not after running the full sweep anyway. This is separate from checking for an in-flight duplicate before a single spawn (one spawn against one objective); here the problem is N loops simultaneously re-deriving and re-paying for the same answer. Prefer adding a new, non-overlapping loop over raising an existing one's frequency -- past the resource cap, more frequency only buys more reconcile overhead, never more throughput. (fast-agentic-delivery.md.)",
+      "expectations": [
+        "Rejects 'no duplicate spawned' as sufficient -- requires consolidating overlapping wakes into a single reconciliation pass instead of each loop running its own full sweep",
+        "Requires a cheap precondition check before the expensive sweep, so a tick already covered by the delivery engine fast-no-ops up front rather than after re-deriving the same answer",
+        "Distinguishes this from the single-spawn-vs-one-objective preflight check (checking for an in-flight duplicate before spawning) -- this is about N simultaneously-firing loops re-paying the same reconcile cost, not one spawn duplicating one objective"
+      ]
     }
   ]
 }

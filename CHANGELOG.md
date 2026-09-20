@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.326.0] — 2026-09-20
+
+### agentic-delivery — throughput epistemology: an assigned slice is a floor not a ceiling (#705), decouple action rate from poll-tick rate (#706), consolidate overlapping loop wakes into one pass (#556)
+
+- **`fast-agentic-delivery.md`** (autonomous-throughput family): three folds. (**#705**) an agent that drains its own assigned backlog slice and declares terminus has swept its assignment, not the queue — the slice is a floor on what it commits to deliver, never a ceiling on what it may pull; broaden into the adjacent remainder of the same shared queue (collision-freedom via the occupancy check) before concluding there is nothing left, with room-to-act still a separate, swap-trend-gated question. (**#706**) a loop's own scheduled wake/poll cadence is not the work cadence — treating a ten-minute tick as the unit of work caps throughput at the poll rate, not the machine; on any wake, take every currently-admissible action (admission still governed by the existing WIP-cap / spawn-one-then-resample / disjoint-surface gates), never one action per tick. (**#556**) when several recurring loops wake on the same tick, consolidate them into one reconciliation pass (check once, act on the union) rather than executing every loop end-to-end — runtime behavior that leaves the operator-visible loop set untouched; gate the expensive sweep behind a fast no-op precondition check that runs first. +3 evals. Closes #705, #706, #556.
+- Built by a worktree builder subagent, independently reviewed **PASS**. At finalize, verified cross-file consistency against v1.324's peer-coordination rule (#740) — which the wave's own reviewer structurally could not see — and added an explicit cross-reference so the "standing refill" model reads the resource gates as machine-wide aggregates (a per-session concurrency target does not compose across peers; the caps sum), harmonizing #706's refill discipline with `multi-session-coordination.md`. Also applied the reviewer's three optional fixes (two hard-wrap orphans rejoined and the term "fast no-op" introduced on first use; one loosely-dimensional phrase tightened).
+
 ## [1.325.0] — 2026-09-20
 
 ### deep-code-review — frontend-perf: an unmemoized tab/row view-model recomputes on a sibling input's keystrokes, even behind a debounce (#667)
