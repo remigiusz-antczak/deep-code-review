@@ -125,7 +125,7 @@ unwalked domain.
 - **Before rating a "sensitive/gated data exposed" finding, establish the actual
   exposure boundary** — is the data-carrying artifact tracked in version control,
   served on an unauthenticated route, or in a client bundle? Pin severity to that
-  boundary **and** the confidentiality tier (S0–S3 below) (`git check-ignore`,
+  boundary **and** the confidentiality tier (S0–S3 in `SKILL.md`) (`git check-ignore`,
   `git ls-files --error-unmatch`, route enumeration + anonymous GET sweep), not
   to the rendering code. And an `Origin`/`Referer`/`Sec-Fetch-Site` check is
   **CSRF defense, not authentication** — if it is the only gate on a sensitive/paid/

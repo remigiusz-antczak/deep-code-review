@@ -168,7 +168,8 @@ Coverage: <N local + M remote branches; PR state via gh | unverified: no forge a
 | Branch | Last commit | State | Unique commits | Open PR | Recommendation | Command |
 |--------|-------------|-------|----------------|---------|----------------|---------|
 | feature/x | 3 days ago | unmerged, ready | 4 | none | Open PR → develop | gh pr create -B develop -H feature/x |
-| bugfix/y | 6 months ago | squash-merged (PR #42) | 0* | merged | Delete | git push origin --delete bugfix/y |
+
+_One illustrative row only — the canonical column shape, the `0*`/`unverified` footnote, and the full worked example live in `branch-and-merge-hygiene.md` § Triage table; do not duplicate them here._
 (Routine cleanup batched here as one Low/Info finding; consequence branches —
 unmerged security fix, only-copy work — escalated in the findings table above.)
 
@@ -187,6 +188,9 @@ Sequence the findings **already listed above** by what to do for the current
   name the overlays it returns (delivery / critic / comms / contribution) — point,
   don't restate. Whether the repo is ready for an agent to work in it well:
   `role-coverage.md`'s agent-readiness lens.
+- **Infra & docs evolution for the next stage:** what the project's infrastructure/architecture and
+  documentation should become at its next stage — `infra-evolution-by-stage.md` and
+  `docs-evolution-by-stage.md` (the stage-evolution inputs `SKILL.md` routes here).
 - **Development direction (grounded in the code):** ≤ 3 evidence-backed moves for
   this stage — e.g. "consolidate the three half-built features before adding a
   fourth", "set module boundaries now if the team is about to grow" — each citing

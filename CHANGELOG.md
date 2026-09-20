@@ -3,6 +3,14 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.259.0] — 2026-09-20
+
+### deep-code-review — wave 180 suite hygiene: de-duplicate the branch-triage table, close a routing loop, fix a dangling pointer
+
+- **`report-format.md`**: the branch-triage table was duplicated verbatim from `branch-and-merge-hygiene.md` (and had already drifted — missing a row and the `0*` footnote); shrank it to one illustrative row + a cross-reference to the canonical `branch-and-merge-hygiene.md` § Triage table (the repo's own no-duplication thesis, applied to itself). Also named `infra-evolution-by-stage.md` + `docs-evolution-by-stage.md` in the going-forward roadmap — closing the loop SKILL.md already promised ("both feed the roadmap in report-format.md") but the section never delivered.
+- **`domain-checklists.md`**: fixed a dangling "(S0–S3 below)" pointer (no S0–S3 definition exists in that file) → "(S0–S3 in `SKILL.md`)", where the tier definitions actually live.
+- Whole-suite self-audit (read-only) otherwise found **no systemic duplication** and swept clean: CWE/WCAG/OWASP standard-ID consistency, routing coverage, version lockstep, byte budget. No eval change (prose-consistency fixes).
+
 ## [1.258.0] — 2026-09-20
 
 ### deep-code-review — wave 179 language defect classes: Rust `unsafe` soundness, Go concurrency idioms, Java equals/hashCode
