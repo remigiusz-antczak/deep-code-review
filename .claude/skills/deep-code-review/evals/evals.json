@@ -4050,6 +4050,26 @@
         "Rejects the eslint-disable (or widening the rule's exception list) as an acceptable fix",
         "Prescribes the reconciling design -- add or extend a service-layer function the UI calls -- satisfying both the boundary rule and the bug fix, with any genuine no-reconciling-design case routed as an owner trade-off"
       ]
+    },
+    {
+      "id": "cross-currency-arithmetic-is-a-type-error",
+      "prompt": "A shopping cart's total is computed as `total = sum(item.amount for item in items)`, where `item.amount` is a bare integer in minor units (cents) and each item carries its own `item.currency` field (some sellers on the marketplace list in USD, others in EUR). A `convert_to_usd(amount, currency)` helper exists, but it is only called when displaying the total to a US-based buyer -- the `total` used everywhere else, including a `total >= free_shipping_threshold_cents` check where `free_shipping_threshold_cents = 5000`, is the raw sum. Review this pricing path.",
+      "expected_output": "Applies the multi-currency-correctness lens (billing-correctness.md): summing item.amount across items of differing currencies is a type error, not a rounding nuance -- amount and currency are one inseparable value (Money value-object pattern), and a plain numeric sum silently treats 50 EUR and 50 USD as the same 50. The free-shipping threshold check compounds the bug by comparing that already-corrupted mixed-currency sum to a bare USD constant with no conversion. Converting only at display time is too late -- the total is wrong before it's ever shown, and every downstream decision (threshold check, tax base, reporting) that consumes the raw total inherits the error. Fix: give amounts a currency-aware type that refuses cross-currency arithmetic, or convert to one pinned currency before any sum/compare.",
+      "expectations": [
+        "Flags summing item.amount across differing currencies as a type error, not a rounding nuance",
+        "Applies or names the Money value-object principle -- amount and currency travel together, never a bare number",
+        "Flags the free-shipping threshold compared directly against the mixed-currency sum with no conversion, and notes display-time-only conversion is too late"
+      ]
+    },
+    {
+      "id": "ledger-balance-must-be-derived-not-mutable",
+      "prompt": "A wallet/credits system tracks each user's spendable balance in a `wallets.balance` integer column, updated in place: `UPDATE wallets SET balance = balance + :delta WHERE user_id = :id`. Every top-up and spend also inserts a row into an append-only `wallet_transactions` table (id, user_id, delta, created_at), which today is used only to render the user's activity-history UI. Support periodically gets tickets where a user's displayed balance doesn't match what adding up their transaction history would give, especially after a burst of concurrent requests or a deploy that crashed mid-request. Review this design.",
+      "expected_output": "Applies the ledger-integrity lens (billing-correctness.md): wallets.balance is a mutable running-total column, not derived from the entry log, so nothing keeps it in agreement with wallet_transactions -- the UPDATE and the INSERT are two separate writes, not one atomic operation, so a crash or a race between concurrent requests can commit one and lose the other with no detection. wallet_transactions is being treated as a side audit trail instead of the source of truth. The fix is the double-entry-bookkeeping invariant: every transaction's debits sum to its credits and net to zero, and the balance must be derived as SUM(credits) - SUM(debits) over the append-only log rather than stored as a separately-updated column at all -- making the two writes atomic would only close the crash window, it would not stop the column from being a second, independently-wrong source of truth. The concurrent-mutation mechanics (compare-and-set) belong to concurrency-shared-state.md, not restated here.",
+      "expectations": [
+        "Flags the mutable balance column as the defect -- balance must be derived (SUM(credits) minus SUM(debits)) from the append-only entry log, not updated in place",
+        "Explains the drift mechanism: the balance UPDATE and the transaction INSERT are not atomic, so a crash or race lets them disagree with no detection",
+        "Names or applies double-entry bookkeeping (debits sum to credits) as the correctness invariant, treating the entry log as the source of truth over the mutable column"
+      ]
     }
   ]
 }

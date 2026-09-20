@@ -15,7 +15,9 @@ Read this when walking a domain in Phase 2 (or a DIFF quick-path that touches th
   duplicate, out-of-order, huge, single-element, off-by-one boundaries.
 - **Money & numeric precision**: currency uses integer-minor-units or `Decimal`,
   **never** binary `float`; rounding mode is explicit and consistent;
-  accumulation error bounded. (Float-for-money is a textbook Critical.)
+  accumulation error bounded. (Float-for-money is a textbook Critical.) Amount and
+  currency travel together — never sum or compare amounts in different currencies
+  without a provenanced conversion. Depth: `billing-correctness.md`.
 - **Non-finite results (`NaN`, `±Infinity`) don't fail loud on the float path — and encoders
   disagree on them.** In **unguarded IEEE 754 float** arithmetic (JS numbers, C/Java/Rust
   `float`/`double`, NumPy) a `0.0/0.0` or an overflow yields `NaN`/`±Infinity` that **keeps

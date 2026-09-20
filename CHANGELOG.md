@@ -3,6 +3,15 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.307.0] — 2026-09-20
+
+### deep-code-review — payments correctness: multi-currency Money value-object + ledger double-entry / derived-balance
+
+- **`billing-correctness.md`** two new sections. **Multi-currency correctness**: amount and currency are one inseparable value (Fowler's Money value-object pattern, by name); cross-currency arithmetic (summing/comparing amounts in different currencies) is a **type error**, not a rounding nuance; any FX conversion must pin the rate's **source + timestamp**. **Ledger integrity**: every transaction's debits sum to its credits (net zero — double-entry, by name); a balance is **derived** (`SUM(credits) − SUM(debits)` over an append-only entry log), never a mutable running-total column that drifts (cross-refs `concurrency-shared-state.md` CAS + `reliability-error-handling.md` reconciliation). Plus a webhook **amount/currency cross-check** (signature proves authenticity, not correctness) and a **rounding-mode catalog** (half-up / half-even / truncate; `sum(round(x)) ≠ round(sum(x))`). "In scope", 🚩 red flags, and `## Verification` extended to match.
+- **`domain-checklists.md`** "Money & numeric precision" bullet gains: amount and currency travel together, never sum/compare across currencies without a provenanced conversion (Depth → `billing-correctness.md`).
+- +2 evals. All citations are well-established patterns cited by name — no `docs/standards-index.md` row. Research-derived expansion (no filed issue).
+- Built by a worktree builder subagent, independently reviewed **PASS-WITH-FIXES**: absence re-verified repo-wide and by full-file read (pre-existing "ledger" hits are spend/coverage ledgers — a different sense; integer-minor-units precision is orthogonal to currency-pairing); all prior evals confirmed byte-identical (strict append-only); applied the fix — extended the file's `## Verification` checklist with the two new lenses and corrected the domain-checklists parenthetical ordering so "(Float-for-money…)" stays with the float clause.
+
 ## [1.306.0] — 2026-09-20
 
 ### deep-code-review — the gate-calibration rule's mirror: a fix that breaks a correctly-calibrated gate is the defect, not the gate (closes #443)
