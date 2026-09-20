@@ -4010,6 +4010,16 @@
         "Requires the audit/access-log panel (Panel B) to surface a distinct, retryable error state on fetch failure rather than falling through to the same empty branch as a genuine zero, because empty reads there as confirmed-none / a false all-clear",
         "Frames this as an architectural requirement (a separate error path), not something fixable by rewording the empty-state copy, and as an axis distinct from whether the copy honestly names its coverage or cause"
       ]
+    },
+    {
+      "id": "normalization-fix-on-write-side-only-still-misses-at-query-call-sites",
+      "prompt": "A login bug where 'Jane' and 'jane' were treated as different accounts got fixed: the signup/write path now runs every username through a shared normalizeUsername() (NFC + Unicode case-fold) before storing it, and a backfill migration re-normalized every existing row. The team calls the bug closed. The login lookup was left untouched: db.users.findOne({ username: input.trim().toLowerCase() }). Is the fix complete?",
+      "expected_output": "No -- the write/index side was fixed but the login lookup was not, so the bug is still live at that call site. input.trim().toLowerCase() is an ad-hoc inline canonicalization that diverges from the shared normalizeUsername(): ASCII lowercasing is not the same as Unicode case-folding (e.g. Turkish İ/ı break a naive toLowerCase()), and this call performs no NFC either. A user whose stored, correctly-normalized username differs from the naively-lowercased login input fails to match -- the row is there, but this specific query never reaches it, so it looks like 'user not found' (missing data) rather than a comparison bug, and the write-side fix plus backfill makes the bug look closed. The reviewable property is symmetry: the write/index path and every read/query path must call the SAME shared normalization function. Fix: replace the inline .trim().toLowerCase() with normalizeUsername(input), then sweep every other lookup/compare against the username field itself -- not just ones matching this exact .trim().toLowerCase() pattern, since a lookup that normalizes not at all is the same defect -- one converted call site does not imply the rest were. (i18n-l10n.md.)",
+      "expectations": [
+        "Identifies the login lookup's inline .trim().toLowerCase() as diverging from the shared normalizeUsername() -- not the same function",
+        "Explains the failure signature: the row exists but this query misses it, presenting as missing data / user-not-found rather than a comparison error -- and a write-side fix plus backfill can look complete while this call site still drifts",
+        "Requires the write/index path and every read/query path to call the same shared normalizer, and to sweep every other lookup against the normalized field itself (not just call sites matching this exact pattern -- a lookup with no normalization at all is the same defect) rather than treating the one reported call site as the whole fix"
+      ]
     }
   ]
 }

@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.304.0] — 2026-09-20
+
+### deep-code-review — a normalization fix must hold at every query call site, not just build-side (closes #652)
+
+- **`i18n-l10n.md`** new bullet in "Encoding & Unicode normalization": a normalization / case-fold fix applied only on the **write/index side** leaves any **query/lookup call site that normalizes differently (or not at all)** broken — the defect then presents as **missing data** (the row exists; this query doesn't reach it), so the write-side fix + backfill *looks* complete when it isn't. Reviewable property: the write path and **every** read/query path route through the **same shared normalizer**. Detection is **field-scoped, not pattern-scoped** — sweep every compare/filter/lookup against the normalized field (a lookup with *no* normalization at all is the same defect, and has no pattern to grep for). +1 eval. Built by a worktree builder subagent, independently reviewed PASS-WITH-FIXES (non-dup vs the normalize-before-compare anchor + case-fold bullet confirmed; field-scoped-not-pattern-scoped detection confirmed in both prose and eval; applied a precision fix — the anchor does name a pipeline stage, so the gap is "same normalizer across every call site," not "where it runs"). Closes #652.
+
 ## [1.303.0] — 2026-09-20
 
 ### deep-code-review — product-ux: dead-render candidate + empty-state stakes calibration (closes #554, #674)
