@@ -603,6 +603,24 @@ fixtures. Secrets via env/secret manager only. Scan the **diff and the history**
 (`git log -p`, `gitleaks`, `trufflehog`). A secret that was ever committed is
 compromised — rotate it, don't just delete it.
 
+- **Anything with an expiry needs an inventory, an ahead-of-time alert, and rotation before
+  it lapses — an unmonitored credential is a scheduled outage.** TLS certificates,
+  code-/JWT-signing keys, API tokens, OAuth client secrets, DB passwords, cloud access keys,
+  and domains all expire; when one lapses in production the failure is total and
+  time-triggered (the classic "the cert expired at midnight and took everything down"),
+  precisely because nothing was watching the clock. Distinct from rotating a *leaked* secret
+  (above) and from validating a *request* token's `exp` (A07): this is the operational
+  **lifecycle**. Check: (1) an **inventory** of every expiring credential/cert with its
+  expiry date and an owner; (2) an **alert with lead time** (days/weeks ahead, not on the
+  outage — a synthetic/uptime check catches the cert, an expiry-scan the rest); (3)
+  **automated renewal/rotation ahead of expiry** (ACME / cert-manager for TLS; a scheduled
+  rotation job for secrets/keys with an **overlap window** so old and new are both valid
+  during cutover), not a manual calendar reminder. 🚩 a long-lived cert/secret/token with no
+  renewal automation and no expiry monitor — a silent time-bomb. (Reliability consequence →
+  `reliability-error-handling.md`; alert wiring → `observability.md`; the owner-facing
+  inventory/reminder template lives in the `agentic-delivery` overlay's
+  `incident-response.md` — here it is the review-time check.)
+
 ## Deterministic corroboration (cross-cutting) — an LLM claim rides on a proof it cannot generate
 
 Running the project's wired scanners is already Phase 1 (`method.md`), and re-verifying a

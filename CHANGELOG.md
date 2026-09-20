@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.266.0] — 2026-09-20
+
+### deep-code-review — wave 187 credential/cert expiry lifecycle: an unmonitored expiring secret is a scheduled outage
+
+- **`security-appsec.md`** (Secrets, cross-cutting): anything with an expiry — TLS certs, code/JWT-signing keys, API tokens, OAuth client secrets, DB passwords, cloud access keys, domains — needs an **inventory** (expiry + owner), an **ahead-of-time alert** (lead time / synthetic check, not on the outage), and **automated renewal/rotation before expiry** (ACME/cert-manager for TLS; a rotation job with an **overlap window** for secrets/keys). A lapse in prod is a total, time-triggered outage (the classic midnight cert expiry). Distinct from rotating a *leaked* secret (same section) and validating a *request* token's `exp` (A07) — this is the operational lifecycle.
+- +1 eval. Incident-driven gap. Independent reviewer PASS-WITH-FIXES (added the cross-skill pointer to `agentic-delivery`'s `incident-response.md` owner-facing inventory template — here it's the review-time check; confirmed the overlap-window is correctly scoped to secrets/keys, not TLS).
+
 ## [1.265.0] — 2026-09-20
 
 ### deep-code-review — wave 186 React render/bundle perf: memoized-callback needs a memo boundary; heavy lib gated at import not render (closes #629, closes #628)

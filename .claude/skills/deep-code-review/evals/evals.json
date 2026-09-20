@@ -3420,6 +3420,16 @@
         "Prescribes deferring the import behind the same interaction gate (next/dynamic / React.lazy / inline import()) so only users who trigger it download it",
         "Gives the detection method (grep the heavy dep's importers; flag static import from a list-route-mounted component) and/or the existing-precedent tell"
       ]
+    },
+    {
+      "id": "an-expiring-credential-with-no-monitor-or-rotation-is-a-scheduled-outage",
+      "prompt": "A service's TLS certificate is a manually-issued 1-year cert; its third-party API token and OAuth client secret were set once at launch. There's no expiry alerting and no rotation automation — the team relies on 'we'll remember.' Security scans are clean (no leaked secrets). Is the secret handling fine?",
+      "expected_output": "No — clean leak-scans miss the LIFECYCLE risk: each of these has an expiry, and with no monitor or rotation they are scheduled outages waiting to fire. When the TLS cert lapses, every client fails TLS at once (the classic midnight cert-expiry outage); when the API token or OAuth client secret expires, integration calls start failing — total, time-triggered failures that happen precisely because nothing watched the clock. This is distinct from rotating a leaked secret (a scan catches that) and from validating a request token's exp (that is per-request auth). Fixes: (1) inventory every expiring credential/cert with its expiry date and an owner; (2) alert with lead time (days/weeks ahead, plus a synthetic check that would catch the cert), not on the outage; (3) automate renewal/rotation ahead of expiry — ACME/cert-manager for TLS, a scheduled rotation job for tokens/secrets/keys with an overlap window so old and new are both valid during cutover — not a human calendar reminder. 'We'll remember' is the failure mode, not the control.",
+      "expectations": [
+        "Identifies that a clean leak-scan doesn't cover the expiry LIFECYCLE — an unmonitored expiring cert/token/secret is a scheduled, time-triggered outage (distinct from leak-rotation and from request-token exp validation)",
+        "Prescribes an inventory of expiring credentials + an ahead-of-time expiry alert (lead time / a synthetic check), not alerting on the outage itself",
+        "Prescribes automated renewal/rotation before expiry (ACME/cert-manager for TLS; a rotation job with an overlap window for secrets/keys), not a manual reminder"
+      ]
     }
   ]
 }
