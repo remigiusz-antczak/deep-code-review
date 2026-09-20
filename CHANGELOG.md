@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.353.0] — 2026-09-20
+
+### agentic-delivery — a remembered constraint-state is a guess; recheck a tripped limit (and a quiet lane) before acting on it (#835)
+
+- **`fast-agentic-delivery.md`**: a new section beside the shared-quota rule (#830). When a limit trips (a model/API quota with a stated reset, a saturated pool), the recorded state is a snapshot — the "resets at HH:MM" is an **upper bound, not a step function** (rolling/partial recovery eases it earlier). Idling every affected lane until the remembered clock wastes the very resource it's waiting on; instead **retest with one cheap real unit of the throttled work** and resume on the observed result, not the remembered clock. Same discipline for a **quiet lane**: "no commit yet / gone quiet" is not proof it's stuck — it may be mid-work with results uncommitted, and killing it discards that work; judge liveness by a positive actual-product signal (cross-ref the transcript-is-not-a-liveness-signal and stop-isn't-teardown rules, #777), not elapsed silence. +1 eval. (Dogfood: this run held on a remembered reset and killed a near-done lane on a stale read.)
+
 ## [1.352.0] — 2026-09-20
 
 ### agentic-delivery — size fan-out by the binding shared quota, not just local RAM/CPU (#830)

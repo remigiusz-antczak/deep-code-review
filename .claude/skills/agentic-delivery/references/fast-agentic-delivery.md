@@ -229,6 +229,81 @@ binding ceiling was the shared quota all along. Track the rate-limit-error rate
 per N lanes dispatched — nonzero under healthy local resources is the proof
 that fan-out is gated on the wrong ceiling.
 
+## A remembered constraint-state is a guess, not a current signal — recheck it before you keep acting on it
+
+The quota section immediately above ends on pacing new lanes "to the quota's
+refill rather than assuming a remembered reset window that may no longer hold."
+This is the mechanism behind that clause, generalized: once any shared
+constraint has **tripped** — a model/API quota returning a rate-limit error with
+a stated reset, a saturated pool — the state you recorded at the moment it
+tripped is a **snapshot, not a live reading**, and continuing to act on the
+snapshot is acting on a guess. Two shapes of that error, one of them destructive.
+
+- **Don't hold longer than the constraint actually binds.** A rate-limit error's
+  "resets at HH:MM" is an **upper bound, not a step function**: a rolling/partial
+  window restores throughput continuously and commonly *before* the advertised
+  time, and a different model tier may not be capped at all. An orchestrator that
+  records the stated reset and idles every affected lane until that clock sits
+  self-throttled on capacity that has already returned — indistinguishable from
+  the outside from a slow or stuck run, wasting the exact resource it is waiting
+  on. The reset time is not observable; the limit's current state **is**. Back
+  off with a schedule that **retries a real check**, not one that sleeps until a
+  remembered clock: at intervals issue **one cheap real unit of the throttled
+  work** (a single small request, one lane) and let its success or failure —
+  ground truth — decide, resuming the instant a check passes. On recovery
+  **ramp, don't re-burst** — the thing that tripped the limit was concurrency, so
+  resume at a fraction and climb while watching for re-throttle rather than
+  relaunching the full fleet into the same wall (the *narrow, never retry the
+  same width into the same wall* response and the *spawn one, re-sample, then
+  decide* discipline of the sections above, applied to a quota's recovery, not
+  restated). Keep the **no-quota fallback lane** the quota section already
+  requires productive throughout, so a stale hold never means zero delivery. Same
+  shape as the *cooldown / skip-set with periodic re-evaluation* of the
+  head-of-line-starvation section below — a block is re-evaluated because it may
+  have cleared, never treated as permanent — at the capacity-ceiling grain rather
+  than the queue-item one.
+
+- **Distinguish "I am blocked" from "I remember being blocked."** A status of
+  "paused until <time>" that cannot say when the limit was **last verified** is
+  reporting the snapshot as if it were current. Carry a **last-checked
+  timestamp** on any held state so a supervisor can tell a real,
+  freshly-observed block from a stale assumption — the *report the artifact, not
+  the activity* discipline above applied to a hold, whose artifact is a recent
+  check result, not a remembered clock.
+
+- **Don't conclude a lane is dead from an indirect signal either — that is the
+  destructive twin.** "No commit yet" / "gone quiet for a while" is the *absence*
+  of a durable artifact, and absence is not evidence: the lane may be mid-work
+  with results uncommitted, and killing it discards that uncommitted work
+  irreversibly (a destructive, shared-state action — principle 9). The
+  recheck-before-you-conclude discipline is identical to the hold above, and its
+  *how* is already stated: judge liveness by a **positive** actual-product signal
+  (a live process, an owned port/PID, a ping it answers), never an indirect one,
+  and treat transcript-only observability as **`UNVERIFIED`, not dead** (the
+  *transcript is not a liveness signal* rule below; and a stop of a lane's turn is
+  not teardown, a "cleaned up" claim unverified until checked, #777 — neither
+  restated here). The one thing those rules don't say: **artifact-absence cuts
+  two ways and only one is a licence.** The WIP-cap rule above reads "no landed
+  artifact" as *produced nothing yet* — grounds to **stop admitting new lanes**
+  and to **refuse to count the work delivered**; it is **never** grounds to
+  **terminate** the lane that lacks one. Draining admission on an empty delivery
+  ratio and killing a live-but-quiet lane are opposite actions on the same
+  signal — the first reversible and correct, the second destructive and gated on
+  a positive liveness signal first.
+
+The unifying error under both: confusing a **remembered** constraint-state with a
+**current** one. A held quota and a quiet lane are each cheap to conclude and
+easy to leave concluded; the fix in each is one real check — a probe unit of
+work, a positive liveness signal — before continuing to act on the memory.
+
+**🚩 tell:** an orchestrator reporting "paused until <reset>" across a full
+window with no record of having rechecked capacity since it tripped; or one that
+kills a lane it labeled "stuck" on no-commit / gone-quiet alone, no positive
+liveness signal, discarding uncommitted work. **Metric:** the gap between when
+capacity actually returned and when the run resumed (a persistently large gap
+means it is honoring remembered resets instead of rechecking), and re-throttle
+events on resume (nonzero means it re-burst instead of ramping).
+
 ## A worktree is a resource with a lifecycle — creation without teardown leaks it
 
 Worktree-per-lane is the right isolation, but a worktree is a **resource with a
