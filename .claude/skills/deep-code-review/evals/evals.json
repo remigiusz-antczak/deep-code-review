@@ -3690,6 +3690,26 @@
         "Rebuts 'from our LB / not user input' — the header is client-settable and often not stripped end-to-end",
         "Prescribes: every response-affecting input must be in the cache key or stripped/normalized at the edge before caching; don't reflect an unkeyed header into a cacheable response; census the cache key vs response-affecting inputs"
       ]
+    },
+    {
+      "id": "accessible-auth-must-support-password-managers-not-just-forbid-captchas",
+      "prompt": "A login form blocks paste into the password field (to 'prevent shoulder-surfing') and its password input has `autocomplete=\"off\"`. There's no puzzle or CAPTCHA. A reviewer says '3.3.8 Accessible Authentication is about not requiring a puzzle — there's none here, so it passes.' Is that right?",
+      "expected_output": "No. 3.3.8 (AA) is broader than 'no CAPTCHA': it requires an auth step not to demand a cognitive-function test WITHOUT an alternative or a mechanism to complete it — and the canonical mechanism is a password manager. Blocking paste and setting `autocomplete=\"off\"` defeat password managers, forcing the user to recall and manually type the password (a cognitive-function test) with no assisting mechanism — a 3.3.8 failure even with no puzzle. Fix: allow paste into password/OTP fields, set correct `autocomplete` tokens (`current-password`/`new-password`/`one-time-code`), and don't intercept clipboard events, so a password manager / OTP autofill works. ('Prevent shoulder-surfing' is not a valid basis to block paste — WCAG and browser vendors reject it.)",
+      "expectations": [
+        "Identifies that 3.3.8 is broader than 'no CAPTCHA' — blocking paste + autocomplete=off defeats the password-manager MECHANISM, forcing manual recall/typing (a cognitive-function test) with no assisting mechanism = a 3.3.8 failure",
+        "Prescribes allowing paste, correct autocomplete tokens (current-password/new-password/one-time-code), and not intercepting clipboard events so password managers / OTP autofill work",
+        "Rejects the 'prevent shoulder-surfing' rationale for blocking paste"
+      ]
+    },
+    {
+      "id": "an-image-captcha-passes-accessible-auth-minimum-but-fails-enhanced",
+      "prompt": "A banking login uses an image-recognition CAPTCHA ('select all the buses') as a step. A reviewer says it's fine because 3.3.8 Accessible Authentication (Minimum) explicitly allows an object-recognition test as an exception. For a high-stakes financial flow, is that sufficient?",
+      "expected_output": "It passes 3.3.8 (Minimum, AA) — object-recognition IS one of that SC's allowed exceptions — but for high-stakes auth the bar is 3.3.9 Accessible Authentication (Enhanced, AAA), which permits ONLY the Alternative and Mechanism exceptions and drops object-recognition and personal-content. So the 'select all the buses' image CAPTCHA passes Minimum but FAILS Enhanced. For a banking/health flow, hold it to 3.3.9: provide a non-cognitive alternative (a hardware key / passkey / email-or-SMS link / accessible 2FA) rather than an image-recognition puzzle, which also excludes users with visual or cognitive disabilities. 'It's an allowed 3.3.8 exception' is true but insufficient at the AAA tier a high-stakes flow warrants.",
+      "expectations": [
+        "Identifies that object-recognition is an allowed 3.3.8 (Minimum) exception so the CAPTCHA passes 3.3.8 — but 3.3.9 (Enhanced) drops that exception, so it FAILS 3.3.9",
+        "States that a high-stakes (banking/health) flow warrants the 3.3.9 / AAA bar, not just Minimum",
+        "Prescribes a non-cognitive alternative (hardware key / passkey / accessible 2FA) instead of an image-recognition CAPTCHA"
+      ]
     }
   ]
 }

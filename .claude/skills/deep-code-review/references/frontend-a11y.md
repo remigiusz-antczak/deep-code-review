@@ -133,8 +133,15 @@ confirm the background does not move.
   across pages (SC 3.2.6, Level A) — the criterion is *order in the content sequence*, not pixel
   location.
 - **Redundant Entry**: don't force re-entering info already provided in a flow.
-- **Accessible Authentication**: no cognitive-function test (e.g. solving a
-  puzzle, transcribing) with no alternative; allow paste into password/OTP.
+- **Accessible Authentication** (SC 3.3.8, AA): an auth step must not require a
+  **cognitive-function test** (recall a password, solve a puzzle, transcribe a code) unless it
+  offers an **alternative** method or a **mechanism** to complete it — chiefly **password-manager
+  support**: allow **paste** into password/OTP fields, set the right `autocomplete` tokens
+  (`current-password` / `new-password` / `one-time-code`), and don't intercept clipboard events
+  (the other two allowed exceptions are object-recognition and user-provided personal-content
+  tests). **SC 3.3.9 (Enhanced, AAA)** drops the object-recognition and personal-content
+  exceptions — so an image CAPTCHA passes 3.3.8 but **fails 3.3.9**; hold high-stakes auth
+  (banking, health) to it.
 
 **Perceivable**
 - Contrast: text ≥ 4.5:1 (large text ≥ 3:1); UI components & graphical objects

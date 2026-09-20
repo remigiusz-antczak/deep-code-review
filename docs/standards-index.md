@@ -674,6 +674,13 @@ determination routes to counsel).
 |---|---|---|
 | WCAG 2.2 SC 2.5.8 Target Size (Minimum) | https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html | Level AA (new in WCAG 2.2). Pointer targets >= 24 by 24 CSS px, with **five exceptions** (verbatim): **Spacing** — undersized targets "positioned so that if a 24 CSS pixel diameter circle is centered on the bounding box of each, the circles do not intersect another target or the circle for another undersized target"; **Equivalent** — another control "can achieve the underlying function" at size; **Inline** — "does not apply to inline targets in sentences, or where the size of the target is constrained by the line-height of non-target text"; **User agent control**; **Essential**. Fetched + verified 2026-09-20. |
 
+## Verified by direct fetch (2026-09-20) — WCAG 2.2 accessible authentication
+
+| Standard / source | URL | What was confirmed |
+|---|---|---|
+| WCAG 2.2 SC 3.3.8 Accessible Authentication (Minimum) | https://www.w3.org/WAI/WCAG22/Understanding/accessible-authentication-minimum.html | Level AA (new in WCAG 2.2). Verbatim: "A cognitive function test (such as remembering a password or solving a puzzle) is not required for any step in an authentication process unless that step provides at least one of the following:" **Alternative** (another method not relying on a cognitive function test), **Mechanism** (a mechanism to assist), **Object Recognition**, **Personal Content**. Basis for allow-paste / password-manager support. Fetched + verified 2026-09-20. |
+| WCAG 2.2 SC 3.3.9 Accessible Authentication (Enhanced) | https://www.w3.org/WAI/WCAG22/Understanding/accessible-authentication-enhanced.html | Level AAA (new in WCAG 2.2). Same base rule as 3.3.8, but the permitted exceptions are only **Alternative** and **Mechanism** — it drops **Object Recognition** and **Personal Content**, so an image / personal-content CAPTCHA that passes 3.3.8 fails 3.3.9. Fetched + verified 2026-09-20. |
+
 ## Verified by direct fetch (2026-09-20) — ML cross-validation & resampling hygiene
 
 | Standard / source | URL | What was confirmed |
