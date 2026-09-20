@@ -3,6 +3,15 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.347.0] — 2026-09-20
+
+### deep-code-review — HTTP header census (#815), MFA fatigue/OTP handling (#816), transaction authorization (#817)
+
+- **`security-appsec.md`** (#815): the header enumeration gains **Permissions-Policy** (deny powerful features — camera/mic/geolocation/payment — by default) and the **COOP / COEP / CORP** cross-origin-isolation trio, tied to the XS-Leaks side channels COOP+CORP close (frame-counting, `onload`/`onerror` resource-probing).
+- **`security-appsec.md`** (#816): a new A07 block — push-based MFA must require **challenge-response / number-matching** and cap notification frequency (push-bombing → account takeover), and OTP codes need an enforced short TTL, single-use, strict attempt-limit, and must never be logged. Applies the existing one-shot-token single-use primitive to OTP.
+- **`security-appsec.md`** (#817): a new A01 block — high-value transactions need **What You See Is What You Sign** (the actual amount/recipient re-confirmed, not a generic "confirm?") and an authorization credential **unique to that transaction's content**, distinct from the segregation-of-duties/maker-checker control already present (same-principal content-bound re-confirmation vs different-principal approval).
+- **`docs/standards-index.md`**: OWASP HTTP Headers / XS-Leaks / MFA / Transaction Authorization cheat-sheet rows, verified by direct fetch 2026-09-20. +3 evals.
+
 ## [1.346.0] — 2026-09-20
 
 ### deep-code-review — CSP directive-level hardening (#809) + DOM Clobbering (#810)

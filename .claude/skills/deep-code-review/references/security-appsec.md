@@ -140,6 +140,31 @@ required to enforce it routes to `business-ops` / counsel, not this gate.)
   principal id; an `approver` / `approved_by` read from a client field or equal
   to the requester; an approver role a user can grant themselves.
 
+**Transaction authorization (WYSIWYS) — an orthogonal, *same*-principal control,
+not a restatement of segregation of duties above.** Segregation of duties is about
+*who* approves — a distinct second principal. Transaction authorization is about
+*what* that principal is shown and confirms, even when it's the same person who
+initiated the action. For a high-value transaction (wire transfer, payout-
+destination change), the OWASP Transaction Authorization Cheat Sheet's **What You
+See Is What You Sign** principle requires the confirmation step show and let the
+user acknowledge the transaction's own significant data — the actual target
+account and amount — not a generic "confirm?": "An authorization method must
+permit a user to identify and acknowledge the data that is significant to a given
+transaction." The same cheat sheet also requires each transaction be authorized
+with credentials **unique to it**, not a reusable session factor: "If applications
+only ask for transaction authorization credentials once … the user could authorize
+any transaction during the entire session or reuse the same credentials," which
+lets a compromised session or sniffed credential authorize an attacker-substituted
+transaction the user never saw. A confirmation that re-uses the login-session MFA
+code and shows only a generic prompt fails both halves at once — it isn't
+transaction content, and it isn't unique/bound to this transaction. Cross-ref
+`billing-correctness.md` for the amount/ledger-correctness side of a
+money-movement change; this control is the authorization-credential side, not the
+arithmetic.
+- **🚩** a high-value transaction confirmation showing a generic prompt instead of
+  the actual amount/recipient, or accepting the same MFA/session credential
+  already used to authenticate the session.
+
 **Cache / CDN is an authorization surface.** Responses derived from identity must
 be `Cache-Control: private` / `no-store` (or keyed by principal). Check
 framework static vs dynamic decisions for pages that read cookies/headers;
@@ -207,8 +232,10 @@ Not to how scary the React looks.
 clients; default or sample credentials; overly permissive CORS
 (`Access-Control-Allow-Origin: *` **with** credentials); directory listing;
 admin/actuator/`/debug` endpoints reachable; missing security headers
-(HSTS, `Content-Security-Policy`, `X-Content-Type-Options`, frame-ancestors);
-cloud storage/buckets world-readable; unnecessary services/features enabled.
+(HSTS, `Content-Security-Policy`, `X-Content-Type-Options`, frame-ancestors,
+`Permissions-Policy`, `Cross-Origin-Opener-Policy`/`Cross-Origin-Embedder-Policy`/
+`Cross-Origin-Resource-Policy`); cloud storage/buckets world-readable; unnecessary
+services/features enabled.
 
 **🚩 grep**: `DEBUG = True`, `NODE_ENV` not enforced to `production`,
 `Access-Control-Allow-Origin: *`, `cors({ origin: true, credentials: true })`,
@@ -217,6 +244,33 @@ cloud storage/buckets world-readable; unnecessary services/features enabled.
 **Fix**: harden by default; ship prod config that disables debug, sets headers,
 scopes CORS to known origins, and removes sample/default accounts. Track against
 CIS Benchmarks for the runtime/platform.
+
+**`Permissions-Policy` and the cross-origin isolation trio extend the same header
+census, not a separate concern.** `Permissions-Policy` denies powerful browser
+features (camera, microphone, geolocation, payment) by default; the OWASP HTTP
+Headers Cheat Sheet frames the goal as letting a site "never allow the camera or
+microphone to be activated" even when an injection (XSS) runs.
+`Cross-Origin-Opener-Policy` (COOP) and `Cross-Origin-Resource-Policy` (CORP)
+close two distinct leaks the OWASP XS-Leaks Cheat Sheet documents (with
+`Cross-Origin-Embedder-Policy` (COEP) the third leg of the cross-origin-isolation
+trio, per the HTTP Headers sheet): COOP puts a page in its own browsing context group, so a
+cross-origin page that **opens it** (a popup, a lured new-tab click) gets back an
+inert handle instead of a live `window` reference — closing the frame-counting
+family, where the sheet's own example is an attacker opening the target and
+reading `win.frames.length` off the handle it gets back. CORP stops another origin
+from loading the response at all, closing the `onload`/`onerror` resource-probing
+family and doubling, per the **HTTP Headers** cheat sheet, as "a robust defense against attacks like
+Spectre." XS-Leaks' own Quick Recommendations list COOP+CORP alongside SameSite
+cookies and framing protection to "strengthen the isolation of your application
+between other origins" — this file already covers SameSite (A07 § Session cookie
+flags) and frame-ancestors/clickjacking (`frontend-a11y.md`); COOP/COEP/CORP is
+the missing header from that set, not a claim that these four close every XS-Leak
+(the sheet separately names Fetch Metadata/`Sec-Fetch-Site` and per-resource
+unpredictable tokens, out of scope here).
+
+**🚩** a cross-origin-embedding-or-embedded surface, or one handling sensitive
+device-capability APIs (camera/mic/geolocation/payment), with no
+`Permissions-Policy` and no COOP/CORP set.
 
 ## A03:2025 — Software Supply Chain Failures
 
@@ -783,6 +837,28 @@ credential-layer pass, not just a session-token one:
   (regulated/high-assurance tiers); most consumer flows correctly skip it — don't over-flag its
   absence. Syncable ("multi-device") passkeys have exportable keys, so NIST bars them at AAL3 —
   check the assurance tier before requiring *or* forbidding sync.
+
+**Push-based MFA needs challenge-response, not blind-approve — and OTP is a secret
+with its own lifecycle discipline.** A bare accept/deny push, sent repeatedly and
+often paired with social engineering, is push-bombing (MFA fatigue): the attacker
+relies on the victim eventually tapping approve out of habit or annoyance. The
+OWASP Multifactor Authentication Cheat Sheet's mitigations: require
+challenge-response push authentication (for example, number matching) so approval
+can't be blind, rate-limit or cap push notifications so repeated prompting isn't
+possible in the first place, and monitor for multiple pushes in a short window as
+an anomaly signal. Where the factor is an OTP (SMS, email, or a TOTP-adjacent
+one-time code), the same sheet sets a lifecycle floor the implementation SHOULD
+meet: enforce a short TTL, ensure single use, apply strict attempt limits,
+invalidate on successful verification — and SHOULD NOT log the OTP value. This is
+distinct from the constant-time compare OTP verification already needs (A04,
+above) and from the per-operation send-cost throttle on OTP dispatch
+(`API-specific overlay` § API4, below): those guard the compare operation and the
+send volume; this bounds the code's own lifecycle and exposure. Cross-ref the
+one-shot approval-token `jti`/single-use primitive above — same record-and-reject
+discipline, applied to a human-facing OTP instead of a machine-bearer token.
+
+**🚩** a push-MFA flow with a plain accept/deny and no rate cap; an OTP written to
+an access/debug log, accepted more than once, or carrying no expiry.
 
 **Password policy follows current NIST, not 2017-era habits.** Flagging the *absence* of forced
 periodic rotation or character-composition rules is following **outdated** guidance — NIST SP
