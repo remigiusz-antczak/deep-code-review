@@ -321,6 +321,35 @@ Every billable or slow call must map to value delivered.
   names the concrete failure shape (sum-vs-max latency), the detection trace (each
   `await`'s arguments back to a prior `await`'s result), and the genuine-dependency
   carve-out that one-liner leaves implicit.
+- **Two projections of one dataset that each re-load the raw source, awaited one after the
+  other, pay double I/O *and* double latency — the compute-once-derive-many miss inside a
+  single handler.** A request handler / SSR loader that needs two differently-shaped views
+  of the *same* data (a summary card and a detail table; a totals rollup and a line-item
+  list; a chart series and its CSV export) often calls two exported helpers —
+  `getSummary()` and `getDetails()` — that each *internally* re-run the shared loader
+  (`loadRawEvents()` then reduce it one way; `loadRawEvents()` again then reduce it the
+  other) and `await`s them in top-to-bottom order. The shared read runs **twice** (2× DB
+  query / file read / API call) and the two reads **serialize** though neither consumes the
+  other's output — 2× the I/O *and* 2× the latency on a critical path (TTFB / SSR). Each
+  helper is clean in isolation (right data, right shape), so a per-file review approves
+  both; the waste lives only in the *pair* and shows only as the network tab's two
+  identical source reads and a load time that is their sum. Rank the fix: **read the source
+  once and pass the records into both projections** (best — it deletes the second read, and
+  with one read there is nothing left to parallelize); **`Promise.all` on the two helpers
+  is only the fallback for when they must stay independent — it overlaps the latency but
+  still reads the source twice**, a partial fix, not the fix. Detect by listing every
+  `await` a handler makes into the same data module before it branches, then confirming the
+  shared loader runs ≤1× per request and any reads left separate run concurrently;
+  acceptance = one source read per request, both projections' outputs unchanged. Distinct
+  from **Redundant full-collection scans** (External / API / LLM calls), whose subject is a
+  collection pulled for an O(1) find/dedupe it never needed — here the full dataset is *legitimately*
+  required, only read once too often and shaped twice. Distinct from the **Sequential
+  `await`s** bullet above, whose independent calls read *different* sources so `Promise.all`
+  is the whole fix — here they read the *same* source, so `Promise.all` leaves the duplicate
+  read standing. Distinct from the client-side **identity fan-out** hook in
+  `frontend-a11y.md` (N mounted consumers each re-fetching one shared singleton, coalesced
+  behind a Provider/cache): this is two sibling projections inside *one* handler, coalesced
+  by hoisting the single read and deriving both locally.
 - No unbounded growth: ever-growing lists/maps/caches, accumulating `defer`s,
   unclosed resources. Stream large data instead of buffering it all in memory.
 - **Every append-only store on disk names a reaper — unbounded growth fills the disk, a
@@ -362,4 +391,5 @@ processes; a cache read → origin recompute with no single-flight (stampede on
 expiry); a cache that stores a not-found/error under the positive TTL; a
 handler/loader with independent `await`s run in top-to-bottom order where none
 reads an earlier call's result (accidental serialization, not a genuine
-dependency).
+dependency); a handler `await`ing two helpers that each re-read the *same* source
+to build different projections (fetch-per-projection instead of read-once-derive-both).

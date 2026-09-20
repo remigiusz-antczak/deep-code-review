@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.368.0] — 2026-09-21
+
+### deep-code-review — two projections of one dataset each re-load the source, awaited serially (#844)
+
+- **`performance-db-cost.md`**: a request/SSR handler that needs two differently-shaped views of the same data (a summary card and a detail table) calls two helpers that each internally re-run the shared loader, awaited top-to-bottom — so the source is read twice (2x I/O) and the two reads serialize with no data dependency (2x latency on TTFB/SSR). Each helper is clean in isolation, so a per-file review approves both; the waste lives only in the pair. Ranks the fix: read the source once and derive both projections (best — it deletes the second read, leaving nothing to parallelize), with `Promise.all` only the partial fallback for when the helpers must stay independent. Carved out from the redundant-full-collection-scan bullet (there the full dataset is never needed), the sequential-`await`s bullet (there the calls read different sources), and the client-side identity fan-out in `frontend-a11y.md`. +1 eval.
+
 ## [1.367.0] — 2026-09-21
 
 ### deep-code-review — a read failure that seeds an editable form turns a misleading display into a destructive write (#850)
