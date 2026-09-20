@@ -3,6 +3,14 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.278.0] — 2026-09-20
+
+### deep-code-review — wave 199 testing depth: test-double fidelity, consumer-driven contract testing, flaky-test quarantine (from a testing-practice comparative pass)
+
+- **`testing-and-evals.md`** — (1) a **test double must not drift from what the real dependency returns**: a mock/stub returning a shape, null-vs-empty, status, or error the live dependency never produces leaves the suite green while the integration is broken (the classic "all tests pass, prod is down"); verify the double against the real contract (a contract test run against both real+double, a recorded interaction/VCR, or provider-generated types). (2) A **chronically flaky test is quarantined and fixed, not retried-until-green** — a blanket CI retry masks a real race and lets a genuine intermittent regression slip through; move it to non-blocking quarantine with an owner + fix deadline, fix the root nondeterminism (a bounded retry on a genuinely external flake, with the rate tracked, is not the finding).
+- **`api-contracts.md`** — **consumer-driven contract testing** (e.g. Pact) catches what a provider-vs-self surface diff (`oasdiff`/`buf`) can't: the consumer publishes its real expectations, the provider replays/verifies them in its own CI, and a broker `can-i-deploy` gate blocks the break before production. Resolves the previously-dangling `(consumer-driven contract)` cross-ref from `data-quality.md`.
+- +3 evals. Independent reviewer PASS-WITH-FIXES: softened an unhedged "most common" frequency superlative to "the classic" (matching the eval + repo idiom); citation-provenance confirmed clean (patterns named like the file's own `pytest-randomly`/`oasdiff` precedent — no standards-index row). Closes no filed issue (proactive coverage from a testing-practice diff).
+
 ## [1.277.0] — 2026-09-20
 
 ### deep-code-review — wave 198 observability: toil is reviewable, SLI measurement-point blind spot, saturation target below 100% (from a Google SRE comparative pass)

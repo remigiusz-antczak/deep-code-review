@@ -30,7 +30,7 @@ explicit third choice), not which one this review prefers.
   mocked into a tautology).
 - **A test double must not drift from what the real dependency actually returns.** A mock/stub
   that returns a **shape, null-vs-empty, status code, or error the live dependency never
-  produces** leaves the suite green while the real integration is broken — the most common
+  produces** leaves the suite green while the real integration is broken — the classic
   "all tests pass, prod is down." Verify the double against the real contract: a shared
   contract-test suite run against **both** the real service and the double, a recorded real
   interaction (VCR/cassette), or a type/schema generated from the provider — not a hand-written
