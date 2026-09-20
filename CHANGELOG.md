@@ -3,6 +3,14 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.310.0] — 2026-09-20
+
+### deep-code-review — two data-state review folds: partial-apply response type drops computed failure detail (#699); a shared honest signal is only as good as its least careful consumer (#700)
+
+- **`product-ux-quality.md`** (#699): a partial-apply operation's success counters must reconcile to its own total — a client response **type** that is a strict subset of the server's return silently drops computed failure detail (`error_count`/`errors`), so counters undercount with no visible cause. Remedy is **both halves**: the type declares the failure fields *and* the render surfaces them (widening the type without a render branch just relocates the silence). Distinct from the remainder-indicator rule (type-boundary drop vs render-time slice).
+- **`product-ux-quality.md`** (#700): a correct loading/failed signal is only as good as its **least careful consumer** — one sibling surface off a shared honest hook that reads the raw value and ignores `ready`/`loadError` renders a confident wrong zero. Sweep **every** consumer of the shared instance, not just the one in the diff. Cross-refs the all-call-site-sweep family (`data-quality.md` §5/§6 write-guard & soft-delete; `i18n-l10n.md` normalizer). +2 evals.
+- Built by a worktree builder subagent (pre + post advisor self-review), independently reviewed **PASS**: both folds confirmed genuinely distinct from the empty-state/dead-render family and the shared-component adoption / divergent-props rules (different mechanism + stakes class); every eval expectation traced to shipped prose; evals strictly append-only. One optional style-consistency fix applied at finalize (inline "Detect it by…" idiom). Closes #699, #700.
+
 ## [1.309.0] — 2026-09-20
 
 ### deep-code-review — replay protection for short-lived approval bearer tokens (closes #696)

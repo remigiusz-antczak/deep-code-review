@@ -122,6 +122,34 @@ system status). **🚩**: a `.slice(0, N)` / `LIMIT` / `take(N)` render path who
 length can be less than a known `total`/count, with no adjacent remainder text
 or pagination control.
 
+**A partial-apply operation's success counters must reconcile to the operation's
+own total — when they can't, and nothing says why, the *partial* state above has
+quietly gone dishonest.** A "paste/import N rows, apply what matches" endpoint
+typically partitions results into several buckets (`applied`, `skipped_duplicate`,
+`unresolved`) and also computes real per-row failure detail alongside them —
+`error_count`, `errors[]` — from the same operation. The failure detail goes
+missing not because a render branch was written wrong, but one layer earlier: the
+client's response type declares only the success fields, so `error_count`/`errors`
+are dropped before any render branch could exist for them. The visible badges can
+sum to less than the request's own `parsed`/`total` field with no indication
+anything failed — an honest-looking partial render that is quietly undercounting.
+Distinct from the remainder-indicator rule above: there, a list is truncated **in
+render** below a total the client already holds; here nothing is sliced on
+purpose — the client's own declared type is narrower than what the endpoint
+actually returns, so the gap is invisible to anyone reading only the render code.
+Detect it by diffing the route handler's actual response shape against the
+client-side type that parses it: any server field absent from the client type —
+especially a count or array of failure reasons — is a candidate silent drop;
+confirm by checking whether the success counters can ever sum to less than the
+operation's own total field. **The remedy is both halves — the client type
+declares the failure fields *and* the render surfaces them** (a count, or the
+first/aggregate reason); widening the type without a render branch just
+relocates the silence one layer down instead of closing it. **🚩**: a
+hand-maintained client response type
+narrower than what the endpoint actually returns, especially one dropping an
+`errors`/`error_count`/`rejected` field; visible counts that can't be reconciled
+to the input total with no "N failed" surface.
+
 **An empty state must not imply a conclusion it hasn't earned.** "No rows shown"
 is not "nothing happened": an empty activity feed, an all-green board with no
 data behind it, or a zero-count that is really an *uncollected* count all read to
@@ -172,6 +200,53 @@ measured wrong) and from the silent-swallow 🚩 in `domain-checklists.md` /
 `reliability-error-handling.md` (an error *discarded* at the code layer — caught, but
 with no log or signal): here the fetch error is caught correctly, and the defect is which **rendered**
 state a correctly-handled failure is allowed to collapse into.
+
+## A correct loading/failed signal is only as good as its least careful consumer
+
+The stakes rule above governs what a **correctly-handled** fetch failure is
+allowed to render as; this asks a narrower, later question — **given** a hook or
+context whose contract already separates loading/failed from a confirmed value
+honestly, does **every** surface that consumes it actually read that signal? A
+shared hook built once and reused across sibling UI surfaces (a provider/context,
+so two renders share one fetch instead of duplicating it) can expose its
+readiness/error field correctly and still ship the exact failure it was built to
+prevent, one layer up: one consumer branches on the field and renders honestly; a
+second consumer, off the **same shared instance**, destructures only the value and
+renders it raw. The same transient failure that surface A discloses, surface B
+renders as a confident wrong zero — indistinguishable from a genuine "none" — and
+the only textual disclosure of the failure sits elsewhere on the page, in a
+component the reader may never reach.
+
+**A correct contract does not imply a correct consumer, and one correct consumer
+does not imply the rest are.** A reviewer who audits the hook plus the one call
+site that clearly does it right, and concludes "this is handled," has verified the
+contract, not its adoption — the identical gap the shared-component
+adoption-is-total and divergent-props rules name for a shared **component**
+(Unified across modules, below), but a different **stakes** class: divergent props
+there is a visual-consistency defect (a feature chip present at one mount site,
+absent at another — the two renders merely "look cheap" together); a sibling
+ignoring a readiness signal is a **data-honesty** defect (a wrong value rendered
+as settled fact) — which is why it belongs in this data-state neighborhood, not
+the component-consistency one.
+
+Detect it by grepping the hook/context **name** itself, not just its file, to
+enumerate every consumer of the shared instance — a component-scoped search
+misses a sibling elsewhere on the page. For each consumer, check independently
+whether it destructures and branches on the readiness/error field alongside the
+value; never infer from one correct consumer that the others also do. Verify by
+forcing the shared fetch to reject and loading the page at **every** surface that
+consumes the hook, not only the one already known to handle it correctly.
+
+Same all-consumers/all-call-sites sweep discipline as a write-guard covering every
+mutation primitive or a soft-delete scope covering every read (`data-quality.md`
+§5, §6), and a normalization fix required at every query call site
+(`i18n-l10n.md`) — a shared correctness property holds only where every consumer
+actually exercises it, not wherever the built-once thing merely exists.
+
+**🚩**: two or more components consuming one shared hook/context instance where
+only some destructure and branch on its readiness/error field; a consumer
+destructuring only the value field, with no readiness/error check anywhere in
+that render path, while a sibling consumer of the same instance does check it.
 
 ## A reversible action reads as a delete when nothing shows the record persists
 
@@ -675,7 +750,9 @@ name-only diff both miss. (Nielsen: consistency and standards.)
 `isLoading`/`isError`/empty branch, a `.map(` over a list with no length-0 case, a
 table/grid with no `overflow`/pagination, a `catch` rendering `err.message`/stack
 into the DOM, or a `.slice(0, N)`/`LIMIT`/`take(N)` render whose length can be
-less than a known `total`/count with no adjacent remainder/pagination text
+less than a known `total`/count with no adjacent remainder/pagination text, or a
+client response type that omits a server-computed `error_count`/`errors`/`rejected`
+field so its success counters can't reconcile to the total
 (states) · a colour scale keyed on a field that also drives an
 icon/shape, or `>1` semantic use of one `--color-*` token (encoding) · a
 status/delta rendered by `color`/`background` with no sibling icon/text node, or a
@@ -702,9 +779,11 @@ confidence number published as precision (confidence tier) · an `<svg>`/chart w
 no `<text>`/axis node and no hover/focus readout target, or a line/area drawn across
 `<3` data points (data-viz) · a `position: sticky`/`fixed` element whose scroll
 container has no padding (gutter), or an action revealed by `onMouseEnter`/`:hover`
-with no focus/keyboard sibling (hover-only) — the footprint, reflow, and
-per-class-parity defects are **render-only**, caught by the route sweep below, not a
-grep.
+with no focus/keyboard sibling (hover-only) · two or more components consuming one
+shared hook/context instance where only some destructure and branch on its
+readiness/error field alongside the value (sibling-consumer signal) — the footprint,
+reflow, and per-class-parity defects are **render-only**, caught by the route sweep
+below, not a grep.
 
 ## Rendered route sweep — apply domain P across every surface (FULL reviews)
 
@@ -772,7 +851,8 @@ often lost — the on-screen chart carries axes and a readout the serialiser dro
 
 ## Pre-ship checklist (mirror SKILL.md's report discipline)
 - [ ] Does it need explaining? If yes, redesign until it doesn't (or demote the text to progressive disclosure).
-- [ ] All five data states handled and honest — empty / loading / error / partial / overflow — an empty state names its **coverage** (no-data-collected vs collected-and-genuinely-none), never implying a false all-clear, and any **named cause** in its copy holds on every path that reaches it, not only the one it describes; a **definitive-record surface** (audit log, security events, a decision-bearing balance/count) shows a **distinct, retryable error state** on fetch failure rather than degrading to empty — a low-stakes/supplementary value may acceptably degrade, a definitive one may not; and a capped/sliced overflow list carries an explicit **remainder indicator** whenever `total > shown`?
+- [ ] All five data states handled and honest — empty / loading / error / partial / overflow — an empty state names its **coverage** (no-data-collected vs collected-and-genuinely-none), never implying a false all-clear, and any **named cause** in its copy holds on every path that reaches it, not only the one it describes; a **definitive-record surface** (audit log, security events, a decision-bearing balance/count) shows a **distinct, retryable error state** on fetch failure rather than degrading to empty — a low-stakes/supplementary value may acceptably degrade, a definitive one may not; and a capped/sliced overflow list carries an explicit **remainder indicator** whenever `total > shown`; and a partial-apply operation's visible success counters reconcile to the input total — a client response type narrower than the endpoint's actual return (a dropped `error_count`/`errors` field) is a silent undercount, not a clean partial state?
+- [ ] Every shared hook/context's readiness/error signal is read the **same way at every consuming surface** — checked independently per consumer, not inferred from the one call site that clearly gets it right; no sibling consumer destructures only the value field while another sibling of the same instance branches on the readiness/error field?
 - [ ] One channel per dimension; nothing colour-only; reads correctly in greyscale?
 - [ ] Deltas are caret + magnitude, coloured by sentiment; flat is a muted `—` with a period anchor?
 - [ ] Confidence / score / priority shown as a **defined labeled tier** (text + a colourblind-safe cue), not a raw `%` or point score, and no model-authored number published as precision?
