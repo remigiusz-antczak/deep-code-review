@@ -636,7 +636,7 @@ production-like server).
 ## Security & compatibility
 
 - Output encoding for anything user-influenced (XSS — see `security-appsec.md`
-  A05); a strict Content-Security-Policy.
+  A05); a strict Content-Security-Policy (directive-level form below).
 - **No secrets/API keys/tokens in the client bundle or source maps** — anything
   shipped to the browser is public.
 - No sensitive data in `localStorage`/`sessionStorage`; tokens in
@@ -651,11 +651,43 @@ production-like server).
   `integrity="sha384-…"` hash plus `crossorigin` lets the browser refuse a resource a compromised
   CDN has altered — without it, one CDN compromise rewrites what every user's browser executes
   (MDN *Subresource Integrity*).
+- **A "strict" CSP is a specific, enforceable `script-src` — not just a header being present.**
+  OWASP's Strict CSP form is `script-src 'nonce-{RANDOM}' 'strict-dynamic'` (or
+  `'sha256-{HASHED_INLINE_SCRIPT}' 'strict-dynamic'` when nonces aren't feasible), plus
+  `object-src 'none'` and `base-uri 'none'` — never a bare `'unsafe-inline'`, which lets any
+  inline script run (including an attacker's) and defeats the whole point: a strict policy exists
+  to "protect against classical stored, reflected, and some of the DOM XSS attacks" (OWASP
+  *Content Security Policy Cheat Sheet*). The nonce must be fresh and unguessable **per HTTP
+  response**, wired through an actual templating layer — a hardcoded or reused nonce is
+  equivalent to publishing it, and a middleware that mechanically stamps `nonce="…"` onto every
+  `<script>` tag it finds in already-assembled HTML hands the same nonce to an attacker-injected
+  `<script>` too (the cheat sheet's own warning: "attacker-injected scripts will then get the
+  nonces as well"). Backstops CWE-79 — Cross-site Scripting, rank #1 in the CWE Top 25
+  (`security-appsec.md` already cites it).
 - **Trusted Types as a DOM-XSS backstop on top of output encoding, not instead of it.** The
   `require-trusted-types-for 'script'` CSP directive forces DOM injection sinks (`innerHTML`,
   `eval`, `script.src`) to take policy-created typed values, turning a raw-string sink into a
   `TypeError` — a browser-enforced backstop (MDN *Trusted Types API*: Baseline 2026; a tinyfill keeps older browsers from throwing
   but enforces nothing there), layered on the output-encoding rule above.
+- **DOM Clobbering: HTML-injection-only, no script execution needed — the neighbor to Trusted
+  Types above.** Named `id`/`name` attributes on ordinary elements (`<form id="config">`, `<a
+  name="url">`) are auto-exposed as properties on `window`/`document`; a sanitizer that only
+  strips script-based XSS lets that markup through untouched, so an attacker's element can shadow
+  whatever global the app relies on (OWASP *DOM Clobbering Prevention Cheat Sheet*, worked
+  example: injecting `<a id=config><a id=config name=url href='malicious.js'>` against code
+  reading `window.config.url`, "to load additional JavaScript code, and obtain arbitrary
+  client-side code execution"). DOMPurify's default config only guards built-ins — app-defined
+  names need `SANITIZE_NAMED_PROPS: true` (namespaces `id`/`name` with a `user-content-` prefix);
+  on the Sanitizer API, set `blockAttributes` on `id`/`name` (its default does not stop this). CSP
+  doesn't close the gap either — it can stop a clobbered *script source* from loading new
+  attacker JS, but not clobbering used inside code already present (e.g., an `eval()` argument).
+  Fix both ends: sanitize named props, and type-check (`instanceof`) any bare
+  `window.*`/`document.getElementById(...)` read before trusting it as configuration or a
+  callback — a clobbered global is a real `Element`, not the object the code expects. Distinct
+  from this skill's other "clobber" hits (concurrent writers racing on shared state, e.g.
+  `concurrency-shared-state.md`) — this is a same-origin HTML-injection attack, no race involved.
+  Applies wherever user HTML is sanitized and rendered: CMS body text, markdown renderers,
+  comment systems.
 - **`Referrer-Policy` does not leak a token-bearing URL cross-origin.** The `Referer` header sends
   the full URL (path + query) to other origins; the modern default is already
   `strict-origin-when-cross-origin` (MDN *Referrer-Policy*), so the finding is a **weakened** policy
@@ -683,4 +715,8 @@ an entire large dataset (walk the client import graph, stripping type-only impor
 edge into that module); a loading/skeleton component with `aria-busy` and/or a label prop but
 no `role="status"`/`role="alert"`/`aria-live` on it or an ancestor; a static `aria-label` that
 doesn't contain the element's own visible text (WCAG 2.5.3); an icon/label swap keyed off an
-`open`/`expanded` boolean with no matching `aria-expanded` on the same control.
+`open`/`expanded` boolean with no matching `aria-expanded` on the same control; a
+`Content-Security-Policy` header/meta containing `unsafe-inline` with no `nonce`/hash, or missing
+`object-src`/`base-uri`; a sanitizer call (`DOMPurify.sanitize`/`new Sanitizer(`) with no
+`SANITIZE_NAMED_PROPS`/`blockAttributes` configured, rendering user HTML, alongside a bare
+`window.*` global or a `getElementById`/`getElementsByName` result trusted with no type check.

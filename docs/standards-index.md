@@ -930,3 +930,23 @@ technical requirements table, not the informal levels overview. Fetched via `cur
 | Standard / source | URL | What was confirmed |
 |---|---|---|
 | SLSA v1.0 — Build track requirements | https://slsa.dev/spec/v1.0/requirements | Verbatim, the Build-platform "Isolation strength" row: "**Hosted** — All build steps ran using a hosted build platform on shared or dedicated infrastructure, not on an individual's workstation. Examples: GitHub Actions, Google Cloud Build, Travis CI." The requirements table's own checkmarks place **Hosted** at **L2 and L3** (blank at L1) — the precise level assignment behind the existing SLSA v1.0 levels row above. Fetched + verified 2026-09-20. |
+
+## Verified by direct fetch (2026-09-20) — CSP directive-level hardening & DOM Clobbering
+
+Verification date for the rows below: **2026-09-20**. Added for the deep-code-review
+`frontend-a11y.md` "Security & compatibility" folds: enforceable CSP directives
+(`script-src` nonce/hash + `strict-dynamic`, `object-src 'none'`, `base-uri 'none'`, and
+the per-response nonce-freshness trap) and DOM Clobbering (sanitizer named-property
+handling + type-checking a bare `window`/`document` global before trusting it). Both
+fetched via `curl` (raw HTML), not a summarizer. Distinct rows from the repo's existing
+by-name "OWASP Cheat Sheet Series" reference — these are the two specific cheat sheets
+actually fetched this session. The already-indexed CWE Top 25 (2025) row above (dated
+2026-08-13) was additionally re-fetched this session to confirm CWE-79 (Cross-site
+Scripting) holds **rank 1** specifically (score 60.38) — the 2026-08-13 row recorded
+only the unranked "top entries" list; the frontend-a11y.md CSP fold's "rank #1" claim
+is sourced to this 2026-09-20 re-fetch.
+
+| Standard / source | URL | What was confirmed |
+|---|---|---|
+| OWASP Content Security Policy Cheat Sheet | https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html | The documented Strict CSP forms, verbatim: `script-src 'nonce-{RANDOM}' 'strict-dynamic'; object-src 'none'; base-uri 'none';` (nonce-based) and the `'sha256-{HASHED_INLINE_SCRIPT}' 'strict-dynamic'` hash-based equivalent. `object-src` "specifies the URLs from which plugins can be loaded from"; `base-uri` "specifies the possible URLs that the `<base>` element can use" and sits under the page's separate "Document Directives" heading, not "Fetch Directives" (`object-src`'s heading — the only directive the page explicitly states does **not** fall back to `default-src` is `frame-ancestors`; no equivalent statement is made for `base-uri`, so no fallback-behavior claim is made here). Nonce freshness, verbatim: "Nonces are unique one-time-use random values that you generate for each HTTP response." Verbatim warning: "Don't create a middleware that replaces all script tags with \"script nonce=...\" because attacker-injected scripts will then get the nonces as well. You need an actual HTML templating engine to use nonces." A strict policy's purpose, verbatim: "protect against classical stored, reflected, and some of the DOM XSS attacks." Fetched + verified 2026-09-20. |
+| OWASP DOM Clobbering Prevention Cheat Sheet | https://cheatsheetseries.owasp.org/cheatsheets/DOM_Clobbering_Prevention_Cheat_Sheet.html | Defines DOM Clobbering, verbatim: "a type of code-reuse, HTML-only injection attack, where attackers confuse a web application by injecting HTML elements whose id or name attribute matches the name of security-sensitive variables or browser APIs ... and overshadow their value," relevant "particularly ... when script injection is not possible, e.g., when filtered by HTML sanitizers." Worked example, verbatim: injecting `<a id=config><a id=config name=url href='malicious.js'>` against code reading `window.config.url`, "to load additional JavaScript code, and obtain arbitrary client-side code execution." Sanitizer defaults, verbatim: DOMPurify's default `SANITIZE_DOM` "removes all clobbering collisions with built-in APIs and properties" only — custom/app-defined names need `SANITIZE_NAMED_PROPS: true` (isolates the namespace "by prefixing them with `user-content-` string"); the Sanitizer API "does not prevent DOM Clobbering [in] its default setting" and needs `blockAttributes` set on `id`/`name` (source page's own wording has a minor typo — "it its" for "in its" — reproduced faithfully, not an error introduced here). Also verbatim: CSP "can only mitigate some variants of DOM clobbering attacks ... but not when already-present code can be abused for code execution, e.g., clobbering the parameters of code evaluation constructs like eval()." Fetched + verified 2026-09-20. |

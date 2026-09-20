@@ -3,6 +3,14 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.346.0] — 2026-09-20
+
+### deep-code-review — CSP directive-level hardening (#809) + DOM Clobbering (#810)
+
+- **`frontend-a11y.md`** (#809): the "Security & compatibility" CSP guidance gains enforceable directives — `script-src` with a per-response `nonce-`/hash + `strict-dynamic` (never bare `'unsafe-inline'`), `object-src 'none'`, `base-uri 'none'` — plus the per-response nonce-freshness trap (a reused or middleware-stamped nonce is handed to attacker-injected scripts too). Backstops CWE-79 (the current #1 CWE). Previously the file named CSP only as "a strict CSP" with no directive.
+- **`frontend-a11y.md`** (#810): a new **DOM Clobbering** bullet — when sanitized user HTML is rendered, block/namespace named `id`/`name` attributes (DOMPurify `SANITIZE_NAMED_PROPS`, or the Sanitizer API `blockAttributes`), and type-check a bare `window.*` / `document.getElementById(...)` read before trusting it: a clobbered global is a live DOM element/`HTMLCollection`, not the expected object, and an injected anchor coerced into a URL sink loads attacker JavaScript — an HTML-only injection a script-blocking CSP misses.
+- **`docs/standards-index.md`**: OWASP CSP + DOM Clobbering cheat-sheet rows, plus a CWE Top 25 (2025) re-fetch confirming CWE-79 rank 1 — all verified by direct fetch 2026-09-20. +2 evals.
+
 ## [1.345.0] — 2026-09-20
 
 ### agentic-delivery — gate each merge on a not-red base, not a fully-green one (#801); an opt-in throughput lever is inert until default-wired (#803)
