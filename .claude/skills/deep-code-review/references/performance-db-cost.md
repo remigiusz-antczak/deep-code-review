@@ -52,8 +52,10 @@ of work earn its keep?**
   collection on every open — not a projection sized to the one requested id — because a few renderers
   cross-reference sibling entities. The whole-collection shape is usually defended by a real,
   previously-litigated correctness comment, which stops review from asking the **orthogonal**
-  question: given that shape, why is it *also* uncached? Marked `no-store` / no `Cache-Control`
-  "because the data can change," it recomputes and retransmits a large **build-time/batch-static**
+  question: given that shape, why is it *also* uncached? Marked `no-store` "because the data
+  can change" (or simply carrying no `Cache-Control` or validators at all — for a dynamic,
+  likely-credentialed JSON response, uncacheable in practice either way), it recomputes and
+  retransmits a large **build-time/batch-static**
   majority (descriptions, formulas, prompts) in full on every open, while only a small slice (a live
   status, a pending-changes index) is genuinely request-volatile. Fix: branch on the requested
   id/kind for a right-sized projection where the cross-reference requirement allows; and split
@@ -61,7 +63,10 @@ of work earn its keep?**
   cache/ETag) and fetch only the volatile slice per request. Pin a **byte-size ceiling** regression
   test, since this surface is paid from every mount site (grep the fan-in) and grows silently with
   the collection. Distinct from column-level over-fetch above (that trims columns; this trims the
-  row-set *shape* and fixes the caching axis).
+  row-set *shape* and fixes the caching axis) — and from the redundant-full-collection-scan bullet
+  below: that removes a scan whose only purpose is dedupe/freshness (which must stay current, never
+  cached), whereas here the whole-collection shape is legitimate and only the volatile slice needs
+  current data, so the deterministic majority is safe to cache.
 - **Push work to the DB**: filter/aggregate/join in SQL, not by pulling rows into
   app memory and looping. But don't hide an unbounded computation behind a view.
 - **Connections & transactions**: a pooled connection (not one per call) — and
