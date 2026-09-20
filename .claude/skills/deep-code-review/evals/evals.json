@@ -3640,6 +3640,26 @@
         "Prescribes including recently-CLOSED issues in the dedup search (by symbol/symptom) before filing, not only open ones",
         "Notes that a closed issue isn't automatically fixed (a wontfix/duplicate/stale close resolved nothing) — check the close reason and, if it still reproduces at HEAD, file anyway; reproduction is the backstop, not a substitute for the closed-issue search"
       ]
+    },
+    {
+      "id": "consistent-help-is-about-order-in-the-content-not-pixel-location",
+      "prompt": "An audit checks WCAG 2.2 Consistent Help by confirming the 'Contact us' link is in the footer on every page. On the checkout page the footer link is present but the live-chat widget (the primary help mechanism elsewhere) is moved above the fold, before the form. A reviewer says 'help is present on every page, so 3.2.6 passes.' Is that right?",
+      "expected_output": "Not necessarily — 3.2.6 Consistent Help (Level A) is about the RELATIVE ORDER of help mechanisms in the content sequence across pages, not just their presence or pixel location. If the same help mechanisms (contact details, a contact mechanism, self-help, an automated/chatbot channel) appear in a different relative order on one page than on others, that's a 3.2.6 failure even though help is 'present.' 'Present in the footer' checks presence, not consistent order. Verify the repeated help mechanisms occur in the same relative content order page-to-page (a user-initiated change is the only allowed exception).",
+      "expectations": [
+        "Identifies that 3.2.6 tests the relative ORDER of help mechanisms in the content sequence across pages, not mere presence or pixel/visual location",
+        "Explains that 'help is present on every page' is insufficient — a mechanism in a different relative order on one page is a failure",
+        "Prescribes verifying repeated help mechanisms occur in the same relative content order page-to-page (user-initiated change excepted)"
+      ]
+    },
+    {
+      "id": "a-focus-ring-that-clears-contrast-can-still-fail-the-focus-appearance-area-prong",
+      "prompt": "A design system's focus indicator is a 1px outline whose colour contrasts 4:1 with the component in both focused and unfocused states. A reviewer says 'it's visible and clears 3:1, so Focus Appearance (2.4.13) passes.' Is that right?",
+      "expected_output": "No — 2.4.13 Focus Appearance (AAA) has TWO requirements and the reviewer checked only one. Besides the >=3:1 contrast between focused/unfocused states (met here), the indicator's AREA must be at least that of a 2 CSS px thick perimeter of the component. A 1px outline is half that thickness, so it fails the area prong even though its contrast is fine. Fix: make the indicator's area meet the 2px-perimeter equivalent (a >=2px outline, a thick underline of equivalent area, or a large-enough shape), not just clear the contrast floor. (Contrast alone is 1.4.11 Non-text Contrast, AA; 2.4.13 adds the size requirement on top and is AAA, so scope the finding accordingly.)",
+      "expectations": [
+        "Identifies that 2.4.13 has two requirements and a 1px ring meets the contrast prong but fails the AREA prong (at least a 2 CSS px thick perimeter of the component)",
+        "Prescribes making the indicator's area meet the 2px-perimeter equivalent (thicker outline / equivalent-area shape), not merely clearing the contrast floor",
+        "Correctly separates 2.4.13's area+contrast (AAA) from 1.4.11 contrast-only (AA), scoping the finding as AAA"
+      ]
     }
   ]
 }

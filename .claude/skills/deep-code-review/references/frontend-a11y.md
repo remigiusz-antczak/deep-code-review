@@ -73,8 +73,10 @@ without regressing a deliberate design.
 - **A focus indicator must clear the contrast floor, not merely *change*.** "Visible" is a
   numeric bar: the indicator's colour must reach **>=3:1** against what it sits on — WCAG **1.4.11
   Non-text Contrast** (AA) requires 3:1 for "visual information required to identify user interface
-  components and states," and **2.4.13 Focus Appearance** (AAA) requires the indicator area to be
-  >=3:1 "between the same pixels in the focused and unfocused states." An automated focus check that
+  components and states," and **2.4.13 Focus Appearance** (AAA) requires **both** that the indicator's **area** be at
+  least that of a **2 CSS px thick perimeter** of the component **and** a **>=3:1** contrast
+  "between the same pixels in the focused and unfocused states" — a thin 1px ring that clears
+  the contrast floor still fails the area prong. An automated focus check that
   captures computed style, calls `.focus()`, and flags only when *nothing changed* validates the
   **wrong property** — a change from transparent to a real-but-too-faint colour is a passing diff and
   a failing product. Resolve the **actual rendered colours** on both sides and compute the ratio (the
@@ -121,7 +123,10 @@ confirm the background does not move.
 - **Target Size (Minimum) 24×24 CSS px** for pointer targets (or adequate
   spacing).
 - **Dragging Movements**: any drag action has a single-pointer alternative.
-- **Consistent Help**: help/contact is in a consistent location across pages.
+- **Consistent Help**: repeated help mechanisms (contact details, a contact mechanism,
+  self-help, an automated/chatbot channel) appear in the same **relative order** in the content
+  across pages (SC 3.2.6, Level A) — the criterion is *order in the content sequence*, not pixel
+  location.
 - **Redundant Entry**: don't force re-entering info already provided in a flow.
 - **Accessible Authentication**: no cognitive-function test (e.g. solving a
   puzzle, transcribing) with no alternative; allow paste into password/OTP.
