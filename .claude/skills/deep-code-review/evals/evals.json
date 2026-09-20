@@ -3660,6 +3660,16 @@
         "Prescribes making the indicator's area meet the 2px-perimeter equivalent (thicker outline / equivalent-area shape), not merely clearing the contrast floor",
         "Correctly separates 2.4.13's area+contrast (AAA) from 1.4.11 contrast-only (AA), scoping the finding as AAA"
       ]
+    },
+    {
+      "id": "a-file-download-endpoint-builds-a-path-from-user-input-without-containment",
+      "prompt": "A download endpoint serves `res.sendFile(path.join(BASE_DIR, req.query.name))`. A reviewer says 'it joins under BASE_DIR, so files outside are safe.' A request arrives with `?name=../../../../etc/passwd`. What happens, and what's the fix?",
+      "expected_output": "`path.join(BASE_DIR, '../../../../etc/passwd')` normalizes the `..` segments and resolves OUTSIDE BASE_DIR, so `sendFile` serves `/etc/passwd` — classic path traversal (CWE-22). `path.join` does not confine to the base; it concatenates-and-normalizes, and `../` walks up. 'It joins under BASE_DIR' is false. Fix: after resolving, verify the canonical result is still within the base — `const p = fs.realpathSync(path.resolve(BASE_DIR, name)); if (!p.startsWith(BASE_DIR + path.sep)) reject;` (realpath follows symlinks; a lexical `path.resolve` alone would miss a symlink escape, and note the trailing `path.sep` — a bare `startsWith('/base')` also matches `/base-evil`) (canonicalize/`realpath` BEFORE the check; also block absolute-path overrides and symlinks that escape). A denylist of literal `../` is insufficient — bypassable via URL-encoded `%2e%2e` or `....//`. Test with `../`, an absolute path, and an encoded traversal.",
+      "expectations": [
+        "Identifies that path.join/concatenation with `../` resolves OUTSIDE BASE_DIR (path traversal, CWE-22) and serves an arbitrary file — 'joins under BASE_DIR' is false",
+        "Prescribes resolving to a canonical realpath (symlink-following) then verifying it is a TRUE SUBPATH of the base — compared against base + its trailing separator, or a real is-subpath check, not a bare `/base` prefix (which also matches `/base-evil`) — plus rejecting absolute-path overrides and escaping symlinks",
+        "Notes a literal `../` denylist is bypassable (encoded `%2e%2e` / `....//`); test with `../`, an absolute path, and an encoded traversal"
+      ]
     }
   ]
 }

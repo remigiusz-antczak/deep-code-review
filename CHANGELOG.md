@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.281.0] — 2026-09-20
+
+### deep-code-review — wave 202 path traversal on the file serve/download read path (CWE-22)
+
+- **`security-appsec.md`** ("Files, archives & parsers"): serving or downloading a file by a user-supplied path is the same CWE-22 as zip-slip on the read side — `BASE_DIR + name` / `send_file(request path)` / `res.sendFile(req path)` lets `../`, an absolute path, or an escaping symlink read arbitrary files. Fix: resolve to a **canonical `realpath` (symlink-following — a lexical `path.resolve` alone misses a symlink escape)** and verify it is a **true subpath** of the base — compare against base **plus its trailing separator** (a bare `startsWith('/base')` also matches `/base-evil`), reject absolute overrides and escaping symlinks; a bare `../` denylist is bypassable (`%2e%2e`, `....//`). +1 eval. Independent reviewer PASS-WITH-FIXES: added the `/base`-vs-`/base-evil` trailing-separator/subpath caveat and the realpath-vs-lexical-resolve symlink distinction (both prose + eval). Closes no filed issue (CWE Top 25 comparative pass; rank-5 PARTIAL — only zip-slip + PHP LFI were covered).
+
 ## [1.280.0] — 2026-09-20
 
 ### deep-code-review — wave 201 WCAG 2.2 precision: Consistent Help is order-not-location; Focus Appearance has an area prong

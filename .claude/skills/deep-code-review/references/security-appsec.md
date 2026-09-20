@@ -364,7 +364,18 @@ a separate origin, or `Content-Disposition: attachment` +
 `X-Content-Type-Options: nosniff`, never inline on the app origin. Archive
 extraction: reject entries whose resolved path escapes the target dir
 (**zip-slip**, CWE-22), plus symlinks, absolute paths, and decompression bombs
-(cap entry count and uncompressed size). XML parsers: **disable external
+(cap entry count and uncompressed size). **Serving or downloading a file by a user-supplied
+path is the same CWE-22 on the read side:** a handler that opens `BASE_DIR + name`,
+`send_file(request.args['path'])`, or `res.sendFile(req.query.path)` lets `../` — or an
+absolute path or an escaping symlink — walk out of the base and read arbitrary files
+(`/etc/passwd`, secrets, another tenant's data). **Resolve to a real, canonical path
+(`realpath`, which follows symlinks — a lexical `path.resolve` alone does not) and verify it is a
+true subpath of the base** — compare against the base **plus its trailing separator**, or use a
+real is-subpath check, since a bare string-prefix on `/base` also matches `/base-evil`;
+canonicalize *before* the check, reject absolute overrides, and reject an escaping symlink; a
+bare `../` denylist is bypassable
+(`%2e%2e`, `....//`). Grep `sendFile`/`send_file`/`send_from_directory`/`open(<dir> + <input>)`
+with no post-resolve base-prefix check. XML parsers: **disable external
 entities and DTDs** (XXE, CWE-611) — `defusedxml` in Python,
 `setFeature(FEATURE_SECURE_PROCESSING, true)` / disallow-doctype-decl in Java,
 `noent: False` for lxml. Same posture for any format with an include/reference
