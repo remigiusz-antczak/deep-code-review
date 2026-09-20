@@ -90,7 +90,10 @@ label:
   internal users, or a named demographic), with a **named halt metric** and an
   automatic-rollback path on regression of that metric — not only an error-rate
   check; a real "immune system" watches a business metric too, since a broken
-  feature can be 200-OK and still wrong.
+  feature can be 200-OK and still wrong. The halt metric must be **partitioned by
+  the canary cohort** (`service.version` or an equivalent tag) — an unpartitioned
+  metric blends canary and baseline traffic and can never regress-check
+  (`observability.md`, telemetry resource identity).
 - **Blue-green**: two environments actually provisioned, the idle one tested,
   and cutover is a **router flip** — find the router/traffic-split config, not
   just the runbook step that says "flip."

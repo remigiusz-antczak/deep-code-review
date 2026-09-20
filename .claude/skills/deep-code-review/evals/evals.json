@@ -3750,6 +3750,26 @@
         "Prescribes stubbing the payment, model, and DB boundaries and probing the pure decision logic against the stubs",
         "If it can't be isolated: skip and record could-not-check (distinct from found-nothing) + fall back to static read — never fire a real side effect for a result"
       ]
+    },
+    {
+      "id": "a-canary-halt-metric-needs-a-version-cohort-dimension-in-telemetry",
+      "prompt": "A PR says 'canary rollout with automatic rollback if error rate regresses.' The deploy config does split 5% of traffic to the new build. The telemetry stamps `service.name` on every metric but no version and no cohort tag. Is the canary's automatic rollback actually implementable as described?",
+      "expected_output": "No — the halt metric as described cannot be computed. Automatic rollback 'on regression' means comparing the canary cohort's error rate against the baseline's, but with only `service.name` (no `service.version` or cohort tag) on the telemetry, the 5% canary traffic and the 95% baseline are merged into one undifferentiated metric — there is no dimension to split them by, so 'canary error rate vs baseline' is not a query you can run. The traffic split is real but the measurement is not: a canary that is 100% broken only moves the blended error rate by ~5%, which may not cross a threshold at all. Fix: stamp a stable resource identity that includes `service.version` (OpenTelemetry `service.version`, Stable) or an explicit canary cohort tag, and partition the halt metric by it so the canary cohort is compared against baseline; a named halt metric that reads an unpartitioned series is measuring a blend and can never regress-check. (observability.md telemetry resource identity + release-engineering.md canary.)",
+      "expectations": [
+        "Says the rollback is NOT implementable as described because with only service.name (no version/cohort dimension) canary and baseline traffic merge into one metric that can't be split",
+        "Notes the consequence: a badly-broken 5% canary barely moves the blended rate, so the threshold may never fire",
+        "Fix: stamp service.version (or a canary cohort tag) and partition the halt metric by it so canary is compared against baseline — an unpartitioned series can't regress-check"
+      ]
+    },
+    {
+      "id": "staging-and-prod-collide-in-one-slo-without-an-environment-dimension",
+      "prompt": "A service computes multi-window burn-rate SLOs from its telemetry. Staging and production both emit with `service.name=frontend` to the same metrics backend; there is no environment attribute. A reviewer is told 'staging traffic is tiny, so it can't matter.' Is that reasoning sound?",
+      "expected_output": "No — this is a correctness defect, not a volume question. Per the OpenTelemetry spec, `deployment.environment.name` 'does not affect the uniqueness constraints defined through the service.namespace, service.name and service.instance.id resource attributes,' so `service.name=frontend` in production and in staging 'MUST be considered to be identifying the same service' — the two environments are, by default, one identified resource. Staging errors, deploys, and load tests therefore land in the production SLO's error budget: a staging incident or a load test burning errors can trip a production burn-rate alert (false page) or silently consume budget, and 'staging is tiny' is irrelevant because a deliberately-failing staging run is unbounded. This collision is the default behavior, not an edge case. Fix: add `deployment.environment.name` (or `service.namespace`) as a resource dimension and scope every SLO/burn-rate query to `production`, so staging and prod are distinct series. (observability.md telemetry resource identity + role-coverage.md SRE burn-rate.)",
+      "expectations": [
+        "Rejects the 'staging is tiny' reasoning — the defect is identity collision, not volume; a deliberately-failing staging/load run is unbounded",
+        "Grounds it in the OTel uniqueness rule: same service.name across environments is by default the SAME identified service (deployment.environment.name does not affect uniqueness), so staging errors land in the prod SLO/error budget",
+        "Fix: add deployment.environment.name / service.namespace and scope every SLO/burn-rate query to production so the environments are distinct series"
+      ]
     }
   ]
 }
