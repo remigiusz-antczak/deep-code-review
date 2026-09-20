@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.360.0] — 2026-09-21
+
+### agentic-delivery — absent CI checks are a distinct third gate-state, not a slow "pending"; bounded-wait then re-trigger (#849)
+
+- **`fast-agentic-delivery.md`**: completes the gate-state triad — #801 (base-admission: pending ≠ red), #833 (red-verdict: a first red is a candidate flake), and now #849 (**member-readiness: absent checks ≠ slow pending**). An uncomputable merge ref (a base advance while the PR is dirty/conflicting, a runner-queue backlog) suppresses the run, so the PR shows **no checks** — fatally easy to misread as "still pending" or "clean." Discriminator: zero-checks + `dirty`/`CONFLICTING` = **stalled** (re-fire: fetch + merge-of-base + push, or rebase); zero-checks + `MERGEABLE` = genuinely just-triggered (bounded wait). Time-box it and never read zero-checks as a verdict (not an implicit pass, not a stable pending). Distinct from a config-unsatisfiable required check (a different cause + remedy). +1 eval.
+
 ## [1.359.0] — 2026-09-21
 
 ### deep-code-review — a Suspense boundary with no async gap inside it is dead code; the fallback never renders (#845)

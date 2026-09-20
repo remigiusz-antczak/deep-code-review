@@ -657,6 +657,64 @@ the **first** non-green of a load-/infra-shaped required check without a bounded
 or one that reruns a **deterministic** assertion failure instead of treating it as real; or a rising
 rerun-went-green ratio nobody is converting into durable gate fixes.
 
+## Absent checks are a third state, not a slow "pending" — an uncomputable merge ref suppresses the run; bounded-wait then re-trigger, never wait forever
+
+The two sections above are how an autonomous drainer reads a check-state bit at two of the
+places it reads one: the *not-red* section sets the **base-admission threshold** (a base run
+still in flight is admissible — pending is not a hold), and the *load-flaky* section sets the
+**red-verdict rule** (a first red is a candidate to reclassify, not a regression conclusion).
+This is the third place — a **member PR's own** readiness — and its rule is that **absent ≠
+slow**: a PR reporting *zero* checks (none at all — not one in flight, not one red) is not a
+check that is merely early, and a drainer that treats it as one waits forever.
+
+The mechanism is that CI runs against a **computed merge ref** (the PR merged into its base),
+not the raw head. When the PR is non-mergeable — `mergeable_state=dirty`: a real conflict, or
+its base advanced past what it last merged — the forge **cannot compute that ref, so it never
+dispatches CI for the head at all** (a runner-queue backlog can suppress the dispatch the same
+way, transiently). The PR then shows **no checks**, which is fatally easy to misread: a human
+or drainer sees "no failures" and reads it as *still pending*, or even *clean*, when in fact
+the run never started and never will for that SHA without intervention. A drainer whose rule is
+"poll until the checks appear and go green" then polls a PR whose checks will never appear —
+the same starvation as the blocked-head case above, but from a head that was never *checked*
+rather than one checked and *refused*.
+
+- **Read `mergeable` / `mergeable_state` alongside the check list — it is the discriminator.**
+  Zero checks + non-mergeable (`dirty` / `CONFLICTING`) = **stalled**: the run was suppressed
+  and needs a re-fire. Zero checks + `MERGEABLE` = **genuinely just-triggered**: a bounded wait
+  is correct. The two act on **different fields, and neither is wait-forever**: poll the
+  *mergeability* field until it settles (the brief `UNKNOWN`-while-recomputing state
+  `branch-and-merge-hygiene.md` bounds to 2–4 tries), then apply bounded-wait-then-re-fire to
+  the *check list*. The check list alone cannot split stalled from fresh; the mergeability field
+  is what does.
+- **Recover by re-triggering, not waiting.** A fresh fetch + merge-of-base + push (or a rebase)
+  recomputes the merge ref; if the re-merge is conflict-free, `mergeable` flips and CI fires
+  within seconds — the rebase / re-run-CI mechanics are `branch-and-merge-hygiene.md`'s, not
+  restated here. A true `dirty` from a real conflict needs that conflict resolved first; either
+  way the move is an **action**, never more polling.
+- **Time-box zero-checks, and never read it as a verdict.** Past a short dispatch-delay
+  threshold **and** while non-mergeable → escalate to a re-merge; do not keep polling. Never
+  interpret zero-checks as an implicit **pass** (the run never ran) or as a stable **pending**
+  (it will never resolve on its own). Track PRs sitting at zero checks while non-mergeable past
+  a normal dispatch delay — a nonzero count is work stalling invisibly on uncomputable merge
+  refs.
+
+Distinct from the **config-unsatisfiable required check** (`branch-and-merge-hygiene.md`'s *a
+required check must be satisfiable* rule, the #262 *no-status* case): there a required check
+**name** never gets a job to report because the workflow is wired wrong (a path filter, a
+trigger-event gap, a missing `on.pull_request.branches` base entry), and the fix is
+**config-side** and permanent — a pass-through job or a corrected `on:` block. Here the workflow
+is correctly wired; a re-merge makes the *same* job fire. Same surface symptom (no status looks
+like pending), opposite remedy — a config fix vs a re-trigger. Distinct too from the
+**serial-drainer spins on a blocked head** rule (above): there the head is green + mergeable but
+refused by a *stricter final gate*, so the drain **advances past** it; here the head was never
+checked at all, so the drain **re-fires** it — advance-past abandons a genuinely-blocked item,
+re-fire rescues a never-started one.
+
+**🚩** an orchestrator turn history that is a run of near-identical "still waiting for CI" ticks
+on a PR that shows **no checks at all** and is non-mergeable — the *emit-on-transition-only*
+tell (below) applied to a state that will **never** transition without a re-merge; the loop is
+not waiting, it is stuck, and the run it is waiting for was never dispatched.
+
 ## An opt-in throughput lever is inert until the default path takes it — attribute the gain to what runs by default, not to the merge
 
 The throughput-lever instance of `SKILL.md` G2's "a cap that defaults to off is not a cap": when a

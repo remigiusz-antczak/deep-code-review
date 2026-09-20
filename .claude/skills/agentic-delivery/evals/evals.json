@@ -918,6 +918,18 @@
         "Bounds the reruns instead of retrying until green, and treats a required gate that keeps needing reruns as its own tracked defect - a stopgap, not the fix: files it for a durable repair (fail-open probe / widened timeout / de-parallelize) and watches the fraction of reruns that go green as the signal the flaky list is outgrowing the fixes.",
         "Draws the deterministic-vs-flaky line: only a shape matching a known-flaky signature is rerun; a deterministic failure (a real assertion / type error, off the flaky list) reproduces and is treated as real immediately, never papered over by a rerun."
       ]
+    },
+    {
+      "id": "zero-checks-after-a-base-advance-is-re-triggered-not-waited-on",
+      "prompt": "An autonomous merge drainer has held one PR for about fifteen minutes, reporting 'still waiting for CI' on every poll. The PR shows no check runs at all - not a failing one, not one still in progress, none have ever appeared for its current head. Other branches pushed around the same time got their check runs within seconds. The drainer's rule is to keep polling a PR until its checks appear and turn green, and it has never checked whether this PR is still mergeable. Is that rule sound here, and what should the drainer do?",
+      "expected_output": "No - the rule waits forever on a run that will never arrive. No checks at all is a distinct state from a check that is still running and from a red one: the PR is non-mergeable (its base advanced past what it last merged, a real conflict, or a runner-queue backlog), so the forge cannot compute the merge ref and never dispatched CI for this head. The drainer must read mergeable/mergeable_state alongside the check list - non-mergeable + no checks = stalled, so re-trigger it (a fresh fetch + merge of base + push, or a rebase, recomputes the merge ref and fires CI within seconds if conflict-free); mergeable + no checks = genuinely just-pushed, so a bounded wait is right. Time-box the no-checks state: past a short dispatch delay while non-mergeable, escalate to a re-merge instead of polling on, and never read no-checks as either an implicit pass or a stable pending.",
+      "expectations": [
+        "Identifies no-checks-at-all as a distinct state - not the same as a check still running, and not a red/failing check - so 'keep polling until checks appear' waits forever on a run that was never dispatched, not on one that is merely early.",
+        "Names the cause: the PR is non-mergeable (base advanced / real conflict / runner backlog), so the merge ref cannot be computed and CI was never dispatched for this head; the checks will not appear on their own without intervention.",
+        "Reads mergeable/mergeable_state alongside the check list as the discriminator - non-mergeable + no checks = stalled, mergeable + no checks = genuinely just-triggered - rather than deciding from the empty check list alone, which the drainer here never even paired with a mergeability read.",
+        "Recovers by re-triggering the run (a fresh fetch + merge of base + push, or a rebase, to recompute the merge ref so CI fires), not by waiting; a true dirty from a real conflict is resolved first.",
+        "Time-boxes the no-checks state (a bounded wait, then re-fire while non-mergeable) and never treats no-checks as an implicit pass or as a stable pending / indefinite wait."
+      ]
     }
   ]
 }
