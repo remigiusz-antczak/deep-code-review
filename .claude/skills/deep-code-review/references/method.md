@@ -133,6 +133,36 @@ and any wired security/dependency scanners. Then, before trusting "green":
   are a common silent green. Trace which test files the gate actually invokes;
   tests present but unwired are "decorative" (procedures:
   `references/testing-and-evals.md`).
+- **The matrix above proves a gate fails closed — it says nothing about which
+  rule or query category the gate actually has turned on.** Alongside (a)-(d),
+  read the enabled config itself (not just its presence) and record, by name,
+  the active tier/category set: a linter's baseline config vs. a broader,
+  opt-in one (typescript-eslint's own rule docs name the *exact* config that
+  enables each rule, not just its coarser recommended/strict label — confirmed:
+  `no-floating-promises`, `no-misused-promises`, and `unbound-method` are each
+  enabled by extending `recommended-type-checked`; `no-unnecessary-condition`
+  requires the separately-named `strict-type-checked`. A project extending only
+  `recommended-type-checked` — already type-aware, already catching the
+  promise/unbound-method class — has no guarantee it also carries
+  `strict-type-checked`'s additional checks, `no-unnecessary-condition` among
+  them: verify the actual config name, don't infer coverage from "type-aware
+  rules are on"), a SAST
+  tool's default query suite vs. a broader named one (CodeQL ships three
+  distinct suites — `default`, `security-extended`, `security-and-quality`), or
+  a linter's documented default rule selection vs. an expanded one (ruff's
+  `select` setting docs document a default selection distinct from `select`,
+  and show `extend-select` adding whole categories "on top of the defaults" —
+  e.g. flake8-bugbear `B` — confirming a real default/expanded split without this
+  skill pinning exact counts, which drift across releases). A gate that is
+  present, non-empty, correctly scoped, and not excluding the changed path can
+  still be calibrated to a tier that structurally cannot catch the class in
+  question — that gap is invisible to (a)-(d) because the config isn't missing,
+  empty, wrong, or path-excluding, it is simply narrower than the review needs.
+  When it is, name the omitted class in the report (e.g. "this config's enabled
+  rules don't include the check that would flag a type-proven-unreachable
+  branch") as a fact for the reviewer/owner to weigh — this records what the
+  gate cannot see, it does not mandate raising the tier (principle 5: judge a
+  gate's calibration in context, don't impose a stricter one).
 - **A gate reports only on the scopes that actually ran — a skipped scope is
   `unverified`, not clean.** A pass is evidence only where the enforcing surface
   could **see** the artifact it checks (`SKILL.md` principle 2). A multi-scope gate

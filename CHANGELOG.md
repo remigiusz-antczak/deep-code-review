@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.348.0] — 2026-09-20
+
+### deep-code-review — verify WHICH rule tier a linter/scanner gate enables, not just that it runs (method.md)
+
+- **`method.md`**: the Phase-1 gate-verification matrix gains a step — after confirming a linter/scanner gate is present, non-empty, path-scoped, and not excluding the changed path, also **record which rule tier / query category it actually enables**, and flag when a baseline tier silently omits a defect class. A project passes "the gate runs" while structurally unable to catch whole classes — e.g. typescript-eslint's `no-floating-promises` / `no-misused-promises` / `unbound-method` need `recommended-type-checked` and `no-unnecessary-condition` needs `strict-type-checked`; CodeQL ships three query suites (`default` / `security-extended` / `security-and-quality`); ruff's default `select` vs an expanded one. Records and flags the tier for the reviewer/owner to weigh — it does **not** mandate a stricter tier (principle 5: judge a gate's calibration in context). +1 eval. Verified by direct fetch 2026-09-20. (Found by an internal SAST/linter-catalog gap-analysis.)
+
 ## [1.347.0] — 2026-09-20
 
 ### deep-code-review — HTTP header census (#815), MFA fatigue/OTP handling (#816), transaction authorization (#817)
