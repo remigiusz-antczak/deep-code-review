@@ -132,6 +132,19 @@ Phase 5 can state, per unit, **who actually covered it — finder id *and* lead-
 — the "no silent caps" principle applied to the fan-out's own completeness, not
 only to sampling inside a unit.
 
+- **A collision check reads a PR's file list *paginated*, never `gh … --json files` (100-file
+  cap).** `gh pr view/list --json files` silently truncates a PR's file list (**100 files** on the current `gh`
+  client — an open client-side bug, `cli/cli#13338`, not the REST API's documented page limit) — no error, no
+  warning — so a lane cleared as "no overlap" against a large in-flight PR can still collide with a
+  file the capped list never showed, producing the exact concurrent-writer conflict the check exists
+  to prevent. Read owned/changed paths from the paginated REST endpoint:
+  `gh api repos/:owner/:repo/pulls/<n>/files --paginate --jq '.[].filename'`. Same failure class as a
+  bare `gh pr/issue list` truncating to its default page (the *mind pagination* rule,
+  `agentic-delivery/references/fast-agentic-delivery.md`) and a forge-only absence check missing a
+  local worktree (#413): a `gh` read returns a truncated view **without erroring**, and a partial
+  read yields a wrong "safe" / "absent" conclusion — treat every `gh` read as
+  **paginated-until-proven-complete** before a collision or absence verdict.
+
 ### Invariant catalog (pick one per unit — do not invent overlapping "find issues")
 
 | Unit id | Invariant (one sentence) |
@@ -439,6 +452,16 @@ the fan-out's *shape***, reported **once** with a remedy — not one finding per
   never infer from "the branch has a recent green"; treat "no run for this SHA" as a
   third state (not passed, not failed → re-dispatch a run for this head, then decide), matching the required-check-must-report discipline in `branch-and-merge-hygiene.md`. Reduce the race
   at source: scope cancel-in-progress so it never cancels the newest run. That silent fail-open merge is a merge-safety defect, **not** this cost section’s default Medium: its severity is inherited from the unverified head it lands, not from runner cost.
+- **A merge guard must not render a `CANCELLED` run as a *failure* — that fails closed on a green
+  head.** The mirror of the fail-open read above: a guard that buckets `CANCELLED` (a superseded /
+  concurrency-cancelled run) with `FAILURE` **blocks a genuinely-mergeable PR** as red. Distinguish
+  **four** states per required check — `PASS`, `FAIL`, `PENDING`/`IN-PROGRESS`, and `NO-RUN` — and
+  treat `CANCELLED` as a subset of **PENDING** (transient: re-dispatch or wait for the live run),
+  never as `FAIL`. Select the run **deterministically — latest per check *name* at the exact head
+  SHA** — group the runs by check name at that SHA, then take the one with the latest
+  **completion time**, never "latest by creation order" (which can return the cancelled sibling). In the status table, `PENDING` /
+  `CANCELLED` must read as visually distinct from `FAIL` — a `CANCELLED` row rendered red is the
+  defect.
 - **Path filters must fail closed.** A filter that **skips** a gate on an
   *unrecognized* path silently drops it — a **gate exclusion**, and a path filter is
   exactly the config `method.md`'s *enumerate what the gates exclude* rule tells you to

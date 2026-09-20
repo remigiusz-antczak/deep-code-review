@@ -3,6 +3,14 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.256.0] — 2026-09-20
+
+### deep-code-review — wave 177 parallel-audit: CANCELLED-run merge-guard fail-closed + collision-check must page a PR's files (closes #605, closes #609)
+
+- **`parallel-audit.md`** (#605): a merge guard must not render a `CANCELLED` run as FAILURE (the fail-closed mirror of the file's existing fail-open cancel-race note). Distinguish 4 states — PASS/FAIL/PENDING/NO-RUN, `CANCELLED` a subset of PENDING; select the run by grouping per check name at the exact head SHA and taking the latest completion time (not "latest by creation order," which can return the cancelled sibling); the status table shows PENDING/CANCELLED distinct from FAIL.
+- **`parallel-audit.md`** (#609): a collision check must read a PR's file list paginated — `gh pr view/list --json files` silently truncates at 100 files (current `gh` client bug `cli/cli#13338`, verified live), so a "no overlap" clear on a large PR is unsound; use `gh api repos/:owner/:repo/pulls/<n>/files --paginate`. Same truncation class as the mind-pagination rule + the forge-only occupancy check (#413).
+- +2 evals. Closes #605, #609. Independent reviewer PASS-WITH-FIXES (corrected a mis-cited issue #560→#413, cross-ref path to house convention, made the run-selection rule completion-time-primary, framed the 100-cap as current client behavior, tightened the merge-guard eval).
+
 ## [1.255.0] — 2026-09-20
 
 ### deep-code-review — wave 176 a11y detector method: focus-indicator contrast floor + reduced-motion symptom-audit (closes #598, closes #599)

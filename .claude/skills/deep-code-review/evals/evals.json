@@ -3201,6 +3201,26 @@
         "Prescribes auditing by the symptom set (scrollIntoView/scrollTo/scrollBy with behavior, scroll-behavior:smooth, Element.animate, rAF, autoplay/carousel), each branching on matchMedia / the existing hook",
         "Notes the fix reuses the reduced-motion hook the codebase already has (cited as the patch), not a new pattern"
       ]
+    },
+    {
+      "id": "merge-guard-must-not-treat-a-cancelled-run-as-a-failure",
+      "prompt": "A merge guard reads the latest check run by creation order for a PR's head and renders its status table. Under rapid pushes, run A (CANCELLED as superseded) and run B (PASS) both exist for the head SHA; the guard picks run A and shows the required check red, blocking a PR whose head actually passed. What's wrong and how should the guard work?",
+      "expected_output": "The guard fails closed on a green head by conflating CANCELLED with FAILURE and by selecting the run non-deterministically. A CANCELLED run (superseded / concurrency-cancelled) is a transient state, not a verdict; rendering it red blocks a genuinely-mergeable PR. Fixes: (1) select the run deterministically — group runs by check NAME at the exact head SHA and take the latest by completion time, never 'latest by creation order,' which returned the cancelled sibling here instead of run B. (2) Distinguish four states per required check — PASS, FAIL, PENDING/IN-PROGRESS, NO-RUN — and treat CANCELLED as a subset of PENDING (re-dispatch or wait for the live run), never as FAIL. (3) In the status table, PENDING/CANCELLED must be visually distinct from FAIL; a CANCELLED row rendered red is the defect. This is the fail-closed mirror of the fail-open cancel-race (merging an earlier green while the final head has no run for its SHA).",
+      "expectations": [
+        "Identifies the guard conflates CANCELLED (a transient/superseded state) with FAILURE, and that the PR is genuinely mergeable BECAUSE a PASS run exists at the same head SHA — so blocking it is a fail-closed error, not a real gate",
+        "Requires deterministic selection: latest run per check NAME at the exact head SHA (not latest-by-creation-order, which returned the cancelled sibling)",
+        "Prescribes a 4-state model (PASS/FAIL/PENDING/NO-RUN, CANCELLED as a subset of PENDING) and a status table showing PENDING/CANCELLED distinct from FAIL"
+      ]
+    },
+    {
+      "id": "collision-check-must-page-a-prs-file-list-not-gh-json-files-100-cap",
+      "prompt": "A one-writer-per-file collision check reads an in-flight PR's changed files with `gh pr view <n> --json files` and clears a new lane because none of those files overlap. The PR is a 700-file release. Is the 'no overlap' conclusion safe?",
+      "expected_output": "No — gh pr view/list --json files silently caps at 100 files per PR, with no error or warning, so on a 700-file PR the check saw at most 100 of them and the lane may collide with any of the other ~600 files the capped list never showed — producing exactly the concurrent-writer conflict the check exists to prevent. Read the file list from the paginated REST endpoint instead: gh api repos/:owner/:repo/pulls/<n>/files --paginate --jq '.[].filename'. This is the same failure class as a bare gh pr/issue list truncating to its default page and a forge-only absence check missing a local worktree: a gh read returns a truncated view without erroring, and a partial read yields a wrong 'safe'/'absent' conclusion. Treat every gh read as paginated-until-proven-complete before basing a collision or absence verdict on it.",
+      "expectations": [
+        "Identifies that gh --json files silently caps at 100 files per PR (no error), so 'no overlap' on a 700-file PR is unsound — the check saw at most 100 files",
+        "Prescribes the paginated REST read (gh api .../pulls/<n>/files --paginate) for the file list",
+        "Generalizes: a gh read returns a truncated view without erroring; treat every gh read as paginated-until-proven-complete before a collision/absence conclusion"
+      ]
     }
   ]
 }
