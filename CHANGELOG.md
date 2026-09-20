@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.341.0] — 2026-09-20
+
+### deep-code-review — custom Select/combobox widgets can't expose "required" when the shared field wrapper hides its own asterisk (#800)
+
+- **`frontend-a11y.md`**: a new **Forms** bullet. A shared `Field` wrapper's required asterisk is correctly `aria-hidden` for the glyph, but a custom button+listbox combobox (`role="combobox"` trigger + portaled `role="listbox"`) composed inside `<Field required>` with no `required`/`aria-required` prop exposes "required" through **no channel at all** — unlike a native `<select required>`, which gets the mapping for free via HTML-AAM. Detection (grep the wrapper for a visual-only indicator; inspect the custom widget's props/trigger and the accessibility tree, not the DOM), fix (thread `required` → `aria-required`, ideally via wrapper context), and a regression test on the **composition**, not either component alone. +1 eval.
+- **`docs/standards-index.md`**: four rows verified by direct fetch 2026-09-20 — WCAG 2.2 SC 3.3.2 (ARIA2 recorded as an *advisory* technique, not a sufficient one), SC 4.1.2 (cited narrowly for the script-generated-component principle, not as mandating `aria-required`), WAI-ARIA 1.2 `aria-required` (Used-in-Roles includes `combobox`/`listbox`/`textbox`), and HTML-AAM `required` (flagged a W3C Working Draft, not a Recommendation).
+
 ## [1.340.0] — 2026-09-20
 
 ### deep-code-review — agent correctness beyond budget caps: a capped loop is not a correct loop (#798); name-only OWASP Agent Control Standard (#799)
