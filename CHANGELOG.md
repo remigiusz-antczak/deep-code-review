@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.251.0] — 2026-09-20
+
+### deep-code-review — wave 172 a wrapping `<label>` does not name a control built on a non-labelable host element (closes #569)
+
+- **`frontend-a11y.md`**: HTML `<label>` only names *labelable* elements (`<input>`, `<button>`, `<select>`, `<textarea>`, `<meter>`, `<output>`, `<progress>`, and form-associated custom elements). A widget built on a non-labelable `<div>`/`<span>` given an ARIA role is not named by a wrapping or adjacent `<label>`, so with an `aria-hidden` glyph as its only content it announces with no accessible name — while the JSX looks plausibly labeled and passes a shape-based review. Fix: name it with `aria-labelledby`/`aria-label` and verify the platform-computed accessible name in the accessibility tree. Corrects an earlier wrong framing that blamed the role override rather than the host element: adding a role to a labelable element (`<button role="switch">`) does not lose its label — the WAI-ARIA APG recommends exactly that.
+- +1 eval. Closes #569. Independent reviewer PASS-WITH-FIXES; the prescribed fix (form-associated custom elements are also labelable, per the WHATWG HTML spec) applied to the bullet and eval.
+
 ## [1.250.0] — 2026-09-20
 
 ### agentic-delivery — wave 171 cut per-lane cycle-time before adding lanes (throughput = WIP / cycle-time) (closes #570)

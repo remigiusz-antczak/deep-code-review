@@ -3121,6 +3121,16 @@
         "Prescribes cutting per-lane cycle-time first — diff-affected tests + cached dependency installs — with the full suite still gating the batch/merge-union (correctness preserved)",
         "Names further levers (batch per PR, merge train, remote/cloud runners to break the machine cap, eliminate rework) rather than just adding lanes"
       ]
+    },
+    {
+      "id": "a-role-remapped-control-wrapped-in-a-label-may-have-no-accessible-name",
+      "prompt": "Review this custom checkbox for accessibility:\n\n```html\n<label>\n  Accept terms\n  <div role=\"checkbox\" aria-checked=\"false\" tabindex=\"0\">\n    <span class=\"box\" aria-hidden=\"true\"></span>\n  </div>\n</label>\n```\nThe reviewer notes 'it's wrapped in a `<label>`, so it's labeled' and moves on. Is that right?",
+      "expected_output": "No. HTML `<label>` only names labelable elements (`<input>`, `<button>`, `<select>`, `<textarea>`, `<meter>`, `<output>`, `<progress>`, and form-associated custom elements). This control is built on a `<div>` (given `role=\"checkbox\"`), which is NOT labelable, so the wrapping `<label>`'s \"Accept terms\" text is not taken as its accessible name; the div's only content is an `aria-hidden` box, so it announces with NO name — \"checkbox, not checked\" instead of \"Accept terms, checkbox, not checked.\" It looks plausibly labeled in the DOM, so a shape-based review misses it. Fix: name it explicitly with `aria-labelledby` (pointing at the visible \"Accept terms\" text's id) or `aria-label`, and verify the platform-computed accessible name in the accessibility tree (devtools/axe), not the DOM. (Had this been a labelable element with a role — `<button role=\"switch\">`, `<input type=\"checkbox\" role=\"switch\">` — the `<label>` would still name it; the fault here is the non-labelable `<div>` host, not the role.)",
+      "expectations": [
+        "States a wrapping `<label>` only names LABELABLE elements (input/button/select/textarea/meter/output/progress, and form-associated custom elements) — a control built on a non-labelable `<div>`/`<span>` (even with an ARIA role) is not named by it",
+        "Identifies the concrete failure: the aria-hidden box leaves no name source, so the control announces with no name ('checkbox, not checked'), and it passes a DOM/shape-based review",
+        "Prescribes naming it via aria-labelledby/aria-label AND verifying the platform-computed accessible name in the a11y tree (not the DOM); does NOT wrongly claim adding a role to a labelable element loses its label"
+      ]
     }
   ]
 }

@@ -38,6 +38,21 @@ without regressing a deliberate design.
   `<h1..h6>` in order, `<label>`, `<table>` with headers) before ARIA. ARIA
   only to fill gaps; a wrong `role` is worse than none. First rule of ARIA: use
   a native element if one exists.
+- **A custom control built on a *non-labelable* element is not named by a wrapping
+  `<label>` — name it explicitly and verify the computed name.** HTML `<label>` only names
+  **labelable** elements (`<input>`, `<button>`, `<select>`, `<textarea>`, `<meter>`,
+  `<output>`, `<progress>`, and form-associated custom elements). A widget built on a **`<div>` or `<span>`** given an ARIA role
+  (`<div role="checkbox">`, `<span role="button">`) is **not** in that set, so a wrapping (or
+  adjacent) `<label>`'s text is **not** taken as its accessible name — and if the element has
+  no text of its own (its visible content is an `aria-hidden` glyph), it announces with **no
+  name** ("checkbox, not checked" instead of "Accept terms, checkbox, not checked"). The JSX
+  can look plausibly labeled, so a shape-based review misses it. (Adding a `role` to a
+  *labelable* element — `<button role="switch">`, `<input type="checkbox" role="switch">` — does
+  **not** lose the label; the WAI-ARIA APG recommends exactly that as the robust switch. The
+  fault is the non-labelable **host element**, not the role override.) Fix: name the control
+  explicitly with `aria-labelledby` (referencing the visible label's id) or `aria-label`, and
+  **verify the platform-computed accessible name** in the accessibility tree (devtools / axe),
+  not the DOM — the same computed-name harvest the cross-view-consistency check below performs.
 - One `<h1>` per page/view; headings describe structure, not styling.
 - Landmarks present; a skip-to-content link for keyboard users.
 
