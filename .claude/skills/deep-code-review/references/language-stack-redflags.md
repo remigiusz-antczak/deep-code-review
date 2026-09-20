@@ -54,6 +54,16 @@ grep -rInE 'console\.log|print\(|dbg!|System\.out\.print|fmt\.Print' .
 - `a || b || default` over decoded JSON/config → the same **falsy**-skip footgun (`0`, `false`,
   `""`, `NaN` fall through). Use `??` (nullish coalescing) so only `null`/`undefined` fall back,
   and test with `0`/`false`/`""` present.
+- A shared sort comparator that can return `NaN`: an `isMissing`/`isBlank` guard covering
+  `null`/`undefined`/`''` but not `NaN` lets a `NaN` (failed `parseFloat`/`Number()`, `0/0`, an
+  unresolved average — all `typeof 'number'`) slip the type dispatch into `a - b`, so the comparator
+  returns `NaN`. `Array.prototype.sort` never throws on this and the order is silently corrupt — one
+  `NaN` can scramble the order of *other* valid values, not only misplace itself. Fold
+  `Number.isNaN(v)` into the *same* "missing" predicate every caller shares (missing sorts last, both
+  directions); regression-test one `NaN` among several distinct numbers and assert **global
+  monotonicity** of the sorted result in both directions, not just where the `NaN` landed. Distinct
+  from the attacker-chosen-key comparator DoS below — that is worst-case *complexity*; this is a
+  wrong *return value*.
 - `Math.random()` for tokens/ids → use `crypto.randomBytes`/`randomUUID`.
 - `any`, `as any`, `@ts-ignore`, `!` non-null assertions → type holes; `TS` set
   to non-`strict`.

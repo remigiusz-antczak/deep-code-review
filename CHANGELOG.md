@@ -3,6 +3,14 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.328.0] — 2026-09-20
+
+### deep-code-review — a shared sort comparator that returns NaN silently corrupts the whole sort (#761); a single-entity detail overlay that returns the whole collection and is uncached (#755)
+
+- **`language-stack-redflags.md`** (JS/TS correctness): (**#761**) a shared sort comparator whose `isMissing`/`isBlank` guard covers `null`/`undefined`/blank but not `NaN` lets a `NaN` (a failed `parseFloat`/`Number()`, `0/0`, an unresolved average — all `typeof 'number'`) slip the type dispatch into `a - b` and return `NaN`. `Array.prototype.sort` never throws on this and the order is silently corrupt — one `NaN` can scramble the order of *other* valid values, not only misplace itself. Fold `Number.isNaN(v)` into the same shared "missing" predicate every caller uses, and regression-test one `NaN` among distinct numbers asserting global monotonicity of the whole result in both directions, not just the `NaN` element's slot. Distinct from the attacker-chosen-key comparator DoS (CWE-407) already in the file. Closes #761.
+- **`performance-db-cost.md`** (payload/compute cost): (**#755**) a generic detail overlay/drawer opened from many pages whose data source returns the *entire* underlying collection on every open (defended by a real cross-reference correctness comment) while marked `no-store` — so a large build-time/batch-static majority is recomputed and retransmitted in full on every open across every mount site, though only a small slice is request-volatile. The justifying comment answers the payload-*shape* question, not the orthogonal *caching* one. Fix: split cached-static from volatile (version/build-id or ETag keyed), narrow to a per-id/kind projection where the cross-reference requirement allows, and pin a byte-size-ceiling regression test given the fan-in. Distinct from column-level over-fetch above. Closes #755.
+- +2 evals (deep-code-review suite → 429). Built in-tree by the finalizer; gated on independent review before merge.
+
 ## [1.327.0] — 2026-09-20
 
 ### deep-code-review — product-ux: whole-row click/keyboard affordance hardened on one page's renderer but missed on a sibling page's separate renderer (#707)

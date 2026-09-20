@@ -47,6 +47,21 @@ of work earn its keep?**
   (yielding different row orders) depending on what you give for LIMIT and OFFSET,"
   PostgreSQL §7.6 *LIMIT and OFFSET*); no writes between page fetches does not make plain
   `OFFSET` pagination safe — only a total, unique `ORDER BY` does.
+- **Whole-collection payload for a single-entity view**: a generic detail overlay/drawer (opened
+  from many pages, for many entity kinds) whose data source returns the **entire** underlying
+  collection on every open — not a projection sized to the one requested id — because a few renderers
+  cross-reference sibling entities. The whole-collection shape is usually defended by a real,
+  previously-litigated correctness comment, which stops review from asking the **orthogonal**
+  question: given that shape, why is it *also* uncached? Marked `no-store` / no `Cache-Control`
+  "because the data can change," it recomputes and retransmits a large **build-time/batch-static**
+  majority (descriptions, formulas, prompts) in full on every open, while only a small slice (a live
+  status, a pending-changes index) is genuinely request-volatile. Fix: branch on the requested
+  id/kind for a right-sized projection where the cross-reference requirement allows; and split
+  caching — cache the deterministic majority (keyed by the data's version/build id, or HTTP
+  cache/ETag) and fetch only the volatile slice per request. Pin a **byte-size ceiling** regression
+  test, since this surface is paid from every mount site (grep the fan-in) and grows silently with
+  the collection. Distinct from column-level over-fetch above (that trims columns; this trims the
+  row-set *shape* and fixes the caching axis).
 - **Push work to the DB**: filter/aggregate/join in SQL, not by pulling rows into
   app memory and looping. But don't hide an unbounded computation behind a view.
 - **Connections & transactions**: a pooled connection (not one per call) — and
