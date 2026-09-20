@@ -396,6 +396,30 @@ Procedures for all four are in `references/security-appsec.md`. Then actively tr
 to break auth, inject, exfiltrate, exhaust, poison, and to find useless/costly
 work. Assume a hostile user **and** a hostile upstream.
 
+**Beyond the security openers, author a disposable probe test to *discover* an
+unsuspected defect in changed logic — do not stop at the tests that already exist.**
+Each dynamic move so far leans on something already present: the planted-defect
+probe (Phase 1) mutates code to prove a *gate* catches a *known, injected* defect;
+fix-verification (Phase 4 below) runs the *existing* suite against a *suspected*
+finding; the openers above attack a *running* security surface. None exercises a
+new or changed **correctness-bearing** unit — a calculation, a state transition, a
+parser/validator, an off-by-one boundary — when no test reaches it. For such logic,
+write a **minimal, disposable** test that calls it at its stated boundary conditions
+in the same throwaway worktree at `START_SHA` the planted-defect probe uses (a
+transient artifact under the same principle-7 bound; never the working tree). A
+**red** result is a finding with a real repro attached — a stronger claim than a
+static read. A **green** result records only *"no defect at the inputs probed,"*
+with the probe and its inputs; it is **not** an invariant, and is promoted to a
+`checked_sound` / *Invariants verified to hold* row (`report-format.md`) **only if
+the test pins the property** across the input class, not one example. **Bound the
+blast radius before you run it:** the throwaway worktree contains *filesystem*
+effects, not *outbound* ones — if the unit cannot be exercised without a network,
+paid, or stateful call (a payment or model-calling handler, a live DB write),
+**stub that boundary or skip**, and record `could-not-check` (distinct from
+found-nothing) rather than fire a real side effect to get a result. Principle 5's
+spend bound and the could-not-check-vs-found-a-problem discipline apply to the
+reviewer's own probe, not only to the target's gates.
+
 **Phase 4 — Synthesize & rank.** Deduplicate, assign severity, separate blocking
 from non-blocking. Note systemic patterns (one root cause behind many symptoms)
 rather than listing every instance. **A finding matching a copyable idiom** — a guard
