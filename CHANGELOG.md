@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.318.0] — 2026-09-20
+
+### agentic-delivery — four operating-doctrine fixes (worktree-reclaim-on-push #538; revert not gated by its own ratchet #734; report the operator's metric #708; self-updating escape command #534)
+
+- **`fast-agentic-delivery.md`** four addendum folds: (**#538**) reclaim a worktree once the lane has reported done AND local HEAD == origin/<branch> AND the tree is clean, **paired with a positive liveness check** (pushed+clean alone isn't proof a lane stopped) — not only on merge; (**#734**) a revert-to-green must not be blocked by the very absolute-count ratchet it restores; (**#708**) report the operator's own metric (open-issue count/delta), not the agent's merge-count proxy, and reconcile continuously; (**#534**) the human escape-hatch one-action ask must be a self-updating/idempotent command, not a stale per-batch PR list. +4 agentic-delivery evals. Closes #538, #734, #708, #534.
+- Built by a worktree builder subagent, independently reviewed **PASS-WITH-FIXES**: applied the must-fix — the #538 eval had shipped the exact **false-universal** ("a still-running lane always has unpushed WIP, so it can never be reclaimed by mistake") that the prose fix retires; corrected the eval to require the lane-done + liveness pairing, and fixed a backwards "(above)" → "(the transcript-is-not-liveness rule below)" cross-reference.
+
 ## [1.317.0] — 2026-09-20
 
 ### deep-code-review — pagination correctness (page-token opacity; LIMIT/OFFSET undefined without ORDER BY)

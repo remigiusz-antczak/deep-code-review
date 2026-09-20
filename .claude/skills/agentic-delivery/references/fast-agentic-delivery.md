@@ -191,6 +191,13 @@ branches escape the usual merged-branch cleanup.
   directory is gone; worktrees whose branch is merged, whose PR is closed, or idle
   past a threshold **and** holding no uncommitted changes — and executes only on
   explicit approval.
+- **Fully pushed is its own reclaim signal, independent of merge state** — once a lane
+  has reported done *and* local `HEAD` equals `origin/<branch>` with a clean tree, the
+  worktree is redundant whether or not its PR has merged (the branch lives durably on the
+  remote; re-checkout later if needed). Add it to the candidate set **unconditioned on
+  idle-time** — the case a human/permission-gated merge queue needs — but pair it with a
+  positive liveness check (the transcript-is-not-liveness rule below): pushed+clean alone is not proof a lane has stopped
+  writing, since a lane that pushes mid-work and keeps going looks identical.
 - **GC is non-destructive toward uncommitted work** — a candidate holding uncommitted
   changes is refused (or its diff archived and reported first). Reclaiming space must
   never become the mechanism that loses a lane's only copy of its work.
@@ -303,7 +310,18 @@ gated terminal step (a merge, a deploy, a paid call) and has **no autonomous rou
 green, mergeable work stays at **zero landed** — invisible to an operator who watches only the integration
 branch, so a done-but-unlanded agent reads as slow or idle. On the **first** denial, convert the block into a
 **one-action ask**: a single copy-pasteable command the human runs themselves (in host CLIs that provide a user-executed shell prefix — e.g. Claude Code's `! <command>` — that command executes as the *user*, outside the agent's own auto-mode classifier: a legitimate escape hatch, **not** permission-laundering, because the human issues it — the agent must not run the prefix itself or re-route the denied action through any agent-controlled path) or one GUI action, surfaced prominently and repeated, not
-buried under status ticks. **Track banked-verified vs landed**: when banked>0 and landed=0 for more than a tick
+buried under status ticks. **Make the one action a query the human can re-run, not a
+snapshot list that goes stale.** A command hard-coded to today's green PR numbers is
+correct once and wrong an hour later, forcing a re-issued command every batch — the
+repeated pinging this section exists to stop. Hand over a **self-updating, idempotent**
+command instead: discover the eligible set at run time (open PRs on the target branch,
+minus a named held/owner-gated set, filtered to checks-green), merging each with a
+mergeability-recompute retry. This shifts what the human approves from *this list* to
+*this policy* (merge whatever is green, now and on every re-run) — the named
+held/owner-gated exclusion set is now the load-bearing part, since it is what the human is
+actually vetting once they stop reviewing each PR number. The human runs the command once
+and re-runs it later to sweep whatever has since turned green. **Track banked-verified vs
+landed**: when banked>0 and landed=0 for more than a tick
 or two, escalate the human ask rather than re-reporting the block. Never let "the gate is closed" become a
 steady state the agent narrates. **🚩** an unattended run reporting "holding / gated" across many ticks with a
 growing pile of verified-but-unlanded work and no single human-runnable unblock surfaced.
@@ -813,6 +831,17 @@ inflating the **count** — an *infra* "could not run", not a real regression): 
 count is **wrong**; here it is **right but contended**. Same shape as any absolute-threshold
 gate on a shared counter — under concurrency, gate on the **delta the change owns**.
 
+**A further trap survives even after gating on the delta: a revert can be blocked by the
+very gate it needs to bypass.** A ratchet is forward/tightening-only by design, which traps
+a **revert**: undoing a redundant bump to the baseline is judged against the tree's
+**current, still-regressed count**, so the revert itself fails the gate the ratchet exists
+to enforce (observed: a baseline bumped `1015→1016` by three redundant lanes — the lane
+that tried to revert its own bump back to `1015` could not, since the real count was
+already `1016` and the pre-push hook had no override). **A forward-progress ratchet that
+also blocks a revert-to-green is misconfigured — a revert must not be gated by the metric
+it is restoring.** Give it an audited revert path judged against the targeted commit, not
+current HEAD, or size headroom (above) so a redundant bump never needs a same-day revert.
+
 ## Acknowledge a live-feedback burst before dispatching — silent throughput reads as ignoring
 
 When the owner is present and firing many separate pieces of feedback, silently
@@ -961,6 +990,20 @@ into the staging branch, closes only the issues that PR *explicitly* linked with
 the keyword syntax — never a name / branch / title heuristic (a wrong auto-close
 is silent tracker data-loss), least-privilege issue-write, idempotent. Building
 that automation is project tooling and owner-gated; naming the discipline is not.
+
+**Even before that automation exists, reconcile what you *report* against the operator's
+metric.** Their headline number is usually the tracker's **open-issue count**, not the
+agent's own visible proxy (PRs merged) — and the two diverge silently under this exact
+pattern: dozens of real merges can leave the open count **flat**, reading as *stalled* to
+an operator who escalates ("why are you slow?") while the code is fine. Distinct from
+*report the artifact, not the activity* above: there the proxy is the orchestrator's own
+busyness (N lanes running); here the proxy is a real, landed outcome that simply isn't the
+number the operator tracks. State the **operator's own metric** in every status line, not
+the proxy, and name the gap in one line when they diverge ("N merged to
+`<integration-branch>`, open count unchanged — auto-close is default-branch-only"). Run
+that reconciliation **continuously**, the same
+byte-exact-per-issue discipline as the *already-delivered* report above — not only at the
+eventual default-branch promotion, which leaves the queue reading false until then.
 
 ## The auto-close keyword fires on merge — do not write it where the issue should stay open
 
