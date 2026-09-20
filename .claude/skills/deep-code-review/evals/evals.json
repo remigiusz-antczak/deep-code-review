@@ -3111,6 +3111,16 @@
         "States the stale required name reports no status forever and blocks EVERY PR (and names the mirror: a check removed from the workflow but left required)",
         "Fixes by syncing the two sets — update the required name AND derive the required list from the workflow or add a test asserting required-names ⊆ workflow-job-names, so a future rename fails loudly"
       ]
+    },
+    {
+      "id": "capacity-bound-delivery-cut-cycle-time-before-adding-lanes-not-raise-concurrency",
+      "prompt": "An autonomous delivery orchestrator runs 4 concurrent heavy lanes and the machine is at its CPU/RAM cap. To ship faster, the operator wants to bump it to 8 lanes. Each lane spends most of its time re-installing dependencies in a fresh worktree and running the full test suite. Is bumping to 8 lanes the right move?",
+      "expected_output": "No. On a capacity-bound machine throughput = WIP / cycle-time (Little's Law); once lanes saturate the CPU/RAM cap, adding more lanes thrashes (context-switching/contention) and everything crawls — that LOWERS throughput, not raises it. The highest-leverage move is cutting per-lane cycle-time: run only diff-affected tests per lane and cache the dependency installs so they aren't re-paid in every isolated worktree (the full suite still gates the batch/merge-union, so correctness isn't traded away); amortize the fixed gate cost by batching atomic low-collision changes per PR; use a merge train to verify the union once and merge members back-to-back; and eliminate rework via verify-first + decorrelated pre-merge review + auto-merge-on-green. Only break the machine ceiling by moving lanes to remote/cloud runners — don't raise local concurrency past the probed cap.",
+      "expectations": [
+        "States raising lane concurrency past the CPU/RAM cap thrashes and LOWERS throughput — not the right move (throughput = WIP/cycle-time; lanes already saturated)",
+        "Prescribes cutting per-lane cycle-time first — diff-affected tests + cached dependency installs — with the full suite still gating the batch/merge-union (correctness preserved)",
+        "Names further levers (batch per PR, merge train, remote/cloud runners to break the machine cap, eliminate rework) rather than just adding lanes"
+      ]
     }
   ]
 }

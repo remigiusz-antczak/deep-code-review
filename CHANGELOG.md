@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.250.0] — 2026-09-20
+
+### agentic-delivery — wave 171 cut per-lane cycle-time before adding lanes (throughput = WIP / cycle-time) (closes #570)
+
+- **`fast-agentic-delivery.md`**: on a capacity-bound machine throughput = WIP / cycle-time (Little's Law); once lanes saturate the CPU/RAM cap, the highest-leverage move is cutting per-lane cycle-time, not raising lane count (which thrashes and LOWERS throughput). Ranked levers: faster gates (diff-affected tests + cached dep installs, full suite still gates the batch/union), batch atomic changes per PR, merge trains, remote/cloud runners to break the machine ceiling, eliminate rework. Differentiated from the WIP-cap section (admission throttle) and cross-linked to CI-offload; anti-pattern flagged (bumping concurrency past the probed cap).
+- +1 eval. Closes #570. Reviewer FIX applied (dropped an unsupported "cheapest first" ordering; differentiated from the adjacent WIP-cap section; linked lever 1 to the CI-offload section).
+
 ## [1.249.0] — 2026-09-20
 
 ### deep-code-review — wave 170 branch-protection required-check-name drift blocks every PR (closes #549)

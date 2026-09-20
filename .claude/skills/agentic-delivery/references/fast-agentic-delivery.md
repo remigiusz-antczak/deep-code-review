@@ -82,6 +82,25 @@ integrates.
   spawned) each interval; near-zero for a full interval means **stop spawning and
   drain** (finish or kill what's in flight and integrate what exists), never add lanes.
 
+## Once lanes are saturated, cut per-lane cycle-time before adding lanes — throughput = WIP / cycle-time
+
+On a capacity-bound machine (a fixed number of concurrent heavy lanes), delivery throughput is
+**WIP / cycle-time** (Little's Law). Once lanes are saturated, the highest-leverage move is **cutting per-lane
+cycle-time, not raising lane count** — more lanes past the CPU/RAM cap thrash (everything crawls), *lowering*
+throughput. Distinct from the WIP-cap section just above (which throttles lane *admission* by landed artifacts): this throttles *time-in-lane* once admission is already capped — the positive dual of the fan-out-sizing rule. Ranked levers:
+- **Faster gates per lane** — run only **diff-affected** tests (test-impact analysis) and **cache dependency
+  installs** so they are not re-paid in every isolated worktree; the **full suite still gates the batch / merge-union**, so per-lane speed does not trade away correctness (this extends the *CI-offload the heavy gate* section below from a RAM rationale to a cycle-time one, adding dynamic diff-affected selection and dependency-install caching).
+- **Amortize the fixed gate cost** — batch several atomic, low-collision changes into one PR rather than paying
+  a full gate per tiny PR.
+- **Merge trains** — verify the union once, merge members back-to-back, avoiding a per-PR base-CI wait
+  (mechanism in `deep-code-review`'s `branch-and-merge-hygiene.md`).
+- **Break the machine ceiling** — move lanes to remote / cloud runners once the local cap is the bind.
+- **Eliminate rework** — verify-first + decorrelated pre-merge review + auto-merge-on-green, so a lane rarely
+  does a wasted second pass.
+
+**🚩** an orchestrator raising lane concurrency past the probed CPU/RAM cap to "go faster" while per-lane
+cycle-time (setup + gate) is untouched — that lowers throughput, not raises it.
+
 ## Gate on free RAM and the swap trend — `load1` is not a reliable signal alone
 
 `SKILL.md`'s environment probe states the act-on predicate — free RAM and the
