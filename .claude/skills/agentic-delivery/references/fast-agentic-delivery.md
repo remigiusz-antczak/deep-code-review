@@ -1236,6 +1236,57 @@ hard reset on any served tree, and put the dev server under a **health-checked s
 restarts it after a sync (with the UX gate waiting on that health check) so a legitimate resync
 does not read as a broken build.
 
+## Re-running the generator after the commit re-stamps its own output — a one-shot dirty tree that hangs the push
+
+The one-shot cousin of the serve-vs-commit deadlock above: there a *long-running* process holds a
+tracked file dirty for its whole lifetime; here a *single* rebuild-commit-then-verify sequence
+dirties its own just-cleaned tree in one step. A lane that **rebuilds a generated/compiled
+artifact, commits it, then runs the mandated verify gate before pushing** can re-dirty the tree the
+commit just cleaned — when the verify gate **re-invokes the same generator** and that generator
+embeds a **self-referential field that changes on every run by design**: a wall-clock build time,
+the current commit SHA, a build counter, a checksum-of-self. The re-run rewrites that field inside
+the file it just committed; the new value can never match the committed one, so `git status` is
+**dirty again the instant after a clean commit**. The subsequent `git push` (or a pre-push
+clean-tree check) then can't proceed — and the naive fix, re-commit the diff, **loops**, because
+the next verify run stamps it again.
+
+Why it slips: `git status` is clean the moment `git commit` returns, so "committed the rebuild"
+reads as done; the re-dirtying happens one step later, inside the gate whose *job* is to re-derive
+the artifact and prove it matches its sources. When the generator embeds such a field, **"prove the
+tree is fresh (rebuild + diff)" and "the tree stays byte-identical to what's committed" are mutually
+exclusive** — verifying freshness is exactly what re-dirties the tree. Neither the generator
+(correct both times) nor the commit (succeeded) is broken in isolation; only the composition —
+commit, then re-verify with a self-stamping generator — produces the hang.
+
+Any one of three closes it; prefer the first:
+
+- **Make the build reproducible** so the verify re-run is byte-identical and there is nothing to
+  reconcile: derive the embedded commit id from the *committed* commit (or the merge-base) rather
+  than HEAD-at-build-time, pin the timestamp to a **source-controlled value** (the commit's own
+  date, or a fixed epoch) instead of wall-clock, and drop a self-timestamp or checksum-of-self that
+  carries no real information. This attacks the root — the field stops changing between runs.
+- **Order the pipeline so the generate step runs *before* the commit** and is never re-run between
+  commit and push; the verify step then *checks* the committed artifact (diff / hash / schema-assert
+  it) without *regenerating* it.
+- **If the verify gate must regenerate** (its charter is to prove freshness), exclude the declared
+  changing field(s) from the clean-tree check via a normalizing filter, or immediately discard a diff
+  confined to those fields (`git restore` / `git checkout -- <path>`) — never re-commit it (that
+  loops) and never leave it dirty.
+
+For the autonomous lane: a dirty tree that appears **immediately after the lane's own rebuild
+commit**, on only known generated paths, with the diff **confined to the one declared
+self-referential field**, is a *distinguishable, higher-confidence* signal than a dirty tree on
+unrelated edits — self-heal by discarding that diff, never loop a re-commit, and escalate only when
+a *non-stamp* data row actually differs (a real freshness miss, not the churn). Distinct from the
+serve-vs-commit deadlock above (a process dirtying a file for its whole lifetime, not a discrete
+one-shot sequence) and from the fresh-worktree provisioning gap in "A worktree's own gate can fire
+on a file it does not own" above (there the toolchain was simply not installed yet; here it is
+installed and correct, and *re-running* it is what dirties the tree).
+
+**🚩** a rebuild-commit-then-verify sequence whose verify step re-runs the generator; a dirty tree
+on only a generated file's stamp line right after that file's own commit; an auto-pusher that
+re-commits the same one-line diff more than once.
+
 ## An absolute-count ratchet is contended shared state under parallel lanes — gate on the delta, not the tree total
 
 A gate that asserts an **absolute count over the whole tree** — `--max-warnings N`, a

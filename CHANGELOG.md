@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.365.0] — 2026-09-21
+
+### agentic-delivery — re-running the generator after the commit re-stamps its own output; a one-shot dirty tree that hangs the push (#854)
+
+- **`fast-agentic-delivery.md`**: a rebuild-commit-then-verify pipeline that re-runs a generator AFTER the commit re-stamps a generated file's self-referential/volatile field (an embedded timestamp, build-id, or checksum-of-self), so a "tree is clean before push" step always sees a dirty tree and stalls (or an auto-pusher loops). Distinct from the long-running serve-vs-commit dirty-tree deadlock (that holds a file dirty for a process's lifetime) and the fresh-worktree provisioning gap. Fixes, ranked: a reproducible/deterministic build (drop self-timestamps, `SOURCE_DATE_EPOCH`); generate BEFORE the commit and never in the verify step; or exclude/discard the volatile-only diff from the clean-tree check. +1 eval.
+
 ## [1.364.0] — 2026-09-21
 
 ### deep-code-review — a wrapper spreading only tabIndex/onKeyDown is focusable and key-operable but has no role or name (WCAG 4.1.2) (#839)
