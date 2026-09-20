@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.285.0] — 2026-09-20
+
+### deep-code-review — wave 206 delivering & defending a finding (review tone + author-pushback hold-or-concede loop)
+
+- **`report-format.md`** new section **"Delivering & defending findings — tone, and handling pushback."** Two rules the method had implied but never stated for the human-facing side of a review. (1) *Comment on the code, not the author* — state the defect, its impact, and the smallest fix; severity rates **consequence, not blame**; a Blocker is a claim about the code's risk, not an accusation; reserve directive language for a real defect and label a nit so it can't read as a gate (register, not vocabulary — `communication-structure` still governs shape/length). (2) *When the author disputes a filed finding, run a hold-or-concede loop — neither cave nor dig in:* genuinely re-weigh and **drop it if the author is right** (the same base-ref test as `method.md`'s pre-filing `REFUTED`, now applied after the finding shipped); else **restate with more evidence and hold the severity** (a real Blocker doesn't decay to a Nit under pressure); stay civil; if deadlocked, **escalate to a named path and record the resolution** so a later reader sees why. Reflexive concession and reflexive digging-in are named as co-equal failures. **`SKILL.md`** routing for `report-format.md` widened to trigger on "an author disputes a filed finding," not only Phase 5. +2 evals. Independent reviewer PASS-WITH-FIXES (applied: precise "pre-filing `REFUTED`, now applied after the finding shipped" qualifier; de-telegraphed the pushback eval prompt). Closes no filed issue (review-method comparative pass).
+
 ## [1.284.0] — 2026-09-20
 
 ### deep-code-review — wave 205 WCAG 2.2 Accessible Authentication (3.3.8 password-manager support + 3.3.9 Enhanced)

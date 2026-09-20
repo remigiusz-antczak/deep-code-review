@@ -3710,6 +3710,26 @@
         "States that a high-stakes (banking/health) flow warrants the 3.3.9 / AAA bar, not just Minimum",
         "Prescribes a non-cognitive alternative (hardware key / passkey / accessible 2FA) instead of an image-recognition CAPTCHA"
       ]
+    },
+    {
+      "id": "a-disputed-finding-gets-a-hold-or-concede-loop-not-a-cave-or-a-dig-in",
+      "prompt": "A review filed a Critical: 'the export endpoint returns other tenants' rows.' The author replies: 'that endpoint is internal-only, behind the VPN, so it's not exploitable — please drop it or downgrade to Nit.' The reviewer could drop it, or keep it Critical. What should the reviewer do, and how should they get there?",
+      "expected_output": "Neither (a) nor (b) reflexively — run a hold-or-concede loop. First genuinely re-weigh the claim: is 'internal-only, behind the VPN' actually true and sufficient? Check it — is the origin reachable off-VPN, and is 'internal' enforced by code or just asserted? If the author is right that it's truly unreachable by any attacker, drop or rescope the finding and say so. If it still stands (a VPN is not an authorization boundary; an internal actor or a compromised internal host still crosses tenants; 'internal' is often unenforced), restate with evidence (the missing tenant predicate at file:line, a two-principal test) and HOLD the severity — a cross-tenant leak's consequence doesn't shrink because the author objects, so it does not become a Nit under pressure. Stay civil. If deadlocked, escalate to a named owner / Decisions-needed entry and record the resolution so the rationale isn't lost in the thread. Caving to avoid friction buries a real risk; digging in on ego is equally wrong — the deciding factor is the evidence, not who pushed.",
+      "expectations": [
+        "Rejects both reflexive options (cave-to-keep-peace and insist-on-ego) — the decision turns on re-weighing the evidence, not on the pushback itself",
+        "Prescribes genuinely re-checking the author's claim (is the VPN/'internal' actually an enforced authorization boundary?) and dropping/rescoping only if the finding is truly wrong",
+        "If it stands: restate with evidence + HOLD the severity (a real cross-tenant leak doesn't become a Nit under pressure), stay civil, escalate to a named path + record the resolution if deadlocked"
+      ]
+    },
+    {
+      "id": "a-review-comment-states-the-code-defect-not-a-judgment-of-the-author",
+      "prompt": "A reviewer writes: 'This auth code is sloppy and whoever wrote it clearly doesn't understand sessions — obviously broken.' The finding underneath (a session token not invalidated on logout) is correct. Is the comment acceptable because the finding is right?",
+      "expected_output": "No — a correct finding delivered as a judgment of the author is still a defective review comment. Comment on the code, not the person: state the defect, its impact, and the fix ('logout deletes the cookie but does not invalidate the server-side session, so a captured token stays valid until expiry — invalidate the session / advance a per-user not-before on logout'), with no 'sloppy' / 'doesn't understand' / 'obviously.' The severity (a real auth defect) rates the code's consequence, not the author's competence — and phrasing it as an attack makes a valid Critical easier to dismiss and erodes the working relationship while adding no technical information. Keep the finding and its severity; rewrite the register. (This is tone/register, not the finding's substance — the substance is correct and stays.)",
+      "expectations": [
+        "Identifies that a correct finding is still a defective comment when it judges the author ('sloppy'/'doesn't understand'/'obviously') rather than the code",
+        "Rewrites to comment on the code — defect + impact + fix — keeping the finding and its severity (consequence, not competence)",
+        "Notes the attacking register adds no technical information, makes a valid finding easier to dismiss, and harms the relationship — fix the register, keep the substance"
+      ]
     }
   ]
 }

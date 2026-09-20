@@ -148,6 +148,31 @@ clean). A flag is a lead for judgement — downgrade, or split
 into a two-status verdict — not an automatic defect. It ships beside the skill and
 is copied by `install.sh`.
 
+## Delivering & defending findings — tone, and handling pushback
+
+A finding is read by the human (or agent) whose code it critiques; how it reads matters as much
+as whether it is right.
+
+- **Comment on the code, not the author.** State the defect, its impact (*Why it matters*), and
+  the smallest fix — never the author's competence or intent ("this is sloppy" → "this `X`
+  allows `Y`; fix: `Z`"). A Blocker is a statement about the code's **risk**, not an accusation;
+  severity rates **consequence, not blame**. Use "consider / this could" for a genuine
+  suggestion, reserve directive language for a real defect, and label a nit `Nit:` so it can't
+  read as a gate. (This is register, not vocabulary — `communication-structure` governs shape
+  and length, not tone.)
+- **When the author disputes a *filed* finding, run a hold-or-concede loop — neither cave nor
+  dig in.** (1) Genuinely re-weigh it: if the author is right (the finding is wrong, or the fix
+  would break intended behavior a base-ref test pins — the same test as `method.md`'s
+  *pre-filing* `REFUTED`, now applied after the finding shipped), **drop it and say so**. (2) If it still stands, **restate the reasoning with more evidence** (the repro, the
+  `file:line`, the failing case) and **hold the severity** — a real Blocker does not become a Nit
+  under pressure (severity is set by consequence and the principle calibration, not by who
+  pushed back). (3) Stay civil regardless. (4) If genuinely deadlocked, **escalate to a named
+  path** (owner / maintainer / a *Decisions needed (owner)* entry) and **record the resolution**
+  so a later reader sees why it went the way it did — a rationale that lives only in a review
+  thread should become a code comment or a doc. Reflexive concession (a green review that buried
+  a real risk to avoid friction) and reflexive digging-in (holding a refuted finding on ego) are
+  **both** failures.
+
 ## Invariants verified to hold (affirmative — co-equal with Findings)
 | Invariant | Where proven | What proves it | Confidence |
 |-----------|--------------|----------------|------------|
