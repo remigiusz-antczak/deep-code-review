@@ -583,6 +583,39 @@ rate), validity (schema/format/range). For each:
   lower freshness, never raise it; a non-monotone recency curve manufactures false
   "re-activation". Principle 2 again: the quiet window is evidence only once a
   positive control confirms the source was actually read for it.
+- **A failed *read* is not a negative *verdict* — carry a distinct
+  `unknown`/`degraded` state, never fold it into the accusing bucket.** A
+  per-subject verdict (compliant/delinquent, posted/missing, present/absent)
+  joined from several store reads often wraps each read to degrade to an empty
+  result on error (`catch → []` / `new Map()`) so one flaky store never 500s the
+  page — an often-correct resilience choice. But when that empty-on-failure
+  fallback feeds a computation whose *absence* reads as a specific **negative**
+  claim, the resilience silently converts an infrastructure fault into a false,
+  actionable accusation against a **named subject**: "couldn't read your posting
+  history" renders as the same red "never posted" badge (and inflated "still
+  owed" count) a genuine miss earns, with nothing in the response telling the two
+  apart. This is the read-*failure* sibling of "an absent window is not a
+  decline" above — there a coverage gap must not read as a substantive-low
+  *score*; here a read that *errored* must not read as a substantive-negative
+  *verdict* about an identified subject — and it is worse, because the output is a
+  specific accusation, not a neutral "no data yet." Make it reviewable on two
+  axes: **(a) polarity** — trace each catch-to-empty forward and ask which bucket
+  the empty lands in; into the *positive/compliant* bucket it is an honest floor
+  (safe), into the *negative* bucket it fabricates the accusation; **(b) the bit
+  must live in the response *shape*** — a `degraded` flag, a `dataIssues:
+  string[]`, or a per-row `unknown`/`unverifiable` state the caller can render —
+  because a server-side log the reader never sees is not a distinguishing signal.
+  Keep the don't-500 resilience; just stop discarding the one bit (did every
+  source actually respond?) that says whether the negative is real. Best enforced
+  by construction: give the verdict type a third state so "delinquent" has **no
+  constructor** from an unread store (§2, *make a dishonest value
+  unrepresentable*). Same failure mode as the gate discipline in
+  `reliability-error-handling.md` (a can't-check needs a distinct exit + message
+  from a found-problem) and the metric version in `observability.md` (a 429 /
+  timeout is not "no match" / "score 0"), but on a **different surface**: here the
+  distinguishing bit must ride a **per-row response field** the UI can render,
+  which a process exit code and an aggregate metric label structurally cannot
+  carry.
 - **Observability is a per-entity-*class* property, not only a per-window one.**
   The rule above corrects a *temporal* coverage gap; a distinct, cross-sectional
   one is that whole **classes** of entity are structurally less observable on

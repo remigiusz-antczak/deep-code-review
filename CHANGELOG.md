@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.358.0] — 2026-09-21
+
+### deep-code-review — a read failure defaulted to the worst-case verdict is indistinguishable from genuine non-compliance (#821)
+
+- **`data-quality.md`** (§8): a check that reads an input to decide pass/fail must not silently fold a **read failure** (missing file, timeout, permission/parse error) into the negative verdict — that launders "I couldn't check" into a specific, actionable accusation against a **named subject** ("couldn't read your posting history" rendered as "you never posted"). The read-failure sibling of "an absent window is not a decline": review on two axes — **(a) polarity** (trace each catch-to-empty forward; into the *positive/compliant* bucket it's an honest floor, into the *negative* bucket it fabricates the accusation) and **(b) the distinguishing bit must live in the response *shape*** (a `degraded` flag, `dataIssues: string[]`, a per-row `unknown`/`unverifiable` the caller renders — an exit code, an aggregate metric label, or a server log structurally can't carry it). Same failure mode as the gate twin (`reliability-error-handling.md`) and the metric twin (`observability.md`), different surface. +1 eval.
+
 ## [1.357.0] — 2026-09-21
 
 ### agentic-delivery — a load-flaky required gate is not a confirmed red; bounded-rerun the same commit before concluding a regression (#833)
