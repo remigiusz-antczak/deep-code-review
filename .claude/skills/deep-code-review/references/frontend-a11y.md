@@ -120,8 +120,13 @@ scroll-container scoping; exercise it — focus a field inside an open overlay a
 confirm the background does not move.
 
 **New in WCAG 2.2 — verify explicitly**
-- **Target Size (Minimum) 24×24 CSS px** for pointer targets (or adequate
-  spacing).
+- **Target Size (Minimum) 24×24 CSS px** for pointer targets (SC 2.5.8, AA) — but **five
+  exceptions**, so don't over-flag: **Spacing** (a 24 CSS px diameter circle centred on each
+  undersized target intersects neither another target nor another undersized target's circle —
+  so two adjacent small icons still fail when their *circles* overlap), **Equivalent** (another control
+  does the same function at full size), **Inline** (a target within a sentence, or sized by the
+  line-height of non-target text), **user-agent-controlled**, and **essential**. An undersized
+  target that meets an exception is not a finding.
 - **Dragging Movements**: any drag action has a single-pointer alternative.
 - **Consistent Help**: repeated help mechanisms (contact details, a contact mechanism,
   self-help, an automated/chatbot channel) appear in the same **relative order** in the content

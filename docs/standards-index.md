@@ -668,6 +668,12 @@ determination routes to counsel).
 | WCAG 2.2 SC 1.4.11 Non-text Contrast | https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html | Level AA. Verbatim: "The visual presentation of the following have a contrast ratio of at least 3:1 against adjacent color(s): User Interface Components" — "Visual information required to identify user interface components and states, except for inactive components or where the appearance of the component is determined by the user agent and not modified by the author". The exemption means an unmodified user-agent-default focus style is not held to the 3:1 floor (2.4.7 still requires it visible); the floor binds author-styled indicators. Fetched + verified 2026-09-20. |
 | WCAG 2.2 SC 2.4.13 Focus Appearance | https://www.w3.org/WAI/WCAG22/Understanding/focus-appearance.html | Level AAA (new in WCAG 2.2). Verbatim: "When the keyboard focus indicator is visible, an area of the focus indicator meets all the following: is at least as large as the area of a 2 CSS pixel thick perimeter of the unfocused component or sub-component, and has a contrast ratio of at least 3:1 between the same pixels in the focused and unfocused states." Basis for the focus-indicator area+contrast floor. Fetched + verified 2026-09-20. |
 
+## Verified by direct fetch (2026-09-20) — WCAG 2.2 target size
+
+| Standard / source | URL | What was confirmed |
+|---|---|---|
+| WCAG 2.2 SC 2.5.8 Target Size (Minimum) | https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html | Level AA (new in WCAG 2.2). Pointer targets >= 24 by 24 CSS px, with **five exceptions** (verbatim): **Spacing** — undersized targets "positioned so that if a 24 CSS pixel diameter circle is centered on the bounding box of each, the circles do not intersect another target or the circle for another undersized target"; **Equivalent** — another control "can achieve the underlying function" at size; **Inline** — "does not apply to inline targets in sentences, or where the size of the target is constrained by the line-height of non-target text"; **User agent control**; **Essential**. Fetched + verified 2026-09-20. |
+
 ## Verified by direct fetch (2026-09-20) — ML cross-validation & resampling hygiene
 
 | Standard / source | URL | What was confirmed |

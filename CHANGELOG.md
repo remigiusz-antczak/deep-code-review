@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.282.0] — 2026-09-20
+
+### deep-code-review — wave 203 WCAG 2.2 Target Size exceptions + a stale LLM-ID cross-ref fix
+
+- **`frontend-a11y.md`** SC 2.5.8 Target Size (Minimum): the 24×24 CSS px bullet now names the **five exceptions** — Spacing (a 24px-diameter circle centred on each undersized target doesn't intersect another's), Equivalent (another control does the function at size), Inline (a target within a sentence, or sized by non-target line-height), user-agent-controlled, and essential — so a review doesn't over-flag exempt inline links or spaced icons. Curl-verified `docs/standards-index.md` row added (SC 2.5.8, fetched 2026-09-20). +1 eval.
+- **`model-tiering.md`** cross-ref fix (from the cross-reference integrity self-audit): the `security-ai-agents.md` pointer named "LLM10 Unbounded Consumption" (the pre-2026 ID); that file migrated to the OWASP LLM Top 10 **2026** edition where Unbounded Consumption is **LLM06:2026** (LLM10:2026 is now Improper Output Handling). Corrected to match the repo's `LLM0N:2026` convention. Closes no filed issue.
+
 ## [1.281.0] — 2026-09-20
 
 ### deep-code-review — wave 202 path traversal on the file serve/download read path (CWE-22)

@@ -2,7 +2,7 @@
 
 Read this when choosing which model tier a fan-out unit, a delivery lane, or an
 `idea-critic` hat runs on — or when reviewing a target's own LLM-call cost
-posture (domain E, cross-ref `security-ai-agents.md`'s LLM10 Unbounded
+posture (domain E, cross-ref `security-ai-agents.md`'s LLM06:2026 Unbounded
 Consumption). Written vendor-neutral first: `parallel-audit.md` already
 maintains a host matrix (Cursor, Codex, Copilot, Gemini, Aider, one-shot paste),
 so the rubric below has to survive outside any one vendor. A Claude-family

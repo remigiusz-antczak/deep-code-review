@@ -3670,6 +3670,16 @@
         "Prescribes resolving to a canonical realpath (symlink-following) then verifying it is a TRUE SUBPATH of the base — compared against base + its trailing separator, or a real is-subpath check, not a bare `/base` prefix (which also matches `/base-evil`) — plus rejecting absolute-path overrides and escaping symlinks",
         "Notes a literal `../` denylist is bypassable (encoded `%2e%2e` / `....//`); test with `../`, an absolute path, and an encoded traversal"
       ]
+    },
+    {
+      "id": "an-undersized-tap-target-may-be-exempt-under-a-wcag-2-5-8-exception",
+      "prompt": "An accessibility audit flags every interactive element under 24×24 CSS px as a WCAG 2.2 Target Size (2.5.8) failure — including inline 'Terms' / 'Privacy' text links inside a paragraph, and a small 'edit' icon with several px of clear space on every side. A reviewer says 'anything under 24px fails 2.5.8.' Is that right?",
+      "expected_output": "No — 2.5.8 Target Size (Minimum, AA) has FIVE exceptions, and both flagged items likely qualify. (1) The inline 'Terms'/'Privacy' links are covered by the **Inline** exception: 2.5.8 does not apply to targets within a sentence or sized by the line-height of non-target text. (2) The spaced 'edit' icon is covered by the **Spacing** exception: an undersized target is exempt if a 24 CSS px diameter circle centred on each intersects neither another target nor another undersized target's circle (so two adjacent small icons still fail when their circles overlap). The other exceptions are **Equivalent** (another control does the same function at full size), **user-agent-controlled**, and **essential**. 'Anything under 24px fails' over-flags: an undersized target meeting any of the five exceptions is not a finding. Fix the audit to apply the exceptions (especially Inline and Spacing) before reporting.",
+      "expectations": [
+        "Identifies that 2.5.8 has exceptions and that flagging every <24px target over-flags — an undersized target meeting an exception is not a finding",
+        "Names the Inline exception for the in-sentence text links (2.5.8 doesn't apply to targets in a sentence / sized by non-target line-height) and the Spacing exception for the spaced icon (24px-circle non-intersection)",
+        "Notes the remaining exceptions (Equivalent / user-agent-controlled / essential) and prescribes applying the exceptions before reporting"
+      ]
     }
   ]
 }
