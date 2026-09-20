@@ -150,6 +150,29 @@ extends, not restates, the coverage rule above: that rule asks whether the
 *source was queried at all*; this asks whether the empty state's *named
 cause* is true on every path that reaches it.
 
+**A value's *stakes* decide whether degrading a fetch failure into "empty" is
+acceptable at all — a third axis, independent of coverage and cause.** The
+coverage rule above asks whether the empty state's copy *names* whether the
+source was probed; the cause rule asks whether a *stated cause* holds on every
+path that reaches it, and explicitly allows falling back to a
+**cause-neutral empty** when paths diverge — this rule narrows that fallback:
+a cause-neutral wording is not enough on a **definitive-record surface**. A
+low-stakes, **supplementary** value — a related-items rail, an optional
+recommendation widget — may reasonably let a fetch failure fall through to
+its ordinary empty/blank render; the cost of a wrong read is small. A value
+the user reads as a **definitive statement about history or state** — an
+audit log ("this never happened"), a security-events list, a balance or count
+a decision rests on — carries no such exemption: it **must surface a
+distinct, retryable error state**, never fall through to the same branch as a
+genuine zero, because on a surface like this "empty" *reads* as "confirmed
+none," and a swallowed fetch error becomes a false all-clear no copy can fix —
+the defect is architectural, not lexical. This is distinct from
+`data-quality.md` §8's observed-low-vs-unobserved rule (a *scored* value,
+measured wrong) and from the silent-swallow 🚩 in `domain-checklists.md` /
+`reliability-error-handling.md` (an error *discarded* at the code layer — caught, but
+with no log or signal): here the fetch error is caught correctly, and the defect is which **rendered**
+state a correctly-handled failure is allowed to collapse into.
+
 ## A reversible action reads as a delete when nothing shows the record persists
 
 When an action **presented as non-destructive** — resolve / archive / dismiss,
@@ -470,6 +493,33 @@ domain H) with a UX consequence, so it is ruled on here too.
   file the target route never renders; trace route → component and confirm the
   component is actually shown on that screen before editing it. Grep finds
   candidates; the render trace confirms (cross-ref `parallel-audit.md` §5).
+- **Zero mount paths from any entry is the dead-render candidate — the proactive
+  form of the same check.** The rule above disambiguates *which* of several
+  candidate surfaces a grep hit actually renders; this is the case where the trace
+  turns up **none**. A component can be cleanly exported and even carry its own
+  passing unit test — `render(<Widget />)` mounts it directly, so the suite stays
+  green — while having **zero mount paths from any router entry, page, or parent
+  component** in the running app: nothing on a real route ever imports it into a
+  tree a user can reach. The file reads as alive (exported, tested, maybe
+  lint-clean) and is shown to no one. **Different discriminator from domain H's
+  dead-code-removal rule** (`domain-checklists.md`): H's unreferenced-code check is
+  blind to exactly this case, because the component *does* have a reference — its
+  own test import — so a plain reference-count linter passes it clean; the defect
+  here is *render*-reachability, not *reference*-count. H treats truly unreferenced
+  code as maintenance/attack-surface and defaults to **delete**; this is a
+  **product** defect — something built to be seen isn't — so the default remedy
+  flips to **wire it up**, with retirement the owner's call, not an automatic
+  deletion. Detection is the same trace as above, run from every entry rather than
+  one: walk the router/page tree inward; a component reachable from **no** entry —
+  only from its own test file or from other already-dead code — is a **candidate**,
+  not a confirmed finding, exactly like the straggler check above. A static import
+  trace is blind to `React.lazy()` / dynamic `import()`, a string-keyed component
+  registry, a CMS-driven map, or a route config built at runtime — check those
+  paths too before calling it dead; where they can't be checked, the zero-entry
+  result is `unverified`, not found-nothing (the could-not-check discipline,
+  Enforcing gate below). Flag a confirmed case to **wire it up or retire it**;
+  retirement is an owner call, surfaced under *Decisions needed (owner)*, never a
+  unilateral delete.
 - **One component, divergent props, is the other half of inconsistency.** Even a
   correctly-unified shared component reads as inconsistent when a **feature-bearing
   optional prop defaults off** and some mount sites omit it — one listing passes
@@ -722,7 +772,7 @@ often lost — the on-screen chart carries axes and a readout the serialiser dro
 
 ## Pre-ship checklist (mirror SKILL.md's report discipline)
 - [ ] Does it need explaining? If yes, redesign until it doesn't (or demote the text to progressive disclosure).
-- [ ] All five data states handled and honest — empty / loading / error / partial / overflow — an empty state names its **coverage** (no-data-collected vs collected-and-genuinely-none), never implying a false all-clear, and any **named cause** in its copy holds on every path that reaches it, not only the one it describes; and a capped/sliced overflow list carries an explicit **remainder indicator** whenever `total > shown`?
+- [ ] All five data states handled and honest — empty / loading / error / partial / overflow — an empty state names its **coverage** (no-data-collected vs collected-and-genuinely-none), never implying a false all-clear, and any **named cause** in its copy holds on every path that reaches it, not only the one it describes; a **definitive-record surface** (audit log, security events, a decision-bearing balance/count) shows a **distinct, retryable error state** on fetch failure rather than degrading to empty — a low-stakes/supplementary value may acceptably degrade, a definitive one may not; and a capped/sliced overflow list carries an explicit **remainder indicator** whenever `total > shown`?
 - [ ] One channel per dimension; nothing colour-only; reads correctly in greyscale?
 - [ ] Deltas are caret + magnitude, coloured by sentiment; flat is a muted `—` with a period anchor?
 - [ ] Confidence / score / priority shown as a **defined labeled tier** (text + a colourblind-safe cue), not a raw `%` or point score, and no model-authored number published as precision?
@@ -732,7 +782,7 @@ often lost — the on-screen chart carries axes and a readout the serialiser dro
 - [ ] Matches a **named** top-product pattern; convention gaps surfaced to the owner, not silently redesigned?
 - [ ] If the owner has rejected this element **twice**, stopped tuning — structural flaw named, two or three comparables researched, concrete options surfaced for the owner to choose?
 - [ ] Consistent type scale / spacing / components / number format with sibling views (tabular figures in columns)?
-- [ ] One shared component per concept — reused/extended, not reimplemented per page; a fix landed in the shared component, not one caller; **searched the tree for a duplicate twin (a duplicated visible string/heading) a diff-scoped review would miss**?
+- [ ] One shared component per concept — reused/extended, not reimplemented per page; a fix landed in the shared component, not one caller; **searched the tree for a duplicate twin (a duplicated visible string/heading) a diff-scoped review would miss**; and every component built for this surface has at least one **mount path** from a router/page entry, static or dynamic/lazy/registry-based (zero paths = a dead-render candidate — wire up or retire, owner's call)?
 - [ ] Interaction loops close — read-back on every input (no write-only), WYSIWYG not raw markup, no dead controls — checked on the route that actually renders?
 - [ ] Any action **labelled non-destructive** (resolve / archive / dismiss) that removes the record still shows it **persists** — a persisted-state label, an undo, or a discoverable resolved/archived view — so it doesn't read as a hard delete? (Default-hiding behind a *known* filter is a convention, not this; soft-delete is out of scope; **fail-open** — a human adjudicates.)
 - [ ] Every **disabled action explains its cause and a recovery path** — the unmet prerequisite + a concrete next step, in **reachable** text (nearby or a focusable wrapper/popover, not a tooltip on the disabled element, which may get no hover/focus); an action permanently unavailable to the current role is hidden or replaced, not a dead end?

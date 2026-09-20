@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.303.0] — 2026-09-20
+
+### deep-code-review — product-ux: dead-render candidate + empty-state stakes calibration (closes #554, #674)
+
+- **`product-ux-quality.md`** two additions. **#554** — a component **exported and even unit-tested but with zero mount paths from any router/page entry** is a dead-render candidate; the default remedy flips to *wire it up* (retirement is an owner call, not a unilateral delete). Hedged: a static import trace is blind to `React.lazy()`/dynamic `import()`/a component registry/runtime route config, so a zero-entry result is a **candidate/`unverified`**, not a confirmed finding. Distinct from parallel-audit §5 (*which* live surface among candidates) and domain-H dead-code (reference-count — blind to a test-only import). **#674** — a low-stakes supplementary value may degrade a fetch failure to an empty render, but a value read as a **definitive claim** (audit log, security-events list, decision-bearing balance) must surface a **distinct, retryable error state** — narrowing #604(b)'s "cause-neutral empty" carve-out on a definitive-record surface. +2 evals. Built by a worktree builder subagent, independently reviewed PASS-WITH-FIXES (doctrine clean; applied: eval Panel-A "swallows"→"logs" to isolate the stakes-axis from domain-F's silent-swallow ban, corrected an "uncaught"→"discarded/caught" cross-ref, and added the candidate-not-confirmed hedge to the dead-render eval). Closes #554, closes #674.
+
 ## [1.302.0] — 2026-09-20
 
 ### deep-code-review — NoSQL / distributed-store consistency (conditional writes, stale reads, GSI lag, LWT mixing, batch limits)
