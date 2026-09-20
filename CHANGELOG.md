@@ -3,6 +3,14 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.264.0] — 2026-09-20
+
+### deep-code-review — wave 185 eval-suite quality: Domain-L/T coverage + de-vacuous/de-dup/de-leak
+
+- Acting on a whole-suite eval audit (set found strong: 0 dup ids, median-3 expectations, red-herring design confirmed). **Domain L (Infra/IaC/containers/K8s) had ZERO evals despite two dedicated reference files** — added 3 aligned to `infra-iac-containers.md` (Dockerfile root/unpinned-base/no-limits; K8s privileged/runAsUser:0/no-NetworkPolicy; Terraform 0.0.0.0/0-on-22 + public-unencrypted bucket). Added a **Domain T** (multi-tenancy) fairness/noisy-neighbour eval (shared queue + global limiter starve tenants; distinct from data isolation).
+- Fixed 2 vacuous expectations (a length-bound that tested nothing; a vacuous "when written" escape) to real content checks; trimmed a near-duplicate parity eval to its unique bidirectional-diff contribution; de-leaked the billing eval to lead with a symptom.
+- +4 evals (327 total, 0 dup ids). Independent reviewer PASS-WITH-FIXES (all new evals verified against the skill's actual guidance): replaced an eval-id citation with the skill rule by content, restored the billing eval's forgery-only clue so the signature-check conjunct is reachable, completed two gold outputs.
+
 ## [1.263.0] — 2026-09-20
 
 ### deep-code-review — wave 184 silent-measurement defects: randomized test order, head-sampling limits, provider-side 429 back-off

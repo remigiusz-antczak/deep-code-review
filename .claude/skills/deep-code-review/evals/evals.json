@@ -14,19 +14,19 @@
     {
       "id": "description-matches-folder",
       "prompt": "Load the deep-code-review skill from its installed folder.",
-      "expected_output": "Frontmatter name is deep-code-review, matching the directory name.",
+      "expected_output": "Frontmatter name is deep-code-review, matching the directory name. The description opens with a trigger condition (\"Use when reviewing, auditing…\"), not a bare category label.",
       "expectations": [
         "YAML name equals the skill directory basename",
-        "description is between 1 and 1024 characters"
+        "description names the trigger condition (when to use the skill), not merely a bare category label"
       ]
     },
     {
       "id": "default-install-review-only",
       "prompt": "Install this repository into a throwaway project with no flags.",
-      "expected_output": "Only the review skill is copied. agentic-delivery and idea-critic are absent.",
+      "expected_output": "Only the review skill is copied. agentic-delivery and idea-critic are absent. The install writes an AGENTS.md stamp recording the VERSION and install SHA; a missing stamp would itself be a finding.",
       "expectations": [
         "Default install.sh does not copy overlay skills",
-        "AGENTS.md stamp records the VERSION and SHA when written"
+        "the install writes/updates the AGENTS.md stamp recording the installed VERSION and content SHA — a missing stamp is itself a finding, not a pass"
       ]
     },
     {
@@ -131,7 +131,7 @@
     },
     {
       "id": "billing-double-charge-and-nonidempotent-webhook",
-      "prompt": "Review the billing code: the renewal path has no lock, and the payment_succeeded webhook handler grants entitlement and increments revenue every time it is called, with no event-id dedup and no signature check.",
+      "prompt": "Customers occasionally report being charged twice for a single renewal, and the revenue dashboard sometimes shows more receipts than the payment processor shows charges — and in one case a customer received an entitlement grant with no matching charge at the processor at all. Review the renewal path and the payment_succeeded webhook handler. What are the bugs?",
       "expected_output": "Applies the billing-correctness lens (domain E, cross-ref G/I): flags the double-charge race (two concurrent renewals both charge — needs a single-flight/idempotency key on the charge keyed on customer+period) and the non-idempotent, unverified webhook (re-delivery double-counts revenue and double-grants entitlement — needs event-id idempotency and signature verification). Tax registration/revenue-recognition route to an accountant; no tax rate is invented.",
       "expectations": [
         "Flags the double-charge race and prescribes a single-flight/idempotency key on the charge",
@@ -769,12 +769,11 @@
     {
       "id": "parity-is-set-equality-flag-app-only-elements",
       "prompt": "Our differ confirmed every element and control in the design is present in the app, so we signed off parity. (The app also renders an extra header, view tabs, a filter bar, a 'Showing N of N' line, and per-card upvote arrows the design doesn't have -- but those are intentional extra functionality.) Good?",
-      "expected_output": "No -- that checked only one direction (design subset of app) and missed the other (app subset of design). Visual parity is SET EQUALITY, not containment: an element present on exactly one side is a finding regardless of which side, and 'intentional extra functionality' is the rationalization that ships the mismatch. Diff both ways per screen, list what the app renders that the design doesn't, then apply the operative test to each app-only item -- does removing it lose a user capability? Pure shell loses none: the extra header and the 'Showing N of N' line default to remove-to-match. Capability-bearing chrome IS a feature, not a bonus: the view tabs (navigating), the filter bar (filtering), and the per-card upvote arrows (upvoting) each is a feature to RESTYLE into the target's design language (re-express the capability in the reference's own primitives) so the look reaches parity while the capability is preserved -- never self-cut to match, and deleting app-only functionality to reach parity without a named owner approval is a High do-no-harm finding; escalate to the owner only as a fallback when no target primitive fits (migration-parity's restyle-an-app-only-feature rule). Scope this to chrome/features; data (values, counts, series) legitimately differs. Sign-off needs the design->app list empty and the app->design list empty or every entry resolved -- restyled into the target language, decoration removed, or an owner-adjudicated keep/removal. (product-ux-quality.md.)",
+      "expected_output": "No -- that checked only one direction (design subset of app) and missed the other (app subset of design). Visual parity is SET EQUALITY, not containment: an element in the app but not the design (the extra header, view tabs, filter bar, 'Showing N of N', per-card upvote arrows) is a real difference the one-directional differ never looked for. Diff app->design too, then for each app-only element apply the operative test (does removing it lose a user capability?) and classify restyle-vs-delete per migration-parity.md's restyle-an-app-only-feature rule (capability-bearing -> restyle into the target design language; pure shell -> remove; unauthorized deletion is a do-no-harm finding needing owner sign-off) -- don't re-derive that taxonomy here.",
       "expectations": [
-        "Rejects a one-directional (design subset of app) check; requires diffing app->design too",
-        "Applies the operative test -- does removing an app-only element lose a user capability?",
-        "Classifies the filter bar, view tabs, and per-card upvote arrows as capability-bearing features to restyle into the target design language, not shell to delete",
-        "Removes pure shell (extra header, 'Showing N of N' line) to match, but restyles features into the target design language (escalating only as a fallback) rather than deleting or self-certifying"
+        "Rejects the one-directional (design subset of app) check and requires diffing app->design too — visual parity is set EQUALITY, not containment",
+        "For an app-only element, applies the operative test — does removing it lose a user capability?",
+        "Defers the full restyle-vs-delete classification and deletion-authorization to the restyle-an-app-only-feature rule in `migration-parity.md`, rather than re-deriving the taxonomy"
       ]
     },
     {
@@ -3360,6 +3359,46 @@
         "Identifies that a 429/503 with no Retry-After forces every client to guess backoff (hammer immediately or over-back-off); the provider must emit Retry-After so clients back off by instruction",
         "Adds the machine-readable budget signal (IETF RateLimit-* header fields) so clients self-pace before tripping the limit",
         "Notes docs are not a substitute for the on-the-wire signal, and frames it as the provider's outbound obligation (distinct from a caller honoring Retry-After on its own retries)"
+      ]
+    },
+    {
+      "id": "dockerfile-runs-as-root-unpinned-base-no-resource-limits",
+      "prompt": "A Dockerfile for a production service starts `FROM node:latest`, installs deps, and ends `CMD [\"node\",\"server.js\"]` — no `USER` line, no resource limits declared, and the base isn't pinned. It builds and the app runs. A reviewer says the Dockerfile is fine since it works. Any container-hardening findings?",
+      "expected_output": "Several. (1) Runs as root — no USER directive, so the process runs as root in the container; a container escape or app RCE then has root. Add an explicit non-root USER (and drop Linux capabilities, no-new-privileges, read-only root filesystem where possible). (2) Unpinned base — FROM node:latest is non-reproducible and silently pulls a new base over time; pin by digest (node@sha256:...), prefer minimal/distroless, and multi-stage-build so build tools don't ship. (3) No resource limits — nothing caps memory/CPU, so one container can starve the host; set limits (and at the orchestration layer, per-container requests/limits). Also scan the final image (Trivy/Grype) + emit an SBOM, and confirm no secret is baked into a layer or build arg. 'It builds and runs' is not the bar — none of these surface at runtime until they bite.",
+      "expectations": [
+        "Flags running as root (no USER) and prescribes a non-root USER (+ dropped caps / no-new-privileges / read-only rootfs)",
+        "Flags the unpinned `:latest` base and prescribes pinning by digest (+ minimal/distroless, multi-stage build)",
+        "Flags the absent memory/CPU resource limits (one container can starve the host)"
+      ]
+    },
+    {
+      "id": "kubernetes-pod-privileged-runasroot-no-networkpolicy",
+      "prompt": "A Kubernetes Deployment sets `securityContext: { privileged: true, runAsUser: 0 }`, declares no resource requests/limits, and the namespace has no NetworkPolicy. It passes CI and deploys. What should a review flag?",
+      "expected_output": "Multiple pod-security and isolation findings. (1) privileged: true + runAsUser: 0 — the pod runs as root with full host capabilities, effectively no container boundary; set runAsNonRoot: true, privileged: false, allowPrivilegeEscalation: false, drop capabilities, add a seccomp profile, and readOnlyRootFilesystem: true. (2) No resource requests/limits — one pod can starve the node; set them on every container and add liveness/readiness probes. (3) No NetworkPolicy — the namespace allows unrestricted pod-to-pod traffic; apply a default-deny NetworkPolicy with explicit allows (especially in a shared/multi-tenant cluster, where it also caps cross-tenant blast radius). Enforce with admission policy (OPA-Gatekeeper/Kyverno) so a future manifest can't reintroduce them. Passing CI and deploying is not the same as hardened.",
+      "expectations": [
+        "Flags privileged/runAsUser:0 and prescribes the pod securityContext (runAsNonRoot, privileged:false, allowPrivilegeEscalation:false, dropped caps, seccomp, readOnlyRootFilesystem)",
+        "Flags the missing resource requests/limits (+ liveness/readiness probes)",
+        "Flags the absent NetworkPolicy (default-deny + explicit allows), noting the multi-tenant blast-radius angle"
+      ]
+    },
+    {
+      "id": "terraform-security-group-open-to-world-and-public-unencrypted-bucket",
+      "prompt": "A Terraform diff adds a security-group rule `cidr_blocks = [\"0.0.0.0/0\"]` on port 22, and an object-storage bucket with no public-access block and no encryption configured. `terraform plan` is clean and the reviewer approves. Sound?",
+      "expected_output": "No. (1) SSH (port 22) open to 0.0.0.0/0 exposes the host's admin port to the entire internet — a top brute-force/exposure finding; scope ingress to a bastion/VPN CIDR or use a session-manager/IAP, never 0.0.0.0/0 on 22 (same for RDP 3389, DB ports, admin panels). (2) The bucket has no public-access block and no encryption — it risks public-data exposure and stores data unencrypted at rest; enable the account/bucket public-access block, enforce encryption at rest and in transit, and add versioning + access logging for a sensitive store. terraform plan being clean only means the config is syntactically applyable, not safe — run an IaC scanner (tfsec/Checkov/KICS) in CI to catch exactly these. (Least-privilege IAM — no `*` actions/resources — is the sibling check.)",
+      "expectations": [
+        "Flags 0.0.0.0/0 on port 22 (admin port to the whole internet) and prescribes scoping ingress (bastion/VPN/session-manager), not world-open on sensitive ports",
+        "Flags the public bucket (no public-access block) and missing encryption at rest/in transit (+ versioning/access-logging)",
+        "Notes 'terraform plan clean' does not mean safe — prescribes an IaC scanner (tfsec/Checkov/KICS) in CI"
+      ]
+    },
+    {
+      "id": "multi-tenant-shared-queue-and-global-limiter-let-one-tenant-starve-others",
+      "prompt": "A SaaS runs all tenants' background jobs through one shared FIFO worker pool and rate-limits the public API with a single global token bucket. One tenant bulk-imports millions of records; other tenants' jobs stop running and their API calls start getting 429s. Authz is correct (no cross-tenant data access). Is this a finding?",
+      "expected_output": "Yes — a multi-tenancy isolation finding on the FAIRNESS/availability axis, distinct from data isolation (which is correct here). A shared FIFO queue with no per-tenant fairness lets one tenant's backlog monopolize the workers (a noisy-neighbour / head-of-line problem), and a single GLOBAL rate limiter means one tenant's traffic consumes the shared budget and 429s everyone else. Correct authz does not prevent one tenant degrading another's service. Fixes: bound per-tenant work (per-tenant quotas / concurrency caps / weighted-fair or per-tenant queues so no tenant starves the rest), key the rate limiter PER TENANT rather than globally, and cap a bulk operation's blast radius (chunk + backpressure). This is the availability/fairness half of tenant isolation — pair it with the data-isolation checks (RLS / scoped queries).",
+      "expectations": [
+        "Identifies a multi-tenancy FAIRNESS/availability isolation gap (noisy-neighbour), distinct from data isolation, which is correct here",
+        "Names both mechanisms: a shared queue with no per-tenant fairness (one tenant starves the pool) and a globally-keyed rate limiter (one tenant 429s everyone)",
+        "Prescribes per-tenant quotas/fairness/queues + a per-tenant-keyed limiter + bounding a bulk op's blast radius"
       ]
     }
   ]
