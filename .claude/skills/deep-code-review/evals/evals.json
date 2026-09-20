@@ -3470,6 +3470,16 @@
         "Prescribes a retention/rotation policy + reaper per store (log rotation size+age, TTL/partition-drop on the table, DLQ trim) plus crash-path cleanup for temp files",
         "Prescribes a disk-headroom monitor/alert ahead of full (free-space threshold), not alerting at the outage"
       ]
+    },
+    {
+      "id": "a-service-that-exits-when-a-dependency-is-down-at-boot-crash-loops-gate-readiness-and-retry",
+      "prompt": "A service opens its database connection at startup and calls `process.exit(1)` if it fails; its readiness probe returns 200 as soon as the HTTP server is listening. On a deploy the DB is briefly unreachable (rolling restart) and the service enters CrashLoopBackOff, taking the whole service down for minutes. What's wrong and how should startup work?",
+      "expected_output": "Two startup defects, the mirror of graceful-shutdown ordering. (1) Exiting on the first dependency failure turns a transient blip or a deploy-ordering race (the app started before the DB was ready) into a crash-loop: the orchestrator restarts the process, it fails to connect again, and it loops (CrashLoopBackOff) — a self-inflicted outage from a recoverable condition. The service should retry connecting to its critical dependencies with bounded backoff (with a cap/escalation), tolerating a not-yet-ready peer rather than exiting. (2) The readiness probe returns 200 as soon as the HTTP listener is up — before dependencies are wired — so the load balancer routes traffic to an instance that can't serve it. Readiness must reflect actual ability to serve: report NOT ready until the critical dependencies (DB, cache, broker, downstream) are reachable, and flip to ready only then; keep liveness separate from readiness so a slow dependency doesn't get the pod killed while it waits. Net: gate readiness on real dependency health + wait-with-backoff at boot, and don't assume strict cross-service start-ordering — each service tolerates a not-yet-ready peer. This is the startup counterpart to failing readiness before you stop accepting on shutdown.",
+      "expectations": [
+        "Identifies that exit-on-first-dependency-failure crash-loops (CrashLoopBackOff) a recoverable transient/deploy-ordering condition; fix = retry connecting with bounded backoff, tolerating a not-yet-ready peer, not exit",
+        "Identifies the readiness probe as a false positive (200 on listener-up, before deps wired) so the LB routes to an instance that can't serve; readiness must reflect actual dependency reachability, with liveness kept separate",
+        "Identifies that services shouldn't assume strict cross-service start-order — each service must tolerate a not-yet-ready peer"
+      ]
     }
   ]
 }

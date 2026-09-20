@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.269.0] — 2026-09-20
+
+### deep-code-review — wave 190 startup dependency-readiness: gate readiness and retry at boot instead of crash-looping
+
+- **`reliability-error-handling.md`** new bullet in the disposability cluster (startup as the mirror of shutdown): a service must not report ready until its critical dependencies (DB, cache, broker, downstream) are actually reachable, and must retry connecting with bounded backoff rather than `exit(1)` on the first failure — otherwise a transient blip or a deploy-ordering race becomes a self-inflicted CrashLoopBackOff. *Bounded* means **capped and observable**: retry a dependency that is merely *not yet up*, but **escalate/alert** on one that is *definitively broken* (rejected credentials, unresolvable host, invalid config) rather than retry silently forever — an uncapped silent loop just trades a visible CrashLoopBackOff for a pod stuck **Running but never Ready** — and emit a log/metric on each failed attempt. Keep liveness separate from readiness (a `startupProbe` gives a slow boot its own budget); don't assume strict cross-service start-order.
+- +1 eval (a DB-at-boot `exit(1)` plus an always-200 readiness probe → CrashLoopBackOff). Independent reviewer PASS-WITH-FIXES, all applied: taught the transient-vs-definitively-broken distinction with a cap/escalation and a per-attempt log/metric (so the skill now backs the eval's gold answer and stays consistent with the file's own "retry-forever is a finding" rule); rewrapped an over-long red-flag line; de-framed an eval expectation to check substance rather than the "mirror" phrasing; named `startupProbe` for symmetry with the shutdown paragraph.
+
 ## [1.268.0] — 2026-09-20
 
 ### deep-code-review — wave 189 dated overflows & disk-full: epoch/field-width time-bombs and unreaped on-disk stores

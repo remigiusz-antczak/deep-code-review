@@ -291,10 +291,29 @@ view of the instance lags its socket state.
   instance blocks its replacement for the lease TTL and loses its last logs/metrics.
 - **A request killed mid-write at shutdown must be retry-safe** — the same idempotency-key discipline
   the retry rules above require, applied at the shutdown boundary.
+- **Startup is the mirror of shutdown: gate readiness until dependencies are reachable, and
+  wait-with-backoff for them at boot — don't crash-loop.** On boot a service must **not
+  report ready until its critical dependencies (DB, cache, broker, downstream API) are
+  actually reachable**, and must **retry connecting with bounded backoff** rather than exit
+  on the first failure — where *bounded* means **capped and observable**: a dependency that is
+  merely **not yet up** (a transient blip or start-order race) is worth retrying, but one that
+  is **definitively broken** (rejected credentials, an unresolvable host, invalid config)
+  should **escalate/alert**, not retry silently forever — an uncapped silent loop only trades a
+  visible `CrashLoopBackOff` for a pod stuck **Running but never Ready**, so emit a log/metric
+  on each failed attempt. A boot path that assumes a dependency is up and `exit(1)`s when it
+  isn't **crash-loops** under an orchestrator (restart → fail → CrashLoopBackOff), turning a
+  transient blip or a deploy-ordering race (the app rolled out before its DB/migration) into
+  a self-inflicted outage; keep **liveness separate from readiness** (a `startupProbe` gives a
+  slow boot its own budget so the liveness probe doesn't kill it mid-start — a native example,
+  not a pinned spec) so a slow dependency doesn't get the pod killed while it waits. Don't
+  assume strict cross-service start-order —
+  each service tolerates a not-yet-ready peer.
 - **🚩** a SIGTERM handler that stops the listener before failing readiness; an unbounded or zero
   drain; a worker that exits without nacking its in-flight job; a readiness endpoint hardcoded to
   `200` (it can neither gate a drain nor signal unhealthy — the always-200 health check flagged in
-  `observability.md` breaks safe rolling deploys, not just monitoring).
+  `observability.md` breaks safe rolling deploys, not just monitoring); a boot path that connects
+  to a dependency once and `exit(1)`s on failure (crash-loop), or a readiness probe that passes
+  before dependencies are wired.
 
 **Scope:** a long-running listening service or
 queue worker (load-balanced / orchestrated); a standalone process with no LB or readiness probe needs
