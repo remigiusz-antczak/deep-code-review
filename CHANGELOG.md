@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.319.0] — 2026-09-20
+
+### deep-code-review — a11y: live-region loading announce (#737), Label in Name (#736), disclosure aria-expanded (#735)
+
+- **`frontend-a11y.md`** three folds: (**#737**) a loading/skeleton region that visually swaps state needs a **live region** (`role="status"`/`aria-live`) announcing the transition — `aria-busy` alone doesn't announce (WCAG 4.1.3 Status Messages, Level AA; its glossary definition covers a "waiting state"/"progress"); (**#736**) an `aria-label` rewritten for context must still **contain the visible text** (WCAG 2.5.3 Label in Name, Level A), or a voice-control user can't activate it; (**#735**) a disclosure toggle that swaps its label/icon still needs **`aria-expanded`** on the control. +4 curl-verified `docs/standards-index.md` rows (WCAG 2.5.3/4.1.3, MDN status role + aria-expanded, canonical redirect URLs noted); +3 evals. Closes #737, #736, #735.
+- Built by a worktree builder subagent, independently reviewed **PASS-WITH-FIXES** (content clean — only optional cosmetic/provenance nits): every WCAG/MDN quote byte-verified against a fresh fetch, incl. confirming the 4.1.3 status-message glossary scope covers a loading state and the MDN canonical-redirect URLs; folds confirmed genuinely absent and distinct (the #735 fold cross-refs the existing APG mention rather than restating it); evals grounded (#737 rejects `aria-busy`+`aria-label` as sufficient) and de-telegraphed.
+
 ## [1.318.0] — 2026-09-20
 
 ### agentic-delivery — four operating-doctrine fixes (worktree-reclaim-on-push #538; revert not gated by its own ratchet #734; report the operator's metric #708; self-updating escape command #534)

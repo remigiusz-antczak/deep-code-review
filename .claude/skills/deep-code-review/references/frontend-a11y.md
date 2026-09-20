@@ -53,6 +53,32 @@ without regressing a deliberate design.
   explicitly with `aria-labelledby` (referencing the visible label's id) or `aria-label`, and
   **verify the platform-computed accessible name** in the accessibility tree (devtools / axe),
   not the DOM — the same computed-name harvest the cross-view-consistency check below performs.
+- **An `aria-label` rewritten to add context must still contain the visible text it
+  labels (WCAG 2.5.3 Label in Name, Level A).** SC 2.5.3 requires that "for user
+  interface components with labels that include text or images of text, the name
+  contains the text that is presented visually" — so a button showing "Export SVG"
+  given `aria-label="Export the report as a PDF file (summary only)"` fails the SC
+  the instant the rewrite drops the original words, even though the new label is
+  *more* descriptive, not less. The break is invisible to a normal screen-reader
+  smoke test (some reasonable name is still announced) and invisible visually (the
+  short visible text on screen is unchanged) — it only surfaces for speech-input/
+  voice-control users, who match a spoken command ("click Export SVG") against the
+  accessible name and get no match once the visible words are gone, exactly the
+  population a manual pass tends to skip. Detection (source-only): for every
+  interactive element with both visible text content and a static `aria-label`,
+  check case-insensitively whether the visible text appears as a contiguous
+  substring of the `aria-label`; flag any label whose *opening* words differ from
+  the visible text, since the usual break is the visible text surviving only as a
+  caveat embedded mid-sentence rather than the label's opening words. Fix: default
+  to no `aria-label` when the visible text is already a reasonable name, putting
+  extra context in a `title`/tooltip or adjacent sr-only text instead; where one is
+  genuinely needed, lead with the visible text verbatim and append the extra
+  context after it (`"<visible text> — <extra context>"`) — the SC's own note
+  gives the same best practice, that the label's text belongs at the start of the
+  name. Distinct from the accessible-name-*sourcing* bullet above (whether a name
+  exists, and from where) and from Consistent Identification below (whether the
+  same destination gets the same name across routes): this is whether a name that
+  already exists still contains what is on screen.
 - One `<h1>` per page/view; headings describe structure, not styling.
 - Landmarks present; a skip-to-content link for keyboard users.
 - **An unnamed `<section>` is not a poorly-labeled landmark — it is not a landmark at
@@ -64,6 +90,38 @@ without regressing a deliberate design.
   component (one instance passed a name prop, another not) render identically, so
   nothing on screen reveals the gap. Detection: pull the page's landmark/rotor list, not
   the DOM, and confirm every `<section>` you expect as a region actually appears in it.
+- **A loading/skeleton region that visually swaps state needs a live region
+  announcing the transition, not only `aria-busy`.** `aria-busy="true"` marks an
+  element as *being updated* — a state property assistive tech can query, not an
+  announcement it makes unprompted — and a plain `aria-label` on that same element
+  is only exposed as its accessible NAME (spoken if the element is focused, or is
+  itself an auto-announced role), never spoken proactively on mount. A shared
+  loading/spinner component that sets `aria-busy` and `aria-label="Loading
+  things…"`, with no `role="status"`, `role="alert"`, or `aria-live` anywhere on
+  it or an ancestor, looks finished — the JSX carries a sensible-sounding label —
+  but leaves the entire loading window, and the swap to the loaded result,
+  completely silent for screen-reader users. This is squarely what WCAG defines
+  as a **status message** — content providing information on "the waiting
+  state of an application" or "the progress of a process" — and SC **4.1.3
+  Status Messages** (AA) requires that "status messages can be programmatically
+  determined through role or properties such that they can be presented to the
+  user by assistive technologies without receiving focus," which neither
+  `aria-busy` nor a plain `aria-label` satisfies. Fix: add `role="status"` to
+  the region — it
+  carries an implicit `aria-live="polite"` and `aria-atomic="true"` (MDN), so no
+  separate `aria-live` attribute is needed — so the label is announced on mount
+  and again when the wrapped content changes; keep `aria-busy` alongside it to
+  suppress reads of partially-updated content, never as a replacement for the
+  role. Detection is source-only: find shared loading/spinner/skeleton
+  components and confirm whether `aria-busy`/a label prop is paired with
+  `role="status"`/`role="alert"`/`aria-live` on the same or an ancestor element —
+  and check the codebase's own error-state sibling, if one exists, which often
+  correctly reaches for `role="alert"` right next to a loading state that
+  doesn't; that asymmetry is itself the tell. Regression test: render the
+  component and assert `getByRole('status')` (or the role used) resolves and
+  contains the expected text, not only a DOM snapshot. Cross-ref
+  `product-ux-quality.md` for whether the skeleton/spinner *design* is right —
+  this is only the announcement half.
 
 **Keyboard & focus** (WCAG 2.1.1, 2.4.3, 2.4.7, and 2.2's 2.4.11)
 - Everything actionable is reachable and operable by keyboard alone; logical tab
@@ -77,6 +135,35 @@ without regressing a deliberate design.
   or states** (a `role="tablist"` with no arrow-key navigation, a `role="dialog"` with no
   `Esc`, a control with no `aria-expanded`/`aria-selected` reflecting its state). Prefer a
   native element first (rule above); reach for the APG only when you build the widget yourself.
+- **A disclosure toggle that swaps its `aria-label` text or icon between
+  "Expand"/"Collapse" still needs `aria-expanded` on the same control — the label
+  communicates what will happen, not the current state.** The APG-conformance
+  point above already names a missing `aria-expanded`/`aria-selected` as an
+  example of a widget shipped without its pattern's states; this is the single
+  most common concrete shape it takes. A hand-rolled expand/collapse row (tree
+  row, accordion header, filter section) commonly swaps its icon
+  (`name={open ? 'chevron-down' : 'chevron-right'}`) and its `aria-label` text
+  (`(open ? 'Collapse' : 'Expand') + title`) on click and stops there — a screen
+  reader landing fresh on the button hears a sensible "Expand" or "Collapse," so
+  a first-read smoke test and a sighted click-through both look correct. But that
+  swapped text is the accessible NAME, not the `aria-expanded` STATE the ARIA
+  disclosure pattern requires on the same control: assistive tech that reports
+  state changes rather than re-announcing the full name on every interaction
+  never gets one, and neither does any tooling that asserts on state directly
+  (axe, Testing Library's `getByRole(..., {expanded})`), which will not recognize
+  the row as a disclosure widget at all. Per MDN, `aria-expanded` "is applied to
+  th[e] focusable, interactive control that toggles the visibility of the
+  object," normally paired with `aria-controls` naming which element it toggles —
+  both belong on the same button whose label/icon already swap. Detection: grep
+  the icon/label-swap tell above, then check whether the same button also
+  carries `aria-expanded={open}`; on a codebase with several tree/list/accordion
+  rows, diff them against each other — most carrying `aria-expanded` and one not
+  is strong evidence of an overlooked component, not a deliberate omission, and
+  worth flagging as a reuse smell alongside the correctness bug (a single shared
+  `<DisclosureButton>` primitive makes the gap structurally impossible to
+  reintroduce). Regression test: assert `aria-expanded` flips per click via
+  `getByRole('button', {expanded: false|true})`, not only that the content
+  becomes visible in the DOM.
 - Visible focus indicator; focus is **not obscured** by sticky headers/toolbars
   (2.2 new: Focus Not Obscured).
 - **A focus indicator must clear the contrast floor, not merely *change*.** "Visible" is a
@@ -467,4 +554,7 @@ third-party origin with no `integrity=`; a weakened `Referrer-Policy` (`unsafe-u
 `frame-ancestors`/`X-Frame-Options` on a page with authenticated or state-changing actions; a
 small lookup helper imported from a shared module that also builds a derived singleton over
 an entire large dataset (walk the client import graph, stripping type-only imports, for an
-edge into that module).
+edge into that module); a loading/skeleton component with `aria-busy` and/or a label prop but
+no `role="status"`/`role="alert"`/`aria-live` on it or an ancestor; a static `aria-label` that
+doesn't contain the element's own visible text (WCAG 2.5.3); an icon/label swap keyed off an
+`open`/`expanded` boolean with no matching `aria-expanded` on the same control.
