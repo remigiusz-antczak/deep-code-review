@@ -3181,6 +3181,26 @@
         "Explains that HTML output-escaping does NOT fix it (it acts on the result, not the engine's evaluation) and that server-side SSTI is typically an RCE path via object-graph traversal; an engine sandbox is a mitigation, not a boundary",
         "Prescribes never compiling a template from user input — pass the user value only as a bound context variable to a static template; for genuine user-template features use a logic-less engine / locked-down sandbox treated as an RCE-grade boundary"
       ]
+    },
+    {
+      "id": "focus-indicator-detector-must-check-contrast-not-just-that-the-style-changed",
+      "prompt": "An accessibility crawler flags a focusable control only when its computed style is identical before and after `.focus()`. It reports 0 failures on a design system where many components override the global focus ring with a light token (meant for dark filled buttons) that measures ~1.8:1 on the light cards they actually sit on. Is the focus indicator accessible? What's wrong with the check?",
+      "expected_output": "No — the indicators are not accessible, and the check validates the wrong property. 'The style changed on focus' is necessary but not sufficient: a change from transparent to a real-but-too-faint colour is a passing diff and a failing product. A focus indicator must clear a numeric contrast floor — WCAG 1.4.11 Non-text Contrast (Level AA) requires 3:1 for the visual information identifying UI-component states, and 2.4.13 Focus Appearance (Level AAA) requires the indicator area to be >=3:1 between the focused and unfocused states — and ~1.8:1 fails it. The detector must resolve the ACTUAL rendered colours on both sides of the focus boundary and compute the ratio (like a text-contrast checker), not just diff that something changed. The root cause is compounding: a narrow-purpose token (documented for dark filled buttons) was reused as the focus colour on light surfaces, and nothing enforced the doc-comment's intended context — so grep the token's call sites, not its comment. The fix is usually just removing the override so the correct global :focus-visible default wins.",
+      "expectations": [
+        "Identifies the check validates the wrong property: 'style changed' passes a too-faint indicator; it must compute the ACTUAL rendered-colour contrast ratio on both sides of focus",
+        "Cites the numeric floor correctly: ~1.8:1 fails 3:1 (WCAG 1.4.11 AA for UI-component states; 2.4.13 Focus Appearance AAA for the indicator area between focused/unfocused states)",
+        "Names the compounding root cause (a narrow-purpose token reused beyond its documented, unenforced context) — grep call sites not the comment; fix by removing the override so the correct global default wins"
+      ]
+    },
+    {
+      "id": "reduced-motion-audit-the-symptom-not-only-the-gated-mechanism",
+      "prompt": "A codebase has thorough prefers-reduced-motion coverage: a CSS duration belt zeroing all transitions/animations under the media query, a per-component motion-reduce variant, and a shared hook wired into every framer-motion usage. A 'jump to section' button calls `element.scrollIntoView({behavior: 'smooth'})` directly. A reviewer greps for `transition-` and the animation library's import, finds everything gated, and passes it. Correct?",
+      "expected_output": "No. The reduced-motion program gates one KIND of motion (CSS transitions/animations + one library) exhaustively, but scrollIntoView({behavior: 'smooth'}) is an imperative native browser API — not a CSS transition and not driven by the duration tokens or the library variants — so a search scoped to the gated mechanism (transition-, the library import) walks right past it. Audit reduced-motion by the SYMPTOM (motion-producing APIs), not the mechanism the codebase already gates: grep for scrollIntoView / scrollTo / scrollBy with a behavior option, CSS scroll-behavior: smooth, Element.animate(), requestAnimationFrame loops, and autoplay/carousel/marquee logic. For each hit, confirm it branches on matchMedia('(prefers-reduced-motion: reduce)') (or the repo's existing hook) before choosing the animated path. The fix is cheap and should reuse the hook already wired for the other animations, cited as the patch.",
+      "expectations": [
+        "Identifies that an imperative native motion API (scrollIntoView({behavior:'smooth'})) is outside the CSS/library mechanism the reduced-motion program gates, so a mechanism-scoped grep misses it",
+        "Prescribes auditing by the symptom set (scrollIntoView/scrollTo/scrollBy with behavior, scroll-behavior:smooth, Element.animate, rAF, autoplay/carousel), each branching on matchMedia / the existing hook",
+        "Notes the fix reuses the reduced-motion hook the codebase already has (cited as the patch), not a new pattern"
+      ]
     }
   ]
 }

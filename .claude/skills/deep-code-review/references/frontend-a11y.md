@@ -70,6 +70,20 @@ without regressing a deliberate design.
   native element first (rule above); reach for the APG only when you build the widget yourself.
 - Visible focus indicator; focus is **not obscured** by sticky headers/toolbars
   (2.2 new: Focus Not Obscured).
+- **A focus indicator must clear the contrast floor, not merely *change*.** "Visible" is a
+  numeric bar: the indicator's colour must reach **>=3:1** against what it sits on — WCAG **1.4.11
+  Non-text Contrast** (AA) requires 3:1 for "visual information required to identify user interface
+  components and states," and **2.4.13 Focus Appearance** (AAA) requires the indicator area to be
+  >=3:1 "between the same pixels in the focused and unfocused states." An automated focus check that
+  captures computed style, calls `.focus()`, and flags only when *nothing changed* validates the
+  **wrong property** — a change from transparent to a real-but-too-faint colour is a passing diff and
+  a failing product. Resolve the **actual rendered colours** on both sides and compute the ratio (the
+  way a text-contrast check does) — except an **unmodified user-agent-default** focus style, which
+  1.4.11 **exempts** from the floor (2.4.7 still requires it *visible*); scope the detector to
+  **author-styled** indicators. Beware a **narrow-purpose token** (e.g. a ring meant for a dark
+  filled button) reused as a component's focus colour on a light surface — its doc-comment's intended
+  context is unenforced, so grep its **call sites**, not its comment; the fix is usually just removing
+  the override so the correct global `:focus-visible` default wins.
 - Focus is managed on route change, modal open/close (trap + restore), and
   async content insertion.
 - **Hidden interactive content leaves the tab order — no "phantom focus."** A closed
@@ -144,6 +158,15 @@ confirm the background does not move.
   the **interaction-triggered** subset (scroll/parallax, hover/click transitions) this is
   WCAG **2.3.3 Animation from Interactions** (AAA — SC 2.2.2 governs the *automatically*
   started case instead).
+- **Audit reduced-motion by the *symptom* (motion-producing APIs), not only the *mechanism* the
+  codebase already gates.** A thorough CSS-duration belt + a per-library `motion-reduce` variant can
+  still leave an **imperative native** motion path ungated — most commonly
+  `Element.scrollIntoView({behavior: 'smooth'})` / `scrollTo` / `scrollBy` with a `behavior` option,
+  CSS `scroll-behavior: smooth`, `Element.animate()`, and autoplay / carousel / marquee logic —
+  because a search scoped to the gated mechanism (`transition-`, the animation library's import)
+  never sees them. Grep the **symptom set** and gate each on the repo's **existing** reduced-motion hook
+  (cited as the patch), not a new pattern — the audit-by-symptom delta, not a re-statement of the
+  CSS-doesn't-reach-JS rule above.
 
 **Timing & motion** (WCAG 2.2.1, 2.2.2 — both Level A)
 - **A time limit that logs out or discards unsaved input needs a warn-and-extend path.**

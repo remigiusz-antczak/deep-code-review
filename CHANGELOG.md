@@ -3,6 +3,14 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.255.0] — 2026-09-20
+
+### deep-code-review — wave 176 a11y detector method: focus-indicator contrast floor + reduced-motion symptom-audit (closes #598, closes #599)
+
+- **`frontend-a11y.md`** (#598): a focus indicator must clear a numeric contrast floor (>=3:1 against its surface — WCAG 1.4.11 Non-text Contrast, AA, for UI-component states; 2.4.13 Focus Appearance, AAA, for the indicator area between focused/unfocused states), not merely *change*. An automated check that flags only "nothing changed on focus" validates the wrong property (a too-faint colour passes the diff, fails the product). Scope the detector to **author-styled** indicators — an unmodified user-agent-default focus style is exempt from 1.4.11's floor (2.4.7 still requires it visible), the same gate-vs-standard discipline the file applies to 1.4.3's disabled-control exemption. Beware a narrow-purpose token reused beyond its unenforced doc-comment context.
+- **`frontend-a11y.md`** (#599): audit reduced-motion by the *symptom* (motion-producing APIs — `scrollIntoView({behavior:'smooth'})`, `scroll-behavior:smooth`, `Element.animate()`, autoplay/carousel), not only the *mechanism* the codebase already gates; imperative native paths escape a CSS-duration/animation-library-scoped grep.
+- +2 evals. `docs/standards-index.md`: WCAG 1.4.11 + 2.4.13 rows (verbatim incl. the 1.4.11 exemption clause), fetched/verified 2026-09-20. Independent reviewer PASS-WITH-FIXES (added the 1.4.11 user-agent-default exemption so the detector isn't over-strict; extended the truncated verbatim quote; tightened #599 to its delta).
+
 ## [1.254.0] — 2026-09-20
 
 ### deep-code-review — wave 175 server-side template injection (SSTI) depth in A05 (CWE-1336)
