@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.276.0] — 2026-09-20
+
+### deep-code-review — wave 197 an `or`/`||` fallback chain over JSON/config fields drops a legitimate falsy value
+
+- **`language-stack-redflags.md`** Python and JavaScript sections: `a or b or default` (Python) / `a || b || default` (JS) over decoded JSON/config skips a legitimately-present **falsy** value — Python `0`/`False`/`""`/`[]`/`{}`; JS `0`/`false`/`""`/`NaN` — and falls through to the next fallback, so the chain can't tell "not set" from "set to a falsy value" (a user's explicit `timeout: 0` is silently ignored). Resolve by **presence, not truthiness**: a presence/`is not None` check in Python, `??` (nullish coalescing, which falls back only on `null`/`undefined`) in JS; test with a falsy-but-present value. +1 eval. Independent reviewer PASS (both languages' falsy sets empirically verified; applied a nit scoping the eval's falsy-value list per language). Closes #650.
+
 ## [1.275.0] — 2026-09-20
 
 ### deep-code-review — wave 196 Kubernetes Pod Security hardening (from a Pod Security Standards comparative pass)
