@@ -3480,6 +3480,16 @@
         "Identifies the readiness probe as a false positive (200 on listener-up, before deps wired) so the LB routes to an instance that can't serve; readiness must reflect actual dependency reachability, with liveness kept separate",
         "Identifies that services shouldn't assume strict cross-service start-order — each service must tolerate a not-yet-ready peer"
       ]
+    },
+    {
+      "id": "llm-self-report-boolean-gated-with-loose-comparison-fails-open",
+      "prompt": "An agent pipeline asks an LLM to check whether a generated action is safe, expecting `{\"safe\": true|false}`, then runs `if (result.safe !== false) { executeAction() }`. A reviewer says 'every action is model-validated before it runs, so unsafe actions are blocked.' Is that right?",
+      "expected_output": "No. Two problems. (1) `result.safe !== false` fails OPEN: it executes for every value except literal `false` — including a missing/omitted `safe` field, `null`/`undefined`, a wrong type (`\"false\"` string, `0`), or a failed/empty parse. Those are exactly the outputs a model produces when it hallucinates, is prompt-injected, truncates on a token limit, or returns malformed JSON — so the 'unsafe' path silently runs. Require `safe` present and boolean, make execution demand an explicit `=== true`, and route every other case (missing, wrong-typed, unparseable) to the block/deny branch — fail closed. (2) A model self-grading its own action is not a trustworthy gate: it can be wrong or coerced by the same injection that produced the unsafe action, so the self-report must corroborate a deterministic safety check (allowlist, argument validation at the tool boundary), not replace it. Test with `safe` missing, null, and `\"false\"` and confirm the action is blocked.",
+      "expectations": [
+        "Identifies that `!== false` (a loose/negated comparison) fails OPEN — a missing, null, wrong-typed, or unparseable self-report value takes the execute branch, which is exactly what an omitted/hallucinated/injected/truncated LLM output produces",
+        "Prescribes fail-closed handling: require the field present and correctly typed, demand an explicit affirmative (`=== true`) for the permissive branch, and route every other case to block/deny",
+        "Identifies that a model self-grading its own output is not a trustworthy sole gate — it must corroborate, not replace, a deterministic check (allowlist / argument validation at the tool boundary)"
+      ]
     }
   ]
 }
