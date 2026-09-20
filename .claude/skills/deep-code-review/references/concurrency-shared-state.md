@@ -271,6 +271,40 @@ Common in agent/tooling repos: JSON/YAML "DB" files, append logs, lockfiles.
 
 ---
 
+## Distributed lock/lease TOCTOU — liveness is not exclusivity
+
+- **A time-bounded distributed lock/lease does not guarantee exclusivity against a paused or
+  clock-skewed holder** — distinct from this file's own "claim a lane" convention above
+  (cooperative scheduling, not an adversarial paused holder). "I hold the lock, therefore
+  only I write" is false once the holder can be paused past the lease TTL — GC
+  stop-the-world, CPU starvation, or a network delay on the write itself — because a second
+  node legitimately acquires the lease on expiry and now **both** write. Checking "is my
+  lock still valid?" right before the write does not close this: GC "can pause a running
+  thread at any point, including the point that is maximally inconvenient for you (between
+  the last check and the write operation)" (Kleppmann). The TTL is not a shared fact either
+  — holder and lock service each measure elapsed time with their **own clock**, so a holder
+  can believe its lease is live after the service already revoked it: "the server revokes
+  the lease but the client still claims it owns the lease" (etcd) — the **cross-node**
+  clock-skew case; single-machine NTP/DST is `time-date-correctness.md`'s. The same
+  stale-holder shape recurs in **leader election** (a deposed node that hasn't learned it
+  lost) — a parallel this skill draws, not one etcd asserts (etcd lists leader election
+  and locks only as common patterns built on it).
+- **The fix lives at the resource, not the holder — a fencing token.** Issue a monotonically
+  increasing token per acquisition (etcd: its revision number) that the resource itself
+  checks on write: it "requires the storage server to take an active role in checking
+  tokens, and rejecting any writes on which the token has gone backwards" (Kleppmann).
+  **Scope caveat:** actionable only when the reviewed code controls the resource's write
+  path — an internal DB row, service, or file store. When the resource is a third-party API
+  or another team's managed service that can't validate a token, the finding is narrower:
+  the lock still gives no exclusivity against a paused holder, so the operation itself must
+  be **idempotent or compare-and-set** instead — etcd concedes the same limit for its own
+  lock: "the lock feature of etcd itself cannot be used for protecting external resources."
+  Distinct from the SQS visibility-timeout race in `reliability-error-handling.md` (one
+  message replayed vs. here, typically **two different** writes) and from lock
+  **ordering**/deadlock above — a different failure mode.
+
+---
+
 ## Tests & jobs vs real shared paths
 
 A high-damage pattern: suite or job writes the **default production/shared data
@@ -342,4 +376,7 @@ targeting the same file set (no spawn-time preflight); load-shedding or lane-abo
 by name/command-line match (`pkill -f` / `killall`) instead of an owned process group;
 a killed lane whose children outlive it (orphaned worktree/port/lock); a
 plain (non-atomic, non-`volatile`) flag or field shared across threads with no
-named synchronization edge — a memory-visibility bug, not only an interleaving race.
+named synchronization edge — a memory-visibility bug, not only an interleaving race; a
+distributed lock/lease (Redis/Redlock, ZooKeeper, etcd, a DB-row lease) guarding a write to
+a shared resource with no fencing token on the write path and no idempotency/CAS fallback —
+especially a "re-check the lease, then write" pattern, which reads as safe but isn't.

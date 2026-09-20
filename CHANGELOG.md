@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.313.0] — 2026-09-20
+
+### deep-code-review — a distributed lock/lease guarantees liveness, not exclusivity (fencing tokens)
+
+- **`concurrency-shared-state.md`** new "Distributed lock/lease TOCTOU — liveness is not exclusivity" subsection: a time-bounded distributed lock/lease does **not** guarantee exclusivity against a **paused** (GC/page-fault/SIGSTOP) or **clock-skewed** holder — a second node acquires the expired lease and both write; re-checking "is my lock valid?" before the write does **not** close it (the pause lands between check and write); holder and lock service measure the TTL on their own clocks. The fix lives at the **resource**: a monotonic **fencing token** the resource validates and rejects if stale — but only when the reviewed code controls the resource's write path; for a third-party/managed resource that can't validate a token, the op must instead be **idempotent or compare-and-set**. Distinguished from this repo's cooperative "claim a lane" lease convention, the SQS visibility-timeout race, and lock-ordering/deadlock. Kleppmann + etcd cited; +2 `docs/standards-index.md` rows; +2 evals.
+- Research-derived expansion (no filed issue). Built by a worktree builder subagent, independently reviewed **PASS-WITH-FIXES**: the reviewer byte-verified every Kleppmann/etcd quote and confirmed the fencing-token scope is correctly gated; applied both must-fixes — softened a leader-election clause that over-attributed a shared-failure-shape claim to etcd (etcd only lists the patterns together, doesn't claim the shared shape), and split a standards-index quote's section heading (the GC-pause quote is under "Protecting a resource with a lock," not "Making the lock safe with fencing").
+
 ## [1.312.0] — 2026-09-20
 
 ### deep-code-review — front-end / loader performance: serialized independent awaits (#716); a static dataset leaked into the client bundle (#715)
