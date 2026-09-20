@@ -122,8 +122,8 @@ and any wired security/dependency scanners. Then, before trusting "green":
   idle) — plant a minimal defect it should catch (a throw, an undefined
   identifier, a banned string, a format break), confirm it goes **red and the
   reported count/exit changes**, then revert and **confirm the revert**. (This
-  transient, self-reverting probe is the one code mutation the read-only default
-  permits — principle 7.) A gate that stays green on a planted defect is a
+  transient, self-reverting probe is one of the dedicated-worktree probes the
+  read-only default permits — principle 7.) A gate that stays green on a planted defect is a
   **Blocker/Critical reported before any code finding** — it invalidates the
   ground truth everything else builds on. **Planted-defect matrix (config
   gates):** exercise at least (a) **missing** config, (b) **empty /

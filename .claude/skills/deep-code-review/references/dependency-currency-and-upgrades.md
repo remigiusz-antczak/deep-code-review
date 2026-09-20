@@ -141,7 +141,7 @@ tests, performance, or another axis.
    backport) fast-track on their own; feature/major upgrades are scheduled,
    migration-planned work. Conflating them either delays a fix or rushes a
    breaking change.
-7. **Bounded and reversible** (`SKILL.md` principle 5). A bump you cannot test
+7. **Bounded and reversible.** A bump you cannot test
    safely in-repo (it touches a paid integration, prod data, or a
    hard-to-reproduce runtime) gets a canary/staging path first; a tested rollback
    — revert the lockfile to the pinned prior version — must always exist. Keep

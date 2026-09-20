@@ -338,7 +338,8 @@ of:
 - **Fix-against-suite (gold standard; required when the finding proposes a code
   change to security / cost / concurrency logic).** Apply the proposed fix in a
   **throwaway worktree** (never the shared tree — principle 7) and run the repo's
-  own gates. A fix that turns the suite **red** refutes the finding, or proves it
+  own gates, then **discard the worktree and confirm it is gone** (the disposal every
+  principle-7 probe owes). A fix that turns the suite **red** refutes the finding, or proves it
   needs a different fix; a fix that keeps the suite green and reproduces the
   original break red-first is the strongest `CONFIRMED` a fan-out can produce.
 

@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.289.0] — 2026-09-20
+
+### deep-code-review — wave 210 self-audit cleanup: principle-7 self-contradiction + a fabricated principle cite
+
+- A dogfood self-audit (Perun run on its own tree) found two principle-citation defects, both fixed here. **Principle 7 self-contradiction:** `SKILL.md` principle 7 read "The **one** unprompted mutation is Phase 1's transient planted probe…", but three sites now license an unprompted worktree mutation under principle 7 (Phase 1's planted-defect probe, Phase 3's discovery probe-test [added in wave 207], Phase 4's fix-against-suite check). Reworded to name the **class** — "Unprompted mutation is confined to transient dedicated-worktree probes, **each reverted or deleted and confirmed**" (byte-neutral) — and aligned `method.md`'s "the one code mutation" phrasing; `parallel-audit.md`'s fix-against-suite step gained the disposal clause the class now requires (reviewer's Low finding). **Fabricated principle cite:** `dependency-currency-and-upgrades.md`'s "Bounded and reversible (`SKILL.md` principle 5)" — principle 5 is "Respect the existing design"; no numbered principle covers bounded/reversible (it's from a different document) — dropped the false attribution, the rule stands standalone. Independent reviewer PASS-WITH-FIXES (the one Low finding applied). No eval change (correctness fix to existing content). Closes no filed issue (internal self-audit).
+
 ## [1.288.0] — 2026-09-20
 
 ### agentic-delivery — wave 209 fleet coordination honesty (claim freshness/staleness #596 + commit attribution trailer #660)
