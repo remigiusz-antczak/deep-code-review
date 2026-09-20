@@ -10,7 +10,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.323.0"
+  version: "1.324.0"
 ---
 
 # Agentic delivery
@@ -195,7 +195,9 @@ conductor).** Two or more agent sessions coordinating over a shared async
 channel instead of one orchestrator's own lanes:
 `references/multi-session-coordination.md` — **read it when** designing a
 claim/lock registry, a pre-write collision probe, a peer-liveness check, a
-shared-board reader, or reconciling two peers' crossed work-splits.
+shared-board reader, reconciling two peers' crossed work-splits, coordinating
+a shared machine-wide resource budget across peers, routing an action one peer
+is persistently denied, or vetting a peer's correction before acting on it.
 
 **A work item's own completion is G7, not G8.** Once a lane's change is
 integrated (G7), the work item it closes is done; G8 Release is a separate,

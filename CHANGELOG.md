@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.324.0] — 2026-09-20
+
+### agentic-delivery — peer coordination: shared machine-wide budget (#740), routing a persistently-denied action without laundering (#727), a peer's correction is a lead not an order (#732)
+
+- **`multi-session-coordination.md`** (peer-coordination family): three folds extending the peer-to-peer model. (**#740**) every peer honoring its own per-session heavy-lane cap still oversubscribes a shared host, because the caps **sum** — three sessions each at "≤4 heavy lanes" is up to twelve, not four; open a heavy lane only after checking the **aggregate** (a shared machine-wide reservation, or a raw shared signal — `git worktree list | wc -l`, `load1` vs core count, swap-percent), and shed lanes on aggregate distress rather than waiting for your own per-session cap to trip. (**#727**) a persistent cross-peer permission/classifier asymmetry (the identical shared-maintenance or publish action routine for one peer, hard-denied for another on every attempt) is not a retryable flake — after two identical denials, stop retrying, and **surface and route** the blocked action to a peer that can perform it or to the owner; never launder the block by having your own logic reach the same effect through a path the classifier never evaluated, and prefer a classifier-safe in-repo alternative where one exists. (**#732**) a peer's "X is wrong, do Y" correction is indistinguishable from a stale or spoofed message — treat it as a **lead**, reconcile it against your own verifiable state (a SHA, a PR URL, a timestamp) before complying, and refuse or flag one that contradicts what you can already verify; on the sending side cite verifiable state and frame the instruction idempotently. +3 evals; SKILL.md routing trigger widened to name the machine-wide-budget, persistent-denial-routing, and correction-vetting cases. Closes #740, #727, #732.
+- Built by a worktree builder subagent, independently reviewed **PASS-WITH-FIXES**: applied both must-fixes — rewrote the #727 eval's `expected_output` to drop a mis-cite (the in-session orchestrator-vs-own-subagent classifier case in `fast-agentic-delivery.md` is deterministic, not "intermittent," and only an already-green merge may be delegated to a sub-agent — never a workaround for an active denial), and widened the multi-session routing trigger the reviewer flagged as too narrow for the new sections.
+
 ## [1.323.0] — 2026-09-20
 
 ### deep-code-review — gh-CLI gotchas: PR-body full-replace clobber (#739); `.github/workflows/*` needs the `workflow` OAuth scope (#719)
