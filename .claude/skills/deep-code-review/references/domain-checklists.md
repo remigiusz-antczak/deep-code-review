@@ -13,6 +13,22 @@ Read this when walking a domain in Phase 2 (or a DIFF quick-path that touches th
 - Does it do what the spec/issue/user actually needs — not a plausible adjacent
   thing? Edge cases: empty, null, zero, negative, max/overflow, unicode,
   duplicate, out-of-order, huge, single-element, off-by-one boundaries.
+- **Placement is a correctness question too: right logic, wrong home.** Before
+  judging what the code does, ask where it should live — does this belong in
+  *this* codebase/layer, or in a shared library, a separate service, or a
+  caller's own concern? A change that is correct and fully tested but lands
+  one layer too low still costs: it couples that layer to a decision it
+  shouldn't own, pre-commits an abstraction on a single data point, or
+  puts a capability in a consumer when it belongs upstream (an *ownership*
+  question — distinct from H's DRY/duplication axis). That's a design defect even
+  when nothing is functionally wrong — though the remedy may be a redesign the
+  owner rules on (principle 5), not one the reviewer imposes unilaterally.
+  Timing is the same question from a different angle: is *now* the right
+  time, or is the caller getting ahead of itself (cross-ref H — a one-caller
+  "helper" is premature)? This puts placement on the **default** Domain A path,
+  not only the Architect role overlay; `references/role-coverage.md`'s Architect lens (boundaries &
+  seams, dependency direction) is the deeper system-shape treatment for when
+  architecture leads the review.
 - **AI-authored code: a call into a *real* dependency must actually exist on the *pinned* version
   — not just the package.** Beyond package-name hallucination (a whole invented dependency —
   `security-appsec.md`, `dependency-currency-and-upgrades.md`), an LLM invents a **nonexistent

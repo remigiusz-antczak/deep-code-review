@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.343.0] — 2026-09-20
+
+### deep-code-review — design-fit ("does this change belong here?") on the default audit path, not only the Architect role overlay (#805)
+
+- **`domain-checklists.md`**: a new **Domain A** bullet — placement is a correctness question too. Before judging what code *does*, ask where it should live: this codebase/layer vs a shared library, a separate service, or a caller's concern; and whether *now* is the right time (vs YAGNI). A correct, fully-tested change one layer too low still couples that layer to a decision it shouldn't own, pre-commits an abstraction on one data point, or puts a capability in a consumer when it belongs upstream — a design defect even when nothing is functionally wrong (the remedy may be an owner-ruled redesign per principle 5, not a unilateral revert). Cross-refs Domain H (premature abstraction) and `role-coverage.md`'s Architect lens (the deeper system-shape treatment, an optional role overlay); this bullet puts placement on the **default** path. +1 eval. Sourced to Google Engineering Practices, "What to look for in a code review" (design section), verified by direct fetch 2026-09-20.
+
 ## [1.342.0] — 2026-09-20
 
 ### agentic-delivery — a background monitor emits on state-transition or terminal state only; an unchanged poll is not an event (#795)

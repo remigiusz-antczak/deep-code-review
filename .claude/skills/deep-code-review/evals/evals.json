@@ -4571,6 +4571,16 @@
         "Explains why the native <select required> sibling is unaffected: HTML's required maps to aria-required automatically for native input/select/textarea, while a custom role=\"combobox\" button has no such mapping and must set it explicitly",
         "Prescribes threading required -> aria-required onto the custom trigger (ideally via the wrapper's shared context) and a regression test on the composition itself (<Field required><PlanSelect /></Field>) asserting aria-required=\"true\", not a test of either component in isolation"
       ]
+    },
+    {
+      "id": "correct-well-tested-helper-added-to-one-component-when-a-shared-lib-already-owns-it",
+      "prompt": "A PR adds currency formatting -- rounding to the account's minor unit and applying the correct symbol per locale -- as a new private function inside a single receipt-printing component. The function is correct, covered by unit tests for every edge case, and the diff is small and focused. The codebase already has a shared `packages/money` library that every other billing surface imports for amount handling; it has no formatter for this at all yet (neither rounding nor locale-symbol). This component is scheduled to support two more locales next quarter. Nothing is broken today and CI is green. What should a review flag?",
+      "expected_output": "Correctness and test coverage are not the issue -- the finding is that this logic was built in the wrong place. Locale-aware currency formatting is a cross-cutting concern every billing surface will eventually need, and the shared `packages/money` library is where that kind of decision (rounding mode, symbol-per-locale) already lives for amount handling -- this component just happens to be first to need a formatter. Building it as a private function inside one leaf component means the component now owns a decision that belongs one layer down, in the library every other billing surface already depends on. That the function is correct and well-tested only clears it on functionality -- it says nothing about whether this component should own the decision at all, and a passing test suite cannot catch that kind of defect. The concrete cost lands next quarter: the two additional locales either get bolted onto this component's private formatter, extending code that was never meant to be the shared answer, or force a later migration into `packages/money` once other surfaces start copying it. The fix is to add the formatter to `packages/money` now and have the component call it, not to let a leaf component become the de facto owner of cross-cutting formatting logic.",
+      "expectations": [
+        "Identifies that the new capability's natural home is the shared library -- a leaf component is the wrong layer for a cross-cutting locale/currency-formatting decision -- rather than clearing the change because it is correct and tested",
+        "States plainly that correctness and full test coverage do not settle the question -- a well-tested, bug-free change can still be built in the wrong place",
+        "Names the forward cost: the two locales landing next quarter will either extend the misplaced component-local formatter or force a later migration into the shared library"
+      ]
     }
   ]
 }
