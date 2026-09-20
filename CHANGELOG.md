@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.247.0] — 2026-09-20
+
+### deep-code-review — wave 168 notebook review: hidden state & committed-output leakage (data-science code)
+
+- **`testing-and-evals.md`**: a new section for two notebook-specific failure modes a normal source review misses, distinct from ML-pipeline correctness. (1) Out-of-order execution → hidden state: a notebook's results reflect run order, not source order, so a committed `.ipynb` with non-monotonic `execution_count`s may not reproduce from a clean kernel; check via Restart & Run All / `jupyter nbconvert --execute` / nbclient in CI, not "it ran for me". (2) Committed output cells leak data/secrets: `.ipynb` stores outputs, so a printed `df.head()` (PII) or an echoed token lands in git history; strip outputs (`nbstripout`, a `--clear-output` pre-commit hook, or a CI gate), and a secret that reached a commit must be rotated, not just stripped. Converts the new-domains breadth scout's one non-gated residual into shipped coverage.
+- +1 eval. Reviewer FIX-FIRST applied (corrected the fabricated `--ClearOutput` flag to the real `--clear-output`; added the key-rotation instruction the eval grades; softened a "does not reproduce" overclaim to "may not").
+
 ## [1.246.0] — 2026-09-20
 
 ### deep-code-review — wave 167 CSV / spreadsheet formula injection, export direction (A05)

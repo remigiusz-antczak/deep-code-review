@@ -3081,6 +3081,16 @@
         "Names the specific dangerous leading characters (=, +, -, @, tab, null) and that they are parsed as a formula by the spreadsheet app on open (CWE-1236 / CSV formula injection)",
         "Prescribes escaping at EXPORT time (prefix a single quote to a leading dangerous char; RFC 4180 escaping), not input-time rejection and not relying on the UI's HTML escaping"
       ]
+    },
+    {
+      "id": "a-committed-notebook-that-only-runs-in-the-authors-kernel-is-not-reproducible-and-may-leak-outputs",
+      "prompt": "A repo commits a `.ipynb` analysis notebook. In review it 'works' (the author ran it and the charts render). Its cells have execution_counts like [5], [2], [9], [3], and several cells print `df.head()` and one prints the value of an `API_KEY` variable while debugging. Is this ready to merge?",
+      "expected_output": "No — two notebook-specific defects a normal source review misses. (1) Hidden state from out-of-order execution: the non-monotonic execution_counts ([5],[2],[9],[3]) show cells were run out of order, so results may depend on a variable set by a since-edited/deleted cell — the committed notebook may not reproduce from a clean kernel. 'It ran for me' isn't evidence; require Restart & Run All from a fresh kernel (or `jupyter nbconvert --execute`/nbclient in CI) and a monotonic run. (2) Committed output cells leak data/secrets: `.ipynb` stores outputs in the file, so the printed df.head() rows (PII) and especially the printed API_KEY are now in git history where a diff-scoped review won't look. Strip outputs before commit (nbstripout / a ClearOutput pre-commit hook or CI gate), rotate the exposed key, and treat a committed output cell like any other emitted value. Not ready to merge.",
+      "expectations": [
+        "Flags hidden state from out-of-order execution (non-monotonic execution_counts) — the committed notebook may not reproduce from a clean kernel; requires Restart & Run All / fresh-kernel execution, not 'it ran for me'",
+        "Flags that committed output cells store data/secrets in the .ipynb (the df.head() PII and the printed API_KEY are in git history), requires stripping outputs (nbstripout/ClearOutput gate) and rotating the exposed key",
+        "Treats these as distinct from ML-pipeline leakage/reproducibility — notebook-specific artifacts (state + stored outputs) — and does not merely say 'add tests'"
+      ]
     }
   ]
 }

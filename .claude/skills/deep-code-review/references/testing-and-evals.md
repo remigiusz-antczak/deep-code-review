@@ -564,6 +564,23 @@ overlay, not restated here. Whether a demonstrated disparity is **unlawful
 discrimination** is a legal determination — route it to counsel (`business-ops` Lane R names the
 regime); the code finding is the **missing measurement or unstated metric**, never a legal verdict.
 
+## Notebook review — hidden state & committed outputs (data-science code)
+
+A Jupyter/Colab notebook is code with two failure modes a normal source review misses, both distinct from the
+ML-pipeline correctness above:
+- **Out-of-order execution → hidden state.** A notebook's results reflect the order cells were *run*, not
+  top-to-bottom source order; an output can depend on a variable set by a cell since edited, moved, or deleted,
+  so the committed `.ipynb` does not reproduce from a clean kernel. The only honest check is **Restart & Run
+  All** (or `jupyter nbconvert --execute` / `nbclient` in CI) from a fresh kernel — a notebook that only works
+  in its author's live session is not reproducible, and "it ran for me" is not evidence. 🚩 a committed
+  notebook with non-monotonic `execution_count`s, or a CI that never executes it fresh.
+- **Committed output cells leak data and secrets.** `.ipynb` stores cell *outputs* in the file: a printed
+  `df.head()` with real rows (PII), an API token echoed in a repr, credentials in a traceback, a base64 image,
+  or megabytes of data — committed into git history where a diff-scoped review never looks. Strip outputs before
+  commit (`nbstripout`, a `--ClearOutput` pre-commit hook, or a CI gate) and treat a committed output cell like
+  any other emitted value (cross-ref `observability.md` Logs & traces and `privacy-compliance.md`). 🚩 an
+  `.ipynb` with populated `outputs` / `execution_count` in the diff and no output-stripping gate.
+
 ## Business rules as executable specs
 
 Encode load-bearing business rules as acceptance tests so the build fails if the
