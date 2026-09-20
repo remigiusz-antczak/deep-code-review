@@ -4510,6 +4510,16 @@
         "Names the concrete gap: the analytics warehouse is in a US region 'because that's where the rest of the warehouse lives,' so PII columns (email, name, billing address) leave the EU on every replication cycle regardless of the primary being correctly hosted and the connector being bug-free",
         "Routes the transfer-mechanism question (whether an adequacy decision, SCCs, or BCRs is documented) to counsel without asserting one applies or is sufficient, while still prescribing a code-level fix: exclude/mask the PII columns from the CDC stream, target an EU-region warehouse, or pseudonymize before the cross-region hop"
       ]
+    },
+    {
+      "id": "password-rotation-and-composition-rules-are-outdated-nist",
+      "prompt": "A security reviewer audits a login system and files two findings: (1) 'passwords are not required to be changed every 90 days -- add a mandatory rotation policy,' and (2) 'the password field accepts \"correcthorsebatterystaple\" with no uppercase/number/symbol requirement -- add complexity rules requiring mixed character types.' The system already screens new passwords against a breached-password list and enforces a 12-character minimum. Are those two findings correct?",
+      "expected_output": "No -- both findings invert current guidance. NIST SP 800-63-4 explicitly reverses the 2017-era habits they recommend: verifiers 'SHALL NOT impose other composition rules (e.g., requiring mixtures of different character types)' and 'SHALL NOT require subscribers to change passwords periodically' (the one exception: verifiers SHALL force a change on evidence the credential is compromised). Mandatory periodic rotation drives users toward predictable, incrementing passwords and is a net negative; composition rules reduce effective entropy and push users to predictable substitutions. The system is already doing the right things -- screening against a breached-credential list and enforcing a length floor are exactly what current NIST calls for. So the reviewer flagging the *absence* of rotation/complexity is itself the finding: those recommendations should be withdrawn, and if the codebase already has a 90-day-rotation or complexity-regex policy, that is what to flag for removal. The only rotation to keep is a forced reset triggered by detected compromise.",
+      "expectations": [
+        "States both findings are wrong: NIST 800-63-4 reverses forced periodic rotation and character-composition rules (SHALL NOT), so flagging their absence follows outdated guidance",
+        "Notes the system's existing controls (breached-list screening + length floor) are what current NIST actually calls for, and that mandatory rotation/complexity are net-negative (predictable/incrementing passwords, lowered effective entropy)",
+        "Identifies the correct exception -- force a change only on evidence of compromise -- and that an existing 90-day/complexity policy is itself the thing to flag for removal"
+      ]
     }
   ]
 }

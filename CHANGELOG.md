@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.334.0] — 2026-09-20
+
+### deep-code-review — deepen: NIST 800-63-4 reverses forced password rotation/complexity (#781)
+
+- **`security-appsec.md`** (#781): the authentication area's password-policy coverage now states that flagging the *absence* of forced periodic rotation or character-composition rules follows **outdated** (2017-era) guidance — NIST SP 800-63-4 reverses both ("SHALL NOT impose other composition rules"; "SHALL NOT require subscribers to change passwords periodically"), the one exception being a forced change on evidence of compromise; prefer breached-credential-list screening + a length floor. +1 eval; +1 curl-verified standards-index row (NIST 800-63-4 password policy); and the `docs/standards-index.md` ASVS caveat updated to record this session's direct re-verification of ASVS 5.0 V7 levels (7.3.1/7.3.2 = L2, 7.4.1 = L1), which match the existing citations.
+- Independently reviewed **PASS-WITH-FIXES**: all NIST quotes + the ASVS levels confirmed at source. Applied the must-fix — the new password paragraph had been inserted directly above the WebAuthn block, inverting that block's "the block above is about session *tokens*" sentence; relocated it to *after* the WebAuthn block so the contrast reads correctly.
+
 ## [1.333.0] — 2026-09-20
 
 ### deep-code-review — NEW: cross-border data transfer & residency enforcement (#780)

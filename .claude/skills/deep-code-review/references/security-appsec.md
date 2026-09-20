@@ -784,6 +784,15 @@ credential-layer pass, not just a session-token one:
   absence. Syncable ("multi-device") passkeys have exportable keys, so NIST bars them at AAL3 —
   check the assurance tier before requiring *or* forbidding sync.
 
+**Password policy follows current NIST, not 2017-era habits.** Flagging the *absence* of forced
+periodic rotation or character-composition rules is following **outdated** guidance — NIST SP
+800-63-4 reverses both: "Verifiers and CSPs SHALL NOT impose other composition rules (e.g.,
+requiring mixtures of different character types)" and "SHALL NOT require subscribers to change
+passwords periodically" (but "SHALL force a change if there is evidence that the authenticator has
+been compromised"). Screen new passwords against a known-breached-credential list and set a length
+floor instead; a mandated 90-day rotation or a complexity regex is itself the finding, not its
+absence.
+
 **🚩 CSRF guard mistaken for authentication.** An `Origin` / `Referer` /
 `Sec-Fetch-Site` check is CSRF defense only — (1) any non-browser client sets
 those headers freely, and (2) browsers omit `Origin` on many same-site **GET**

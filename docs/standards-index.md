@@ -112,7 +112,7 @@ Verification date: **2026-08-17**.
 
 | Standard / source | URL | What was confirmed |
 |---|---|---|
-| OWASP ASVS | https://github.com/OWASP/ASVS | Latest stable version **5.0.0** (dated May 2025). Preferred requirement id form `v<version>-<chapter>.<section>.<requirement>` (e.g. `v5.0.0-1.2.5`); a bare `1.2.5` refers to the latest version. Use as a verification checklist — claiming "ASVS covered" in a review requires naming the exact chapters/requirements actually checked, not a bare "ASVS" label. (Repointed 2026-09-18 from the retired `owasp.org/www-project-application-security-verification-standard/`, now 404; ASVS 5.0's assurance-level model was **not** re-verified this session — do not cite L1/L2/L3 without checking the 5.0 spec.) |
+| OWASP ASVS | https://github.com/OWASP/ASVS | Latest stable version **5.0.0** (dated May 2025). Preferred requirement id form `v<version>-<chapter>.<section>.<requirement>` (e.g. `v5.0.0-1.2.5`); a bare `1.2.5` refers to the latest version. Use as a verification checklist — claiming "ASVS covered" in a review requires naming the exact chapters/requirements actually checked, not a bare "ASVS" label. (Repointed 2026-09-18 from the retired `owasp.org/www-project-application-security-verification-standard/`, now 404; ASVS 5.0's assurance-level model for **V7 (Session Management)** was re-verified by direct fetch of the `v5.0.0_release` spec on 2026-09-20 — 7.3.1 = L2, 7.3.2 = L2, 7.4.1 = L1, matching this repo's `security-appsec.md` citations; other chapters/levels not cited here remain unverified — check the 5.0 spec before citing them.) |
 
 ## Verified by direct fetch (2026-08-17) — install / Cursor portability
 
@@ -861,3 +861,13 @@ well-established mechanisms, so they carry no separate row here.)
 | Standard / source | URL | What was confirmed |
 |---|---|---|
 | RFC 8058 — Signaling One-Click Functionality for List Email Headers | https://www.rfc-editor.org/rfc/rfc8058.txt | Verbatim: "The List-Unsubscribe header field MUST contain one HTTPS URI." "The List-Unsubscribe-Post header MUST contain the single key/value pair 'List-Unsubscribe=One-Click'." "the message MUST have a valid DomainKeys Identified Mail (DKIM) signature that covers at least the List-Unsubscribe and List-Unsubscribe-Post headers." "The POST request MUST NOT include cookies, HTTP authorization, or any other context information." "The mail sender MUST NOT return an HTTPS redirect ..." Basis for the one-click-unsubscribe rules (direct POST, no confirm-redirect, DKIM must cover the unsubscribe headers; the no-cookies/no-context rule scopes the POST's contents, not the endpoint's response). Fetched + verified 2026-09-20. |
+
+## Verified by direct fetch (2026-09-20) — NIST 800-63-4 password policy
+
+Verification date for the row below: **2026-09-20**. Added for the deep-code-review
+`security-appsec.md` password-policy deepen (current NIST reverses forced rotation / composition
+rules). Fetched via `curl` (raw HTML).
+
+| Standard / source | URL | What was confirmed |
+|---|---|---|
+| NIST SP 800-63-4B (Digital Identity Guidelines — Authentication) | https://pages.nist.gov/800-63-4/sp800-63b.html | Verbatim: "Verifiers and CSPs SHALL NOT impose other composition rules (e.g., requiring mixtures of different character types) for passwords." "Verifiers and CSPs SHALL NOT require subscribers to change passwords periodically. However, verifiers SHALL force a change if there is evidence that the authenticator has been compromised." Basis for the deepen that flagging the *absence* of forced periodic rotation or composition rules follows outdated (2017-era) guidance — current NIST reverses both (prefer screening against a breached-credential list plus a length floor; force a change only on evidence of compromise). Fetched + verified 2026-09-20. |
