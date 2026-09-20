@@ -3,6 +3,14 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.340.0] — 2026-09-20
+
+### deep-code-review — agent correctness beyond budget caps: a capped loop is not a correct loop (#798); name-only OWASP Agent Control Standard (#799)
+
+- **`security-ai-agents.md`** (#798): a new check that a *capped* agent loop can still be *wrong* — the cost/DoS caps (LLM06) are not a correctness control. Three correctness failures independent of any cap, mapped to the MAST taxonomy (Cemri et al.): a **goal-satisfied / stopping-condition** check distinct from the budget check (FM-1.5, *unaware of termination conditions*); **step-repetition** detection — identical back-to-back tool calls the harness should break on itself, not wait out via the cap (FM-1.3, *step repetition*); **tool-result semantic verification** — branching on transport success (no exception, HTTP 200) without inspecting the result payload is under-verification (FM-3.2, *no or incomplete verification*). Cross-refs the FSM form in `reliability-error-handling.md` and the trajectory eval in `testing-and-evals.md` (which scores task completion as an outcome, not the loop's own goal-satisfied predicate or step-repetition). +1 eval.
+- **`security-ai-agents.md`** (#799): name-only citation of the **OWASP Agent Control Standard (ACS)** alongside the existing OWASP MCP Top 10 pre-stable precedent — a runtime-governance wire spec (Guardian-Agent hook contract; Instrument / Trace / Inspect), **pre-1.0** (spec v0.1.0, tag v0.1.1), so named but nothing pinned as stable.
+- **`docs/standards-index.md`**: the MAST row deepened with the curl-verified full-text failure-mode names (FM-1.3/1.5/3.2, enumeration surface — *termination conditions*, matching the paper's formal taxonomy; the abstract-only caveat preserved for the pinned submission); a new ACS row (spec/tag versions, five-disposition enum, three pillars), both verified by direct fetch 2026-09-20.
+
 ## [1.339.0] — 2026-09-20
 
 ### deep-code-review — AI-authored code: a call into a *real* dependency must actually exist on the *pinned* version, not just the package (#797)

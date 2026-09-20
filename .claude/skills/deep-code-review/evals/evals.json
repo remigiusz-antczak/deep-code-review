@@ -4550,6 +4550,16 @@
         "Explains a clean lint/type pass is not sufficient reassurance -- a linter does not resolve third-party symbols, and a type-checker with stubs often isn't run on such code (and stubs can lag the pinned version); prescribes verifying the exact symbol on the lockfile-pinned version via introspection/stub-diff/smoke test (the absent test itself a flag)",
         "Names the version-drift variant (valid in some other version, not the pinned one, surfacing as a bare type error fixed without naming the pattern) and treats symbol-existence-on-pinned-version as a first-class check for AI-authored code"
       ]
+    },
+    {
+      "id": "capped-agent-loop-without-a-goal-satisfied-check-is-not-correct",
+      "prompt": "Reviewing an autonomous agent's task loop. It has a hard cap: max 50 turns, max 100k tokens, max $5 -- and it correctly stops when any trips, reporting which. On a task that finishes its real work in 8 turns, the agent keeps calling the same `search_docs` tool with the same query for 20 more turns, then hits the turn cap at 50 and reports 'stopped: turn limit.' A reviewer sees the caps are all present and correctly enforced and signs off. Is the loop correct?",
+      "expected_output": "No -- the caps are correct as cost/DoS controls, but the loop is not *correct*: it burned turns past finishing its real work and only stopped because a budget cap tripped, not because it recognized the task was done. A capped loop is not a correct loop. Two distinct MAST failure modes are present: (1) no goal-satisfied / stopping-condition check independent of the budget -- the loop has no test for 'the task is complete,' so it runs to the cap regardless (FM-1.5, unaware of termination conditions), a finding separate from the (here present) spend cap; (2) step repetition -- calling the same tool with the same query many times with no adaptation is a stuck-loop signal the harness should detect and break on itself, not wait out via the cap (FM-1.3). The review conflated 'the cap will eventually stop it' with 'the agent knows when it's done' -- different properties, and only the first was checked. Fix: add a goal-satisfied predicate that can terminate before any cap; detect identical repeated tool calls and break/adapt; add trajectory eval cases for premature continuation. The caps stay -- they are the backstop, not the correctness check.",
+      "expectations": [
+        "States a capped loop is not a correct loop: it only stopped because a budget cap tripped, not because it recognized the task was done -- the caps are cost/DoS controls, not a correctness check",
+        "Names the two distinct failure modes: no goal-satisfied/stopping-condition check independent of budget (FM-1.5), and step-repetition -- identical repeated tool calls the harness should detect and break on, not wait out (FM-1.3)",
+        "Prescribes a goal-satisfied predicate that can terminate before any cap plus repeated-call detection, keeping the caps as the backstop; notes the review conflated 'the cap will stop it' with 'the agent knows it's done'"
+      ]
     }
   ]
 }

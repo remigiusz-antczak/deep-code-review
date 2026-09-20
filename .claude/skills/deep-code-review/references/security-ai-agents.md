@@ -161,7 +161,11 @@ execution / consent** surface, and **tool metadata** the model reads as instruct
 lens named in parentheses — do not re-walk the general form. The **OWASP MCP Top 10**
 (`owasp.org/www-project-mcp-top-10`, lead V. Verma Sehgal) catalogs this layer but is
 **Phase-3 beta** — name it if a target cites it, but do **not** walk its `MCPxx:2025`
-IDs as current (cf. the 2025 compatibility map above). The concrete `MUST`/`SHOULD`
+IDs as current (cf. the 2025 compatibility map above). The OWASP **Agent Control Standard (ACS)**
+(`genai.owasp.org`) is the same shape of pre-stable spec — a runtime-governance layer (Instrument /
+Trace / Inspect; a Guardian-Agent hook contract) rather than a risk catalog, and **pre-1.0** (spec
+v0.1.0, active development): name it if a target adopts it, but do **not** pin its hook method names
+or the `allow`/`deny`/`modify`/`ask`/`defer` decision enum as stable. The concrete `MUST`/`SHOULD`
 controls below are from the official MCP security spec
 (`modelcontextprotocol.io/docs/tutorials/security/security_best_practices`, fetched
 2026-09-19).
@@ -352,6 +356,26 @@ LLM-backed feature, add cases that assert the guardrail holds:
   steps / spend) must be **propagated to every spawned sub-agent** — a parent cap
   not forwarded leaves each child on the framework default and the whole tree
   unbounded.
+- **A *capped* loop is not a *correct* loop — bound termination and step-progress by the task, not
+  only by budget.** The caps above are cost/DoS controls (LLM06); a loop that never trips them can
+  still be **wrong** — never recognizing the task is done, or that it is stuck. These are
+  correctness failures independent of any cap, named in the MAST multi-agent-failure taxonomy
+  (Cemri et al., `docs/standards-index.md`): **(1)** a **goal-satisfied / stopping-condition** check
+  distinct from the budget check — a loop bounded *only* by turn/token/dollar caps, with no test
+  that the task is actually complete, is a finding separate from a missing spend cap (MAST FM-1.5,
+  *unaware of termination conditions*); **(2)** **step-repetition** detection — the same tool name with
+  identical/near-identical arguments called back-to-back with no adaptation is a stuck-loop signal
+  the harness should break on itself, not wait out via the cap (FM-1.3, *step repetition*); **(3)**
+  **tool-result semantic verification** — code that branches on transport success (no exception,
+  HTTP 200) without inspecting the *result payload* for an embedded failure is under-verified
+  (FM-3.2, *no or incomplete verification*), the *quarantine the reader from the actor* discipline
+  above applied to correctness. The FSM form (no stuck/orphan states) is
+  `reliability-error-handling.md`; the eval form — labeled *premature-continuation* (done, kept
+  going) and *premature-termination* (FM-3.1; incomplete, stopped) trajectory cases — extends
+  `testing-and-evals.md`'s agent-trajectory eval, which scores task completion as an outcome but
+  not the loop's own goal-satisfied predicate or step-repetition. **🚩** an agent loop with a spend
+  cap but no goal-satisfied predicate; a tool-result consumer that checks only `ok`/status, never
+  the payload.
 - **Streaming / completion-delivery mode is part of output handling and spend.** A guard written
   for one *complete* response silently fails on a **streamed** one, and truncated output reads as
   complete: (1) **check the finish / stop reason** (`finish_reason` / `stop_reason`) before using a
