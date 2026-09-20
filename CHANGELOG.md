@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.309.0] — 2026-09-20
+
+### deep-code-review — replay protection for short-lived approval bearer tokens (closes #696)
+
+- **`security-appsec.md`** (A07 Authentication Failures): a short-lived approval/action bearer token verified only for **signature + expiry is replayable** inside its validity window — if it leaks (access log, APM breadcrumb, logging proxy) it can be resubmitted to re-trigger the approved write, attributed to the original approver, with no signal it fired twice. A short expiry only narrows the window; **single-use enforcement** closes it — mint a unique `jti`, record consumed ids, reject a reuse. The record-and-reject must be a **single atomic** step (unique-constraint insert / compare-and-set) — a read-then-insert is itself a TOCTOU that two concurrent replays both pass. Distinguished from four adjacent controls: idempotency key, inbound-webhook replay, **refresh-token reuse detection**, and CSRF. CWE-294 + OWASP JWT Cheat Sheet (Replay Protection) cited; +2 `docs/standards-index.md` rows; +2 evals.
+- Built by a worktree builder subagent, independently reviewed **PASS-WITH-FIXES**: the reviewer curl-verified CWE-294's title and every OWASP quote, and caught an **OWASP-misattribution** — the prose implied OWASP *ranks* the single-use controls above short expiry, but OWASP lists all mitigations flat/unranked; reworded (against a fresh fetch) so the ranking is stated in the skill's own voice, not attributed to OWASP. Also applied at finalize: the consumed-id **atomicity** requirement (a naive check-then-insert is racy), **refresh-token reuse detection** added as a fourth distinct control, and a quote-punctuation fidelity fix (colon in source). Closes #696.
+
 ## [1.308.0] — 2026-09-20
 
 ### deep-code-review — conflict-swallowing write must check the affected-row count (#728); an "N/A" empty-collection accessor silently inverted by a generic filter (#729)
