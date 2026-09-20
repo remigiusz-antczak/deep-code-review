@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.306.0] — 2026-09-20
+
+### deep-code-review — the gate-calibration rule's mirror: a fix that breaks a correctly-calibrated gate is the defect, not the gate (closes #443)
+
+- **`method.md`** extends the "Check a firing gate against its own standard first" bullet with the **mirror** of the existing over-strict-gate rule: when the gate already matches its standard, a fix that would make it fail is what's wrong — do not weaken or suppress a correctly-calibrated gate to land a change. Two correct constraints in apparent tension is a **design problem**, not a gate problem: find the design that satisfies both, or route it as an owner trade-off (principle 4), never a unilateral weakening. Cross-links `testing-and-evals.md`'s ratified assert-absent rule (the same shape). +1 eval (a correct `no-restricted-imports` layering gate "fixed" with `eslint-disable` → restructure via a service layer, don't suppress).
+- Built by a worktree builder subagent, independently reviewed **PASS**: the mirror was confirmed genuinely absent (every near-miss read in full, including the closest sibling in `testing-and-evals.md` — distinct because it lacks the "find the design that satisfies both" reconciliation move); the `(principle 4)` citation verified verbatim against `SKILL.md`; the eval is grounded, uniquely-id'd, and append-only. Closes #443.
+
 ## [1.305.0] — 2026-09-20
 
 ### deep-code-review — serverless event-source correctness: recursive-invocation loops, partial-batch failure contract, and the visibility-timeout redelivery race

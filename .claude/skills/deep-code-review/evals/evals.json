@@ -4040,6 +4040,16 @@
         "States that the cycle lives in the trigger wiring / event-source mapping defined in IaC (a separate resource-to-resource wiring), not in the function's source, and connects it to the observed concurrency/cost-spike symptom",
         "Names the platform detection gap as an example rather than assuming universal protection — e.g. AWS Lambda's recursive-loop detection covers function/SQS/S3/SNS cycles but not one mediated by DynamoDB — and prescribes tracing the resource-to-trigger graph for cycles plus breaking this one (e.g. writing to a separate table/attribute, filtering the stream, or computing the field on read) as the review action"
       ]
+    },
+    {
+      "id": "boundary-lint-correctly-blocks-fix-restructure-not-suppress",
+      "prompt": "A bug fix needs the OrderSummary UI component to read the current shipping status. The fastest fix imports the DB client straight into the component (`import { db } from '../../infra/db-client'`) and queries the table inline. CI's `no-restricted-imports` layering rule -- UI code must not import the DB client, only the service layer may -- fails on the new import, so the PR adds `// eslint-disable-next-line no-restricted-imports` above it to get CI green. Is that the right fix?",
+      "expected_output": "No -- the layering rule is correctly calibrated (UI/DB separation is a real architectural boundary this rule exists to hold, not an accidental over-strict pattern), so the fix is what's wrong, not the gate. Suppressing it with eslint-disable trades a real defect -- an inline DB import from the presentation layer, which couples the component to schema, bypasses whatever the service layer enforces on that read (access checks, caching, error mapping), and re-opens the same hole at the next call site -- for a green CI run: a design problem wearing a gate problem's clothes. Getting the shipping status to the UI and keeping the UI off the DB client are both correct constraints in only apparent tension: the reconciling design is to add or extend a service-layer function (e.g. `getShippingStatus(orderId)` in the existing service module) that the component calls, landing the fix without touching the boundary rule at all. Never widen the eslint-disable or add an exception to the rule's allow-list to unblock one call site; if a reconciling design genuinely does not exist, that is an owner trade-off on the architecture, not a unilateral suppression. (method.md.)",
+      "expectations": [
+        "Identifies the import/layering rule as correctly calibrated -- the fix is wrong, not the gate",
+        "Rejects the eslint-disable (or widening the rule's exception list) as an acceptable fix",
+        "Prescribes the reconciling design -- add or extend a service-layer function the UI calls -- satisfying both the boundary rule and the bug fix, with any genuine no-reconciling-design case routed as an owner trade-off"
+      ]
     }
   ]
 }

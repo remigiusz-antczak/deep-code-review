@@ -166,7 +166,13 @@ and any wired security/dependency scanners. Then, before trusting "green":
   WCAG 2.2 SC 1.4.3 exempts) yields a "fix" that regresses another axis
   (principle 4): record the citation and **narrow the gate, saying so in writing**
   — narrowing an over-strict rule and weakening a real one look identical in the
-  diff and are opposite acts.
+  diff and are opposite acts. **The mirror: when the gate already matches its
+  standard, a fix that would make it fail is what's wrong, not the gate** — do
+  not weaken or suppress a correctly-calibrated gate to land it. Two correct
+  constraints in apparent tension is a design problem, not a gate problem: find
+  the design that satisfies both, or route it as an owner trade-off (principle
+  4) — never a unilateral weakening. (A ratified assert-absent test is the same
+  shape: `testing-and-evals.md`'s never-loosen-a-negative-assertion rule.)
 - **Reproduce a gate's finding with the gate's own detector, not a hand-rolled
   probe.** Validating a fix aimed at an automated gate (linter, schema/contract
   validator, audit/policy gate) with a **bespoke approximation** ("I grep for
