@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.362.0] — 2026-09-21
+
+### deep-code-review — an identity/session hook that fetches per-instance with no shared cache fans out to N identical requests per page (#843)
+
+- **`frontend-a11y.md`** (Core Web Vitals): a `useUser()`/`useSession()`/`useCurrentAccount()` hook that fetches in `useEffect` with no shared cache fires its *own* request per calling component — a page with a dozen components reading the current user makes a dozen identical `/api/me` calls (the tell is a network tab with N copies of one request). Distinct from the fetch *waterfall* (dependent-chain depth) and loop *N+1* (N different queries): this is N callers of the *same* singleton with no coalescing. Fix: hoist the fetch to one Provider/root loader, or use a request-deduping cache keyed by the resource (SWR/React-Query dedup key, a module-level in-flight promise), so N callers share one in-flight request and one result. Cross-refs the abstract single-flight/de-dupe mechanism in `performance-db-cost.md`. +1 eval.
+
 ## [1.361.0] — 2026-09-21
 
 ### deep-code-review — a multi-backend store fails on the backend the tests never instantiate; a faithful fake can't catch it (#853)

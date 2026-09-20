@@ -519,6 +519,39 @@ production-like server).
   budget. (Chrome Lighthouse, *critical request chains*.) The same accidental-serialization
   shape inside a server handler's own loader — no browser round trip involved, hurting TTFB
   rather than LCP — is `performance-db-cost.md`'s Concurrency section.
+- **A singleton-read hook that fetches per instance fans out to one identical request per
+  mounted consumer — a page with N callers makes N copies of the same call.** A
+  `useUser()`/`useSession()`/`useCurrentUser()`-style hook — or any hook many components call to
+  read the *same* shared singleton — implemented as its own fetch-on-mount (`useState` + a
+  `useEffect` that `fetch`es `/me` and `setState`s, or a fetch on first render) with no shared
+  cache or dedup fires an **independent** network request from **every** component that calls it,
+  so a page mounting a dozen consumers issues a dozen identical `/me` requests on one load. It
+  reads clean at the hook (small, correct, returns the right `{ user, loading }`) and clean at
+  each call site (which just calls the hook); the redundancy exists only across the *set* of call
+  sites and surfaces only as the network tab's N copies of one request — a per-file review never
+  sees it. Worst when the callers sit in the **global shell** (nav bar, command palette, global
+  FABs, an auth guard): those mount on **every** route, so the multiplier is paid per navigation,
+  and each consumer runs its **own** retry/backoff on failure and gates its own region's render on
+  its own copy of `loading`, compounding perceived slowness beyond the raw N× server/network
+  load. Detect by grepping the hook's call sites and asking whether the fetch lives behind a
+  single shared **Provider/Context** (or a keyed dedup cache) or a **per-instance** effect; count
+  the consumers the global shell mounts — each is a per-route multiplier. Strong tell: the
+  codebase already documents this cost at **one** call site specially re-engineered to avoid it (a
+  hoisted fetch, a threaded-down prop) while other global sites still pay it — name that
+  precedent, it makes the fix trivially arguable. Fix: mount **one** Provider/Context (or back the
+  hook with a request-deduping cache — SWR / React-Query keyed on the resource, or a module-level
+  in-flight singleton promise) once near the root that does the single fetch/retry the hook
+  already implements, and switch every call site to a context read; **keep the hook's public
+  return shape** so no consumer changes. Acceptance = exactly one identity fetch per page load
+  regardless of consumer count. Distinct from the **waterfall** bullet above by *shape*: that is
+  chain **depth** (dependent requests each awaiting the previous; fix = parallelize or collapse),
+  this is identical **breadth** (independent requests for the *same* value; fix = coalesce to
+  one) — same load cost, opposite geometry. Distinct from **N+1** in `performance-db-cost.md`
+  (Database): that is N *different* queries, one per **row** of a result; this is N *identical*
+  requests for one **singleton**, one per **component instance**. The coalescing itself is the
+  **de-dupe / single-flight** mechanism from `performance-db-cost.md` (External calls, and the
+  cache-expiry stampede) applied one layer out — at the client component tree rather than a server
+  cache.
 - **A `<Suspense>` boundary whose subtree never *suspends* has a dead fallback — the
   "loading state" it looks like it adds renders nothing.** A Suspense fallback paints only
   while a descendant actually suspends — throws a promise the boundary catches — which is what
@@ -809,7 +842,10 @@ edge into that module); a loading/skeleton component with `aria-busy` and/or a l
 no `role="status"`/`role="alert"`/`aria-live` on it or an ancestor; a `<Suspense fallback={…}>`
 whose subtree loads data only via `useEffect`+`setState` or receives already-resolved props, with
 no `lazy()`/`use()`/suspense-enabled hook and no unresolved promise crossing it (the fallback is
-dead); a static `aria-label` that
+dead); an identity/singleton-read hook (`useUser`/`useSession`/`useCurrentUser`) that `fetch`es in
+a `useEffect`/on first render with no shared Provider/Context or dedup cache, called from many
+components (each mount fires its own request — grep the call sites, count global-shell consumers);
+a static `aria-label` that
 doesn't contain the element's own visible text (WCAG 2.5.3); an icon/label swap keyed off an
 `open`/`expanded` boolean with no matching `aria-expanded` on the same control; a
 `Content-Security-Policy` header/meta containing `unsafe-inline` with no `nonce`/hash, or missing
