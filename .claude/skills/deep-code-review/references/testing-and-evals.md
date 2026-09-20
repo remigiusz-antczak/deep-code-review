@@ -67,6 +67,43 @@ explicit third choice), not which one this review prefers.
   fails in production. A past game-day / chaos exercise (`release-engineering.md`)
   proves the infra path ran **once**; it is not a substitute for a repo-owned
   regression test that keeps the branch honest on every future change.
+- **Before you write that fallback test, confirm the fallback *exists*: a
+  doc-comment can enumerate a branch the body never implements — so there is no
+  code for a dead-code or coverage tool to flag.** The bullet above assumes the
+  fallback is present and merely unexercised; the sharper defect is a docstring
+  that promises resolution/degradation steps in sequence ("matches exactly, else
+  falls back to a fuzzy/alias match, else gives up"; "on timeout, retries against
+  the replica") when the body implements only the first step and unconditionally
+  returns the not-found/error result otherwise. The described branch has **no code
+  path at all — only its description exists** — which makes it invisible to exactly
+  the tools a reviewer trusts: a dead-code or lint pass sees **no unreachable
+  statement** (there is no branch to flag), and coverage stays **green** (there is
+  no line to leave uncovered). Fixtures never expose it either, because the primary
+  path satisfies every already-normalized value the suite and today's production
+  data happen to carry; the gap only bites when a real user or a new data source
+  supplies the more natural input the fallback was *documented* to handle, and a
+  resolvable reference then silently degrades (to unlinked text, a hard error, an
+  unhandled timeout) with no signal. Only reading the doc **against** the code
+  catches it. Detection is mechanical: for every exported symbol whose doc-comment
+  names more than one behavior / fallback / error, list each promised branch, grep
+  the body for a corresponding code path, and confirm a test **forces its
+  triggering condition** — a promised branch with neither code nor test is the
+  finding (trying to write that forcing test is itself what surfaces the absence:
+  there is nothing to make it pass). Report it even when today's data can only ever
+  reach the primary path — "currently unreached" is a property of today's fixtures,
+  not of the code's correctness — at reduced severity, but state plainly whether it
+  is reachable now (same latent-but-reported discipline as `data-quality.md`'s
+  bare-id merge rule). Fix by implementing the branch (with the forcing test above)
+  **or** by correcting the comment to claim only what the code does; the doc fix is
+  cheap and is **never skipped even when the real fix is deferred**, because an
+  inaccurate contract comment actively misleads the next caller — who relies on it
+  *without* re-reading the implementation — into depending on behavior that isn't
+  there, which is worse than no comment. This is **not** the stale-comment case (a
+  comment that was once true and drifted) — it was never true — and **not**
+  `security-ai-agents.md`'s asserted-but-unenforced safety property (there the code
+  exists at the call site and a lower layer drops it; here there is no code for the
+  promised branch at all); it is the source-doc-comment, test-limbed specialization
+  of `docs-and-dx.md`'s "reconcile load-bearing claims against the code."
 - **Probe the real function on the real fixture before pinning an expected
   value.** Never hand-guess an expected string — a guessed expectation encodes a
   misunderstanding as a green test.

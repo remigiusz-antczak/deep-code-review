@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.370.0] — 2026-09-21
+
+### deep-code-review — a doc-comment enumerates a fallback the code never implements, invisible to dead-code and coverage tools (#870)
+
+- **`testing-and-evals.md`**: a docstring that promises resolution/degradation steps in sequence ("on timeout, retries against the replica"; "matches exactly, else falls back to a fuzzy match, else gives up") when the body implements only the first step and returns the not-found/error result otherwise. The described branch has no code path at all — only its description — so it is invisible to the tools a reviewer trusts: a dead-code/lint pass sees no unreachable statement, and coverage stays green (no line to leave uncovered); fixtures never expose it because the primary path satisfies every value today's data carries. Only reading the doc against the code catches it. Detection is mechanical: for every exported symbol whose doc-comment names more than one behavior/fallback/error, list each promised branch, grep the body for a code path, and confirm a test forces its triggering condition — trying to write that forcing test is itself what surfaces the absence. Report even when today's data can only reach the primary path (at reduced severity, stating reachability). Fix by implementing the branch or correcting the comment; the doc fix is never skipped even when the real fix is deferred, because an inaccurate contract actively misleads the next caller. Not the stale-comment case (never true, not drifted); the source-doc-comment, test-limbed specialization of `docs-and-dx.md`'s reconcile-claims-against-code. +1 eval.
+
 ## [1.369.0] — 2026-09-21
 
 ### deep-code-review — a Tooltip that wires `aria-describedby` onto its immediate child breaks when a call site wraps the real control (#837)
