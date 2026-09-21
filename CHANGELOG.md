@@ -3,6 +3,15 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.428.0] — 2026-09-21
+
+### deep-code-review — three keyboard/structure a11y heuristics: a control that self-disables while focused, landmarks that pass the automated bypass check but fail a sighted-keyboard user, and a tree whose depth is only padding + colour (#1005, #1012, #1013)
+
+- **`frontend-a11y.md`** (#1005): a control on the `disabled={pending}`/`disabled={isSubmitting}` submit recipe that **self-disables while it holds focus** drops the keyboard user to `<body>` — native `disabled` removes the focused element from the tab order, focus falls unrestored with no announcement (WCAG **2.4.3 Focus Order**, A). Fix: move focus at/before disable (a `role=status`, the next control, a results region), or `aria-disabled` + a guarded handler that keeps it focusable. Distinct from the async-outcome fold (DOM removal, which *recommends* keep-mounted-and-disabled — this is the correction that an in-place disable *still* strands focus when the control holds it, and fires mid-request) and the scroll-container focus-strip (same mechanism, different trigger).
+- **`frontend-a11y.md`** (#1012): correct ARIA **landmarks** satisfy the automated *bypass-blocks* check (WCAG 2.4.1 is met by any one sufficient technique, and ARIA11/landmarks is one), so axe/Lighthouse go green and the skip link is dropped as redundant — but landmarks are a screen-reader affordance a **sighted keyboard-only** user can't perceive; they still Tab through the whole nav on every page. Fix: a visible-on-focus skip link (first focusable, targets main). A green bypass check on landmarks alone is a false signal.
+- **`frontend-a11y.md`** (#1013): a nav/sidebar tree that conveys parent-child depth **only** through left-padding + a colour-matched accent shows the hierarchy to the eye but hides it from the accessibility tree — a flat `<ul>` is announced at one level, indentation has no programmatic equivalent, colour is unspoken (WCAG **1.3.1 Info and Relationships**, A; the colour accent also implicates 1.4.1). Fix: real nested lists or the ARIA tree pattern (`role=tree`/`treeitem` + `aria-level`/`setsize`/`posinset`/`expanded`). Distinct from the disclosure-`aria-expanded` fold (per-row open/close *state* vs the cross-row containment *relationship*).
+- +3 evals (547 total), non-telegraphing. WCAG SC 2.4.1 + 1.3.1 fetch-verified and logged in `docs/standards-index.md`. Closes #1005, #1012, #1013 — including the previously lane-dropped #1005 (now re-drained).
+
 ## [1.427.0] — 2026-09-21
 
 ### deep-code-review — a fail-soft catch that hides a failure as empty, RSC tab bodies that execute regardless of the active tab, and a count that re-derives a subset of a shared predicate (#1010, #1011, #1014)
