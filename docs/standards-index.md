@@ -1107,3 +1107,14 @@ execution-time (inbound request-execution timeout) axes.
 | Standard / source | URL | What was confirmed |
 |---|---|---|
 | OWASP API Security Top 10 (2023) — API4 detail | https://api-security.owasp.org/editions/2023/en/0xa4-unrestricted-resource-consumption/ | Verbatim: "An API is vulnerable if at least one of the following limits is missing or set inappropriately (e.g. too low/high):" — enumerated limits, verbatim: "Execution timeouts"; "Maximum allocable memory"; "Maximum number of file descriptors"; "Maximum number of processes"; "Maximum upload file size"; "Number of operations to perform in a single API client request (e.g. GraphQL batching)"; "Number of records per page to return in a single request-response"; "Third-party service providers' spending limit". (308 from owasp.org/API-Security/editions/2023/en/0xa4-unrestricted-resource-consumption/ → api-security.owasp.org; fetched 2026-09-21) |
+
+## Verified by direct fetch (2026-09-21) — WHATWG URL Standard (backslash normalized to slash for special schemes)
+
+Verification date for the row below: **2026-09-21**. Added for a `deep-code-review`
+`security-appsec.md` A01 fold on a client-side open-redirect guard that rejects the
+protocol-relative `//host` form but not its backslash equivalent (`/\host`), which a
+browser resolves to the same off-origin target.
+
+| Standard / source | URL | What was confirmed |
+|---|---|---|
+| WHATWG URL Standard — special schemes & backslash handling | https://url.spec.whatwg.org/ | The special schemes are ftp, file, http, https, ws, and wss. In the *relative slash state* a special URL takes the same branch for either slash — verbatim: "If url is special and c is U+002F (/) or U+005C (\), then: If c is U+005C (\), invalid-reverse-solidus validation error. Set state to special authority ignore slashes state." — and in the *special authority ignore slashes state* a backslash is likewise consumed identically to a forward slash — verbatim: "If c is neither U+002F (/) nor U+005C (\), then set state to authority state and decrease pointer by 1." The backslash is flagged only as an `invalid-reverse-solidus` validation error, defined verbatim: "The URL has a special scheme and it uses U+005C (\) instead of U+002F (/)." (example given: "https://example.org\path\to\file"). A validation error is non-fatal — verbatim: "A validation error does not mean that the parser terminates. Termination of a parser is always stated explicitly, e.g., through a return statement." — so the parse continues and the backslash still acts as a slash. Confirmed against the raw spec HTML; reproduced with `new URL('/\\host', 'https://good.example/page').host` returning `'host'` (also for `\/host` and `\\host`). Fetched + verified 2026-09-21. |

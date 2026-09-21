@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.395.0] — 2026-09-21
+
+### deep-code-review — a client-side open-redirect guard that rejects a protocol-relative prefix but not its backslash twin (WHATWG normalization) (#894)
+
+- **`security-appsec.md`** (A01, CWE-601): a login/return flow that reflects a user-supplied `next`/`returnTo` and tries to keep it same-origin by rejecting a leading double-slash (to block a protocol-relative `//host`) is bypassed because the WHATWG URL parser, for special schemes, treats a backslash as a forward slash in the authority position — so the backslash-twin forms fail a literal double-slash string check yet the browser navigates off-site (verified against the spec's relative-slash and special-authority-ignore-slashes states, plus a node repro; the spec calls the backslash an 'invalid-reverse-solidus' validation error but a validation error does not terminate the parser). Fix: resolve the target against a fixed base and allowlist the resulting origin rather than string-prefix checks; if a prefix check is kept, reject any leading slash-or-backslash pair (and the `startsWith('/')`-means-relative mirror is fooled the same way). The browser-navigation sibling of the server-side SSRF bullet above; cross-refs the A05 canonicalize-before-compare lesson. +1 eval. Source verified by direct fetch (WHATWG URL Standard), logged in docs/standards-index.md.
+
 ## [1.394.0] — 2026-09-21
 
 ### agentic-delivery — a shared bot account authors every post, so no claim/status/liveness check is attributable: stamp a per-agent id (#901)
