@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.380.0] — 2026-09-21
+
+### deep-code-review — an empty list must disclose why it is empty (a filter removed everything vs nothing exists yet), and header/chrome must be gated on content (#886, #888)
+
+- **`product-ux-quality.md`**: two halves of one defect — the render never separates filtered-to-none from genuinely-none. On the copy side, one `items.length === 0` branch reuses a reassuring success-styled line for both, so a search that matched nothing reads as "all done" while real rows sit hidden and the user abandons the task; the falsifying signal is already in props but unread (an unfiltered `totalCount` beside the filtered `items.length`, or a `filterActive` flag) — reserve the positive/onboarding copy for a zero unfiltered total, else render a neutral "no matches" state with a clear-/adjust-filter affordance (the two truths need different next actions, so a single cause-neutral fallback is not enough). On the chrome side, a header/count/badge/"see all" emitted outside the content-presence conditional leaves a heading over a blank strip and an affordance pointing at nothing — gate the chrome on content or pair it with an empty/no-match fallback. Detect by grepping the empty-state string across all paths and by finding a `.filter(...)`-fed list whose header/affordance precedes it with no adjacent `length === 0` branch. One principle resolves both issues; also patched the pre-ship checklist for consistency. +1 eval.
+
 ## [1.379.0] — 2026-09-21
 
 ### deep-code-review — schema-migration safety: what actually forces an ADD COLUMN rewrite, RENAME as a compatibility break, and routing the section from reliability/release (DB migration)

@@ -201,6 +201,44 @@ measured wrong) and from the silent-swallow 🚩 in `domain-checklists.md` /
 with no log or signal): here the fetch error is caught correctly, and the defect is which **rendered**
 state a correctly-handled failure is allowed to collapse into.
 
+**An empty list must disclose *why* it is empty — a filter or search removed
+everything, versus nothing exists yet — and any header, count, or banner above it
+must be gated on content, never implying rows a filter has hidden.** These are two
+halves of one defect: the render never separates *filtered-to-none* from
+*genuinely-none*. On the **copy** side, a single `items.length === 0` branch reuses
+one reassuring, success-styled line ("You're all caught up") for both — honest
+onboarding when the account is truly empty, but a **false completeness claim** when
+a search matched nothing while N real rows sit hidden, so the user reads the task
+as done and abandons it. Unlike the cause rule above — where the copy *names* a
+cause and the fix is lexical (branch the wording, or fall back to a cause-neutral
+empty) — here the copy names nothing; it asserts a *state*, and the signal that
+falsifies it is **already in the component's props and merely unread**: an
+unfiltered `totalCount` beside the filtered `items.length`, or a
+`searchActive`/`filterActive` flag a sibling list already threads. That rule's
+single cause-neutral fallback is **not enough here**, because the two truths need
+different *next actions* — so reserve the positive/"nothing exists yet" copy (the
+create/onboarding state) for a zero **unfiltered** total, and when the total is
+non-zero but the view is empty render a neutral "no matches" state carrying a
+**clear-/adjust-filter affordance** (narrowing the cause rule's fallback the way
+the stakes rule above narrows it for definitive records). On the **chrome** side, a
+section's header, count, "N done" badge, or a "see all / show breakdown" affordance
+emitted **outside** the content-presence conditional — a title rendered
+unconditionally above a row built by `list.filter(...)` that can come back empty,
+with no sibling empty branch — leaves a heading over a blank strip (reads as
+broken, or as lost content) and an affordance pointing at nothing (a dead control,
+*No dead controls* below); gate the chrome on content-presence, or pair it with an
+explicit empty/no-match fallback under the same conditional. **Detect it** by
+grepping the empty-state string and enumerating every path that renders it — one
+success-styled line reachable from both a filtered and an unfiltered branch is the
+copy defect — and by finding a `.filter(...)`/search-fed list whose header, count,
+or affordance is emitted before it with **no** adjacent `length === 0` branch.
+Distinct from the coverage rule above (whether the source was *probed* at all) and
+from the *dead filter option* below (an option that matches zero rows in **any**
+data, versus a valid filter matching zero **now**); `frontend-a11y.md` (empty-state
+phrasing, and the ownership line above) assumes the classes of emptiness already
+exist and enforces one voice and one next action per class — this owns whether the
+filtered-vs-genuine distinction is drawn at all.
+
 ## A correct loading/failed signal is only as good as its least careful consumer
 
 The stakes rule above governs what a **correctly-handled** fetch failure is
@@ -997,7 +1035,7 @@ often lost — the on-screen chart carries axes and a readout the serialiser dro
 
 ## Pre-ship checklist (mirror SKILL.md's report discipline)
 - [ ] Does it need explaining? If yes, redesign until it doesn't (or demote the text to progressive disclosure).
-- [ ] All five data states handled and honest — empty / loading / error / partial / overflow — an empty state names its **coverage** (no-data-collected vs collected-and-genuinely-none), never implying a false all-clear, and any **named cause** in its copy holds on every path that reaches it, not only the one it describes; a **definitive-record surface** (audit log, security events, a decision-bearing balance/count) shows a **distinct, retryable error state** on fetch failure rather than degrading to empty — a low-stakes/supplementary value may acceptably degrade, a definitive one may not; and a capped/sliced overflow list carries an explicit **remainder indicator** whenever `total > shown`; and a partial-apply operation's visible success counters reconcile to the input total — a client response type narrower than the endpoint's actual return (a dropped `error_count`/`errors` field) is a silent undercount, not a clean partial state; and a **load-to-edit** form does not let an **unresolved** read (a failed/timed-out fetch, not a confirmed-empty one) seed its `initial`/`defaultValue` into a **full-object replace** on save — the save is gated (disabled, patched, or confirmed) until the value resolves, since here a failed read degrades into a **destructive write**, not merely a misleading display?
+- [ ] All five data states handled and honest — empty / loading / error / partial / overflow — an empty state names its **coverage** (no-data-collected vs collected-and-genuinely-none), never implying a false all-clear, and any **named cause** in its copy holds on every path that reaches it, not only the one it describes; it distinguishes **filter/search-removed** from **genuinely-none** — the positive/onboarding copy is reserved for a zero **unfiltered** total, while a non-empty total with an empty view gets a neutral no-match state carrying a **clear-filter** action — and any **section chrome** (header, count, "all done" banner, see-all affordance) is **gated on content-presence** or paired with an explicit empty/no-match fallback, never captioning rows a filter has hidden; a **definitive-record surface** (audit log, security events, a decision-bearing balance/count) shows a **distinct, retryable error state** on fetch failure rather than degrading to empty — a low-stakes/supplementary value may acceptably degrade, a definitive one may not; and a capped/sliced overflow list carries an explicit **remainder indicator** whenever `total > shown`; and a partial-apply operation's visible success counters reconcile to the input total — a client response type narrower than the endpoint's actual return (a dropped `error_count`/`errors` field) is a silent undercount, not a clean partial state; and a **load-to-edit** form does not let an **unresolved** read (a failed/timed-out fetch, not a confirmed-empty one) seed its `initial`/`defaultValue` into a **full-object replace** on save — the save is gated (disabled, patched, or confirmed) until the value resolves, since here a failed read degrades into a **destructive write**, not merely a misleading display?
 - [ ] Every shared hook/context's readiness/error signal is read the **same way at every consuming surface** — checked independently per consumer, not inferred from the one call site that clearly gets it right; no sibling consumer destructures only the value field while another sibling of the same instance branches on the readiness/error field?
 - [ ] One channel per dimension; nothing colour-only; reads correctly in greyscale?
 - [ ] Deltas are caret + magnitude, coloured by sentiment; flat is a muted `—` with a period anchor?
