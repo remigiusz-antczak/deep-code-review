@@ -92,6 +92,11 @@ of work earn its keep?**
 
 ## Schema & data migrations (safety)
 
+Migration safety is filed in domain E but is **reviewed here even when the PR
+carries no query-performance change** — so domain E is not marked N/A once a diff
+touches a migration, and domains F (`reliability-error-handling.md`) and K
+(`release-engineering.md`) route to this section rather than restating it.
+
 A migration is a deploy-time hazard, not just a query. Check:
 - **Locking**: `ALTER TABLE` / `CREATE INDEX` on a large table without the
   non-blocking variant (`CREATE INDEX CONCURRENTLY` in Postgres — use the engine's
@@ -109,9 +114,32 @@ A migration is a deploy-time hazard, not just a query. Check:
   expand → migrate → contract: add the new column/table (nullable), backfill,
   switch reads/writes, then remove the old — across separate deploys, never in
   one destructive step.
+- **`RENAME COLUMN` / `RENAME TABLE` is the canonical accidental in-place break.**
+  A bare Postgres rename is metadata-only and fast, so it *looks* atomic and safe —
+  but it is a **backward-incompatible interface change**: old pods still running
+  mid-deploy select/write the old name, which no longer exists, and error until the
+  rollout finishes. File it as a **compatibility** hazard, not a locking one (it
+  takes no meaningful lock). The expand → migrate → contract path above *is* Martin
+  Fowler's **parallel change** (also known as expand and contract) — "a pattern to
+  implement backward-incompatible changes to an interface in a safe manner"
+  (`ParallelChange`);
+  a rename must run it (add the new name alongside the old via a column or view, cut
+  readers then writers over, drop the old in a later deploy), never as one step.
 - **`NOT NULL` without a default** on an existing table breaks inserts from old
   code and can rewrite the whole table; add nullable + default first, backfill,
-  then enforce.
+  then enforce. This is conservative, though — it omits *what actually triggers the
+  rewrite*. A **non-volatile (constant) default is metadata-only**: Postgres stores
+  the value in the catalog, "making the `ALTER TABLE` very fast even on large tables
+  … In neither case is a rewrite of the table required" (`sql-altertable.html`). A
+  full **table-and-index rewrite** is forced only by a narrower set — flag these
+  four by name: a **volatile default** (e.g. `clock_timestamp()`), a **stored
+  generated column**, an **identity column**, or a **column whose domain type has
+  constraints** — which "will cause the entire table and its indexes to be
+  rewritten" (a *virtual* generated column never does). "We added a default, so it's
+  safe" is the false friend. (This **rewrite** is a distinct mechanism from the
+  constraint-family **validation-scan-under-lock** below: a rewrite rebuilds every
+  row and index; a validation scan reads existing rows under lock without rebuilding
+  them.)
 - **Backfill** runs **outside** the DDL transaction, in bounded batches, so it
   doesn't hold a lock or blow up the transaction log.
 - **Rollback path** exists and is tested; the migration is idempotent/resumable.
@@ -374,7 +402,9 @@ same full-collection scan run twice in one operation; a fresh SDK/HTTP client
 constructed per call; a pool checkout not returned on the error path (connections trending to max =
 pool exhaustion); no `timeout=`/`AbortController` on network calls; `while
 True` poll loops; `CREATE INDEX` without `CONCURRENTLY`; `ADD COLUMN … NOT NULL`
-with no default; `ADD CONSTRAINT` with no `NOT VALID`; `ALTER COLUMN … TYPE` on a big table; DDL with
+with no default; `ADD CONSTRAINT` with no `NOT VALID`; `ALTER COLUMN … TYPE` on a big table; a
+`RENAME COLUMN`/`RENAME TABLE`/`RENAME TO` or ORM `rename_column` (lock-free but a
+backward-incompatible break for old code still running mid-deploy); DDL with
 no `lock_timeout`; a backfill loop with a fixed `sleep` and no lag/health read; a
 low-cardinality or skewed NoSQL partition key (single-tenant, status enum, monotonic
 timestamp prefix) concentrating traffic on one partition; unbounded in-memory caches/dicts as module globals; a write invalidating only the

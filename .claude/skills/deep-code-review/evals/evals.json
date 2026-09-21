@@ -4963,6 +4963,28 @@
         "Rejects \"we only identify after consent\" as a defense, because identity is applied to events collected before consent",
         "Does not treat the code as privacy-safe merely because identify() is called only after sign-in"
       ]
+    },
+    {
+      "id": "add-column-default-still-rewrites-when-the-default-is-computed-per-row",
+      "prompt": "Review this migration, scheduled to run online against a 400M-row, high-write `events` table:\n\n```sql\nALTER TABLE events ADD COLUMN ingested_at timestamptz NOT NULL DEFAULT clock_timestamp();\n```\n\nThe PR description says: \"Adds an ingestion-time column. This is safe to run in business hours: it has a DEFAULT, so there's no backfill step and no long lock -- it's the fast, metadata-only ALTER path.\" Is that reasoning correct?",
+      "expected_output": "No -- the review must reject \"it has a default, so it's the fast metadata-only path.\" clock_timestamp() is evaluated per row (a different value each call), so this default is not stored once as catalog metadata; it forces the entire table and its indexes to be rebuilt, holding a blocking table-level lock for the duration on a 400M-row hot table -- an outage, the opposite of what the author claims. The review should note that a constant/non-volatile default WOULD be metadata-only and fast, but this one is not, and give a safe path: add the column nullable, backfill in bounded batches, then set the value and enforce -- or use a genuinely constant default if one fits.",
+      "expectations": [
+        "Rejects the author's 'it has a default, so it is fast / metadata-only / no long lock' reasoning rather than endorsing it",
+        "Identifies that this particular default is computed per row and therefore forces a full table-and-index rebuild, not a metadata-only change",
+        "Notes the rebuild runs under a blocking table-level lock on a large hot table (an availability/outage risk)",
+        "Contrasts with a constant/non-volatile default (which would be metadata-only) and prescribes a safe path (nullable column + bounded backfill, then enforce)"
+      ]
+    },
+    {
+      "id": "migration-renames-a-column-old-app-pods-still-query-the-old-name",
+      "prompt": "Review this migration. It ships in the same rolling deploy as the application change that starts reading the new name:\n\n```sql\nALTER TABLE accounts RENAME COLUMN signup_ts TO created_at;\n```\n\nThe PR says: \"Trivial cleanup -- brings the column to our naming convention. It's an instant catalog-only change: no table lock, no data copied, so it's safe to ship any time.\" Anything to flag before this merges?",
+      "expected_output": "The review should agree the statement itself is cheap and fast at the database level, then flag that speed is not the risk. During a rolling deploy the previous application version is still running and still selects and writes `signup_ts`, which no longer exists once the statement commits, so those instances error until every pod has rolled to the new code. The fix is a phased, backward-compatible sequence rather than a single rename: add the new name alongside the old (e.g. a new column kept in sync, or a view/synonym), migrate all readers and then writers across separate deploys, and only drop the old name once nothing references it. \"Catalog-only / no lock / no data copied\" does not make it safe to ship in one step.",
+      "expectations": [
+        "Does NOT treat 'fast / catalog-only / no lock / no data copied' as evidence the change is safe to ship as-is",
+        "Identifies that old application code still running during the rolling deploy references the old column name and will error once it is gone",
+        "Recommends a phased add-new / migrate-readers-then-writers / drop-old sequence across separate deploys",
+        "Frames the rename as a backward-incompatible interface change, not a cosmetic cleanup"
+      ]
     }
   ]
 }

@@ -216,6 +216,12 @@ that fails after the commit — diverges them: the state exists but no event fir
 (**lost**), or the event fired but the transaction rolled back (**phantom**).
 Retrying naively double-publishes.
 
+The **same-table** analogue — a schema-migration backfill that must write both the
+old and the new column shape until cutover — is a deploy-time hazard reviewed in
+`performance-db-cost.md` §"Schema & data migrations (safety)", which distinguishes
+it from this cross-system case; that section is the home of migration safety even
+when the PR carries no query-performance change.
+
 - **Transactional outbox / CDC.** Write the event to an **outbox row in the same
   transaction** as the state change; a relay publishes from the outbox and marks it
   sent (at-least-once), so the event is durable **iff** the state committed. Or

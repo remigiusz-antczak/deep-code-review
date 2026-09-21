@@ -238,5 +238,10 @@ target a human runs by hand (`npm publish`, `twine upload`, `git tag -s` + manua
   finds it stale.
 - `role-coverage.md` **Platform / DevOps / SRE** lens — SLI/SLO/error-budget/
   burn-rate, the reliability contract a release ships into.
+- `performance-db-cost.md` §"Schema & data migrations (safety)" — the deploy-time
+  safety of the schema change a release ships: expand → migrate → contract, the
+  lock/rewrite hazards, and a tested rollback. Release checks the rollout; that
+  section checks the migration inside it, reviewed there even when the PR carries no
+  query-performance change. This file never restates it.
 - `docs/standards-index.md` — DORA, feature-toggle, canary, and blue-green
   citations with fetch dates.

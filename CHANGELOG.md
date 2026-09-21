@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.379.0] — 2026-09-21
+
+### deep-code-review — schema-migration safety: what actually forces an ADD COLUMN rewrite, RENAME as a compatibility break, and routing the section from reliability/release (DB migration)
+
+- **`performance-db-cost.md`** (+ cross-refs in `reliability-error-handling.md` and `release-engineering.md`): three residuals extending the already-strong §Schema-migrations section. (Routing) a section-head note that the migration checklist is reviewed even when the PR carries no query-performance change (so domain E is not N/A'd past a migration) + reciprocal cross-refs from domains F and K. (ADD COLUMN rewrite triggers) the "NOT NULL without a default" bullet was conservative — it never named what forces a rewrite; a non-volatile/constant default is metadata-only ("very fast even on large tables"), and only a volatile default, a stored generated column, an identity column, or a domain type with constraints rewrites the whole table+indexes (a virtual generated column never does); "we added a default, so it's safe" is the false friend, and this rewrite is distinct from the constraint-family validation-scan-under-lock. (RENAME) `RENAME COLUMN`/`RENAME TABLE` is the canonical accidental in-place break — metadata-only and fast, so it looks atomic, but backward-incompatible for old pods still running mid-deploy; filed as a compatibility hazard (not a lock one) and must run expand→migrate→contract (Martin Fowler's parallel change). +2 evals. Sources verified by direct fetch (Postgres docs, ParallelChange), logged in docs/standards-index.md.
+
 ## [1.378.0] — 2026-09-21
 
 ### deep-code-review — intervenability as code beyond deletion (rectify + restrict), and retroactive de-anonymization on sign-in (LINDDUN)
