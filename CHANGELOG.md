@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.378.0] — 2026-09-21
+
+### deep-code-review — intervenability as code beyond deletion (rectify + restrict), and retroactive de-anonymization on sign-in (LINDDUN)
+
+- **`privacy-compliance.md`**: two privacy residuals grounded in LINDDUN threat types. (Unawareness & Unintervenability) deletion is not the only data-subject right that must walk the erasure copy-set — a corrected value (rectification) left stale in a search index / warehouse / vendor profile is that same copy-set walk applied to an update, and a schema whose only lever is `deleted_at` cannot express a restriction-of-processing freeze (soft-delete makes the row gone, not held-but-excluded); both reuse the existing copy-set + purpose-limitation flag and route through the single suppression boundary, not a second enforcement site. (Linking) the temporal cousin of cross-context pseudonym reuse — an analytics `identify()`/`alias()`/`setUserId` that back-links a pre-login anonymous event stream to a now-known identity retroactively de-anonymizes prior activity, composing with the pre-consent rule. +2 evals. LINDDUN threat-type definitions verified by direct fetch, logged in docs/standards-index.md (older in-file spellings kept for consistency).
+
 ## [1.377.0] — 2026-09-21
 
 ### deep-code-review — the files a privileged pipeline executes need the workflow's review gate; inter-job artifact/cache handoffs need integrity checks, not only final attestation (OWASP CICD-SEC-4/9)

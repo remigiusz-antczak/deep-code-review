@@ -4943,6 +4943,26 @@
         "Distinguishes end/promotion attestation from per-handoff integrity: signing at the final promotion step does not extend integrity backward over the earlier handoffs that produced the signed artifact.",
         "Prescribes the fix: verify integrity at EACH handoff -- attest or pin+digest-check inter-job artifacts before a downstream job consumes them, scope and verify cache keys (no untrusted-branch writes; check the restored cache against an expected digest), and fail closed on a missing/mismatched between-stage check -- not only at promotion."
       ]
+    },
+    {
+      "id": "email-correction-updates-primary-row-but-downstream-copies-keep-stale-value",
+      "prompt": "Review this PR that ships an \"edit your email\" feature. Here is the new handler and, for context, the existing signup handler it sits beside:\n\n```ts\n// user-signup.ts (existing)\nasync function createUser(input: SignupInput) {\n  const user = await db.users.insert({ email: input.email, name: input.name });\n  await search.index('users', { id: user.id, email: user.email, name: user.name });\n  await warehouse.upsert('dim_users', { user_id: user.id, email: user.email });\n  await crm.upsertContact({ externalId: user.id, email: user.email });\n  return user;\n}\n\n// user-update.ts (new in this PR)\nasync function updateEmail(userId: string, newEmail: string) {\n  await db.users.update(userId, { email: newEmail });\n  await audit.log('email_changed', { userId });\n  return { ok: true };\n}\n```\n\nThe PR author says: \"Straightforward -- the user row takes the new email and we log the change. Tests pass.\" A reviewer approved it: \"LGTM, email edit works.\"\n\nGive your review findings.",
+      "expected_output": "The review flags that updateEmail writes the new address only to the users table, while the search index, the warehouse table, and the CRM contact -- all populated with the email by the signup path -- keep the old value and will keep serving and re-exporting it. The correction has to reach the same set of downstream copies a deletion/erasure must reach, ideally through the shared write/suppression boundary rather than re-listed per store. Approving on \"the user row takes the new email\" (or on green tests) is not sufficient.",
+      "expectations": [
+        "Flags that the corrected email is left stale in the search index, warehouse, and/or CRM -- copies the signup path writes but the update path does not",
+        "Frames it as the same downstream copy-set a deletion/erasure must also reach, here applied to an update rather than a delete",
+        "Does not accept \"the users table row is updated\" or passing tests as sufficient coverage"
+      ]
+    },
+    {
+      "id": "anonymous-event-buffer-flushed-with-identity-attached-on-signin",
+      "prompt": "Review this analytics module. The product requirement was: \"don't attach identity to analytics until the user has signed in and accepted the privacy notice.\"\n\n```ts\n// analytics.ts\nconst anonymousId = getOrCreateAnonId(); // random id in localStorage, set on first visit\nconst buffer: Event[] = [];\n\nexport function track(name: string, props: object) {\n  // while logged out, events queue locally under the anonymous id\n  buffer.push({ name, props, anonymousId, ts: Date.now() });\n  if (isLoggedIn()) flush();\n}\n\nexport function onSignIn(userId: string) {\n  // called once, right after the user authenticates and accepts the notice\n  analyticsClient.identify(userId, { anonymousId });\n  flush(); // send the queued events\n}\n\nfunction flush() {\n  for (const e of buffer.splice(0)) analyticsClient.enqueue(e);\n}\n```\n\nThe author's PR note: \"Privacy-safe: identify() is only ever called in onSignIn, i.e. after the user has signed in and consented. Nothing before that is tied to a person.\" A reviewer approved: \"Good -- consent-gated identity, ship it.\"\n\nGive your review findings.",
+      "expected_output": "The review flags that identify(userId, { anonymousId }) ties the user id to the anonymous id under which every pre-login event was queued, so flushing that buffer after sign-in attaches identity to activity collected while the user was anonymous -- the earlier stream is re-identified after the fact, not merely the future events. \"We only call identify() after consent\" does not cure it, because consent obtained now is applied to history gathered before it. The fix is to not carry the pre-consent anonymous id onto the identified profile (reset/drop the anonymous id at sign-in, or do not back-fill the queued events).",
+      "expectations": [
+        "Recognizes that identify()/alias() with the shared anonymousId links the now-known user to the previously anonymous event stream, re-identifying past activity rather than only future events",
+        "Rejects \"we only identify after consent\" as a defense, because identity is applied to events collected before consent",
+        "Does not treat the code as privacy-safe merely because identify() is called only after sign-in"
+      ]
     }
   ]
 }

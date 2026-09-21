@@ -74,6 +74,15 @@ emits a minimized / pseudonymized / aggregated dataset, check:
   an email any holder of the email can recompute, re-links the "anonymized" rows —
   scope / rotate the pseudonym per purpose, and salt-and-keep-server-side a hash a
   third party could brute-force over a small input space. (Healthcare: HIPAA **§164.514(c)** makes this a bright line — a de-identification code must be "not derived from or related to information about the individual" and not otherwise translatable back to them, so a pseudonym like `hash(name + DOB)` fails it outright, being recomputable over a small input space.)
+- **A formerly anonymous event stream, back-linked on sign-in to a now-known
+  identity, is retroactively de-anonymized in a single call.** The reuse above
+  links two *already-known* contexts; the temporal cousin is an analytics
+  `identify()` / `alias()` / `setUserId` that attaches a buffer of previously
+  *anonymous* events to the person who just authenticated — every earlier action
+  becomes attributable, not only future ones. Greppable at those call sites, it
+  composes with the pre-consent rule below: an anonymous buffer flushed *with an
+  identity attached* after sign-in is the composite defect, not merely a tag that
+  fired early.
 - **A "derived" field can still be a quasi-identifier in combination.** Age band +
   region + a timestamp can be unique to one person though each field alone looks
   coarse; minimizing each column is not testing the **combination** for uniqueness.
@@ -107,10 +116,31 @@ legal adequacy / anonymity determination routes to counsel.)
   **Suppression is enforced once, at the export/publish boundary** — the single
   place every consumer passes through. Per-consumer re-implementation is both a
   compliance and a duplication finding (cross-ref `data-quality.md`).
+- **Deletion is not the only data-subject right that must walk that copy-set.**
+  Two further interventions reuse the exact surface the erasure bullet above
+  enumerates, each as greppable as a missed delete:
+  - **A corrected value left stale downstream.** When a subject's data is *fixed*
+    rather than removed (a changed email, a corrected name), every copy the erasure
+    bullet enumerates must take the new value too; a search index, warehouse table,
+    or vendor profile still serving and re-exporting the old value is that same
+    copy-set walk applied to an *update* instead of a *delete*.
+  - **A "keep it, stop using it" freeze.** A schema whose only subject-state lever
+    is `deleted_at` cannot express "hold the data but exclude it from processing":
+    soft-delete makes the row *gone*, not *frozen*, so it also disappears from the
+    one purpose still permitted. This is the purpose-limitation flag above flipped
+    to *exclude-all-but-one*, enforced at the same single suppression boundary — not
+    a second, per-right enforcement site.
+  (The request's own intake and clock stay with the DSAR bullet above; a
+  machine-readable export *format* is `api-contracts.md` territory, not this bullet.
+  LINDDUN groups both interventions under *Unawareness & Unintervenability* — per
+  its threat-type definitions, verified this session and logged in
+  `docs/standards-index.md` — whose code face reaches past deletion.)
 
 **Grep leads:** `deleted_at` with no job acting on it; `suppress`/`optout`/
 `do_not_contact` used in one exporter but not another; a `retention` constant
-referenced nowhere; no scheduled task issuing a delete at all.
+referenced nowhere; no scheduled task issuing a delete at all; `deleted_at` as the
+*only* subject-state lever, with no separate freeze/restrict flag; a corrected
+value written to the primary row but to none of the copies the erasure walk covers.
 
 ## Cross-border data transfer & residency — a distinct reviewable surface
 
@@ -221,12 +251,15 @@ display name. Cross-ref ASI07 (audience) in `security-ai-agents.md`.
 ---
 
 **🚩 red flags**: fields collected with no reader; retention policy with no job;
-erasure that misses indexes/caches/warehouse/vendors; DSAR with no timestamps or
-SLA; suppression re-implemented per consumer; a region selector defaulting or
-falling back outside the promised residency boundary; a backup, CDC, or
-analytics sink replicating PII to a region the primary never uses; a
-subprocessor with no documented processing region or transfer mechanism;
-boolean consent with no purpose or version; tags firing pre-consent;
-`track(event, props)` passthrough; PII in analytics ids or URLs; vendor SDK
-with no data-flow note; GPL/AGPL or unlicensed dependency in a distributed
-permissive project; a compliance claim no code enforces.
+erasure that misses indexes/caches/warehouse/vendors; a correction or
+processing-restriction that reaches only the primary row, or a `deleted_at`-only
+schema with no freeze lever; DSAR with no timestamps or SLA; suppression
+re-implemented per consumer; a region selector defaulting or falling back
+outside the promised residency boundary; a backup, CDC, or analytics sink
+replicating PII to a region the primary never uses; a subprocessor with no
+documented processing region or transfer mechanism; boolean consent with no
+purpose or version; tags firing pre-consent; `identify()`/`alias()` back-linking
+a pre-login anonymous stream to a known identity; `track(event, props)`
+passthrough; PII in analytics ids or URLs; vendor SDK with no data-flow note;
+GPL/AGPL or unlicensed dependency in a distributed permissive project; a
+compliance claim no code enforces.

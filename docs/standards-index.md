@@ -280,8 +280,9 @@ design-quality checklist in `references/migration-parity.md` (#124).
   **LINDDUN** (privacy threats), and **MAESTRO** (agentic-AI threat modeling,
   complementary to the OWASP ASI / MITRE ATLAS catalogs); plus the program-maturity
   frames **OWASP SAMM** and **BSIMM** (measure the org's program, not a diff — name,
-  don't score). Named methods only — no URL fetched this session; verify before citing
-  specifics.
+  don't score). Named methods only — no URL fetched this session, except **LINDDUN**,
+  whose threat-type definitions are now verified by direct fetch (see the 2026-09-21
+  section below); verify before citing specifics.
 - **NIST SSDF (SP 800-218)** and the **NIST AI RMF Generative AI Profile (AI 600-1)**
   — secure-development and AI-risk lifecycle framing. (The AI RMF core function names
   are verified in the table above; these document/profile specifics were not fetched.)
@@ -1059,3 +1060,15 @@ OWASP project repository's raw source file (the authoritative origin for the pro
 | OWASP CI/CD Top 10 — CICD-SEC-04 Poisoned Pipeline Execution | https://raw.githubusercontent.com/OWASP/www-project-top-10-ci-cd-security-risks/74b2c790d5512998f232480dde61d4d42fa692ae/CICD-SEC-04-Poisoned-Pipeline-Execution.md | Verbatim (Indirect PPE, I-PPE): "In I-PPE, an attacker injects malicious code into files referenced by the configuration file." Backs the fold that a privileged pipeline's executed-but-unprotected files (build scripts, Makefile, Dockerfile, hook/linter configs, package.json scripts) need the same enforced review gate as the workflow file. Fetched + verified 2026-09-21 (raw file, SHA-pinned `74b2c79`). |
 | OWASP CI/CD Top 10 — CICD-SEC-07 | https://raw.githubusercontent.com/OWASP/www-project-top-10-ci-cd-security-risks/74b2c790d5512998f232480dde61d4d42fa692ae/CICD-SEC-07-Insecure-System-Configuration.md | Front-matter `title:` verbatim: "CICD-SEC-7: Insecure System Configuration". Description verbatim: "CI/CD environments are comprised of multiple systems, provided by a variety of vendors. To optimize CI/CD security, defenders are required to place strong emphasis both on the code and artifacts flowing through the pipeline, and the posture and resilience of each individual system." Example misconfiguration, verbatim list item: "A self-hosted system that has administrative permissions on the underlying OS." Fetched + verified 2026-09-21. |
 | OWASP CI/CD Top 10 — CICD-SEC-09 Improper Artifact Integrity Validation | https://raw.githubusercontent.com/OWASP/www-project-top-10-ci-cd-security-risks/74b2c790d5512998f232480dde61d4d42fa692ae/CICD-SEC-09-Improper-Artifact-Integrity-Validation.md | Verbatim (Recommendations): "Prior to consuming the resource in subsequent steps down the pipeline, the resource’s integrity should be validated against the signing authority." Backs the fold that inter-job artifacts and restored caches must be integrity-checked at each stage handoff, not only at the final promotion attestation. Fetched + verified 2026-09-21 (raw file, SHA-pinned `74b2c79`). |
+
+## Verified by direct fetch (2026-09-21) — LINDDUN privacy threat types
+
+Verification date for the row below: **2026-09-21**. Added for two privacy residual
+folds in `references/privacy-compliance.md` — intervenability beyond deletion
+(rectification and processing-restriction as code, reusing the erasure copy-set and
+the purpose-limitation flag) and the retroactive back-linking of a pre-login
+anonymous event stream onto a now-known identity.
+
+| Standard / source | URL | What was confirmed |
+|---|---|---|
+| LINDDUN privacy threat types | https://linddun.org/threat-types/ | Seven threat types listed; two used verbatim. **Unawareness & Unintervenability** = "Insufficiently informing, involving or empowering individuals in the processing of their personal data." (grounds the intervenability-beyond-deletion fold — rectification + processing-restriction as code). **Linking** = "Associating data items or user actions to learn more about an individual or group." (grounds the retroactive back-link fold). The live site uses the updated gerund category names (Linking / Identifying / Detecting); the skill body keeps LINDDUN's older spellings (Linkability / Identifiability / Detectability) for in-file consistency. Fetched 2026-09-21. |
