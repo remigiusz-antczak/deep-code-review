@@ -3,6 +3,17 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.425.0] — 2026-09-21
+
+### deep-code-review — four frontend/UX heuristics: zero-denominator N/A not fake-0%, cross-row chip alignment needs a shared column, a shared resolver masks render duplication, and classify a cross-surface difference before filing it as drift (#996, #999, #1002, #1003)
+
+- **`product-ux-quality.md`** (#996): a coverage/progress tile `total>0 ? round(done/total*100) : 0` paints a fabricated hard **0%** (reads "none done", gets the alarming treatment) when `total===0` — the honest reading is **N/A** ("nothing to do"). The `total>0` guard looks correct (it prevents NaN/Infinity) and seed data rarely has an empty population. Reserve 0% for `total>0 && done===0`. Distinct from the no-honest-reading rule (there the reading is absent/unmeasurable; here it exists but the denominator is empty) and the honest-empty-*list* rules (#886/#888).
+- **`product-ux-quality.md`** (#999): fixed-width trailing chips after a `flex-grow` cell align **within** a row but not **across** rows — each row is its own flex container, so the grow cell takes a different width per row and the chip cluster starts at a different x (ragged trailing edge). Use a shared CSS Grid track / subgrid so rows share column boundaries. A relational defect visible only across stacked rows (a one-row test passes). Distinct from the tabular-figures rule (glyph-level digit alignment in one column vs column-boundary alignment across rows).
+- **`product-ux-quality.md`** (#1002, refines #992): a shared value **resolver** (`resolveCategoryColor(key)`) centralizes the value so a DRY gut-check signs the concept off as "unified" — but the **wrapper markup** is still hand-rolled per call site and drifts (tell: duplicate render blocks wrapping the same resolver call). The **partial-consolidation trap** one rung above #992 (which is *no* shared component at all): audit the render per call site, never conclude "unified" from an imported resolver alone; consolidate the render into one component owning both the resolver call and the markup.
+- **`product-ux-quality.md`** (#1003, new UX-audit-method section): a cross-surface-difference audit ("renders differently on A vs B → drift") **false-positives** on intentional distinct-semantic differences. A three-question classifier before filing — same concept? same intended meaning? does the difference carry meaning? — files as drift only when same+same+carries-no-meaning; otherwise leave it or surface as an owner decision, never a Blocker, never a silent "unify" (which would destroy a real signal). The symmetric false-*positive* guard to #988's false-*negative* (a checklist rubber-stamping a real defect), and the inverse of #1002 (looks unified but drifts).
+- **#995** (a `<Suspense>` boundary wrapping already-resolved props — dead fallback) **closed as covered**: `frontend-a11y.md`'s dead-`<Suspense>` bullet already states "the discriminator is *where the awaiting happens*" and carries the identical fix, so it is not re-filed.
+- +4 evals (537 total), non-telegraphing. Closes #996, #999, #1002, #1003.
+
 ## [1.424.0] — 2026-09-21
 
 ### deep-code-review — RSC render-once isn't a file property, audit every href-transform not just the primary renderer, and a partition validity gate that wrongly rejects the minimal terminal segment (#998, #1000, #1004)

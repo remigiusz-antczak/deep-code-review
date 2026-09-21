@@ -5542,6 +5542,52 @@
         "Fix: make the terminal comparison inclusive, compute ring indices modulo N, and assert the partition invariant (lengths sum to N and each piece including the last is at least MIN)",
         "Adds the degenerate-boundary tests: N and N-1, the all-minimal decomposition (every sub-cycle including the last exactly MIN), and one whose only MIN-sized piece is the terminal one; distinguishes this single-comparator bug from a floor undone by a later clamp"
       ]
+    },
+    {
+      "id": "coverage-tile-zero-total-shows-na-not-fake-zero-percent",
+      "prompt": "In Aperture, a project dashboard, every team gets a 'Checklist complete' tile computed as `pct = totalItems > 0 ? Math.round(doneItems / totalItems * 100) : 0` and shown as `{pct}%`. A team that was created this morning and has not added any checklist items yet shows a red '0%' tile sitting next to teams reading 60-80%. An engineer says the tile is fine: the guard stops a divide-by-zero, and zero done out of zero really is zero progress. Is the tile correct, and what should the new team's tile show?",
+      "expected_output": "No. For a team with zero items the tile should not read 0%. 0% reads as 'this team has completed none of its work' and gets the alarming/red treatment, when the truth is there is nothing to complete yet -- a not-applicable state, not zero attainment. The `: 0` fallback avoids a NaN but picks a sentinel that renders as a real percentage, so it conflates an empty population with 'none done'. Show a non-numeric state for the empty case (N/A, a muted dash, or 'nothing to do') and reserve 0% for a team that has items but has done none of them (totalItems > 0 && doneItems === 0), which is a real, actionable zero.",
+      "expectations": [
+        "Says the 0% tile is wrong for a zero-item team and rejects 'zero of zero is zero progress'",
+        "Identifies that 0% reads as 'none done' while the truth is 'nothing to do' (a not-applicable state)",
+        "Recommends a non-numeric rendering (N/A, dash, 'nothing to do') for the empty-population case, not 0%",
+        "Distinguishes the empty-denominator case from a genuine totalItems > 0 && done === 0 zero",
+        "Does not accept 'the guard prevents a divide-by-zero' as making the tile correct"
+      ]
+    },
+    {
+      "id": "cross-row-chip-alignment-needs-shared-column-not-per-row-flex",
+      "prompt": "In Meridian, an issue list, each row is rendered as a flexbox: a title cell with `flex: 1`, then three fixed-width status chips (priority, assignee, state). Each individual row looks tidy and the chips sit neatly at its right end. But scanning down the whole list, the three chips do not line up with one another from row to row -- on each row they begin at a different horizontal position, so the right side of the list looks ragged. A developer says nothing is broken: the chips are right-aligned inside every row and it is only the titles that vary in length. What is the root cause, and how should the row layout be changed so the chips line up from row to row?",
+      "expected_output": "Root cause: each row is its own flex container, so the `flex: 1` title takes whatever width that row's title leaves, and the fixed-width chip cluster therefore starts at a different x on every row -- flexbox aligns children within one row, never across rows, so there is no shared column. The developer's 'right-aligned within each row' does not create alignment from row to row. Fix: give the list container a shared column structure -- CSS Grid on the list with one grid-template-columns (for example `1fr max-content max-content`), each row a grid row (or display: contents / subgrid for a nested row component) -- so every row's chip column shares the same track boundaries and the chips align down the list.",
+      "expectations": [
+        "Identifies the root cause as each row being its own flex container with a growing cell, so no column is shared across rows",
+        "Explains that flexbox aligns within a row but not across rows",
+        "Recommends a shared column structure on the container (CSS Grid template / subgrid), not a per-row styling tweak",
+        "Rejects 'right-aligned within each row' as producing alignment from row to row"
+      ]
+    },
+    {
+      "id": "shared-value-resolver-masks-hand-rolled-render-duplication",
+      "prompt": "In Halcyon, category badges appear on five screens. During review a colleague points out that the team already extracted `resolveCategoryColor(key)` into a shared util and every one of the five screens imports it, so the color logic has a single source and is fully DRY. On that basis they mark the item 'category badge: unified -- one source of truth' and move on. Reading the five screens, each writes its own JSX around the call: screen A renders `<span className={cx('dot', resolveCategoryColor(k))}>`, screen B a `<div className={cx('pill', resolveCategoryColor(k))}>`, screen C wraps the same in an extra icon, and so on. Is the colleague right that the badge is unified? If not, what is still wrong and how would you fix it?",
+      "expected_output": "No. Only the value (the color) is centralized; the render around it -- the element, the class scaffolding, the a11y attributes, the icon, the sizing -- is hand-rolled independently on each of the five screens, so the badge's markup still drifts screen to screen even though the color logic is DRY. A DRY check on the resolver gives a false 'unified' signal because it inspects only the value, not the render. The concept is unified only when the render is one shared component (for example `<CategoryBadge category={k}/>`) that owns both the resolver call and the markup, with its one legitimate per-site difference (size/variant) as a prop. Audit the markup at each call site, not just whether the value is centralized.",
+      "expectations": [
+        "Answers No: a shared color/value resolver does not make the concept unified while the surrounding render is duplicated per screen",
+        "Identifies that the markup (element, a11y, icon, sizing) drifts across the five screens despite the shared resolver",
+        "Notes the DRY-on-the-resolver check gives a false 'unified' signal because it inspects only the value",
+        "Recommends consolidating the render into one shared badge component owning both the lookup and the markup"
+      ]
+    },
+    {
+      "id": "classify-cross-surface-difference-before-filing-as-drift",
+      "prompt": "In Solstice, a UX consistency audit is comparing how the same components render across screens. It has drafted two items to file as inconsistencies to fix: (1) the status badge is a solid filled pill on the active-projects board but an outline-only badge on the archived-projects view; (2) the main action is a prominent solid button on the create form but a small subdued text link on the read-only detail page. The reviewer is about to file both as 'same component rendered two different ways -- unify them.' Before filing, what should the reviewer check for each item, and are these two actually defects to fix?",
+      "expected_output": "Before filing, check each difference rather than assume every cross-surface difference is accidental. Ask: are these the same concept? do they mean the same thing in each context? does the visual difference carry meaning? Both examples look like intentional, meaning-bearing differences, not accidental drift: an outline badge signals 'archived' against the active board's filled badge, and the subdued link versus the solid button reflects that the action is primary on create but not really available on a read-only page. Filing those as inconsistencies and 'unifying' them would erase a real signal -- a net-negative change. So neither is an automatic defect; at most, if the reviewer thinks a distinction is wrong, raise it as an owner decision, never a blocker. File as an inconsistency only when it is the same concept, the same intended meaning, and the difference carries no meaning.",
+      "expectations": [
+        "Says to check/classify each difference before filing, not to file both as inconsistencies automatically",
+        "Applies a test of same-concept / same-meaning / does-the-difference-carry-meaning (or equivalent)",
+        "Recognizes both examples as intentional, meaning-bearing differences (archived vs active; action available vs not), not drift",
+        "Warns that unifying a meaning-bearing difference erases a real signal / is a regression",
+        "Concludes they are not automatic defects -- at most an owner decision, not a blocker"
+      ]
     }
   ]
 }
