@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.391.0] — 2026-09-21
+
+### agentic-delivery — a memory-only spawn gate reads green while CPU-heavy lanes thrash the run queue: brake on the paired signal (#905)
+
+- **`fast-agentic-delivery.md`**: the mirror of the disk-I/O-heavy case already in the free-RAM/swap gate — a CPU-bound lane type (parallel test suites, builds, typecheck) backs up the run queue while free RAM stays above its buffer and swap stays flat, so a memory-only gate reads green and the orchestrator keeps spawning into a box where every lane's wall-time is already ballooning (observed: load1 near 5x core count on a 14-core host, RAM >50%, swap flat). The reading the section header distrusts becomes reliable once paired — load1 sustained past core count together with CPU idle collapsing toward zero is a CPU-contention signature disk-I/O-wait cannot fake — so for a known CPU-heavy lane it is a legitimate spawn brake. Kept brake-only and lane-typed (high CPU idle stays confirmation, never a licence; RAM/swap remain primary; budget CPU-heavy concurrency separately since read-only lanes tax neither); cross-refs the size-to-the-binding-one rule (effective heavy-lane concurrency = min of RAM-headroom and CPU-headroom). +1 eval.
+
 ## [1.390.0] — 2026-09-21
 
 ### deep-code-review — the context-assembly budget check is not RAG-specific: any prompt assembler that overflows sheds the earliest text, often the system prompt (LLM app quality)

@@ -140,7 +140,24 @@ elevated `load1` during a heavy-setup fan-out (many concurrent dependency instal
 dev-server boots saturating disk I/O) may **corroborate a back-off** even when RAM and
 swap read healthy — never a *licence* to spawn, but a legitimate independent **cap on
 concurrent I/O-heavy setup**, since the RAM/swap gate alone won't catch an I/O-bound
-crawl. Whatever the exact predicate, **spawn one heavy
+crawl. The mirror failure is a **CPU-bound** lane type — parallel test suites,
+compilation/builds, typecheck — that backs up the run queue rather than the disk:
+several at once drive `load1` to a multiple of core count while free RAM sits well
+above its buffer and swap stays flat, so the memory gate reads green throughout and
+the orchestrator keeps spawning into a box where every lane's wall-time is already
+ballooning (observed: `load1` near 5× core count on a 14-core host while free RAM
+held above 50% and swap never grew). Here the reading the header distrusts becomes
+reliable once **paired** — a `load1` sustained past core count *together with CPU
+idle collapsing toward zero* is a CPU-contention signature disk-I/O-wait cannot fake,
+so for a *known* CPU-heavy lane it is a legitimate spawn brake this gate would
+otherwise miss. Keep it brake-only and lane-typed: back off a new CPU-heavy lane on
+that paired signal (high CPU idle stays confirmation only, never a *licence* — RAM
+and the swap trend remain primary), and budget CPU-heavy concurrency **separately**
+from RAM, since cheap read-only lanes (grep, an API call) tax neither. This is the
+*size to the binding one* shape of the shared-quota ceiling below applied among the
+local resources — effective heavy-lane concurrency is the **minimum** of RAM-headroom
+and CPU-headroom, not memory alone (the reverse of the probe's *a machine can exhaust
+RAM before it exhausts CPU slots*: the bind runs both ways). Whatever the exact predicate, **spawn one heavy
 lane at a time, re-sample after a settle window, then decide on the next** —
 never compute a ceiling and dispatch straight up to it, and **leave a burst reserve
 even when the predicate says go** — a later spiky lane (a browser gate, a dependency
