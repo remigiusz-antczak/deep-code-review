@@ -807,6 +807,45 @@ production-like server).
   correct and correctly keyed** and the unstable value is a **bare inline literal** with no named
   derivation to notice — so the only fix is to stabilize the literal's identity, never to add
   memoization the child already has.
+- **A lazily-mounted container can't reach backwards into its props — an eagerly-evaluated
+  expensive prop runs for every panel, including the ones never shown.** A container that mounts
+  its children conditionally — a `Tabs` that renders only the active panel, a `{isOpen &&
+  <Panel/>}`, a virtualized/windowed region — skips the *render* of the branches it doesn't show,
+  but **not the evaluation of the props it was handed**: a prop expression is an ordinary function
+  argument, so the parent computes it **before** the element tree ever reaches the container that
+  decides what to mount. Hand such a container an array of pre-built panels —
+  `<Tabs panels={[{label, content: renderHeavyChart(a)}, {content: renderHeavyChart(b)}, …]} />`,
+  `<Modal body={buildBigTree(data)} />`, `<Panel rows={expensiveTransform(rows)} />` — and every
+  chart/tree/transform is computed up front even though only one panel is ever opened; the
+  container's mount-only-the-active-child discipline saves nothing. **The discriminator that
+  separates the bug from a false positive is call-vs-descriptor:** a bare JSX *element* in prop
+  position (`content: <HeavyChart data={raw}/>`) is a cheap `createElement` descriptor — nothing
+  heavy runs until the container mounts it, so it is **not** this bug; the bug is a **function
+  call** evaluated in prop position (`content: renderHeavyChart(raw)`) or an element whose **inner
+  prop is computed on the spot** (`<HeavyChart rows={buildSeries(raw)} />` — the element is cheap
+  but `buildSeries` runs now). Flag the call/allocation, not every element passed as a prop, and
+  gate on real dataset scale and a real, frequent trigger — over-flagging a correct-looking shape
+  at small *n* erodes trust in the finding. **Memoization does not fix this, and reaching for it
+  is the tell that the axis was misread:** `useMemo(() => renderHeavyChart(raw), [raw])` still
+  executes for **all** N panels on the first render — a memo caches a value across *re-renders*,
+  it never skips the *never-opened* branch. The lever is *when* the work is invoked, not *how
+  often* it recomputes. Fix: move the work to the point of mount so the container runs it only for
+  the panel it actually shows — pass a thunk / render-prop / `children` / a component reference the
+  container invokes on mount (`content: () => renderHeavyChart(raw)` rendered as
+  `tabs[active].content()`), or hand the panel its raw inputs and let the mounted component do its
+  own derivation. Detect: an expensive call or allocation (or an array of them) written as a prop
+  value to a component that conditionally/lazily renders that prop; confirm by counting the
+  expensive work's invocations while opening panels — acceptance is that the count equals the
+  panels actually **opened** (a never-opened tab = zero, a first-time tab switch = exactly one),
+  not the number defined. Distinct from the three memoization bullets above by *axis*: those are
+  re-render cost — the work reruns because a child lacks `React.memo`, a view-model is unmemoized,
+  or an inline literal is referentially unstable, and memoization is the cure; here the
+  container's laziness is real and the prop may be perfectly stable, yet the work still runs for
+  branches that never mount, so only relocating the invocation helps. And distinct from the
+  heavy-optional-library-import bullet below: that is a **bytes** leak — a statically imported lib
+  shipped to routes that never open the gate — cured by deferring the **import**; this is a **CPU
+  / allocation** cost executed at render for unseen branches, cured by relocating the
+  **invocation**.
 - **A heavy optional-feature library must be gated at the *import*, not just the render.** A
   rich-text editor, chart/diagram lib, PDF/export, or syntax highlighter that renders only
   behind an interaction gate (`open`/`editing`/`expanded`) but is **statically imported at

@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.388.0] — 2026-09-21
+
+### deep-code-review — an eagerly-evaluated expensive prop runs for every panel a lazy container never mounts; memoization can't fix a breadth problem (#881)
+
+- **`frontend-a11y.md`**: a container that mounts its children conditionally (a `Tabs` rendering only the active panel, an `{isOpen && <Panel/>}`, a virtualized region) skips the *render* of unshown branches but not the *evaluation of the props it was handed* — a prop expression is an ordinary argument the parent computes before the container decides what to mount, so passing an array of pre-built panels (`content: renderHeavyChart(a)`, …) builds every chart though one panel opens. Discriminator (avoids the false positive): a bare JSX *element* in prop position is a cheap `createElement` descriptor (not the bug); a function *call* in prop position, or an element whose inner prop is computed on the spot (`rows={buildSeries(raw)}`), is. Memoization does not fix this — reaching for it is the tell the axis was misread: a memo caches across re-renders, it never skips a never-opened branch; the lever is *when* the work is invoked, not *how often* it recomputes. Fix: move the work to mount (thunk / render-prop / `children` / a component reference the container invokes on mount), gated on real dataset scale and a real trigger; acceptance = the expensive work's invocation count equals the panels actually opened. Distinct from the re-render-frequency memo folds (#846, inline-literal). +1 eval.
+
 ## [1.387.0] — 2026-09-21
 
 ### deep-code-review — a scroll container's static `tabIndex={0}` is a dead focus stop when its content fits; gate focusability on live overflow (#875)
