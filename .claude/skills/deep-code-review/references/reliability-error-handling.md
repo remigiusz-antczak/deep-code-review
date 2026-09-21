@@ -104,6 +104,29 @@ the checklist.
   is the gate's *blocking* behaviour; an item a reviewer genuinely could not verify is
   a separate axis — marked `could-not-check`, never a silent pass, the sense in which
   "fails open" is used for a review status elsewhere.)
+- **A changed-files / diff gate is a *detective* control — resolve its base by a ref,
+  and treat an unreadable diff as could-not-check, never as an empty diff.** A gate that
+  decides *what to check* by diffing against the PR base first has to **obtain** that base.
+  Resolving it by an **exact commit SHA** (`git fetch origin <base-sha>`) fails on a
+  **shallow CI checkout** (a small `fetch-depth`/`--depth`, common to keep CI fast) whenever
+  that commit sits outside the truncated history — a base older than the clone depth, a moved
+  or force-pushed base, a rewritten head. The fetch errors and the diff cannot be computed;
+  the defect is what the gate does **next**. Because a diff/changed-files gate is a
+  **detective** control — its job is to *find* what changed, not to attest a safety property —
+  an unreadable diff is **unknown → could-not-check → fail open**: emit a distinct
+  skipped/neutral status and, where the gate routes other checks, **run them conservatively**
+  (treat everything as in scope). Never fabricate an **empty** diff that silently passes or
+  skips the downstream checks (a false green), and never — the opposite error — hard-fail the
+  PR as if a violation were found. Two fixes, both needed: **fetch the base by ref** (the
+  branch name, `git fetch origin <base-branch>`, or `--deepen`/`--unshallow`) so resolution
+  survives a moved SHA and a shallow clone; and give the can't-read-the-diff path a **distinct
+  could-not-check exit and message** (the rule above), so it reads as *skipped*, not *clean*.
+  This is the diff-detector inversion of the security / authz / integrity / spend **exception**
+  above: *those* fail **closed** on an unreadable input; a change **detector** fails **open**,
+  because "found nothing because it could not look" must not read as "found nothing." (Whether
+  the *repository history itself* is shallow — `git rev-parse --is-shallow-repository`,
+  `git fetch --unshallow` — is `branch-and-merge-hygiene.md`; this bullet is the **gate** that
+  consumes that history.)
 - **Find the house primitive; confirm *uniform* routing (the converse lens).**
   Don't only ask "does each I/O site have *some* handling?" — grep the project's
   **own** retry/backoff/timeout wrapper (`withRetry`, `fetchWithTimeout`, a

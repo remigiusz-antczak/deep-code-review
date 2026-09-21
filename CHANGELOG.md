@@ -3,6 +3,14 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.415.0] — 2026-09-21
+
+### deep-code-review — two CI-gate-design review lessons: a diff gate that resolves its base by exact SHA breaks on shallow clones, and a drifted local copy of a CI gate is a false green (#968, #969)
+
+- **`reliability-error-handling.md`** (#969): a changed-files / diff gate is a **detective** control — resolving its base by an **exact commit SHA** (`git fetch origin <sha>`) fails on a shallow CI checkout when that commit is outside the truncated history (base older than the clone depth, moved, or force-pushed), and the gate then can't compute the diff. Fetch the base **by ref** (branch name / `--deepen` / `--unshallow`), and treat an unreadable diff as **could-not-check → fail open** (a distinct skipped status; run downstream checks conservatively) — never a fabricated empty diff (false green) nor a hard-fail. The diff-detector inversion of the security/authz/integrity/spend fail-**closed** exception directly above it: a change *detector* fails open, because "found nothing because it couldn't look" must not read as "found nothing."
+- **`branch-and-merge-hygiene.md`** (#968): a **drifted local copy** of a CI gate is a false green even when the author ran it in good faith — the same gate lives as a CI job *and* a local convenience copy (a `pre-push`, a `make verify`, a vendored paste) that drifts behind the CI definition, reports green on a change CI rejects, and the "passed locally" reading grounds an `--admin` override that merges what CI would have caught. Fix: **single-source the gate** — the local entry point invokes the exact CI script, or a version/digest check refuses a divergent local pass. Extends the "self-report is not a control" rule (which covers a check *skipped/bypassed*) to one that *ran and passed and still means nothing*. (#968's other half — an evidence gate must require a source that renders for the reviewer — was already covered by `product-ux-quality.md`'s "gate on visibility, not presence" and is cross-linked, not re-filed.)
+- +2 evals (518 total), non-telegraphing. Closes #968, #969.
+
 ## [1.414.0] — 2026-09-21
 
 ### agentic-delivery — four multi-agent lessons: an offer racing the offerer's own lane, plugin-spawned forks judged by effect, a fan-out review's barrier-join, and a peer-handed partition that ages on the wire (#952, #955, #959, #960)
