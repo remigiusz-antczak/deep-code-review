@@ -201,6 +201,57 @@ tilt, and escalate the absence rather than silently compensating. **🚩
 tell:** a one-sided board — every recent entry from the same peer — with no
 liveness check before the next post.
 
+## A one-way status channel with a confirmed-silent reader is not coordination — back off the fixed-timer post and escalate the absence, past a missed-cycle threshold
+
+The *no live peer, no coordination lift* rule above (#709) gates the **one**
+discrete hand-off — check liveness *before* spending budget composing it, and if
+the peer is absent, don't write it. It does not cover a **standing periodic
+emit**: an agent told "post status each cycle" fires **unconditionally on a fixed
+timer** into a shared **lock-free, one-way channel** the peer need never answer,
+and follows that instruction literally long after the peer has gone silent — a
+real case: ~8 consecutive cycles, ~a dozen days, zero replies, a status post every
+tick regardless (#1001). A one-way channel with no reader is **not coordination —
+it is spent cycles and noise**, and a fixed-timer instruction never re-checks
+whether the audience is still there.
+
+The piece #709's binary, single-window liveness read lacks here is a
+**confirmed-silence threshold**: one missed cycle is a **transient gap, not a dead
+peer**, so hard-stopping on the first quiet tick is as wrong as posting forever.
+
+- **Confirm before you act — count consecutive silent cycles, don't judge one
+  window.** Track **consecutive** cycles with **zero reciprocation** — no reply,
+  ack, or fresh entry attributable to the peer's *own* id (*a shared bot account
+  authors every post*, above, is why it must be the peer's own, not merely any new
+  post). Below a pre-stated threshold (N consecutive), keep the cadence; only a
+  crossed threshold is **confirmed silence** — the hysteresis #709's single read
+  does not carry.
+- **On confirmed silence, taper or stop the periodic post — the evidence overrides
+  the standing instruction.** Drop to a low-frequency heartbeat or stop the timed
+  emit; "post each cycle" was written blind to whether anyone reads. Backing off is
+  **not going dark** (*if the loop is idling, say so loudly*,
+  `fast-agentic-delivery.md`) — it is refusing to spend cycles on an emit with no
+  reader.
+- **Escalate the absence to a durable, read channel — not one more post into the
+  dead one.** The silence itself is the finding: surface "peer <id> silent N
+  cycles, backing off" to the owner or a channel actually consumed (#709's
+  *escalate the absence*, applied to a periodic emit) — one escalation, not a
+  re-post into the void each cycle.
+
+Distinct from **#709 no-live-peer** (above): that gates a **discrete hand-off** on
+a **single-window** liveness read; this governs a **standing fixed-timer emit**,
+adds the **transient-vs-confirmed-dead threshold** #709 has no notion of, and
+**tapers the cadence** rather than gating one post. Distinct from **a monitor
+emits on state-transition only** (`fast-agentic-delivery.md`): that suppresses a
+**reader's** output when the **watched state** has not changed (unchanged poll →
+stay silent); this backs off a **sender's** emit when the **audience is confirmed
+absent** — a watched state can keep changing while no peer reads it, so *no change*
+and *no reader* are different silences. **Not an announce/claim rule** at all:
+those arbitrate *who owns an item*; this decides *whether to keep emitting to a
+peer who stopped reading*. **🚩 tell:** an agent posting status every cycle to a
+shared channel under a "post each cycle" instruction while the peer has produced
+nothing for a sustained run of cycles — a fixed-timer emit with no
+confirmed-silence threshold and no escalation of the absence.
+
 ## A sync that reads only the newest entry silently drops what landed between reads
 
 Reading a board by its newest comment alone *feels* like syncing — it is

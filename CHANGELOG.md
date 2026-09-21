@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.423.0] — 2026-09-21
+
+### agentic-delivery — a one-way status channel with a confirmed-silent reader isn't coordination: back off the fixed-timer post and escalate the absence past a missed-cycle threshold (#1001)
+
+- **`multi-session-coordination.md`** (#1001): an agent told "post status each cycle" fires **unconditionally on a fixed timer** into a shared lock-free, one-way channel the peer need never answer, and follows that literally long after the peer has gone silent (a real case: ~8 consecutive cycles, zero replies, a post every tick). A one-way channel with no reader is spent cycles and noise. The piece #709 (no-live-peer, a single-window gate on one discrete hand-off) lacks: a **confirmed-silence threshold** — one missed cycle is a transient gap, not a dead peer, so hard-stopping on the first quiet tick is as wrong as posting forever. On N consecutive cycles with zero reciprocation (attributable to the peer's *own* id), **taper or stop** the periodic emit (not going dark — a heartbeat/escalation still speaks) and **escalate the absence** to a durable read channel — one escalation, not a re-post into the void. Distinct from #709 (standing-timer + threshold + taper vs a discrete-hand-off pre-gate) and from monitor-emit-on-state-transition (a *sender* backing off a confirmed-absent *audience* vs a *reader* suppressing unchanged-*state* output — "no change" ≠ "no reader").
+- +1 eval (118 total in agentic-delivery). Closes #1001.
+
 ## [1.422.0] — 2026-09-21
 
 ### deep-code-review — completes the "feels like a prototype" root taxonomy with the concept-fragmentation (no-shared-component) root (#992)
