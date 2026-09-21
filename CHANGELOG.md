@@ -3,6 +3,16 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.426.0] — 2026-09-21
+
+### deep-code-review — a build scanner that emits nothing for an omitted dir, a secret gate blind to an omitted committable type, an override that misses the decision field, and a substring join that leaks a row (#997, #1006, #1007, #1008)
+
+- **`reliability-error-handling.md`** (#997): a generator that scans only an enumerated set of dirs/globs (a utility-CSS **content** scanner, a codegen input list, an asset glob) emits **nothing** for a source outside it — "scanned a dir, found nothing to emit" is a silent no-op of a subsystem that *ran* but covered a subset. A class token present in the markup can still render no effect because its file is outside the build's scan scope.
+- **`reliability-error-handling.md`** (#1006): a name/secret/banned-token grep-gate that selects files by an **allow-list of extensions** silently under-covers — a green then means "clean **within the subset I scanned**," not "clean"; a committable type omitted from the list (`*.py`, `*.ipynb`) is never scanned and the gate reports exit-0 clean (false confidence, worse than no gate). Fix: make coverage a **superset of the committable surface** — derive the file set from `git ls-files` (scan-all-then-exclude), treat an unrecognized committable type as **could-not-check → fail closed** for a security/secret gate (the fail-closed case, vs #969's fail-open detective gate), and self-test with a negative control per committable type.
+- **`data-quality.md`** (#1007): a stated authority precedence (human read > model estimate) must be enforced in the branch that sets the **decision field the reader acts on** — writing an adjacent `notes` column while the decision field still shows the un-overridden value is a nominal override the read path never consults. The authority-**direction** complement to the grade-monotonic rule (that blocks a junior overwrite; this makes a senior override actually reach the decision).
+- **`data-quality.md`** (#1008): a **substring-containment** join key (`a in b or b in a`, no word-boundary/length guard) leaks one entity's whole (often confidential) **row** onto another when a short name is a substring of an unrelated longer one; over-correcting to bare exact-match then silently **drops** legitimate rows. Fix: join on a normalized key / resolved id, surface every overlay entry as a visible matched-or-unmatched row (never a silent drop), and verify **both** the false-positive and false-negative directions (a join is unproven until both counts are seen). Distinct from the suppression-match-exact rule (a substring `includes` dropping one categorical decision vs leaking a whole row).
+- +4 evals (541 total), non-telegraphing. Closes #997, #1006, #1007, #1008.
+
 ## [1.425.0] — 2026-09-21
 
 ### deep-code-review — four frontend/UX heuristics: zero-denominator N/A not fake-0%, cross-row chip alignment needs a shared column, a shared resolver masks render duplication, and classify a cross-surface difference before filing it as drift (#996, #999, #1002, #1003)

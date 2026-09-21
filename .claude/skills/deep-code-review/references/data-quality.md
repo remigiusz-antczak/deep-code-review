@@ -71,6 +71,25 @@ deterministic per-source table, not an inferred judgement) and refuse a write wh
 incumbent.grade`; keep the incumbent on ties. Additive to the populated→empty and fanout checks,
 never a replacement (grade-gating alone won't stop an equal-grade blanking). Record each refused /
 accepted overwrite with the grades, so the arbitration is auditable.
+- **A stated precedence must be enforced in the branch that sets the DECISION field — writing the
+  higher-authority value into an adjacent column a reader never consults is precedence in name only.**
+  When a doc / contract says one source **outranks** another (a human read > a model estimate, a
+  manual correction > an automated guess), grep the field that actually **encodes the acted-on
+  decision** (`status`, `verdict`, `recommendation`) and confirm the senior source is consulted
+  **first in the branch that computes THAT field** — not merely written *somewhere* on the row. The
+  breach: the override lands in a side `notes` / `read` / `urgency` column while the decision field is
+  computed **purely from the junior (model) branch and never reads the override**, so a row shows
+  `status="keep"` beside a human note that says "do NOT do this." This is the authority-**direction**
+  complement to grade-monotonic write-authority above — that refuses a *junior* value from overwriting
+  a senior one; this makes a *senior* value actually **reach** the decision — and a field-granularity
+  case of the write-only-value defect (§7, an acknowledgment nobody reads). Distinct from §6's
+  dual-registered write-target (which *store* holds a field) and from a compare-and-swap that guards
+  the wrong column (`concurrency-shared-state.md`): here one store, one record — the write reaches the
+  row, but the decision branch ignores it. Compounding tell: **truncating** the caveat-bearing field
+  to a length that can cut the disqualifying clause (a read of "strong, but do NOT proceed —
+  regulated" clipped to "strong") — never truncate a field whose job is to carry the reason; clip
+  low-information display fields instead. Test the **conflict case**: a row where override and base
+  disagree must render the **override's** verdict in the acted-on cell.
 - **An identity / roster change re-attributes cached signals — classify the drop, don't blind-ack
   or blind-block.** A change that improves the entity roster or resolution (fills anchors, corrects
   matches) **re-keys attribution** across every cached downstream signal, so a per-dimension
@@ -157,6 +176,23 @@ accepted overwrite with the grades, so the arbitration is auditable.
   evidence, since the chance it silently collapses two distinct entities rises with
   frequency). Thresholds are named constants with a rationale, never a tuned magic
   number; route any demotion that empties a field through the non-regression gate (§1).
+- **Join on a normalized key or a resolved id — a *substring-containment* match (`a in b or b in a`)
+  leaks one entity's row onto another, and over-correcting to bare exact-match silently drops
+  legitimate rows.** Matching two datasets by bidirectional substring with no word-boundary or length
+  guard is **worse than the name-only match** warned against above: a short name is a substring of an
+  unrelated longer one (`"AV"` inside `"Haven"`), so the row **inherits a stranger's — often
+  confidential — fields**, pasted into a human-facing output (a privacy leak, not just a quality
+  defect). The reflexive fix — strict exact-match — then **over-corrects**: rows whose names differ
+  only trivially (a legal suffix, `Inc`, `gmbh`, punctuation, case) stop matching and **vanish
+  silently**. Fix both failure directions at once: match on a **normalized key** (case / whitespace /
+  unicode-NFC / suffix-folded — the canonicalize-before-compare rule in §5) or a **resolved stable
+  id**, and when overlaying one set onto another **emit every overlay entry as a matched-or-unmatched
+  row** so a miss is a **visible unmatched row, never a silent drop** (the resolution-order *surface
+  the ambiguous count* rule above, at row grain). Prove the join **both ways on real data** before
+  trusting it — sweep for **false positives** (a wrong row attached) *and* **false negatives** (an
+  expected row missing); a join is unproven until both counts are seen. Same substring-`includes`
+  antipattern as the status / suppression rule in §7, on a different surface — a **join key** that
+  leaks a whole row, not a categorical decision that drops one.
 - Prefer revealed-preference, hard-to-game, multi-signal evidence over a single
   vanity/attention signal.
 - Temporal claims (a prior role, a past affiliation) require an explicit
@@ -843,4 +879,4 @@ that ships raw events where the consumer scores on aggregates, or a claimed
 provider-input never reconciled against the provider's live output before it feeds a
 downstream score; a deserializer that trusts a serialized computed field (a count
 read verbatim, not re-derived from the validated collection) or checks only a
-primitive type, not element shape — weaker than its own builder; a corroboration / fusion step that raises a fused confidence past its **entity-attribution** component on agreement that only evidences occurrence; a hand-rolled composite / score / tiering where a citable external standard exists and wasn't used, or per-metric spec URLs over a **tool-chosen metric set** (the invented index one level up); a non-empty value-A→value-B overwrite with no source-grade arbitration; a join / corroboration key not weighted by value-commonness (a value shared by dozens treated as a confirming match); a corroboration count that collapses same-domain duplicates but not derivation; a per-dimension volume-floor drop acked or blocked with no fold investigation after an identity/roster/entity-resolution change (a correction and a regression are identical from the count); an identity cluster built from raw connected components with no bridge / centrality check (transitive over-merge); a fabricated freshness decay curve (`0.5^(days/half_life)`) or an adopted vendor half-life in place of an observable in-window gate; a diff / index keyed on a **bare `id`** over a list mixing multiple entity **kinds** (a `(kind, id)` collision that silently merges two entities into one delta); a vector index mixing embeddings from two model versions, queried with a different model than it was built with, not re-embedded after its source docs changed, or built for one distance metric / normalization and queried under another; a per-group ratio whose numerator fans a shared/ownerless entity out to every group while its denominator credits it to a single owner (inflated, or undefined, for every group that shares it); a percent-unit guard with a lower bound only, so a value above 1 (legitimate over-100% semantics, or a double conversion) renders wrong with no error; a `scopeKeys`/`tags`/`labels`-style per-type accessor with a constant `[]` return (or a `// not scoped by X` comment) feeding a shared `.includes()`/`.some()` filter with no whole-type bypass, silently dropping that type from every scoped result.
+primitive type, not element shape — weaker than its own builder; a corroboration / fusion step that raises a fused confidence past its **entity-attribution** component on agreement that only evidences occurrence; a hand-rolled composite / score / tiering where a citable external standard exists and wasn't used, or per-metric spec URLs over a **tool-chosen metric set** (the invented index one level up); a non-empty value-A→value-B overwrite with no source-grade arbitration; a join / corroboration key not weighted by value-commonness (a value shared by dozens treated as a confirming match); a corroboration count that collapses same-domain duplicates but not derivation; a per-dimension volume-floor drop acked or blocked with no fold investigation after an identity/roster/entity-resolution change (a correction and a regression are identical from the count); an identity cluster built from raw connected components with no bridge / centrality check (transitive over-merge); a fabricated freshness decay curve (`0.5^(days/half_life)`) or an adopted vendor half-life in place of an observable in-window gate; a diff / index keyed on a **bare `id`** over a list mixing multiple entity **kinds** (a `(kind, id)` collision that silently merges two entities into one delta); a vector index mixing embeddings from two model versions, queried with a different model than it was built with, not re-embedded after its source docs changed, or built for one distance metric / normalization and queried under another; a per-group ratio whose numerator fans a shared/ownerless entity out to every group while its denominator credits it to a single owner (inflated, or undefined, for every group that shares it); a percent-unit guard with a lower bound only, so a value above 1 (legitimate over-100% semantics, or a double conversion) renders wrong with no error; a `scopeKeys`/`tags`/`labels`-style per-type accessor with a constant `[]` return (or a `// not scoped by X` comment) feeding a shared `.includes()`/`.some()` filter with no whole-type bypass, silently dropping that type from every scoped result; a stated precedence (`A` outranks `B`) whose override writes an adjacent `notes`/`read` column while the `status` / decision field is computed only from `B` and never consults it (worse if that caveat-bearing field is then truncated to a length that cuts the disqualifying clause); a dataset join by unguarded substring containment (`a in b or b in a`) that inherits an unrelated entity's confidential row, or a bare exact-match overlay that silently drops rows differing only by a legal suffix / case / punctuation.
