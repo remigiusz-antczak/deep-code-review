@@ -573,6 +573,22 @@ is **advisory**, never a passing control:
   executed. "The repo has hooks" or "the PR says tests pass" is **never** logged as a green
   control — record only a forge run pinned to the reviewed SHA (a required status that never ran
   is the merge-blocker above, not "the author ran it locally").
+- **A *drifted local copy* of a CI gate is a false green even when the author ran it in good
+  faith.** The rule above covers a local check *skipped or bypassed*; the subtler case is one
+  that **ran and passed and still means nothing** — the same gate lives as both a CI job and a
+  local convenience copy (a `pre-push` script, a `make verify` / `scripts/check.sh` target, a
+  vendored paste of the CI logic), and the local copy **drifts behind** the CI definition. It
+  reports green on a change CI will reject; the author reasonably says "it passed locally" and
+  reads the red CI as a flake — grounds for an `--admin` override that then merges what CI would
+  have caught. Fix: **single-source the gate logic** — the local entry point **invokes the exact
+  script the CI job runs** (one file, two callers), or a version/digest check **refuses to pass
+  locally when the two diverge** — so a local pass can never mean *less* than a CI pass. This is
+  the gate-logic case of *audit every consumer when a gate moves* above (a local merge-preflight
+  is one such consumer) and of domain H's duplicate-source-drift (one source, not two copies that
+  fall out of step); the trusted control stays the forge run pinned to the reviewed SHA. (The
+  sibling **design** question — an evidence gate must require a source that *renders for the
+  reviewer*, an uploaded attachment, not a raw-content-host link that only *looks* like evidence —
+  is `product-ux-quality.md`'s "gate on visibility, not presence.")
 - **The *absence* of a hold marker is not authorization — a mutable-text hold can be edited away.**
   The mirror of the rule above: where a merge is blocked by a "DO NOT MERGE" / hold marker in a
   **mutable** surface (a PR-body line, a checklist box, a label a bot can toggle), its
