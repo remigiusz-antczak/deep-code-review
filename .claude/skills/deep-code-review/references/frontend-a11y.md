@@ -112,6 +112,29 @@ without regressing a deliberate design.
   exists, and from where) and from Consistent Identification below (whether the
   same destination gets the same name across routes): this is whether a name that
   already exists still contains what is on screen.
+- **A dismissible chip/tag button whose accessible name is only the *value* it represents states no
+  *action* — a screen-reader user hears the current filter, never that the control removes it.** The
+  common filter/token chip renders as `<button>{label} ×</button>` (a visible label plus a trailing
+  `×` multiplication-sign glyph), and its accessible name computes from that visible content to the
+  **value** — `"Category: Books ×"` — so assistive tech announces the filter that is *set*, with no
+  hint the button's *purpose* is to clear it; the trailing `×` is a decorative glyph with **no
+  reliable spoken equivalent** (announced as "times", as its Unicode name, or skipped, depending on AT
+  and verbosity). That fails **WCAG 2.4.6 Headings and Labels** (AA — a label must describe the
+  control's *purpose*, and "Category: Books" describes the value, not "remove this filter") and leans
+  on **4.1.2 Name, Role, Value**. It ships because a name *does* exist and even reads as descriptive,
+  so a presence check (`if (!accessibleName)`), a first-read screen-reader pass, and a sighted
+  click-through (the `×` reads as "remove" to the eye) all approve. Fix: give the button an
+  `aria-label` stating the **action and its target** — `aria-label="Remove filter: Category Books"` —
+  and mark the `×` `aria-hidden="true"` so it is not announced. **Distinct** from the Label-in-Name
+  (2.5.3) bullet above, whose polarity is opposite — there a rewritten `aria-label` wrongly *drops* the
+  visible text; here the visible text *is* the whole name and is insufficient because it names the
+  value, not the action — and the two combine: the action label you add must still **contain the
+  visible target text** (lead with the action, keep "Category: Books" in the string) so the fix does
+  not itself break 2.5.3. Distinct too from the roving-tabindex and non-labelable-host bullets above,
+  where a name is **absent or unsourced**; here a name is present with a **valid role**, and only the
+  *action semantics* are missing. Detection (source-only): an interactive dismiss/remove/clear control
+  whose only accessible name is its subject label plus a bare glyph (`×`/`✕`/`⨯`), with no `aria-label`
+  naming the action; test that the computed name contains the action verb, not only the subject.
 - **A Tooltip/description helper that wires `aria-describedby` onto the one child
   it is handed assumes that child *is* the focusable control; a call site that
   wraps the real control breaks the association silently.** The common React
@@ -505,6 +528,31 @@ confirm the background does not move.
   computed accessible name for **both** branches — absent, or present only in `title`, is the
   finding. Test: assert the two states' **computed accessible-name strings differ**, not just their
   class lists.
+- **A direction/movement badge whose only non-colour cue is a bare Unicode arrow *glyph* (`▲`/`▼`,
+  `↑`/`↓`) clears the colour-blind test but still owes a *spoken* equivalent.** A delta or trend chip
+  rendered as a plain `<span>` — an arrow character plus a magnitude, coloured by sentiment — reads
+  correctly in greyscale (a *shape* is present, so *Never colour alone* in `product-ux-quality.md`
+  looks satisfied) and serves a sighted colour-blind user. But that shape channel is **visual only**:
+  a bare Unicode symbol character has **no reliable spoken form** — assistive tech announces `▲` as
+  "black up-pointing triangle", as "up arrow", or skips it, depending on AT and verbosity — so to a
+  screen-reader user the direction rides on the glyph + colour and neither is dependable (**WCAG 1.1.1
+  Non-text Content**: the glyph is not a dependable text alternative; **1.4.1 Use of Color**: colour is
+  unspoken). The trap is that a Unicode arrow *looks like text* — it is a character — so it is assumed
+  accessible and no alternative is added, unlike an obvious `<img>`/icon. Fix: put the direction in a
+  **word** the accessibility tree exposes — visually-hidden (`sr-only`) text inside the chip
+  (`<span class="sr-only">up </span>`), which joins the computed name, or an `aria-label` on a
+  labelable host (`"up 3 percent versus last month"`) — and mark the decorative glyph
+  `aria-hidden="true"`; the arrow reinforces, the word carries. **Distinct** from the two-state
+  colour-only chip bullet above, where the branches differ by **colour alone with no shape at all**
+  (fix: add any non-colour channel) — here a shape *is* present and the point is that a **glyph is not
+  a spoken equivalent**; from *Never colour alone* (`product-ux-quality.md`), which lists `▲▼` as a
+  valid **visual** shape cue — this adds that clearing the greyscale axis does **not** clear the
+  **screen-reader** axis; and from the icon-button name bullets above, which concern an **icon font /
+  SVG** that plainly needs a name — the wrinkle here is a **Unicode character** deceptively treated as
+  accessible text. Detection (source-only): a status/delta/trend node whose direction is a literal
+  arrow character (`▲▼↑↓▴▾`) in its text with no sibling `sr-only` word and no `aria-label`, the glyph
+  not `aria-hidden`. Test: assert the **computed accessible name** (accessibility tree, not
+  `textContent`) contains the direction **word**, not only the glyph.
 - **Guard a deliberately-decorative / sub-AA token at its point of *use*, not its
   value.** A token pinned below the text-contrast threshold and documented
   "decorative only" is only decorative if *no component paints **real, informational
