@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.381.0] — 2026-09-21
+
+### agentic-delivery — a fully-pushed lane is not a process-exited lane: reclaim the worktree on a positive process-end signal, not the silence of git signals this window kills (#878)
+
+- **`fast-agentic-delivery.md`**: refines the "fully pushed is its own reclaim signal" rule. A git-final lane emits no further commit and its tree is clean by definition, so the transcript-is-not-liveness rule's two headline signals (a new commit, a fresh work-tree diff) are structurally dead in exactly the post-push window — a reaper applying them faithfully gets a false negative (no new git activity → reads the lane as stopped → deletes the checkout while the shell is still live composing its hand-back, waiting on its own CI, or cleaning up). Sharpen the required positive-liveness check to a PROCESS-level one (a lane-held lockfile, live-task-registry presence, an owned PID, an answered ping) for this window: fully-pushed makes the WORK safe (the branch is durable on the remote), but the WORKTREE hosting a live shell stays unsafe to delete until the process exits. The advisory, approval-gated sweep still executes the delete — this only qualifies the removal candidate. Adds the lane-side half: a lane whose checkout vanished emits a terminal hand-back naming the pushed PR rather than retrying the dead sandbox. +1 eval. Extends the reclaim rule; does not overturn it.
+
 ## [1.380.0] — 2026-09-21
 
 ### deep-code-review — an empty list must disclose why it is empty (a filter removed everything vs nothing exists yet), and header/chrome must be gated on content (#886, #888)

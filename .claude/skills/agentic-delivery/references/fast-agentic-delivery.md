@@ -399,6 +399,32 @@ branches escape the usual merged-branch cleanup.
   idle-time** — the case a human/permission-gated merge queue needs — but pair it with a
   positive liveness check (the transcript-is-not-liveness rule below): pushed+clean alone is not proof a lane has stopped
   writing, since a lane that pushes mid-work and keeps going looks identical.
+- **The work-product liveness signals go silent in the post-push window, so their
+  absence is not proof the lane has exited.** The positive liveness check the rule
+  above requires normally reads a lane's *product* — a fresh work-tree diff or a new
+  commit (the transcript-is-not-liveness rule below). Both are **structurally dead**
+  the moment a lane is done pushing: a git-final lane emits no further commit and its
+  tree is clean by definition. A reaper applying both rules faithfully then hits a
+  **false negative** — it sees no new git activity, reads the lane as stopped, and
+  deletes the checkout — while the lane is in fact still live doing **post-push
+  work**: composing its hand-back, waiting on its own CI to go green before it
+  reports, tearing down helpers, or waiting on a review. "No new work-product" equals
+  "process gone" everywhere *except* this window — the exact state this reclaim rule
+  governs. So here the check must be **process-level**, not artifact-level: a
+  lane-held lockfile still in the worktree, the lane still in the live-task registry,
+  an owned PID, or a ping it answers. A positive signal the **process** has ended —
+  never the silence of a signal this window is guaranteed to kill — is the
+  precondition that lets a pushed worktree even become a removal candidate; the
+  advisory, approval-gated sweep above still executes the delete. Delete it on the
+  pushed signal alone and the shell dies
+  mid-step: the hand-back never arrives, yet the objective logs as done-and-reclaimed
+  while the slot spins on a dead sandbox. **The lane's own half:** a lane that finds
+  its checkout gone treats it as **terminal** — the work is already safe on the remote
+  — and hands back at once naming the pushed PR, never retrying shell access on a dead
+  sandbox (the inverse of the *stopping a lane's turn is not teardown* rule above —
+  there the checkout outlives a stopped lane; here it dies under a live one).
+  **🚩 tell:** a reaper that deletes a worktree the instant its branch reads complete
+  on the remote, with no process-level check.
 - **GC is non-destructive toward uncommitted work** — a candidate holding uncommitted
   changes is refused (or its diff archived and reported first). Reclaiming space must
   never become the mechanism that loses a lane's only copy of its work.
