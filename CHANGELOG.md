@@ -3,6 +3,15 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.424.0] — 2026-09-21
+
+### deep-code-review — RSC render-once isn't a file property, audit every href-transform not just the primary renderer, and a partition validity gate that wrongly rejects the minimal terminal segment (#998, #1000, #1004)
+
+- **`language-stack-redflags.md`** (#998): in a server/client-boundary framework (RSC / Next App Router), a component with **no** `"use client"` directive is *not* thereby "renders once per request" — that depends on **where it's imported from**. A client component importing and rendering it directly pulls it into the client bundle / re-render, silently breaking a render-once assumption (a per-request singleton, a one-time side effect, a generated id) or leaking a server secret into the bundle. Enforce the boundary (`server-only` guard / import discipline); don't infer render-frequency from file content. The opposite import direction from the client-value-proxied-across-the-boundary defect.
+- **`security-appsec.md`** (#1000): audit **every** implementation of an href-producing transform, not only the main markdown renderer — a codebase grows several independent `[label](url)`→`<a>` builders (an email autolinker, a legacy "linkify", a one-off export/PDF/RSS link) that share the *behavior* of the fixed path but **none of its code idiom**, so a scheme-block fix + tests scoped to the primary stay green while a sibling ships the same XSS. **Test-symmetry heuristic:** for each vuln class fixed in the primary (scheme allowlist, text escaping, `rel`/`target`), enumerate the *other* implementations by what they **produce** (grep the sinks + link-shaped source), and confirm each carries the same guard; prefer collapsing to one shared linker. The security transform-enumeration face of `method.md`'s completeness sweeps, broader than the single is-relative-regex twin in A01.
+- **`language-stack-redflags.md`** (#1004, new section): a partition/segmentation validity gate that accepts every interior piece can **wrongly reject a valid decomposition when the terminal segment is minimal** — a single terminal/wraparound comparator one notch too strict (`>` needing `>=`, an `i+1` without `% N`) false-rejects the last, minimal sub-cycle (the mirror of the usual too-permissive off-by-one). Fix: inclusive terminal compare + modulo-N indices + a partition invariant (sizes sum to N, each incl. the last ≥ MIN); test N, N-1, all-minimal, terminal-only-minimal. Distinct from the composed-numeric-bounds section directly above (two bounds admitting too *small*; this a single gate rejecting a *valid* minimal piece).
+- +3 evals (533 total), non-telegraphing. Closes #998, #1000, #1004.
+
 ## [1.423.0] — 2026-09-21
 
 ### agentic-delivery — a one-way status channel with a confirmed-silent reader isn't coordination: back off the fixed-timer post and escalate the absence past a missed-cycle threshold (#1001)

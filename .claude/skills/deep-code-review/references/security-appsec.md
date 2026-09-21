@@ -644,6 +644,33 @@ per-language sinks.
 
 **An idempotency "already-formatted, skip it" short-circuit that bypasses the sanitizer, not just the transform (XSS).** A text-to-markup helper — an autolinker that turns bare URLs into `<a>` tags, a markdown renderer, a mention/emoji expander — is frequently made safe to run twice with a guard: *if the input already contains links / looks already-processed, return it unchanged.* The defect is that the **scheme check and escaping live only on the branch that *builds* the markup**, so the "already-formatted" branch returns the pre-existing value **with no revalidation** — the tool's href-safety guarantee holds only where it constructed the href itself. Whoever controls the free text the tool runs on (a title, a generated changelog line, a description pasted in from elsewhere) then controls the value on the skip branch: they pair a token that *looks already-processed* — a stray `<a` tag is enough to trip the guard — with the real payload (a raw `<img onerror=…>` or `<script>`, or an anchor whose own href is a `javascript:`/`data:` scheme), so the whole string passes the guard and reaches the HTML sink unchecked → stored/reflected XSS. It survives review because the skip is **deliberate and unit-tested** ("running twice does not double-wrap"): that test pins the exact branch that is the hole, and a reviewer who reads only the build path sees a correct scheme check and signs off. 🚩 an early-return / fast-path / cache-hit keyed on *"already done"* that returns a value bound for an HTML/URL/`src` sink where the scheme-allowlist or escape step sits **inside the transform it just skipped**. **Fix**: scope the idempotency guard to the *transform only* — the skip branch must **re-validate the pre-existing value** (confirm the href scheme against the allowlist; don't trust it), because sanitizing is a *different operation* from the link-transform and must not be made conditional on it. Independently, the render-time sink needs **its own** scheme allowlist no matter what any producer promises — sanitize-at-the-sink holds for an in-process generator, not only a network upstream — and a codebase with more than one text-to-link path wants **one shared, audited** linker, not a second bespoke one that skipped the audit. Trace every URL/`href`/`src` sink back to *every* producer and ask whether any path — the idempotency/skip branch first — reaches the sink without passing the scheme allowlist.
 
+**Audit *every* implementation of an href-producing transform, not only the primary
+renderer — a symmetry check across siblings.** A scheme-block fix (rejecting
+`javascript:` / `data:` hrefs, HTML-escaping link text) usually lands on the app's
+**main** `[label](url)`→`<a>` path — the shared markdown renderer, the one sanitizer
+everyone knows. But a codebase commonly grows **several independent** link/href
+builders: a hand-rolled autolinker for notification emails, a "linkify" helper in a
+legacy widget, a one-off `<a href=...>` string built in an export or a PDF/RSS
+generator. Each is a *separate* implementation of the same transform, and the secondary
+ones are exactly what a scheme-block sweep misses — they share the *behavior* of the
+fixed path but **none of its code idiom**, so grepping for the primary's function name
+or its regex finds nothing and unit tests scoped to the primary renderer stay green
+while the twin ships the same XSS. **Heuristic — test-symmetry:** for **each** vuln
+class you fix in the primary parser (scheme allowlist, text escaping, `rel` / `target`
+hardening), enumerate the *other* implementations of the same transform by what they
+**produce**, not by matching the fixed one's shape — grep the sinks (`<a`, `href=`,
+`dangerouslySetInnerHTML`, `setAttribute('href'`) and link-shaped source patterns
+(`\[[^\]]*\]\([^)]*\)`) — and confirm each carries the same guard; a fix that hardens one
+and leaves a sibling bare is an incomplete fix, not a closed class. Prefer collapsing
+them to **one shared, audited** linker (as the idempotency bullet above urges) so the
+guard has a single home; until then the divergence is the finding. This is the
+**security, transform-enumeration** face of the completeness sweeps in `method.md` (the
+outward instance-set / named-list sweep and its inward companion) — narrowed to "same
+transform, same security guard" and keyed on transform *behavior* because the siblings
+share no idiom to grep — and it is broader than the single is-relative-regex twin in the
+client-side-open-redirect bullet in A01 (that diffs one guard against its twin filter;
+this enumerates *all* implementations of one transform against a whole vuln class).
+
 **Files, archives & parsers.** Uploads: enforce a size cap **and** an allow-list
 of types validated by **magic bytes**, not the client-supplied `Content-Type` or
 extension. Store outside any directory the server will execute or serve as code;
