@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.387.0] — 2026-09-21
+
+### deep-code-review — a scroll container's static `tabIndex={0}` is a dead focus stop when its content fits; gate focusability on live overflow (#875)
+
+- **`frontend-a11y.md`**: making a wheel/touch-scrollable region keyboard-focusable (`tabIndex={0}`, often `role="region"`) is the correct fix and an automated scan flags a scrollable region that cannot take focus (axe `scrollable-region-focusable`, WCAG 2.1.1) — the bug is applying it UNCONDITIONALLY, so at widths where the content fits with room to spare the wrapper is still a tab stop that scrolls nothing (and, if named, announces itself for no reason); repeated per row it compounds into many dead stops that stretch Focus Order (2.4.3) on exactly the views built to scan fastest, while a keyboard smoke test still passes (focus lands, ring shows; only the purpose is missing). Fix: derive `tabIndex` (and any role added solely to explain focusability) from a live `ResizeObserver` comparing `scrollWidth > clientWidth`/`scrollHeight > clientHeight` — the same measure the clip/truncation check uses — recomputed on mount/resize but NOT while the element holds focus (stripping `tabIndex` from the focused element bounces focus to `<body>`). When focusable it still needs role + name; a genuinely-named landmark keeps its role — the target is the no-op stop, not focusability. Distinct from the phantom-focus bullet (hidden content) and the roving-tabindex bullet (an operable but roleless wrapper). +1 eval.
+
 ## [1.386.0] — 2026-09-21
 
 ### deep-code-review — an independent read appended past an existing concurrent group belongs inside it (batch drift) (#880)

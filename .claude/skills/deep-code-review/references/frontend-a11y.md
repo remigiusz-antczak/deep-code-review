@@ -329,6 +329,37 @@ without regressing a deliberate design.
   `role="presentation"` on a focusable element) — otherwise a keyboard user tabs into an
   element a screen reader can't announce, the mirror of the open-dialog focus-trap above.
   Detector: tab through every collapsed / closed region and confirm focus never lands in it.
+- **A scroll container made keyboard-scrollable with a static `tabIndex={0}` stays a focus
+  stop on the screens where its content fits and nothing scrolls — gate the focusability on a
+  live overflow measurement, not a constant prop.** A region that scrolls only by wheel/touch
+  has no keyboard equivalent, so making its wrapper focusable (`tabIndex={0}`, often with
+  `role="region"`/`"group"`) is the correct, expected fix: it lets arrow/`PageDown`/`Home`/`End`
+  scroll it, and an automated scan flags a scrollable region that cannot take focus (axe's
+  `scrollable-region-focusable` — the WCAG 2.1.1 Keyboard concern). The bug is applying it
+  **unconditionally**. At the widths where the content sits inside the box with room to spare —
+  often the common case — the wrapper is still in the tab order with nothing to scroll: a focus
+  target that moves nothing and, if named, announces itself for no reason. Repeat it once per
+  list row/card and it compounds into many dead stops that stretch keyboard traversal (2.4.3
+  Focus Order) on exactly the views built to scan fastest, while a keyboard-only smoke test
+  still "passes" — focus lands and the ring shows; only the *purpose* is missing, which a
+  shape/keyboard pass never checks. Fix: derive `tabIndex` (and any `role` added *solely* to
+  explain that focusability) from a live `ResizeObserver` comparing `scrollWidth > clientWidth`
+  (or `scrollHeight > clientHeight`) — the same comparison the clip/truncation check asserts
+  (`testing-and-evals.md`) — so the wrapper is a tab stop only while it can actually scroll;
+  and recompute on mount/resize, **not while the element holds focus**, since stripping
+  `tabIndex` from the focused element bounces focus to `<body>`, a worse Focus Order break than
+  the dead stop. When it *is* focusable it still needs a role and an accessible name so AT can
+  say why it is a stop (the *role first, then name* bullet above); a genuinely-named landmark
+  region keeps its role regardless — the target is the no-op stop, not focusability itself.
+  Detector: `tabIndex={0}`/`tabindex="0"` on an `overflow-auto`/`overflow-x-auto`/
+  `overflow-scroll` wrapper with **no `onKeyDown`/`onKeyPress`** in the component and no
+  condition tying the prop to a measured overflow; a strong secondary tell is the same file
+  already gating a *different* attribute on an overflow/clip measure (a title tooltip shown only
+  when the text is actually clipped) — the technique is known, just not applied here. Distinct
+  from two neighbours: the phantom-focus bullet above removes focus from *hidden* content (here
+  the region is visible, just not overflowing), and the roving-tabindex bullet's wrapper is
+  *operable* but roleless/nameless (here the wrapper is not operable at all — nothing to
+  operate).
 - A **global focus/scroll-into-view correction** handler (the *Focus Not
   Obscured* remedy) must yield to an open overlay and scope to the focused
   element's own scroll container — detector below.
