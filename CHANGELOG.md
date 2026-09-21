@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.376.0] — 2026-09-21
+
+### deep-code-review — a background-refreshed cache with no 'as-of' surface renders a dead refresher identically to live (#822)
+
+- **`data-quality.md`**: a hot read path that keeps a module-level last-good snapshot and refreshes in the background, serving the old snapshot on refresh failure (a defensible resilience choice), has a honesty defect on the read surface — the snapshot usually carries a `generated_at` the consumer *could* render but no caller reads it (the dead-pipe tell: produced, consumed nowhere), and the refresh failure is logged server-side only, so through an outage of any length every consumer renders identically to a live read. The successful-read twin of the read-failure-verdict bullet (#821). Explicitly not §4 freshness (subject's own activity) — this is the pipe's liveness, routinely conflated in review. Fix: wire `generated_at` into a visible "data as of" cue or a read-time freshness bound, paired with the operator-side overdue-refresh alarm (`observability.md`) which alone leaves the reader blind; if deferred, downgrade the unwired accessor from a shipped API to a tracked follow-up so its mere existence isn't read as coverage. Distinct from cache stampede / negative-cache / invalidation bugs (`performance-db-cost.md`). +1 eval.
+
 ## [1.375.0] — 2026-09-21
 
 ### deep-code-review — harden the CI/CD pipeline system itself, not only the app it ships (OWASP CICD-SEC-7)

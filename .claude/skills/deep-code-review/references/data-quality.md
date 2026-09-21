@@ -616,6 +616,38 @@ rate), validity (schema/format/range). For each:
   distinguishing bit must ride a **per-row response field** the UI can render,
   which a process exit code and an aggregate metric label structurally cannot
   carry.
+- **A background-refreshed cache serves the last-good value with no *as-of*
+  surface — so a dead refresher renders byte-identical to live.** A hot read path
+  that can't query its store synchronously (a sync render function, an async-only
+  client) keeps a module-level *last-good snapshot* and kicks off refresh in the
+  background, serving the old snapshot on refresh failure rather than throwing —
+  a defensible resilience choice, like the don't-500 fallback above. The honesty
+  defect is on the **read surface**: the snapshot usually already carries a
+  `generated_at` / `refreshed_at` the consumer *could* render, but no caller reads
+  it (the accessor's only reference is its own declaration — the same **dead-pipe**
+  tell as §5's *artifact → consumer census*: produced, consumed nowhere), and the
+  refresh failure is logged **server-side only**. So through an outage of any
+  length every consumer renders identically to a fully live read. This is the
+  **successful-read twin** of the read-*failure* bullet above — there a read that
+  *errored* must not render as a verdict; here a read served from a cache whose
+  refresher *silently died* must not render as live — and a server log the reader
+  never sees is again not a distinguishing signal. **Do not conflate this with §4
+  freshness:** §4 scores the *subject's* own newest activity (never a fetch/refresh
+  timestamp); this is the *pipe's* liveness — can the cache still refresh from
+  source — a different question, which a subject-level "this record is N days old
+  vs its cadence" signal never answers yet is routinely mistaken for in review
+  because both use the vocabulary "fresh"/"stale". Fix: **wire the `generated_at`
+  into a visible surface** (a "data as of HH:MM" cue, or a banner once cache age
+  exceeds N expected refresh intervals) **or assert a read-time freshness bound**;
+  pair it with the operator-side alarm on an overdue refresh (`observability.md` —
+  freshness = time since last successful run; page when none in 2× the interval),
+  which alone still leaves the *reader* blind. If the reader-side signal is
+  deliberately deferred, **downgrade the unwired accessor from a shipped API to a
+  tracked follow-up** so a later reviewer doesn't read its mere existence as wired
+  coverage. Distinct from the cache **stampede** / **negative-cache** /
+  invalidation bugs in `performance-db-cost.md` (correctness and cost of the cache
+  *mechanism*) — this is a cache that never *visibly* expires because a background
+  job owns refresh and its death is unobservable at the point of read.
 - **Observability is a per-entity-*class* property, not only a per-window one.**
   The rule above corrects a *temporal* coverage gap; a distinct, cross-sectional
   one is that whole **classes** of entity are structurally less observable on
