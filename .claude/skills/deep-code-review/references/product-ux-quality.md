@@ -550,6 +550,27 @@ genuinely absent, render **"awaiting reading / not yet measurable"** (an honest 
 - A display that would honestly render **"awaiting reading" on nearly every row is worse than no
   feature** — hold it (a legitimate BLOCKED-ON-OWNER: ratify the rule and instrument the inputs
   first) rather than shipping a fabricated grade to fill it.
+- **A ratio/coverage tile guarded by `total > 0 ? round(done / total * 100) : 0` renders a
+  fabricated 0% for an *empty population* — "nothing to do" is drawn as "none done."** This is
+  the mirror of the no-honest-reading rule above: there no current value exists, so *any* percent
+  fabricates a "done"; here `done` and `total` are both real and measured, but the population is
+  **empty** (`total === 0`), so the ternary's `: 0` sentinel paints a hard **0%** — usually the
+  same alarming, often red, treatment a genuinely-behind row gets — when the honest reading is
+  **not-applicable**: there is nothing to complete, not a body of work left undone. The guard
+  *looks* correct because it does prevent a `NaN`/`Infinity` divide-by-zero, so it clears code
+  review, type-checks, and never throws; the defect is that its fallback **value** is a number
+  that reads as an attainment, and seed/demo data almost always has a non-zero `total`, so the
+  empty-population branch rarely renders in dev. Fix: branch the *empty* denominator to a
+  **non-numeric** state — `N/A`, a muted `—`, "nothing to do", or a neutral/complete treatment —
+  and reserve `0%` for `total > 0 && done === 0`, the real "has items, none done yet" a user can
+  act on; a `100%`-for-empty fallback is the same fabrication with the opposite sign (a vacuous
+  "all done"). **Distinct** from the no-honest-reading rule above (a reading is *absent /
+  unmeasurable* — show coverage or "awaiting reading") — here the reading *exists* and only the
+  denominator is empty; and from the honest-empty *list* rules under *Every data state* above
+  (filtered-to-none vs genuinely-none over a **list of rows**) — this is a **scalar ratio tile**
+  whose zero denominator, not a hidden row, is the trap. **🚩**: a percentage / progress / ratio
+  render whose denominator can be zero, guarded by `total > 0 ? … : 0` (or `|| 0` / `?? 0`), whose
+  fallback is a number that renders as a real percentage rather than a not-applicable state.
 - **🚩** a `%-complete` / grade / progress bar with no measured current value (a fabricated
   "done"); an attainment number the pipeline can't substantiate rendered instead of an
   "awaiting reading" state or a coverage ("N of M measurable") metric.
@@ -732,6 +753,36 @@ domain H) with a UX consequence, so it is ruled on here too.
   imports the shared lookup/primitives module and the shared source becomes the
   single place a new member is added; the one legitimate per-variant difference (a
   size class) becomes a prop, not a second copy.
+- **A centralized *value resolver* makes the DRY gut-check pass while the *render* around it is
+  still hand-rolled per call site — value unified, markup not.** A team factors the shared
+  *logic* of a recurring element into one function — `resolveCategoryColor(key)`,
+  `getStatusVariant(s)`, a `Record<Enum, className>` lookup — and imports it at every surface, so
+  the value has one source and a **DRY pass sees no duplicated magic values and signs the concept
+  off as "unified."** But the resolver only centralizes *what value to use*; the **wrapper markup
+  that consumes it** — the element (`<span>` vs `<div>` vs a pill), the class scaffolding, the
+  a11y attributes, an optional icon/dot, the sizing — is re-written independently at each call
+  site, so the *render* drifts exactly where the resolver cannot reach: one site paints a dot +
+  text, another a filled pill, another adds an icon, all calling the same `resolveCategoryColor`.
+  The tell is **duplicate render blocks (often in the same file) wrapping the same resolver
+  call**, not a duplicated value or literal string — which is why the twin-search keyed on a
+  duplicated string/value, and a DRY check on the resolver, both miss it. Fix: consolidate the
+  **render**, not just the value — build one component (`<CategoryBadge category={key}/>`) that
+  owns *both* the resolver call and the markup, its one legitimate per-site difference a prop
+  (size/variant), and route every call site through it; centralizing the value is necessary but
+  not sufficient. **Distinct** from the sibling-variant-re-declares-lookup bullet above (there the
+  **lookup map itself is inlined** per variant — *type centralized, map not*; here the
+  map/resolver *is* shared and imported — *value centralized, render not*, the next rung down);
+  from the *unassembled molecule* bullet above (there **no** shared composition exists and ad-hoc
+  assemblies of raw primitives diverge — here a shared resolver *does* exist and is precisely what
+  masks the render duplication); and from *One component, divergent props* below (there **one
+  render component** exists and a feature-prop defaults off — here there is **no** shared render
+  component, only a shared value). It **refines the concept-fragmentation root** (*"Feels like a
+  prototype"* below) — a concept can look consolidated because its value is centralized while
+  still being re-implemented N ways at the render layer, so audit the **wrapper markup per call
+  site**, never conclude "unified" from an imported resolver alone. Detection: grep the resolver's
+  **name** to list its callers, then diff the **markup around each call** (element, classes, a11y,
+  icon) rather than confirm the import exists; divergent wrappers over one shared resolver is the
+  finding.
 - **A raw value hardcoded equal to a design token's *current* value is design-system
   drift that renders identically today and breaks the moment the token moves.** This
   section's *one source per concept* thesis covers **design tokens** — a spacing step, a
@@ -1164,6 +1215,34 @@ digits align. The same mark/legend renders identically wherever it appears.
 **visual / number-format** consistency — the drift a per-route pass and a
 name-only diff both miss. (Nielsen: consistency and standards.)
 
+- **Fixed-width trailing chips laid out after a `flex-grow` cell align *within* each row but not
+  *across* rows — a per-row flex container has no shared column, so the cluster starts at a
+  different x on every row.** A repeated list/table row built as a flexbox — a primary cell with
+  `flex: 1` (or `flex-grow`) that expands to fill, followed by a cluster of fixed-width status
+  chips, counts, or action buttons — packs its own children correctly, so any **single** row
+  looks perfectly aligned and a one-row component test or a screenshot of one row passes. But each
+  row is its **own** flex container: the `flex: 1` cell consumes whatever width that row's primary
+  content leaves, which differs per row, so the trailing cluster begins at a **different
+  horizontal position on every row** and the chips read as ragged down the page, sharing no common
+  edge. It hides because the raggedness is a **relational** property visible only when rows stack
+  and you scan the trailing edge — exactly the composition judgment the *clean-checklist-is-a-
+  floor* rule below names ("a column of badges that don't share a right edge") as invisible to a
+  per-element checklist — and because seed data whose primary cells happen to be near-equal in
+  length lines the chips up by accident. Fix: hoist the columns to the **container** with a shared
+  track structure — CSS Grid on the list with one `grid-template-columns` (e.g. `1fr max-content
+  max-content`), each row a grid row (or `display: contents` / `subgrid` for a nested row
+  component) so every row's chip column shares the **same track boundaries** and the cluster
+  aligns across rows; flexbox aligns children within one container, Grid with a shared template
+  aligns a column across many (the data-grid / property-row precedent — Linear, Notion, a
+  spreadsheet). Right-aligning the chips within each row does **not** fix it — it only moves the
+  ragged edge to the other side. **Distinct** from the tabular-figures rule above (glyph-level:
+  digits lining up inside one column via `font-variant-numeric`) — this is **column-boundary**
+  alignment across rows, a layout-structure defect, not a font-feature one. Detection: a repeated
+  row component whose layout is `flex`/`inline-flex` with a `flex-grow`/`flex:1` cell and
+  fixed-width trailing elements, with **no** shared grid track on the parent tying the cluster's
+  start across rows; verify by stacking several rows with **unequal** primary-cell lengths and
+  scanning the trailing edge, never a single row.
+
 ---
 
 **🚩 grep**: a data-fetch / `useQuery` / `await` render path with no
@@ -1302,6 +1381,43 @@ enumerable defects — but not sufficient for composition) and from requiring on
 that a screenshot be *inspected* against that checklist (#198) or that review
 cite heuristics rather than taste (#124): this reports the failure that survives
 all three — the checklist exists, is consulted, and still rubber-stamps.
+
+## A cross-surface difference is a defect only when it carries no meaning — classify before filing
+
+The Unified-across-modules audits above (and the composition critique just above) hunt for one
+concept **rendered differently across surfaces** and call it drift. The failure mode of that hunt
+is the **false positive**: not every cross-surface difference is accidental drift — some are
+**intentional and distinct-semantic**, a concept deliberately drawn two ways because the two
+instances *mean* different things, and filing those as drift (then "unifying" them) **destroys a
+real signal** — a net-negative "fix" that violates do-no-harm and the read-first *separate a
+defect from a redesign* spine. Before filing any "renders differently on A vs B" finding, run a
+**three-question classifier**:
+
+1. **Same concept?** Are both instances the same underlying concept (same entity, same component
+   role) — or two different things that merely look alike? Different concepts are not a
+   consistency finding at all.
+2. **Same intended meaning?** Do the two instances mean the same thing in their contexts? If the
+   difference tracks a genuine semantic distinction — a status badge *filled* on the active board
+   but *outline* on the archived view (outline **signals** archived), a primary action a solid
+   button on the create form but subdued/absent on a read-only detail page (the action **isn't
+   available** there) — it is intentional-distinct-semantic, not drift.
+3. **Does the difference carry meaning?** Is the visual difference **doing work** — communicating
+   that semantic distinction — or is it noise with no semantic correlate?
+
+**File as drift only when all three say "same concept, same intended meaning, and the difference
+carries no meaning."** Otherwise it is intentional-distinct-semantic: leave it, or — if you
+believe the distinction itself is wrong — surface it under *Decisions needed (owner)*, never a
+Blocker/Critical, never a silent "unify" (the product-choice gate discipline, SKILL.md Phase 5).
+**Distinct** from the composition-critique rule above, which fights the opposite error — a
+checklist **false negative** that rubber-stamps a real defect; this fights the **false positive**
+where the same audit flags a meaningful distinction as a defect, the two being symmetric guards on
+one "is this consistent across surfaces?" question. **Distinct** too from the shared-value-resolver
+bullet under *Unified across modules* above: that is a false **negative** (a shared resolver makes
+a concept *look* unified while its render drifts — a real defect hidden); this is the false
+**positive** (a concept renders differently and *looks* like drift while the difference is
+intentional) — the exact inverse error, which is why the *render-identically-at-all-mount-sites*
+question there must pass this classifier first, so the drive to unify never collapses a
+distinction the product intends.
 
 ## "Feels like a prototype" is usually one or two shared-primitive roots — fix the root, not each surface
 
