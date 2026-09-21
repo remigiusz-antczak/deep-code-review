@@ -97,6 +97,13 @@ throughput. Distinct from the WIP-cap section just above (which throttles lane *
 - **Break the machine ceiling** — move lanes to remote / cloud runners once the local cap is the bind.
 - **Eliminate rework** — verify-first + decorrelated pre-merge review + auto-merge-on-green, so a lane rarely
   does a wasted second pass.
+- **Shrink the shared collision surface** — when saturated lanes still stall with the hardware idle, the
+  cycle-time they pay is often a *queue* on one shared **generated** artifact every lane must rewrite (a
+  lockfile, a compiled bundle, an aggregated registry/index), which serializes them however disjoint their
+  source edits are. Cut it by making that surface **smaller** (slice the work so fewer lanes touch it, or
+  generate per-slice and aggregate once) and giving the chokepoint a **single owner** or a **read-through
+  cache** — not by adding lanes, which only lengthens the queue for the same artifact. (The invisible-ceiling
+  cousin of the shared-quota section below: the box reads healthy while throughput stalls.)
 
 **🚩** an orchestrator raising lane concurrency past the probed CPU/RAM cap to "go faster" while per-lane
 cycle-time (setup + gate) is untouched — that lowers throughput, not raises it.
@@ -175,6 +182,36 @@ licence* above, one level out: a healthy outside-view reading could not there au
 and it cannot here overrule a worker's own inside-view crash — back off concurrency immediately on
 the worker's report (the same swap-trend response above), and re-probe before the next heavy lane,
 rather than waving off a real crash because the orchestrator's own check said there was headroom.
+
+## Cap the dev/build server's memory in the one shared start script, not only in CI
+
+The gate above *detects* a memory blowout and backs off; this is the standing fix
+that keeps it from firing in the first place — prevention, not detection, so keep
+both. A memory ceiling on a dev or build server (`NODE_OPTIONS=--max-old-space-size`,
+a `ulimit -v`, a container/cgroup memory limit) is load-bearing only if **every**
+invocation inherits it. The recurring failure is a ceiling pinned **only in the CI
+job's environment**: CI's runner launches the server with the cap, stays under
+budget, and reads green even on a runner with less RAM than the dev box — while the
+plain start command a lane actually runs, the `dev`/`build` script in `package.json`
+and the "how to run this" docs, carries no ceiling at all. A hand-run or agent-run
+lane invokes the documented `npm run dev` / `npm run build` uncapped, allocates
+without bound, and under concurrency several such servers page the box and drive the
+swap trend straight into the back-off gate above — the cap meant to prevent exactly
+that never touched the invocation that needed it, because it lived in CI's env and
+not in the command the lane ran.
+
+Fix: put the ceiling on the **one script every caller goes through** — bake it into
+the shared start/build entrypoint itself (the `package.json` script body, or a
+committed wrapper both CI and humans call), never the CI job's env block — and
+**size it to the intended per-machine concurrency** (per-lane budget ≈ usable RAM ÷
+max concurrent heavy lanes, with a burst reserve) so N lanes fit without paging. CI,
+a hand-run, and an agent lane then inherit the *same* ceiling because they run the
+*same* script, and lowering concurrency stops being the only lever, since each lane
+is now bounded on its own. Distinct from *CI-offload the heavy gate* (below), which
+changes **where** the heavy suite runs to cut the local box's peak memory — a
+different lever, not a per-invocation cap — and from *dev-server lanes need a copy,
+not a symlink* of the dependencies dir (below), which is about install integrity,
+not a memory ceiling.
 
 ## A shared API/model quota is a fan-out ceiling no local probe can see — size to the binding one, not the machine
 

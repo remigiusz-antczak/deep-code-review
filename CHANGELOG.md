@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.371.0] — 2026-09-21
+
+### agentic-delivery — cap the dev/build server's memory in the shared start script, not only in CI; shrink the shared collision surface (salvaged from #589)
+
+- **`fast-agentic-delivery.md`**: a memory ceiling pinned only in CI's environment (`NODE_OPTIONS=--max-old-space-size`, a `ulimit`, a container/cgroup limit) leaves the plain start command a lane actually runs — the `dev`/`build` script and the "how to run this" docs — uncapped, so a hand-run or agent lane allocates without bound and, under concurrency, pages the box straight into the swap-trend back-off gate. Fix: put the ceiling on the one shared start/build entrypoint every caller goes through, sized to intended per-machine concurrency, so CI and human/agent lanes inherit the same cap. Framed as the standing prevention fix (vs the gate's detection); distinct from CI-offloading the heavy gate and from the copy-not-symlink dependency rule. A second bullet generalizes the concurrency ceiling: once RAM/CPU/disk clear their floor, a single shared generated artifact (a lockfile, a compiled bundle, an aggregated index) serializes every lane that rewrites it however disjoint their edits — shrink that surface (slice finer, generate per-slice and aggregate once) and give the chokepoint a single owner or a read-through cache, not more lanes. +2 evals. Salvaged from stale PR #589 (its other two concepts were already covered on main and left untouched).
+
 ## [1.370.0] — 2026-09-21
 
 ### deep-code-review — a doc-comment enumerates a fallback the code never implements, invisible to dead-code and coverage tools (#870)
