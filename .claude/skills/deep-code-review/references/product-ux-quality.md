@@ -286,6 +286,55 @@ only some destructure and branch on its readiness/error field; a consumer
 destructuring only the value field, with no readiness/error check anywhere in
 that render path, while a sibling consumer of the same instance does check it.
 
+## A reverted optimistic write is the one error path that skips the app's shared safe-message mapper
+
+The five-states *error* rule above bars a raw stack on any failure; this is its
+consistency twin, and it targets the one seam that survives that rule. A mature
+client centralises user-facing failure copy in a shared mapper —
+`toSafeMessage(err)` / `toUserMessage(err)` — that turns any thrown value into one
+honest, non-leaking sentence, and the normal request path calls it everywhere.
+But an **optimistic mutation** (apply the change locally at once, fire the write in
+the background, roll back on failure) often grows its `onError`/rollback handler by
+hand, and that handler renders `(err as Error).message` **directly** — the single
+call site in the app that skips the mapper the rest of the app trusts.
+
+It survives review and every ordinary test because a **non-2xx response is usually
+safe**: the fetch wrapper throws a *curated* error whose `.message` is already a
+clean sentence, so a test mocking a 500 shows correct copy and the direct `.message`
+read looks fine. The leak is on the **transport** path — offline, DNS failure, CORS,
+an unreachable server — where `fetch()` itself rejects with a browser-native
+`TypeError` whose text is UA-specific ("Failed to fetch" / "Load failed" /
+"NetworkError when attempting to fetch resource"). That raw string is shown verbatim
+where the rest of the app would show its fixed fallback — an internal, inconsistent,
+sometimes sensitive detail surfaced to the user, and, if the revert writes its status
+into an `aria-live` region, **read aloud** to a screen-reader user (`frontend-a11y.md`
+owns the announced-surface phrasing). The defect is not "a raw error is rendered" —
+the states-block grep below already owns that — it is the **asymmetry**: a shared
+mapper exists and is called at sibling call sites, and this one path bypasses it, so
+the app speaks two different error languages depending on which write failed.
+
+**Fix — one mapping boundary.** Every user-facing failure string, a reverted
+optimistic write's included, goes through the same shared mapper the normal path
+uses; the revert handler passes the caught value to the mapper rather than reading
+`.message`. Acceptance: a test that makes `fetch` reject with a raw `TypeError`
+asserts the rendered (and, if announced, the `aria-live`) text equals the mapper's
+fixed fallback, not the raw message — a test mocking only a curated 5xx will not
+catch it. Same all-consumers discipline as the least-careful-consumer rule above,
+a different **stakes** class: there a sibling ignoring a shared *readiness signal*
+renders a wrong confident value (data-honesty); here a path bypassing the shared
+*message mapper* leaks a raw internal string (a user-facing leak — cross-ref
+`security-appsec.md` A02 verbose-errors / A10 leaked-internals and
+`domain-checklists.md`'s error-class-not-upstream-response-bodies rule).
+`reliability-error-handling.md` owns the *server* error contract; this
+owns which client path is allowed to render it.
+
+**🚩**: a shared error-message mapper (`toSafeMessage` / `toUserMessage` / a toast
+helper) called at ordinary request call sites, together with an optimistic
+mutation's `onError` / `catch` / rollback handler that reads `(err).message` or
+renders the error object **directly** instead of calling that mapper — narrower than
+the generic *`catch` rendering `err.message`/stack* grep in this file's states
+block, which flags the raw render but not the bypassed-shared-mapper asymmetry.
+
 ## A read-failure that seeds an editable form turns a misleading display into a destructive write
 
 The read-failure-honesty family above governs what a failed read may **render**;

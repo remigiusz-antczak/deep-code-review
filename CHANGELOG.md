@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.382.0] — 2026-09-21
+
+### deep-code-review — a reverted optimistic write is the one error path that skips the app's shared safe-message mapper (#887)
+
+- **`product-ux-quality.md`**: an optimistic UI write that rolls back on failure and shows the caught error to the user, but renders it raw instead of routing it through the same safe-message mapper (`toUserMessage`/`toSafeMessage`) the app's normal request path uses. The load-bearing mechanism: a non-2xx response is usually a curated `ApiError`, but a transport rejection (offline / DNS / CORS) is a browser-native `TypeError` shown verbatim — a leak plus a message-inconsistency (one path speaks a raw browser string, the rest curated copy), also read aloud by an aria-live region. Fix: the optimistic-revert error path goes through the one mapping boundary like every other error; acceptance = make `fetch` reject with a raw `TypeError` and assert the fallback copy. Distinct from the generic raw-`catch` grep lead and the least-careful-consumer signal fold (a shared *signal* vs a shared *mapper*); server-side leak framing stays in `security-appsec.md` A02/A10 and the user-facing contract here. +1 eval.
+
 ## [1.381.0] — 2026-09-21
 
 ### agentic-delivery — a fully-pushed lane is not a process-exited lane: reclaim the worktree on a positive process-end signal, not the silence of git signals this window kills (#878)
