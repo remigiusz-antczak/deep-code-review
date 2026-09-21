@@ -1355,16 +1355,25 @@ for Root 1, read `getComputedStyle(el).cursor` and `.transitionProperty` on the
 actual bespoke element before/after, not by eye; for Root 2, `curl` the route
 with no JS running and confirm the real content — not a shell/skeleton — is in
 the raw HTML with its visible styling already applied, not shipped `opacity: 0`.
-**Distinct** from three neighbours: the *interaction-consistency* bullet above (a
+**Distinct** from four neighbours: the *interaction-consistency* bullet above (a
 *shared* component whose hover/active/focus reaction diverges *across instances*
 from per-instance overrides) — Root 1 is an element that never went through the
 primitive at all, so it lacks the base affordance rather than diverging on it;
 the *not-dead-before-hydration* / dead-`<Suspense>` bullets (an *interactive
 control* disabled or blank pre-hydration) — Root 2 hides *already-rendered
 non-interactive content* whose data was ready, gating only its *visibility* on
-hydration; and the composition-critique rule above (#988), which is how you
+hydration; the composition-critique rule above (#988), which is how you
 *notice* the app feels off — this is how you *diagnose it to the shared root*
-once noticed.
+once noticed; and the concept-fragmentation root (*Unified across modules — one
+component per concept* above, #992) — the **opposite topology**, and a third
+prototype-feel root worth checking for by default. Both #990 roots share a
+*single* base-layer / shared-primitive cause whose **one fix propagates to every
+surface**; the concept-fragmentation root is the inverse — there is **no** shared
+component to fix, the concept is re-implemented N independent ways (a stat tile
+built four ways, a status pill five, each drifting so a fix landing in one twin
+leaves its copies broken), so the remedy is to **consolidate to one parameterized
+component**, not repair a base layer. Both share only the tell that a
+**symptom-by-symptom patch pass never converges**.
 
 ## Export / print / share is a second render surface
 

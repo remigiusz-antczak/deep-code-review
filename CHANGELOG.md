@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.422.0] — 2026-09-21
+
+### deep-code-review — completes the "feels like a prototype" root taxonomy with the concept-fragmentation (no-shared-component) root (#992)
+
+- **`product-ux-quality.md`** (#992): the issue's core — the same UI concept re-implemented independently per surface (a stat tile built four ways), each copy drifting so a fix to one twin leaves the others broken; audit by counting implementations, consolidate to one parameterized component, per-surface patching never converges — was **already covered** by the "Unified across modules — one component per concept" family (`:665-837`), #966 (audit a migration by control-type), and #949 (hardcoded-value drift), so it is **not re-filed**. The one genuinely-absent piece: #990's "feels like a prototype" section named only its **two shared-primitive roots** (missing base affordance, SSR `opacity:0`) as the taxonomy to check by default; this adds the **opposite-topology third root** as a cross-ref — concept fragmentation, where there is *no* shared component to fix and the remedy is consolidation, not a base-layer repair (both roots share only the tell that a symptom-by-symptom pass never converges). A taxonomy-completing link to the Unified section, not a restatement of its fix. No new eval (the defect is already exercised by the duplicate-twin and prototype-feel evals). Closes #992.
+
 ## [1.421.0] — 2026-09-21
 
 ### deep-code-review — four frontend/UX-review heuristics: a dead cross-view anchor, an "Applied" claim that outruns the publish pipeline, a checklist audit that rubber-stamps composition defects, and "feels like a prototype" traced to shared-primitive roots (#985, #987, #988, #990)
