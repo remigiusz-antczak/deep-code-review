@@ -329,6 +329,41 @@ without regressing a deliberate design.
   `role="presentation"` on a focusable element) — otherwise a keyboard user tabs into an
   element a screen reader can't announce, the mirror of the open-dialog focus-trap above.
   Detector: tab through every collapsed / closed region and confirm focus never lands in it.
+- **A hand-rolled full-screen overlay that copies a dialog's ARIA (`role="dialog"`/`"alertdialog"` +
+  `aria-modal="true"`) but skips the app's shared modal / focus-trap / background-`inert` helper
+  asserts a modality it never delivers.** `aria-modal="true"` is not a label AT reads back — it is an
+  *instruction* AT acts on: it tells a screen reader to stop exposing everything outside the dialog
+  and confine the user to its subtree. The ARIA APG modal-dialog pattern is explicit that you may set
+  it *only* when the code actually prevents interaction with the background **and** the styling
+  obscures it, because on some AT it removes the rest of the page from perception. So an interstitial,
+  error gate, or "you must do X first" blocker rendered as a raw sibling of the app tree with the
+  right role and attribute but **none** of the behavior — focus never moves into it on open, `Tab`
+  from its last control escapes to the page behind it, the background is never `inert`/`aria-hidden`,
+  focus is never restored on close — is *worse* than one carrying no `aria-modal` at all: a
+  keyboard/AT user is sent into background the attribute swore was gone, so it actively misdirects
+  rather than merely under-serving. It ships because it looks right — it covers the viewport and
+  carries the correct role, so a visual pass and an "is it mounted?" render test both approve — and
+  because it is usually the newest surface, landing after the hardening pass that fixed every other
+  overlay. **Root cause and fix are the #838 bypass fault (the hand-rolled-skeleton-vs-shared-loader
+  bullet above), with a modal-specific payload:** reuse, don't patch — render the surface through the
+  ONE shared overlay primitive, or native `<dialog>` opened with `.showModal()` so the modal
+  behavior comes from the platform rather than hand-rolled app code; either way the containment
+  reaches this surface for the reason that bullet gives. Only if a bespoke overlay is
+  genuinely unavoidable, have it call the same focus-move-in, focus-trap, background-`inert`, and
+  restore-on-close helpers — bolting the attribute on without them is not the fix. Detection
+  **inverts** that sweep: grep every `aria-modal="true"` / `role="dialog"` / `role="alertdialog"` and
+  diff the set against the importers of the shared modal/focus-trap helper — each hit that neither
+  renders *through* the primitive nor calls the helpers is a Focus Order defect (2.4.3). **Distinct**
+  from three neighbours: the dismissible-overlay focus-restore bullet above is only the *close* half
+  (return focus to the trigger) and presupposes the open dialog was already trapped — this is the
+  *open + while-open* half it assumes; the phantom-focus bullet above marks *hidden* subtrees `inert`
+  to keep focus out, where here `inert` belongs on the *visible background under an open dialog* (its
+  inverse); and the "modal open/close (trap + restore)" line above states the rule, where this is the
+  failure mode in which the rule is skipped but the attribute is asserted anyway. Regression-test the
+  behavior, not the mount: on open `document.activeElement` is inside the dialog; `Tab` from the last
+  focusable wraps within it and never reaches a background control; the background is
+  `inert`/`aria-hidden`; `Escape`/close returns focus to the opener — an "is it mounted?" assertion
+  catches none of it.
 - **A scroll container made keyboard-scrollable with a static `tabIndex={0}` stays a focus
   stop on the screens where its content fits and nothing scrolls — gate the focusability on a
   live overflow measurement, not a constant prop.** A region that scrolls only by wheel/touch

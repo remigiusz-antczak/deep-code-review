@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.393.0] — 2026-09-21
+
+### deep-code-review — a hand-rolled overlay that copies a dialog's ARIA but skips the shared focus-trap/inert helper asserts a modality it never delivers (#903)
+
+- **`frontend-a11y.md`**: `aria-modal="true"` is not a label AT reads back — it is an instruction AT acts on (stop exposing everything outside the dialog); the ARIA APG modal-dialog pattern says set it only when the code actually prevents background interaction. A hand-rolled full-screen overlay carrying `role="dialog"` + `aria-modal="true"` but none of the behavior (focus never moves in, Tab escapes to the page behind it, the background is never inert/aria-hidden, focus is never restored on close) is worse than one with no aria-modal — it sends a keyboard/AT user into background the attribute swore was gone. It ships because it looks right (covers the viewport, correct role → a visual pass and an is-it-mounted test approve) and is usually the newest surface, landing after the hardening pass that fixed every other overlay. Root cause + fix are the #838 bypass fault (hand-rolled vs the shared accessible component) with a modal-specific payload: reuse the one shared overlay primitive, or native `<dialog>.showModal()`, so the containment comes from the platform, not hand-rolled code; detection inverts the #838 sweep (grep every aria-modal/role=dialog, diff against importers of the shared modal/focus-trap helper). +1 eval.
+
 ## [1.392.0] — 2026-09-21
 
 ### deep-code-review — an idempotency "already-formatted, skip it" short-circuit that bypasses the sanitizer, not just the transform (#893)
