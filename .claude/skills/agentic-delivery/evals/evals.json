@@ -1233,6 +1233,17 @@
         "Requires verifying the match against the PR's real author, not an assumed token identity (a green-looking identity is a floor, not proof)",
         "Gives the discriminator: a manufactured mark / list is correct only in the SHARED-identity case (no author signal to key on); where a distinct identity exists the author-identity match strictly dominates a hand-maintained list"
       ]
+    },
+    {
+      "id": "sustained-peer-silence-stops-timed-status-posts-and-raises-the-absence",
+      "prompt": "One of my agents runs under a standing rule: every work cycle it posts a short status update to a shared board so a sibling agent can follow its progress. The sibling has posted nothing, replied to nothing, and left no acknowledgement for eight cycles straight -- about twelve days -- and my agent has dutifully posted its status on the board every one of those cycles because its rule just says 'post status each cycle.' Is that the right thing to keep doing, and if not, what should it do instead -- and how should it tell an ordinary temporary quiet spell apart from a sibling that is actually gone?",
+      "expected_output": "No. A shared board the sibling never reads is not coordination; posting to it on a fixed timer every cycle spends cycles for no benefit and adds noise, and the 'post status each cycle' rule was written with no check that a reader still exists. But the agent must not overcorrect on a single quiet cycle either: one or two cycles with no response is an ordinary temporary gap, not proof the sibling is gone. The discriminator is a run of CONSECUTIVE cycles with no response of any kind attributable to the sibling itself -- no reply, ack, or new entry of its own -- at or beyond a pre-set count; below that count, keep posting, and only a sustained run at or past it counts as the sibling genuinely being gone. Once that point is reached, stop (or sharply cut the frequency of) the every-cycle posting instead of continuing on the timer, and raise the sibling's prolonged absence once to the owner or another channel that is actually read, rather than posting the same update into the unread board again next cycle. The correct behaviour sits between two failures: posting forever on the timer, and hard-stopping the instant the sibling misses one cycle.",
+      "expectations": [
+        "Rejects continuing to post every cycle on the fixed timer to a board the sibling is not reading -- a one-directional channel with no reader is not coordination, only spent cycles and noise, and the 'post each cycle' rule never re-checks that a reader exists",
+        "Requires a sustained run of CONSECUTIVE non-responses at or past a pre-set count before concluding the sibling is gone; a single quiet cycle is an ordinary temporary gap, so hard-stopping on the first missed cycle is as wrong as never stopping",
+        "On a confirmed run, stops or sharply reduces the timed posting rather than continuing to fire on the timer",
+        "Raises the sibling's prolonged absence to the owner or a channel that is actually read, once -- not another post into the unread board each cycle"
+      ]
     }
   ]
 }
