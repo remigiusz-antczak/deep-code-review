@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.377.0] — 2026-09-21
+
+### deep-code-review — the files a privileged pipeline executes need the workflow's review gate; inter-job artifact/cache handoffs need integrity checks, not only final attestation (OWASP CICD-SEC-4/9)
+
+- **`security-appsec.md`**: two A03 CI/CD folds. (CICD-SEC-4, Indirect PPE) protecting only `.github/workflows/` stops an edit to the pipeline config, but a privileged job still runs whatever the files it *references* contain — a `make` target, `scripts/*.sh`, a `Dockerfile`, `conftest.py`, `.pre-commit-config.yaml`, a `package.json` script — so an attacker edits the referenced file (not the protected workflow) and the pipeline runs their code with its privileges; the trust boundary is the transitive closure of what the pipeline executes, and CODEOWNERS on those paths binds only when branch protection enforces it. Distinct from the script-injection / `pull_request_target` checkout bullets (direct PPE). (CICD-SEC-9) attestation at promotion doesn't cover the handoffs *inside* the pipeline: a later job consuming an earlier job's `upload-artifact`/`download-artifact` output or a restored build cache with no integrity check lets a poisoned cache or tampered inter-job artifact flow downstream — the tampering entered before the signed thing was built, so the pipeline faithfully attests poisoned bytes; validate integrity at each stage handoff, not only at promotion. Distinct from the final-artifact attestation bullet. +2 evals. Sources verified by direct fetch (SHA-pinned OWASP raw files), consolidated into the CI/CD section of docs/standards-index.md.
+
 ## [1.376.0] — 2026-09-21
 
 ### deep-code-review — a background-refreshed cache with no 'as-of' surface renders a dead refresher identically to live (#822)
