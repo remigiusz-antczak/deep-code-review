@@ -1116,6 +1116,67 @@ this is not reading its **file stat** as *liveness*. And distinct from the idle-
 duplicate section above: that is a false-**positive** "completed" leading to a duplicate
 dispatch; this is a false-**negative** liveness read leading to a destructive **kill**.
 
+## A lane looping in its own self-poll can't receive a nudge — verify the state, stop, and finish the last step yourself
+
+A worker that finishes its substantive work and enters a wrap-up phase where it
+**self-polls a background job it started itself** — watching its own CI run, waiting
+for its own push to land — before formally handing back can loop there a long time,
+in the worst case indefinitely. The mechanism is specific: some agent runtimes check
+the inbox for **new orchestrator messages only at the start of a fresh
+reasoning/tool round**, and a lane busy inside a tight self-poll never reaches such a
+round. So a re-nudge queues **unread** behind a loop that will not yield to it soon,
+or ever — **re-nudging is a no-op**, and waiting longer does not help, because the
+lane is not blocked on missing information, it is blocked on its own polling loop.
+The orchestrator that reads each "done, but background work still running" tick as
+"still in progress, give it more time" babysits a lane it can neither reach nor
+speed up.
+
+- **Detect cycling-*without-progress*, not just "still running."** If a lane's own
+  externally-checkable state — branch head, PR existence, PR check results, files
+  changed — is **identical across two or more consecutive self-poll pings**, treat it
+  as a candidate stuck state; a genuinely-working lane usually shows some forward
+  movement between pings. Repeating "completed, background work still running" with a
+  frozen external state is the tell.
+- **Verify the durable state directly, not the self-report.** Query the remote
+  yourself — is the branch pushed, is the PR open, which specific step (if any) is
+  actually missing — rather than trusting the lane's narration. The remaining work is
+  routinely **trivial and does not need the lane at all**: the branch is already fully
+  pushed, the PR is already open, and the only gap is a small mechanical step (a
+  changelog/release-note fragment, a "ready for review" flip, one finalize command) —
+  coordination and merge-plumbing steps are the orchestrator's own job anyway.
+- **Escalate straight to *stop*, not another nudge — but verify before stopping.**
+  Stopping a lane is a destructive, shared-state action (principle 9), and a lane may
+  be mid-write. Confirm any in-flight write actually **landed on the destination** (the
+  remote branch/PR), never the lane's own "the push succeeded" claim, before
+  terminating; stopping mid-push can leave a partial or corrupt state behind.
+- **Then finish the last mechanical step yourself.** Once the durable state confirms
+  the only remaining work is small, well-defined, and low-risk, do it directly rather
+  than keeping a whole agent — and its context and budget — alive, or spawning a fresh
+  one, for a one-command finalize.
+
+Distinct from **confirm a subagent is idle before dispatching a duplicate** (above):
+that is a false-*positive* "completed" leading to a wasteful duplicate **dispatch**
+into the same worktree; here the lane is still **alive but unreachable**, and the fix
+is stop-then-finish, never a duplicate. It reuses the liveness discipline of **a
+transcript's size or mtime is not a liveness signal** (above) — verify a positive,
+durable signal and confirm no in-flight write before the kill — but its trigger is a
+*positive* no-progress-across-pings read plus a **void nudge**, and its action is a
+bounded stop-then-finalize, not a stat-based guess. It is the receiver-side companion
+to **a monitor emits on state-transition or terminal state only** (below): that stops
+a monitor from *emitting* redundant "still pending" ticks; this is what to do when a
+lane is emitting them and cannot take a nudge. And finishing the step yourself is
+**not** the Conductor drift the operating-rhythm rule bans (`SKILL.md`): drift is
+seizing a lane's tactical work because "doing it myself is faster"; this is the narrow
+keyhole that rule already carves out — the lane genuinely cannot be re-dispatched or
+nudged, and the residual is a minimal finalize/coordination step handed straight back
+to the orchestrator's own remit, not tactical work taken for speed.
+
+**🚩 tell:** an orchestrator sending nudge after nudge to a lane whose
+externally-checkable state has not moved across several pings while its own reports
+keep saying "done, background work still running" — the nudges are queuing behind a
+self-poll that will never read them, and the trivial remaining step could have been
+finished directly turns ago.
+
 ## An open-ended brief gives the judge nothing to judge — timebox it and require an interim checkpoint
 
 The section above says how to **judge** a lane once you're looking at it — from its actual
@@ -1254,6 +1315,56 @@ replace the forge run.
   "confirmed" with no `Verify:` line naming the command, the surface, and the evidence — an
   unbacked completion claim, `unverified` until the method is stated (and still self-reported
   after — the forge run is the control).
+
+## Relaying a subagent's measured findings to a human: verify the cheap load-bearing facts, attribute the expensive ones — never restate them in your own voice
+
+The sections above govern what a lane *did* and *didn't* do; this governs what the
+orchestrator does with a lane's report when it **relays it onward to a human
+decision-maker**. A delegated lane's measured claims — a merge-conflict count, "the
+audit gate is N findings across three shards, not the M the thread assumes," "shard 3
+hit the CI timeout, not a test failure," "these three issues are already closed" — are
+**model output**, carrying no more authority than any un-reviewed measurement.
+Relaying them verbatim in the orchestrator's own authoritative voice **launders an
+unverified number into a human decision**: the orchestrator becomes the stated source
+of numbers it never checked, and the human acts on them as if they were.
+
+Split every load-bearing claim in the handback by **verification cost** and by
+**whether a human acts on it**:
+
+- **Cheap to check *and* a human will act on it → spot-check it yourself before
+  amplifying.** A "drop/close these items" claim earns a check because a human acts by
+  closing or ignoring them; verify it directly (the issue state; the PR's current head
+  SHA and mergeable status) so amplifying is safe. A "the analysis still holds — the PR
+  hasn't moved" premise is the same: confirm the head SHA before passing it on.
+- **Expensive to re-measure → attribute it to the lane *with its evidence trail*.**
+  Present the full-conflict count and the multi-shard breakdown as **the lane's**
+  measurement, carrying the run ID, the job IDs, and the head/merge-base SHAs, so the
+  human can chase it — never folded into the orchestrator's own "I found N conflicts."
+
+**Prioritize the spot-check by the human action it triggers, not by how surprising the
+number is:** a "drop these" claim gets verified because a human acts on it; a
+large-but-inert number is attributed. Net: every fact reaching the human is either
+orchestrator-verified or lane-attributed-with-receipts, and none is a laundered guess.
+
+This is the multi-agent case of the over-claim / **name-the-evidence-surface**
+discipline and the **downgrade-a-caveated-status** rule (both in `deep-code-review`):
+the measurement was made by *another agent*, and the relay step is exactly where the
+"it's the lane's number, not mine" caveat gets silently dropped. Distinct from **a
+delegated "verify green" is a lead** (above): that is the orchestrator trusting a
+lane's *pass/fail verdict* for a merge/land decision, resolved by re-running the
+authoritative gate; here the artifact is a *measured number* relayed to a *human*, and
+you often cannot cheaply re-run a conflict count — hence verify-or-attribute, not
+re-run. Distinct from **a completion claim carries a `Verify:` line** (above): that
+obliges the *lane's own* artifact to state its method; this obliges the *orchestrator*
+to verify-or-attribute when passing the lane's claims up. And unrelated to the
+classifier-permission asymmetry (above; and the peer case in
+`multi-session-coordination.md`), which is about who may *act*, not the provenance of a
+measurement.
+
+**🚩 tell:** an orchestrator status to the owner that states a subagent's measured
+count ("N conflicts," "M findings across three shards") in the first person, with no
+attribution and no evidence trail, and no spot-check of the cheap claims the human is
+about to act on.
 
 ## A prohibition in a delegate's brief is a soft control — verify the refrained action against the effect surface, and expect drift on idle or long runs
 
@@ -1551,6 +1662,28 @@ domain partition (`multi-session-coordination.md`) keeps most review lanes clear
 lane's surface in the first place. Any finding carried across the landing is a lead, not a
 verdict — re-confirm it at the new head (*discovery findings are durable as leads; a
 discovery verdict is disposable*, above).
+
+**When one redesign contests the *whole* surface, repoint the lens class, not just
+the base.** The rule above handles a contested *file set* — review the owning branch's
+tip, or defer. A large redesign/release PR that rewrites an entire UI surface contests
+something bigger: an entire **review-lens class** — accessibility, visual polish,
+design-system conformance, empty/loading/error states — because *every* finding any of
+those lenses produces lands on a file the redesign already rewrites, so each is
+contested and none is actionable until it merges, and several lanes (or machines)
+re-derive the same "surface contested" conclusion at full cost. Reviewing the tip
+helps little here: the tip is a many-hundred-file work-in-progress whose findings churn
+until it lands. The move is to repoint the **lens rotation itself** onto the dimensions
+a UI redesign structurally does not touch — non-UI logic, data/model layers, shared
+utilities, API/data-access, security — whose findings are actionable now *and* survive
+the redesign landing (the *different-axis survivors* the rule above already names, now
+an **active routing decision** rather than a passive "safe to file"). Enumerate the
+contested set once and cache it on the shared channel so no lane re-derives it (the
+paginate-then-reconcile probe below, which a truncated file list defeats by failing
+open — #936); resume the UI lenses once the redesign merges and the rewritten surface is
+the real target. Distinct from #936's *route the peripheral fixes now, hold the
+contested ones* — that routes **fix** lanes by file; this repoints **review** lenses off
+a wholly-contested *dimension* onto an uncontested one, rather than deferring the review
+outright.
 
 **A commit or PR attribution trailer names the agent that actually did the work.**
 When a fleet commits under a shared template, the co-author / attribution trailer must

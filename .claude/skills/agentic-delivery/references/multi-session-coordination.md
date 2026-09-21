@@ -72,6 +72,61 @@ local-vs-UTC clock skew.
   surface with no per-agent sender tag on posts — or any liveness/staleness rule
   that assumes it can tell whose claim or last post it is reading.
 
+## A shared VCS identity can't attribute a PR or branch to a peer — an edit/rebase-ownership question needs a channel claim or a per-agent trailer; absent one, defer
+
+The section above stamps a per-agent id so a peer's **posts, claims, and liveness**
+can be attributed. The same shared-identity root raises a distinct *operational*
+question the sender-id does not directly answer: when two coordinating agents commit
+and open PRs under **one shared git/gh identity**, "is this PR mine to edit, or this
+branch mine to rebase?" is **unanswerable from author/committer metadata** — both
+agents *are* the author, so git yields zero ownership signal.
+
+The owner-vs-agent discriminator does **not** resolve this. The held-PR
+merge-classification rule below, and the auto-merger rule in
+`fast-agentic-delivery.md` (*shared identity makes authorship useless*), tell an
+**owner's** action from an **agent's** by a merger/actor identity that is *not* the
+shared bot — a third, human identity. That discriminates owner-vs-agent; it yields
+nothing for **agent-A-vs-agent-B**, where both are the same shared bot, so
+identity-inspection is the wrong tool here. The resolution is an **out-of-band
+ownership signal**, the write-ownership extension of the per-agent id above:
+
+- **(a) an explicit claim on the coordination channel** — the peer named this PR/branch
+  as theirs (or a static domain partition puts it in their lane); or
+- **(b) a per-agent trailer on the commit/PR** that names *which* agent authored it —
+  the same per-agent id above, stamped into the **commit/PR trailer**, not only onto
+  chat posts (the co-author/attribution-trailer provenance rule in
+  `fast-agentic-delivery.md` is the stamping side).
+
+The preventive trailer works **only if it actually lands and is checked**: a
+convention-stamped trailer that is **absent from the very commits whose ownership is in
+question** resolves nothing — verify it is present before relying on it, the same
+"a green gate is a floor, verify don't assume" discipline. **Absent a positive
+ownership signal, defer:** treat an ambiguous PR/branch as the peer's and surface it on
+the channel ("these N conflict and need a rebase — mine or yours?") rather than editing
+or rebasing it. Edit/rebase only PRs you can **positively confirm** are your own
+(self-claimed, or clearly inside your domain slice). Editing a peer's in-flight PR is
+the *one-writer-per-file / never-rewrite-another-agent's-WIP* violation this prevents
+(`SKILL.md`, *Worktrees and occupancy*).
+
+- **Extends the per-agent-sender-id section above**, not a contradiction of it: same
+  join key (the per-agent id), new surface (a commit/PR trailer plus a **defer**
+  default), because the question moved from *whose post is this* to *whose artifact is
+  this to write*.
+- **Distinct from the held-PR merge-classification rule below** (*an agent-set
+  merge-hold does not bind the human owner*): that classifies an **already-happened**
+  merge by `mergedBy` (owner vs agent); this is a **pre-action** edit/rebase-ownership
+  question between two agents who share identity, where `mergedBy` and author are both
+  silent.
+- **Distinct from the auto-merger rule** (`fast-agentic-delivery.md`, #424): that is a
+  robot deciding future **admission** (which PRs it may merge), fixed by a manufactured
+  ownership **mark** (label / branch-prefix) with default-deny; this is a peer deciding
+  whether to **edit** a peer's WIP, fixed by a channel claim or per-agent trailer, with
+  **defer** as the default-deny analog.
+- **🚩 tell:** an agent applying a body-fix, rebase, or force-push to an open PR under a
+  shared identity it cannot positively attribute to itself — inferring "probably mine"
+  from a shared author field, or relying on a provenance trailer without first verifying
+  it is present on the commits in question.
+
 ## Collision-check mechanically before you claim or write — never "read the thread and hope"
 
 Reading the thread and diffing open PRs by hand before every claim, or
@@ -450,3 +505,69 @@ work, exactly as the terminus rule prescribes; this section is only about **what
 signal trustworthy across peers**, not what to do at it. **🚩 tell:** one peer declaring fleet-wide
 terminus from its solo scan while another peer still has un-swept surface — solo exhaustion is not
 fleet exhaustion.
+
+## A standing house default must live where every subagent reads it — a per-turn hook or a per-dispatch brief reaches only the main loop
+
+When a fleet must adopt a **standing default that applies to every agent and
+subagent** — a house comms/output style, a required review method, a
+cost/compression layer, a safety filter — the mechanism's **reach** is what
+fails, not its content. Two common enforcement mechanisms silently cover only part
+of the fleet:
+
+- **A per-turn or session-scoped hook** (a session-start or per-prompt hook that
+  injects the ruleset each turn) fires for the **main loop only**. Spawned
+  subagents do not run the main loop's hooks in their own turns, so they silently
+  ignore the standard — you get a compliant main agent and non-compliant
+  subagents.
+- **A per-dispatch brief** ("be terse / use the review method / don't call the
+  expensive tool" baked into each subagent prompt) is **forgettable**: across N
+  agents, M sessions, and every ad-hoc or scheduled subagent — including subagents
+  spawned by *other* agents that never saw the brief — one missed dispatch drops
+  the default, surfacing later as a cost/quality drift nobody attributes to a
+  missed brief. A per-dispatch default degrades to "usually."
+
+Two weaker fixes do not hold either: an injected project guide that says "enable
+mode X" is **not self-executing** (a subagent cannot run the operator's hook, and
+"turn on the plugin" is an instruction, not a mechanism); and a per-brief
+instruction drifts back to defaults over a long task (the *soft-control* rule
+below).
+
+Enforce the default **where every agent and subagent actually reads its
+instructions**:
+
+- **Bake the ruleset into the agent definition.** The subagent's system prompt
+  carries the standard **verbatim** (self-contained, no hook dependency), **loads
+  any required method by default**, and **omits forbidden/expensive tools from its
+  toolset** — removal beats instruction, a tool that is not present cannot be
+  misused (the protocol-vs-host-enforced grading and the tool-omission hard control
+  are `host-enforcement.md`'s, not restated here).
+- **Or a host/user-scope mechanism** that applies to the main loop **and** every
+  subagent it spawns transparently (a user-scope config the host reads for every
+  agent process), so the default is a property of the **environment**, not of each
+  prompt.
+- **Carve the exceptions into the definition** so the default never corrupts
+  deliverables — e.g. terse for reports/reasoning, but code, commits, PR/issue
+  bodies, docs, and human-facing data always in normal prose.
+
+Two operational riders:
+
+- **Bridge in-flight agents.** A newly-installed host/definition mechanism
+  typically takes effect only on a **new** session, so already-running agents still
+  need the explicit per-brief instruction as a bridge until they cycle. Keep both:
+  the durable mechanism for reach, the brief for the transition.
+- **Verify enforcement; a confidential fleet default stays local.** Confirm the
+  injected ruleset actually appears in a spawned subagent's context before claiming
+  the default is universal (a green gate is a floor). And a fleet default that ships
+  observability must be installed **local-only / loopback-verified** with any cloud
+  dashboard opt-in — a fleet default must never silently route private traffic
+  through a third party.
+
+Extends `fast-agentic-delivery.md`'s *a prohibition in a delegate's brief is a soft
+control* (a brief lowers a rate but never to zero) from **intent-vs-capability
+drift within one lane** to the **reach of a standing default across the
+main-loop/subagent boundary and across a fleet**; the enforcement-*level* grading
+(protocol / validated / host-enforced) stays in `host-enforcement.md`, and this
+section adds only the **scope** dimension — which mechanism reaches subagents at
+all. **🚩 tell:** a fleet reporting a comms/review-method/cost default as universal
+on the strength of a session hook or a per-dispatch brief, with no check that a
+spawned subagent's own context actually carries it.
