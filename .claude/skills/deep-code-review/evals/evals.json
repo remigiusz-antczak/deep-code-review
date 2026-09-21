@@ -5632,6 +5632,42 @@
         "Requires surfacing every overlay entry as a matched-or-unmatched row so a mismatch is visible, never a silent drop",
         "Requires verifying the join both directions on real data -- false positives AND false negatives -- before trusting it"
       ]
+    },
+    {
+      "id": "failsoft-catch-returning-empty-hides-a-failed-read-as-empty",
+      "prompt": "A shared dashboard's server loader starts eight independent section reads in parallel; each read is wrapped as .catch(err => { log(err); return [] }) so one failing read cannot take the page down. The team added these guards after an earlier incident where a single rejected read crashed the whole dashboard. Sign off on the loader?",
+      "expected_output": "No. Every read is now guarded so the page will not crash -- but returning [] on failure makes a failed read render identically to a section that genuinely has no rows: a transient DB/upstream failure shows as '0 items / nothing here', and neither a viewer nor any downstream count/total can tell a failed load from a real empty. On a shared multi-viewer dashboard that silent false-empty under-reports live data as absence -- worse than the loud crash it replaced. The fallback must carry a distinguishable failed/degraded signal: a tagged result or sentinel the renderer maps to an error-or-stale marker, or last-good behind a stale badge, reserving the empty state for a read that succeeded with no rows. Test both paths -- a rejected read must render the error/stale marker and a resolve-empty read the empty state, and the two must diverge. (reliability-error-handling.md.)",
+      "expectations": [
+        "Confirms the added guards fix the crash but flags that returning an empty value on failure renders a failed read identically to a genuinely-empty section",
+        "Names the harm: no viewer and no downstream count can tell a failed load from a real empty, so a shared dashboard shows the same '0' to everyone and under-reports live data as absence",
+        "Requires the fallback to carry a distinguishable failed/degraded signal (an error or stale marker, or last-good), reserving the empty state for a successful read with no rows",
+        "Requires testing that a rejected read and a resolve-empty read produce different rendered states",
+        "Distinguishes it from the missing-guard crash bug (the guard is present here) and from writing an empty artifact over last-good bytes (this is a display defect, not a write-path one)"
+      ]
+    },
+    {
+      "id": "rsc-prebuilt-tab-section-bodies-execute-server-side-regardless-of-active-tab",
+      "prompt": "In a Next.js App Router dashboard, a Server Component builds five section bodies -- each is itself a Server Component that runs its own database reads and joins -- and passes them to a Client Component <Tabs> as an array of { id, node }. <Tabs> keeps activeTab in useState and renders only the active section's node, hiding the rest, so only one tab's data is visible at a time. Is this an efficient way to keep the hidden tabs' data off the client until they are opened?",
+      "expected_output": "No -- the design does the opposite of what is assumed. Because the parent is a Server Component that builds all five nodes, every section body executes its reads and joins on the server on each request, and each rendered node (plus any data serialized into the RSC payload) is sent to the client before <Tabs> picks one. activeTab only chooses which pre-computed node to reveal; it cannot prevent the other four from having run. Result: five sections' worth of server work and queries to display one, and the hidden tabs' data is present in the payload the browser receives -- readable in the network response regardless of the CSS that hides it -- a cost and a leak, not isolation. It passes typecheck and looks right in the browser, so only the RSC/network payload or the query log exposes it. Fix: make an inactive section's body not run until it is chosen -- give each tab its own route/segment so navigation triggers the read, or defer the body behind a boundary that only renders on activation and fetches on demand; pass the inputs a tab needs (an id or query key), never the pre-built node of an unopened tab. (language-stack-redflags.md.)",
+      "expectations": [
+        "Rejects the assumption: all five section bodies execute their server-side reads/joins on every request because the Server Component parent builds every node before any client tab state exists",
+        "Explains that client activeTab state gates only which pre-built node is displayed and cannot stop the other sections from having run",
+        "Names both consequences: wasted server work / repeated queries for unshown tabs, and hidden-tab data serialized into the client payload (readable despite the CSS that hides it)",
+        "Requires making an inactive tab's body not run until chosen -- a per-tab route/segment or an activation-gated boundary that fetches on demand, passing inputs rather than a pre-built node",
+        "Distinguishes it from a directive-less module whose run-location follows its import site -- here the sections legitimately run once on the server and the fix is to defer execution, not to relocate them off the client"
+      ]
+    },
+    {
+      "id": "a-count-rederives-a-subset-of-a-shared-configured-predicate",
+      "prompt": "A shared helper gates every 'is this integration usable' code path: isConnected = i => i.hasApiKey && i.hasWebhook. A dashboard shows a 'Connected: N of M' stat computed separately as integrations.filter(i => i.hasApiKey).length. QA reports the stat sometimes shows a higher connected number than the feature that relies on isConnected will actually enable. Review the stat.",
+      "expected_output": "The stat re-derives 'connected' by hand and tests only hasApiKey, dropping the hasWebhook condition the shared isConnected helper also requires. Every field it reads is real, so it looks correct in isolation, but it counts integrations the actual gate treats as not-connected -- so the user-facing 'N of M' over-counts and silently disagrees with the behavior isConnected controls. Fix: call the shared helper -- integrations.filter(isConnected).length -- and never re-express a check the codebase already centralizes; a count over the helper cannot diverge from the gate. To find the class, start from the shared helper, enumerate the fields it reads (hasApiKey, hasWebhook), and search every site that reads any of them in a boolean/count/filter context, flagging any that tests fewer conditions than the helper. (method.md.)",
+      "expectations": [
+        "Identifies that the stat tests only hasApiKey and omits hasWebhook, which the shared isConnected helper also requires",
+        "Explains the symptom: every field read is genuine so the code looks right, but the user-facing count over-counts and silently disagrees with the behavior the shared helper gates",
+        "Requires calling the shared helper (filter(isConnected)) rather than re-expressing a check the codebase already centralizes",
+        "Gives the detection technique: start from the shared helper, enumerate the fields it reads, and search sites that read any of them but test fewer conditions",
+        "Distinguishes it from N drifting sibling copies of a guard with no single source of truth -- here a shared helper is the source of truth and the bug is one narrower hand-rolled check that omits a condition"
+      ]
     }
   ]
 }

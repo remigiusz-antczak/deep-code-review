@@ -481,6 +481,38 @@ confirm at source (read the workaround; confirm it still bypasses the shared thi
 HEAD), not as proof on its face — the comment may itself have drifted, per the Phase 1
 rule.
 
+**Diff every ad-hoc re-derivation of a *canonical* predicate against the canonical — a
+partial reimplementation reads real fields yet tests a *subset* of the conditions.** A
+specific, high-frequency case both the comment-mining pass above and the copyable-idiom
+sweep (Phase 4) miss: the project **correctly centralizes** a boolean — *is this fully
+configured / wired / eligible / complete* — in one shared helper that legitimately requires
+**A and B** (`isWired = x => x.hasKey && x.hasWebhook`), but somewhere else a **count,
+filter, badge, or percentage** re-derives the *same* concept inline and implements only
+**part** of it (`items.filter(x => x.hasKey).length`, dropping `hasWebhook`). Every field it
+reads is genuine and the code looks right in isolation; the only symptom is that a
+**user-facing count/percentage silently disagrees with the canonical predicate** — the
+dashboard says "8 of 10 configured" while the helper that actually gates behaviour counts 6.
+A grep for the *idiom* (Phase 4) will not find it — the re-derivation shares no literal with
+the helper — and no comment admits the bypass (the comment-mining pass above), because the
+author did not think they were bypassing anything; they re-expressed a "simple" check.
+**Technique: start from the canonical predicate, not from a duplicated string.** Enumerate
+the fields/conditions the shared helper reads (`hasKey`, `hasWebhook`), then grep every site
+that reads **any** of them in a boolean/count/filter context and diff its condition set
+against the canonical's — a site that tests a **proper subset** is the finding. **Fix: call
+the shared predicate; never reimplement a subset of it** — a count over
+`items.filter(isWired)` cannot drift from the gate. **Adjudication vs the nearest rules:**
+distinct from `testing-and-evals.md`'s *diff-the-guard-conditions-across-N-sibling-copies*
+(that has **no** canonical — N peer copies drifting from one another, fixed by reconciling or
+extracting them; here a **designated canonical exists** and the bug is one **narrower**
+re-derivation of it, fixed by calling it); distinct from a **value-set** subset (a data set
+missing members, not a predicate missing a conjunct); and distinct from the
+**audit-every-implementation** sweep (Phase 4, which fans a fix across every call site of one
+function — here the re-derivation is **not** a call site of the helper at all, which is
+exactly why a call-site audit skips it). It is the **structural-search complement** to the
+comment-mining pass above: that pass catches a bespoke reimplementation via the developer's
+*admission comment*; this catches one that shares neither a literal nor a comment, by keying
+on the **fields the canonical predicate reads**.
+
 **Product UI (domain P) → rendered route sweep.** On a `FULL` or broad-`DIFF`
 review of a product UI, enumerate every route and rule domain P on each across the
 render matrix, reporting coverage as a ledger — the domain-P analogue of Phase 3's
