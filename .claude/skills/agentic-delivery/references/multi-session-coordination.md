@@ -359,6 +359,55 @@ else it's mine" for an item it has already dispatched its own lane on, followed 
 for the same work; or a coordinator closing one of the two without first checking they are
 equivalent.
 
+## An announcement comment is not an atomic claim — make the claim token a durable artifact whose *creation* fails the second claimant
+
+The claim-race cluster above (#713 opposite splits, #834 domain partition, #933 broadcast
+arbitration, #952 the offerer's own lane) shares one unstated assumption worth naming: that
+the *claim itself* — "taking X" posted to a shared thread — marks ownership. It does not. **A
+comment on an append-only thread is an append, not a compare-and-swap:** every post
+*succeeds*, so posting "taking X" never fails and never tells the poster that someone else
+already took X. Two agents that pick the same item each post their claim **before** reading
+the other's, and the channel — eventually-consistent, never a mutex — happily stores both. The
+announcement records *intent*; it does not *arbitrate* it. #713 already named the mechanism
+("no compare-and-swap; read-then-post is not atomic") and #933 named the trigger (a broadcast
+makes every peer claim at the same instant); this is the **preventive** fix both stop short of.
+
+- **Use a claim token whose namespace is the *item* and whose creation is atomic on that
+  namespace.** Pick a token the medium can only create **once** per item, so the second
+  creator's attempt **fails** rather than appends: an exclusive file create
+  (`open(..., O_CREAT|O_EXCL)` / a lock file that errors if it exists), an atomic rename into
+  a per-item path, or a **deterministically-named branch/ref** for the item
+  (`claim/<item-id>`) whose second `git push` of that same new ref the forge rejects. The
+  failed create **is** the collision signal, delivered at claim time to the loser — a real
+  mutex, not an announcement.
+- **A comment or a registry *row* is a fine place to record and read a claim, but not to
+  *win* one.** Appending a row to a committed registry file has the same non-atomicity as a
+  comment (two peers add a row, both push, the second merges — both rows land, neither create
+  failed). Keep the machine-readable registry (*a prose claim doesn't scale*, above) as the
+  **readable record**; let the **atomic token** decide who owns the item, and write the row
+  *after* winning the token.
+- **Fall back to post-hoc arbitration only where no atomic primitive exists.** Some surfaces
+  offer no create-that-fails (a plain discussion thread, an issue whose assignment is
+  last-write-wins). There, #933's claim-first + earliest-UTC arbitration is the best available
+  — but it is strictly **weaker**: it needs both claimants to post, then both to re-read, then
+  the loser to stand down, and it leaves the simultaneity window #933 can only *resolve after
+  the fact*. Prefer an atomic token when the medium has one; arbitrate only when it does not.
+
+Distinct from **#933 broadcast arbitration** (above): #933 is **corrective** — both claims
+post, earliest-UTC wins, the loser salvages; it presumes a non-atomic channel and resolves the
+duplicate after it happens. This is **preventive** — an atomic-creation token makes the second
+claim *fail* at claim time, so no duplicate starts and there is nothing to arbitrate. Distinct
+from **#834 domain partition** (above): #834 removes the *shared item* (disjoint slices, so two
+peers never contend one item); this keeps the item shared and makes *claiming it* atomic — the
+other structural answer, for items a partition cannot reach (a broadcast, a within-domain
+residual). Distinct from *a prose claim doesn't scale — commit a structured registry* (above):
+that governs the claim's **shape** (machine-readable vs prose); this governs its **atomicity**
+(a create that fails vs an append that always succeeds) — a registry row can be perfectly
+structured and still lose the race, because it is an append. **🚩 tell:** two peers each posting
+"taking X" (a comment, or a registry row) seconds apart with neither create ever failing,
+followed by two PRs for X — a claim mechanism that only *announces*, with no create-that-fails
+token anywhere in the path.
+
 ## Every peer honoring its own heavy-lane cap still oversubscribes the machine — coordinate the shared budget, not each session's slice
 
 A per-session heavy-lane cap — `fast-agentic-delivery.md`'s environment

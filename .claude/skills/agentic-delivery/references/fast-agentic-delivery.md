@@ -681,6 +681,54 @@ one union.
 member — paying a base-CI cycle per merge inside what was supposed to be one draining window — or
 a batch that closes with no post-drain check confirming the union of merges actually landed green.
 
+## Flipping the whole draft stack to ready at once floods the shared runner pool without feeding the serial seat any faster — stagger the ready-flips
+
+The two sections above govern the merge **seat** — one serial holder, admitting the next
+merge on a not-red base. This governs the step *upstream* of the seat: the draft→ready
+flip that makes a PR eligible in the first place. The reflex, once a wave of lanes is
+done, is to flip **every** draft to ready at once "so the seat can start merging them" —
+but that buys no throughput and courts an incident.
+
+- **The flip is not the merge, and the seat is the bottleneck.** Readying a PR does not
+  merge it; it only makes it a *candidate*. The seat still merges one at a time
+  (*single-seat, back-to-back draining* above), so the merge rate is capped by the seat
+  and the base's CI cycle, not by how many PRs are ready. Twenty ready PRs and four ready
+  PRs drain through one serial seat at the same rate.
+- **What flipping to ready *does* fire is the heavy CI suite — per PR, into a shared
+  pool.** Draft PRs commonly run only the fast tier; the browser / a11y / visual / E2E
+  matrix is gated on ready-for-review or a label (*Draft-gated heavy checks*, below). So
+  flipping N drafts to ready at once dispatches **N heavy check-suites into a shared
+  runner pool simultaneously**. The pool has a fixed concurrency, so the surplus past it
+  **queues**: every check on every PR sits `pending` for many minutes, the fast checks
+  that would have gone green quickly are stuck behind the flood, and the seat is *starved*
+  anyway because nothing reaches green promptly. Pushed far enough it is a self-inflicted
+  **runner-drain incident** — the shared pool is exhausted for every other lane and repo
+  on the account, not just this queue.
+- **Stagger the flips to a small in-flight window; drain, then flip the next.** Hold the
+  count of *ready* (CI-running) PRs to a small window sized to the runner pool — a low
+  default such as 3–4 — flip that many draft→ready, let their suites finish and the seat
+  drain them, then flip the next batch. Same eventual throughput (the serial seat was
+  always the cap), a steady green pipeline the seat consumes at its own rate, and no pool
+  exhaustion. This is the WIP-cap-by-landed-artifacts discipline (above) applied to the
+  **ready-flip** admission point and bounded by the **runner** budget rather than local
+  RAM.
+
+Distinct from *single-seat, back-to-back draining* and *the window's admission check is
+not-red* (both above): those govern the **merge** action — how many *seats* (one) and
+which base state admits the next *merge* (not-red, so "take all currently-green in a
+burst" is right *for merging*). This governs the **ready-flip** action upstream of the
+seat — how many PRs have their heavy CI *in flight* at once — whose cost falls on the
+shared runner pool, not the base-diff gate; readying all at once and merging all
+already-green at once are different actions on different resources. Same shape as *a
+shared API/model quota is a fan-out ceiling no local probe can see* (above) — a shared
+external budget a local box cannot observe — but the resource is the **CI runner pool**
+and the lever is staggering **ready-flips**, not narrowing model lanes, and the failure is
+checks **pending** (queued), not lanes **erroring** on a rate limit. **🚩 tell:** a wave
+of lanes finished, all drafts flipped to ready in one sweep "so the seat can merge them,"
+then every PR's checks sit `pending` for many minutes while the serial seat merges them
+one at a time no faster than a staggered flip would have — and other work on the account
+stalls on a drained runner pool.
+
 ## A load-flaky required gate is not a confirmed red — bounded-rerun the same commit to reclassify it before concluding a regression
 
 This expands `SKILL.md` gate-epistemology principle 3 ("if the shape matches a known-flaky
@@ -1065,6 +1113,108 @@ reads as abandoned, and its banked work is invisible until someone adopts it.
   has a draft PR missing changelog/evidence is **adopt-and-verify or explicitly
   discard**, never left to rot. (Sibling to *run verification in the foreground* above:
   there a **verdict** is lost to a background task; here the **promotion** is.)
+
+## A "stop when fixed" / minimal-patch contract truncates the lane's definition of *done* — fold the post-fix process steps into acceptance, or own them explicitly
+
+The section above orphans a draft when a **process** (a lingering server, a retry loop)
+burns the turn before the finalize tail runs — the lane *tried* to finalize and was cut
+off. This is the adjacent failure with a different root: the lane **stops on purpose**,
+having met a definition of *done* that never included the finalize steps. A lean-build /
+minimal-diff / "stop when the fix is in and tests pass" contract — a compression or cost
+policy applied to the lane — defines completion as **code-fix + gates-green** and treats
+everything after as out of scope. So the lane opens a draft PR, greens the fast gates, and
+**stops** — skipping the required post-fix *process* steps (write the changelog /
+release-note fragment, flip draft→ready, attach the evidence) even though the brief listed
+them. The PR is left **stranded**: draft, and red on the missing-changelog check, with a
+correct fix banked behind it.
+
+Why the brief alone does not save it: a standing process-policy default ("minimal patch,
+stop when fixed") is a **stronger, always-on** instruction than one line buried in a task
+brief, and where the two conflict the lane follows the default and drops the brief's tail.
+This is the mirror of *a prohibition in a delegate's brief is a soft control* (below) — a
+**required** step dropped rather than a forbidden one taken — so naming the steps in the
+brief is necessary and **not** sufficient.
+
+- **Fold the process steps into the lane's acceptance / definition-of-done, so "fixed" is
+  not "done" until they are done.** The Work-item contract's *Done-when* (`SKILL.md`,
+  *Output contract*) must enumerate the changelog fragment and the ready-flip **as
+  acceptance criteria**, not as a post-script — a lane whose *Done-when* is "the fix and
+  its process artifacts are all in, PR ready" cannot satisfy its own contract by stopping
+  at green code. Change what *done* **means** for the lane; do not merely repeat the steps.
+- **Or the orchestrator owns the process tail explicitly.** If lanes are deliberately kept
+  minimal, make the changelog fragment + ready-flip the **orchestrator's** named job (the
+  same small, mechanical finalize the *stuck self-polling lane* rule, below, has the
+  orchestrator finish directly), assigned to one owner. One of the two must own the tail;
+  the failure is when **neither** does.
+- **A draft red only on a missing changelog fragment is a stranded-by-contract signal, not
+  a defect.** Read it as this pattern — the fix is sound, the process tail was truncated —
+  and complete the tail (fold-in for future lanes, finish it now for this one), rather than
+  re-reviewing the code for a fault that is not there.
+
+Distinct from *Land the fix, then finalize separately* (above): there the finalize was
+**attempted** and orphaned by a process / retry loop burning the turn — the fix is to
+*decouple* landing from finalize, make finalize idempotent, kill helpers, and bound
+retries. Here the finalize was **never in the lane's definition of done** — nothing
+crashed; the lane met its (too-narrow) contract and stopped — so the fix is to **widen the
+acceptance contract** (or reassign the tail), not to harden a tail the lane was never going
+to run. The two compose: a decoupled, idempotent finalize (that section) *plus* a
+definition of done that actually requires it (this one). **🚩 tell:** a fix lane under a
+"minimal patch / stop when fixed" policy that closes out at green code with an open draft PR
+red on a missing changelog fragment — the process steps were in the brief but not in the
+lane's *Done-when*.
+
+## A stranded PR has no live owner, so two actors both recover it at once — claim the *unstranding*, and assign it to one owner
+
+The two sections above are how a PR gets **stranded** (a truncated finalize contract,
+#967 just above; a finalize tail orphaned by a process) and that an orchestrator sweep
+should recover it. This is the failure *in the recovery itself*. A stranded PR — draft, or
+red only on a missing changelog fragment, its lane stopped and its worktree reaped — has
+**no live owner**, and an orphan with no owner attracts **two** recoverers at once:
+
+- the **producer**, whose own lane is resumed or redispatched to finish what it left (the
+  *adopt-and-re-verify a prior generation's worktree/branch* path, above), and
+- the **merge-seat holder**, which finds a nearly-green PR blocking its drain and
+  **unstrands it to merge** (adds the missing fragment, flips it to ready) to clear the
+  queue.
+
+Both write the **same branch** to complete the **same** small tail, seconds apart — a dual
+**push** to one ref: a non-fast-forward for whoever loses the race, a force-push clobber if
+either overrides, or two divergent "finish" commits (one adding the changelog fragment, one
+flipping ready) that collide. It is not dual *work* on disjoint files (*an ownership map
+blocks a dual write, not dual work*, below) — it is dual *write* to one branch, exactly
+what one-writer-per-branch forbids, arising here because the branch's writer had **stopped**
+and nothing re-established a single owner before two parties reached for it.
+
+- **Recovering a stranded PR is an exclusive step — claim it before acting.** Unstranding
+  is a write to a contested branch, so it takes the same claim any exclusive step takes: an
+  entry naming the single current owner of *this PR's recovery* (the `exclusive_role` field
+  of the claim registry, `multi-session-coordination.md`, applied to unstranding, not only
+  to the merge seat). Check it and refuse to recover a PR another owner is already
+  unstranding.
+- **Assign unstranding to one role by default — the merge-seat holder is the natural
+  owner.** The seat is already serialized and already touches the branch to merge it, so
+  folding "finish the tail, then merge" into the seat avoids a second writer entirely; the
+  producer, if resumed, reads the recovery claim and **stands down** on any PR the seat is
+  unstranding. (Either owner works — the invariant is *exactly one*, not *which one*.)
+- **Verify the in-flight write actually landed before concluding recovery** — never the
+  recoverer's own "pushed" claim (the *confirm the write landed on the remote* discipline of
+  the *stuck self-polling lane* rule, below), since a mid-race push can leave the branch
+  partially updated.
+
+Distinct from #967 just above (what **strands** the PR — a truncated lane contract) and
+from *Land the fix, then finalize separately* (that a stranded draft must be **recovered**,
+adopt-and-verify or discard): both establish *that* recovery happens; this governs *who*
+may perform it, because recovering an unowned branch is itself a write that needs a single
+owner. Distinct from *an ownership map blocks a dual write, not dual work* (below), which
+stops a duplicate lane spawning on a **live** objective via an occupancy check — here the
+objective's lane is **dead/stopped**, so occupancy reads empty and the collision is between
+two *recoverers* of the orphan, resolved by a recovery **claim**, not an occupancy probe.
+Distinct from *shared VCS identity cannot attribute a PR* (`multi-session-coordination.md`),
+which is *whose* PR it is under one shared identity — here ownership is not ambiguous, it is
+**absent**, and the fix is to (re)establish a single owner of the recovery, not to attribute
+an existing one. **🚩 tell:** a stranded / draft PR that both a resumed producer lane and
+the merge-seat holder move to finish in the same window, ending in a non-fast-forward, a
+force-push, or two divergent finish commits on one branch.
 
 ## A hard-to-write test must not hold a ready fix hostage — verify-first is a fails-before / passes-after floor, not a ceiling
 
