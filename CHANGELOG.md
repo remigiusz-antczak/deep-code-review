@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.383.0] — 2026-09-21
+
+### deep-code-review — the model's structured response is a frequently-malformed input class: validate the parsed shape, repair-once-then-fall-back, and handle a refusal as its own branch (OpenAI structured outputs, LLM10)
+
+- **`security-ai-agents.md`**: instruments the one-line structured-output bullet. Code that asks the model for JSON and `JSON.parse`s / `json.loads` the completion straight into use — no schema check on the parsed object, no parse-failure/repair path, no refusal branch — is the defect: the reply can arrive prose-wrapped, fenced, truncated at a `max_tokens` cut, or as a safety refusal that is well-formed but matches no schema field. Three branches: (1) validate the parsed object against the schema (a parse proves syntax, never shape); (2) repair once then fall back deterministically (no unbounded repair loop); (3) handle a refusal / off-schema reply as its own surfaced branch — not a 500, not blank-as-success. Same LLM10 output-handling family as the injection-sink rule (which governs where output goes) but governs whether the response is what was asked for; the model-response instance of the `JSON.parse`-without-a-schema footgun in `language-stack-redflags.md`; shares the truncation-as-complete root with the streaming/`finish_reason` rule. Boundary named: shipped-output harms (hallucination-as-fact, over-reliance, disclosure) are the `product-output-safety` sibling's surface; this is strictly the code-level parse/schema/refusal shape. +1 eval. Source verified by direct fetch (OpenAI Structured Outputs guide; 301 observed), logged in docs/standards-index.md.
+
 ## [1.382.0] — 2026-09-21
 
 ### deep-code-review — a reverted optimistic write is the one error path that skips the app's shared safe-message mapper (#887)

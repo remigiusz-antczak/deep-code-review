@@ -323,7 +323,43 @@ LLM-backed feature, add cases that assert the guardrail holds:
   project-context files and skill text are concatenated raw into the *same*
   system prompt.
 - **Structured output + schema validation** on the way out; reject/repair
-  off-schema output before use.
+  off-schema output before use. **The model's structured response is a
+  frequently-malformed input class, not a happy-path string**, so code that
+  asks for JSON and `JSON.parse`s / `json.loads` the completion straight into
+  use — no schema check on the *parsed* object, no parse-failure/repair path,
+  no refusal branch — is the defect. The reply can arrive prose-wrapped,
+  wrapped in a fenced code block, truncated at a `max_tokens` cut (unparseable),
+  or as a **safety refusal** that is itself well-formed but matches no field of
+  the schema (OpenAI's Structured Outputs guide: "the model might not generate
+  a valid response that matches the provided JSON schema … in the case of a
+  refusal … or … you reach a max tokens limit and the response is incomplete").
+  Instrument three branches, not one: (1) **validate the parsed object against
+  the schema** — a successful parse proves *syntax*, never *shape*, so a
+  missing/renamed field is caught here, not read as `undefined` downstream; (2)
+  **repair once, then fall back deterministically** — strip a fence / re-ask at
+  most once, then a deterministic default or a surfaced error, never an
+  unbounded repair loop; (3) **handle a refusal / off-schema reply as its own
+  branch** — a provider that returns a distinct `refusal` field (OpenAI: "a
+  refusal does not necessarily follow the schema you have supplied in
+  `response_format`, the API response will include a new field called
+  `refusal`"), or a schema-shaped error object, must be surfaced in the UI or
+  in consuming logic — **not** mapped to a 500, **not** rendered
+  blank-as-success. This is the same **LLM10** output-handling family as the
+  injection-sink rule above (which governs *where* output goes — sink hygiene,
+  never raw into SQL / a shell / HTML / `eval`); this governs whether the
+  response *is what was asked for at all*. It is the *model-response* instance
+  of the `JSON.parse`-without-a-schema footgun in `language-stack-redflags.md`
+  (that is untrusted **input** robustness; here the input is the model's own
+  reply, malformed by class rather than by attack), and it shares the
+  truncation-as-complete root with the streaming / `finish_reason` rule below
+  (which this extends with the off-schema and refusal cases). **Boundary:** what
+  a *shipped* output then does to the user — hallucination surfaced as fact,
+  over-reliance, unsafe disclosure — is the `product-output-safety` sibling's
+  harm surface, not this bullet; here the finding is strictly the code-level
+  parse / schema / refusal shape. **🚩** `JSON.parse(` / `json.loads(` on a
+  completion with no schema validation of the result, no `try`/`catch` +
+  repair/fallback, and no branch for a refusal / off-schema reply; a refusal or
+  truncated response that 500s or renders blank.
 - **A model's self-report boolean is untrusted input — compare it strictly, fail closed,
   and never let it be the sole gate.** Gating an allow/skip/"it's safe" decision on an
   LLM-returned flag with a **negated** comparison — `if (res.safe !== false)` — takes the

@@ -1083,3 +1083,13 @@ expand → migrate → contract sequence already used there to its source patter
 | Standard / source | URL | What was confirmed |
 |---|---|---|
 | Martin Fowler — Parallel Change (expand and contract) | https://martinfowler.com/bliki/ParallelChange.html | Verbatim opening definition: "Parallel change, also known as expand and contract, is a pattern to implement backward-incompatible changes to an interface in a safe manner, by breaking the change into three distinct phases: expand, migrate, and contract." Phase intent, verbatim: expand — "you augment the interface to support both the old and the new versions"; migrate — "you update all clients using the old version to the new version"; contract — "remove the old version and change the interface so that it only supports the new version." Fetched + verified 2026-09-21. |
+
+## Verified by direct fetch (2026-09-21) — OpenAI Structured Outputs guide
+
+Verification date for the row below: **2026-09-21**. Added for a `deep-code-review`
+`security-ai-agents.md` fold on handling the model's non-happy structured response —
+off-schema output, `max_tokens` truncation, and safety refusals.
+
+| Standard / source | URL | What was confirmed |
+|---|---|---|
+| OpenAI Structured Outputs guide | https://developers.openai.com/api/docs/guides/structured-outputs | Verbatim: "In some cases, the model might not generate a valid response that matches the provided JSON schema. This can happen in the case of a refusal, if the model refuses to answer for safety reasons, or if for example you reach a max tokens limit and the response is incomplete." And verbatim: "Since a refusal does not necessarily follow the schema you have supplied in `response_format`, the API response will include a new field called `refusal` to indicate that the model refused to fulfill the request." (301 from platform.openai.com/docs/guides/structured-outputs; fetched 2026-09-21) |

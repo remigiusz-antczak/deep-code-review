@@ -5006,6 +5006,16 @@
         "Notes the leaked string is announced aloud because the toast renders into an aria-live region",
         "Fix routes the revert path through the same toUserMessage mapper (one mapping boundary); acceptance test makes fetch reject with a raw TypeError and asserts the fixed fallback, not the raw message"
       ]
+    },
+    {
+      "id": "model-json-reply-offschema-refusal",
+      "prompt": "A feature asks the model to extract a shipping address and return it as JSON. The handler does `const addr = JSON.parse(resp.choices[0].message.content); order.city = addr.city;` and writes the order — no `try`/`catch`, no other checks. In review a colleague approves: 'We set the model to JSON mode, so the content is always valid JSON — parsing it directly is fine.' Is the colleague right, and what would you flag?",
+      "expected_output": "No. The colleague is wrong that JSON mode makes direct parse-and-use safe. A model's reply is a frequently-malformed input class, not a guaranteed clean string: even in JSON mode it can wrap the JSON in prose or a fenced code block, hit the token limit and return TRUNCATED (unparseable) JSON, or return a safety refusal that is itself well-formed JSON but carries none of the expected fields. Three gaps: (1) nothing validates the PARSED object against the expected shape — a successful parse proves syntax, not that `city` exists, so a missing/renamed field silently writes `undefined`; (2) there is no `try`/`catch` around the parse and no repair-once-then-deterministic-fallback, so a fenced or truncated reply throws and 500s the request; (3) a refusal / off-shape reply has no branch of its own — it is either thrown as a 500 or written to the order as a blank address as if it succeeded. Fixes: validate the parsed object against the shape; wrap the parse, repair at most once (e.g. strip a fence / re-ask) then fall back to a deterministic default or a surfaced error; and give the refusal / off-shape case its own branch that is surfaced to the user or the consuming logic, not mapped to a 500 and not stored blank-as-success. JSON mode constrains syntax only, so approving on that basis is the defect. (security-ai-agents.md.)",
+      "expectations": [
+        "Rejects the 'JSON mode ⇒ safe to parse-and-use directly' reasoning and names the model reply as a frequently-malformed class — prose/fenced wrapping, token-limit truncation, and a well-formed safety refusal carrying none of the expected fields",
+        "Requires validating the PARSED object against the expected shape (a successful parse proves syntax, not that the fields exist), not just that JSON.parse succeeded",
+        "Requires a try/catch with repair-once-then-deterministic-fallback AND a distinct branch for a refusal / off-shape reply that is surfaced — not mapped to a 500, not stored blank-as-success"
+      ]
     }
   ]
 }
