@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.401.0] — 2026-09-21
+
+### deep-code-review — a justification carried forward inside a suppression list is a claim to re-verify, and a green ratchet proves only that nothing was added (#813)
+
+- **`method.md`** (+ a bidirectional cross-ref from `testing-and-evals.md`'s #870 phantom-contract bullet): a shrink-only allowlist/ratchet in the target — a `.trivyignore`/audit-allowlist row, a lint or type-error baseline, a `# nosec`/`// eslint-disable` reason, a CODEOWNERS exception — carries a per-entry comment saying why it is still there ("false positive", "upstream fix pending, TICKET-123"). That comment was once true; when its cause quietly goes away (the fix shipped, the ticket closed, the false positive became real) the entry and its prose are re-emitted verbatim into each regenerated baseline, so a dead rationale reads as current fact and the suppression is never re-examined. Two moves: (1) treat the prose as a falsifiable assertion — it names a symbol/call/ticket, so grep the blamed symbol, `git log -S` for when it left, read the linked issue's real state before repeating/sizing/reporting it (a second reviewer who restates it has not corroborated it — one unverified claim copied twice); (2) a green ratchet proves only nothing was ADDED, so diff the entry set across baseline revisions to confirm entries actually leave. Expiry/re-verification lifecycle cross-ref'd to infra-iac + skill-authoring. Distinct from #870 (never-true) and from re-validating your own carried-forward finding. +1 eval.
+
 ## [1.400.0] — 2026-09-21
 
 ### deep-code-review — a cleanup arm shared by two async operations clears a loading flag it doesn't own (cross-path and cross-generation clobber) (#908)

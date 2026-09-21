@@ -99,7 +99,9 @@ explicit third choice), not which one this review prefers.
   inaccurate contract comment actively misleads the next caller — who relies on it
   *without* re-reading the implementation — into depending on behavior that isn't
   there, which is worse than no comment. This is **not** the stale-comment case (a
-  comment that was once true and drifted) — it was never true — and **not**
+  comment that was once true and drifted — e.g. a suppression/allowlist entry's
+  justification that has gone stale; `method.md`'s carried-forward-justification
+  rule) — it was never true — and **not**
   `security-ai-agents.md`'s asserted-but-unenforced safety property (there the code
   exists at the call site and a lower layer drops it; here there is no code for the
   promised branch at all); it is the source-doc-comment, test-limbed specialization

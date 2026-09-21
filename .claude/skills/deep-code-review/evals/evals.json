@@ -5179,6 +5179,17 @@
         "Gives the identity-gating fix: stamp each request with a monotonic id/sequence (or wire an `AbortController`) and let ONLY the current request's completion switch the spinner off and ONLY the current response feed the setter, dropping or aborting a superseded one — or give each in-flight operation its own indicator so one cannot clear another's.",
         "Names the test gap: the reviewer's single-path check ('typed a query and watched it clear') cannot reproduce this because it never overlaps two requests; the regression test must fire two overlapping searches, let the superseded request settle while the current one is still outstanding, and assert both the spinner state AND the resulting list."
       ]
+    },
+    {
+      "id": "carried-forward-suppression-justification-is-a-claim-to-re-verify",
+      "prompt": "Our CI security-audit step reads an ignore file listing advisories we've accepted, each row carrying a comment explaining why it's safe to skip. A dependency-bump PR regenerates that file; the generator re-emitted every existing row unchanged, including `# safe: false positive, upstream patch pending (ISSUE-42)` next to a suppressed high-severity advisory. The audit is green, the file now has 40 rows (it was 31 two quarters ago), and a reviewer approves it because every row still has a documented reason. Sign off?",
+      "expected_output": "A documented reason is not a current fact. Each suppression row's comment (here 'false positive, upstream patch pending, ISSUE-42') is a falsifiable claim to re-verify against current source and ticket state before it is trusted, not settled truth carried forward: check ISSUE-42's real status and grep the code for the flagged path, because if the upstream fix has since shipped (or the false positive became real) the row now hides a live high-severity finding while the audit stays green -- so the regenerated file must not be approved on the strength of its documented reasons. The review asks that each entry carry an expiry or a re-verification trigger (a date, a linked-issue state check, a periodic sweep) rather than a permanent documented reason, and flags that a passing audit plus a count that only ever grows (31 -> 40, nothing ever removed) proves only that the accepted set is still accepted (no new unaccepted finding), never that any row's reason still holds -- so the set must be diffed across regenerations to confirm entries actually leave, not just arrive. Dropping the row merely because it 'looks old,' without re-verifying ISSUE-42 against current source, does not satisfy this.",
+      "expectations": [
+        "Treats the row's 'upstream patch pending (ISSUE-42)' comment as a claim to re-verify against current ticket and source state, not a fact carried forward because it is documented",
+        "Warns the suppression can now hide a live high-severity finding if the upstream fix already shipped or the false positive became real, while the audit stays green",
+        "Calls for a per-entry expiry or re-verification trigger, not a permanent documented reason",
+        "Flags that a green audit proves only that the accepted set is still accepted (no new unaccepted finding), never that any row's reason still holds; and that an only-growing, never-shrinking set shows the suppression never tightens, so it must be diffed across regenerations to confirm entries actually leave"
+      ]
     }
   ]
 }

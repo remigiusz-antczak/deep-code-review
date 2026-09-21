@@ -242,6 +242,36 @@ and any wired security/dependency scanners. Then, before trusting "green":
   repeating one that **changed or worsened** as if unchanged, which over-claims a
   **trust-critical** status (rate that *claim*, not the staleness). A "still open"
   status holds only at the current SHA.
+- **A justification carried forward inside the *target's own* suppression list
+  is a claim to re-verify, not a fact — and a green ratchet proves only that
+  nothing was *added*.** Distinct from re-validating your own carried-forward
+  finding (above): a shrink-only allowlist / ratchet in the target — a
+  `.trivyignore` or audit-allowlist row, a lint-suppression or type-error
+  baseline, a `# nosec` / `// eslint-disable` reason, a CODEOWNERS exception —
+  carries a per-entry comment saying *why* it is still there ("false positive";
+  "upstream fix pending, tracked in TICKET-123"). That comment was once true;
+  when its blocking cause quietly goes away (the fix shipped, the ticket closed,
+  the false positive became real) the entry and its prose are re-emitted verbatim
+  into each regenerated baseline, so a dead rationale reads as current fact and
+  the suppression is never re-examined — a list that only ever loosens. Two
+  moves. **(1) Check the prose like an assertion:** it names something specific —
+  a symbol, a call, a ticket id — so it is as falsifiable as a unit-test
+  expectation; grep the current file for the blamed symbol (zero hits predate a
+  since-landed fix), `git log -S` for when it left, read the linked issue's real
+  state — *before* you repeat it, size work against it, or report it as status. A
+  second reviewer who trusts the prose and restates it in a new issue/report has
+  not corroborated it: that is one unverified claim copied twice, not two
+  confirmations. **(2) Confirm the ratchet tightens:** its passing gate
+  enumerates only "is this entry still present," never "is its reason still true"
+  (the green-gate-clears-only-what-it-enumerated rule below), so diff the entry
+  **set** across baseline revisions and flag a list where entries only ever
+  arrive and none ever leaves. Fix: each entry needs an expiry or re-verification
+  trigger (a date, a linked-issue state check, a periodic sweep) — the lifecycle
+  a grant needs beyond correct-scope-at-creation (`infra-iac-containers.md`) and
+  the *allowed-not-required* discipline a size-pin already carries
+  (`skill-authoring-and-size.md`). **Not** the phantom-contract case
+  (`testing-and-evals.md`: a doc-comment naming a branch the code **never**
+  implemented — never true); here the comment **was** true and drifted.
 - **A green gate clears only the surface it enumerated — not one it never
   visited.** A gate that ran and passed proves something about the routes,
   states, and inputs its coverage set actually reached; a surface it never
