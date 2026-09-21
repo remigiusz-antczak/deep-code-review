@@ -176,6 +176,20 @@ on.
   release ritual added "to go faster" — is coordination overhead priced as progress; a measured
   bottleneck justifies **switching** to a better one, never **running both**. Adopting a
   methodology is itself subject to the bar above.
+- **Order a commit-hook / CI chain cheapest-decisive-check-first — a trivial-mistake retry must
+  not pay the expensive tier.** A commit / pre-commit / pre-push hook or a CI pipeline that runs
+  its slow, expensive tier (the full test suite, a container build, an integration stage) *before*
+  a cheap, near-instant check (commit-message format, lint, a formatter, a banlist grep) charges
+  the whole expensive cost on **every** retry of a mistake the cheap check would have caught in
+  milliseconds — a mis-formatted commit message re-runs the entire suite each time the author
+  re-types the message. Order the stages by cost, cheapest first, so the common cheap failure
+  **fails fast** before the expensive tier ever starts. This is a **free re-ordering**, taken
+  *before* the paid platform levers in the paragraph above (cache a step, shard the suite) — the
+  same cheapest-decisive-first discipline as running the cheapest go/no-go query first in
+  `data-quality.md`, here spending CI minutes and developer wait instead of a query. Grep the hook
+  / workflow definition (`.pre-commit-config.yaml`, `.husky/`, a `lefthook.yml`, a
+  `.github/workflows/*.yml` job `needs:` graph or step order) and read whether a fast
+  lint/format/message check gates the slow build/test tier or merely trails it.
 
 ---
 

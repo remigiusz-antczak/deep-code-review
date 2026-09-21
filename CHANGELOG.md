@@ -3,6 +3,17 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.413.0] — 2026-09-21
+
+### deep-code-review — five correctness/review heuristics: hook stage-ordering, a hanging assert on a big/cyclic graph, terminator-as-content, guard-parity across N sibling copies, and a floor undone by a later clamp (#953, #954, #956, #957, #958)
+
+- **`release-engineering.md`** (#953): a commit/CI hook chain that runs the expensive test/build tier **before** a near-instant message-format/lint check re-pays the full expensive cost on every retry of a trivial mistake — order stages **cheapest-decisive-first** and fail fast (a free re-ordering, taken before the paid cache/shard/cancel levers). Cross-refs `data-quality.md`'s cheapest-decisive-query-first.
+- **`testing-and-evals.md`** (#954): a deep-equality assertion passing a large or **cyclic** object graph as `actual` can **hang** the runner — most assert libs deep-traverse + pretty-print the value to build a failure diff, blowing the per-test timeout; worst on the failure path (no green run triggers it). Assert on a small scalar drawn from the object, never the live node. Distinct from the weak-assertion bullet (asserts too *little*; this asserts on too *much*).
+- **`language-stack-redflags.md`** (#956, new "Hand-rolled parsing & delimiter scanning" section): a "find the terminator" scanner that stops at the **first** line/token equal to the delimiter (a closing `---` frontmatter fence, an end-of-headers blank line, a multipart boundary) misparses silently when the delimiter can occur **legitimately as content** before the real terminator — it splits at the wrong point without raising. Fix: a real parser / require open+close / count paired fences / raise on ambiguity. Distinct from the switch/case control-flow terminator.
+- **`testing-and-evals.md`** (#957): when one reconciliation/diff check is copy-pasted per **N sibling fields/types**, diff the copies' **guard conditions** against each other line-by-line — a dropped edge-case guard in exactly one copy is invisible read in isolation and has no idiom to grep (copies differ by field name); the odd-one-out is the finding. Fix: collapse to one parameterized check, else restore the guard + a shared-precondition test. Distinct from `method.md`'s fix-propagation completeness sweeps (greppable, fix-driven), the coherence test (identical-output, same field), and the #929 sentinel-sibling (value-set in one function; this is guard-parity across N functions).
+- **`language-stack-redflags.md`** (#958, new "Composed numeric bounds" section): a min-size **floor** (`Math.max(size, MIN)`) silently undone by a **later** clamp re-bounding the same value against room from a dependent dimension (`Math.min(size, TRACK_END - position)`) — two individually-correct lines violate the floor's invariant only when composed, near a boundary the happy path rarely hits. Fix: re-assert the floor after the clamp, or clamp position first so room ≥ MIN. Distinct from a single size-cap clamp (one bound, no floor to undo).
+- +5 evals (516 total), non-telegraphing. Closes #953, #954, #956, #957, #958.
+
 ## [1.412.0] — 2026-09-21
 
 ### agentic-delivery — five orchestration lessons: unreachable self-polling lane, relaying a subagent's measured findings, shared-VCS-identity write-ownership, repointing a review lens off a wholly-contested surface, and a standing default that must reach subagents (#939, #942, #944, #946, #947, #948)

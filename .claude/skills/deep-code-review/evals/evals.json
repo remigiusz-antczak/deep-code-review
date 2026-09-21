@@ -5308,6 +5308,56 @@
         "Gives the detection: you cannot grep the token name (the literal never names it), so use siblings as the oracle -- most reference the token, this one writes a literal equal to the token's current value",
         "Prescribes referencing the token so the value has one source, and treats a genuine intentional one-off as a marked exception (named constant/comment), not a silent literal"
       ]
+    },
+    {
+      "id": "hook-runs-slow-tier-before-the-instant-message-check",
+      "prompt": "Fictional repo, Tessellate. The pre-commit hook runs three steps in this sequence: (1) the full Jest suite (about 4 minutes), (2) a Docker image build (about 3 minutes), (3) a commit-message-format lint (about 50 milliseconds). A contributor keeps fumbling the message format, and each attempt re-runs the whole suite and the image build before finally reaching the message check. The reviewer signs off: \"The hook runs the format lint, the test suite, and the image build -- every gate a commit has to pass is present and enforced, so the hook is solid.\" Do you agree with the sign-off?",
+      "expected_output": "No. The gates are all present but in a self-defeating sequence: the ~50ms message-format lint runs last, behind ~7 minutes of suite plus image build, so every retry of a trivial message typo pays the entire expensive tier for a mistake the instant check would have caught first. The fix is a free re-ordering -- put the cheap, decisive checks (message format, lint, formatter) first so the common cheap failure fails fast before the slow test/build tier ever starts. 'All gates present' is not the same as 'gates in the right order'; the reviewer graded presence and missed cost.",
+      "expectations": [
+        "Names the sequencing as the defect: the cheap message/format/lint check must run before the expensive test/build tier, not after it",
+        "Explains the wasted cost -- every retry of a trivial mistake re-pays the slow tier that the instant check would have rejected in milliseconds",
+        "Fix is a free re-ordering (cheapest-decisive check first, fail fast), not accepting the hook merely because every gate is present"
+      ]
+    },
+    {
+      "id": "equality-assert-on-whole-graph-node-times-out",
+      "prompt": "Fictional graph editor, Weaver. A test builds a scene graph in which each node holds a reference back to its parent and references to its neighbour nodes, then asserts the whole tree with assertEqual(rootNode, expectedRoot, \"scene mismatch\"). In CI the test intermittently exceeds the 5-second per-test timeout and gets marked flaky. A developer proposes raising the per-test timeout to 30 seconds. The reviewer agrees: \"The graph is large, so the comparison is just slow -- bumping the per-test timeout to 30 seconds is the right fix.\" Do you agree?",
+      "expected_output": "No. The time is not spent comparing large data -- it is the assertion library trying to serialize and format rootNode to build a failure diff. Because each node references its parent and neighbours, the graph is self-referential, and traversing it to render a message does not terminate cheaply; that formatting step is what blows the timeout, and it is triggered on the failure path (the values differ), which no green run exercises. Raising the timeout only moves or hides the wall and still yields no usable diff. Fix: assert on a small scalar drawn from the object -- a node id, a child count, a status flag -- or snapshot a bounded, acyclic projection, never the whole live node.",
+      "expectations": [
+        "Identifies the cause as the assertion library deep-traversing/serializing the large self-referential node graph to build a failure diff, not slow application logic",
+        "Notes the cost lands on the failure path (and is aggravated by the cyclic references), so a larger timeout hides rather than fixes it and still gives no usable diff",
+        "Fix asserts on a small scalar or a bounded acyclic projection drawn from the object, not the entire live node"
+      ]
+    },
+    {
+      "id": "frontmatter-split-stops-at-first-triple-dash",
+      "prompt": "Fictional static-site generator, Quill. It separates a Markdown file's YAML frontmatter from the body by reading lines from the top until it reaches the first line equal to ---, which it treats as the close of the frontmatter. Two posts render wrong: one whose body opens with a horizontal rule written as ---, and one whose frontmatter has a multi-line description value that itself contains a line of ---. The reviewer signs off: \"The splitter locates the closing --- and separates the two sections; it passes on every post in our fixture set.\" Do you agree?",
+      "expected_output": "No. Matching the first line equal to --- assumes --- only ever appears as the real closing fence, but --- can appear legitimately as content before it -- a body horizontal rule, or a --- line inside a multi-line frontmatter value. On those posts the scan stops early and mis-splits, silently handing a truncated header or a swallowed body downstream instead of raising. The fixtures pass only because none of them happened to contain an interior ---, so a green fixture set is not evidence. Fix: use a real YAML/frontmatter parser, or, if hand-rolling, require the block to both open and close with the fence (a lone opener is an error), count the paired fences rather than matching the first, and raise on the ambiguous/malformed case rather than returning a best-effort split.",
+      "expectations": [
+        "Names the failure: matching the first --- ends the span early whenever --- occurs legitimately as content before the true closing fence",
+        "Rejects the green fixtures as evidence -- they pass only because none contained an interior ---, and the bug needs content that does",
+        "Fix uses a real parser or requires open+close / counts fences and raises on the ambiguous case instead of silently splitting"
+      ]
+    },
+    {
+      "id": "one-of-several-reconciliation-blocks-missing-null-skip",
+      "prompt": "Fictional inventory service, Palletdb. A reconciler compares the declared stock count against a separately computed count for six attributes (onHand, reserved, damaged, inTransit, returned, quarantined) and logs a discrepancy per attribute. It is six near-identical blocks, one per attribute. Reading them: five of the blocks begin with the line `if declared is None: continue` and then run the comparison; the quarantined block starts straight at the comparison with no such line. The suite is green -- its fixtures set every attribute on every row. The reviewer signs off: \"I read all six reconciliation blocks; each one is present and reads correctly on its own, so reconciliation coverage is complete.\" Do you agree?",
+      "expected_output": "No. Reading each block in isolation is exactly what hides this. Five copies skip rows where `declared is None` and the quarantined copy dropped that precondition, so on a legacy/unset row it will log a spurious discrepancy the other five would not. 'Each reads correctly on its own' is the wrong check: the defect exists only relative to the siblings, and it surfaces only when you diff the copies' guard conditions against each other -- the block with one fewer precondition than the rest is the finding. The green suite proves nothing because its fixtures populate every attribute and never exercise the None branch. Fix: collapse the six into one parameterized reconciliation so there is a single guard set, or restore the `is None` skip in the quarantined block and add a test over a row where that attribute is unset.",
+      "expectations": [
+        "Catches that the quarantined block dropped the `declared is None` precondition the other five share -- drift in one of N parallel copies",
+        "Rejects 'each reads correctly on its own' as the wrong test; the defect is visible only by diffing the copies' guard conditions against each other",
+        "Fix parameterizes the six into one check (or restores the missing guard) and adds an unset/legacy-row test; notes the all-populated fixtures never exercise the dropped branch"
+      ]
+    },
+    {
+      "id": "min-bar-width-canceled-by-right-edge-clamp",
+      "prompt": "Fictional timeline UI, Chronoline. Each event bar's pixel width is first computed as w = Math.max(w, 4) so that zero-duration events stay visible as a 4px sliver. Later, in the layout pass, w = Math.min(w, trackEnd - x) so a bar cannot extend past the right edge of its track. A zero-duration event whose start x lands within 4px of trackEnd renders with width 0 and disappears. The reviewer signs off: \"Both lines are standard -- one keeps tiny bars visible, the other prevents overflow, and each is correct on its own; the vanishing bar is probably bad input data.\" Do you agree?",
+      "expected_output": "No -- it is not the data. Each line is correct alone, but their composition is the bug. When x is within 4px of trackEnd, trackEnd - x is less than 4, so the later Math.min re-bounds the width back down to that remaining room -- below the 4px minimum the earlier Math.max established, here to 0. The minimum-width guarantee holds everywhere except within 4px of the far edge, which ordinary test data rarely hits. Fix: re-assert the minimum after the edge bound (w = Math.max(Math.min(w, trackEnd - x), 4), then decide explicitly whether the bar overflows or the track grows, since you can no longer have both), or bound x first so at least 4px of room remains.",
+      "expectations": [
+        "Identifies composition as the defect -- the later Math.min re-bounds width below the 4px minimum the earlier Math.max set, not bad input",
+        "Gives the exact trigger: start x within 4px (the minimum) of trackEnd, so trackEnd - x is below the minimum",
+        "Fix re-asserts the minimum after the edge bound, or bounds x first so remaining room stays at or above the minimum -- not 'blame the data'"
+      ]
     }
   ]
 }
