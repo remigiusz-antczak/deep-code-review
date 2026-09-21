@@ -3,6 +3,15 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.427.0] — 2026-09-21
+
+### deep-code-review — a fail-soft catch that hides a failure as empty, RSC tab bodies that execute regardless of the active tab, and a count that re-derives a subset of a shared predicate (#1010, #1011, #1014)
+
+- **`reliability-error-handling.md`** (#1010): the **near-inverse of #977** — every read in a fail-soft fan-out *is* guarded, but a `.catch(() => [])` (or `null`/`0`) **launders a failed read into a legitimate-looking empty state**, so a viewer and any downstream count can't tell a failed load from a genuinely-empty one (a shared dashboard silently under-reports live data as absence). A **matched pair**: #977's own prescribed one-line `.catch(() => [])` closes the crash and opens this false-empty — so guard every read *and* make each fallback **distinguishable** (a tagged/degraded result, last-good behind a stale badge), reserving the empty state for a read that succeeded with no rows; test that the reject-path and the resolve-empty-path diverge.
+- **`language-stack-redflags.md`** (#1011): a parent Server Component builds N section bodies (each a Server Component doing real reads) and hands them to a **client** tab shell as already-built `ReactNode`s; the client's `activeTab` gates only **display**, so all N executed server-side and shipped on every request — wasted work, over-fetch, and a **leak** (hidden-tab data serialized into the RSC payload, readable in the response regardless of the CSS hiding it). Gate the **work**, not the display (per-tab route/segment, or an activation-gated boundary; pass inputs, never the pre-built node of an unopened tab). Distinct from #998 (run-location/frequency follows the import site — a client display gate can't *un-run* eagerly-built server children).
+- **`method.md`** (#1014, Phase 2 technique): a boolean predicate legitimately needs A **and** B and is correctly centralized in one helper, but an **ad-hoc re-check** elsewhere (a count/filter/badge) reimplements only **part** of it (tests A, drops B) → a user-facing count silently disagrees with the canonical predicate though every field read is genuine. Start from the canonical predicate, enumerate its fields, grep every site reading them in a boolean/count context, and diff its condition set — a **proper-subset** site is the finding; call the shared predicate, never reimplement a subset. Distinct from #957 (N peer copies with no canonical, drifting from each other) and from #1000/audit-call-sites (the re-derivation isn't a *call site* of the helper at all, which is exactly why a call-site audit skips it).
+- +3 evals (544 total), non-telegraphing. Closes #1010, #1011, #1014.
+
 ## [1.426.0] — 2026-09-21
 
 ### deep-code-review — a build scanner that emits nothing for an omitted dir, a secret gate blind to an omitted committable type, an override that misses the decision field, and a substring join that leaks a row (#997, #1006, #1007, #1008)

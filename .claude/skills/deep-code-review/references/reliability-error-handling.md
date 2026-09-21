@@ -258,6 +258,38 @@ Review:
   **logic guard clause** across N reconciliation checks, harm = an inflated miscount — this diffs an
   **error-handling wrapper** across N I/O reads, harm = a crash that violates a stated fail-soft
   contract).
+- **The near-inverse of the unguarded read: a fail-soft `.catch` that returns a bare
+  *empty* value launders a failed load into a legitimate-looking empty state — every read
+  is guarded, yet a failure is indistinguishable from a genuinely-empty section.** Harden
+  the fan-out above the way it prescribes — wrap **every** read in its own `.catch` — and a
+  subtler defect reappears whenever the fallback is an *empty* result the surface treats as
+  real data: `.catch(err => { log(err); return [] })` (or `return null` / `{ items: [] }` /
+  `0`). The page no longer crashes, but a transient failure of one read (a DB blip, a
+  timed-out upstream, a throttled API) now renders as **"0 items / nothing here"** —
+  indistinguishable, to a viewer *and* to any downstream count/total, from the section being
+  **genuinely empty**. On a shared multi-viewer dashboard that is worse than the crash it
+  replaced: the crash was loud and got fixed; the false-empty is silent, shows the same "0"
+  to everyone, and under-reports live data as absence. The resilience the fan-out was
+  reviewed for (don't take the page down) is present; the **honesty** — saying *why* a
+  section is empty — is missing. It is a **data-state** defect, not a control-flow one.
+  **Fix: the fallback must carry a distinguishable failed/degraded signal, not an empty that
+  reads as "nothing here."** Return a tagged result — `{ status: 'error' }`,
+  `{ stale: true, lastGood }`, or a sentinel the renderer maps to an error/stale marker —
+  and render "couldn't load" (or last-good behind a stale badge) for a *failed* read,
+  reserving the empty state for a read that **succeeded with no rows**. Test the fork: stub
+  the read to **reject** and assert an error/stale marker (not the empty state); stub it to
+  **resolve empty** and assert the empty state — the two must diverge. **Discriminator vs
+  the unguarded-read bullet above:** that one is a **missing** guard → one rejection crashes
+  the loader (fix: add the guard the siblings have); this one is a **present** guard whose
+  fallback *value* **erases the error/empty distinction** (fix: make the fallback honest).
+  They are a matched pair — the sibling's one-line `.catch(() => [])` *closes* the crash and
+  *opens* this false-empty, so guard every read **and** make each guard's fallback
+  distinguishable from success-with-no-rows. Distinct from the *present-empty ≠ absent* rule
+  in the Detection procedure (that bars **writing** an empty artifact over last-good *bytes*;
+  this bars **displaying** a failed read as empty) and from the fail-closed-to-last-good
+  preflight below (which degrades to a cached snapshot; a bare read fan-out usually has none,
+  so the honest fallback here is an explicit error/stale marker, or last-good only where one
+  exists).
 - **Echo-verify writes** when the cost of silent drift is high: compare the
   store's returned record to what was sent (field-by-field or hash), not only
   "HTTP 200."
@@ -470,7 +502,10 @@ subsystem never executing in production while local runs look fine.
 ---
 
 **🚩 red flags**: swallowed exceptions; one read in a documented fail-soft parallel fan-out left
-without its own `.catch` while its siblings have one (one transient reject crashes the whole loader);
+without its own `.catch` while its siblings have one (one transient reject crashes the whole loader); a
+fail-soft fan-out whose per-read `.catch` returns a bare **empty** value (`[]`/`null`/`0`) so a failed
+read renders as a legitimate empty state indistinguishable from success-with-no-rows (return a tagged
+error/stale fallback, not a silent empty);
 retry-forever; no timeout; a per-request
 retry cap with no aggregate retry budget; a downstream call started on a fresh full
 timeout instead of the caller's remaining deadline; non-idempotent

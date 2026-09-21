@@ -120,6 +120,40 @@ grep -rInE 'console\.log|print\(|dbg!|System\.out\.print|fmt\.Print' .
   client-reference **proxy** when a **server** component imports it; this is the opposite
   direction, a **directive-less** module pulled **into the client** and re-run, breaking a
   render-once / server-only assumption.
+- **A client "tab shell" handed already-built Server-Component section bodies as props gates
+  only *display*, not *execution* — every section has already run its server-side reads and
+  shipped, whichever tab is active.** A common App-Router shape: a **Server Component** parent
+  builds N sections — each itself a Server Component doing real data reads/joins — and passes
+  them to a **Client Component** tab switcher as an array of `{ id, node }`, where `node` is
+  the **already-rendered** `ReactNode`. The client's `activeTab` state then chooses which
+  `node` to show (conditional render, or CSS `hidden`). But by the time that state exists,
+  **all N section bodies have already executed on the server** — every read, every join, for
+  every tab — and their output (plus any data serialized into the RSC payload) has already
+  been sent to the client. The active-tab state only reveals a pre-computed node; it cannot
+  un-run the work. Consequences: **wasted server work** (N sections fetched to show one),
+  repeated **over-fetch / cost** on every request, and a **leak** — data for tabs the user
+  never opens (an admin-only panel, another user's detail, a not-yet-entitled section) is
+  computed and **serialized into the payload the browser receives**, readable in the network
+  response regardless of the CSS that hides it. It passes typecheck and unit tests (each
+  section renders correctly in isolation) and looks right in the browser (only the active tab
+  shows), so only reading the RSC payload or the server query log exposes it. **Fix — gate
+  the *work*, not the *display*:** make an inactive section's body **not run** until it is
+  chosen. Give each tab its **own route/segment** (`/dashboard/overview`, `/dashboard/billing`)
+  so navigation, not a client boolean, triggers the read; or defer the body behind a boundary
+  that only renders on activation (a lazily-loaded segment that fetches on mount, a route
+  handler the tab calls when selected). Pass the **inputs** a tab needs (an id, a query key)
+  to something that fetches on demand — never the pre-built node of an unopened tab. Verify by
+  reading the RSC/network payload of a freshly-loaded page and confirming an unopened tab's
+  data is **absent**, and that the server query log shows only the active tab's reads.
+  **Discriminator vs the directive-less-module bullet above:** that one is about *where and
+  how often a single module runs* — a directive-less module pulled into a **client** import
+  re-executes in the browser every render and can leak a module-scope secret; this one is
+  about **eagerly-built server children that ran correctly, once, on the server, but cannot be
+  un-run by a client display gate**. There the fix enforces the boundary so the module never
+  reaches the client; here the boundary is fine (the sections are legitimately server-side) and
+  the fix is to **defer execution** so an inactive tab's reads never fire. Passing an
+  already-executed server node to a client switcher is exactly what makes "which tab is active"
+  unable to prevent the other tabs' work.
 
 ## Go
 
