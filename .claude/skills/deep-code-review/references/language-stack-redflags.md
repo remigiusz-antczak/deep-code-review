@@ -96,6 +96,30 @@ grep -rInE 'console\.log|print\(|dbg!|System\.out\.print|fmt\.Print' .
   is the React form; see the subscription-lifetime rule in `concurrency-shared-state.md`).
 - `process.env.X` read at module load without validation → silent misconfig.
 - Secrets or API keys referenced in client/bundle code → shipped to the browser.
+- **A component/module with *no* `"use client"` directive does not thereby "render
+  once per request on the server" — render *location* (and so render *frequency*)
+  follows **who imports it**, not the file's own contents.** In a server/client-split
+  framework (React Server Components / the Next.js App Router), a directive-less module
+  is *shared*: imported by a Server Component it runs on the server (once per request);
+  imported and rendered by a **Client Component** it is pulled into the **client
+  bundle**, runs in the browser, and re-executes on **every** client render. A "runs
+  exactly once on the server" assumption baked into it then breaks silently the instant a
+  client caller imports it — a module-load singleton now re-initializes in each client
+  that loads the bundle (its value exposed client-side, no longer one-per-request); a
+  one-time side effect in the render path fires on every client render; an id / nonce /
+  timestamp "generated once" varies per client; a **server-only secret / env var** read
+  at module scope ships to the browser. It passes typecheck, lint, and unit tests (which
+  import the module in a plain Node context where it *does* run once), so only a real
+  client-side render exposes it. **Fix:** never infer render-frequency from file
+  content — enforce the boundary. Add a build-time `server-only` import to any module
+  that must never reach the client (it **fails the build** if a client module pulls it
+  in), keep once-per-request state in a request-scoped server construct rather than
+  module scope, and verify the real import graph, not the directive. Distinct from the
+  plain-value-**proxied**-across-the-boundary defect (`frontend-a11y.md` § "Server/client
+  boundary — a plain value proxied across it") — that is a **client** value turned into a
+  client-reference **proxy** when a **server** component imports it; this is the opposite
+  direction, a **directive-less** module pulled **into the client** and re-run, breaking a
+  render-once / server-only assumption.
 
 ## Go
 
@@ -283,6 +307,34 @@ finding.
   (`security-appsec.md` clamps a requested size to a hard maximum — one bound, no floor for it to
   undo); the defect here is the **composition** of two individually-correct bounds, not either
   bound alone.
+
+## Partition / segmentation validity gates — the minimal terminal segment
+
+- **A validity gate that checks a partition/segmentation accepts every interior piece but
+  rejects a *valid* decomposition whose **last** piece is the minimum allowed size — an
+  off-by-one at the terminal (or wraparound) boundary.** A routine that carves a sequence
+  or a **ring** (a directed cycle of `N` nodes indexed `0..N-1`, split into sub-cycles by
+  "backward chord" edges) into contiguous pieces derives each interior piece's size the
+  same way, but the **terminal** piece is computed from *what remains* — a remainder, or a
+  wraparound index that must close back onto the start — so its size is a *different*
+  expression from the interior ones. A check written and tested against interior pieces
+  (`len > MIN`, `end - start > MIN`, `next = i + 1` with no `% N`) then mishandles the
+  terminal piece at its smallest legal size: the strict `>` rejects a piece that is
+  *exactly* `MIN` (it needed `>=`), or the un-wrapped `i + 1` runs off the end instead of
+  returning to `0`. The result is a **false rejection** — a decomposition that is genuinely
+  valid is reported invalid (or the routine throws / returns an out-of-range index), the
+  mirror of the usual off-by-one that *admits one too many*. It survives because happy-path
+  fixtures use uneven pieces where the last one sits comfortably above `MIN`; the boundary
+  only bites when the terminal piece lands *at* the floor. **Fix:** make the terminal
+  comparison inclusive (`>=` / `<=`, matching the interior pieces' true contract), compute
+  every ring index modulo `N`, and assert the **partition invariant** — the piece sizes sum
+  to `N` and each piece (the last included) is `>= MIN`. **Test** the degenerate boundaries
+  explicitly: `N` and `N - 1`; the **all-minimal** decomposition (every piece exactly `MIN`,
+  so the terminal piece is minimal too); and a decomposition whose *only* minimal piece is
+  the terminal one. Distinct from the composed-floor-and-clamp defect above — that is two
+  individually-correct numeric bounds whose *composition* violates a floor; this is a
+  **single** boundary comparator one step too strict at the *terminal / wraparound*
+  position, wrongly rejecting a valid input rather than admitting an invalid one.
 
 ## SQL / migrations
 
