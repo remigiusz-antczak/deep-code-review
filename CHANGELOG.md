@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.374.0] — 2026-09-21
+
+### deep-code-review — twin-file parity and an outermost guard verify a fix without proving the fixed file has no other path to the same sink (#867)
+
+- **`method.md`**: the Phase 4 completeness sweeps run outward across the tree (grep the fixed idiom, land every instance, re-grep for survivors); this adds the inward companion. Two routine ways of *verifying* a hardening fix leave the fixed file's own other paths unswept — paths that hold no instance of the idiom for a grep to reach. A fix justified by parity with a sibling/twin file supplies no idiom to grep and proves only that the file is as broad as that sibling, never that it lacks a second path (an inner helper, a self-recursive branch, another function) to the same sink. A fix justified by a top-level/outermost guard closes only the outer layer — every field access beneath it, in any other function of the same file, is a separate still-unguarded read (distinct from the one-function "never throws" rule in `reliability-error-handling.md`). So after matching the twin or landing the outer check, sweep the fixed file itself for every path to the same sink over the same input and confirm the guard's actual scope reaches it. Cross-refs the #814 named-list / instance-set sweep as the outward companion. +1 eval.
+
 ## [1.373.0] — 2026-09-21
 
 ### deep-code-review — a PR whose only conflict is a generated artifact re-conflicts on every merge; a local merge driver never runs on the forge's server-side merge (#842, #862)

@@ -504,7 +504,29 @@ code — the Phase 2 / Phase 4 seam. Separate an **acknowledged** boundary from 
 full enumeration, a real gap only when the search never left the ticket; and an
 **easier**-to-fix sibling skipped while harder ones were fixed is the tell of an
 accidental miss, not a deliberate deferral. (The field-shape version — patching a shared
-request-body builder only where reported — is `domain-checklists.md` Domain H.) Also identify
+request-body builder only where reported — is `domain-checklists.md` Domain H.) **The same completeness discipline also runs *inward*, into the file the
+fix just landed in.** The sweeps above go *outward*, across the tree — grepping the fixed idiom (or the
+re-derived shape) to land every instance, then re-grepping to confirm none survive. Two routine ways
+of *verifying* a hardening fix defeat that check while leaving the fixed file's own other
+paths unswept — paths that hold **no instance of the fixed idiom for a grep to reach**. A
+fix justified by **parity with a sibling/twin file** (*"the other handler already guards
+this; this one now matches it"*) supplies no idiom to grep at all, and proves only that
+the fixed file is *as broad as* that sibling — never that it lacks a **second path to the
+same data or sink**: an inner helper, a self-recursive branch, or another function
+independently interpreting the same untrusted input, for which a flatter sibling has no
+counterpart to match. A fix justified by a **top-level/outermost guard** (an
+`isinstance`/type/auth/escaping check on the whole input) closes only the outer layer —
+every `.get`/subscript/`for ... in`/decode on a *field beneath* it, in **any other
+function of the same file**, is a separate, still-unguarded read of that value (not the
+one-function rule in `reliability-error-handling.md`, which is other throwing calls
+*inside a single function*; this is other functions across the file). So after matching
+the twin or landing the outer check, **sweep the fixed file itself**: grep it for every
+function, branch, and nested access reaching the same sink over the same input, name each,
+and confirm the new guard's *actual scope* reaches it — the class is closed only when the
+fixed file's own remaining paths are accounted for, not when the diff reaches parity with
+a sibling or an outer check goes green. This is the **inward companion** to the outward
+instance-set/named-list sweep: that one lands the siblings a fix skipped; this lands the
+fixed file's own deeper paths the *verification method* skipped. Also identify
 **compounds** — findings from
 different domains where one disables another's safeguard; a compound's severity
 is the joint effect, which can exceed either part, so state it as one finding
