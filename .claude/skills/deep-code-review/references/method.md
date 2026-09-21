@@ -563,8 +563,11 @@ is the joint effect, which can exceed either part, so state it as one finding
 with the fix order. **Distinguish a live defect from a documented past one:**
 comments often narrate fixed incidents in present tense — before reporting, check
 (a) is there a test pinning the corrected behavior? and (b) does
-`git log -S'<symbol>' --oneline` show the fix already landed? If either is yes,
-it is a historical note, not a finding. **When a review files its findings as tracked
+`git log -S'<symbol>' --oneline` **on the ref that governs "shipped"** (`git log
+-S'<symbol>' origin/<that-ref>`) show the fix already landed? (A **bare** `git log -S`
+reads whatever checkout is out — branch-blind; on a diverged repo the deploy line is a
+different ref, so scope the containment check to it, `branch-and-merge-hygiene.md`.) If
+either is yes, it is a historical note, not a finding. **When a review files its findings as tracked
 issues, dedupe against recently-*closed* issues, not only open ones** — a finding matching an
 issue closed in the last few weeks may already be fixed, so re-filing it re-lanes shipped work
 and erodes trust in the tracker; search closed issues for the symbol/symptom (the route, the

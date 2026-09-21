@@ -5190,6 +5190,17 @@
         "Calls for a per-entry expiry or re-verification trigger, not a permanent documented reason",
         "Flags that a green audit proves only that the accepted set is still accepted (no new unaccepted finding), never that any row's reason still holds; and that an only-growing, never-shrinking set shows the suppression never tightens, so it must be diffed across regenerations to confirm entries actually leave"
       ]
+    },
+    {
+      "id": "is-x-shipped-needs-containment-on-the-deploy-branch-not-a-grep-or-merged-status",
+      "prompt": "A teammate asks whether feature X has shipped to production. A reviewer runs `git log --all --grep` for it, finds the commit, sees the feature's PR is marked merged, and concludes \"yes -- it's live in prod.\" Context: the team develops on a long-lived `development` branch that is about 1,500 commits ahead of `main`; production deploys only from `main`, and the open PR meant to reconcile `development` into `main` is currently conflicting. Is the reviewer's \"it's live\" conclusion sound, and if not, what would actually settle it?",
+      "expected_output": "The \"it's live\" conclusion is rejected as unproven: a `git log --grep` hit and a \"merged\" PR status only establish that the change is on `development` (or some branch), not on `main`, the branch production deploys from. What settles it is a containment check against `main` specifically -- `git merge-base --is-ancestor <sha> origin/main` -- and, because a squash/rebase merge makes the original SHA a non-ancestor even when the content shipped, corroboration via `main`'s tree (git grep / git show on the `main` ref) or the forge record of the merge into `main`. \"Merged to development\" (integration milestone) and \"promoted to main\" (shipped) are kept distinct, and the ~1,500-commit divergence with a conflicting reconcile PR is flagged as a release-readiness risk in its own right.",
+      "expectations": [
+        "Rejects \"it's live\" as unproven -- a commit-grep hit and a merged-PR status establish presence on development / some branch, not that the change reached main, the branch prod deploys from",
+        "Names a containment check against main specifically (e.g. git merge-base --is-ancestor <sha> origin/main, or grepping/reading main's own tree) as what would settle it -- not a repo-wide or current-branch grep, and not the merged status",
+        "Handles the squash/rebase false-negative: a preserved-SHA ancestry test can read \"not shipped\" for work that did ship, so corroborates via main's tree (git grep / git show on the main ref) or the forge record of the merge into main",
+        "Distinguishes merged-to-integration (development) from promoted-to-release (main), and/or flags the large divergence plus conflicting reconcile PR as a release-readiness risk rather than treating grep-visible work as live"
+      ]
     }
   ]
 }

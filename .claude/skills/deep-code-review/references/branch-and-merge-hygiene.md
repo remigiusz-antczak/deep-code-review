@@ -819,6 +819,38 @@ explicit approval** — the same opt-in bar as the Phase 6 imprint.
   issues closed elsewhere), it is **verify-then-close**, not merge; closing someone
   else's PR is an owner call (§6 opening) — surface the touched-path-vs-HEAD evidence,
   don't act unilaterally.
+- **"Is X shipped / live / already fixed?" is a *containment* question against the ref
+  that governs "shipped" — a commit-grep on whatever checkout you have out, or a "the PR
+  is merged" status, answers a different one.** A `git log --grep` / `-S` hit, a green
+  "Files changed", or a merged-PR record only proves the change exists on **some** ref —
+  the branch currently checked out, or the integration branch a PR merged **into**. Where
+  a long-lived integration / `development` branch runs far ahead of the line that actually
+  governs "shipped" (the release branch, the ref deploy promotes from — often **not** the
+  integration tip, and never a **stale local checkout** drifted behind its own remote), a
+  large amount of merged, grep-visible work is integration-only and **not live**; the naive
+  check then invites a wrong action — dispatching a doc-correction PR to match a "shipped"
+  model, telling a stakeholder a feature is live, closing a deploy-readiness item. So
+  **name which ref governs "shipped"** first (where deploy promotes from, not where the
+  newest work lands), then test **containment against that ref** with the §3 toolkit pointed
+  at it, not at your current branch: `git merge-base --is-ancestor <landed-sha>
+  origin/<governing-ref>` proves containment **only while the SHA is preserved** (a normal /
+  fast-forward merge). Under a **squash / rebase / cherry-pick** the original SHA is not an
+  ancestor though the content shipped — the §3 squash-merge false-negative, the mirror trap —
+  so corroborate the way §3 does but **against the governing ref**: grep **its tree** for the
+  landed symbol (`git grep <symbol> origin/<governing-ref>`, `git show
+  origin/<governing-ref>:<path>`), `git cherry`, or the forge record of the PR that merged
+  **into that ref**. "Merged" with no target named is the ambiguity: **merged-to-integration**
+  (done, integration-first) and **promoted-to-release** (shipped) are different milestones —
+  scope every status claim to the one you verified. Distinct from the stale-base silent-revert
+  above (*would merging undo shipped work* — needs the base's post-fork side); this is *did the
+  work reach the governing line* — needs containment against that ref. The same branch-blindness
+  defeats the "is this finding already fixed?" reproduce check in `method.md` (its `git log -S`
+  run on the wrong checkout clears a defect still live on the deploy line), and it is the
+  verification the "a merged PR is a **proxy**, not the outcome" rule (`report-format.md`) leaves
+  unspecified. Treat a governing branch thousands of commits behind its integration branch, with a
+  conflicting / stale reconcile PR, as a **release-readiness blocker in its own right**: surface it
+  early, and when the frontier is genuinely exhausted the honest state is "gated on the promotion /
+  owner," not more integration-only work that widens the gap.
 - **Before closing a PR as duplicate or superseded, diff the two tips — title or
   branch similarity is not patch equality.** Two PRs that look like the same fix can
   differ in a hunk only one carries (one tip gates a `useReducedMotion` check behind
@@ -1010,6 +1042,10 @@ squash). Mark any PR column `unverified` when forge auth was absent (§1).
   on "rebase + re-run CI" — with no check of the target's post-branch commits on the paths
   it touches; a squash, a toward-the-branch resolution, or a semantically-coupled clean
   merge then drops that newer work with no conflict to catch it.
+- An "X is shipped / live" or "already fixed" claim resting on a commit-grep, a "Files
+  changed" diff, or a merged-PR status on the **current / integration branch**, with no
+  containment check against the ref that governs deploy — on a repo where integration runs
+  far ahead of the release line, much grep-visible / merged work is not live.
 - A batch merged off one up-front green + `MERGEABLE` snapshot with **no per-merge
   re-check**, or a **merge sweep run concurrently with a conflict-resolution lane**
   against the same base — the moving base head flips later members back to

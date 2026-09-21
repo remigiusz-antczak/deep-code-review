@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.404.0] — 2026-09-21
+
+### deep-code-review — "is X shipped?" is a containment question against the governing branch, not a commit-grep or a merged-PR status (#924, #925)
+
+- **`branch-and-merge-hygiene.md`** (+ a method.md routing cross-ref): a `git log --grep`/`-S` hit, a green Files-changed, or a merged-PR record only proves a change exists on some ref — the checkout you have out, or the integration branch a PR merged into. Where a long-lived integration/development branch runs far ahead of the ref that governs shipped (the release branch deploy promotes from — often not the integration tip, and never a stale local checkout drifted behind its remote), a lot of merged, grep-visible work is integration-only and not live, and the naive check invites a wrong action (a doc-correction PR to match a false shipped model, telling a stakeholder a feature is live, closing a deploy-readiness item). Name the governing ref first, then test containment against it with the §3 toolkit — `git merge-base --is-ancestor <sha> origin/<ref>` while the SHA is preserved, falling back to grepping that ref's tree / the forge merge-into-ref record under squash/rebase (a bare `--is-ancestor` alone contradicts §3's squash false-negative). Distinct from #818 (the inverse — would merging undo shipped work) and the merged-PR-as-proxy caution (which names the trap but supplies no test); method.md's reproduce check is scoped to the governing ref. +1 eval.
+
 ## [1.403.0] — 2026-09-21
 
 ### agentic-delivery — a hard-to-write test must not hold a ready fix hostage: verify-first is a fails-before / passes-after floor, not a ceiling (#922)
