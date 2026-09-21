@@ -979,6 +979,54 @@ until it renders:
   them **see, reach, and edit** what they added, in that same view (read-back). An
   input that posts to a store but never shows the value back is a defect, not a
   slice — the user cannot tell it worked, correct it, or undo it.
+- **A completion claim must not outrun the publish pipeline that makes it
+  visible — "Applied" copy on a write that still lands in an intermediate store,
+  read back from a different plane, silently disagrees with itself.** The
+  read-back rule above asks that a written value appear *somewhere* in the same
+  view; this is the sharper failure where a read-back surface *exists* but sits
+  on a **different data plane** than the write, with an async or manual step
+  between them, and the success copy was strengthened to hide it. A flow changes
+  from "submit → a human reviews → it goes live" to "submit → applies
+  immediately," and the success UI is updated to match ("Applied", "X is
+  updated", "no review step needed") — but the actual publish path is **not**
+  collapsed: the write still lands in a durable audit log, an auto-opened pull
+  request, a moderation queue, or an outbox, and the value only reaches the read
+  surface after a *separate* merge / cache invalidation / rebuild / batch job /
+  second human approval. The read surface the user then looks at is often a
+  **static build, a CDN-cached response, a replica, or a materialized view** the
+  write does not touch until that step runs — so it is not "eventually
+  consistent in a few seconds," it is *not connected*. The user sees the old
+  value with **no diff, no "publishing" state, no pending indicator** directly
+  under a message asserting the change is live, making a successful write
+  indistinguishable from a silently dropped one (they may re-submit → duplicate
+  writes, or stop trusting the edit affordance). It ships because the copy change
+  and the pipeline are audited separately: the "waiting for a human" affordance
+  is removed from the *submission* surface without checking that the *display*
+  surface still depends on that step to ever update — and the same change often
+  **removes a "pending" badge/banner** that used to key off the old status enum,
+  deleting the one honest signal at the moment it deletes the caveat that signal
+  implied. **Detect** by finding a write whose success UI carries an unqualified
+  completion verb ("Applied/Saved/Updated/Live/Published"), especially one
+  recently strengthened from a weaker claim ("Submitted/Sent for
+  review/Queued"); trace where the write lands vs. where the read surface reads
+  from; if they are different planes with an async/manual step between,
+  reproduce it — perform the write, re-render the *exact same view* without the
+  manual step, and if the old value stands with zero in-flight indication, that
+  is the bug. **Giveaway:** a slower flow in the same product (e.g. a
+  reviewer-facing acceptance screen) often still states the real caveat honestly
+  — the regression is that the faster-feeling flow dropped language the slower
+  one keeps. **Fix, either closes it:** (A) make the read surface reflect the
+  write — patch/refetch/revalidate the exact value in the same session, and keep
+  a "not yet live" indicator until the async step actually completes (don't
+  delete it because the status enum changed); or (B) make the copy match reality
+  — say what happened ("recorded; a change request was opened automatically —
+  live once it's reviewed and published"), not borrowed "Applied" language from a
+  faster path. **Distinct** from the optimistic-write bullets
+  (`concurrency-shared-state.md`'s read-modify-write; the
+  reverted-optimistic-write mapper in this file): those are an optimistic-UI
+  *race* (a newer write clobbered, or a raw error string leaked) — this is a
+  **process/pipeline mismatch**, the copy asserting completion the read plane
+  cannot back, with no race involved.
 - **WYSIWYG, never raw markup shown to users.** Store markup; **display it
   formatted**. A rich-text field that shows `**bold**`, `<u>`, or `*` tokens while
   the user types has leaked its storage format into the UI — render what the text
@@ -994,6 +1042,45 @@ until it renders:
   still a control that does nothing when clicked. Validate the option set against the **actual data
   distribution** — render only options with a non-zero count (or show the count) rather than hardcoding a
   menu from an enum that outruns the data — so a user never picks a filter that silently returns nothing.
+- **A cross-view in-page anchor is a dead control when the section it targets
+  omits its `id` in the empty state.** A different flavour of dead control from
+  the two above (a no-op handler; an option no row satisfies): here the control
+  — a link `<a href="/detail/{id}#section">` (or a `router.push` to a fragment)
+  in a list/table view — is wired correctly, but the element it scrolls to is a
+  detail-page section rendered `{data ? <section id="section">…</section> :
+  null}`, so under the empty condition the whole wrapper *and its `id`* vanish
+  and the fragment resolves to nothing: clicking scrolls nowhere, silent and
+  indistinguishable from a broken button. The cross-link is typically built
+  **unconditionally** off the same `0/0`-style counts that drive the empty
+  condition, so the exact records whose section is absent are the ones whose
+  link renders (often styled as a "problem"/danger state). It survives review
+  because each component reads fine alone — the detail page's conditional looks
+  like ordinary "don't render a diagram with no data," the list's link like
+  ordinary "click through to detail" — the defect exists only in the
+  *combination*, invisible to a diff-scoped or per-component pass; and an
+  end-to-end test on the anchor is usually written against a record that *has*
+  data, never the empty record where the target disappears. It hides especially
+  well when sibling views (a card, a preview drawer, a relationships table)
+  render the same empty condition *honestly*, so the one `null` reads as
+  consistent with well-handled neighbours. **Detect** by taking any element
+  conditionally rendered on a data-presence check that carries a DOM `id` (an
+  in-page anchor target) and grepping every `href`/router-push that builds a
+  fragment matching that `id`; if the link is unconditional (or gated on a
+  derived count that can legitimately be `0`) while the section is gated on the
+  same data, the empty-record case is a guaranteed dead anchor. **Fix — keep the
+  wrapper and its `id` always mounted and put an honest inline empty-state
+  message inside it**: this closes both halves at once — the region is never a
+  blank void, and the anchor always resolves to a real in-viewport element; or,
+  if the section genuinely must not exist, gate the cross-link too (don't emit a
+  clickable fragment into a section this record won't have, or point it at the
+  page without the fragment). **Distinct** from the section-chrome-gated-on-
+  content rule above (#886 — a header/count/affordance emitted *outside* a
+  filtered row's presence conditional in the *same* component, leaving a heading
+  over a blank strip): that is a same-component chrome/empty defect; this is a
+  *cross-component* anchor contract broken by a conditionally-omitted `id`,
+  whose blast radius is a dead link on *another* surface. The blank-region half
+  is the honest-empty rule above; the novel half here is the cross-view anchor
+  target that disappears with it.
 - **A disabled action explains its cause and its recovery path — not a dead end.**
   Looking disabled (gate 1's *disabled-looks-disabled*) and disabling the same way at
   every instance (the *interaction-consistency* bullet below) prove the control's
@@ -1173,6 +1260,111 @@ mid-scroll) — this is its inverse, a **false** defect the capture *invents* fo
 element; and a UX instance of `method.md`'s *reproduce a finding against the right surface* family
 (dev-vs-prod build, the gate's own detector) — here the wrong instrument is the **full-page stitch
 capture mode**, and the right one is the live render or a non-stitched per-viewport shot.
+
+## A clean checklist is a floor, not a ceiling — read the render and critique composition
+
+The gates below (the enforcing gate's named pixel checklist, the rendered-route
+sweep, the full-page-stitch caution above) prove a screenshot was *taken* and
+scanned for enumerable, per-element defects — overlap, clip, contrast, a missing
+empty/loading state, a focus ring. They do **not** prove the surface *looks
+acceptable*, and treating "every checklist item passed" as "this is fine" is a
+category error a binary list structurally invites. **Composition quality —
+spacing rhythm, alignment consistency (a column of badges that don't share a
+right edge), visual density, information hierarchy, chrome/nav consistency,
+element overlap — is a *relational* judgment across everything on screen at
+once, not a yes/no property of any one component**, so no fixed line item
+expresses it, and a checklist-shaped audit returns a confident "no defects
+found" on a page a human flags for cramped, ragged, or unscannable layout in
+seconds. The clean report is not evidence of quality; it is the **default output
+of a shallow pass**, rewarded because a short "no defects" costs less than prose
+that must justify each finding (clean-pass bias). A second bias compounds it: a
+checklist audit that *does* surface something visually wrong is
+disproportionately likely to **wave it away as a "screenshot artifact"** rather
+than file it — the legitimate full-page-stitch caution above (#973) inverted
+into a blanket excuse. **The requirement is not a longer checklist:** a UX audit
+must *read the rendered screenshots* and produce a **written per-surface
+composition critique against a named best-in-class bar** — the operative
+question is "would a senior designer at a top product org ship this?", answered
+in a few sentences about spacing, alignment, density, hierarchy, chrome
+consistency, and overlap — and a bare "no defects found" with no such critique is
+**`unverified`, not a pass** (a status with an unstated inspection — the
+enforcing gate's own rule). Capture **multiple real-viewport screenshots at the
+scroll positions a user actually lands on**, never a single full-page stitch:
+the stitch both hides composition problems (nothing is framed as a user sees it)
+and fabricates others (a `fixed`/`sticky` element pasted at its first-frame
+position). **Distinct** from #973 above (a capture artifact producing a false
+*positive* on fixed/sticky chrome — verify against the live DOM before *filing*):
+this is the opposite direction, a checklist producing a false *negative* on real
+composition defects, and it warns that #973's "it's an artifact" reasoning must
+not be inverted into an excuse to *discard* a real finding unverified. Distinct
+too from the enforcing gate's pixel checklist (necessary, and it catches the
+enumerable defects — but not sufficient for composition) and from requiring only
+that a screenshot be *inspected* against that checklist (#198) or that review
+cite heuristics rather than taste (#124): this reports the failure that survives
+all three — the checklist exists, is consulted, and still rubber-stamps.
+
+## "Feels like a prototype" is usually one or two shared-primitive roots — fix the root, not each surface
+
+When users call a web app "a mediocre prototype" — hover states that behave
+oddly, motion that isn't smooth, pages that seem to take seconds to appear — the
+cause is rarely scattered per-page bugs; it is usually **one or two
+shared-primitive roots**, each producing the symptom on *every* surface that
+touches it, so one base fix repairs all of them and a symptom-by-symptom patch
+pass never converges. This is the diagnostic form of root-cause-not-symptom
+(SKILL.md principle 9): don't file N per-page tickets, find the shared root. Two
+roots recur often enough to check for by default:
+
+- **Root 1 — bespoke interactive elements bypass the design-system primitive and
+  so lack the base affordances it bakes in.** A design system puts
+  `cursor: pointer` and a hover/focus `transition` on its `Button`/`Link`
+  primitive; any element written as a raw `<button>`/`<a>` (a one-off, a
+  third-party wrapper, a "just this once") inherits neither, so it reads as inert
+  (default arrow cursor over a clickable thing) or janky (colour/background
+  snapping with no ease). The fix belongs at the **base/global layer**, not per
+  component: a global `button:not([disabled]) { cursor: pointer; }` and one
+  shared `transition` on `a, button, [role="button"], [role="tab"]`. Two
+  mechanics are load-bearing: use the **attribute selector `:not([disabled])`,
+  not the pseudo-class `:not(:disabled)`** — the pseudo-class's lower specificity
+  lets a per-instance utility (`cursor-help`) get silently out-specified back to
+  the base rule (a real, previously-hit regression, worth a test); and **exclude
+  `box-shadow` from the transitioned properties** (never `transition: all`),
+  because keyboard focus rings are commonly a `box-shadow` and easing one in over
+  ~150 ms reads as laggy, unresponsive keyboard navigation — a genuine a11y
+  regression traded for a cosmetic one. Pair the transition with a
+  `prefers-reduced-motion: reduce` zero-out (`frontend-a11y.md` owns the
+  reduced-motion rule — including the JS-driven case; this only adds that the
+  base transition needs the same guard).
+- **Root 2 — an SSR page ships above-the-fold content at `opacity: 0`, waiting on
+  client JS to reveal it.** An entrance-animation pattern renders an
+  above-the-fold element with `opacity: 0` (or a `translateY` offset) in the
+  server markup and a client effect flips it visible on hydration. But the server
+  already sent the real content — it is merely *invisible* until the bundle
+  loads, parses, and hydrates, so a page that rendered correctly and fast **reads
+  as an empty/blank multi-second load**; the animation library manufactured the
+  delay. Fix: never gate already-rendered SSR content above the fold behind a JS
+  reveal — play the same effect as a **pure CSS `@keyframes` starting at first
+  paint** (`animation: fadeIn 300ms ease-out`), or drop the `opacity: 0` initial
+  state above the fold and reserve reveal-on-scroll/-mount for content that
+  starts below the fold (where the delay is invisible anyway).
+
+**Don't over-fix:** in most design systems the `Button`/`Link` primitive and the
+focus ring are already correct — the gap is specifically the code that
+*bypasses* them, so audit for **bypass sites** (raw `<button>`/`<a>` outside the
+primitive), don't rewrite components that already work. **Verify, don't assume:**
+for Root 1, read `getComputedStyle(el).cursor` and `.transitionProperty` on the
+actual bespoke element before/after, not by eye; for Root 2, `curl` the route
+with no JS running and confirm the real content — not a shell/skeleton — is in
+the raw HTML with its visible styling already applied, not shipped `opacity: 0`.
+**Distinct** from three neighbours: the *interaction-consistency* bullet above (a
+*shared* component whose hover/active/focus reaction diverges *across instances*
+from per-instance overrides) — Root 1 is an element that never went through the
+primitive at all, so it lacks the base affordance rather than diverging on it;
+the *not-dead-before-hydration* / dead-`<Suspense>` bullets (an *interactive
+control* disabled or blank pre-hydration) — Root 2 hides *already-rendered
+non-interactive content* whose data was ready, gating only its *visibility* on
+hydration; and the composition-critique rule above (#988), which is how you
+*notice* the app feels off — this is how you *diagnose it to the shared root*
+once noticed.
 
 ## Export / print / share is a second render surface
 
