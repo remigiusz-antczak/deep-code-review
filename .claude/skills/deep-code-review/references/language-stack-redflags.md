@@ -233,6 +233,57 @@ non-comment line immediately following a `return`/`throw` at the same indent lev
 are leads, not verdicts — read the surrounding control flow before recording either as a
 finding.
 
+## Hand-rolled parsing & delimiter scanning
+
+- **A "find the terminator" scanner that stops at the *first* line/token equal to the
+  delimiter mis-parses when that delimiter can also occur *legitimately as content* before
+  the real terminator.** Hand-rolled splitting of a structured header from a body — the
+  closing `---` of a YAML/TOML frontmatter fence, an end-of-headers blank line, a `--boundary`
+  in a multipart body, a here-doc terminator, a section separator — commonly scans for "the
+  first line/token that equals `X`" and treats it as the end. It silently misparses the moment
+  `X` can appear *inside* the content it scans over: a `---` on its own line within frontmatter
+  (a horizontal rule, a `---` list item, a value that contains it), a blank line inside a
+  folded block, a chosen multipart boundary that also occurs in a part's bytes. The scanner
+  stops early, splits at the wrong point, and hands both halves downstream **without raising** —
+  a truncated header parsed as "complete", body content swallowed into the header (or the
+  reverse) — so the corruption surfaces far from the parse. It survives review because the
+  happy-path fixture (no `X` in the content) passes; the bug needs content that *contains* the
+  delimiter, which fixtures rarely include. Fixes, most robust first: **use a real parser** for
+  the format (a YAML / MIME / multipart library) instead of a line scan; if hand-rolling,
+  require the **open+close structure** (a frontmatter block must both open *and* close with the
+  fence — a lone opening fence is an error, not an empty body), **count** paired fences rather
+  than matching the first, pick a multipart boundary **proven absent** from the payload, and
+  **raise on the ambiguous/malformed case** rather than returning a best-effort split. Grep
+  lead: a `split`/`indexOf`/`find`/`readline` loop comparing a line against a literal delimiter
+  (`=== '---'`, `== "---"`, `.startswith('---')`, `line == boundary`) with no bound, no fence
+  count, and no error branch. (Distinct from the switch/case "missing terminator" above — that
+  is a `break`/`fallthrough` control-flow default; this is a *data*-delimiter scan that ends the
+  wrong span.)
+
+## Composed numeric bounds — a floor and a later clamp
+
+- **A min-size floor is silently undone by a *later* boundary clamp that re-bounds the same
+  value against room computed from a dependent dimension.** One line enforces a floor —
+  `size = Math.max(size, MIN)` ("keep a zero-length item visible", a minimum column width, a
+  minimum touch-target) — and a later, independently-correct line bounds the same variable to
+  the space that is left — `size = Math.min(size, TRACK_END - position)` (don't overflow the
+  track / container / page). Each line is right on its own, but **composed** they violate the
+  floor's own invariant: whenever `position` sits within `MIN` of the far edge,
+  `TRACK_END - position < MIN`, the `Math.min` wins, and the result drops **below** `MIN`
+  (often to `0` or negative) — exactly the state the floor existed to prevent, reachable only
+  near a boundary the happy-path test rarely exercises. The two lines are usually far apart (the
+  floor in a sizing helper, the clamp in a layout/paint pass), so neither reads as wrong in
+  isolation and the item simply "disappears" or collapses near an edge. Fix: **re-assert the
+  floor after the clamp** (`size = Math.max(Math.min(size, room), MIN)` — then decide explicitly
+  whether the item overflows or the container grows, because you can no longer satisfy both), or
+  **clamp `position` first** so `room >= MIN` holds by construction. Grep lead: the same variable
+  passed through a `Math.max(…, K)` / `max(…, K)` **and** a later `Math.min(…, expr)` /
+  `min(…, expr)` (or `clamp()` calls) where `expr` derives from a position/offset — read whether
+  any later bound can fall under the earlier floor. Distinct from a single size-cap clamp
+  (`security-appsec.md` clamps a requested size to a hard maximum — one bound, no floor for it to
+  undo); the defect here is the **composition** of two individually-correct bounds, not either
+  bound alone.
+
 ## SQL / migrations
 
 - String interpolation into SQL (see per-language above).

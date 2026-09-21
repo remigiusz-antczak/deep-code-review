@@ -169,6 +169,23 @@ explicit third choice), not which one this review prefers.
   auth gate.)
 - **Meaningful assertions.** Not `assertTrue(true)`; not a mock that makes the
   test pass trivially; not coverage inflated by tests that assert nothing.
+- **A deep-equality assertion on a large or *cyclic* object graph can *hang* the runner
+  instead of failing fast.** Passing a big, deeply-connected, or self-referential object as
+  the `actual` value of an equality assert (`assert.deepEqual`, `expect(node).toEqual(...)`,
+  an `assertEqual(node, expected, msg)` with the whole live node as the first arg) makes most
+  assertion libraries **deep-traverse and pretty-print** that value to build the failure diff —
+  and on a large or circular graph that formatting step blows the test-runner's per-test
+  timeout, so a check that *should* fail in a millisecond instead **times out** with no usable
+  diff and reads as a slow/flaky suite rather than the real assertion failure. The trap is
+  worst exactly when the assert is *meant* to fail (the value is wrong), because the failure
+  path **is** the expensive-formatting path — a passing run never triggers it, so it slips
+  every green CI. Assert on a **small scalar drawn from** the object — an `id`, a `length`, a
+  status flag, a bounded serialized projection — never the live node itself; if structure must
+  be compared, snapshot a **bounded, acyclic** projection. (A cyclic graph also throws
+  `TypeError: Converting circular structure to JSON` under a naive `JSON.stringify` expectation
+  — a louder symptom of the same "don't hand a live object graph to a formatter" root cause.)
+  Distinct from the weak-assertion bullet above: that asserts too *little*; this asserts on too
+  *much*, and the whole cost lands on the failure path where no green run exercises it.
 - **Mutation testing when a coverage number is doing the assurance work.**
   Line/branch coverage shows what *ran*, not whether a test would *catch a fault*
   in it (`pitest.org`); a suite can hit a high percentage and assert almost
@@ -286,6 +303,30 @@ explicit third choice), not which one this review prefers.
   (a port, a re-implementation, a circular-import copy), link the source of
   truth in a comment **and** add a test that runs one fixture through both paths
   and asserts identical output.
+- **When one check is copy-pasted per sibling field/type, diff the copies' *guard
+  conditions*, not just their overall shape.** A reconciliation or diff check — compare an
+  authored/declared value against a derived/computed one and flag disagreement — is often
+  written **separately for each of N sibling fields or entity types** (one block per column,
+  per resource kind, per metric), the N blocks near-identical but for the field they name.
+  Read one at a time, every block looks internally consistent and plausible, so the review
+  waves each through. The bug that hides here is a **dropped edge-case guard in exactly one
+  copy** — an `if (authored == null) continue`, a "skip legacy rows", a rounding/tolerance
+  clause, a "both sides present" precondition — that the *other* copies keep and this one lost
+  (a bad merge, a hand-edit, a copy taken before the guard was added). It leaves **no idiom to
+  grep** (the copies differ by design, by field name) and no single copy reads as wrong; it is
+  visible only **relative to its siblings**. Detection: line the N copies up and **diff their
+  guard/branch conditions against each other**, treating the set as mutually cross-checking —
+  the copy with one fewer guard clause than the rest is the finding. Fix: collapse the N copies
+  into **one parameterized check** (the no-duplication cure — then there is one guard set, not
+  N to keep in sync); if they must stay separate, restore the missing guard and add a test that
+  pins the shared precondition across all of them. Distinct from the outward/inward completeness
+  sweeps in `method.md` (those propagate or verify **one fix** across the tree or within the
+  fixed file, greppable by a shared idiom; this cross-diffs **N pre-existing parallel copies**
+  whose only shared signal is their *structure*, driven by no fix), from the coherence test
+  above (which runs one fixture through mirrored paths asserting *identical* output —
+  inapplicable when each copy targets a different field), and from the sentinel-sibling
+  comparator in `language-stack-redflags.md` (value-set completeness inside **one** function;
+  this is guard-set parity across **N** functions).
 - **A store with interchangeable backends fails on the one the tests never instantiate — and a
   faithful fake cannot catch it.** When one interface has several implementations chosen at runtime
   (an in-memory/file store for dev/CI, a SQL database in prod), a field added to the model must be
