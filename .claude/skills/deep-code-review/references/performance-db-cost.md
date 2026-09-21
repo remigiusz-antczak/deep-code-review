@@ -252,7 +252,10 @@ Every billable or slow call must map to value delivered.
   measure real cost-per-call and failure rate, then extrapolate and get sign-off
   before the full apply. Don't discover the bill after the batch.
 - **LLM specifics**: `max_tokens` and `timeout` set; prompt/response sizes
-  bounded; a deterministic fallback path for when generation fails, with a
+  bounded — but a *size* bound is not a drop-priority: what silently gets shed when the
+  assembled input overflows (often the system instructions) is governed by a correctness
+  check at the context-assembly seam (`testing-and-evals.md`), not by this cost bound; a deterministic
+  fallback path for when generation fails, with a
   counter reporting how often the fallback fired; don't ask the model to do work
   a function can do (see `security-ai-agents.md`). On cost:
   - **Prompt-cache breakpoint**: put the cacheable marker on the longest *stable*

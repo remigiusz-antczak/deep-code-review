@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.390.0] — 2026-09-21
+
+### deep-code-review — the context-assembly budget check is not RAG-specific: any prompt assembler that overflows sheds the earliest text, often the system prompt (LLM app quality)
+
+- **`testing-and-evals.md`** (+ routes from `domain-checklists.md` §C and `performance-db-cost.md`): generalizes the context-assembly bullet from "a RAG app" to any prompt assembler — a RAG pipeline is one instance, a chat turn concatenating a system prompt + conversation history + tool output + the user's message is another. New content: the drop-priority on overflow must be explicit and protect the load-bearing input, because a naive assembler sheds the *earliest* text — the system instructions — silently; the existing mechanics (count with the real tokenizer, drop whole units not mid-content, Lost-in-the-Middle placement) are kept and generalized in place, not restated. A size bound is not a drop-priority (the perf one-liner routes here); domain-checklists §C gains a one-line pointer to the seam, disambiguated from the long-running-agent compaction case. +1 eval.
+
 ## [1.389.0] — 2026-09-21
 
 ### deep-code-review — API4 response-size and execution-time axes: clamp a client-set result count to a server maximum; bound inbound request wall-clock (OWASP API Security Top 10)

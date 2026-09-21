@@ -587,22 +587,30 @@ needs its own harness:
   retrieval component over external knowledge — Lewis et al., 2020. The metric names
   are operationalized by open-source eval libraries, e.g. RAGAS — a *tool*, not a
   standard: frame the concept, don't pin a vendor's exact formula.)
-- **A RAG app is also evaluated at the *context-assembly* seam — input budget and
-  chunk placement, not only retrieval.** Two silent-failure checks between "the right
-  chunks were retrieved" and "the model answered": **(a) input-budget overflow** — when
-  the top-k chunks exceed the model's context budget, is the check computed with the
-  target model's **actual tokenizer** (not a char/word estimate), and on overflow are
-  **whole lowest-ranked chunks dropped**, never a chunk **truncated mid-content** (a
-  mid-cut fact or citation the model then completes or misattributes)? Force the overflow
-  in a test and assert no partial chunk reached the prompt, the dropped chunks were the
-  lowest-ranked, and the drop was counted/logged. **(b) placement, not just fit** — even
-  when everything fits, a chunk ranked below #1 but still needed for the answer should sit
-  at the **start or end**, not left buried mid-concatenation in raw retrieval-score order
-  (ranking is imperfect, so the chunk with the answer is not always the #1 hit): models access "relevant
-  information in the middle of long contexts" markedly worse ("Lost in the Middle," Liu et
-  al., 2023). This is **per-call prompt arithmetic** — distinct from a long-running agent's
-  conversation compaction (`security-ai-agents.md`) and from an output `max_tokens` cap
-  (that bounds what comes *out*; this bounds what goes *in*).
+- **Any prompt assembler is evaluated at the *context-assembly* seam — input budget and
+  placement, not only its upstream quality.** A RAG pipeline is one instance; a chat turn
+  that concatenates a system prompt + conversation history + tool/function output + the
+  user's message is another. Any assembler that joins parts with no budget guard has the
+  same two silent-failure checks between "the right material was gathered" and "the model
+  answered": **(a) input-budget overflow** — when the assembled input exceeds the model's
+  context budget, is the check computed with the target model's **actual tokenizer** (not
+  a char/word estimate), and on overflow are **whole lowest-priority units dropped** (for
+  RAG, the lowest-ranked chunks), never a unit **truncated mid-content** (a mid-cut fact or
+  citation the model then completes or misattributes)? **The drop-priority must be explicit
+  and protect the load-bearing input** — a naive assembler that merely overflows silently
+  sheds the *earliest* text, which is the **system instructions** (or clips a load-bearing
+  data blob), so the model quietly stops following its own rules with no error raised; a
+  chat assembler's priority is "shed the oldest turns, never the system prompt or the
+  current user message." Force the overflow in a test and assert no partial unit reached the
+  prompt, the dropped units were the lowest-priority (never the system prompt), and the drop
+  was counted/logged. **(b) placement, not just fit** — even when everything fits, a unit
+  ranked below #1 but still needed for the answer should sit at the **start or end**, not
+  left buried mid-concatenation in raw score order (ranking is imperfect, so the part with
+  the answer is not always the #1 hit): models access "relevant information in the middle of
+  long contexts" markedly worse ("Lost in the Middle," Liu et al., 2023). This is **per-call
+  prompt arithmetic** — distinct from a long-running agent's conversation compaction
+  (`security-ai-agents.md`) and from an output `max_tokens` cap (that bounds what comes
+  *out*; this bounds what goes *in*).
 - **An agent (tool-using, multi-step) is evaluated on its trajectory, not only its
   final answer.** Score tool-call *selection* (did it pick the right tool), tool-call
   *arguments* (well-formed, correctly bound), and multi-step *task completion* (the

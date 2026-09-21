@@ -204,6 +204,13 @@ skill**, also walk AST01–AST10 in `references/security-agent-skills.md`.
 - **Bound consumption** (LLM06:2026, was LLM10:2025): token/cost/rate caps enforced *before* each
   billable call; loop caps; breakers on 402/429; a **no-model fast path** for
   rejected/unauthenticated input so a flood can't burn budget.
+- **A prompt assembler needs an explicit input budget and drop-priority** — any single
+  call that concatenates a system prompt + history + tool output + user input (RAG is one
+  case, not the only one) overflows silently and typically sheds the *earliest* text, i.e.
+  the **system instructions**, so the model stops following its own rules with no error.
+  This is **per-call** assembly, distinct from the long-running-agent compaction/memory
+  case (🚩 below) — the budget + drop-priority + placement seam check is
+  `references/testing-and-evals.md` (context-assembly seam).
 - **A safety param set at a call site is a claim, not a guarantee** — confirm the
   layer below actually applies it. A `temperature`, `verify=`, `timeout`, `signal`,
   dry-run flag, allowlist, or `readOnly` can be silently dropped/overridden by a
