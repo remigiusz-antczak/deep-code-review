@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.394.0] — 2026-09-21
+
+### agentic-delivery — a shared bot account authors every post, so no claim/status/liveness check is attributable: stamp a per-agent id (#901)
+
+- **`multi-session-coordination.md`**: the claim registry names an `agent_id` per entry (#635), but that is a field in one file — every other surface these peers share (status posts, PR comments, hand-offs, a free-text "taking X") is authored by the same bot account / git identity, so the channel attributes nothing: two peers' "taking this" are byte-indistinguishable, and no reader can say which peer holds an item or is behind a post. That silently voids two existing rules — the one-sided-board liveness tell (vacuous under a shared account: every board is one-sided by construction) and the stale-claim reconcile (checks that lane's liveness — impossible when the claim never recorded whose). Fix: one stable per-agent id distinct from the shared account (a session/agent id, or a worktree/host tag), stamped as the same value in three places — the registry row's `agent_id`, every message the agent posts (prose included, machine-parseable), and the handle its liveness probe runs against — the join key binding a claim to its author and the author to a liveness check. Distinct from #635 (a registry field) and the auto-merger's agent-vs-human ownership mark. +1 eval.
+
 ## [1.393.0] — 2026-09-21
 
 ### deep-code-review — a hand-rolled overlay that copies a dialog's ARIA but skips the shared focus-trap/inert helper asserts a modality it never delivers (#903)
