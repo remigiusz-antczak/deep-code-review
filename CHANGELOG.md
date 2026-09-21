@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.373.0] — 2026-09-21
+
+### deep-code-review — a PR whose only conflict is a generated artifact re-conflicts on every merge; a local merge driver never runs on the forge's server-side merge (#842, #862)
+
+- **`branch-and-merge-hygiene.md`**: two chained bullets on generated-artifact conflicts in a forge/CI context. (#842) When a PR's *only* conflicting path is a derived file neither side hand-edited (a lockfile, a bundled `dist/`, a checksums/manifest, a generated schema) and many open PRs regenerate it, "rebase and it's clean" is false by construction — each same-class merge rewrites the serialization, so a just-rebased branch re-conflicts before it can land, an unwinnable loop under steady merge volume. Distinct from the silent-drop case (fires on *no* conflict) and §5's coordinator-driven sweep treadmill (this needs no coordinator). After the second such re-conflict, stop rebasing: land it once inside a no-same-class-merge window (taking trunk's copy and re-running the generator), and durably regenerate the artifact post-merge/in-CI or serialize-and-regenerate-last. (#862) A custom merge driver (`.gitattributes merge=`) is client-side only; the forge's server-side merge (the Merge button / API / auto-merge / queue) does not run it — on GitHub, observed to ignore custom drivers (the mechanism should generalize but is not independently verified for other forges) — so a driver-"resolvable" conflict still shows CONFLICTING and blocks auto-merge; the only host-visible fix is a pushed no-conflict commit or a CI build. +2 evals.
+
 ## [1.372.0] — 2026-09-21
 
 ### deep-code-review — sibling view-variants re-declare a shared lookup/primitive a sibling already imports, so a new enum member silently misses one layout (#863, #825)

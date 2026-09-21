@@ -714,8 +714,63 @@ explicit approval** — the same opt-in bar as the Phase 6 imprint.
   rebuilds** from the combined source (a superset fold), never layering its own
   partial build. Flag a generated-artifact PR as **superset-fold-required** while a
   sibling source PR is open.
+- **A PR whose *only* conflict is a generated/compiled artifact re-conflicts on
+  every same-class merge — a structural loop, not a normal rebase-able conflict.**
+  When the sole conflicting path is a **derived file neither side hand-edited** (a
+  lockfile, a bundled `dist/`, a checksums/manifest file, a generated schema or
+  client) and many open PRs regenerate it from a shared source, "rebase and it's
+  clean" is false **by construction**: each same-class PR that lands **rewrites that
+  serialization**, so a branch you just rebased green re-conflicts before it can
+  merge, and under steady merge volume it re-stales faster than any human/agent can
+  rebase — an unwinnable loop that reads as a perpetually "almost-ready" PR while
+  compute burns on re-rebasing. Distinct from the silent-drop case above, which
+  fires on *no* conflict (last writer wins); this fires on a conflict that **never
+  clears**. Distinct, too, from §5's sweep-while-resolving treadmill (a *coordinator*
+  re-dirties a cluster with a concurrent merge sweep): this needs no coordinator —
+  ambient merge cadence alone drives it. **After the second re-conflict whose only
+  path is a generated artifact, stop rebasing** and change strategy: get the PR green
+  + mergeable **once** and land it inside a window where no same-class PR merges
+  (§5's freeze-the-merge-step / a single merge-seat holding the class's other merges
+  for the brief handoff), always **taking trunk's copy and re-running the generator**
+  rather than hand-splicing (the regenerate-from-merged-inputs rule above). **Durable
+  fix — stop conflicting at all:** regenerate the artifact as a **post-merge / CI
+  step** (or stop committing it and build it in CI), or serialize the class and
+  regenerate it **last**, so same-class PRs never block each other on it. A local git
+  merge driver looks like the durable fix but only mitigates *your* local merge — see
+  the next bullet. **🚩** rising rebase attempts per merged PR whose only conflicting
+  path is a generated file; treating a generated-only conflict as resolve-by-rebase.
+- **A git merge driver resolves the artifact conflict only on a *local* merge/rebase
+  — the forge's server-side merge never runs it, so the PR still shows CONFLICTING.**
+  Registering a custom driver (`.gitattributes merge=<driver>` + a resolver script
+  set up per-clone) so conflicts in the artifact auto-resolve (take either side +
+  regenerate) fixes only a **local** `git merge`/`rebase` on a clone where the driver
+  is registered. A merge driver is a **client-side** feature — registered per-clone
+  in local git config, run only by git on a clone that has it — so a host that
+  computes mergeability and merges on **its own servers** has no reason to run your
+  repo's local resolver and treats the artifact as an ordinary conflict. On
+  **GitHub** this is observable: the "Merge" button / merge API / auto-merge / merge
+  queue and its mergeability computation **ignore custom `.gitattributes merge=`
+  drivers** (the mechanism should generalize to other forges but is **not
+  independently verified** here, per the async-mergeability note in §5) — so a PR
+  whose only conflict is the driver-handled artifact still displays **CONFLICTING
+  indefinitely**, the host merge
+  button stays disabled, and auto-merge never fires, even though the conflict is
+  trivially auto-resolvable on any driver-registered clone. Teams then waste effort
+  "rebasing to fix it" through the host UI (which can't), conclude the driver is
+  broken (it isn't), or build a second driver (redundant). **Don't read
+  host-CONFLICTING on a driver-managed path as a real conflict** — confirm whether the
+  *only* conflicting path is the driver-managed artifact. **Land it via a local
+  merge/rebase on a driver-registered clone, then push the resolved head:** the local
+  resolution leaves no conflict, so the push flips the host to MERGEABLE and the
+  normal host merge then works; **document the mechanic next to the driver**
+  ("resolve/land locally; the host won't run this driver"). The rule uniting both
+  bullets: **a merge driver is a client-side convenience for your own merge; it never
+  changes the PR's forge-visible state** — the only host-visible fix is a **pushed
+  commit that carries no conflict** (regenerate-and-push, or don't commit the artifact
+  and build it in CI, previous bullet). **🚩** a PR stuck at host-CONFLICTING whose
+  only conflicting path is a driver-managed generated file.
 - **A subset absorbed at a stale SHA can revert a later fix — no conflict, last
-  writer wins.** Distinct from the generated-artifact fold above (which is a
+  writer wins.** Distinct from the superset-fold case above (which is a
   *derived* file rebuilt from source): here PR B **absorbed PR A's own source
   content** at an **older** tip, missing A's later commits (say a disabled-submit
   guard that A fixed in follow-ups). Merge A, then merge B, and B's stale copy of
