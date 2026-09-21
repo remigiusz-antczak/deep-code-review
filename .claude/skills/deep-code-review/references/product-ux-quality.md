@@ -732,6 +732,39 @@ domain H) with a UX consequence, so it is ruled on here too.
   imports the shared lookup/primitives module and the shared source becomes the
   single place a new member is added; the one legitimate per-variant difference (a
   size class) becomes a prop, not a second copy.
+- **A raw value hardcoded equal to a design token's *current* value is design-system
+  drift that renders identically today and breaks the moment the token moves.** This
+  section's *one source per concept* thesis covers **design tokens** — a spacing step, a
+  colour, a radius, a z-index — as much as components: the token is the single source,
+  and a component that writes the literal (`padding: 16px`, `color: '#2563eb'`,
+  `borderRadius: 8`) instead of referencing the token (`var(--space-4)`,
+  `tokens.color.primary`, `theme.radii.md`) has forked that value. It is invisible to
+  every check that compares the *rendered* result, because the literal was chosen to
+  equal the token's value **now**: the hardcoded copy and its token-referencing siblings
+  paint the same pixels, so a screenshot diff, a visual-regression snapshot, and an
+  eyeball pass all agree "consistent." The drift is **latent** — when the token changes
+  for any reason (a rebrand, a density pass, a dark-theme remap, a 4px→8px grid
+  migration) every sibling that references it moves and the hardcoded one silently
+  stays, so the surface that looked most conformant becomes the lone off-brand element,
+  caught only by the next screenshot after the token change. Detection cannot grep the
+  token *name* (the point is the literal never names it); use the **siblings as the
+  oracle** — for a given style property, if most components of a class reference a token
+  and one writes a literal whose value equals a defined token's current value, that
+  literal is almost certainly a bypass, not a deliberate one-off (the same
+  minority-outlier diff as the disclosure-`aria-expanded` sweep in `frontend-a11y.md`).
+  The mirror shape is the **same literal with no token at all, repeated across N
+  siblings** (`16px` inlined everywhere): that repetition is the signal a token *should
+  be extracted*, the value-level form of H's duplicate-source-drift. Fix: reference the
+  token — or, for the no-token case, define one and point every sibling at it — so the
+  value has one source and the next token change reaches this surface too. **Distinct**
+  from the sibling-variant-re-declares-lookup bullet above (that is a *lookup map or
+  sub-element* — an `enum→colour` `Record`, a legend block — inlined instead of
+  imported; this is a *scalar style value* hardcoded instead of referencing its token)
+  and from the duplicated-string twin-search (a duplicated *literal string / markup
+  block*; this duplicates a **token's value**, and it is a finding *precisely because*
+  it is not a visible duplicate — it renders identical). A genuine one-off that must
+  **not** track the token is the fail-open exception: mark it (a named constant or a
+  comment) so it reads as chosen, not drifted.
 - **A fix to a shared concept lands in the shared component**, not in one caller —
   otherwise the same defect survives in every other caller, and whoever checked
   only the screen they were shown signs off a still-broken app.

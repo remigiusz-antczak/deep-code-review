@@ -3,6 +3,15 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.411.0] — 2026-09-21
+
+### deep-code-review — three review heuristics: a combobox popup must close on focus-exit (a11y), mine code comments that admit bypassing a shared component, and a hardcoded value equal to a token's current value is DS drift (#940, #941, #949)
+
+- **`frontend-a11y.md`** (#940): a non-modal popup (combobox/listbox/select/autocomplete) has **three** independent dismiss paths — Escape, outside-pointer, and **focus leaving the widget** — and a roving-tabindex / `aria-activedescendant` design most often omits the third. Verifying Escape + outside-click passes review, but a keyboard `Tab` out fires neither, leaving the popup open and orphaned while focus sits on a later control (a WCAG **2.4.3 Focus Order** break). Fix: a `focusout` closing when `relatedTarget` is outside the trigger+popup (or handle `Tab` in `keydown`); regression-test by tabbing out, not only Escape. Grounded in the ARIA APG Combobox Pattern's tab-sequence-exclusion fact (the fold notes APG does **not** itself mandate "Tab closes the popup" — it rests on the exclusion + Focus Order consequence). Distinct from the dismiss-then-restore, whole-keyboard-map, and hand-rolled-`aria-modal` (trap-focus) neighbours.
+- **`method.md`** (#941, Phase 2): mine the code's own comments for **admitted deviations** — `"not using the shared <Select>…"`, `"hand-rolled instead of the DS modal…"` — a class of finding a *structural* drift search can't reach (a from-scratch reimplementation shares no literal). Each hit is worth two findings: local drift that may have shed the shared version's baked-in correctness, and a real gap in the shared abstraction to fix at source. Opposite polarity to the two comment-as-claim rules (Phase 1 suppression-reason, Phase 4 incident-narrating) that warn *not to over-trust* a comment; confirm each match at source (the comment may itself have drifted).
+- **`product-ux-quality.md`** (#949): a raw value hardcoded **equal to a design token's current value** (`padding: 16px` where siblings use `var(--space-4)`) is DS drift that renders identically today and breaks the moment the token moves — invisible to screenshot/VRT/eyeball because it was chosen to equal the token *now*. Detect via **siblings as the oracle** (can't grep the token name — the literal never names it); the mirror shape is the same literal repeated across N siblings with no token (extract one). Mark a genuine one-off so it reads as chosen, not drifted. Distinct from the inlined-lookup-map and duplicated-string sibling bullets.
+- +3 evals (511 total), non-telegraphing. Closes #940, #941, #949.
+
 ## [1.410.0] — 2026-09-21
 
 ### deep-code-review — write-side N+1 + O(n²) false-positive discipline (perf), and which-end-to-trust on a multi-hop proxy header (security) (#943, #945)

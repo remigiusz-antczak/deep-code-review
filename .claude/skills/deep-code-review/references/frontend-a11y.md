@@ -321,6 +321,48 @@ without regressing a deliberate design.
   handler with no captured trigger ref and no `.focus()` call back onto it. Contrast: a
   design-system overlay primitive that captures the trigger ref on open and calls
   `.focus()` on it in its close path has the correct shape.
+- **A non-modal popup — a combobox listbox, select menu, autocomplete, or dropdown —
+  must also close when focus *leaves* it, a dismiss path separate from Escape and
+  outside-click and the one a roving-tabindex / `aria-activedescendant` design most
+  often omits.** Such a widget has *three* independent dismiss code paths, wired in
+  three different places: **Escape** (a `keydown` handler), **outside pointer** (a
+  document `pointerdown`/`click` listener that closes when the target is outside the
+  trigger + popup), and **focus leaving the widget** (a `focusout`/`blur` handler, or
+  `Tab` intercepted in the `keydown`). The first two are the ones every implementation
+  reaches for, so a keyboard-Escape check and a click-away check both pass and a
+  reviewer signs off "dismissal handled" — yet moving focus out of the widget with the
+  keyboard fires **no** pointer event (the outside-click listener never runs) and is
+  **not** the Escape key (that handler never runs), so a popup wired only for those two
+  is left **open and orphaned**: it floats over the page while focus sits on some later
+  control, a WCAG **2.4.3 Focus Order** break in which the reader's focus and the one
+  visible interactive overlay are in different places. The **roving-tabindex /
+  `aria-activedescendant`** design is what guarantees the exposure: the WAI-ARIA APG
+  *Combobox Pattern* keeps the combobox a **single** tab stop and states that "the
+  popup, and the popup descendants are excluded from the page `Tab` sequence" (verified
+  this session; the pattern's only listed popup-dismiss key is Escape), so a
+  `Tab`/`Shift+Tab` out of the widget necessarily lands focus on the next page control
+  with nothing inside the popup to catch it — the stuck-open popup is structural, not
+  incidental. A keyboard-only smoke test that opens, arrows, and Escapes never presses
+  `Tab` **while the popup is open**, so it never sees it. Fix: add the focus-exit
+  dismiss — a `focusout` on the widget container that closes when `relatedTarget` falls
+  outside the trigger + popup subtree (or handle `Tab`/`Shift+Tab` in the `keydown`
+  before focus moves) — then let focus land naturally on the next control (a non-modal
+  popup must **not** trap; see the inverse below). Detection: a listbox/menu/combobox
+  with an Escape `keydown` and a document outside-click listener but **no**
+  `onBlur`/`focusout` on the container and no `Tab` branch in the `keydown`; confirm
+  live by opening the popup and tabbing out — it must close. **Distinct** from three
+  neighbours: the dismissible-overlay focus-restore bullet above is the *restore* half
+  (return focus to the trigger *once dismissed*, and it lists the dismiss triggers as
+  Escape/outside-click/selection) — this is a dismiss trigger that list omits, and it
+  must fire *before* any restore can; the combobox APG-pattern bullet above prescribes
+  the whole keyboard map (Arrow/Enter/Escape) — this isolates the one dismiss path a
+  widget with a correct Escape still routinely lacks, the way the
+  disclosure-`aria-expanded` bullet isolates that bullet's most-omitted state; and the
+  hand-rolled-`aria-modal` bullet below is a **modal** that must *trap* focus so `Tab`
+  wraps **inside** — a non-modal popup is the inverse (Tab moves **out** and closes it),
+  so trapping one is as wrong as failing to dismiss the other. Regression test: render
+  the widget open, move focus to a control outside it, and assert the popup is gone
+  (`queryByRole('listbox')` is null), not only that Escape closes it.
 - **Hidden interactive content leaves the tab order — no "phantom focus."** A closed
   off-canvas menu, collapsed accordion, inactive tab panel, or CSS-hidden dropdown must
   remove its focusable descendants from the tab sequence (`inert`, conditional unmount,

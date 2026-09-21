@@ -448,6 +448,39 @@ pinned-ref contract — and note the substitution. Never let a harness's prompt
 contract stall **A01/domain B**; the fallback is the audit, not a skip. Depth:
 `references/parallel-audit.md`.
 
+**Mine the code's own comments for admitted deviations — a class of finding a
+structural search cannot reach.** The drift searches elsewhere in this method key on
+*structure*: a duplicated component, a copied string or markup block, a repeated
+scaffolding cluster (`product-ux-quality.md`'s *one component per concept*
+twin-search), or the inverse sweep that greps a hand-rolled `aria-modal` / skeleton and
+diffs it against the shared primitive's importers (`frontend-a11y.md`). All of them are
+blind to a call site that **reimplemented** a shared component/helper/guard from
+scratch and therefore shares no literal with it. But a developer who deliberately
+bypassed a shared abstraction often **says so in a comment** — *"not using the shared
+`<Select>`, it can't do X"*, *"hand-rolled instead of the DS modal because …"*,
+*"inlined the fetch, the shared client doesn't fit here."* Grep those admissions as
+their own pass — the phrasings cluster around a small set of tells (`instead of`, `not
+using` / `not the shared`, `can't use`, `rather than`, `hand-rolled`, `workaround`)
+sitting next to an import or a shared symbol's name — because each hit is worth **two**
+findings at once: (1) this call site has drifted from the shared abstraction and may
+have shed whatever correctness the shared version bakes in — an a11y behavior, a guard,
+a dedup — the exact regression `frontend-a11y.md`'s bypass-the-shared-component family
+names; and (2) the shared abstraction has a **real gap** its author already hit, so the
+root-cause fix (principle 9) is usually to close that gap at the source rather than
+bless the workaround. It is higher-confidence than a cold duplicate search because the
+author **pre-verified** the deviation for you: the comment is a first-party admission
+that the shared path did not fit. **Opposite polarity from the two other
+comment-as-claim rules in this method** — the carried-forward suppression-reason (Phase
+1) and the incident-narrating comment (Phase 4) warn you *not to over-trust* a comment
+as still-true; this *harvests* a class of comment that **is** a finding you would
+otherwise miss. And distinct from `product-ux-quality.md`'s adoption-is-total move,
+which reads the **shared component's own** doc-comment (it names the call sites it
+fixed) to hunt stragglers — this reads the **call site's** comment to find the bespoke
+bypass that never touched the shared component at all. Treat a match as a finding to
+confirm at source (read the workaround; confirm it still bypasses the shared thing at
+HEAD), not as proof on its face — the comment may itself have drifted, per the Phase 1
+rule.
+
 **Product UI (domain P) → rendered route sweep.** On a `FULL` or broad-`DIFF`
 review of a product UI, enumerate every route and rule domain P on each across the
 render matrix, reporting coverage as a ledger — the domain-P analogue of Phase 3's
