@@ -86,6 +86,50 @@ without regressing a deliberate design.
   explicitly with `aria-labelledby` (referencing the visible label's id) or `aria-label`, and
   **verify the platform-computed accessible name** in the accessibility tree (devtools / axe),
   not the DOM — the same computed-name harvest the cross-view-consistency check below performs.
+- **A wrapper deliberately left roleless to dodge the nested-interactive anti-pattern still
+  needs a name — and a bare `<div>`'s implicit `generic` role cannot carry one, so its
+  `aria-label` is silently discarded.** A list row made keyboard-operable by hand
+  (`tabIndex={0}` plus `onClick`/`onKeyDown`) sometimes also wraps genuinely interactive
+  descendants — a `<details>/<summary>` disclosure, a nested `<a>` — and HTML's content model
+  already forbids exactly that nesting for a native control (the `<a>` element's content
+  model: "there must be no interactive content descendant, `a` element descendant, or
+  descendant with the `tabindex` attribute specified," HTML Standard). An author who knows an
+  ARIA `role="button"`/`role="link"` on the row would reproduce the same interactive-in-
+  interactive hazard for assistive tech deliberately withholds the role — and, still wanting
+  the row announced, adds an explicit `aria-label` to the now-roleless `<div>`. That reads as
+  finished (focusable, key-operable, visibly labeled in the JSX) but per WAI-ARIA 1.2 §5.2.8.6,
+  `generic` — the implicit role of a `<div>`/`<span>` carrying no other semantics — is one of
+  the roles with **Name Prohibited**: "Authors MUST NOT use the `aria-label` or
+  `aria-labelledby` attributes to name the element" (confirmed on MDN's `generic`-role
+  reference: "`aria-labelledby` and `aria-label` attributes are prohibited"). The browser's
+  accessible-name computation **discards** the label outright, leaving the row with role
+  `generic` and no name — WCAG **4.1.2 Name, Role, Value**. It ships because every surface a
+  reviewer actually checks looks right: the JSX carries an `aria-label`, an outerHTML dump
+  shows the attribute present, a keyboard smoke test finds the row focusable and its nested
+  link/`<summary>` still works — only the accessibility tree (where the attribute never
+  surfaces) shows the gap. **Distinct from the roving-tabindex bullet above**, whose premise is
+  that no name was ever attempted (role and name both simply forgotten) — here a name is
+  deliberately authored and still lost, for a spec reason unrelated to forgetfulness.
+  **Distinct from the non-labelable-host bullet above**, whose failure is an *indirect* path —
+  a wrapping `<label>` not transferring to a non-labelable role'd host — fixed by adding a
+  *direct* `aria-label`; here the host carries **no role at all**, so the very direct
+  `aria-label` that bullet prescribes is exactly what `generic` throws away. Fix: don't resolve
+  nested-interactive by dropping to `generic` plus `aria-label` — restructure so the row's
+  primary action is a real, singly-interactive control (a `<button>`/`<a>`) with the
+  genuinely-interactive descendants living outside its content model, the native-compliant
+  shape; or, where the row's compound content is what makes a single activate-role wrong, reach
+  for the `role="group"` + `aria-roledescription` + computed-name technique already named above
+  for a rich composite row (`group` is not in the Name Prohibited set, so `aria-label` reaches
+  it) — but a plain `role="group"` carries no activation semantics of its own, so this still
+  means the descendants, not the group wrapper, own any keyboard activation; or drop
+  `aria-label` entirely and name the row from a visible heading/`aria-labelledby` referencing
+  on-screen text. Detection: grep a hand-rolled interactive row (`tabIndex={0}` +
+  `onKeyDown`/`onClick` on a `<div>`/`<span>`) that also carries a static or computed
+  `aria-label` and **no** `role`, then read the row's **computed accessible name** in the
+  accessibility tree (devtools/axe) — present in the DOM, absent from the tree, is the tell; a
+  JSX/DOM read alone always looks fixed. Regression test: assert `getByRole` resolves the row
+  under some **non-generic** role with a non-empty accessible name — not merely that the
+  `aria-label` prop was passed.
 - **An `aria-label` rewritten to add context must still contain the visible text it
   labels (WCAG 2.5.3 Label in Name, Level A).** SC 2.5.3 requires that "for user
   interface components with labels that include text or images of text, the name
@@ -112,6 +156,42 @@ without regressing a deliberate design.
   exists, and from where) and from Consistent Identification below (whether the
   same destination gets the same name across routes): this is whether a name that
   already exists still contains what is on screen.
+- **A multi-select/dropdown trigger whose visible text and `aria-label` are two
+  independently-computed expressions can agree on every "something selected" branch and still
+  drift apart on the one branch nobody tests: empty/placeholder.** A multi-select or combobox
+  trigger typically renders its visible summary from the current selection (`"Books, Movies"`,
+  `"3 selected"`, or a placeholder such as `"Select categories…"` when nothing is chosen) and
+  separately computes an `aria-label` for context (`"Category filter: Books, Movies"`). When
+  something is selected, both expressions derive from the same selection array/count, so they
+  naturally agree — and a reviewer who opens the dropdown, picks an option, and checks the
+  label sees them agree and moves on. The empty branch is where they stop sharing a source: the
+  visible placeholder is one hand-written literal ("Select categories…") and the `aria-label`'s
+  empty-state text is a second, independently hand-written literal ("Category filter" or "No
+  categories selected") — authored at a different time, sometimes by a later PR that updates
+  only the placeholder copy — so the accessible name for that one branch does not contain the
+  on-screen placeholder text at all: WCAG **2.5.3 Label in Name** (Level A) fails, but only in
+  the branch that is empty by definition and therefore the one QA or a screenshot review is
+  least likely to exercise (testers routinely select something first to "see it work," which is
+  exactly the branch where the drift is invisible). **Distinct from the static Label-in-Name
+  bullet above**, whose failure is a *single, permanently-wrong* literal — one author rewrote a
+  name and dropped the original words, reproducible on every render, caught by a one-shot
+  substring check against "the" visible text; here the visible text and the label are each
+  *themselves* branch-dependent, agree on most branches by construction, and only one
+  under-tested branch carries the drift — the same *things-that-must-stay-in-sync-and-didn't*
+  shape as the sibling-copy guard-parity family (`testing-and-evals.md`), but at the
+  granularity of **branches inside one component's two parallel expressions**, not **N separate
+  call sites**. Detection: don't stop at a single substring check — enumerate every branch the
+  trigger's state machine defines (empty, one selected, many selected, all selected) and, for
+  **each**, check whether that branch's computed accessible name contains that same branch's
+  computed visible text; audit the empty/placeholder branch first, not last, since it is the
+  one a populated-dropdown-only manual pass never reaches. Fix: stop hand-authoring the label as
+  a second, parallel string — derive the accessible name from the same expression that already
+  produces the visible text (appending extra context after it, per the fix above), so there is
+  one source of truth per branch instead of two texts kept in sync by hand; if the empty state
+  genuinely needs different wording, include the real placeholder text verbatim inside it.
+  Regression test: assert, for the **empty** render specifically (not only a
+  "something-selected" fixture), that the computed accessible name contains the visible
+  placeholder text — the branch most existing test suites never construct.
 - **A dismissible chip/tag button whose accessible name is only the *value* it represents states no
   *action* — a screen-reader user hears the current filter, never that the control removes it.** The
   common filter/token chip renders as `<button>{label} ×</button>` (a visible label plus a trailing
