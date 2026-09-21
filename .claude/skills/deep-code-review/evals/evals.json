@@ -5016,6 +5016,16 @@
         "Requires validating the PARSED object against the expected shape (a successful parse proves syntax, not that the fields exist), not just that JSON.parse succeeded",
         "Requires a try/catch with repair-once-then-deterministic-fallback AND a distinct branch for a refusal / off-shape reply that is surfaced — not mapped to a 500, not stored blank-as-success"
       ]
+    },
+    {
+      "id": "ci-repo-wide-secret-readable-by-jobs-that-dont-need-it",
+      "prompt": "Review this GitHub Actions workflow. A `deploy` job reads `${{ secrets.PROD_DEPLOY_KEY }}` to release to production. In the same repository, a `lint-and-test` job that never deploys, and a `pr-build` job triggered on `pull_request_target` that builds incoming contributor pull requests, both run with the repository's secrets available and can also reference `secrets.PROD_DEPLOY_KEY`. A reviewer approves the setup: 'The production key is stored in GitHub Actions secrets, not in the source code, so it is safe.'",
+      "expected_output": "The review rejects the 'stored in secrets, not in code' rationale as a false pass: a repository secret is readable by every job that runs in the repository context, so the production deploy credential is reachable from jobs that never deploy — including a `pull_request_target` job that runs in a context influenced by untrusted contributor pull requests. It requires the credential to be scoped to the deploy job that needs it — bound to a protected deployment environment whose secrets only that job can read, gated by an approval / wait / branch restriction before deploy — rather than left readable workflow- or repository-wide, and requires that a secrets-bearing context exposed to untrusted PR code not carry production credentials.",
+      "expectations": [
+        "Rejects 'the key is in GitHub secrets, not in the code' as sufficient — a stored repository secret is still readable by every job that runs in the repository context, including the lint-and-test job that never deploys",
+        "Requires the production credential to be scoped to the deploy job that needs it — bound to a protected deployment environment whose secrets only that job can read (with an approval / wait / branch restriction before deploy) — not left readable workflow- or repository-wide",
+        "Flags that a secrets-bearing pull_request_target job runs in a context influenced by untrusted contributor code and must not be able to read the production deploy credential"
+      ]
     }
   ]
 }

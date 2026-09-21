@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.384.0] — 2026-09-21
+
+### deep-code-review — `permissions:` scopes the CI token, not a secret: a repo/org secret has no per-job boundary — bind prod credentials to a protected deployment environment (OWASP CICD-SEC-5/6)
+
+- **`security-appsec.md`**: `permissions:` scopes the GITHUB_TOKEN, but a repo- or org-level secret (`${ secrets.PROD_DEPLOY_KEY }`) has no per-job boundary — any job running in the repository context can reference it, including a lint/test job that never deploys, so a production deploy credential sits in reach of jobs that do not need it (CICD-SEC-05, Insufficient PBAC). Fix (CICD-SEC-06, Credential Hygiene): scope each secret to the job that needs it — bind prod credentials to a protected deployment `environment:` whose secrets only a job that declares it can read and whose deploy is gated by an approval / wait / branch restriction. A plain fork `pull_request` job already runs without repo secrets (GitHub withholds them); the trigger that hands a secrets-bearing context to untrusted PR code is `pull_request_target` — keep prod credentials out of any job reachable that way. Distinct axes: self-hosted-runner isolation bounds *where* a job runs; the committed-secret / rotation checks are secret-at-rest; this bounds which jobs may *read* a live secret. +1 eval. Sources verified by direct fetch (SHA-pinned OWASP raw files), consolidated into the CI/CD section of docs/standards-index.md.
+
 ## [1.383.0] — 2026-09-21
 
 ### deep-code-review — the model's structured response is a frequently-malformed input class: validate the parsed shape, repair-once-then-fall-back, and handle a refusal as its own branch (OpenAI structured outputs, LLM10)

@@ -300,7 +300,28 @@ untrusted PR head code? GitHub's hardening guide: these triggers "expose the
 repository to security compromises" and "must not explicitly check out untrusted
 code." Is untrusted `${{ github.event.* }}` interpolated straight into a `run:`
 step (script injection — route it through an intermediate `env:` var)? Is
-`GITHUB_TOKEN` / `permissions` read-only by default and escalated per job? **Are
+`GITHUB_TOKEN` / `permissions` read-only by default and escalated per job? **But
+`permissions:` scopes the *token*, not a *secret*.** A repo- or org-level secret
+(`${{ secrets.PROD_DEPLOY_KEY }}`) has no per-job boundary — *any* job running in
+the repository context can reference it, including a lint/test job that never
+deploys — so a production deploy credential sits in reach of jobs that do not
+need it (OWASP CI/CD **CICD-SEC-05**, Insufficient PBAC: malicious code in a
+pipeline node "can access secrets, access the underlying host and connect to any
+of the systems the pipeline in question has access to"). Fix per **CICD-SEC-06**
+(Insufficient Credential Hygiene): "Ensure secrets that are used in CI/CD systems
+are scoped in a manner that allows each pipeline and step to have access to only
+the secrets it requires" — bind prod credentials to a protected deployment
+`environment:`, whose secrets only a job that declares that environment can read
+and whose deploy is gated by an approval / wait / branch restriction, instead of
+leaving them readable workflow- or repo-wide. A plain fork `pull_request` job
+already runs *without* repo secrets (GitHub withholds them — see
+`infra-iac-containers.md`); the trigger that hands a secrets-bearing context to
+untrusted PR code is `pull_request_target` (above), so keep prod credentials out
+of any job reachable that way. Distinct axes: self-hosted-runner
+isolation/ephemerality (`infra-iac-containers.md`) bounds *where* a job runs and
+what residue it harvests; the committed-secret / rotation checks under
+**Secrets** below are secret-at-rest — this bounds which jobs may *read* a live
+secret. **Are
 the files a privileged/protected pipeline *executes* under the same enforced review
 gate as the workflow file** — a `make` target, `scripts/*.sh`, a `Dockerfile`,
 `conftest.py`, `.pre-commit-config.yaml`, a `package.json` script? Protecting only
@@ -355,7 +376,10 @@ as the artifact. A privileged workflow whose `run:` invokes `make`,
 `bash scripts/…`, `docker build`, `pre-commit`, or a `package.json` script whose
 target file is **not** under the same review/CODEOWNERS rule as `.github/workflows/`.
 A job that `download-artifact`s a prior job's output or restores `actions/cache` and
-consumes it with no digest/attestation check before the next stage.
+consumes it with no digest/attestation check before the next stage. A job that
+references `${{ secrets.` with no `environment:` scoping it — especially a
+prod/deploy credential, or a `pull_request_target` job that runs with repo/org
+secrets available while exposed to untrusted PR code.
 
 **Fix**: pin by hash, commit lockfiles, scan dependencies and images in CI,
 generate an SBOM (CycloneDX/SPDX), and adopt provenance (SLSA) for released
@@ -374,7 +398,12 @@ authenticity); put every file the privileged pipeline *executes* — build scrip
 integrity of inter-job artifacts and restored caches at **each** stage handoff
 (pin/attest them, check a digest before a downstream job consumes them), not only
 when the final artifact is signed at promotion (OWASP CI/CD **CICD-SEC-04** /
-**CICD-SEC-09**). **Severity keys on reachability** — a weak install verification on
+**CICD-SEC-09**). Scope secrets to the job that needs them — bind prod
+credentials to a protected deployment `environment:` (its secrets readable only
+by a job that declares it, deploy gated by an approval / wait / branch
+restriction), not a repo/org-wide secret every job can read, and keep them out of
+`pull_request_target` or other jobs exposed to untrusted PR code (OWASP CI/CD
+**CICD-SEC-05** / **CICD-SEC-06**). **Severity keys on reachability** — a weak install verification on
 the *sole documented install path for every user* outranks the same weakness on
 an optional side channel. See `infra-iac-containers.md` and section K of `SKILL.md`.
 
