@@ -3,6 +3,14 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.432.0] — 2026-09-21
+
+### deep-code-review — two a11y naming traps: a computed aria-label that drifts from the visible text only in the empty branch, and a role dropped to dodge nested-interactive that silently loses the aria-label (#1027, #1028)
+
+- **`frontend-a11y.md`** (#1027, WCAG 2.5.3): a multi-select/dropdown trigger whose visible text and `aria-label` are **two independently-computed expressions** agrees on every populated branch (same selection data) but the **empty/placeholder** branch is a separate literal in the aria-label that drifts from the real placeholder — so the accessible name omits the visible placeholder, and QA misses it because testers select something first "to see it work." Fix: derive the name from the same source as the visible text; test the empty branch specifically. A tight extend of the 2.5.3 Label-in-Name bullet (that is one static wrong-on-every-render label; this is a two-expression drift only in one branch).
+- **`frontend-a11y.md`** (#1028, WCAG 4.1.2): a row made keyboard-operable by hand (`tabIndex`+`onClick`+`onKeyDown`) on a plain `<div>` with an explicit `aria-label` but **deliberately no `role`** (to avoid the ARIA nested-interactive anti-pattern when it wraps interactive descendants) — but a roleless `<div>` has the **generic** role, and ARIA **prohibits an accessible name on generic** (WAI-ARIA 1.2 §5.2.8.6), so the `aria-label` is **silently dropped** and the row is nameless. The nested-interactive dodge created a naming hole. Fix: don't wrap interactive descendants in a click-div (make the primary action a real control), or use a role that permits a name without nesting-interactive (`group` is not Name-Prohibited), or name a landmark via `aria-labelledby`. Distinct from the roving-tabindex bullet (name never attempted) and the non-labelable-host bullet (there a *direct* aria-label is the fix; here the direct aria-label is exactly what's thrown away).
+- +2 evals (552 total), non-telegraphing. WAI-ARIA §5.2.8.6 verified at source. Closes #1027, #1028.
+
 ## [1.431.0] — 2026-09-21
 
 ### deep-code-review — an automated "scan every X, assert property P" inventory test is only as complete as how it recognizes X; a text-pattern scan silently under-covers an equivalent-but-unrecognized syntax (#1024)
