@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.400.0] — 2026-09-21
+
+### deep-code-review — a cleanup arm shared by two async operations clears a loading flag it doesn't own (cross-path and cross-generation clobber) (#908)
+
+- **`frontend-a11y.md`**: one loader serving two entry points (a refresh and a pagination call, each with its own in-flight flag) whose shared `.finally` resets both unconditionally clears the refresh flag when the pagination call settles while the refresh is still in flight (cross-path clobber); the single-flag variant is the same defect across generations — a re-issued search's superseded first attempt, resolving last, clears the flag the current attempt still needs (cross-generation clobber). The rule: a cleanup may only clear a flag the current owning invocation set — establish operation identity before the settle. Not cosmetic: the gated control reads done mid-request (spinner vanishes over still-loading data, a re-enabled load-more re-fires with a shifted cursor), and when the superseded response finally resolves an append reducer duplicates rows. Reproduces only under overlap + out-of-order resolution, so every single-path test passes. Fix: per-flag cleanup + a monotonic request id / AbortController that drops a superseded response. Distinct from the aria-busy, dead-Suspense, and fetch-dedup bullets. +1 eval.
+
 ## [1.399.0] — 2026-09-21
 
 ### deep-code-review — the date/time boundary layer: where a string / wire payload / column becomes a typed time (date/time)

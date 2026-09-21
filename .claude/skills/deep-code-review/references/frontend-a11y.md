@@ -801,6 +801,47 @@ production-like server).
   *does* render announces itself) — this is whether it renders at all; and from a real,
   explicit `if (loading) return <Skeleton/>` state, which is not this bug. Regression-test on a
   throttled network, or assert the fallback actually mounts — not a fast local load.
+- **A cleanup arm shared by two async operations clears a loading flag it doesn't own — a
+  sibling or superseded invocation's settle flips off the flag the *current* operation still
+  needs.** One loader serves two entry points — `load()` for initial/refresh and `load(cursor)`
+  for pagination, each with its own in-flight flag (`loading` vs `loadingMore`) — and the shared
+  `.finally(() => { setLoading(false); setLoadingMore(false); })` (or a shared `setBusy(false)`)
+  resets **both** unconditionally, so when the pagination call settles it also clears the refresh
+  flag while that refresh is still in flight: cross-*path* clobber. The single-flag variant is the
+  same defect across *generations* — a search/typeahead path re-issues its request as the query
+  changes, both attempts share one `finally` that flips one `loading`, and the **superseded** first
+  attempt, resolving last, clears `loading` while the current attempt is still pending:
+  cross-*generation* clobber. The unifying rule is that **a cleanup may only clear a flag the
+  current, owning invocation set** — (a) violates ownership across paths, (b) across generations,
+  and both fix by establishing operation identity before the settle is allowed to clear. **The
+  failure is not a cosmetic flip.** The control gated by the wrongly-cleared flag reads "done"
+  mid-request — the spinner vanishes over still-loading or stale data, and a re-enabled "load more"
+  button (or a refresh listener) fires the path again with a now-shifted cursor; when the original,
+  superseded response finally resolves, an append-style reducer (`setItems(cur => [...cur,
+  ...page])`) appends rows overlapping what the re-fire already added → **duplicated items**. It
+  reproduces **only under overlap** (a refresh landing during pagination, or a query change
+  mid-request) **plus out-of-order resolution**, so every single-path test passes. **Detect** by
+  finding any loader reachable from two entry points and reading its cleanup: does one
+  `.finally`/`setBusy(false)` reset a flag it does not own, or can a stale invocation's settle clear
+  a flag a newer one still needs? A single shared cleanup that calls more than one
+  `setLoading*(false)`, or a `setLoading(false)` on a path that can run concurrently with itself, is
+  the tell. **Fix** in two parts: scope each path's cleanup to the flag it owns (`if (isPagination)
+  setLoadingMore(false); else setLoading(false);`), or give each operation its own flag; **and**
+  establish **operation identity before the settle** — stamp each request with a monotonic id (or an
+  `AbortController`), let only the current id's `finally` clear the flag, and **drop** (never append)
+  a response whose id is no longer current. **Regression-test the overlap explicitly**: fire both
+  paths, resolve them **out of order**, and assert both the flags *and* the resulting list — a
+  single-path test asserts neither the cross-path flag clobber nor the stale append. Distinct from
+  the two loading-state bullets nearby: the `role="status"`/`aria-busy` bullet under Accessibility is
+  whether a loader that *renders* announces itself, and the dead-`<Suspense>` bullet just above is
+  whether the loader *renders at all* — here the loader renders fine and is *cleared by an operation
+  that does not own it*. The `AbortController` mechanism, and the discipline that a cancel of a
+  superseded request is a **user-cancel, not a swallowed timeout**, live in
+  `reliability-error-handling.md` (Timeouts, aborts, retries); the "an older result must not clobber
+  current state — gate on a version/id" shape is `billing-correctness.md`'s out-of-order rule
+  (compare the provider's version/timestamp) applied one layer out, at a client reducer. Distinct too
+  from the fetch-dedup bullets above, which govern *how many* requests fire, not *which* operation's
+  flag a shared cleanup clears.
 - **A memoized callback needs a memoized recipient — stable props alone don't stop
   re-renders.** In a list/queue rendering N rows via `.map()`, if the parent holds shared
   per-row state (a selection set, per-row drafts, a filter) that changes on ordinary
