@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.385.0] — 2026-09-21
+
+### deep-code-review — provenance & hygiene (self-audit fixes): SHA-pin drifting standards URLs, disambiguate two duplicate-title rows, remove one restatement
+
+- **`docs/standards-index.md`**: five rows citing verbatim text from a moving `main` ref are now pinned to a resolved commit SHA (four OpenSSF Scorecard rows → `f92023a`, the NIST OSCAL SP 800-53 rev5 AC-2 row → `78650f0`), each quote re-verified at that SHA (2026-09-21) so a citation can no longer silently drift; the Swift-book row keeps its existing moving-ref caveat. Two rows sharing the identical title "NIST SP 800-63-4B (Digital Identity Guidelines — Authentication)" but citing different passages are disambiguated in-title ("— AAL phishing-resistance" / "— password composition & rotation"), matching the file's convention for every other multiply-cited source.
+- **`references/parallel-audit.md`**: the live-defect-vs-documented-past discriminator, stated in full both here and in `method.md` Phase 4, is compressed to a pointer to Phase 4 (keeping only the fan-out-specific framing) — removing the one duplicated procedure the self-audit found. `method.md` unchanged. No eval (pure hygiene).
+
 ## [1.384.0] — 2026-09-21
 
 ### deep-code-review — `permissions:` scopes the CI token, not a secret: a repo/org secret has no per-job boundary — bind prod credentials to a protected deployment environment (OWASP CICD-SEC-5/6)

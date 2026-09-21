@@ -436,10 +436,8 @@ security-critical claims itself:
   **and** catches real invisible-character injection the render hides.
 - **Live defect vs documented past one** (cross-ref Phase 4): comments often
   narrate fixed incidents in present tense (`Audit 2026-…`, `Bug B`, `live
-  incident …`). Before reporting, apply the discriminator: (a) is there a test
-  pinning the corrected behavior? (b) does `git log -S'<symbol>' --oneline` (or
-  `git log -L`) show the fix already landed? If either is yes, it is a historical
-  note, not a finding. A fan-out will otherwise re-report the repo's own
+  incident …`). Before reporting, apply Phase 4's live-vs-historical
+  discriminator (`method.md`) — a fan-out will otherwise re-report the repo's own
   changelog as new bugs, once per unit. Pair with Phase 0's **measured** history
   depth — do not argue from a README claim that history is absent.
 - **Grep hit vs the surface that actually runs** (cross-ref principle 9,
