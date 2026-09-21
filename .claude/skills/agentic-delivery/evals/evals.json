@@ -1134,6 +1134,39 @@
         "Prescribes embedding the standard in the agent definition (verbatim ruleset, load the method by default, omit forbidden tools) or a host/user-scope mechanism reaching the main loop and every subagent",
         "Bridges in-flight agents with the brief until restart and verifies the injected ruleset actually appears in a subagent's context before claiming universality"
       ]
+    },
+    {
+      "id": "fan-out-review-barrier-joins-all-workers-before-handing-back",
+      "prompt": "I fanned a security review out to three parallel worker forks. Two have returned their findings; the third is still running. I have the two reports aggregated and ranked, so I will hand the review back now as complete with the top finding from those two -- the third can catch up later if it finds anything. OK?",
+      "expected_output": "No -- a fan-out review is not complete until every worker has JOINED. Two of three returned is a quorum, not a join: findings are severity-ranked and the slowest worker is not a random omission -- a worker runs long because its slice is the hardest or deepest, disproportionately where the highest-severity finding sits (tail-severity), so the third's finding can outrank everything you have and reorder the top. Treat the review as OPEN until every worker is accounted for: each has returned, or been explicitly timed-out-and-noted (a named bounded wait, the gap recorded), never silently dropped. The aggregate's ranking is PROVISIONAL until the join closes, so do not present it as complete or state 'the top finding is X' yet. If a worker is abandoned, name its slice as an UNVERIFIED hole in the aggregate rather than letting a partial set read as a clean pass. And if the handback is one-shot (it cannot make a second call to add a late finding), size the wait so the barrier closes BEFORE the handback fires. (fast-agentic-delivery.md.)",
+      "expectations": [
+        "Refuses to present a fan-out review as complete while a fanned worker is still running or was silently dropped",
+        "Names tail-severity: the unreturned/slowest worker is disproportionately likely to carry the top-severity finding, so a quorum is not a join and the ranking is provisional",
+        "Requires every worker accounted for -- returned or explicitly timed-out-and-noted -- and an abandoned slice recorded as UNVERIFIED, not omitted",
+        "Notes a one-shot handback must not be spent on a set known to be incomplete -- the barrier closes before it fires"
+      ]
+    },
+    {
+      "id": "plugin-host-hook-spawned-forks-judged-by-effect-not-provenance",
+      "prompt": "Right after I enabled a comms/augmentation plugin through the host's plugin hook, several forks I never spawned showed up in the task listing, each carrying my full context. That looks like runaway agents leaking my context, so I am going to kill all of them on sight. OK?",
+      "expected_output": "No -- 'I did not spawn it' and 'it holds my context' are PROVENANCE signals, and provenance alone does not make a fork a runaway. Enabling a comms/augmentation plugin through the host's native hook can auto-spawn the plugin's own bundled helper-agents as fork subagents; they appear as forks you did not explicitly spawn and, being forks, inherit the parent's full context -- expected behavior once you know the plugin spawns them, not a leak. Judge each fork by its EXTERNAL EFFECT, not by who dispatched it: is it mutating shared state, opening PRs, holding a worktree it collides on, burning budget without producing? Enumerate the effect surfaces (remote refs, open PRs, the per-agent tool-call record); a helper touching none of them is not a kill candidate however unfamiliar. Killing is a destructive shared-state action (principle 9): the precondition is a POSITIVE signal of harm, never the absence of a spawn record. Remove the surprise at the source -- announce on the coordination channel that the plugin spawns bundled forks so a watching operator/peer does not misclassify them. This is distinct from the never-kill-a-dead-looking-lane liveness rules: the fork is plainly alive; the false trigger here is 'is it mine / a runaway?', a provenance misread, answered by harm-to-shared-state, not liveness. (fast-agentic-delivery.md.)",
+      "expectations": [
+        "Refuses to kill the forks on the ground that they were not spawned by the orchestrator or that they carry inherited context",
+        "Identifies that a plugin enabled via the host hook can auto-spawn its bundled helper forks, so their appearance and inherited context are expected",
+        "Requires judging a fork by external effect on shared state (damage/mutation), with termination gated on a positive harm signal (principle 9)",
+        "Distinguishes this provenance misread from the liveness rules (the fork is alive; the question is ownership, not aliveness) and announces the plugin's fork-spawning to prevent misclassification"
+      ]
+    },
+    {
+      "id": "offer-of-work-races-the-offerers-own-in-flight-lane",
+      "prompt": "I already dispatched my own lane to build item X. To be collegial I also posted to the peer channel 'taking X if you're idle, otherwise it's mine.' The peer replied that it will take it. Good -- that is load-balanced and claim-before-start is satisfied on both sides, so I will just let it play out. OK?",
+      "expected_output": "No -- your OFFER is racing your OWN already-dispatched lane. Three things now contend, not two: the offer, the peer's acceptance, and your in-flight lane -- and the peer's accepted claim PLUS your own running lane both produce a PR for the same item. 'Claim before you start' is necessary but not sufficient here, because you are not racing another claim you could lose on a timestamp; you are racing your own running lane, which no claim or arbitration rule observes. An offer is a hand-off of ownership, so retract your execution as you make it: stop (or positively confirm not-yet-dispatched) your own lane for X AT THE MOMENT you offer it -- never offer work you are simultaneously running; if you cannot confirm your lane is stopped, withhold the offer rather than sending it and hoping the peer declines. If both produce work before either notices, verify EQUIVALENCE before closing the loser (they may differ in scope/quality) -- repoint the loser to a different lens/slice, or close it with a pointer and evidence only if truly redundant, never a blind discard (principle 9). Distinct from broadcast arbitration (N peers race one pushed ask, earliest-UTC-wins): the racer here is your own in-flight lane, invisible to a tie-break, so the fix is upstream. (multi-session-coordination.md.)",
+      "expectations": [
+        "Identifies that the offer races the offerer's own already-dispatched lane, so the peer's claim and the offerer's lane both produce a PR",
+        "States that claim-before-start / arbitration does not cover the offerer's own in-flight lane",
+        "Requires stopping or confirming-not-yet-dispatched the offerer's own lane at the moment of offering (or withholding the offer)",
+        "Reconciles a resulting duplicate by verifying equivalence before closing the loser, with evidence, not a blind discard"
+      ]
     }
   ]
 }

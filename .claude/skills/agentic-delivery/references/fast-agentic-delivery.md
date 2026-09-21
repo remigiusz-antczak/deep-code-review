@@ -1116,6 +1116,48 @@ this is not reading its **file stat** as *liveness*. And distinct from the idle-
 duplicate section above: that is a false-**positive** "completed" leading to a duplicate
 dispatch; this is a false-**negative** liveness read leading to a destructive **kill**.
 
+## A plugin's host hook auto-spawns forks you did not — judge them by external effect, not by unexpected provenance
+
+The two liveness rules around this one forbid killing a lane on a false read of whether it
+is **alive**. This is the adjacent misfire on a *different* axis — killing a lane on a
+false read of whether it is **yours**. Enabling a comms or augmentation plugin through the
+host's **native plugin hook** can auto-spawn the plugin's own **bundled helper-agents as
+fork subagents**. They show up in the agent/task listing as forks the orchestrator never
+explicitly spawned and, being forks, inherit the parent's **full context**. To an operator
+scanning the fleet for runaways and context-leaks, an unrecognized fork carrying the whole
+parent context reads exactly like the thing to kill on sight — so the reflex fires, and
+killing it breaks the plugin (or the lane it augments) though no defect ever occurred.
+
+- **"I did not spawn it" and "it holds my context" are provenance signals, and provenance
+  alone does not make a fork a runaway.** A plugin-spawned helper is doing its job; its
+  surprising *appearance* is expected once you know the plugin spawns it.
+- **Judge a fork by its external effect, not by who dispatched it.** The kill-relevant
+  question is whether it is doing damage — mutating shared state, opening PRs, burning
+  budget without producing, holding a worktree it collides on — not whether it is on your
+  own spawn ledger. Enumerate the effect surfaces the *refrained-action* check below
+  already lists (remote refs, open PRs, the per-agent tool-call record); a helper touching
+  none of them is not a kill candidate however unfamiliar. Killing is a destructive
+  shared-state action (`SKILL.md` principle 9): the precondition is a **positive signal of
+  harm**, never the mere absence of a spawn record.
+- **Remove the surprise at the source.** When you enable such a plugin in a monitored
+  fleet, announce on the coordination channel that it spawns bundled forks, so a watching
+  operator or peer does not classify them as runaways in the first place — the
+  provenance-attribution problem a shared identity creates
+  (`multi-session-coordination.md`), here applied to *spawn* provenance rather than
+  *authorship*.
+
+Distinct from *a transcript's size or mtime is not a liveness signal* and *don't conclude a
+lane is dead from an indirect signal* (both above): those stop a kill of a
+suspected-**dead** lane on a false-negative liveness read — the question is "is it alive?"
+Here the fork is plainly alive and that is not in doubt; the false trigger is "is it
+**mine**, or a runaway/leak?" — a provenance misread — and the right test is
+harm-to-shared-state, not liveness.
+
+**🚩 tell:** an operator or orchestrator terminating an unfamiliar fork solely because it
+was not on the spawn ledger or because it carries the parent's context, with no check that
+it is actually touching shared state or doing damage — especially just after a
+comms/augmentation plugin was enabled.
+
 ## A lane looping in its own self-poll can't receive a nudge — verify the state, stop, and finish the last step yourself
 
 A worker that finishes its substantive work and enters a wrap-up phase where it
@@ -1315,6 +1357,48 @@ replace the forge run.
   "confirmed" with no `Verify:` line naming the command, the surface, and the evidence — an
   unbacked completion claim, `unverified` until the method is stated (and still self-reported
   after — the forge run is the control).
+
+## A fan-out review is not complete until every worker has joined — a partial aggregate can drop the tail's top-severity finding
+
+The relay section below governs the *provenance* of each number a lane reports; this
+governs whether the **set** of reports is complete before any of it is presented. An
+orchestrator that fans a review (or any decomposed analysis) out to N parallel workers
+and hands its aggregate back the moment a **quorum** returns — two of three forks in, the
+third still running — is presenting an incomplete set as final. The failure is worse than
+"one finding missing," because findings are **severity-ranked and the slowest worker is
+not a random omission**: a worker runs long precisely because its slice is the hardest or
+deepest, which is disproportionately where the highest-severity finding sits
+(**tail-severity**). Observed: a security review fanned to three forks collected two and
+handed back; the third's P0 outranked everything already gathered and surfaced only
+through a side channel *after* the one-shot handback had refused a second call.
+
+- **Barrier-join before you present.** Treat the review as **open** until every worker is
+  **accounted for** — each has either returned its report or been **explicitly
+  timed-out-and-noted** (a named, bounded wait with the gap recorded, never a silent
+  drop). The aggregate's severity ranking is **provisional** until the join closes,
+  because a later arrival can reorder the top; "N of M came back" is not "reviewed."
+- **An abandoned worker's slice is an `UNVERIFIED` hole, not an omission** — name it in
+  the aggregate (the skip-loudly bar, `SKILL.md` principle 5), so a reader sees the set
+  was incomplete rather than reading a partial pass as a clean one.
+- **A one-shot handback must not be spent on a set you know is incomplete.** When the
+  aggregation step is a single non-resumable hand-off — it cannot make a second call to
+  add a late finding — size the wait so the barrier **closes before** the hand-off fires;
+  that constraint is what makes the barrier load-bearing rather than best-effort.
+
+Distinct from `idea-critic`'s *Join before claiming reviewed* (principle 6): that governs
+**one** background critic as a dependency of a claim — pending or missing stays
+`UNVERIFIED`. This is the **aggregation barrier across a parallel fan-out of many
+workers**, plus the tail-severity reason a *quorum* is not a join — the missing worker is
+the one most likely to carry the worst finding. Distinct from *confirm a subagent is idle
+before dispatching a duplicate* (above), which reads a false-positive "completed" to avoid
+a wasteful **dispatch**; here a complete-looking set drives a premature **presentation**.
+And distinct from *relaying a subagent's measured findings* (below), which verifies or
+attributes each relayed number — **completeness of the set precedes provenance of its
+members**: join first, then relay.
+
+**🚩 tell:** an orchestrator presenting a fan-out review as complete, or stating "the top
+finding is X," with one fanned worker still running or silently dropped rather than
+returned-or-explicitly-timed-out.
 
 ## Relaying a subagent's measured findings to a human: verify the cheap load-bearing facts, attribute the expensive ones — never restate them in your own voice
 

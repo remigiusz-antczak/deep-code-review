@@ -322,6 +322,43 @@ exactly what a broadcast produces.
   coordinator answering the dup by tightening the collision probe — the probe cannot
   close a simultaneity window a broadcast opens; arbitration and salvage do.
 
+## An offer of work to a peer still races the offerer's own in-flight lane — retract your lane at the moment you offer it
+
+The broadcast section above arbitrates two peers racing to claim **one pushed ask**. This
+is the mirror race a claim protocol does **not** cover: a peer *offering* an item — "take
+this if you're idle, otherwise it's mine" — while its **own lane for that item is already
+dispatched**. Now three things contend, not two: the offer, the peer's acceptance, and the
+offerer's in-flight lane — and the peer's accepted claim **plus** the offerer's own running
+lane both produce a PR for the same work (#952). *Claim before you start* (the broadcast
+section above; *announce-then-take* in `fast-agentic-delivery.md`) is necessary but **not
+sufficient** here, because the offerer is not racing another *claim* it could lose on a
+timestamp — it is racing its **own already-running lane**, which no claim or arbitration
+rule observes.
+
+- **An offer is a hand-off of ownership, so retract your own execution as you make it.**
+  Pair the offer with **stopping** (or positively confirming **not-yet-dispatched**) your
+  own lane for that item **at the moment of offering** — never offer work you are
+  simultaneously running. If you cannot confirm your lane is stopped or was never
+  dispatched, the honest move is to **withhold the offer**, not to send it and hope the
+  peer declines.
+- **If both produce work before either notices, verify equivalence before closing the
+  loser.** The two PRs may differ in scope or quality, so reconcile as the broadcast
+  section's late-caught duplicate does — repoint the loser to a different lens or slice,
+  or, only if it is truly redundant, close it with a pointer and evidence (never a blind
+  discard: closing shared state needs evidence, `SKILL.md` gate-epistemology principle 9).
+
+Distinct from the **broadcast arbitration** above (#933): there N peers race to claim one
+pushed ask, resolved by claim-first + earliest-UTC-wins; the racer here is the offerer's
+**own in-flight lane** against its own offer, invisible to arbitration between claimants —
+so the fix is upstream (retract your lane when you offer), not a tie-break. Distinct from
+*in-flight work is the anchor* (#713 above): that keeps each peer on the **different** half
+it already started; here both converge on the **identical** item because the offer never
+retracted the offerer's own start, so the reconciliation is to **differentiate or
+supersede**, not to anchor each in place. **🚩 tell:** a peer posting "take it if idle,
+else it's mine" for an item it has already dispatched its own lane on, followed by two PRs
+for the same work; or a coordinator closing one of the two without first checking they are
+equivalent.
+
 ## Every peer honoring its own heavy-lane cap still oversubscribes the machine — coordinate the shared budget, not each session's slice
 
 A per-session heavy-lane cap — `fast-agentic-delivery.md`'s environment
@@ -450,6 +487,47 @@ moment X is already done). **🚩 tell:** a lane silently complying with a
 peer's correction that contradicts its own just-verified state, or a
 coordinator sending a correction built from a snapshot it never re-checked
 immediately before sending.
+
+## A peer-handed work-partition is a snapshot that ages on the wire — verify each item against the governing head before building it
+
+The correction section above treats a peer's *instruction* as a lead to reconcile against
+your own state. A peer-handed **work-partition** — a division of labor, a gap list, a "you
+take these" backlog slice — is the same staleness on a different surface: the list is a
+snapshot at **send** time, and in a concurrent fleet the **governing branch head advances
+under it** while it sits on the wire — other lanes close, merge, or deliver its items
+between when it was written and when you act. So a handed partition is **stale-on-arrival**
+(a real case: four handed items, three already merged since the list was written); read as
+a dispatch order, it re-does delivered work (#960).
+
+- **A handed partition is a set of leads, not a work queue.** Before claiming or building
+  each item, run the **already-delivered / reproduce-on-current-head** check exactly as
+  `fast-agentic-delivery.md`'s *an open tracker issue is not proof the fix is absent*
+  specifies, testing **containment against the ref that governs "shipped"** per
+  `deep-code-review`'s `branch-and-merge-hygiene.md` (*is X shipped / already fixed* — name
+  the governing ref, grep **its** tree). That mechanism is **not restated here.** The new
+  obligation is only that the check **runs on a handed list too**, keyed on
+  **delivery-since-snapshot** — the trigger is a peer handoff aging in a concurrent fleet,
+  not the forge's default-branch-only auto-close the tracker rule turns on.
+- **Frame the hand-off idempotently on the sending side** — "these are candidates; verify
+  each against `<governing-ref>`, several may already be done" — the same re-check-at-send
+  and idempotent-framing discipline the correction section above applies to a correction,
+  applied to a work list so it degrades gracefully instead of reading as false the moment
+  an item is already delivered.
+
+Distinct from the **domain-partition** rule (#834 above): that *prevents* claim **races** by
+handing each peer a disjoint live slice — the item is at risk of being double-**claimed**
+right now, checked against the live claim registry. Here the item is already **done**, and
+the check is **containment against the governing head** (was it delivered?), not a registry
+read (is a peer on it now?). Distinct from *a peer's correction is a lead* (above): that
+reconciles an **instruction** against the receiver's **own** verified state; this reconciles
+a **work-list** against the **shared** governing head. Distinct from *enumerate the
+contested set once* (#936, `fast-agentic-delivery.md`): that caches a release PR's
+changed-**file** set for collision checks; this re-verifies handed **work-items** for
+already-done-ness — a different variable and a different failure (redone work, not a file
+collision). **🚩 tell:** a peer building straight down a handed partition or gap list
+without re-checking each item against the governing head, then landing a duplicate of work
+a sibling already merged; or a hander shipping a bare item list with no "verify against
+`<ref>`, some may be done" caveat.
 
 ## Tag backlog items by resource-profile and pre-assign to the machine that fits — before dispatch, not after a crash
 

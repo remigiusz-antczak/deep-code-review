@@ -10,7 +10,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.413.0"
+  version: "1.414.0"
 ---
 
 # Agentic delivery
@@ -204,7 +204,9 @@ resources fit, relaying a shared gate's accepted format to a peer, classifying w
 that landed under a peer's merge-hold before calling it a violation, attributing a PR or
 branch's edit/rebase-ownership to a peer under one shared VCS identity, enforcing a standing
 house comms or review-method default so it reaches every spawned subagent and not only the
-main loop, or trusting cross-peer convergence as a backlog-exhausted signal.
+main loop, retracting your own in-flight lane before offering that same work to a peer,
+re-verifying a peer-handed work-partition against the governing branch head before
+building its items, or trusting cross-peer convergence as a backlog-exhausted signal.
 
 **Unattended / autonomous operating mode (an overnight or multi-hour autonomous
 run).** When this skill runs as a **continuous loop over a backlog** rather than
