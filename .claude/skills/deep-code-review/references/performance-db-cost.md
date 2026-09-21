@@ -401,6 +401,34 @@ Every billable or slow call must map to value delivered.
   `frontend-a11y.md` (N mounted consumers each re-fetching one shared singleton, coalesced
   behind a Provider/cache): this is two sibling projections inside *one* handler, coalesced
   by hoisting the single read and deriving both locally.
+- **An expensive `await` placed *above* an early return is paid on every request that takes
+  the early branch — even when that branch never reads its result.** A handler / loader /
+  resolver fetches something costly at the top (a DB query, an API/LLM call, a full-collection
+  read) and only *then* hits a guard that returns early on the common path — a cache hit, a
+  `304`, an empty/redirect/short-circuit response, a permission or feature-flag bail — where
+  the returning branch does not consume the fetched value; only the *rarely-taken* rest of the
+  function does. Because the fetch runs before the guard, **every** request pays for it and the
+  hot branch discards the result, so the app issues and throws away that query on its most
+  frequent path. It reads clean line-by-line — the fetch genuinely is needed *somewhere* in the
+  function — and the waste is purely the **ordering**: the call sits before the branch that
+  decides it isn't needed. Common shapes: a page loader that reads the full record/list at the
+  top for an edge-case render but returns a cached or empty response on the common branch
+  without touching it; a resolver that `await`s an enrichment call before an authorization or
+  feature-gate early-return. **Fix — relocate the call, don't cache it:** move the `await`
+  *below* the early return so only the branch that consumes it issues it, or make it lazy (a
+  thunk / deferred promise the consuming branch awaits) so the hot path never triggers it.
+  Caching (the *Necessity* bullet's cure above) does **not** fix this — a cached read is still a
+  needless lookup on a branch that discards its result; the lever is *where the call sits*, not
+  *how often it recomputes*. Detect: for each `await` in the function, confirm its result is
+  read on **every** branch that can `return` after it — an `await` whose value is consumed only
+  *past* an earlier `return` is the finding; acceptance = count the call's invocations on the
+  early-return path (zero after the fix, one per request before). Distinct from **Sequential
+  `await`s** and the **twin-projection** bullet above, whose reads are all genuinely *used* (fix
+  = parallelize, or read once) — here the read is *unused on the branch that always runs*, so
+  only relocating the call helps; from **over-fetch / whole-collection** above, which trim what a
+  *used* result contains (here nothing on the hot path uses it); and from dead code in
+  `domain-checklists.md` §H (an unreferenced function nobody calls) — here the call **runs** on
+  every request and only its *result* is dead on the hot branch.
 - No unbounded growth: ever-growing lists/maps/caches, accumulating `defer`s,
   unclosed resources. Stream large data instead of buffering it all in memory.
 - **Every append-only store on disk names a reaper — unbounded growth fills the disk, a
@@ -448,4 +476,7 @@ dependency); a `Promise.all`/`gather` immediately followed by a standalone `awai
 whose arguments don't reference the group's results (an independent read appended
 past an existing concurrent group instead of folded into it); a handler `await`ing
 two helpers that each re-read the *same* source to build different projections
-(fetch-per-projection instead of read-once-derive-both).
+(fetch-per-projection instead of read-once-derive-both); an expensive `await`
+(DB/API/LLM/full-collection read) placed above an early return whose returning (hot) branch
+never reads its result (paid and discarded every request — move the call below the return or
+make it lazy).

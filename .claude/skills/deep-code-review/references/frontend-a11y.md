@@ -842,6 +842,41 @@ production-like server).
   (compare the provider's version/timestamp) applied one layer out, at a client reducer. Distinct too
   from the fetch-dedup bullets above, which govern *how many* requests fire, not *which* operation's
   flag a shared cleanup clears.
+- **A debounced write to the URL/shared state closes over the values it read when the
+  timer was *scheduled* — a change made for another reason while the timer is pending is
+  reverted when the stale timer fires.** A control that writes the URL/query on a delay (a
+  search box that `setTimeout`s a `router.replace`/`push` a few hundred ms after the last
+  keystroke, an autosave, a slider that debounces its commit) builds the write's payload
+  from the params/state it captured at *schedule* time and holds it in the pending closure.
+  Before the timer fires, the same URL/state moves on for an unrelated reason — the user
+  clicks a filter chip, a nav writes a param, another control commits — via its own
+  *immediate* write. The pending timer then fires with its captured-stale set and re-writes
+  the URL from it, silently dropping the concurrent newer write (the filter "un-clicks
+  itself," the just-set param vanishes ~300 ms later). It reproduces **only under overlap**
+  — a second write landing between a debounced write's schedule and its fire — so every
+  single-control test passes; a **per-component copy** of the debounce makes it worse, since
+  two controls each keep their own stale snapshot and clobber each other. **Fix — read
+  current state at fire time, never replay a captured one:** move the debounce into an effect
+  keyed on the changed value whose cleanup cancels the still-pending timer on every re-run
+  and on unmount (so the write re-schedules whenever the value changes and no superseded
+  timer survives), and build the payload **inside** the timer from the live URL/router state
+  (or a functional/merge update — `params => ({ ...currentParams, q })` read at fire time),
+  never from a set closed over at schedule time; route every debounced writer through **one
+  shared debounced-write hook** so they all funnel through the same current-state read
+  instead of each holding a private snapshot. Detection: a `setTimeout`/debounced callback
+  that spreads captured params/state into a `router.replace`/`push`/`setState` with **no**
+  cleanup clearing the pending timer when its keyed value changes, or a per-component
+  debounce copy of a URL write. Regression-test the overlap: schedule the debounced write,
+  issue a *different* param's write before it fires, let it fire, and assert the concurrent
+  change survives — a single-control test asserts neither write's outcome under overlap.
+  Distinct from three neighbours: the shared-`.finally` loading-flag clobber above clears a
+  loading **flag** a concurrent operation doesn't own (this reverts a **state/URL value**,
+  not a flag); the fetch-dedup bullets above govern **how many** requests fire (this governs
+  **which write wins**); and the URL-backed-state bullet above ("Drawer / filter / detail
+  state should be URL-backed") is about state that **never reaches the URL** (held only in
+  `useState`) — here it *does* reach the URL and a stale timer reverts it. The general concurrent-writer form (two writers racing on one value,
+  needing a lock/CAS/version) is `concurrency-shared-state.md`'s read-modify-write rule
+  applied at a client debounce.
 - **A memoized callback needs a memoized recipient — stable props alone don't stop
   re-renders.** In a list/queue rendering N rows via `.map()`, if the parent holds shared
   per-row state (a selection set, per-row drafts, a filter) that changes on ordinary
@@ -1149,4 +1184,8 @@ doesn't contain the element's own visible text (WCAG 2.5.3); an icon/label swap 
 `Content-Security-Policy` header/meta containing `unsafe-inline` with no `nonce`/hash, or missing
 `object-src`/`base-uri`; a sanitizer call (`DOMPurify.sanitize`/`new Sanitizer(`) with no
 `SANITIZE_NAMED_PROPS`/`blockAttributes` configured, rendering user HTML, alongside a bare
-`window.*` global or a `getElementById`/`getElementsByName` result trusted with no type check.
+`window.*` global or a `getElementById`/`getElementsByName` result trusted with no type check; a
+`setTimeout`/debounced callback that spreads params/state captured at *schedule* time into a
+`router.replace`/`push`/`setState` with no cleanup clearing the pending timer when its keyed value
+changes (a concurrent newer write is reverted when the stale timer fires), or a per-component copy
+of a debounced URL write.

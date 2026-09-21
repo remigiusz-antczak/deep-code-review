@@ -3,6 +3,14 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.409.0] — 2026-09-21
+
+### deep-code-review — two incremental-change detection patterns: a debounced write that reverts a concurrent change, and an expensive await discarded on the hot early-return branch (#930, #932)
+
+- **`frontend-a11y.md`** (#930): a debounced write to the URL/shared state closes over the values it read at *schedule* time; if the URL/state moves on for another reason (a filter chip, a nav) while the timer is pending, the stale timer fires and re-writes its captured snapshot, silently reverting the concurrent newer write. Reproduces only under overlap (every single-control test passes); a per-component copy makes it worse. Fix: move the debounce into an effect keyed on the changed value whose cleanup cancels the pending timer, build the payload inside the timer from live state, and route every debounced writer through one shared hook. Distinct from the shared-`.finally` flag clobber (a flag, not a value), the fetch-dedup bullets (how many requests, not which write wins), and the URL-backed-state bullet (state that never reaches the URL). +1 eval.
+- **`performance-db-cost.md`** (#932): an expensive `await` placed above an early return is paid on every request that takes the early (hot) branch even when that branch never reads its result — the app issues and discards the query on its most frequent path. The waste is the ordering, not the frequency: caching does not fix it (a cached read is still a needless lookup on a branch that discards it). Fix: move the call below the early return, or make it lazy. Distinct from sequential-awaits / twin-projection (reads that are used), over-fetch (trims a used result), and dead code (an unreferenced function). +1 eval.
+- **#931 (a helper preserves state on some return branches but not all) closed as covered — no fold:** already reachable via `product-ux-quality.md` (a view/tab-switch link that drops the active filter — same principle, fix, and test, with an existing eval), #929's completeness-by-construction cure in `language-stack-redflags.md`, and `method.md`'s inward-completeness sweep; a bullet would restate one of them (the repo's no-duplication thesis).
+
 ## [1.408.0] — 2026-09-21
 
 ### agentic-delivery — three multi-session / resource-discipline lessons: broadcast-ask arbitration, matching the local gate to CI's enforced set, and a contention probe that fails open on a truncated file list (#933, #935, #936)
