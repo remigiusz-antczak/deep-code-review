@@ -348,7 +348,27 @@ Every billable or slow call must map to value delivered.
   terse `async/parallel where safe` line above, which states the principle: this
   names the concrete failure shape (sum-vs-max latency), the detection trace (each
   `await`'s arguments back to a prior `await`'s result), and the genuine-dependency
-  carve-out that one-liner leaves implicit.
+  carve-out that one-liner leaves implicit. **A *correct* concurrent group already
+  in the function is not proof the whole function is parallel — run that same trace
+  on every `await`, including the ones *after* a group.** The recurring shape is a
+  loader that already starts its first reads together (a `Promise.all`, a
+  hoisted-promise pair, an `asyncio.gather`) and then, in a later change, tacks a
+  new independent read on *after* the group as a lone `await`: its author added read
+  k+1 at its natural point-of-use without reopening the top-of-function group, and
+  its inputs never trace back to anything the group returns, so it has no data
+  reason to run last yet still adds its full round-trip to the sum. The group's
+  presence is the camouflage — a reviewer reads it as "concurrency already handled"
+  and the change added only one line, with the group it should have joined sitting
+  unchanged (often outside the diff hunk), so a diff-only pass waves it through.
+  Tell it apart from a never-parallelized loader by *provenance*: the group and the
+  trailing read land in different commits (blame / `git log -L` on the function).
+  Fix by starting the new read *with* the group, not beside it — but preserve its
+  error handling in the move: a fail-all group (`Promise.all`/`gather`) rejects as a
+  whole on any member's failure and discards the siblings' results, so a read that
+  carried its own `.catch`/fallback loses that isolation if it is blindly folded in.
+  Hoist it to its own promise, keep the `.catch` on it (or use `Promise.allSettled`),
+  and `await` it at its point of use — keeping the latency win without coupling a
+  non-critical read's failure to the critical ones.
 - **Two projections of one dataset that each re-load the raw source, awaited one after the
   other, pay double I/O *and* double latency — the compute-once-derive-many miss inside a
   single handler.** A request handler / SSR loader that needs two differently-shaped views
@@ -421,5 +441,8 @@ processes; a cache read → origin recompute with no single-flight (stampede on
 expiry); a cache that stores a not-found/error under the positive TTL; a
 handler/loader with independent `await`s run in top-to-bottom order where none
 reads an earlier call's result (accidental serialization, not a genuine
-dependency); a handler `await`ing two helpers that each re-read the *same* source
-to build different projections (fetch-per-projection instead of read-once-derive-both).
+dependency); a `Promise.all`/`gather` immediately followed by a standalone `await`
+whose arguments don't reference the group's results (an independent read appended
+past an existing concurrent group instead of folded into it); a handler `await`ing
+two helpers that each re-read the *same* source to build different projections
+(fetch-per-projection instead of read-once-derive-both).

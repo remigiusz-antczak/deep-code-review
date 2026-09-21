@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.386.0] — 2026-09-21
+
+### deep-code-review — an independent read appended past an existing concurrent group belongs inside it (batch drift) (#880)
+
+- **`performance-db-cost.md`**: extends the Sequential-`await`s bullet with the batch-drift case — a handler already parallelizes its independent reads in one group, then a later change adds another independent read as a separate `await` *after* the group instead of folding it in, so the new read needlessly serializes on the critical path. A correct group present is camouflage: the arg-trace must also run on the `await`s that follow a group (any whose inputs don't derive from it is a member that drifted out), and a one-line diff whose unchanged group sits outside the hunk waves through a diff-only review; blame / `git log -L` shows the group and the trailing read landed in different commits. Fix by starting the new read *with* the group, but preserve its error handling in the move — a fail-all group (`Promise.all`/`gather`) rejects wholesale and discards siblings on any member's failure, so a read that carried its own `.catch` loses that isolation if blindly folded in; hoist it to its own promise, keep the `.catch` (or use `Promise.allSettled`), and `await` at its point of use. +1 eval.
+
 ## [1.385.0] — 2026-09-21
 
 ### deep-code-review — provenance & hygiene (self-audit fixes): SHA-pin drifting standards URLs, disambiguate two duplicate-title rows, remove one restatement
