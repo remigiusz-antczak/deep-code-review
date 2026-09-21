@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.396.0] — 2026-09-21
+
+### deep-code-review — LLM call telemetry logs model+version but not a prompt version/hash, so a prod quality regression can't be bisected to a prompt edit (LLM app quality)
+
+- **`observability.md`**: the LLM-call instrumentation logs the model + version, outcome and a trace, so a quality regression is bisectable to a model bump but not to a prompt edit — the prompt is the other behavior-changing input. Add a prompt version tag or template hash to each call record so a regression is attributable to the prompt revision that caused it (a template hash, not the rendered prompt — metadata, compatible with the rule against logging the raw prompt payload). The prod-traceability sibling of the pre-merge eval-gate-on-prompt-change (testing-and-evals.md), cross-ref'd not restated. +1 eval.
+
 ## [1.395.0] — 2026-09-21
 
 ### deep-code-review — a client-side open-redirect guard that rejects a protocol-relative prefix but not its backslash twin (WHATWG normalization) (#894)

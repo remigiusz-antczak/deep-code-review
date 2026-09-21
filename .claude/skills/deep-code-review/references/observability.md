@@ -48,7 +48,9 @@ failure paths that *produce* these signals are section F /
 - **Instrument LLM / agent calls as first-class telemetry, not just the host service.** An LLM or
   agent feature shipped with only service-level latency/error signals is under-instrumented:
   capture per-call **token usage** (prompt/completion), **latency** and **cost**, the **model +
-  version**, the **outcome** (success / error / refusal / empty / tool-call), and a **trace**
+  version** (and, for LLM calls, a **prompt version tag or template hash** — so a quality regression
+  is attributable to the *prompt* revision, not just a model bump; `testing-and-evals.md`), the
+  **outcome** (success / error / refusal / empty / tool-call), and a **trace**
   spanning the agent's tool calls, so a failing or token-burning agent is visible — but emit
   **structured telemetry: counts and metadata, never the raw prompt/response payload** (redact per
   *Logs & traces* below; token *counts* need no prompt text). The **OpenTelemetry GenAI semantic
