@@ -3,6 +3,14 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.431.0] — 2026-09-21
+
+### deep-code-review — an automated "scan every X, assert property P" inventory test is only as complete as how it recognizes X; a text-pattern scan silently under-covers an equivalent-but-unrecognized syntax (#1024)
+
+- **`security-appsec.md`** (A01): a regression/inventory test that scans every route/handler/migration and asserts a security property (auth checked, input validated) is only as complete as its **recognition** of the construct. A scan built as a **string/regex/brace-match for one literal spelling** finds **zero** matches in a file expressing the identical runtime construct in a different valid form, so the assertion loop never iterates it and the suite reports **nothing — not a failure** (green because it never looked). Concretely: a test finding mutating handlers by grepping `export async function POST(` silently skips `export const POST = async (req) => …`; a brand-new no-auth handler ships under a green suite, and the test's docstring overclaims "every route covered by construction." Detect: is the scan pattern-based rather than an AST/compiler-symbol lookup, does the language allow >1 spelling, and — decisive — does the fixture set include a **negative case in an alternate-but-valid syntax** asserted to be caught. Fix: parse with the real AST/compiler API (check exported names regardless of declaration form), or broaden the pattern **and** add a regression fixture per form so the completeness claim is itself under test. Distinct from the extension-allow-list gate gap (#1006 — under-covers by *which files* enter the scan; this under-covers by *which syntax* is recognized inside a scanned file) and the href-transform test-symmetry (#1000 — a missing sibling *function*; here one scanner defeated by one file in a different dialect).
+- **#1025** (a shared queue without a live-claim registry causes duplicate work) **closed as covered** — the claim-registry-before-work rule is the foundation of `multi-session-coordination.md` (#593 structured registry, #970 atomic create-that-fails token, #834/#933 partition + arbitrate, #901 per-agent id); #1025 as written adds nothing unstated.
+- +1 eval (550 total), non-telegraphing. Closes #1024.
+
 ## [1.430.0] — 2026-09-21
 
 ### deep-code-review — a shell bracket-range used to validate a character class is locale-collated, so a byte-identical gate returns a different verdict per LC_COLLATE (#1022)
