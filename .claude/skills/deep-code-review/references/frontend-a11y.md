@@ -967,6 +967,44 @@ production-like server).
   `useState`) — here it *does* reach the URL and a stale timer reverts it. The general concurrent-writer form (two writers racing on one value,
   needing a lock/CAS/version) is `concurrency-shared-state.md`'s read-modify-write rule
   applied at a client debounce.
+- **An optimistic write that reverts to a value it captured before the call has no idea a *newer* write
+  already committed a different value — on failure it reverts to the stale one and clobbers the newer.**
+  An optimistic-update handler (drag-to-reorder, an inline edit, a toggle) writes the new value into
+  keyed client state — `state[id] = next`, a map keyed by item id, a single field — **before** the
+  persist request resolves; the success path leaves it, the failure path reverts by deleting or resetting
+  that key to the value it captured at write time. Correct for a **single** in-flight write, it becomes a
+  clobber the moment the same key is written a **second** time before the first settles — a second drag,
+  a fast double-click, a keyboard repeat, all ordinary interactions when the trigger has no
+  disable-while-pending guard. Sequence: write 1 sets `state[id] = A` and fires a slow request, capturing
+  `prev`; before it resolves, write 2 reads the current (already-optimistic) value, sets `state[id] = B`,
+  and fires a fast request that **succeeds**, correctly leaving `B`; write 1 then **fails** (or simply
+  resolves out of order) and its revert **unconditionally** resets `state[id]` to its captured `prev` (or
+  deletes it), clobbering the confirmed `B` and snapping the UI back to a stale or pre-write-1 value —
+  usually with a misleading "your change was reverted" attached to a request the user has already
+  forgotten. Neither branch checks whether the value it is about to overwrite is still the one **this**
+  call wrote. It survives review because each handler reads correctly alone (write, then undo on failure)
+  and a single-call unit test — call once, resolve/reject the mock, assert state — always passes; the bug
+  lives only in the **interaction** of two calls on one key. **Detection:** for any optimistic handler,
+  (1) confirm the trigger can fire a second time on the same key before the first request settles (no
+  `disabled`-while-pending, no debounce that would prevent it), and (2) check whether the revert (and,
+  for symmetry, the success write) mutates by **bare key** or first checks "is the current value/token
+  still the one I wrote" — a captured-value compare, or a monotonic per-key request token where only the
+  latest token's continuation may mutate state. Bare key plus a plausible double-trigger is the bug;
+  **verify before filing** by tracing the exact two-call mutation sequence and showing the clobber, not
+  just "seems racy." **Fix — a per-call identity guard (a client-side compare-and-set):** capture the
+  value or a request token when the optimistic write happens, and only mutate in the async continuation
+  if the current value/token still matches what this call expects; regression-test two overlapping calls
+  on one key with the first failing after the second succeeds, asserting the final state reflects the
+  second (successful) call. Distinct from the debounced-write bullet directly above: there the stale
+  value is a **schedule-time snapshot** a debounce timer replays on its own (successful) late fire, fixed
+  by reading current state at fire time; here it is a **pre-write value** reset on an out-of-order
+  mutation's **failure** path, fixed by a per-call token — both are a stale write clobbering a concurrent
+  newer one, different trigger and fix. Distinct too from `product-ux-quality.md`'s reverted-optimistic-
+  write bullet, which governs which **mapper** the revert's error *message* passes through (a user-facing
+  string leak) — this governs whether the revert's **state write** still owns the key (a data-correctness
+  race); same handler, orthogonal defects. The general concurrent-writer form (a lock/CAS/version on one
+  shared value) is `concurrency-shared-state.md`'s read-modify-write rule, here applied to keyed
+  **client** state on the optimistic-revert path.
 - **A memoized callback needs a memoized recipient — stable props alone don't stop
   re-renders.** In a list/queue rendering N rows via `.map()`, if the parent holds shared
   per-row state (a selection set, per-row drafts, a filter) that changes on ordinary

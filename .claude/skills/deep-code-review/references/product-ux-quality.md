@@ -790,6 +790,48 @@ domain H) with a UX consequence, so it is ruled on here too.
   shared marker to match; and from the hardcoded-value-equals-token bullet above, which is the
   *value-level* check **within** one control (a literal equal to a token's current value) — this is the
   *population* question of **which** controls of the class to check at all.
+- **A "we'll migrate the rest later" claim is only as good as the ticket behind it — and the leftover
+  sites it defers are the ones that *structurally* can't adopt the shared component.** The
+  audit-migration-by-control-TYPE bullet above owns the **population** question (enumerate by the
+  control type / old-recipe signature, not the shared component's importers) and the two ways a
+  leftover carries no shared marker: (a) a control never migrated, and (b) a control that *cannot* use
+  the primary shared component. This bullet owns two ways that leftover stays **hidden even from that
+  sweep**. **(1) The migration is "tracked" only in a code comment, not a real ticket.** An extraction
+  that *admits* the leftover — `// migrating the server-rendered empty state onto SharedEmptyState is
+  a tracked follow-up` — reads as diligence, so a reviewer trusts the "tracked" claim and moves on; but
+  the follow-up issue was never filed, so nothing forces the consolidation and the shared component and
+  the un-migrated copy drift apart (an a11y fix, a prop, or a copy tweak lands on one and not the other
+  — the latent-drift consequence the audit-migration and hardcoded-token bullets already name). **Verify
+  the claim against the tracker; do not take the comment's word:** grep the extraction's comments and
+  commit messages for promise phrasing (`tracked follow-up`, `migrate … later`, `should become a thin
+  call of`, `consolidation deferred`), and for each, confirm a real open issue names the specific two
+  components. A structurally-confirmed duplicate with no tracking issue means the "tracked" claim is
+  false — file the follow-up, do not trust the comment. Distinct from `frontend-a11y.md`'s "grep for
+  *we avoided the shared component because…*" technique, which mines a comment stating a **reason not to
+  use** a primitive (a pre-verified bug already worked around, treated as a found finding) — this mines
+  a comment **promising to finish** a migration, and the action is to *verify the promise was kept*, not
+  to treat the deviation as the bug. **(2) The one relevant leftover is buried in a multi-branch
+  empty-state conditional, masked by legitimately-distinct siblings.** A search-like view chains several
+  empty states — *no query yet* / *query too short* / *no text matches* / *matches exist but a secondary
+  filter removed them all* / *results* — and only the last is the shared "filtered-to-zero" concept; the
+  others are genuinely different and must **not** be forced into it. A concept-grep (`No .* match` /
+  `.* match .* filters`) over-matches the legitimately-distinct branches, so a reviewer — or an automated
+  importer census — sees "this file already has several empty states for good reasons" and stops without
+  classifying **which** branch is the shared concept in disguise. Its tell: that branch's copy reads as a
+  **prose instruction** ("clear a filter to widen the results") rather than an actual control, because
+  the working clear button lives several lines away, wired to a different, often hand-rolled affordance.
+  **Fix the framework-boundary survivor at the component, not the call site:** a server-rendered site
+  hand-rolls an *action-less* empty state precisely because the shared component takes a client
+  `onClear: () => void` it cannot pass (the server/client-boundary case of blind spot (b) above — a
+  framework boundary rather than a wrong role) — extend the shared component to accept an
+  **action-descriptor** (an href / action form) alongside the bare callback so a server caller is not
+  structurally forced to hand-roll, and when closing an "extract shared component X" ticket **enumerate
+  the call sites excluded and why** (framework boundary, multi-branch conditional) rather than closing on
+  "every match of the old pattern I found is gone." Distinct from the **adoption-is-total** bullet above,
+  which diffs the shared component's own doc-comment named-fixed set against a grep for the shared
+  string/concept and assumes a straggler *should* have imported it — here the survivor either **could
+  not** adopt it (framework boundary) or is hidden behind a *false* "tracked" claim, so it never appeared
+  in a named set to diff against.
 - **A fix to a shared concept lands in the shared component**, not in one caller —
   otherwise the same defect survives in every other caller, and whoever checked
   only the screen they were shown signs off a still-broken app.
