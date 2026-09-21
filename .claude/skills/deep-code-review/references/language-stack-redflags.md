@@ -64,6 +64,10 @@ grep -rInE 'console\.log|print\(|dbg!|System\.out\.print|fmt\.Print' .
   monotonicity** of the sorted result in both directions, not just where the `NaN` landed. Distinct
   from the attacker-chosen-key comparator DoS below — that is worst-case *complexity*; this is a
   wrong *return value*.
+- `new Date('2026-03-14')` / `Date.parse` on a **date-only** string → **UTC** midnight, while a
+  `'…T00:00:00'` (time, no offset) → **local** midnight (MDN) → a viewer behind UTC renders a bare
+  day a **day early**; non-ISO/slash forms are unportable. Mechanism + fix in
+  `time-date-correctness.md`.
 - `Math.random()` for tokens/ids → use `crypto.randomBytes`/`randomUUID`.
 - `any`, `as any`, `@ts-ignore`, `!` non-null assertions → type holes; `TS` set
   to non-`strict`.

@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.399.0] — 2026-09-21
+
+### deep-code-review — the date/time boundary layer: where a string / wire payload / column becomes a typed time (date/time)
+
+- **`time-date-correctness.md`** (+ a language-stack-redflags.md grep-tell, + an RFC 9557 citation): a new boundary-layer section below the file's instant/wall-clock/floating taxonomy, covering the seam where a value crosses into a typed time. Face 1 (PARSE): `new Date('2026-01-01')` on a date-only string parses at UTC midnight, but the same date WITH a time and no offset parses as local, so a date-only value formatted back for a viewer behind UTC renders the previous day; only the date-only-UTC-vs-datetime-local asymmetry is specified — non-ISO forms are implementation-defined (do not assume slash-form is local). Face 2 (WIRE): a timestamp ingested without an offset makes the parser guess the sender's zone (RFC 3339 makes the offset mandatory; `-00:00` = UTC-known-offset-unknown, semantically distinct from `Z`). Face 3 (SCHEMA): a civil date (DOB, invoice date, holiday) stored as a timestamp/epoch shifts a day when tz-converted — hold a date-only type (SQL `DATE`, `Temporal.PlainDate`). Plus RFC 9557 named as the wire format for the existing store-wall-clock+tz-id advice. Distinct from the covered SSR-default, bucketing, and `datetime.now()` footguns. +2 evals. Sources verified by direct fetch (MDN, RFC 3339/9557), logged in docs/standards-index.md.
+
 ## [1.398.0] — 2026-09-21
 
 ### deep-code-review — a fetch collapsed behind a shared hook is still issued again by an always-mounted consumer left outside it: grep the URL, not the hook name (#913)
