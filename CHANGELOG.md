@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.429.0] — 2026-09-21
+
+### deep-code-review — a graph-authored-as-data whose closure-only validity gate stays green while its `anchor`/`startNode` field disagrees with the declared entry (#1019)
+
+- **`data-quality.md`** (§4 consistency): a diagram/state-machine authored as data (an ordered node list, directed edges, a prose step narrative, and a separate `anchor`/`startNode` a renderer reads) carries the anchor as a **denormalized restatement of where the ring begins**, and nothing forces it to equal the **declared entry** (the node-list first element / the narrative's first clause). A gate asserting *the edges form one closed cycle over every node* passes green on a perfectly valid ring — so a reviewer reads "validated" — yet **never checks which node is declared the start**, so an anchor set to the last (or an arbitrary "most interesting") node sails through and every consumer renders the ring **rotated to the wrong step**. Detection compares the anchor to the declared entry (`anchor == nodes[0]` and the narrative's first clause), never "is the anchor a valid node id." Fix by construction: derive the anchor *from* the declared entry, or gate the two fields into equality (§2 make-a-dishonest-value-unrepresentable). Batch-inherits from a template/porting-script/author habit → sweep every sibling from the same pass (`method.md` Phase 4). Distinct from the §4 named-quantity rule (a *quantity* drifted **stale** vs a start-designation **wrong from origin** with a green topology gate as false assurance), from the partition/ring gate in `language-stack-redflags.md` (a routine's off-by-one that falsely **rejects** vs authored data a gate falsely **accepts** by omitting a dimension), and from §1's stated-precedence (authority **direction** vs **co-equal** fields that must be equal).
+- +1 eval (548 total), non-telegraphing. Closes #1019.
+
 ## [1.428.0] — 2026-09-21
 
 ### deep-code-review — three keyboard/structure a11y heuristics: a control that self-disables while focused, landmarks that pass the automated bypass check but fail a sighted-keyboard user, and a tree whose depth is only padding + colour (#1005, #1012, #1013)
