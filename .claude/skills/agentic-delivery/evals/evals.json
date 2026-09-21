@@ -1030,6 +1030,17 @@
         "If the merge was performed by the owner's own identity (distinct from the shared agent account), classifies it as an authoritative override: cancels the alarm, does not revert, and reconciles by marking the losing competing PR as superseded",
         "Treats only a merge performed by an agent identity that agreed to the lock as a real violation to investigate"
       ]
+    },
+    {
+      "id": "hard-test-blocks-a-ready-fix-from-landing",
+      "prompt": "A lane has a one-line bug fix that is correct and ready. It is also required to add a test that proves the bug -- red before the fix, green after. But the ideal test needs a real DOM render and a fake timer that races the framework's scheduler, and the harness won't cleanly flush the async update. Two hours in, the worker is still rewriting the mock; the working tree is dirty, nothing is committed or pushed, and the fix has been ready almost the whole time. What should the worker do?",
+      "expected_output": "The worker stops perfecting the hard test and lands the fix now, behind the cheapest artifact that still fails-before / passes-after -- a pure-logic port of the buggy control flow, a source-shape pin, or a narrower assertion on the same behaviour -- then opens the PR; the full suite still gates the branch. The requirement to prove the fix is a floor (a red-before / green-after proof must exist), not a ceiling that licenses maximizing test elegance, coverage, or realism while the fix sits unshipped. The DOM-level, real-scheduler test is filed as a tracked follow-up for the fuller test -- the fix never lands with zero proof, so this is not deferring testing wholesale. The test-writing effort is bounded against the fix's value, and the stall is diagnosed from the artifact (dirty tree, no commit) rather than from 'no PR yet'.",
+      "expectations": [
+        "The fix lands now behind the cheapest real assertion that still fails-before / passes-after, not held hostage to the ideal hard-to-write test",
+        "The proof requirement is treated as a floor (a red-before / green-after proof must ship), not a ceiling that mandates maximizing test elegance/coverage/realism",
+        "Only the fuller DOM/real-scheduler test is deferred to a tracked follow-up; the fix does not land with zero proof (this is not the 'add tests later' failure)",
+        "The test-writing effort is bounded against the fix's value, and the stall is diagnosed from the dirty-tree / no-commit artifact rather than from 'no PR yet'"
+      ]
     }
   ]
 }

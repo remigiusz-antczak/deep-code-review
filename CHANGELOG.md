@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.403.0] — 2026-09-21
+
+### agentic-delivery — a hard-to-write test must not hold a ready fix hostage: verify-first is a fails-before / passes-after floor, not a ceiling (#922)
+
+- **`fast-agentic-delivery.md`**: verify-first / test-first is misapplied into test gold-plating — the fix is ready but the worker over-invests in a hard-to-write test (an awkward mock, a flaky async harness, an edge no one hit) and the fix never lands. Verify-first is a floor (a fails-before/passes-after pin), not a ceiling that licenses unbounded test perfectionism blocking delivery. Ship the fix with the cheapest assertion that pins the behavior and defer only the fuller test as a tracked follow-up; budget the test effort against the fix's value, separate from the lane's overall timebox. Guard: the fix never lands with zero proof — deferring the proof itself is the other failure and stays forbidden (G4). Distinct from the finalize-orphan rule (there gates are green and a draft's tail is orphaned by a process) and the "I'll add tests later" anti-pattern (its inverse). +1 eval.
+
 ## [1.402.0] — 2026-09-21
 
 ### agentic-delivery — an agent-set merge-hold does not bind the human owner: classify a held-PR merge by who merged before calling it a breach (#917)
