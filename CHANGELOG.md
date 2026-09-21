@@ -3,6 +3,16 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.417.0] — 2026-09-21
+
+### agentic-delivery — four delivery/coordination lessons: stagger ready-flips into a serial seat, a truncated "done" that strands a PR, a stranded PR double-recovered, and a comment that isn't an atomic claim (#964, #965, #967, #970)
+
+- **`fast-agentic-delivery.md`** (#964): under a single serial merge seat + shared CI runners, flipping the whole draft stack to **ready** at once buys no merge throughput (the seat drains one at a time) but fires N heavy CI suites into a fixed-concurrency runner pool → every check pends for minutes and the pool exhausts for other lanes (self-inflicted runner-drain). Hold *ready* PRs to a small window sized to the pool (~3–4), drain, flip the next. Governs the ready-flip upstream of the seat (cost borne by the runner pool), distinct from the single-seat merge-burst and the local-RAM WIP cap.
+- **`fast-agentic-delivery.md`** (#967): a "stop when fixed" / minimal-patch lane contract defines *done* as code-fix + gates-green and treats the post-fix **process** steps (changelog fragment, draft→ready flip) as out of scope, so the lane opens a draft, greens gates, stops — leaving the PR stranded (draft, red on the missing changelog) despite the brief listing those steps. Fold the process steps **into the lane's acceptance / Done-when**, or the orchestrator owns the tail explicitly — exactly one must own it.
+- **`fast-agentic-delivery.md`** (#965): a **stranded** PR has no live owner, so the producer (resuming its lane) and the merge-seat holder (unstranding to merge) both recover it at once → a dual-push race on the branch. Make unstranding an **exclusive** step — claim it before acting, assign it to one owner (the merge-seat holder by default), the other stands down; verify the write landed on the remote. The cause is #967 (a truncated Done-when); this is the race recovering the already-stranded PR — cross-referenced, not merged.
+- **`multi-session-coordination.md`** (#970): an announcement comment on an append-only thread is an **append, not a compare-and-swap** — every "taking X" post succeeds, so it never tells the poster someone already took it; two peers claim the same item before reading each other. Use a claim token whose **creation is atomic** on the item's namespace (`O_CREAT|O_EXCL`, an atomic rename, a deterministically-named branch whose second push the forge rejects) — the failed create *is* the collision signal (a real mutex). A registry row is a readable *record*, not the *winner* (appending it is equally non-atomic). The **preventive** fix #713 (named the mechanism) and #933 (named the trigger, gave post-hoc arbitration) both stop short of; fall back to #933 only where no atomic primitive exists.
+- +4 evals (115 total in agentic-delivery). Closes #964, #965, #967, #970.
+
 ## [1.416.0] — 2026-09-21
 
 ### deep-code-review — four a11y / UX-review heuristics: token-migration completeness by control-type, a dismissible chip that names the value not the action, a bare-arrow glyph with no spoken equivalent, and a full-page screenshot that fabricates fixed/sticky defects (#966, #971, #972, #973)
