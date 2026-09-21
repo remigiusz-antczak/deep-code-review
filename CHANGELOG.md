@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.397.0] — 2026-09-21
+
+### agentic-delivery — a read-only review of a contested surface is wasted even though it can't write-conflict: probe in-flight ownership, review the tip not the stale base (#912)
+
+- **`fast-agentic-delivery.md`**: the third leg of the ownership-map argument. The converse rule clears any lane whose surface is disjoint from every in-flight write; read literally it greenlights a *review* lane (which writes nothing, so never conflicts) — but a defect sweep against a base an in-flight/held branch is mid-rewriting is throwaway: its findings go stale the instant that branch lands, and a fix dispatched from them collides with it. The write-conflict gate is the wrong gate for a read-only lane — the test is whether the branch owning the file set is rewriting the code the finding would be about. Before sweeping a file set, run the same in-flight-ownership probe (forge state and local git); if a branch owns it, review that branch's tip (a PR review whose findings land with the change) or defer until it lands, rather than re-reviewing the base it will discard. Not the over-block mirror error: findings on a different axis or an untouched region survive its landing and are safe to file now, and a static domain partition keeps most review lanes clear; any finding carried across a landing is a lead, re-confirmed at the new head. +1 eval.
+
 ## [1.396.0] — 2026-09-21
 
 ### deep-code-review — LLM call telemetry logs model+version but not a prompt version/hash, so a prod quality regression can't be bisected to a prompt edit (LLM app quality)

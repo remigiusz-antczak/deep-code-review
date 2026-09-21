@@ -1008,6 +1008,17 @@
         "Prescribes a stable per-agent identifier (a session/agent id or a worktree/host tag) DISTINCT from the shared account, applied as the same value in three places — in `claimed_by` instead of the account name, prepended to every message the agent posts to the channel (machine-parseable), and as the handle the liveness probe runs against — framing it as the join key that binds a claim to its author and the author to a liveness check.",
         "Adds the timestamp half — an absolute, timezone-explicit (UTC) `claimed_at` so 'recent vs stale' is a fact, not a local-vs-UTC clock-skew guess — and reclaims the now-identifiable stale row only on a positive-liveness check turning up nothing, never on elapsed time alone."
       ]
+    },
+    {
+      "id": "review-of-a-branch-mid-rewrite-goes-stale-when-it-lands",
+      "prompt": "Agent A has pushed a branch that rewrites most of the payments module and is waiting on a release gate before it lands. Agent B is now told to sweep the payments module for defects and file findings. How should B proceed?",
+      "expected_output": "B does not run a fresh defect sweep of the payments module against the current default branch as if it were settled. B first checks whether another branch already owns that file set, finds A's branch, and instead reviews A's branch tip (so findings reach A and land with the change), defers the sweep until A's branch lands, or scopes to files A's branch does not touch. The reason: findings against the pre-rewrite base are invalidated the moment A's branch lands, and a fix built on them would collide with it.",
+      "expectations": [
+        "B checks whether an existing branch already owns the payments module before starting the sweep, not only whether it can write-conflict",
+        "B does not review the payments module against the current default-branch state as if that state were final",
+        "B's remedy is to review A's branch tip, defer until it lands, or scope to files A's branch does not touch -- not a fresh sweep of the soon-stale base",
+        "B's reasoning is that findings against the pre-rewrite base are invalidated when A's branch lands"
+      ]
     }
   ]
 }

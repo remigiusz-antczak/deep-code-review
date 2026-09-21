@@ -1496,6 +1496,28 @@ never touch that artifact are safe to run in parallel, and pausing them idles ca
 a conflict that cannot occur. Gate a lane on whether **its own** surface overlaps an
 in-flight write, not on whether **any** shared write is open.
 
+**A read-only *review* of a contested surface is wasted even though it cannot write-conflict.**
+The converse just above clears any lane whose surface is disjoint from every in-flight
+write; read literally it *greenlights* a review lane, which writes nothing and so never
+conflicts. But a defect sweep run against a base that an in-flight or held branch is
+mid-rewriting is throwaway, not safe — its findings go stale the instant that branch lands,
+and a fix dispatched from them collides with it (#912). The write-conflict gate is the wrong
+gate for a read-only lane: the test is whether the branch already owning the file set is
+**rewriting the code the finding would be about**. So before sweeping a file set for defects,
+run the same in-flight-ownership probe the main rule above uses (forge state *and* local
+git), and if a branch owns it, **review that branch's tip, not the stale base** — a review of
+the tip is a PR review whose findings reach that lane's author and land *with* the change,
+turning a throwaway pass into useful work — or **defer** the sweep until it lands
+(`multi-session-coordination.md`'s *in-flight work is the anchor*: the started work stays put
+and the reviewer yields to it, rather than re-reviewing the base it will discard). This is
+**not** "review nothing anyone touches," the over-block mirror error the converse already
+warns against: findings on a **different axis**, or on a region the branch does not touch,
+survive its landing and are safe to file now — only the overlap is contested, and a static
+domain partition (`multi-session-coordination.md`) keeps most review lanes clear of a write
+lane's surface in the first place. Any finding carried across the landing is a lead, not a
+verdict — re-confirm it at the new head (*discovery findings are durable as leads; a
+discovery verdict is disposable*, above).
+
 **A commit or PR attribution trailer names the agent that actually did the work.**
 When a fleet commits under a shared template, the co-author / attribution trailer must
 identify the *real* executing agent or model for each lane — a template that
