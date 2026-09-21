@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.398.0] — 2026-09-21
+
+### deep-code-review — a fetch collapsed behind a shared hook is still issued again by an always-mounted consumer left outside it: grep the URL, not the hook name (#913)
+
+- **`frontend-a11y.md`**: the adoption-gap sibling of the identity fan-out fold (#843). Once an endpoint is lifted behind a single Provider/cache, its readers collapse to one request — but a consumer never folded in (a nav badge, shell chrome, an every-route telemetry hook) keeps its own raw `fetch`/`useEffect` against the same URL, so one load still issues the request twice. Not the absent-coalesce case: the boundary exists and works; the defect is partial adoption. That is load-bearing for detection — the outlier does not call the hook, so grepping the hook's call sites (the sibling bullet's method) structurally can't see it; grep the resource URL/endpoint and reconcile every hit against the shared instance's importers. A comment at the shared instance is a cue to audit for a third consumer, not proof the dedup is complete. Two consequences the folded set never shows: the outlier's own polling timer drifts its derived view (an unread badge) out of sync with the shared store (a consistency bug, not just wasted bytes), and a test scoped to the shared hook passes while the outlier still double-fetches. +1 eval.
+
 ## [1.397.0] — 2026-09-21
 
 ### agentic-delivery — a read-only review of a contested surface is wasted even though it can't write-conflict: probe in-flight ownership, review the tip not the stale base (#912)

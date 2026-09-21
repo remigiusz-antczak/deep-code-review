@@ -731,6 +731,34 @@ production-like server).
   **de-dupe / single-flight** mechanism from `performance-db-cost.md` (External calls, and the
   cache-expiry stampede) applied one layer out — at the client component tree rather than a server
   cache.
+- **A fetch already collapsed to one request behind a shared hook/Provider is still issued again by
+  an always-mounted consumer that kept its own raw fetch of the same URL.** Once the identity /
+  notification / settings endpoint is lifted behind the single Provider/Context or request-deduping
+  cache from the bullet above, the call sites that read through it collapse to one request as
+  intended — but a consumer that was never folded in (typically a nav badge, shell chrome, or a
+  telemetry hook that mounts on **every** route) keeps its **own** `fetch`/`useEffect` against the
+  same resource, so one load still issues that request **twice** — once for the folded set, once for
+  the outlier — not once (more, if several were left out). This is not the absent-coalesce case
+  above: the coalescing boundary **exists and works**; the defect is **partial adoption** — one
+  always-on consumer left outside it. That difference is load-bearing for **detection**: the bullet
+  above says to grep the *hook's* call sites, but the outlier **does not call the hook** — it holds a
+  raw fetch — so a hook-name grep **structurally cannot see it**. Grep the **resource URL/endpoint**,
+  not the hook or context name, and reconcile every hit against the shared instance's importers; the
+  leftover hit is the outlier. A comment at the shared instance ("lifted this to avoid a double
+  fetch") is a cue to **audit for a third consumer**, not proof the dedup is complete. It is the
+  exact inverse of the *Strong tell* in the bullet above — there **one** site is specially
+  re-engineered while the rest fan out; here the rest are folded in while **one** site is left out —
+  same partial-adoption geometry, opposite majority. Two consequences the folded set never exhibits:
+  (1) the outlier usually runs its **own polling timer**, so its derived view (an unread-count badge)
+  drifts **out of sync** with the shared store until each refreshes on its own schedule — a visible
+  **consistency** bug, not just wasted bytes; (2) a test scoped to the shared hook alone asserts a
+  single fetch and **passes** while the outlier still double-fetches — the regression test must
+  **mount every known consumer together** (nav + shell + a page consumer) and assert one request.
+  Fix: migrate the outlier onto the same shared instance — delete its raw fetch and its private poll,
+  read the context/cache — so a single fetch and a single refresh loop feed every consumer. Distinct
+  from the identity fan-out bullet above by *state*: that **builds** the coalescing boundary and
+  switches every call site; this is that boundary already built, with one always-mounted consumer
+  never moved onto it.
 - **A `<Suspense>` boundary whose subtree never *suspends* has a dead fallback — the
   "loading state" it looks like it adds renders nothing.** A Suspense fallback paints only
   while a descendant actually suspends — throws a promise the boundary catches — which is what
@@ -1069,7 +1097,11 @@ whose subtree loads data only via `useEffect`+`setState` or receives already-res
 no `lazy()`/`use()`/suspense-enabled hook and no unresolved promise crossing it (the fallback is
 dead); an identity/singleton-read hook (`useUser`/`useSession`/`useCurrentUser`) that `fetch`es in
 a `useEffect`/on first render with no shared Provider/Context or dedup cache, called from many
-components (each mount fires its own request — grep the call sites, count global-shell consumers);
+components (each mount fires its own request — grep the call sites, count global-shell consumers) —
+or, when that shared Provider/cache **already exists**, one always-mounted consumer (nav/badge/shell)
+still fetching the same endpoint **directly** via a raw `fetch` of the resource URL rather than the
+hook, so one load fetches it twice and the outlier's own poll drifts its derived badge out of sync
+(grep the **URL**, not the hook name — the outlier never calls the hook);
 a static `aria-label` that
 doesn't contain the element's own visible text (WCAG 2.5.3); an icon/label swap keyed off an
 `open`/`expanded` boolean with no matching `aria-expanded` on the same control; a
