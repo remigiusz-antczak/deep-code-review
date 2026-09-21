@@ -1053,6 +1053,43 @@
         "Requires a run-end self-audit: what landed on the canonical surface (merged-to-default / live URL, never a proxy), what is staged, what is blocked and on whom, spend vs ceiling",
         "Frames stopping as needing a stated termination condition while starting does not, and queues an owner-gated next step rather than self-authorizing it"
       ]
+    },
+    {
+      "id": "broadcast-ask-arbitrate-crossed-claims-not-tighten-the-probe",
+      "prompt": "I run one of five independent agent sessions on a shared repo, each on its own domain slice, coordinating through a committed claim registry. The owner just posted one message to all five sessions: 'everyone, bump the shared lockfile and open a PR.' My pre-write collision probe reads the registry, sees no claim on the lockfile, so I'll start the work now and post my claim when I open the PR. OK?",
+      "expected_output": "No -- a broadcast is a high duplicate-work trigger the domain partition cannot fence, and this ordering loses the race. The ask was PUSHED to every session at once regardless of slice, so no partition owns it and all five recipients run their collision probe at nearly the same instant, all read an empty registry, and all start -- the probe's read-then-claim ordering is defeated by simultaneity, not by a skipped check. Announce-then-take already requires claiming before you start; what a broadcast additionally needs is ARBITRATION of crossed claims. So: post the one-line claim (your agent_id plus an absolute UTC timestamp) BEFORE executing, then re-read the board; if a competing claim exists, the EARLIEST timestamp owns and the later claimant stands down -- decidable only because the per-agent id and UTC stamp are already mandated. If two peers are already mid-flight on the SAME task before either notices, the loser SALVAGES its work onto a different lens (a test, a review, an edge case the winner is not covering) or a disjoint slice, rather than discarding it. Tightening the probe cannot close a simultaneity window a broadcast opens. Distinct from opposite-splits reconciliation (#713), which is two peers on DIFFERENT halves; here both are on the identical task. (multi-session-coordination.md.)",
+      "expectations": [
+        "Identifies a broadcast as a high duplicate-work trigger a domain partition cannot fence -- pushed to all, not pulled per-slice",
+        "Recognizes the read-then-claim probe fails under simultaneity -- all recipients read an empty board and start together",
+        "Requires claiming BEFORE executing, then re-reading, with earliest-UTC-timestamp arbitration of crossed claims",
+        "Ties the arbitration to the mandated per-agent id plus absolute UTC timestamp",
+        "Salvages a late-caught duplicate by a different lens or slice rather than discarding it",
+        "Does not answer by tightening the collision probe; distinguishes this from opposite-splits (#713)"
+      ]
+    },
+    {
+      "id": "local-gate-mirrors-ci-enforced-set-shed-runner-browsers-not-dev-server",
+      "prompt": "Each of my parallel worker lanes runs the full local browser E2E suite as a blocking gate before it pushes. CI does not run that suite as a required check for merges -- it gates only on lint, unit, and type. Several lanes running the E2E suite at once are thrashing the machine. The suite is good coverage so I'll keep it, and just lower my lane concurrency until the thrash stops. Plan OK?",
+      "expected_output": "Lowering concurrency treats a symptom; the gate itself is the defect. A heavy local suite that is NOT in CI's required-check set is not a merge gate anywhere -- running it as a blocking lane gate is pure thrash, paying the machine's scarcest resource (the headless-browser processes) for zero merge-safety. Match the local blocking gate to CI's ACTUALLY-ENFORCED set -- lint, unit, type, no less and no more (the inverse of the delegated-green rule, where a lane runs NARROWER than the real gate; here it runs WIDER than any gate). Let CI carry any fuller matrix, or run the E2E suite as non-blocking discovery. When a heavy run does still thrash, shed by process class on the lane's own live-teardown path: kill the test-runner's managed/headless browser processes (the disposable mass), but PROTECT the app's own dev server by its port/PID -- the UX gate needs it live -- never sweep it with them. Detecting the thrash is the swap-trend gate (not restated here); orchestrator-level orphan sweeps stay advisory and approval-gated, and kill mechanics live in concurrency-shared-state.md. (fast-agentic-delivery.md.)",
+      "expectations": [
+        "Identifies the redundant gate itself as the defect -- a suite CI does not gate merges on is not a merge gate anywhere",
+        "Matches the local blocking gate to CI's actually-enforced set (no less, no more), not just lowering concurrency",
+        "For shedding, distinguishes the test-runner's managed browsers (kill) from the app's own dev server (protect by port/PID)",
+        "Keeps shedding on the lane's own live-teardown path; does not invent an autonomous-kill exception to the advisory/approval-gated orphan sweep",
+        "Does not merely restate the swap-trend / free-RAM resource gate as the fix"
+      ]
+    },
+    {
+      "id": "contention-probe-truncated-file-list-fails-open-reconcile-the-count",
+      "prompt": "Before I dispatch a fix lane onto a file, I check contention by listing the open release PR's changed files with one `gh pr view <n> --json files` call and seeing whether my target file is in it. My target file isn't in that list, so I conclude it's uncontested and I'll dispatch the lane. The release PR is large -- several hundred files. OK?",
+      "expected_output": "No -- a single un-paginated call returns only one page, and a membership test against a truncated list FAILS OPEN: a file past the first page reads as absent, therefore uncontested, therefore safe, so you would dispatch a lane onto a file the release PR is actively rewriting and it collides the instant the release lands. This is worse than the general truncated-count trap because the failure is a false SAFE, not just an undercount. Fix: pull the FULL list (gh api repos/OWNER/REPO/pulls/<n>/files --paginate) and reconcile its length against the PR's own reported changed-file count -- a returned length short of the reported total means the list is truncated and every 'absent' answer is UNVERIFIED, not safe. Count-reconciliation is threshold-independent: it holds at any page size, where 'pass a bigger --limit' only patches the one number you happened to know. Enumerate the contested set ONCE and dispatch against that cache rather than re-probing per lane. And report the honest state: while a giant release PR is open, fixes to its files are net-negative until it merges -- 'most work is waiting on the release,' not 'producers are idle.' (fast-agentic-delivery.md.)",
+      "expectations": [
+        "Recognizes an un-paginated file listing returns one page and the membership test FAILS OPEN (a false 'safe'), not merely undercounts",
+        "Reconciles the returned list length against the PR's own reported changed-file count; treats a short list's 'absent' as UNVERIFIED",
+        "Notes count-reconciliation is threshold-independent, stronger than passing a bigger --limit",
+        "Enumerates the contested set once and caches it rather than re-probing per dispatch",
+        "Reports the honest state -- most work waits on the release, not 'producers idle'"
+      ]
     }
   ]
 }

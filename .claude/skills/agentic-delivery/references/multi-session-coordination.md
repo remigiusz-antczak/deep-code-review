@@ -236,6 +236,37 @@ a ranking. **🚩 tell:** peers still shipping duplicate/collided PRs after a
 dispatch-time claim recheck was added, answered by tightening the recheck
 further instead of removing the shared grab with a domain split.
 
+## A broadcast reaches every peer at once, so a domain partition can't fence it — arbitrate the crossed claims, then salvage the late-caught dup
+
+The domain-partition fix above removes contention on a backlog peers **pull** from —
+each fires only inside its own slice. A **broadcast** is the case it cannot reach: one
+owner ask **pushed** to every session at once ("all machines: bump the shared
+lockfile") lands in every peer regardless of slice, so no partition owns it and every
+recipient is equally entitled to act (#933). It is a **high duplicate-work trigger** —
+all recipients run the pre-write collision probe (above) at nearly the same instant, all
+read an empty board, and all start; the probe's *read-then-claim* ordering is defeated by
+**simultaneity**, not by a skipped check. Announce-then-take
+(`fast-agentic-delivery.md`) already orders *claim before you start* for one agent, but
+it does **not arbitrate** two claims posted seconds apart where neither saw the other —
+exactly what a broadcast produces.
+
+- **Claim first, then re-read for a competitor; the earliest UTC timestamp owns.** Post
+  the one-line claim — `agent_id` + absolute UTC stamp (*a shared bot account authors
+  every post* above) — **before** executing, then read the board again. If a competing
+  claim exists, the **earliest timestamp wins** and the later claimant stands down.
+  Arbitration is only decidable because that section already mandates the per-agent id
+  and UTC stamp; without them the crossed claims are byte-indistinguishable.
+- **Salvage a late-caught duplicate by lens or slice — don't discard it.** When two
+  peers are already mid-flight on the *same* task before either notices, the loser
+  repoints its work to a **different lens** (a test, a review, an edge case the winner
+  isn't covering) or a **disjoint slice**, rather than throwing it away. Distinct from
+  *in-flight work is the anchor* (#713 above): that reconciles **opposite splits** — two
+  peers on *different* halves, each staying put; here both are on the *identical* task,
+  so the reconciliation is to **differentiate** them.
+- **🚩 tell:** a broadcast ("everyone: do X") followed by N near-identical PRs, or a
+  coordinator answering the dup by tightening the collision probe — the probe cannot
+  close a simultaneity window a broadcast opens; arbitration and salvage do.
+
 ## Every peer honoring its own heavy-lane cap still oversubscribes the machine — coordinate the shared budget, not each session's slice
 
 A per-session heavy-lane cap — `fast-agentic-delivery.md`'s environment

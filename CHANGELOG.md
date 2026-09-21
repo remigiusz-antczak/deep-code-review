@@ -3,6 +3,15 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.408.0] — 2026-09-21
+
+### agentic-delivery — three multi-session / resource-discipline lessons: broadcast-ask arbitration, matching the local gate to CI's enforced set, and a contention probe that fails open on a truncated file list (#933, #935, #936)
+
+- **`multi-session-coordination.md`** (#933): a **broadcast** owner-ask — one message pushed to every peer at once — defeats a domain partition (no slice owns it) and defeats the read-then-claim probe (every recipient reads an empty board at the same instant), so N peers do the identical work. New: claim before executing then re-read, the **earliest UTC timestamp** arbitrates crossed claims (decidable only because the per-agent-id + UTC-stamp rule already exists), and salvage a late-caught duplicate by lens/slice. Distinct from the domain-partition fix (fences a pulled backlog) and #713 (opposite splits — differentiate here, stay-put there); does not restate the existing claim-before-start rule.
+- **`fast-agentic-delivery.md`** (#935): a heavy local suite CI does **not** gate merges on (a full browser/E2E run) is not a merge gate anywhere — running it as a blocking lane gate is pure thrash for zero merge-safety; match the local gate to CI's actually-enforced set (the mirror of the delegated-green rule — there a lane runs *narrower* than the real gate and false-passes, here *wider* and thrashes). Plus the shed selection rule — kill the test-runner's managed/headless browsers, **protect the app's dev server by port/PID** — scoped to a lane's own already-permitted teardown path: it adds *which* processes are safe to shed, **not** new kill authority (the orchestrator orphan-sweep stays approval-gated). The swap-trend / load-vs-cores gate itself is cross-referenced, not restated.
+- **`fast-agentic-delivery.md`** (#936): a contention probe that reads a PR's changed files via a single un-paginated call gets one page, not the whole set — and unlike a plain under-count it **fails open**: a file past the first page reads as absent → uncontested → safe, green-lighting a lane onto a file an open release PR is rewriting. Fix: paginate, then **reconcile the returned length against the PR's own reported changed-file count** (threshold-independent, stronger than a bigger `--limit`); enumerate the contested set once and cache; report "most work waits on the release," not "producers idle."
+- +3 evals (104 total in agentic-delivery). Closes #933, #935, #936.
+
 ## [1.407.0] — 2026-09-21
 
 ### agentic-delivery — the unattended / autonomous operating mode, consolidated as one routed reference (#377, #385, #386, #474)

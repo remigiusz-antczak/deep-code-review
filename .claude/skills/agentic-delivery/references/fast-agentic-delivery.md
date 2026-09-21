@@ -849,6 +849,29 @@ every lane to the light tier is the actual concurrency unlock — it is what
 lets several lanes run inside the RAM budget one full-gate lane alone would
 otherwise consume — not a smarter resource-gate formula (previous section).
 
+- **Run neither less nor more than the gate that actually admits your change.** The
+  offload above trims a lane *down* to the fast tier; its converse trims *out* a suite CI
+  does **not gate merges on at all**. A heavy local suite (a full browser/E2E run) absent
+  from CI's required-check set is not a merge gate anywhere — running it locally as a
+  blocking lane gate is **pure thrash**, spending the machine's scarcest resource (the
+  headless-browser processes that drive the swap trend, *Gate on free RAM and the swap
+  trend* above) for zero merge-safety (#935). Mirror of the delegated-green rule below
+  (brief a lane with the **root** gate it is judged by at land): there a lane runs
+  *narrower* than the real gate and false-passes; here it runs *wider* than any gate and
+  thrashes. Match the local blocking gate to CI's **actually-enforced** set — no less, no
+  more.
+- **When a heavy run still thrashes the box, shed by process class, not blindly.** A lane
+  tearing down its **own** helpers the moment their step ends (*kill a lane-owned helper*,
+  below) has a selection rule to get right under memory pressure: the test-runner's
+  **managed/headless browser** processes are the disposable mass to kill, while the
+  **app's own dev server** is load-bearing for the UX gate and must be **protected by its
+  port/PID**, never swept with them. This adds only **which** processes are safe to shed
+  on a lane's own live-teardown path; the **orchestrator-level** sweep of *orphaned*
+  processes stays advisory and approval-gated (*the orchestrator also owns reaping
+  orphaned heavy processes*, above), and the kill mechanics (own a process group,
+  terminate by pgid) stay in `deep-code-review`'s `concurrency-shared-state.md` — not new
+  authority to kill.
+
 ## Draft-gated heavy checks hide a UI-regression wave — run them somewhere while the draft is open
 
 The section above offloads the heavy gate to CI — but CI commonly runs those
@@ -1538,6 +1561,40 @@ review side treats as a correctness defect. Parameterize the trailer, or let eac
 commit time; never let a lane silently inherit the orchestrator's identity as a default.
 This is provenance hygiene for a multi-agent fleet — the delivery-side analogue of the
 evidence-provenance the review side already demands.
+
+## A contention probe against a truncated file list fails open — reconcile the returned count against the PR's own changed-file total
+
+The ownership-map probe above answers *is this file being rewritten under me?* by reading a
+PR's changed files. When that read is a **single un-paginated CLI/API call**, it returns one
+page, not the whole set — and a membership test against a truncated list does not merely
+under-count (the *truncated listing is not a complete count* trap in `deep-code-review`'s
+`branch-and-merge-hygiene.md`), it **fails open**: a target file that sits *past* the first
+page reads as **absent → uncontested → safe**, so the probe green-lights a lane onto a file
+an open PR is actively rewriting. On a large release PR the effect is systemic — most files
+fall past the first page, so most contention checks return a false *safe* and the
+orchestrator keeps dispatching lanes onto doomed fixes that collide the instant the release
+lands (#936).
+
+- **Paginate, then reconcile the length.** Pull the full list
+  (`gh api repos/OWNER/REPO/pulls/<n>/files --paginate --jq '.[].filename'`) and
+  **cross-check its length against the PR's own reported changed-file count** before trusting
+  any membership test — a returned length short of the reported total means the list is
+  truncated and every *absent* answer is `UNVERIFIED`, not safe. Count-reconciliation is
+  **threshold-independent**: it holds whatever the page size is, where "pass a bigger
+  `--limit`" only patches the one number you happened to know.
+- **Enumerate the contested set once, then dispatch against the cache.** Compute the release
+  PR's full file set a single time (re-fetch on a stated staleness bound) and check each
+  candidate lane against that cache — not a fresh truncated probe per dispatch, which re-pays
+  the fail-open on every lane.
+- **A giant release PR makes routine fixes to its files net-negative until it merges —
+  report that, not "idle."** While the release is open, a fix to any file it rewrites is
+  throwaway (the *read-only review of a contested surface is wasted* rule, above). The honest
+  status is **"most work is waiting on the release,"** not "producers are idle" — state the
+  operator's own metric, the same reconcile-against-the-operator's-number discipline the
+  tracker section below applies.
+- **🚩 tell:** a contention / ownership probe that reads *absent from a `--json files` page*
+  as *uncontested* with no count-reconciliation, on a repo with a many-hundred-file release
+  PR open.
 
 ## An open tracker issue is not proof the fix is absent — auto-close is default-branch-only
 
