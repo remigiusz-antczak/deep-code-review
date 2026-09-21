@@ -1125,6 +1125,48 @@ across many legitimate accounts (CWE-770, Allocation of Resources Without Limits
 provider with no per-caller operation throttle and no spend ceiling or billing alert
 configured.
 
+**API4 — unrestricted resource consumption, the *auth-exempt outbound-amplification*
+axis.** The *spend* axis above bills a **metered** downstream call and names the
+*bill*, not availability, as the damage; this sibling is the case where the downstream
+call need not be billed per use and the damage **is** availability. A
+deliberately-**unauthenticated** endpoint that makes a server-side outbound call per
+request — the canonical case is an "exchange an identity-provider token for a local
+session" handler that must run **before any session cookie exists** — is, by that
+necessity, on the list of paths the auth middleware is configured to **skip** (A01 §
+Identity Arrival Map, the no-cookie request class). That skip-list entry is the trap:
+an *authenticated* endpoint carries an **implicit throttle**, because a caller must
+first hold a session — itself a scarce, rate-limited-to-mint credential (A06 §
+Rate-limit key, burst, and failure mode) — so exempting the endpoint from the auth gate
+**removes that implicit throttle along with the auth**, leaving the outbound leg
+reachable by anyone at any rate. The individual call is often **correctly** hardened —
+a per-call timeout, a token-size cap (API10 below) — which is exactly why it survives
+review: each call looks bounded, yet nothing bounds the **number or concurrency** of
+calls, so unbounded inbound requests fan out to unbounded provider calls, exhausting
+the app's own outbound worker/connection pool (a self-DoS that starves every other
+caller) and the provider's **per-tenant quota** (the provider throttles *you* back,
+breaking login for everyone) — neither of which a spend ceiling or billing alert
+addresses. Why it is missed: the skip-list entry reads as **correct** to an
+access-control reviewer — it *must* be reachable pre-session — so the A01 pass signs it
+off, and the same pass conceals that the exemption stripped the throttle; the
+resource-consumption surface is **created by** an access-control decision, and neither
+review looks at the other. **Fix:** treat any unauthenticated endpoint that triggers a
+downstream call as a resource-consumption surface in its own right — rate-limit it
+**specifically and independently of the auth gate it is exempt from** (per-IP, plus
+per-token-**subject** for honest callers, backed by a **global** per-endpoint ceiling,
+since both an IP and an *unverified* token subject are attacker-mintable — A06 §
+Rate-limit key) — and **cap the concurrency of the outbound leg** (a bounded pool /
+semaphore) so one burst cannot saturate it. Distinct from the *spend* axis (metered
+call; damage = the bill; fix = spend ceiling / billing alert), from **A06 § Rate-limit
+key** (which asks what an *existing* limiter is keyed on and whether it fails open —
+here there is **no** limiter, because the auth exemption silently removed the implicit
+one), and from **API10** below (which bounds a *single* upstream call's timeout / size /
+schema — present here — not the *rate* at which an unauthenticated surface triggers it).
+🚩 an endpoint on the auth middleware's skip/allow-list (a pre-session token-exchange,
+an unauthenticated "start"/callback, a public webhook that fans out to a downstream
+call) making a server-side outbound call, hardened with a per-call timeout / size cap
+but with **no** per-endpoint rate limit and no outbound-concurrency cap of its own
+(CWE-770; OWASP API4:2023).
+
 **API4 — unrestricted resource consumption, the *memory* axis.** Distinct from
 the spend axis above: the damage here is exhausted server memory, not a
 runaway bill, and the trigger is the request's own body, not a downstream call

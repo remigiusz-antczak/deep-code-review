@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.418.0] — 2026-09-21
+
+### deep-code-review — an auth-gate-exempt endpoint whose per-request outbound call has no rate limit is an unrestricted-resource-consumption surface (#980)
+
+- **`security-appsec.md`** (#980, new API4 axis): a deliberately-**unauthenticated** endpoint that makes a server-side outbound call per request — the canonical case is an "exchange an identity-provider token for a local session" handler that must run before any session cookie — is by necessity on the auth middleware's **skip/allow-list**, and that exemption **removes the implicit throttle** an authenticated route gets for free (a caller must first mint a scarce, rate-limited session). Each call is often correctly hardened (per-call timeout, token-size cap — API10), which is why it survives review, but nothing bounds the **number or concurrency** of calls: unbounded inbound requests fan out to unbounded provider calls, exhausting the app's own outbound worker/connection pool (self-DoS) and the provider's per-tenant quota (login breaks for everyone). The resource-consumption surface is **created by** an access-control decision, and the A01 pass that signs off the skip-list entry conceals the stripped throttle. Fix: rate-limit the endpoint **independently of the auth gate it's exempt from** (per-IP + per-token-subject + a global per-endpoint ceiling) and **cap the outbound leg's concurrency**. Distinct from the API4 *spend* axis (a metered call; damage = the bill, not availability), from A06 § rate-limit-key (there a limiter exists; here the exemption removed it), and from API10 (bounds a single call, not the rate). CWE-770; OWASP API4:2023.
+- +1 eval (523 total), non-telegraphing. Closes #980.
+
 ## [1.417.0] — 2026-09-21
 
 ### agentic-delivery — four delivery/coordination lessons: stagger ready-flips into a serial seat, a truncated "done" that strands a PR, a stranded PR double-recovered, and a comment that isn't an atomic claim (#964, #965, #967, #970)
