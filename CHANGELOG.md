@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.430.0] — 2026-09-21
+
+### deep-code-review — a shell bracket-range used to validate a character class is locale-collated, so a byte-identical gate returns a different verdict per LC_COLLATE (#1022)
+
+- **`language-stack-redflags.md`** (Shell/Bash): a bracket **range** used to VALIDATE — `case $x in *[!0-9a-f]*)`, `[[ $x =~ ^[0-9a-f]+$ ]]`, `grep '[0-9a-f]'` — is resolved against the locale's **collating sequence**, not codepoint order (POSIX §9.3.5: a range is "the set of collating elements that fall between two elements in the collation sequence"; outside POSIX/C its behavior is "unspecified"). Under a dictionary-collating UTF-8 locale (glibc: `a A b B …`), uppercase sorts *inside* `[a-f]`, so a guard meant to **reject** non-lowercase-hex silently **accepts** an uppercase digest; under `LC_ALL=C` it's byte-strict — so a **byte-identical** script blocks every local commit on one box while CI stays green (or the reverse). It's a property of the **locale, not the OS** (don't key it to "macOS"). Fix: pin `LC_ALL=C` for the comparison, or use an explicit set (`*[!0123456789abcdef]*`); a named class (`[[:xdigit:]]`) is still locale-scoped, so a gate should still pin `LC_ALL=C`. **Distinct from the drifted-local-copy false-green** (two scripts that *differ*, fixed by single-sourcing — here the script is single-sourced and byte-identical, and only pinning the locale fixes it), from the fetch-by-ref / input-scope gates (which turn on *which* input, not how one input is interpreted), and from application-text collation (user data for display vs collation inside a gate's control flow). POSIX quoted + logged in `docs/standards-index.md`.
+- +1 eval (549 total), non-telegraphing. Closes #1022.
+
 ## [1.429.0] — 2026-09-21
 
 ### deep-code-review — a graph-authored-as-data whose closure-only validity gate stays green while its `anchor`/`startNode` field disagrees with the declared entry (#1019)
