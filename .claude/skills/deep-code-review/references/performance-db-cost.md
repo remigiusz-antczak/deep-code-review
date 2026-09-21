@@ -16,6 +16,21 @@ of work earn its keep?**
   correct key; don't recompute what you already have.
 - Bound the work: an operation whose cost scales with untrusted input needs a
   cap (page size, max depth, max iterations).
+- **False-positive twin of the O(n²) rule: don't flag a nested scan over a
+  *bounded, config-scale* collection — reserve the finding for *unbounded /
+  request-scale* growth.** The shape that triggers the rule (nested loop,
+  `list.contains` in a loop) is a cost only when **n grows**. Over a collection
+  whose maximum size is fixed at build time — a dozen supported currencies, a
+  handful of feature flags, a fixed enum, a table's columns — n² is a *small
+  constant × small constant*: no growth term, no measurable cost, and a set/map
+  rewrite is churn with no win. The false positive fires when a shape-only pass
+  (or a `for`-in-`for` grep) pattern-matches "quadratic!" without asking **what
+  bounds n**. Before filing it, trace the collection's maximum size to its
+  *source*: bounded by config / enum / schema / a hard cap → **not a finding**;
+  scales with request input, dataset size, or an attacker-controlled count → a
+  real finding (and, when the count is attacker-controlled, also a DoS lever —
+  cross-ref *Bound the work* above and the API4 response-size axis in
+  `security-appsec.md`). Only the unbounded case earns the set/map rewrite.
 
 ## Database
 
@@ -27,6 +42,35 @@ of work earn its keep?**
   fires N nested fetches with **no loop visible at any single call site** — the
   fix is a per-request batch/cache seam (the **DataLoader** pattern), and the same
   queries-per-request test catches it.
+- **Serialized single-row write per item of an input collection — an N+1 on the
+  *write* side that survives a missing-`await` scan because every write *is*
+  awaited.** A handler that persists an incoming batch with a per-item write in a
+  loop — `for (const x of items) await db.insertOne(x)` (or `.save`/`.create`/
+  `.update`/`execute("INSERT …")`), common in ingest / import / webhook / fan-out
+  / sync helpers — issues **one network round-trip per item**: N items pay N times
+  the write latency, serially, so throughput collapses and a large batch times
+  out. Every line is individually correct — the promise is awaited, so a
+  floating-promise / no-`await` lint sees nothing — and no *prior query result* is
+  being looped, so the read-N+1 grep and its DataLoader seam don't match either;
+  the defect is purely the **round-trip count**, invisible at any single line and
+  visible only as a writes-per-request count or a throughput cliff under load.
+  **Fix:** collapse the loop into **one** batched write — `insertMany` / a single
+  multi-row `INSERT … VALUES (…),(…)` / `COPY` / the ORM's `createMany`/
+  `bulkCreate` / a batched upsert — chunked to a *bounded* number of round-trips
+  where the driver caps batch size (still O(chunks), not O(rows)), inside one
+  transaction where atomicity matters. **`Promise.all(items.map(x =>
+  db.insertOne(x)))` is not the fix** — it overlaps the latency but still issues N
+  round-trips and can swamp the connection pool or serialize on write locks; the
+  lever is *one* call for N rows, not N calls at once. Preserve the per-row error
+  attribution the loop gave you — a bulk write that aborts the whole batch on one
+  bad row loses per-item isolation, so map failures back to rows (ordered /
+  continue-on-error + collect the rejects) when partial success matters. Distinct
+  from **N+1** above (a *read* per row of a *prior query result*, fixed by a join /
+  `IN` / eager-load — here it is a *write* per item of the handler's *own input*,
+  fixed by a bulk-write API) and from the **Sequential `await`s** / twin-projection
+  concurrency bullets below (a fixed handful of *distinct* calls parallelized with
+  `Promise.all` — here it is N *identical* writes that must be *batched into one*,
+  where `Promise.all` is the wrong tool).
 - **Indexes**: the columns in `WHERE`/`JOIN`/`ORDER BY` on hot queries are
   indexed and the index is actually used — confirm with the query plan
   (`EXPLAIN`/`EXPLAIN ANALYZE`); a seq scan on a large table is the finding.
@@ -479,4 +523,7 @@ two helpers that each re-read the *same* source to build different projections
 (fetch-per-projection instead of read-once-derive-both); an expensive `await`
 (DB/API/LLM/full-collection read) placed above an early return whose returning (hot) branch
 never reads its result (paid and discarded every request — move the call below the return or
-make it lazy).
+make it lazy); an `await`ed single-row write (`insertOne`/`save`/`create`/multi-row
+`INSERT`) inside a `for`/`map` over an *input* collection (serialized round-trips,
+correctly awaited so a missing-`await` scan passes — collapse to one bulk write, not N
+parallel writes).

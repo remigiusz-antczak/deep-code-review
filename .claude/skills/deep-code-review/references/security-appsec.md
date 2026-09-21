@@ -112,6 +112,41 @@ middleware ships).
   follow redirects bare is the same class of miss. A guard nothing calls is a
   no-op.
 
+**A security decision keyed on a client IP parsed from a multi-hop proxy header
+trusts the wrong end unless it counts the proxies in front of the app (CWE-348,
+*Use of Less Trusted Source*).** A rate-limit key, IP allow/deny, geo/geoblock, or
+audit-"who did this" identity derived from `X-Forwarded-For` / `Forwarded` /
+`X-Real-IP` reads a **chain**, not a value: each proxy *appends* the peer it saw on
+the **right**, so the **rightmost** entries are what your own last-mile
+infrastructure observed and the **leftmost** entry is whatever the original client
+sent — as forgeable as any other client-supplied header. Taking a fixed
+index-0-from-the-left (`xff.split(',')[0]`) trusts the attacker's value as "the
+client IP". The trap is that **verifying the parse is correct is not the property
+under review**: a split-on-comma, trim, validate-each-IP parser can be flawless and
+still trust the wrong element, and every happy-path test passes because for an
+*honest* client index 0 *is* the real address — only a crafted request that
+prepends a spoofed `X-Forwarded-For:` reveals the inversion, letting an attacker
+mint a fresh "IP" per request to skip a rate limit, land on an allow-list, spoof a
+geo, or poison an audit trail (a form of CWE-807, reliance on an untrusted input in
+a security decision). **Fix:** pin the exact number **N** of trusted proxies
+between the app and the internet (or a trusted-CIDR set), then trust the **(N+1)th
+entry from the *right*** — the address your outermost trusted proxy observed and
+appended — and discard everything to its left as client-supplied; use the
+platform's proven primitive (Express `app.set('trust proxy', <n | CIDRs>)` then
+`req.ip` — the A02 `trust proxy` misconfig 🚩 is this defect's Express face; WSGI
+`ProxyFix(x_for=N)`; nginx `set_real_ip_from` + `real_ip_recursive`), never a
+hand-rolled left index. If the origin is reachable **directly** (not strictly
+behind the proxy), the header is unusable for a security decision — bind the limit
+/ audit to an **authenticated principal** instead (cross-ref A06 § rate-limit key:
+a scarce verified identity beats any IP). Distinct from the strip-inbound-copies
+item in the forgeability row-set above — that *removes* a client-forged header when
+you trust **zero** proxies; this *selects* the verified segment when a real N-hop
+chain exists. **🚩** a forwarded header (`X-Forwarded-For` / `Forwarded` /
+`X-Real-IP`) feeding a rate-limit / allow-deny / geo / audit decision via a fixed
+left index (`split(',')[0]`, `.shift()`), or with the framework's trusted-proxy
+count unset or set to blanket-trust (`trust proxy: true`, no `ProxyFix` hop count,
+no `set_real_ip_from`).
+
 **Client-side open redirect (CWE-601) — a "same-origin relative path" guard that rejects `//` but not its backslash twin.** The SSRF bullet above is the *server* fetching an attacker's URL; the browser-navigation sibling is a login / return flow that reflects a user-supplied `next` / `returnTo` / `returnUrl` / `redirect` parameter into a `Location` header (or a client-side `location =`). The usual hand-rolled guard tries to force the target same-origin by demanding a *rooted-relative* path — accept when the string begins with `/`, reject when it begins with `//` (the protocol-relative `//host` form, which a browser resolves to `scheme://host`, a *different* origin). That literal `startsWith('//')` test is bypassable because a browser's WHATWG URL parser treats a backslash as a forward slash for the **special** schemes (`http`, `https`, `ws`, `wss`, `ftp`, `file`): `/\host`, `\/host`, and `\\host` each fail `startsWith('//')` yet resolve to `//host`. The spec is explicit — the relative-slash and special-authority-slashes states consume `/` and `\` identically ("If c is neither U+002F (/) nor U+005C (\), then set state to authority state…"), flagging the backslash only as an `invalid-reverse-solidus` **validation error**, and "A validation error does not mean that the parser terminates" — so the parse (and the navigation) proceeds off-site. Verify in one line: `new URL('/\\host', 'https://good.example/page').host` → `'host'`, not `good.example` (confirmed for `/\`, `\/`, and `\\`). The mirror defect is a `startsWith('/')`-means-relative check with no second test at all — `/\attacker.example` clears it too. **Fix:** don't string-match — a prefix test is not a structural check (the same trap as the canonicalize-before-compare rule for file-serving paths in A05). Resolve the candidate against a fixed same-origin base with the platform URL parser and allow-list the resulting `origin`; if a prefix check is truly unavoidable, reject **any** leading slash-or-backslash pair — `/^\/(?![/\\])/` (a leading `/` not followed by another `/` or `\`), never `/^\/(?!\/)/`. **Sibling-sanitizer diff (the how-it-ships tell):** the same tree often already excludes both characters on a twin filter (an image-`src` / iframe-`src` sanitizer) while the link-`href` / redirect guard excludes only `/` — a hardening that landed in one filter and not its twin is a gap, not a design choice, and unit tests scoped to a single filter never surface the divergence; diff every relative-URL / "is-safe-path" regex against the others, not only against its own tests. 🚩 grep `next` / `returnTo` / `returnUrl` / `redirect` params flowing into a redirect or `location`, and any is-relative regex that names `/` in a negative-lookahead but not `\`.
 
 **Two-principal matrix (mandatory beside the anonymous sweep).** Seed two

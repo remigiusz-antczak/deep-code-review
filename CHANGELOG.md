@@ -3,6 +3,14 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.410.0] — 2026-09-21
+
+### deep-code-review — write-side N+1 + O(n²) false-positive discipline (perf), and which-end-to-trust on a multi-hop proxy header (security) (#943, #945)
+
+- **`performance-db-cost.md`** (#943, two folds): (1) a **serialized single-row write per item of an input collection** (`for (const x of items) await db.insertOne(x)`) is an N+1 on the *write* side that survives a missing-`await` scan because every write *is* awaited — N round-trips, not a missing keyword; fix is **one** batched write (`insertMany`/multi-row `INSERT`/`COPY`/`createMany`), chunked to bounded round-trips, and `Promise.all` over N single writes is **not** the fix (still N round-trips). Distinct from the read-side N+1 (a read per row of a prior result → join/`IN`/eager-load, already covered) and from sequential-`await`s (distinct calls → `Promise.all`). (2) The **O(n²) false-positive twin**: don't flag a nested scan over a *bounded, config-scale* collection (a fixed enum/config/schema) as quadratic — trace the collection's max size to its source; reserve the finding for unbounded/request-scale (or attacker-scale, also a DoS lever).
+- **`security-appsec.md`** (#945, A01): a security decision (rate-limit key, IP allow/deny, geo, audit identity) keyed on a client IP from a multi-hop `X-Forwarded-For`/`Forwarded`/`X-Real-IP` chain must **count the trusted proxies N and trust the (N+1)th entry from the right** — the leftmost entry is attacker-supplied, and a fixed left index (`split(',')[0]`) inverts the security property while passing every happy-path test (an honest client's index 0 *is* the real IP). Fix names the platform primitives (Express `trust proxy`+`req.ip`, WSGI `ProxyFix`, nginx `set_real_ip_from`); a directly-reachable origin binds to an authenticated principal instead. Cites **CWE-348** (Use of Less Trusted Source) and **CWE-807** (Reliance on Untrusted Inputs in a Security Decision), both fetch-verified and logged in `docs/standards-index.md`.
+- +3 evals (508 total), non-telegraphing. Closes #943, #945.
+
 ## [1.409.0] — 2026-09-21
 
 ### deep-code-review — two incremental-change detection patterns: a debounced write that reverts a concurrent change, and an expensive await discarded on the hot early-return branch (#930, #932)
