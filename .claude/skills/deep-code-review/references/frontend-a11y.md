@@ -182,6 +182,33 @@ without regressing a deliberate design.
   harvest the name bullets above rely on.
 - One `<h1>` per page/view; headings describe structure, not styling.
 - Landmarks present; a skip-to-content link for keyboard users.
+- **Correct ARIA landmarks satisfy the automated *bypass-blocks* check yet leave a
+  sighted keyboard-only user with no way past a long repeated nav — that still needs a
+  real skip link.** WCAG **2.4.1 Bypass Blocks** (Level A — "a mechanism is available to
+  bypass blocks of content that are repeated on multiple web pages") is met by any *one*
+  of its sufficient techniques, and they are independent options: **ARIA11** (landmark
+  regions), **G1** (a link at the top to the main content), or **H69** (headings at each
+  section). So a page shipping correct `banner`/`nav`/`main` landmarks meets the SC on
+  ARIA11 alone, and the automated rule that maps to it (axe-core `bypass`, Lighthouse
+  *bypass blocks* — each accepts a region *or* a skip link *or* a heading) goes green. That
+  green check reads as "bypass handled," so the skip link is dropped as redundant — but a
+  landmark is a **screen-reader** navigation affordance (rotor / region jump); a user
+  navigating by **keyboard alone with no screen reader running** cannot perceive or jump to
+  a landmark, so they must `Tab` through every nav item on every page to reach content. The
+  tool cannot see this because the SC genuinely *is* satisfied; only a manual keyboard-only
+  pass (`Tab` from the top, no SR) exposes the traversal. Fix: add a genuine skip link — an
+  in-page anchor to the `#main` / main-landmark id, placed as the **first focusable element**
+  in the DOM and **visually hidden until it receives focus** (the `sr-only`-until-`:focus`
+  pattern, so it doesn't alter the visible design but appears for the keyboard user);
+  point it at a focusable/labelled main region so activating it *moves focus*, not just the
+  scroll position. **Distinct** from the terse "Landmarks present; a skip-to-content link"
+  checklist line above — this is *why* both are listed and are not interchangeable: a green
+  bypass-blocks check on landmarks alone is a false signal that the skip link is optional.
+  And distinct from the unnamed-`<section>` bullet below, where a region is **missing from
+  the landmark tree** (a defect *in* the landmarks) — here the landmarks are **correct and
+  complete** and still insufficient for the non-SR keyboard user. Detection: never infer
+  2.4.1 conformance from an automated pass; run a keyboard-only pass and confirm the first
+  `Tab` reaches a skip control that moves focus into main.
 - **An unnamed `<section>` is not a poorly-labeled landmark — it is not a landmark at
   all.** By the HTML/ARIA host-language mapping, `<section>` exposes to assistive tech
   as the ARIA `region` landmark only when it carries an accessible name (`aria-label`,
@@ -191,6 +218,44 @@ without regressing a deliberate design.
   component (one instance passed a name prop, another not) render identically, so
   nothing on screen reveals the gap. Detection: pull the page's landmark/rotor list, not
   the DOM, and confirm every `<section>` you expect as a region actually appears in it.
+- **A tree/nav whose parent-child depth is drawn only with left-padding and a colour
+  accent shows the hierarchy to the eye but hides it from the accessibility tree.** A
+  sidebar, file explorer, or nav tree rendered as a **flat `<ul>` of sibling `<li>` rows**,
+  all at the same DOM depth, with the level expressed by an incremental `padding-left` step
+  per depth plus a colour-matched accent, carries the hierarchy in **presentation only**.
+  Assistive tech reads the accessibility tree, not the pixels: a flat list of siblings
+  announces every row at the same level with no parent/child containment, so a screen-reader
+  user hears "list, N items" with no sense of depth, which row owns which, or where a
+  subtree begins and ends — indentation has no programmatic equivalent, and the colour
+  accent is unspoken (and invisible in greyscale / forced-colours). This is **WCAG 1.3.1
+  Info and Relationships** (Level A) — "information, structure, and relationships conveyed
+  through presentation can be programmatically determined or are available in text," whose
+  Understanding page gives *indented list items* as the canonical example — with the colour
+  accent additionally leaning on **1.4.1 Use of Color** (Level A). It ships because the
+  indentation makes the hierarchy unmistakable *visually*, so a sighted review and any
+  screenshot / visual-regression pass approve, and because the rows may each carry a correct
+  label and correct `aria-expanded` on the collapsible ones — a per-row check looks complete
+  when the gap is the **relationship between rows**, which no single-row inspection sees.
+  Fix: expose the hierarchy in the tree, not in padding + colour — either **real nested
+  lists** (each child `<ul>` inside its parent `<li>`, so containment is structural) or the
+  **ARIA tree pattern** (`role="tree"` on the container, `role="treeitem"` on rows,
+  `aria-level` for depth, `aria-setsize`/`aria-posinset` for position, `aria-expanded` on
+  parents, and `aria-owns` to wire parent→children when the DOM can't physically nest them);
+  keep the indentation and accent as visual reinforcement, never the sole carrier.
+  **Distinct** from three neighbours: the disclosure-`aria-expanded` bullet under Keyboard &
+  focus is a per-row **open/close *state*** — a tree can carry correct `aria-expanded` on
+  every parent and still leave the **level / containment *relationship*** invisible if it is
+  a flat `<ul>` with padding; the APG custom-widget bullet there names `tree` as a widget
+  class needing its full pattern — this is the concrete flat-list-plus-padding shape of that
+  class's *structural* half, as the disclosure bullet is its `aria-expanded` half; and the
+  two-state colour-only chip and direction-badge bullets under Perceivable are a **binary
+  state** carried by colour or a glyph on one element, where here the missing thing is a
+  **multi-level structural relationship across rows** whose primary carrier is indentation
+  (1.3.1), colour only secondary. Detection/test: read the accessibility tree (devtools /
+  axe), not the DOM padding — assert rows expose their level/containment
+  (`getByRole('treeitem', { level })`, or a genuine nested-list structure); a flat `<ul>`
+  whose only depth signal is a `style`/`className` padding step per level, with no
+  `aria-level` / nested `<ul>` / `role="tree"`, is the tell.
 - **A loading/skeleton region that visually swaps state needs a live region
   announcing the transition, not only `aria-busy`.** `aria-busy="true"` marks an
   element as *being updated* — a state property assistive tech can query, not an
@@ -344,6 +409,39 @@ without regressing a deliberate design.
   handler with no captured trigger ref and no `.focus()` call back onto it. Contrast: a
   design-system overlay primitive that captures the trigger ref on open and calls
   `.focus()` on it in its close path has the correct shape.
+- **A control that self-disables *while it holds focus* drops the keyboard user to
+  `<body>` — the `disabled={pending}` / `disabled={isSubmitting}` submit recipe is the
+  common shape.** The native HTML `disabled` attribute removes an element from the focus and
+  tab order, so applying it to the element that **currently holds focus** — a submit/action
+  button the user activated with `Enter`/`Space`, which then sets `disabled` for the
+  in-flight request — moves focus to `<body>` (the document default), with nothing restoring
+  it: the keyboard user is dumped to the top of the page mid-task, no announcement, no way
+  back to where they were. It ships because a sighted mouse user sees only the button grey
+  out while the request runs (their focus was never tracked there), the JSX is the textbook
+  "disable to prevent double-submit" pattern, and a keyboard smoke test that `Tab`s to the
+  button and presses `Enter` rarely checks *where focus lands after*; a render test asserts
+  the button is `disabled`, not `document.activeElement`. This is a **WCAG 2.4.3 Focus
+  Order** (Level A) break — the same "focus silently falls to `<body>`" failure the
+  async-outcome bullet (under Structure & semantics) and the scroll-container bullet below
+  name, reached by a third trigger. Fix: at or **before** the disable, move focus to a
+  sensible target — a `role="status"` result/toast region (which also *announces* the
+  outcome), the next logical control, or a results region — so focus is placed, not dropped;
+  **or** keep the element focusable by driving the busy state with `aria-disabled="true"`
+  plus a **guarded handler** (an early-`return` in `onClick`/`onKeyDown` while pending)
+  instead of the native `disabled` attribute, so focus stays put and the tab order is
+  unbroken (`aria-disabled` does not block activation on its own — the handler must).
+  **Distinct** from three neighbours: the async-outcome bullet fires when the control is
+  **removed from the DOM** and replaced by a message, and recommends "keep it mounted,
+  disabled and relabelled" as the *safe* alternative — this bullet is the correction that
+  even that in-place disable drops focus when the control holds it, so the disable must
+  itself be paired with a focus move, and it fires **mid-request** (`pending`), not at the
+  resolved outcome; the scroll-container bullet below shares the exact mechanism — stripping
+  focusability from the focused element bounces focus to `<body>` — but by a different
+  trigger (a `tabIndex` recompute vs a submit); and the dismissible-overlay restore bullet
+  above *restores* focus to a trigger on **dismiss**, whereas here nothing is dismissed — the
+  control disables itself in place. Regression test: drive the pending state and assert
+  `document.activeElement !== document.body` immediately after the control disables (and, for
+  the `aria-disabled` variant, that the guarded handler is a no-op while pending).
 - **A non-modal popup — a combobox listbox, select menu, autocomplete, or dropdown —
   must also close when focus *leaves* it, a dismiss path separate from Escape and
   outside-click and the one a roving-tabindex / `aria-activedescendant` design most
