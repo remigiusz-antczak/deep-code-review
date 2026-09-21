@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.392.0] — 2026-09-21
+
+### deep-code-review — an idempotency "already-formatted, skip it" short-circuit that bypasses the sanitizer, not just the transform (#893)
+
+- **`security-appsec.md`**: a text-to-markup helper (autolinker, markdown renderer, mention/emoji expander) made safe to run twice with an "if it already looks processed, return it unchanged" guard — but the scheme-check and escaping live only on the branch that BUILDS the markup, so the skip branch returns the pre-existing value with no revalidation. Whoever controls the free text pairs a guard-tripping token (a stray `<a` is enough) with a real payload (`<img onerror>`/`<script>`, or an anchor with a `javascript:`/`data:` href) → the string passes the guard and reaches the HTML sink unchecked (stored/reflected XSS). It survives review because the skip is deliberately unit-tested ("running twice doesn't double-wrap") — that test pins the exact hole, and a reviewer reading only the build path signs off. Fix: scope the idempotency guard to the transform only and re-validate the pre-existing value on the skip branch; the sink keeps its own scheme allowlist regardless of what a producer promises; consolidate multiple text-to-link paths into one audited linker; trace every URL/href/src sink back to every producer (the skip branch first). +1 eval.
+
 ## [1.391.0] — 2026-09-21
 
 ### agentic-delivery — a memory-only spawn gate reads green while CPU-heavy lanes thrash the run queue: brake on the paired signal (#905)
