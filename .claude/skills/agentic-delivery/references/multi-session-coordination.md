@@ -84,6 +84,53 @@ well-known "exclusive role" field and refuse if another peer holds it and is
 still live. Output is go/no-go plus the exact colliding file, issue, or PR —
 never a prose inference a peer might skip.
 
+## An agent-set merge-hold does not bind the human owner — classify a held-PR merge by who merged before calling it a breach
+
+The collision probe above has a peer **refuse** to run the merge while another
+peer holds the `exclusive_role` seat — a live, pre-write check. Its after-the-fact
+companion is the opposite reflex: a held PR **lands anyway**, and a coordination
+monitor fires "hold violated," queues a revert, and reruns the suite for
+regressions. That reflex skips the one question that decides whether anything was
+violated at all — **who merged it.** The first action on any held-PR merge is
+`gh pr view <N> --json mergedBy`, **not** a revert.
+
+An `exclusive_role` / do-not-merge hold is an agreement **between the coordinating
+agents** (and their mergers); its scope is agent-to-agent. The **human owner is
+the principal, not a peer bound by that protocol** — the owner never joined the
+hold and can merge a held PR at will, even one under a fully-established, live
+hold. So the merger field partitions the outcome:
+
+- **Merger is the owner's own human identity** — a third identity, distinct from
+  the shared agent account the sessions run under — ⇒ the owner exercised
+  authority. The hold **resolved**, it was not breached: treat the merge as an
+  **authoritative override**, stop watching for a breach, and **never revert an
+  owner's deliberate merge** (that would regress the owner's own decision).
+  "Override, not breach" is not a no-op, though — **reconcile**: reclassify the
+  losing competitor as **superseded** (close it with a pointer, never a live
+  conflict) and resync open work against the new base.
+- **Merger is a known agent identity that agreed to the hold** ⇒ this is the
+  **actual breach** — investigate it, and only here does the revert / regression
+  reflex belong.
+
+The discriminator is a merger identity that is **not the shared agent account** —
+the mirror of the shared-bot-identity problem above (*a shared bot account authors
+every post*): the same shared identity that makes agent-vs-agent attribution
+ambiguous is exactly why you must positively read the `mergedBy` field, and a
+third, human identity is the tell that the principal acted. This is a **third**
+case beside the two that section already separates — neither the per-agent
+**sender** id (agent-vs-agent attribution) nor the auto-merger's manufactured
+**ownership** mark (`fast-agentic-delivery.md`, *shared identity makes authorship
+useless* — a robot deciding, going forward, which PRs it may **admit**). This one
+is a **monitor** classifying a merge that **already happened**, keyed on the
+merger, and the human acting is **legitimate**, not something to fence out. The
+discriminator only works if the owner's identity is **separable** from the shared
+agent account (the distinct-identity fix that section already argues); where the
+owner also acts through that same account, `mergedBy` cannot tell them apart and
+you need another owner signal before concluding either way. **🚩 tell:** a
+coordination monitor that flags a held PR's merge as a violation, or auto-reverts
+it, without first checking `mergedBy` — a false-positive breach alarm, or a bad
+auto-revert, against the owner's own deliberate pick.
+
 ## No live peer, no coordination lift — verify liveness before spending the budget
 
 A shared board looks like collaboration whether or not anyone reads it. One

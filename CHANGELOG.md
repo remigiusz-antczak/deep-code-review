@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.402.0] — 2026-09-21
+
+### agentic-delivery — an agent-set merge-hold does not bind the human owner: classify a held-PR merge by who merged before calling it a breach (#917)
+
+- **`multi-session-coordination.md`** (+ a SKILL.md enumeration trigger): the after-the-fact companion to the collision probe. When a held PR lands anyway, the first action is `gh pr view <N> --json mergedBy`, not a revert. An `exclusive_role`/do-not-merge hold is an agreement between the coordinating agents; the human owner is the principal, not a peer bound by that protocol — the owner never joined the hold and may merge a held PR at will, even a live one. So the merger field partitions the outcome: an owner/human merge is an authoritative override (reconcile, don't alarm or auto-revert); an agent bypassing another agent's live hold is the actual breach. Cross-refs the #901 shared-identity rule (the owner's identity must be separable from the shared account for the discriminator to work) and the auto-merger admission rule; extends them, doesn't restate. +1 eval.
+
 ## [1.401.0] — 2026-09-21
 
 ### deep-code-review — a justification carried forward inside a suppression list is a claim to re-verify, and a green ratchet proves only that nothing was added (#813)

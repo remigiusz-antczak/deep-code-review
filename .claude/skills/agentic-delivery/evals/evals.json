@@ -1019,6 +1019,17 @@
         "B's remedy is to review A's branch tip, defer until it lands, or scope to files A's branch does not touch -- not a fresh sweep of the soon-stale base",
         "B's reasoning is that findings against the pre-rewrite base are invalidated when A's branch lands"
       ]
+    },
+    {
+      "id": "a-pr-that-landed-under-a-peer-lock-is-classified-by-who-merged-not-reverted",
+      "prompt": "You run two agent sessions that share one GitHub account and coordinate through a committed registry file. They placed a mutual do-not-land lock on two competing pull requests that implement the same feature two different ways, to wait for the owner to pick one; each session recorded the pair in its own merge-seat lock entry. A few minutes later, one of the two PRs lands on the main branch while both registry entries still show the lock held. Your coordination watcher immediately raises a 'lock violated' alert and is queued to revert that PR and rerun the full test suite to check for regressions. Walk through how to handle this.",
+      "expected_output": "Do not treat the landing as a violation or revert reflexively. The first action is to find out who performed the merge -- `gh pr view <N> --json mergedBy` -- before anything else. The lock is an agreement among the two agent sessions only; the human owner is the principal and was never a party to it, so an owner merge is a legitimate decision, not a violation. If mergedBy is the owner's own identity (a third identity, distinct from the shared account the two sessions run under), classify it as an authoritative override: cancel the violation alert, do not revert (reverting would undo the owner's own pick), and reconcile -- reclassify the losing competing PR as superseded and close it with a pointer, then resync open work against the new base. Only if mergedBy is one of the agent identities that agreed to the lock is this a real violation to investigate, and only then does the revert / regression check belong. Caveat: this discriminator works only because the owner's identity is separable from the shared agent account; if the owner also acts through that same account, mergedBy cannot distinguish them and you need another owner signal before concluding either way.",
+      "expectations": [
+        "Does not revert or treat the landing as a violation reflexively; the first action is to check who performed the merge (e.g. `gh pr view <N> --json mergedBy`)",
+        "Recognizes the lock binds only the coordinating agent sessions and not the human owner, who is the principal -- so an owner merge is a legitimate decision, not a violation",
+        "If the merge was performed by the owner's own identity (distinct from the shared agent account), classifies it as an authoritative override: cancels the alarm, does not revert, and reconciles by marking the losing competing PR as superseded",
+        "Treats only a merge performed by an agent identity that agreed to the lock as a real violation to investigate"
+      ]
     }
   ]
 }
