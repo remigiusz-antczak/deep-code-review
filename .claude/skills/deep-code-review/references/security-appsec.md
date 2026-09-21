@@ -1130,6 +1130,51 @@ whose JSON routes sit behind a bounded-read middleware can still ship this bug
 on the one raw-body route that bypasses it — precisely because it isn't a JSON
 route.
 
+**API4 — unrestricted resource consumption, the *response-size* axis.** A third
+named limit, distinct from the spend and memory axes above and from the GraphQL
+batching/depth limits below: **how many rows a single request returns**. When that
+count is set by a client parameter (`limit`, `per_page`, `pageSize`, `top`, a
+GraphQL `first`) and the server enforces no maximum of its own, one request can be
+made to return the whole table, and the amplification is on the **response** side —
+the memory to materialize and serialize the rows, plus CPU, DB work and egress, all
+scale with an attacker-chosen number and multiply by however many such requests a
+caller fires. This is *not* the memory axis above (that is the inbound request
+**body**/upload being buffered; this is the **outbound** result set sized by a client
+count), and "the endpoint paginates" is not the control. The bound-the-work cap and
+keyset-vs-`OFFSET` mechanics already live in `performance-db-cost.md` (the over-fetch
+bullet under `## Database`, and the "bound the work" cap under `## Algorithmic`); the
+**security** finding is that the
+size is *client-settable and unbounded*, so a missing maximum — or one "**set
+inappropriately (e.g. too low/high)**" (OWASP API4:2023, which names "Number of
+records per page to return in a single request-response" among its required limits)
+— is a DoS vector, not just a latency cost. A sensible default page size is not a
+cap: the server must **clamp** the requested size to a hard maximum regardless of
+what the client asks for. 🚩 a list/search/export handler that reads a
+page-size/`limit`/`first` param and passes it to the query (or ORM `take`/`.limit()`)
+without clamping it to a server-side maximum.
+
+**API4 — unrestricted resource consumption, the *execution-time* axis.** The fourth
+named limit: a server-side wall-clock ceiling on **how long a single inbound request
+may run** before the server aborts it and frees the handler. Without one, a heavy
+endpoint — a wide-date-range report, an unindexed search, a large export, any
+synchronous long aggregation — lets a handful of the slowest requests each occupy a
+request handler/connection for as long as the work takes, and a few concurrent ones
+starve the shared, finite pool so every other caller (including cheap requests) is
+denied service (CWE-770; OWASP API4:2023 names "Execution timeouts" among its
+required limits). Correctness of the result and rarity of the slow path are not
+defenses: a caller can send the expensive request deliberately and repeatedly. This
+is distinct from **two** timeouts already in scope and must not be conflated with
+either: the **session** idle/absolute timeout (`Session termination & timeout`,
+above) bounds a *user session's* lifetime, not a request's runtime; and the
+**outbound** deadline the reliability and SSRF guidance sets — the upstream-call
+timeout in API10 below, and `reliability-error-handling.md`'s "propagate the
+deadline" rule — bounds calls the server *makes* and in fact *presupposes* an
+inbound budget exists to derive from. This fold is that inbound budget, enforced by
+the server on itself as an anti-DoS control. 🚩 a report/export/search endpoint (or
+any long synchronous aggregation) with no server-side per-request time limit that
+aborts the work; offloading the heavy job to a background queue is complementary but
+is not itself the ceiling.
+
 **API6 — unrestricted access to a *sensitive business flow*.** Distinct from the
 rate-limit key/burst check in A06 above: a flow can be **correctly authorized,
 individually within the rate limit, and still harm the business at volume** —

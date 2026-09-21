@@ -1097,3 +1097,13 @@ off-schema output, `max_tokens` truncation, and safety refusals.
 | Standard / source | URL | What was confirmed |
 |---|---|---|
 | OpenAI Structured Outputs guide | https://developers.openai.com/api/docs/guides/structured-outputs | Verbatim: "In some cases, the model might not generate a valid response that matches the provided JSON schema. This can happen in the case of a refusal, if the model refuses to answer for safety reasons, or if for example you reach a max tokens limit and the response is incomplete." And verbatim: "Since a refusal does not necessarily follow the schema you have supplied in `response_format`, the API response will include a new field called `refusal` to indicate that the model refused to fulfill the request." (301 from platform.openai.com/docs/guides/structured-outputs; fetched 2026-09-21) |
+
+## Verified by direct fetch (2026-09-21) — OWASP API4 detail (records-per-page & execution timeouts)
+
+Verification date for the row below: **2026-09-21**. Added for a `deep-code-review`
+`security-appsec.md` API4 fold on the response-size (records-per-page) and
+execution-time (inbound request-execution timeout) axes.
+
+| Standard / source | URL | What was confirmed |
+|---|---|---|
+| OWASP API Security Top 10 (2023) — API4 detail | https://api-security.owasp.org/editions/2023/en/0xa4-unrestricted-resource-consumption/ | Verbatim: "An API is vulnerable if at least one of the following limits is missing or set inappropriately (e.g. too low/high):" — enumerated limits, verbatim: "Execution timeouts"; "Maximum allocable memory"; "Maximum number of file descriptors"; "Maximum number of processes"; "Maximum upload file size"; "Number of operations to perform in a single API client request (e.g. GraphQL batching)"; "Number of records per page to return in a single request-response"; "Third-party service providers' spending limit". (308 from owasp.org/API-Security/editions/2023/en/0xa4-unrestricted-resource-consumption/ → api-security.owasp.org; fetched 2026-09-21) |

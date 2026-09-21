@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.389.0] — 2026-09-21
+
+### deep-code-review — API4 response-size and execution-time axes: clamp a client-set result count to a server maximum; bound inbound request wall-clock (OWASP API Security Top 10)
+
+- **`security-appsec.md`**: two axes added to the API4 (Unrestricted Resource Consumption) overlay. (response-size) when the number of rows a request returns is set by a client parameter (`limit`/`per_page`/`pageSize`/`top`/GraphQL `first`) and the server enforces no maximum, one request can return the whole table — response-side amplification (memory to materialize + serialize, CPU, DB, egress) scaled by an attacker-chosen count; a default page size is not a cap, the server must clamp to a hard maximum. Distinct from the inbound-memory (request-body) axis; the cap/keyset mechanics stay in `performance-db-cost.md`, the security finding is that the size is client-settable and unbounded. (execution-time) a server-side wall-clock ceiling on a single inbound request, so a few slow/expensive requests can't tie up the worker pool — distinct from session idle/absolute timeouts and from outbound/upstream deadlines (CWE-770). Both cite OWASP API4:2023's enumerated required limits verbatim ("Number of records per page…", "Execution timeouts"), source SHA-independent (api-security.owasp.org, 308 from owasp.org). +2 evals.
+
 ## [1.388.0] — 2026-09-21
 
 ### deep-code-review — an eagerly-evaluated expensive prop runs for every panel a lazy container never mounts; memoization can't fix a breadth problem (#881)

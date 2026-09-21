@@ -5060,6 +5060,26 @@
         "Prescribes moving the work to mount time — store a function / component reference / children the container invokes only for the panel it shows (`content: () => renderTrendChart(...)` rendered as `tabs[active].content()`), or pass raw inputs and let the mounted panel derive its own chart — so only opened panels pay.",
         "States a render-count acceptance (chart builds equal tabs actually opened: zero for an unvisited tab, one for a first visit, not the five defined) and does not misfire on a bare element like `content: <TrendChart data={metrics.revenue}/>`, whose descriptor is cheap — it is the call, or an eagerly-computed inner prop, that is the defect."
       ]
+    },
+    {
+      "id": "client-set-result-count-with-no-server-maximum-returns-the-whole-table",
+      "prompt": "Review this list endpoint from an internal analytics API. The handler reads a `limit` query parameter and passes it straight through as the SQL `LIMIT` for the query that returns dataset rows; when the parameter is absent it defaults to 50, and when present the caller's value is used as given. A reviewer signs off: \"Good — the endpoint paginates, so clients pull data in pages instead of all at once. Approved.\"",
+      "expected_output": "The review rejects the sign-off: supporting a `limit` parameter is not the same as bounding it. Because the caller sets the row count and the server enforces no maximum, one request can ask for — and this endpoint will return — every row in the table, so the response side is the amplifier: the memory to materialize and serialize the rows, plus DB work and egress, all scale with an attacker-chosen number, and a few such requests can degrade or take down the service (an availability risk, not merely a slow query). It requires a server-side hard maximum that clamps the requested size to a ceiling regardless of what the client asks for, and treats a sensible default paired with a missing (or far-too-high) maximum as still vulnerable — the limit is set inappropriately, not merely absent. The cap and cursor mechanics themselves live in the performance reference; the finding here is that the result-set size is client-settable and unbounded.",
+      "expectations": [
+        "Rejects \"the endpoint paginates / it takes a limit\" as sufficient — identifies that the client sets the row count and the server enforces no upper bound, so a single request can return the entire result set (the whole table)",
+        "Frames it as a server-side availability / resource-amplification risk driven by an attacker-controlled parameter (memory to materialize and serialize the rows, DB and egress cost), not only a latency or over-fetch nit",
+        "Requires a hard server-side maximum that clamps the requested size to a ceiling regardless of the client's value, and notes that a sensible default with a missing or too-high maximum is still the defect (a limit set inappropriately, not just a limit missing)"
+      ]
+    },
+    {
+      "id": "heavy-report-endpoint-with-no-request-time-limit-can-tie-up-the-request-pool",
+      "prompt": "Review this reporting endpoint. It runs a synchronous multi-table aggregation whose running time depends on the date range the caller supplies — a few seconds for a narrow range, several minutes for a very wide one — and the handler holds the request open until the query returns before responding. It runs on the same fixed-size pool of request handlers that serves the rest of the API. A reviewer approves: \"The numbers come back correct and the slow path is rare — ship it.\"",
+      "expected_output": "The review rejects the sign-off: \"correct and rare\" does not address availability. Because a single request can run for minutes and nothing bounds how long the handler may execute, each of the slowest requests holds one handler in the shared fixed-size pool for the whole duration, and a few concurrent ones occupy the entire pool — so every other caller, including cheap requests, is denied service. Correctness of the numbers and rarity of the slow path are not defenses: a caller can send the wide-range request deliberately and repeatedly. It requires a server-side wall-clock ceiling on how long a single inbound request may run, after which the server aborts the request and frees the handler; moving the heavy job to a background/queued job the client polls is a complementary fix but is not itself the per-request ceiling.",
+      "expectations": [
+        "Rejects \"correct and rare — ship it\" as missing the availability risk — identifies that nothing bounds how long a single inbound request may execute",
+        "Explains that because the handler is synchronous and runs on a shared fixed-size pool, a few slow/expensive concurrent requests occupy the whole pool and deny service to other callers, and that a caller can send the expensive request deliberately so rarity is not a defense",
+        "Requires a server-side per-request time limit (a wall-clock ceiling that aborts the request and frees the handler); may note offloading to a background/queued job as complementary, but not as a substitute for the inbound ceiling"
+      ]
     }
   ]
 }
