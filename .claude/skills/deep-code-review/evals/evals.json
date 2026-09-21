@@ -5712,6 +5712,18 @@
         "Flags that a shared template / porting-script origin makes this a batch defect and the finding must sweep all fourteen sibling diagrams from the same pass, not stop at the one file",
         "Gives a by-construction fix -- derive the anchor from the declared entry, or gate the two authored fields into equality -- rather than only re-pointing this one file's `startNode`"
       ]
+    },
+    {
+      "id": "shell-hex-validation-via-bracket-range-diverges-by-locale-not-a-drifted-copy",
+      "prompt": "A repo gates commits with a pre-commit hook and re-runs the identical check in CI. The check confirms a config digest is lowercase hex: `case \"$digest\" in *[!0-9a-f]*) echo 'bad digest'; exit 1;; esac`. The hook file is the same everywhere and is invoked the same way in both places. Developers report that a digest typed with uppercase letters is accepted by the hook on some machines but rejected on others, and the CI job's verdict does not always agree with the local hook's -- yet nobody has edited the script. Review the guard and explain the split verdict.",
+      "expected_output": "The review identifies that `[!0-9a-f]` is a bracket RANGE, whose matched set is defined by the current locale's collating sequence (LC_COLLATE) rather than by codepoint, so under a dictionary-collating UTF-8 locale (e.g. glibc) uppercase letters sort inside `a-f` and pass the reject filter, while under LC_ALL=C the same guard is byte-strict and rejects them -- the identical script returns different verdicts per environment. It recommends pinning LC_ALL=C for the comparison or replacing the range with an explicit character set (`*[!0123456789abcdef]*`). It explicitly rules out a drifted/stale local copy of the gate, noting the script is byte-identical and only the runtime locale differs, so single-sourcing the script would not fix it.",
+      "expectations": [
+        "Names the bracket RANGE (`[!0-9a-f]` / `[a-f]`), not an explicit enumerated set, as the root cause",
+        "Explains the verdict differs because a range is matched against the locale's collating sequence (LC_COLLATE) and is byte-strict only under the POSIX/C locale (LC_ALL=C)",
+        "Recommends pinning LC_ALL=C for the comparison OR an explicit character set / named class -- not merely re-copying or re-syncing the script",
+        "Distinguishes this from a drifted or stale local gate copy: the script is byte-identical and only the environment/locale differs, so single-sourcing does not fix it",
+        "Does not misattribute the split verdict to the operating system alone; ties it to the active locale/collation setting"
+      ]
     }
   ]
 }
