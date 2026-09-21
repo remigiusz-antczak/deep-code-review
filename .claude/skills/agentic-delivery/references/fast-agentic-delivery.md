@@ -500,6 +500,17 @@ set by PR *number*, but a human-owned design PR shared the agent author — only
 branch / diff / subject told them apart).
 - **Give agents a distinct identity** — a bot account or a separate `GITHUB_TOKEN` — so authorship
   is a *real* discriminator. The clean fix.
+- **With a distinct identity, filter by the author-identity match itself — never hand-maintain a
+  list.** Once agents have their own account, the reliable ownership signal *is* the author field:
+  scope the auto-merger to PRs whose author **positively matches the automation's own account** and
+  default-deny every other, so a human's PR is out of scope *by construction*, not by having been
+  listed. Do **not** substitute a hand-kept exclusion/allow list of PR numbers or branches for that
+  match — a manual list is only as current as its last edit, and the PR it never learned about is
+  the *next* human PR, so it goes stale and eventually auto-merges a human's mid-review work the
+  moment that unlisted PR is mergeable. A list is the right tool only in the shared-identity case
+  below, where there is *no* author signal to key on; where a distinct identity exists the author
+  match strictly dominates it. Verify the match against the PR's real author, not an assumed token
+  identity (a green-looking identity is a floor, not proof).
 - **If identity must be shared, key the auto-merger on an explicit convention** — an allowlist of
   agent-created PRs, a denylist of human-owned branches, a label (`agent-mergeable`), or a branch
   prefix (agents `bot/*`, humans `feat/*`). **Default-deny anything not positively marked
@@ -509,7 +520,10 @@ branch / diff / subject told them apart).
   infer ownership from a field every actor shares.
 - **🚩 tell:** an auto-merger scoped by PR author (`author:@me` / `gh pr list --author @me`) in a repo where agents run
   under the owner's token; or any auto-merge/auto-rebase with no positive agent-ownership mark
-  (label / branch-prefix / allowlist) and no default-deny.
+  (label / branch-prefix / allowlist) and no default-deny; or, where agents **do** have a distinct
+  account, an auto-merger keyed on a hand-maintained exclusion/allow list of PR numbers or branches
+  instead of the author-identity match — a stale list that auto-merges the next human PR it never
+  learned about.
 
 ## An auto-mode permission gate that denies the orchestrator but allows a sub-agent is a false "stuck"
 
@@ -784,6 +798,52 @@ is a rerun, not a fix-forward.
 the **first** non-green of a load-/infra-shaped required check without a bounded same-commit rerun;
 or one that reruns a **deterministic** assertion failure instead of treating it as real; or a rising
 rerun-went-green ratio nobody is converting into durable gate fixes.
+
+## A local pre-push gate reddened by machine contention is not a regression — re-run the failing check in isolation before concluding one
+
+The load-flaky-required-gate rule above is the CI/merge-drainer sibling of this one:
+it reads a *required check's* pass/fail bit and reruns the **identical commit** to
+reclassify a first red. The same discipline governs the **local build/test/lint gate**
+several lanes — or peer sessions (`multi-session-coordination.md`) — run before push on
+**one shared machine**, with one constraint the CI wording leaves open: the rerun must
+also be **isolated**, because the contention that reddened the gate is *on that box*, so
+a same-commit rerun taken while the other heavy lanes still run reproduces the
+contention, not the code. The canonical rule — a failure appearing only under fan-out
+concurrency is contention, not a defect, until reproduced at low concurrency, and its
+"re-run the specific failing check in isolation" step — is `parallel-audit.md` §0 (in the
+`deep-code-review` sibling) and is **not restated here**; this applies it to the delivery
+gate's own verdict.
+
+- **A first red under aggregate load is a candidate to reclassify, not a regression
+  conclusion — and bypassing the gate is not the alternative.** Several full local gates
+  at once can exhaust the shared box's CPU / RAM / file descriptors, so a headless-browser
+  render times out, a latency/timing assertion trips, or a suite flakes —
+  indistinguishable, from inside one lane, from a real regression the diff introduced.
+  Concluding "regression" burns a fix cycle chasing a non-bug; `--no-verify`-ing past the
+  red defeats the gate. Do neither on the first red.
+- **The disambiguator is a rerun *in isolation*, not merely on the same commit.** Quiesce
+  the box first — pause or kill the other heavy lanes, shedding the test runner's own
+  browsers but not the app's dev server (*CI-offload the heavy gate* above) — then re-run
+  the **specific failing check** on the identical commit. A pass on the quiesced box proves
+  the red was contention; only a failure that **still reproduces at low concurrency** is a
+  candidate regression and enters the fix queue. A same-commit rerun taken *without*
+  quiescing is not a valid disambiguation: under sustained contention it keeps failing and
+  wrongly flips the verdict to "regression" — the exact wasted cycle the load-flaky rule's
+  bounded rerun assumes it has already ruled out.
+- **Prevent the misread by sizing, not only by diagnosing it after.** Throttle heavy gate
+  lanes by *measured* load (free RAM + the swap trend, *Gate on free RAM and the swap
+  trend* above; the peer-aggregate form is `multi-session-coordination.md`'s shared
+  heavy-lane reservation), and run locally only the gate CI actually enforces (*CI-offload
+  the heavy gate* above) — so fewer contention-flakes reach the verdict step at all.
+
+Distinct from *Gate on free RAM and the swap trend* and *CI-offload the heavy gate*
+(#935): those decide **whether and how heavily** to run the local gate (sizing) —
+prevention; this decides **how to read a red the gate already produced** — interpretation.
+Distinct from the load-flaky-required-gate rule above: that is the CI required-check
+verdict with a same-commit rerun; here the shared-machine gate's rerun must *also* be
+**isolated**. **🚩 tell:** a lane opening a fix or reverting on the **first** red of a
+heavy local gate — or bypassing the gate — while other heavy lanes are live on the same
+box, with no isolated re-run of the failing check to separate contention from a defect.
 
 ## Absent checks are a third state, not a slow "pending" — an uncomputable merge ref suppresses the run; bounded-wait then re-trigger, never wait forever
 

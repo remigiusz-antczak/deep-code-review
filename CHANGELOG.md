@@ -3,6 +3,14 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.420.0] — 2026-09-21
+
+### agentic-delivery — a local gate reddened by machine contention isn't a regression (re-run isolated), and a distinct-identity auto-merger filters by author match, not a stale list (#984, #986)
+
+- **`fast-agentic-delivery.md`** (#984, new section): when several lanes/peers each run the full local build/test/lint gate on one shared box, aggregate CPU/IO contention reddens a gate (a headless-browser timeout, a timing assertion, a suite flake) **indistinguishable inside one lane from a real regression**. A first red is a candidate to reclassify, not a verdict — and `--no-verify` defeats the gate, so do neither; **re-run the failing check in isolation** (quiesced box, shed test browsers not the dev server) on the identical commit: pass-alone = contention, only a failure that still reproduces at low concurrency is a candidate regression. Distinct from #935 / the free-RAM-and-swap-trend gate (those *size/prevent* the heavy gate — this *interprets* a red it already produced) and from the load-flaky required-gate rule (a same-commit CI rerun — here the rerun must **also** be isolated, or a still-contended rerun falsely flips to "regression"); the isolation rule itself is linked to `deep-code-review`'s `parallel-audit.md` §0, not restated.
+- **`fast-agentic-delivery.md`** (#986, into the #424 auto-merger section): once agents have their **own account**, the reliable ownership signal *is* the author field — scope the auto-merger to PRs whose author positively matches the automation's account and default-deny the rest, so a human's PR is out of scope **by construction**. Do **not** hand-maintain an exclusion/allow list of PR numbers/branches — a manual list is only as current as its last edit, so it eventually auto-merges the next human PR it never learned about, mid-review. The list is the right tool only in the **shared-identity** case (#424, no author signal to key on); where a distinct identity exists the author match strictly dominates it (verify the match against the real author — a green token identity is a floor, not proof).
+- +2 evals (117 total in agentic-delivery). Closes #984, #986.
+
 ## [1.419.0] — 2026-09-21
 
 ### deep-code-review — a "tracked follow-up" migration whose ticket was never filed, one unguarded read that crashes a fail-soft fan-out, and an optimistic revert that clobbers a newer write (#976, #977, #978, #979)
