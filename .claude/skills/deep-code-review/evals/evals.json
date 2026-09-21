@@ -5588,6 +5588,50 @@
         "Warns that unifying a meaning-bearing difference erases a real signal / is a regression",
         "Concludes they are not automatic defects -- at most an owner decision, not a blocker"
       ]
+    },
+    {
+      "id": "a-source-token-present-in-markup-can-still-render-no-effect-when-its-file-is-outside-the-build-scan-scope",
+      "prompt": "A component renders with class=\"grid-cols-3 gap-4\" -- the class string is confirmed present in the live DOM -- but the three-column grid never appears: no build error, no lint warning, no console message. The identical utility classes work in a sibling component under src/legacy/. A teammate's test greps the component file, confirms the class strings are present, and marks it passing. What do you check before assuming a CSS-specificity or JIT-syntax bug, and is that grep test sufficient?",
+      "expected_output": "The file most likely sits outside the build tool's configured source/content scan scope, so those utility classes compile to no CSS at all -- zero emitted rule, no error, the class is just an inert string on className. Confirm it: read getComputedStyle for the property the utility should set (grid-template-columns) and walk the compiled stylesheet (document.styleSheets, recursing nested @media/@supports) for any rule matching the class; if the class rides the DOM but no rule exists anywhere, the scanner never saw the file (or its extraction missed the syntax). Rebuild fresh first to rule out a stale cache. The grep test is NOT sufficient and proves nothing here: the string is present but maps to no emitted rule, so a source-text-presence check must never stand as proof a utility renders an effect -- assert the produced effect (a computed-style value) instead. Fix going forward: keep the scan scope a superset of the source dirs (add a directory's entry in the same change that adds the directory), add a CI guard that fails the build when a dir with recognizable source files is outside the configured scope, or a computed-style canary per top-level source dir. (reliability-error-handling.md.)",
+      "expectations": [
+        "Checks whether the file is inside the build tool's configured source/content scan scope before assuming a specificity/JIT bug",
+        "Verifies via computed style and the compiled stylesheet that no rule for the class exists anywhere, and rebuilds fresh to rule out a stale cache",
+        "Rejects the grep/source-text test as proof the utility renders -- requires asserting the produced effect, because the class string being present maps to no emitted rule",
+        "Prescribes keeping the scan scope a superset of source dirs / a CI coverage guard / a computed-style canary per top-level source dir"
+      ]
+    },
+    {
+      "id": "a-secret-gate-scanning-an-extension-include-list-is-blind-to-an-omitted-committable-type",
+      "prompt": "Our pre-commit gate greps every *.ts, *.js, *.md, *.json, *.sh, *.yml, and *.txt file for banned tokens and secrets. It just ran in CI and printed 'clean', exit 0. The repo also commits *.py scripts and *.ipynb notebooks. Can I record this boundary as clean?",
+      "expected_output": "No. The gate selects files by an include-list of extensions that omits committable types (*.py, *.ipynb), so those files were never scanned -- a banned token or secret in one is invisible and the gate still exits 0. The green means 'clean within the subset I scanned,' not 'clean'; this is false confidence, and worse than no gate because it trains the team to trust a no-op. It is not the same as a skipped scope from a missing pattern-list: the single scan ran, but its input file-set is a subset of what the repo can commit. Fix: make the scanned set a superset of the committable surface -- derive it from git ls-files (scan-all-then-exclude / deny-list) rather than a hand-maintained include-list; and because this is a secret/identifier gate, treat an unrecognized committable type as could-not-check and fail closed, never a silent pass. Prove it with a negative control per committable type: plant a banned token in a throwaway file of each type the repo commits and assert the gate catches every one; a gate with no such self-test is unverified, not clean. (reliability-error-handling.md.)",
+      "expectations": [
+        "Refuses to record the boundary clean: the extension include-list omits committable types (*.py, *.ipynb) that were never scanned, so exit 0 covers only the scanned subset",
+        "Names it false confidence -- worse than no gate -- and distinguishes an under-covering input file-set from a skipped scope caused by a missing pattern-list",
+        "Requires coverage be a superset of the committable surface (git ls-files / scan-all-then-exclude), and fail-closed / could-not-check on an unrecognized committable type for a secret/identifier gate",
+        "Requires a negative-control self-test that plants a banned token in every committable file type and asserts the gate catches each"
+      ]
+    },
+    {
+      "id": "a-stated-human-over-model-precedence-must-set-the-decision-field-not-an-adjacent-note",
+      "prompt": "A README states: 'the human read always wins over the model's estimate.' In the code, the human read is written into a 'read' column; the row's 'status' -- the field the shortlist and the exported report act on -- is computed in a branch that consults only the model/research signals. One row shows status='keep' next to a read of 'do NOT -- regulated, hard pass.' Is the stated precedence actually implemented, and what's the rule?",
+      "expected_output": "No -- the precedence is nominal only. The senior source (the human read) is written to a side 'read' column, but the decision field 'status' is computed purely from the junior (model) branch and never consults the read, so the field a reader acts on contradicts the override: status='keep' beside a read that says hard pass. For any stated precedence (A outranks B), grep the field that encodes the acted-on decision and confirm A is consulted first in the branch that sets THAT field -- not merely written somewhere on the row. Fix: in the branch computing status, consult the human read first and let it win; test the conflict case explicitly (a row where override and base disagree must render the override's verdict in the acted-on cell). Also never truncate a caveat-bearing field to a length that can cut the disqualifying clause ('do NOT -- regulated' clipped to a positive stub is how the reason gets lost) -- clip low-information display fields instead. Distinct from which store holds the field (a dual-registered write-target) and from a compare-and-swap guarding the wrong column: here one record, the write reaches the row but the decision branch ignores it. (data-quality.md.)",
+      "expectations": [
+        "Concludes the precedence is not implemented: the override is written to a side column while the acted-on decision field is computed only from the junior branch and never consults it",
+        "States the rule: for a stated precedence, confirm the senior source is consulted first in the branch that sets the decision field -- not merely written somewhere on the row",
+        "Requires testing the conflict case (override vs base disagree -> the acted-on cell shows the override's verdict) and warns against truncating a caveat-bearing field so it cuts the disqualifying clause",
+        "Distinguishes it from a dual-store write-target and from a CAS guarding the wrong column -- one record, the write lands but the decision branch ignores it"
+      ]
+    },
+    {
+      "id": "an-unguarded-substring-name-join-misattributes-a-row-and-exact-match-over-drops",
+      "prompt": "We join a survey overlay onto a company snapshot by name using: if a in b or b in a. In the human-facing export, a fund named 'AV' picked up a confidential revenue note that actually belongs to a company named 'Haven'. A teammate proposes fixing it by switching to a strict exact string match. Sign off on that fix?",
+      "expected_output": "No -- to both the current join and the proposed fix. The bidirectional substring test (a in b or b in a) with no word-boundary or length guard makes the short name 'AV' a substring of 'Haven', so the fund inherits an unrelated entity's confidential row and it lands in a human-facing output -- a privacy leak, not just a quality defect. But strict exact string match over-corrects: rows whose names differ only trivially (a legal suffix like 'Inc' or 'gmbh', punctuation, case) stop matching and drop out silently. Fix both directions at once: match on a normalized key (case/whitespace/unicode-NFC/suffix-folded) or a resolved stable id; when overlaying, emit every overlay entry as a matched-or-unmatched row so a name mismatch is a visible unmatched row, never a silent drop; and verify the join both ways on real data -- sweep for false positives (a wrong row attached) AND false negatives (an expected row missing). A join is unproven until both counts are seen. (data-quality.md.)",
+      "expectations": [
+        "Rejects both the unguarded substring join (it inherits a confidential row from an unrelated entity -- a privacy leak) and the naive exact-string fix (it silently drops rows differing only by suffix/case/punctuation)",
+        "Requires matching on a normalized key or a resolved stable id rather than an unguarded substring",
+        "Requires surfacing every overlay entry as a matched-or-unmatched row so a mismatch is visible, never a silent drop",
+        "Requires verifying the join both directions on real data -- false positives AND false negatives -- before trusting it"
+      ]
     }
   ]
 }

@@ -127,6 +127,24 @@ the checklist.
   the *repository history itself* is shallow — `git rev-parse --is-shallow-repository`,
   `git fetch --unshallow` — is `branch-and-merge-hygiene.md`; this bullet is the **gate** that
   consumes that history.)
+- **A gate whose input is an *allow-list of file extensions* silently under-covers the committable
+  surface — a green then means "clean within the subset I scanned," not "clean."** A name / secret /
+  banned-token grep-gate that selects files by an **include-list** of extensions
+  (`ts,js,md,json,sh,yml,txt`) never scans a committable type omitted from it (`*.py`, `*.ipynb`,
+  `*.env.example`): a banned token there is invisible and the gate still prints `clean`, exit `0` —
+  **false confidence, worse than no gate**, because it trains the team to trust a no-op. Distinct
+  from the skipped-*scope* and unenumerated-*surface* rules in `method.md` (there a missing
+  pattern-list disables one scan, or a route the sweep never hit): here the gate's single scan
+  **ran**, but its **input file-set** is an allow-list that is a **subset** of what the repo can
+  commit. Fix — make coverage a **superset of the committable surface**: derive the file set from
+  `git ls-files` (scan-all-then-exclude / deny-list), not a hand-maintained include-list; and for a
+  **security / secret / identifier** gate treat an **unrecognized committable type as
+  could-not-check → fail closed**, never a silent pass (the fail-closed exception above — a
+  name/secret gate is exactly the case the detective-control rule above does *not* fail open). Prove
+  it with a **negative control per committable type**: plant a banned token in a throwaway file of
+  each type the repo commits and assert the gate catches **every** one — a gate with no such
+  self-test is `unverified`, not clean. (The reviewer-side reading — a green clears only the surface
+  it enumerated — is `method.md`; this is the gate-*design* fix.)
 - **Find the house primitive; confirm *uniform* routing (the converse lens).**
   Don't only ask "does each I/O site have *some* handling?" — grep the project's
   **own** retry/backoff/timeout wrapper (`withRetry`, `fetchWithTimeout`, a
@@ -424,6 +442,30 @@ subsystem never executing in production while local runs look fine.
   a smoke test that hits the real wiring).
 - Grep for optional `require`/`import` behind flags with no test that the flag
   path runs in CI for both states.
+- **A build/codegen step keyed on an explicit source allow-list silently emits
+  *nothing* for an input outside the list — the build-time face of the silent
+  no-op.** A generator that scans only an enumerated set of dirs/globs (a
+  utility-CSS **content** scanner, a codegen input list, an asset glob) produces
+  **zero output** for a file outside that scope with **no build error, lint, or
+  console warning** — the omitted file's tokens still ride the source (a
+  `className` string, a symbol), so every catch layer stays quiet and only the
+  missing *effect* shows. It recurs because the list is configured once over the
+  dirs that existed then, and a later new subtree / package / route-group falls
+  outside it unnoticed: "scanned a dir, found nothing to emit" is
+  indistinguishable from "never scanned the dir." A **source-text-presence test**
+  (grep that the token appears in a file) passes and **proves nothing** — the
+  string is there; it just maps to no emitted rule. Fix: assert the **produced
+  effect**, not the source token (a canary that reads the real generated
+  artifact — a computed style, an emitted symbol — for one input per top-level
+  source dir), and add a CI guard that enumerates every dir holding recognizable
+  source files and **fails the build when one is outside the configured scan
+  scope** — the coverage-superset move a gate needs for its own input file-set
+  (verification-gate family above), here for a build input set. Whole-tree
+  auto-detection avoids the omission but has its own failure mode (sweeping a
+  build-output / `dist` dir into the scanner corrupts the emitted set — often
+  *why* an explicit list was chosen), so it is not a free win. Sibling to the
+  registration/flag cases above: there a subsystem never *runs*; here a build
+  step *runs but covers a subset of its inputs*.
 
 ---
 
@@ -448,4 +490,8 @@ that closes its listener before failing readiness, or drains unboundedly; a work
 nacking its in-flight job; one pool/client/semaphore shared by a critical and a background call with
 no partition, admission check, or per-replica floor; a downstream consumer that gates on an artifact's
 **existence** rather than the producing step's **success** (an abort added to a formerly-hanging step
-must preserve last-good and signal failure, not write-then-throw).
+must preserve last-good and signal failure, not write-then-throw); a build / codegen step keyed on an
+explicit source allow-list (a scanned-dirs/globs list) that silently emits nothing for a file outside
+it — no error or warning, and a source-text-presence test still passes; a name / secret grep-gate
+whose scanned file set is an include-list of extensions (a **subset** of the committable surface)
+reporting `clean` while an omitted committable type (a `*.py`) is never scanned.
