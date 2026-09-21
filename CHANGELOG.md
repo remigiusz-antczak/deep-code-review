@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.407.0] — 2026-09-21
+
+### agentic-delivery — the unattended / autonomous operating mode, consolidated as one routed reference (#377, #385, #386, #474)
+
+- **New `references/unattended-operating-mode.md`** (routed from SKILL.md with a "read it when" trigger): the operating-mode layer *above* per-PR delivery, for an overnight or multi-hour autonomous run. It **names and wires together** doctrine that already lives across `fast-agentic-delivery.md`, `multi-session-coordination.md`, `project-state.md`, and `deep-code-review`'s `branch-and-merge-hygiene.md` / `release-engineering.md` — it does **not** restate that depth (52 pointers, no duplication; ~90% of the four issues' content already existed). The genuinely-new normative additions are (1) the **run-start checklist + run-end self-audit** that bound a run, and (2) the worked **default set of offset recurring loops** (PUSH / MERGE / PRODUCER / HYGIENE / QUALITY / LEARNINGS) with the cadence-is-max-latency-not-work-quantum guard. Also states the default-mode framing (starting the loop needs no reason; stopping needs a named termination condition), the composition of the three skills as three gates, and the running ≠ merged ≠ live reporting ladder. Independently reviewed (fresh context): all six loop-set pointers and ~15 others verified to resolve to sections that support their claim, human-gate boundary confirmed to license no auto-merge/deploy/send; one clarity fix applied — the autonomous PUSH/MERGE loops are the un-gated half only (a lane's own feature-branch push + G7 integration merge), while shared-branch push, merge-to-default, deploy, and external send stay Human gates. +1 eval. Consolidates and closes #377, #385, #386, #474.
+
 ## [1.406.0] — 2026-09-21
 
 ### deep-code-review — mobile/native appsec vertical: iOS/Android red flags a web-appsec pass misses, plus a `mobile` archetype (OWASP MASVS/MASTG) (#392)

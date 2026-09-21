@@ -10,7 +10,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.406.0"
+  version: "1.407.0"
 ---
 
 # Agentic delivery
@@ -202,6 +202,19 @@ mutual pause where two peers each wait on the other, routing backlog items to th
 resources fit, relaying a shared gate's accepted format to a peer, classifying who merged a PR
 that landed under a peer's merge-hold before calling it a violation, or trusting
 cross-peer convergence as a backlog-exhausted signal.
+
+**Unattended / autonomous operating mode (an overnight or multi-hour autonomous
+run).** When this skill runs as a **continuous loop over a backlog** rather than
+one feature at a time: `references/unattended-operating-mode.md` — **read it when**
+starting or shaping an unattended / overnight autonomous run. It composes
+`deep-code-review` (review), `idea-critic` (decision), and this skill's own gates
+into one bounded-and-reversible loop, and adds only the connective doctrine: the
+default-mode framing (stopping needs a stated termination condition; the Human
+gates below are unchanged), the five-rung delivery loop with its FREEZE-THEN-TRAIN
+and SIZE-TO-MEASURED-HEADROOM sequencing rules, the **run-start checklist +
+run-end self-audit** that bound a run, the running ≠ merged ≠ live reporting
+ladder, and the default set of offset recurring loops. A **loop, not a standing
+swarm**.
 
 **A work item's own completion is G7, not G8.** Once a lane's change is
 integrated (G7), the work item it closes is done; G8 Release is a separate,
