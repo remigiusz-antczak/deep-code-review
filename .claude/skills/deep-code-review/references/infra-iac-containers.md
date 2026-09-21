@@ -199,6 +199,32 @@ hard-coded `access_key`/`secret`/`password` in `.tf`.
 - Secrets injected from the CI secret store, **never** echoed in logs
   (`set -x` leaks; mask them); least-privilege CI tokens (a read-only checkout
   where a write isn't needed); protected branches; required status checks.
+- **Harden the pipeline *system* itself, not only the app it ships.** The bullets
+  around this one secure the code and artifacts flowing *through* the pipeline; this
+  one secures the CI/CD system's own runtime posture — the axis OWASP CI/CD Top 10
+  **CICD-SEC-7** ("Insecure System Configuration") frames as the "posture and resilience
+  of each individual system," and whose own examples include a "self-hosted system that
+  has administrative permissions on the underlying OS." Repo-visible signal:
+  **`runs-on: self-hosted`** (or any custom label targeting a machine the team runs
+  itself). A *persistent* runner reused across jobs carries state between runs —
+  environment, the tool-cache, on-disk secrets and credentials, and the prior checkout
+  all survive — so an untrusted/fork-PR job that lands on the same runner as a privileged
+  job can **read the residue** the privileged job left, or **poison** a cache/tool the
+  *next* privileged run consumes (a fork `pull_request` job runs the contributor's code
+  even when repo secrets are withheld from it; residue-harvest and cache-poisoning defeat
+  that withholding). Prescribe — skill guidance, beyond the OWASP text — **ephemeral,
+  single-job runners** torn down after each run, and **never co-schedule untrusted/fork
+  PRs on a runner that also serves privileged jobs**; segregate runner pools by trust
+  tier. "CI is green and the runners are fast" is not evidence of isolation. Same
+  principle, briefly: the CI server's own patch level, unvetted plugins, default-admin
+  credentials, and network segmentation between runners and production — all "harden the
+  system, not only the app." Keep the finding to what the diff shows (`runs-on`, the
+  trust-tier mix across workflows); org runner-group configuration and vendor patching
+  live in platform admin, so surface the signal and route the rest. Distinct axes: this
+  bounds *where* a job runs; the least-privilege-token bullet above bounds *what* it may
+  reach; CIS hardening of the *deployed* app runtime is the separate axis at this file's
+  opening (and `security-appsec.md` A05). Untrusted fork-PR **checkout/trigger** risk
+  (`pull_request_target`, script injection) is in `security-appsec.md`.
 - **Package-signature verification is a blocking gate** (a signature mismatch
   means the artifact is not what the registry signed); transitive-CVE audit is a
   useful **advisory** signal — schedule high/critical, don't block on every

@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.375.0] — 2026-09-21
+
+### deep-code-review — harden the CI/CD pipeline system itself, not only the app it ships (OWASP CICD-SEC-7)
+
+- **`infra-iac-containers.md`**: a new CI/CD-block bullet for the pipeline system's own runtime posture (OWASP CI/CD Top 10 CICD-SEC-7), distinct from CIS-hardening the *deployed* app and from least-privilege CI tokens. Repo-visible signal `runs-on: self-hosted` (or any custom label for a team-run machine, treated as a lead): a *persistent* runner reused across jobs carries environment, tool-cache, on-disk secrets and the prior checkout between runs, so an untrusted/fork-PR job landing on the same runner as a privileged job can read the residue or poison a cache the next privileged run consumes — defeating repo-secret withholding. Prescribes (attributed to the skill, beyond the OWASP text) ephemeral single-job runners torn down after each run and no co-scheduling of untrusted with privileged jobs; names CI patch level, unvetted plugins, default-admin creds and runner/prod network segmentation briefly; bounds the finding to the diff-visible `runs-on` surface and routes org runner-group / vendor-patching to platform admin. +1 eval. Source verified by direct fetch (SHA-pinned OWASP raw file), logged in docs/standards-index.md.
+
 ## [1.374.0] — 2026-09-21
 
 ### deep-code-review — twin-file parity and an outermost guard verify a fix without proving the fixed file has no other path to the same sink (#867)
