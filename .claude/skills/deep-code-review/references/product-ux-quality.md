@@ -615,6 +615,36 @@ domain H) with a UX consequence, so it is ruled on here too.
   that import no common component for it. If the design system already ships the
   primitives, the fix is to build the one shared atom, not just reconcile the
   wording (the wording was never the only thing diverging).
+- **Sibling view-variants of one concept each re-declare the shared lookup or
+  primitive the others import.** When one entity is shown through alternate
+  *layouts* — a compact vs an expanded card, a horizontal vs a vertical diagram,
+  a table vs a list that a single parent switches between — each variant tends to
+  carry its *own* copy of a mapping or a sub-element rather than resolving the one
+  shared source. Distinct from the two bullets above: not a whole component missed
+  at a call site (*adoption-is-total*), and not a primitive no one has composed
+  yet (*the unassembled molecule*) — here the shared atom **exists** and this
+  variant's file **already imports it** for a neighbouring member, so the gap hides
+  behind a present `import { … } from './primitives'` that reads as a finished
+  migration. Two shapes, one defect: **(a)** an enum→label/colour/tone **lookup
+  map** (`Record<Status, …>`) where the union *type* is already centralized and
+  imported but the map over it is inlined — *type centralized, map not* is the
+  strongest tell; **(b)** a sub-element's **derivation-plus-render pair** (a centre
+  readout, an axis block, a legend) left inline in one renderer while its siblings
+  pull the same thing from the shared module. The hazard spans present and future,
+  not today's pixels alone: the inline copy may *already* be a member behind (diff
+  it against the shared map key-by-key), and any enum member — or sub-element fix —
+  added later reaches only the shared source, so that one variant silently renders
+  a blank/wrong label, an off-brand colour, or a stale block, while each variant
+  reviewed alone looks correct. Detect by enumerating **every** renderer of the
+  enum or diagram (grep the union type, or the parent's layout-toggle option list —
+  not a visible string; a status→colour map has none) and confirming they resolve
+  **one** lookup/primitive; a variant with its own inline map or sub-element when a
+  shared one exists is the finding. Same sibling-variant family as the
+  row-affordance / view-switch / search bullets below, but the divergence is a
+  duplicated *source*, not divergent *handling* of a shared one. Fix: the variant
+  imports the shared lookup/primitives module and the shared source becomes the
+  single place a new member is added; the one legitimate per-variant difference (a
+  size class) becomes a prop, not a second copy.
 - **A fix to a shared concept lands in the shared component**, not in one caller —
   otherwise the same defect survives in every other caller, and whoever checked
   only the screen they were shown signs off a still-broken app.
@@ -978,7 +1008,7 @@ often lost — the on-screen chart carries axes and a readout the serialiser dro
 - [ ] Matches a **named** top-product pattern; convention gaps surfaced to the owner, not silently redesigned?
 - [ ] If the owner has rejected this element **twice**, stopped tuning — structural flaw named, two or three comparables researched, concrete options surfaced for the owner to choose?
 - [ ] Consistent type scale / spacing / components / number format with sibling views (tabular figures in columns)?
-- [ ] One shared component per concept — reused/extended, not reimplemented per page; a fix landed in the shared component, not one caller; **searched the tree for a duplicate twin (a duplicated visible string/heading) a diff-scoped review would miss**; and every component built for this surface has at least one **mount path** from a router/page entry, static or dynamic/lazy/registry-based (zero paths = a dead-render candidate — wire up or retire, owner's call)?
+- [ ] One shared component per concept — reused/extended, not reimplemented per page; a fix landed in the shared component, not one caller; **sibling view-variants import one shared lookup/primitive (an enum→label/colour map, a sub-element's derivation+render) rather than each re-declaring it**; **searched the tree for a duplicate twin (a duplicated visible string/heading) a diff-scoped review would miss**; and every component built for this surface has at least one **mount path** from a router/page entry, static or dynamic/lazy/registry-based (zero paths = a dead-render candidate — wire up or retire, owner's call)?
 - [ ] Interaction loops close — read-back on every input (no write-only), WYSIWYG not raw markup, no dead controls — checked on the route that actually renders?
 - [ ] Any action **labelled non-destructive** (resolve / archive / dismiss) that removes the record still shows it **persists** — a persisted-state label, an undo, or a discoverable resolved/archived view — so it doesn't read as a hard delete? (Default-hiding behind a *known* filter is a convention, not this; soft-delete is out of scope; **fail-open** — a human adjudicates.)
 - [ ] Every **disabled action explains its cause and a recovery path** — the unmet prerequisite + a concrete next step, in **reachable** text (nearby or a focusable wrapper/popover, not a tooltip on the disabled element, which may get no hover/focus); an action permanently unavailable to the current role is hidden or replaced, not a dead end?

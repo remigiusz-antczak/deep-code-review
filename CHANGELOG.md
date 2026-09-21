@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.372.0] — 2026-09-21
+
+### deep-code-review — sibling view-variants re-declare a shared lookup/primitive a sibling already imports, so a new enum member silently misses one layout (#863, #825)
+
+- **`product-ux-quality.md`**: when one concept is shown through alternate *layouts* a parent switches between (a compact vs an expanded card, a horizontal vs a vertical diagram, a table vs a list), each variant tends to carry its own inline copy of an enum→label/colour map or a rendered sub-element instead of resolving the one shared source. The gap hides because the shared atom exists and the variant's file already imports it for a neighbouring member, so the migration reads as finished; the failure is future growth — a new member added centrally never reaches the inline copy, so that one layout renders a blank/wrong label or an off-brand colour while each variant reviewed alone looks correct. Two shapes, one defect: a lookup map where the union *type* is centralized but the map over it is inlined (*type centralized, map not* — the strongest tell), and a sub-element's derivation-plus-render left inline in one renderer. Detect by enumerating every renderer (grep the union type or the parent's layout-toggle list — a status→colour map has no visible string) and confirming they resolve one shared source. Distinct from the adoption-is-total call-site miss and the unassembled-molecule bullet; resolves both #863 (lookup-map shape) and #825 (sub-element shape), and closes a component-only framing gap on the pre-ship checklist. +1 eval.
+
 ## [1.371.0] — 2026-09-21
 
 ### agentic-delivery — cap the dev/build server's memory in the shared start script, not only in CI; shrink the shared collision surface (salvaged from #589)
