@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.405.0] — 2026-09-21
+
+### deep-code-review — a sort comparator that hand-places one sentinel but not its later-added siblings returns a valid order a monotonicity test can't catch (#929)
+
+- **`language-stack-redflags.md`**: a comparator that forces one placeholder to a fixed end by naming it (`if (a.status === 'TBD') return 1`, or a `null`-goes-first branch) pins *that one* value and lets everything else fall through to the natural-key compare. A **second** placeholder introduced later — an `'N/A'` beside the `'TBD'`, a new enum member — touches the domain and not the comparator, so it misses the branch, sorts by its raw key, and lands in an arbitrary-but-consistent slot. Distinct from the adjacent `NaN`-comparator bullet: that returns a *malformed* value and breaks the total-order contract, so the monotonicity assertion catches it; this returns a **valid** order and only *mis-places* the value, so the same assertion stays green and the bug reads as surface-specific. Fix by keying on a **positive** predicate — "is this a real value?" — so the `else` forces every placeholder, present or future, to the end by construction, with no list to keep complete; if you must enumerate, derive the whole set from the one enum/type that defines it and add a test that fails when a member is added with no rule (a pinned handled-subset proves non-regression, not completeness — `method.md`). Cross-refs the added-enum-member breaking-change note in `api-contracts.md` as the cross-version sibling. +1 eval.
+
 ## [1.404.0] — 2026-09-21
 
 ### deep-code-review — "is X shipped?" is a containment question against the governing branch, not a commit-grep or a merged-PR status (#924, #925)

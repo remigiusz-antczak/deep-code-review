@@ -64,6 +64,23 @@ grep -rInE 'console\.log|print\(|dbg!|System\.out\.print|fmt\.Print' .
   monotonicity** of the sorted result in both directions, not just where the `NaN` landed. Distinct
   from the attacker-chosen-key comparator DoS below — that is worst-case *complexity*; this is a
   wrong *return value*.
+- A sort comparator that **hand-places one sentinel but not its siblings.** A placeholder forced to
+  a fixed end by naming it — `if (a.status === 'TBD') return 1`, or a `null`-goes-first branch — pins
+  *that one* value and lets everything else fall through to the natural-key compare. Introduce a
+  **second** placeholder later (an `'N/A'` beside the `'TBD'`, a new enum member) and, because the
+  change touches the domain and not this function, it misses the branch, sorts by its **raw key**, and
+  lands in an arbitrary-but-consistent slot (a label `localeCompare`s wherever its letters fall).
+  Distinct from the `NaN` bullet above — that returns a *malformed* value and breaks the total-order
+  contract, so the monotonicity assertion catches it; this returns a **valid** order and only
+  *mis-places* the value, so that same assertion stays green and the bug reads as surface-specific.
+  Fix by keying on a **positive** predicate — *"is this a real value?"* — so the `else` forces
+  **every** placeholder, present or future, to the end by construction, with no list to keep complete.
+  If you must enumerate them, enumerate the **whole** set from the one enum/type that defines it and
+  add a test that fails when a member is added with no rule — a pinned handled-subset proves
+  non-regression, not completeness (`method.md`). A one-sided special-case (`return 1` with no
+  mirrored `return -1`) also breaks antisymmetry. The cross-version sibling of the same completeness
+  question — a consumer's exhaustive-`switch` outgrown by a **producer's** newly-added enum member —
+  is the added-enum-member breaking-change note in `api-contracts.md`.
 - `new Date('2026-03-14')` / `Date.parse` on a **date-only** string → **UTC** midnight, while a
   `'…T00:00:00'` (time, no offset) → **local** midnight (MDN) → a viewer behind UTC renders a bare
   day a **day early**; non-ISO/slash forms are unportable. Mechanism + fix in
