@@ -11,7 +11,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.405.0"
+  version: "1.406.0"
 ---
 
 # Deep Code Review
@@ -63,6 +63,7 @@ Batch-mark untouched domains N/A; escalate on any blast-radius 🚩. Procedure:
 | Archetype | Default domains | Must-load refs |
 |---|---|---|
 | web | A B E F J O P | `security-appsec.md`, `frontend-a11y.md`, `product-ux-quality.md` |
+| mobile | A B E F J P Q | `mobile-appsec.md`, `security-appsec.md` |
 | api / service | A B E F I J | `security-appsec.md`, `api-contracts.md` |
 | data / ETL | A D E F G J | `data-quality.md`, `performance-db-cost.md` |
 | agent / LLM / MCP | A B C E F J | `security-ai-agents.md`, `security-agent-skills.md`, `security-appsec.md` |
@@ -111,7 +112,7 @@ VERIFY_SURFACE: <url-or-port · tree/worktree path · branch · sha actually ren
 HISTORY_DEPTH: <git rev-list --count HEAD | N/A>
 REVERTS_CHECKED: <commits | NONE>
 BANNED_REMEDIES: <rejected approaches | NONE>
-ARCHETYPE: <web|api|data|agent|iac|lib|other>
+ARCHETYPE: <web|api|mobile|data|agent|iac|lib|other>
 STAGE: <prototype|mvp|growth|mature | UNVERIFIED> (owner-declared, or named from evidence; unstated defaults to the stricter reading)
 COVERAGE_LEDGER: <applicable domains + must-load refs>
 ```
@@ -199,7 +200,7 @@ footguns: `references/language-stack-redflags.md`.
 | | Domain | Depth |
 |---|---|---|
 | A | Correctness & logic | `domain-checklists.md`, `time-date-correctness.md` (timestamps, durations, recurring/scheduled times, time zones) |
-| B | AppSec (OWASP Top 10:2025) | `security-appsec.md` |
+| B | AppSec (OWASP Top 10:2025) | `security-appsec.md`; `mobile-appsec.md` — **read when** the target ships an iOS / Android / native mobile client (MASVS/MASTG deltas) |
 | C | AI / LLM / agents | `security-ai-agents.md`, `security-agent-skills.md` |
 | D | Data integrity | `data-quality.md` |
 | E | Performance, efficiency & cost | `performance-db-cost.md`, `model-tiering.md`, `billing-correctness.md` (when the target meters, subscribes, or charges) |

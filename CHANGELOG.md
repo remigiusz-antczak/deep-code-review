@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.406.0] — 2026-09-21
+
+### deep-code-review — mobile/native appsec vertical: iOS/Android red flags a web-appsec pass misses, plus a `mobile` archetype (OWASP MASVS/MASTG) (#392)
+
+- **New `references/mobile-appsec.md`** (+ a `mobile` archetype wired into SKILL.md: archetype-table row, ARCHETYPE enum, domain routing line with a "read when" trigger). The mobile/native-specific red flags a server-side or web-appsec review does not surface, each **linking** the existing `security-appsec.md` class rather than restating it: insecure local storage + Keychain/Keystore accessibility & hardware backing; cleartext / ATS platform opt-outs (`NSAllowsArbitraryLoads`, `networkSecurityConfig`) and missing / bypassable certificate pinning; exported components / implicit intents / deeplink & App-Links hijack; WebView JS-bridge exposure to native code; client-only or biometric auth used as the sole control; root/jailbreak & anti-tamper theater (with the don't-over-demand caveat); platform side-channels (app-switcher snapshot, pasteboard, `allowBackup`, keyboard cache, tapjacking); hardcoded secrets in a client-distributed binary; excessive permissions & third-party SDK exfiltration. Grounded in OWASP MASVS (8 control groups) / MASTG, with the quoted control text SHA-pinned in `docs/standards-index.md`. +1 eval (503 total).
+
 ## [1.405.0] — 2026-09-21
 
 ### deep-code-review — a sort comparator that hand-places one sentinel but not its later-added siblings returns a valid order a monotonicity test can't catch (#929)
