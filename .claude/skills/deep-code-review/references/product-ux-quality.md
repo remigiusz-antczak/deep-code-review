@@ -765,6 +765,31 @@ domain H) with a UX consequence, so it is ruled on here too.
   it is not a visible duplicate — it renders identical). A genuine one-off that must
   **not** track the token is the fail-open exception: mark it (a named constant or a
   comment) so it reads as chosen, not drifted.
+- **A shared-recipe / design-token *migration* is audited for completeness by enumerating the control
+  TYPE, not the shared component's importers.** When a team migrates a recurring control — a segmented
+  control, a pill/tab group, a filter-chip row — onto one shared recipe or token set, replacing older
+  one-off implementations, the natural completeness check is to list the shared component's **call
+  sites (importers)** and confirm each looks right. That check is structurally blind to the two ways a
+  control gets left on the old recipe, because both import the shared thing **nowhere**: (a) a control
+  built **later or in a parallel branch** that was simply never migrated — it still carries the *old*
+  recipe's markup/class signature, so an importer census cannot see it; and (b) a control that
+  **cannot** use the primary shared component at all — a state-toggle that is not a real navigation
+  link, an item needing a different role (the *one control, one role* split in `frontend-a11y.md`) —
+  which therefore gets a **hand-rolled copy** of the recipe and likewise imports nothing shared. Both
+  render correctly today, so a per-screen pass and a visual snapshot approve; the drift is **latent**,
+  exactly like the hardcoded-token bullet above — when the shared recipe or a token moves, every
+  migrated instance follows and these lag into the lone off-recipe controls. **Enumerate by the control
+  CLASS**: grep the *old recipe's* signature (its distinctive class names, its markup shape, the
+  literal values it inlined) and any newer variant of the same visual control, take that whole
+  population, and diff it against the migrated/importer set — every member of the class that does not
+  resolve to the shared recipe is a candidate straggler (confirm it renders, per *Fix the surface that
+  renders* below). **Distinct** from the adoption-is-total bullet above, which diffs the shared
+  component's own doc-comment named-fixed set against a grep for the shared *concept/string* and
+  assumes a straggler *should* have imported the component — here the search key is the **control type
+  / old-recipe signature** precisely because an un-migrated or can't-use-it control carries **no**
+  shared marker to match; and from the hardcoded-value-equals-token bullet above, which is the
+  *value-level* check **within** one control (a literal equal to a token's current value) — this is the
+  *population* question of **which** controls of the class to check at all.
 - **A fix to a shared concept lands in the shared component**, not in one caller —
   otherwise the same defect survives in every other caller, and whoever checked
   only the screen they were shown signs off a still-broken app.
@@ -1085,6 +1110,27 @@ turns "we have the rules" into "we applied them everywhere."
    them (`migration-parity.md`, *Scope a parity claim to the correspondence table*).
    Group findings by root
    cause: a class spanning many routes is **one** systemic finding, not forty.
+
+## A full-page stitched screenshot fabricates fixed/sticky defects — verify against the live DOM before filing
+
+An automated UX audit that captures **full-page** screenshots (`page.screenshot({ fullPage: true })`
+in Playwright/Puppeteer, and equivalents) does not photograph the page in one shot — it **scrolls the
+viewport and stitches** the segments into one tall image. A `position: fixed` or `position: sticky`
+element is painted **in every segment**, so the stitched result shows it **duplicated down the page**
+(a header repeated at each scroll step) or **displaced** from where it actually renders. That is a
+**capture artifact of the stitching, not a defect in the page** — the live product shows the element
+exactly once, correctly pinned. It burns a fix cycle because the stitched image looks authoritative: a
+"duplicated header", "overlapping toolbar", or "footer floating mid-page" reads as a real layout bug,
+gets filed, and a builder chases a problem no real viewport has. **Before filing any suspected
+fixed/sticky defect sourced from a full-page capture, reproduce it against the live DOM** — open the
+running page and scroll it, or take **per-viewport** captures at specific scroll offsets (the
+`{top, mid-scroll}` shots the *Rendered route sweep* above already uses, which do **not** stitch) — and
+file only what survives. **Distinct** from the *sticky-chrome collision* invariant in the Enforcing
+gate below, which is a **real** defect (content painting **under** sticky/fixed chrome, seen
+mid-scroll) — this is its inverse, a **false** defect the capture *invents* for a correctly-pinned
+element; and a UX instance of `method.md`'s *reproduce a finding against the right surface* family
+(dev-vs-prod build, the gate's own detector) — here the wrong instrument is the **full-page stitch
+capture mode**, and the right one is the live render or a non-stitched per-viewport shot.
 
 ## Export / print / share is a second render surface
 

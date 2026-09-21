@@ -3,6 +3,16 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.416.0] — 2026-09-21
+
+### deep-code-review — four a11y / UX-review heuristics: token-migration completeness by control-type, a dismissible chip that names the value not the action, a bare-arrow glyph with no spoken equivalent, and a full-page screenshot that fabricates fixed/sticky defects (#966, #971, #972, #973)
+
+- **`product-ux-quality.md`** (#966): a shared-recipe / design-token **migration** is audited for completeness by enumerating the control **TYPE**, not the shared component's **importers** — an importer census is blind to (a) a control never migrated (still on the old recipe, imports nothing shared) and (b) a control that *can't* use the shared component (a state-toggle that isn't a real link → hand-rolled copy). Enumerate by control class (grep the old recipe's signature) and diff the whole population against the migrated set. Distinct from the adoption-is-total bullet (assumes a straggler *should* import the component) and from #949's value-level check (this is the *population* question of which controls to check at all).
+- **`frontend-a11y.md`** (#971): a dismissible chip `<button>{label} ×</button>` computes its accessible name from the visible text — the filter **value** (`"Category: Books ×"`) — so a screen reader announces the value, never the **action** (remove), and the trailing `×` has no reliable spoken form. WCAG 2.4.6 / 4.1.2. Fix: `aria-label="Remove filter: Category Books"` + `aria-hidden` the `×`. Distinct from 2.5.3 Label-in-Name (opposite polarity — and the fix must still contain the visible text so it doesn't break 2.5.3).
+- **`frontend-a11y.md`** (#972): a direction/movement badge whose only non-colour cue is a bare Unicode arrow **glyph** (`▲`/`▼`) clears the greyscale test but a bare symbol char has no reliable spoken form (AT reads "black up-pointing triangle" / "up arrow" / skips it). WCAG 1.1.1 / 1.4.1. Fix: a direction **word** in the a11y tree (`sr-only` / `aria-label`) + `aria-hidden` glyph. Distinct from the colour-only chip (no shape at all) and from "never colour alone" (a glyph is a valid *visual* cue but not a *spoken* one).
+- **`product-ux-quality.md`** (#973, new section): an automated UX audit's **full-page** screenshot (`page.screenshot({fullPage:true})`) scrolls-and-stitches, so a `position: fixed`/`sticky` element is painted in every segment and appears **duplicated/displaced** — a capture artifact, not a page bug. Reproduce a suspected fixed/sticky defect against the live DOM (or a non-stitched per-viewport capture) before filing. The inverse of the *real* sticky-chrome-collision defect; a UX instance of method.md's reproduce-against-the-right-surface.
+- +4 evals (522 total), non-telegraphing. Closes #966, #971, #972, #973.
+
 ## [1.415.0] — 2026-09-21
 
 ### deep-code-review — two CI-gate-design review lessons: a diff gate that resolves its base by exact SHA breaks on shallow clones, and a drifted local copy of a CI gate is a false green (#968, #969)
