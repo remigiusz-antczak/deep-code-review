@@ -72,6 +72,7 @@ jobs:
           set -euo pipefail
           python3 .claude/skills/deep-code-review/scripts/parity_differ.py --selftest
           python3 .claude/skills/deep-code-review/scripts/fix_class_gate.py --selftest
+          python3 .claude/skills/deep-code-review/scripts/binaries_gate.py --selftest
           python3 .claude/skills/agentic-delivery/scripts/serial_gate.py --selftest
           python3 .claude/skills/agentic-delivery/scripts/handback_cap.py --selftest
 

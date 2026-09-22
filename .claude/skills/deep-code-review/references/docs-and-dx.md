@@ -217,7 +217,11 @@ findings — not a generic dump):
    **privacy/secret gate that fails closed when its banned-terms input is
    missing and reports `file:line` only — never echoing the matched secret**,
    and dependency/secret scanning. The gate scans the lines a branch *adds*; a
-   green gate is a floor, not a certificate.
+   green gate is a floor, not a certificate. When this skill is the source,
+   `install.sh --with-gates` mechanizes a slice of this bullet directly —
+   wires this skill's own `fix_class_gate.py` / `binaries_gate.py` into the
+   target's CI via `scripts/dcr-gates.sh` — never a substitute for the
+   stack's own lint/format/type-check/test gates.
 3. **Templates**: `.env.example` (secret-free), an ADR template, a PR checklist
    mirroring the definition of done, a `.banlist.txt` seed (real identifiers go
    in a gitignored local file), and the editor/versioning conventions that keep

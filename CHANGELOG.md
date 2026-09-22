@@ -3,6 +3,59 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.435.0] — 2026-09-23
+
+### Added — opt-in CI enforcement for target repos (`install.sh --with-gates`)
+
+The skillset's own mechanisms (`fix_class_gate.py`, `binaries_gate.py`, and friends)
+previously only ran in this repository's own CI; a project that installed the skill
+got the doctrine as prose an agent may or may not follow, with the mechanism itself
+never enforced there. `install.sh --with-gates` closes that gap:
+
+- `deep-code-review/scripts/binaries_gate.py` — the extension-scoped no-committed-
+  binaries check, ported from `ci-gates.sh`'s `binaries` subcommand into a shipped,
+  stdlib-only skill script (`--selftest` 5/5) so it is callable from an installed
+  target, not only from this repo's own dev tooling. `ci-gates.sh binaries` now
+  **delegates** to this script (resolved from this repo's own tree via a new
+  `CI_GATES_REPO_ROOT`, never from the directory being scanned) — one implementation,
+  two callers. All 4 existing `binaries` self-tests still pass unchanged.
+- `deep-code-review/templates/dcr-gates.yml` + `templates/dcr-gates.sh` — a CI
+  workflow template (SHA-pinned `actions/checkout`, `fetch-depth: 0`, `contents:
+  read`) plus its runner. `dcr-gates.sh` resolves the INSTALLED skill's own gate
+  scripts at runtime across every host `install.sh` can write to (no copies, no
+  duplicated gate logic): runs `fix_class_gate.py` on the PR/push range (configurable
+  test globs via `DCR_TEST_GLOBS`), `binaries_gate.py` (configurable allowlist via
+  `DCR_BINARIES_ALLOWLIST`), and `--selftest` on every shipped gate script it finds
+  (including `agentic-delivery`'s `serial_gate.py` / `handback_cap.py` when that
+  overlay is also installed). Fails closed if no installed skill is found.
+- `install.sh --with-gates` — copies the two files above into
+  `.github/workflows/dcr-gates.yml` and `scripts/dcr-gates.sh`; **never overwrites**
+  an existing file at either path (writes `<path>.new` instead, with a note).
+  Prints (does not write) a `SubagentStop` settings snippet for `agentic-delivery`'s
+  `handback_cap.py` hook. `ci-gates.sh install --mode gates` wraps it for this
+  repo's own self-tests.
+- `scripts/recommend-overlays.py` — `--recommend` now lists the CI-enforcement
+  mechanism (what it wires, what it writes, that it never overwrites) alongside the
+  advisory-overlay list, so an owner learns it exists at pack-selection time.
+- `scripts/test-ci-gates.sh`: 4 new cases appended at the end of the file (own lane,
+  never touching earlier sections) — fresh target gets both files; an existing
+  workflow is never overwritten; the runner resolves the installed skill's own
+  script paths and calls them; the runner exits clean end-to-end on a binaries-free
+  target.
+- `references/docs-and-dx.md`'s Standards-imprint bullet 2 and `SKILL.md`'s Optional
+  overlays section each name `--with-gates` as the mechanized version of "pair a
+  standard with a gate." Size budgets ratcheted up, justified by this growth:
+  `SKILL.md` 418→424, `references/docs-and-dx.md` 359→363.
+
+### Fixed
+- `dcr-gates.sh`'s default `BASE_SHA`/`HEAD_SHA` resolution now uses
+  `git rev-parse --verify -q` instead of a bare `git rev-parse <ref>`: on an
+  unresolvable ref (e.g. `HEAD~1` in a single-commit repo) plain `rev-parse` still
+  prints the literal ref text to stdout alongside its non-zero exit — a real git
+  quirk caught by manual end-to-end testing before this shipped, not a self-test
+  fixture. `--verify` never does that, so a failed resolution is reliably empty.
+  Pinned by the "runner exits clean end-to-end" case in `scripts/test-ci-gates.sh`.
+
 ## [1.434.0] — 2026-09-23
 
 ### Added

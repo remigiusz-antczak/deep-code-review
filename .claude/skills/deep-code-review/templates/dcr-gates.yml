@@ -1,0 +1,35 @@
+name: dcr-gates
+
+# Installed by deep-code-review's `install.sh --with-gates`. Wires the
+# INSTALLED skill's own gate scripts into THIS repo's CI, so the lessons the
+# skill documents (a pinned test per fix commit, no committed binaries) run
+# here as an enforced gate instead of staying prose an agent may or may not
+# follow. Edit the trigger branch below if this repo's default branch is not
+# `main`. Everything this workflow runs lives in `scripts/dcr-gates.sh`,
+# which resolves paths inside the installed skill tree — no gate logic is
+# duplicated in this file. Re-run `install.sh --with-gates` after upgrading
+# the skill; it will never silently overwrite a file you have since edited
+# (see the installer's note on first run).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read # least privilege
+
+jobs:
+  dcr-gates:
+    runs-on: ubuntu-latest
+    steps:
+      # SHA-pinned, not a mutable tag (same pin this skillset's own CI uses).
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # fix_class_gate diffs base..head; a depth-1 clone cannot resolve the range
+
+      - name: Run installed deep-code-review gates
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: bash scripts/dcr-gates.sh

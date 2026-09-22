@@ -421,6 +421,20 @@ def main(argv: list[str]) -> int:
             print("  (deep-code-review product-ux-quality.md).")
 
     print()
+    print("CI enforcement available (mechanism, not a skill; install with --with-gates):")
+    print("  Wires the INSTALLED skill's own gate scripts into this repo's own CI, so")
+    print("  the doctrine actually runs here instead of staying prose an agent may or")
+    print("  may not follow:")
+    print("    - fix_class_gate  every fix(...) commit touches a pinned test, or")
+    print("                      carries a non-empty No-Test-Reason: trailer")
+    print("    - binaries_gate   no git-tracked file at a banned image/media/")
+    print("                      archive/build-output extension")
+    print("    - selftests       every gate script above proves it fires on a")
+    print("                      planted violation before its result is trusted")
+    print("  Writes .github/workflows/dcr-gates.yml + scripts/dcr-gates.sh; never")
+    print("  overwrites an existing file at either path (writes <path>.new instead).")
+
+    print()
     print("advisory overlays available (opt-in, default off, not in --full;")
     print("--recommend never auto-installs these — the owner chooses):")
     for flag, name, reach in ADVISORY_OVERLAYS:
