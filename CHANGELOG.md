@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.433.7] — 2026-09-22
+
+### deep-code-review — fold an instruction-fidelity guard (#1062), net-neutral/below
+
+- Folded **#1062** into `migration-parity.md` (332→329, offset by reflow): classifying a difference is a **diagnostic step, not the deliverable** — a concrete "align X to the reference" instruction must terminate in the change, not a report of why each gap is already acceptable; "keep current" is a bucket outcome valid only behind a named owner sign-off, never a judgement the agent self-grants (worse across a multi-agent pipeline, where a reviewer's classification reads to the orchestrator as verified alignment). Guards the classify-differences escape-hatch against silently downgrading a do-instruction into an audit. +1 `deep-code-review` eval (561); size budget ratcheted 332→329.
+
 ## [1.433.6] — 2026-09-22
 
 ### deep-code-review — fold a design-parity lesson (#1053 / #1058), net-neutral
