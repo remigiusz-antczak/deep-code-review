@@ -16,7 +16,6 @@ fbdcc90666ff54483d54a67aabc32afd9d4dbeec55e4660b558601eea7c5dfe1  .claude/skills
 4c5a2dbbc8a702c16df84d5e675a7921f313de774c3ec5ec38ac83bb3a21bf2e  .claude/skills/agentic-delivery/references/template-adr.md
 dc812b0b447b7bb8c523581ec48041f373c27345b71255da568ae2a17689677c  .claude/skills/agentic-delivery/references/template-postmortem.md
 7d762b129a6afb7dfe7603148299b5cffdb9a978d1ca54e281dcc50d0082364c  .claude/skills/agentic-delivery/references/unattended-operating-mode.md
-a2e0202245d95d66914c092b455ac2b776b65db7069b374e8f9e4cdadcd673e4  .claude/skills/agentic-delivery/scripts/__pycache__/serial_gate.cpython-314.pyc
 2c3073e60df613a664060cc1a3e6d9dce36400d58549e6bbcf1b2b36a33964e8  .claude/skills/agentic-delivery/scripts/handback_cap.py
 fb9b1ff4cbc36547492f06eedf3108fed6e474d99f03d1d009d1568e69ffd88f  .claude/skills/agentic-delivery/scripts/serial_gate.py
 360fbe70b5d30e33d83d2b7bd92c058c40198c8796015f4ca309298ccb2f72f0  .claude/skills/business-ops/SKILL.md

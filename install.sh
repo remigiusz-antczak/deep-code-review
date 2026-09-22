@@ -189,6 +189,8 @@ install_skill_copy() {
     mv "${dest}" "${backup}"
   fi
   cp -R "${src}" "${dest}"
+  # Never ship local Python bytecode caches (created by running a script selftest).
+  find "${dest}" -name __pycache__ -type d -prune -exec rm -rf {} +
   # Support docs the review skill cites — must resolve after install.
   if [[ "${skill_name}" == "${REVIEW_NAME}" ]]; then
     mkdir -p "${dest}/references"

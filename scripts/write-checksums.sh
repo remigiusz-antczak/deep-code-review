@@ -18,7 +18,7 @@ export LC_ALL=C
        .claude/skills/positioning \
        .claude/skills/business-ops \
        .claude/skills/product-output-safety \
-       -type f ! -name SHA256SUMS | sort
+       -name __pycache__ -prune -o -type f ! -name SHA256SUMS ! -name '*.pyc' -print | sort
 } | while IFS= read -r f; do
   sha256sum "$f"
 done >"$OUT"
