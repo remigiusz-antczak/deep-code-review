@@ -269,9 +269,9 @@ throwaway integration SHA plus one aggregate gate before a merge train (G7).
   (`parallel-audit.md` §2 covers the read-only fan-out case; this is the
   general-lane case).
 - Serialize shared-state edits, migrations, generated files, and the
-  integration branch.
-- Occupancy is **visibility, not a lock**. Say what is live or stale. Do
-  not comment "do not merge" on a peer's PR after you stopped writing.
+  integration branch — lanes sharing a host: `scripts/serial_gate.py`.
+- Occupancy is **visibility, not a lock**. Say what is live or stale; do not
+  comment "do not merge" on a peer's PR after you stopped writing.
 
 ## Environment probe (before you size anything)
 
