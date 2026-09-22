@@ -3,6 +3,16 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.433.5] — 2026-09-22
+
+### deep-code-review + agentic-delivery — fold 4 new reliability lessons (#1044, #1050, #1047, #1041), net-neutral/below budget
+
+- **#1044** (`unattended-operating-mode.md`): the run-end self-audit gains a net-removal-vs-protected-baseline check — a cycle that removes more than it adds must be flagged, not reported as progress.
+- **#1050** (`testing-and-evals.md`): a regression test's oracle must be independent of the code under test — never derive `expected` by running the detector being tested.
+- **#1047** (`testing-and-evals.md`): assert an observable readiness signal, not a fixed `sleep(N)` — a wall-clock bet a busy multi-lane CI lane loses.
+- **#1041** (`reliability-error-handling.md`): a UI backed only by a volatile local cache blanks on every routine rebuild (not an outage) — require a committed fallback + idempotent auto-rehydration + a freshness gate; the fix is architectural, not a longer timeout.
+- Each dedup-verified genuinely-new (no near-duplicate folded); +1 `agentic-delivery` eval (123), +3 `deep-code-review` evals (559); `testing-and-evals.md` 809→799 and `reliability-error-handling.md` 532→516 budgets ratcheted down. **#763** (self-throttle) left owner-gated — its headline was doctrine-rejected and its valid half is already covered.
+
 ## [1.433.4] — 2026-09-22
 
 ### agentic-delivery — fold a new reliability lesson (#1049), net-neutral

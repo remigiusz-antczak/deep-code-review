@@ -67,48 +67,28 @@ explicit third choice), not which one this review prefers.
   fails in production. A past game-day / chaos exercise (`release-engineering.md`)
   proves the infra path ran **once**; it is not a substitute for a repo-owned
   regression test that keeps the branch honest on every future change.
-- **Before you write that fallback test, confirm the fallback *exists*: a
-  doc-comment can enumerate a branch the body never implements — so there is no
-  code for a dead-code or coverage tool to flag.** The bullet above assumes the
-  fallback is present and merely unexercised; the sharper defect is a docstring
-  that promises resolution/degradation steps in sequence ("matches exactly, else
-  falls back to a fuzzy/alias match, else gives up"; "on timeout, retries against
-  the replica") when the body implements only the first step and unconditionally
-  returns the not-found/error result otherwise. The described branch has **no code
-  path at all — only its description exists** — which makes it invisible to exactly
-  the tools a reviewer trusts: a dead-code or lint pass sees **no unreachable
-  statement** (there is no branch to flag), and coverage stays **green** (there is
-  no line to leave uncovered). Fixtures never expose it either, because the primary
-  path satisfies every already-normalized value the suite and today's production
-  data happen to carry; the gap only bites when a real user or a new data source
-  supplies the more natural input the fallback was *documented* to handle, and a
-  resolvable reference then silently degrades (to unlinked text, a hard error, an
-  unhandled timeout) with no signal. Only reading the doc **against** the code
-  catches it. Detection is mechanical: for every exported symbol whose doc-comment
-  names more than one behavior / fallback / error, list each promised branch, grep
-  the body for a corresponding code path, and confirm a test **forces its
-  triggering condition** — a promised branch with neither code nor test is the
-  finding (trying to write that forcing test is itself what surfaces the absence:
-  there is nothing to make it pass). Report it even when today's data can only ever
-  reach the primary path — "currently unreached" is a property of today's fixtures,
-  not of the code's correctness — at reduced severity, but state plainly whether it
-  is reachable now (same latent-but-reported discipline as `data-quality.md`'s
-  bare-id merge rule). Fix by implementing the branch (with the forcing test above)
-  **or** by correcting the comment to claim only what the code does; the doc fix is
-  cheap and is **never skipped even when the real fix is deferred**, because an
-  inaccurate contract comment actively misleads the next caller — who relies on it
-  *without* re-reading the implementation — into depending on behavior that isn't
-  there, which is worse than no comment. This is **not** the stale-comment case (a
-  comment that was once true and drifted — e.g. a suppression/allowlist entry's
-  justification that has gone stale; `method.md`'s carried-forward-justification
-  rule) — it was never true — and **not**
-  `security-ai-agents.md`'s asserted-but-unenforced safety property (there the code
-  exists at the call site and a lower layer drops it; here there is no code for the
-  promised branch at all); it is the source-doc-comment, test-limbed specialization
-  of `docs-and-dx.md`'s "reconcile load-bearing claims against the code."
+- **Before you write that fallback test, confirm the fallback *exists*: a doc-comment can enumerate a branch the body never implements — so there is no code for a dead-code or coverage tool to flag.** The bullet above assumes the fallback is present and merely unexercised; the sharper defect is a docstring that promises resolution/degradation steps in sequence ("matches exactly, else falls back to a fuzzy/alias match, else gives up"; "on timeout, retries against the replica") when the body implements only the first step and unconditionally returns the not-found/error result otherwise. The described branch has **no code path at all — only its description exists** — which makes it invisible to exactly the tools a reviewer trusts: a dead-code or lint pass sees **no unreachable statement** (there is no branch to flag), and coverage stays **green** (there is no line to leave uncovered).
+  Fixtures never expose it either, because the primary path satisfies every already-normalized value the suite and today's production data happen to carry; the gap only bites when a real user or a new data source supplies the more natural input the fallback was *documented* to handle, and a resolvable reference then silently degrades (to unlinked text, a hard error, an unhandled timeout) with no signal. Only reading the doc **against** the code catches it.
+  Detection is mechanical: for every exported symbol whose doc-comment names more than one behavior / fallback / error, list each promised branch, grep the body for a corresponding code path, and confirm a test **forces its triggering condition** — a promised branch with neither code nor test is the finding (trying to write that forcing test is itself what surfaces the absence: there is nothing to make it pass). Report it even when today's data can only ever reach the primary path — "currently unreached" is a property of today's fixtures, not of the code's correctness — at reduced severity, but state plainly whether it is reachable now (same latent-but-reported discipline as `data-quality.md`'s bare-id merge rule).
+  Fix by implementing the branch (with the forcing test above) **or** by correcting the comment to claim only what the code does; the doc fix is cheap and is **never skipped even when the real fix is deferred**, because an inaccurate contract comment actively misleads the next caller — who relies on it *without* re-reading the implementation — into depending on behavior that isn't there, which is worse than no comment. This is **not** the stale-comment case (a comment that was once true and drifted — e.g. a suppression/allowlist entry's justification that has gone stale; `method.md`'s carried-forward-justification rule) — it was never true — and **not** `security-ai-agents.md`'s asserted-but-unenforced safety property (there the code exists at the call site and a lower layer drops it; here there is no code for the promised branch at all); it is the source-doc-comment, test-limbed specialization of `docs-and-dx.md`'s "reconcile load-bearing claims against the code."
 - **Probe the real function on the real fixture before pinning an expected
   value.** Never hand-guess an expected string — a guessed expectation encodes a
   misunderstanding as a green test.
+- **A regression test's oracle must be independent of the code under test —
+  never derive `expected` by running the very detector being tested.**
+  Confirming a checker catches a defect by running it on the fixture and
+  copying its own output as `expected` is circular: the test can only ever
+  agree with whatever the checker currently does, so a real defect ships baked
+  into its own expected value and the test passes forever, unable to catch it
+  (the failure mode: a self-referential oracle hid a real defect). This scopes
+  the probe-the-real-function bullet above to *already-trusted* behavior — it
+  never licenses generating a detector's own regression oracle from itself.
+  Build the oracle independently: a hand-verified fixture, a planted defect
+  whose verdict is known before the gate ever runs (the planted-defect matrix,
+  `SKILL.md`), or a value computed by a different method. Discriminator vs the
+  tautological-generator bullet below: same self-reference, opposite side —
+  that generator samples from the rule it asserts; this oracle is computed by
+  the code it asserts against.
 - **Reviewing your own diff? The tests inherit your blind spot.** The mind that
   wrote the bug wrote the tests, so they exercise the axis you considered and hold
   fixed the one the bug hides on. For each new test ask what it does *not* vary —
@@ -278,6 +258,16 @@ explicit third choice), not which one this review prefers.
   clock/seed, remove the shared state, await the real condition instead of `sleep`). A standing
   CI retry count `> 0` used to paper over flakes — rather than a bounded retry on a genuinely
   external flake with the rate tracked — is the finding.
+- **A fixed-duration `sleep(N)`-then-assert is a timing bet a busy CI lane loses — assert the
+  observable readiness signal, not wall-clock duration.** The wait assumes N ms always suffices;
+  under multi-lane CI (several jobs contending for the same host's CPU) the identical operation
+  that finishes in 50ms alone can take 600ms starved, so a 500ms wait flakes only under load —
+  never locally, where nothing contends — and reads as environment noise rather than a timing bug
+  in the test itself. Poll for the actual condition (an emitted event, a changed node, a resolved
+  promise) with a generous upper bound; never assert against a fixed sleep. Distinct from the
+  chronically-flaky-test bullet above — that is the *triage* once a test is already known-flaky
+  (quarantine + fix root cause, one clause of which is this same await-not-sleep fix); this names
+  the CI-contention *trigger* so the test is authored correctly the first time.
 - **Tests must not write real shared/production data paths.** A suite that
   points the server-under-test at a tracked, shared, or default data directory
   (no temp-dir / network-dir override) will intermittently corrupt real state —
