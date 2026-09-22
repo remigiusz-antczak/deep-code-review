@@ -95,6 +95,13 @@ jobs:
             --test-glob '.claude/skills/*/evals/evals.json' \
             --test-glob 'scripts/test-ci-gates.sh'
 
+      # A size-budget row may only rise with a `size-budget-raise:` marker
+      # (commit range or CHANGELOG) — budgets ratchet down by default.
+      - name: Size budgets ratchet down
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: bash scripts/ci-gates.sh size-ratchet --base "$BASE_SHA" --config scripts/size-budgets.tsv .
+
       - name: SKILL.md name matches its directory
         run: |
           set -euo pipefail

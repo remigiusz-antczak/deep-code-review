@@ -13,6 +13,11 @@ follows Keep a Changelog; versioning follows Semantic Versioning.
 - `docs/standards-index.md`: the Claude Code hooks reference (SubagentStop exit-2 behaviour, input fields, matcher), verified 2026-09-23.
 
 ### Changed
+- Autonomy regressions removed (12 over-broad stop rules, 6 of 8 contradictions fully resolved): a recorded owner standing grant now covers push / open PR / merge-to-integration on green + reviewed (force-push, deploy, secrets, spend, external sends, destructive data stay gated); an item gated only on a covered push/merge no longer ends the loop; a stuck item is recorded and skipped, never silently dropped. A structural check in `test-ci-gates.sh` pins the wording.
+- Size gate budgets BYTES, not lines (line budgets let "compaction" stuff text into long lines); all rows re-baselined at current bytes. New `ci-gates.sh size-ratchet --base <ref>` fails any row increase lacking a `size-budget-raise:` marker.
+- size-budget-raise: .claude/skills/agentic-ceo/SKILL.md 11178→11227 standing-grant and keep-producing wording (net −160 bytes across the change)
+- size-budget-raise: .claude/skills/deep-code-review/SKILL.md 23226→23289 principle 7 standing-grant carve-out
+- size-budget-raise: .claude/skills/idea-critic/SKILL.md 12544→12581 owner-gate asks no longer HOLD local reversible work
 - Size budgets: `agentic-delivery/SKILL.md` 478→483 and `references/host-enforcement.md` 69→102 (growth, justified: the handback cap is an owner hard requirement and must be routed from the always-loaded map).
 - Autonomy: a recorded standing grant lets push / open PR / merge of green, reviewed work proceed; a gated item is parked, not a stop. A stuck change is recorded and passed, never dropped. The Conductor drift rule, idea-critic, and DCR principle 7 no longer interrupt single-agent or build work. Budgets lowered: unattended 255→252, multi-session 764→758. A structural `test-ci-gates.sh` check pins this.
 

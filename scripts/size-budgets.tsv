@@ -1,3 +1,4 @@
+# unit: bytes
 # scripts/size-budgets.tsv — frozen byte-count budgets for every shipped
 # SKILL.md and references/*.md (dogfoods this repo's own
 # .claude/skills/deep-code-review/references/skill-authoring-and-size.md: "A

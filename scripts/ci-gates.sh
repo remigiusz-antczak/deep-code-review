@@ -702,6 +702,12 @@ cmd_size_ratchet() {
   local -a old_paths=() old_budgets=()
   local old_content
   if old_content="$(git -C "$root" show "${base}:${relconfig}" 2>/dev/null)"; then
+    # Unit change (base budgets were line counts): rows are not comparable
+    # across units, so the adoption commit cannot ratchet — say so, pass.
+    if grep -q '^# unit: bytes$' "$config" && ! printf '%s\n' "$old_content" | grep -q '^# unit: bytes$'; then
+      printf 'size-ratchet: base %s budgets use a different unit (pre-byte adoption) -- not comparable, skipped\n' "$base"
+      return 0
+    fi
     while IFS= read -r _line || [ -n "$_line" ]; do
       _trimmed="${_line#"${_line%%[![:space:]]*}"}"
       case "$_trimmed" in
