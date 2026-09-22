@@ -267,6 +267,152 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# binaries — extension-scoped block on committed images/media/archives/build
+# output; scans only git-TRACKED files, with a small path-scoped allowlist.
+# ---------------------------------------------------------------------------
+
+binclean="$WORK/binaries-clean"
+mkdir -p "$binclean"
+git -C "$binclean" init -q
+printf 'hello world\n' >"$binclean/notes.txt"
+git -C "$binclean" add notes.txt >/dev/null 2>&1
+
+gate "$GATES" binaries "$binclean"
+if [ "$GATE_RC" -eq 0 ]; then
+  record 0 "binaries: a tracked tree with no banned-extension file passes"
+else
+  record 1 "binaries: a tracked tree with no banned-extension file passes"
+fi
+
+# Planted RED: a demo screenshot-shaped binary, git-tracked, unrouted through
+# any allowlist. The gate must FIRE, name the exact path, and point at an
+# artifact store instead of silently accepting it.
+binfire="$WORK/binaries-fire"
+mkdir -p "$binfire"
+git -C "$binfire" init -q
+printf 'hello world\n' >"$binfire/notes.txt"
+printf 'not a real png -- a planted demo binary artifact\n' >"$binfire/demo.png"
+git -C "$binfire" add notes.txt demo.png >/dev/null 2>&1
+
+gate "$GATES" binaries "$binfire"
+if [ "$GATE_RC" -ne 0 ] \
+  && grep -q 'BINARY TRACKED: demo.png' "$WORK/last.log" \
+  && grep -qi 'route to an artifact store' "$WORK/last.log"; then
+  record 0 "binaries: FIRES on a planted git-tracked demo.png and names it (planted RED)"
+else
+  record 1 "binaries: FIRES on a planted git-tracked demo.png and names it (planted RED)"
+fi
+
+# Discrimination: the SAME tracked demo.png, but now named in the tree's own
+# scripts/binaries-allowlist.tsv, passes -- proving the allowlist actually
+# exempts a path, not merely that an empty/absent allowlist parses.
+binallow="$WORK/binaries-allowlisted"
+mkdir -p "$binallow/scripts"
+git -C "$binallow" init -q
+printf 'hello world\n' >"$binallow/notes.txt"
+printf 'not a real png -- a planted demo binary artifact\n' >"$binallow/demo.png"
+printf '# fixture allowlist\ndemo.png\n' >"$binallow/scripts/binaries-allowlist.tsv"
+git -C "$binallow" add notes.txt demo.png >/dev/null 2>&1
+
+gate "$GATES" binaries "$binallow"
+if [ "$GATE_RC" -eq 0 ]; then
+  record 0 "binaries: an allowlisted tracked path is exempted, not flagged"
+else
+  record 1 "binaries: an allowlisted tracked path is exempted, not flagged"
+fi
+
+# The real repo tree passes today: scripts/binaries-allowlist.tsv was seeded
+# empty because no tracked file currently matches a banned extension (the
+# gate is GREEN by construction, same freeze-ratchet discipline as size).
+gate "$GATES" binaries "$ROOT"
+if [ "$GATE_RC" -eq 0 ]; then
+  record 0 "binaries: the real repo has no un-allowlisted git-tracked banned-extension file"
+else
+  record 1 "binaries: the real repo has no un-allowlisted git-tracked banned-extension file"
+fi
+
+# ---------------------------------------------------------------------------
+# mustload — frozen per-archetype MUST-LOAD token-est ceilings, parsed live
+# from a fixture SKILL.md's own "Archetype -> load map" table (never the real
+# repo's archetypes, so this harness never drifts as refs are edited).
+# ---------------------------------------------------------------------------
+
+mlroot="$WORK/mustload-fixture/root"
+mkdir -p "$mlroot/.claude/skills/deep-code-review/references"
+cat >"$mlroot/.claude/skills/deep-code-review/SKILL.md" <<'EOF'
+# Fixture skill
+
+| Archetype | Default domains | Must-load refs |
+|---|---|---|
+| demo | A B | `ref-a.md`, `ref-b.md` |
+| demo2 | C | `ref-c.md` |
+EOF
+# ref-a.md = 40 bytes (10 tokens), ref-b.md = 20 bytes (5 tokens): demo totals
+# 15. ref-c.md = 40 bytes (10 tokens): demo2 totals 10. chars/4, floor; head -c
+# writes exactly N bytes, no trailing newline, so the math is exact.
+head -c 40 </dev/zero | tr '\0' 'a' >"$mlroot/.claude/skills/deep-code-review/references/ref-a.md"
+head -c 20 </dev/zero | tr '\0' 'b' >"$mlroot/.claude/skills/deep-code-review/references/ref-b.md"
+head -c 40 </dev/zero | tr '\0' 'c' >"$mlroot/.claude/skills/deep-code-review/references/ref-c.md"
+
+printf 'demo\t15\ndemo2\t10\n' >"$WORK/mustload-clean.tsv"
+gate "$GATES" mustload --config "$WORK/mustload-clean.tsv" "$mlroot"
+if [ "$GATE_RC" -eq 0 ]; then
+  record 0 "mustload: passes when every archetype is at or under its frozen ceiling"
+else
+  record 1 "mustload: passes when every archetype is at or under its frozen ceiling"
+fi
+
+# Planted RED: grow demo's ref-b.md past its share of the ceiling (total
+# becomes 10+50=60 > 15). The gate must FIRE and name "demo", leaving
+# "demo2" (unaffected, still exactly at its own ceiling) unflagged.
+head -c 200 </dev/zero | tr '\0' 'b' >"$mlroot/.claude/skills/deep-code-review/references/ref-b.md"
+gate "$GATES" mustload --config "$WORK/mustload-clean.tsv" "$mlroot"
+if [ "$GATE_RC" -ne 0 ] \
+  && grep -q 'MUSTLOAD FAIL: archetype "demo"' "$WORK/last.log" \
+  && ! grep -qE 'MUSTLOAD (FAIL|MISSING BUDGET|DANGLING): archetype "demo2"' "$WORK/last.log"; then
+  record 0 "mustload: FIRES on an archetype over its frozen ceiling and names it (planted RED)"
+else
+  record 1 "mustload: FIRES on an archetype over its frozen ceiling and names it (planted RED)"
+fi
+# restore under-ceiling content so the cases below start clean
+head -c 20 </dev/zero | tr '\0' 'b' >"$mlroot/.claude/skills/deep-code-review/references/ref-b.md"
+
+# Fail closed: an archetype the load map defines (demo) with no row in the
+# config, while a sibling archetype (demo2) IS present and satisfied -- the
+# failure must name demo, not demo2.
+printf 'demo2\t10\n' >"$WORK/mustload-missing.tsv"
+gate "$GATES" mustload --config "$WORK/mustload-missing.tsv" "$mlroot"
+if [ "$GATE_RC" -ne 0 ] \
+  && grep -q 'MUSTLOAD MISSING BUDGET: archetype "demo"' "$WORK/last.log" \
+  && ! grep -qE 'MUSTLOAD (FAIL|MISSING BUDGET|DANGLING): archetype "demo2"' "$WORK/last.log"; then
+  record 0 "mustload: fails closed on an un-budgeted archetype (planted RED)"
+else
+  record 1 "mustload: fails closed on an un-budgeted archetype (planted RED)"
+fi
+
+# Fail closed: a config row naming an archetype the load map no longer
+# defines ("ghost") must fail and name ghost, while demo/demo2 (both valid
+# and satisfied) are not flagged.
+printf 'demo\t15\ndemo2\t10\nghost\t5\n' >"$WORK/mustload-dangling.tsv"
+gate "$GATES" mustload --config "$WORK/mustload-dangling.tsv" "$mlroot"
+if [ "$GATE_RC" -ne 0 ] \
+  && grep -q 'MUSTLOAD DANGLING: archetype "ghost"' "$WORK/last.log" \
+  && ! grep -qE 'MUSTLOAD (FAIL|MISSING BUDGET|DANGLING): archetype "demo2?"' "$WORK/last.log"; then
+  record 0 "mustload: fails closed on a config row whose archetype no longer exists (planted RED)"
+else
+  record 1 "mustload: fails closed on a config row whose archetype no longer exists (planted RED)"
+fi
+
+# The real repo config passes against the real repo tree: adding this gate
+# touched no skill content, so it must be green day one (the freeze-ratchet).
+gate "$GATES" mustload --config "$ROOT/scripts/mustload-budgets.tsv" "$ROOT"
+if [ "$GATE_RC" -eq 0 ]; then
+  record 0 "mustload: the real repo's archetypes are all within their frozen ceiling"
+else
+  record 1 "mustload: the real repo's archetypes are all within their frozen ceiling"
+fi
+
+# ---------------------------------------------------------------------------
 # version — VERSION format and first CHANGELOG heading must announce it
 # ---------------------------------------------------------------------------
 

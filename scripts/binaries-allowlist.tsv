@@ -1,0 +1,12 @@
+# scripts/binaries-allowlist.tsv — reasoned exceptions to `ci-gates.sh binaries`
+#
+# One exact git-tracked path per line (relative to repo root). Blank lines
+# and lines starting with '#' are ignored. This file was seeded by grepping
+# `git ls-files` for the gate's banned extensions at adoption time: the
+# result was empty, so this policy starts with ZERO exemptions (the gate is
+# green today with no allowlisted binaries at all).
+#
+# Add a row only for a binary that is genuinely meant to be committed (e.g. a
+# small logo asset a doc renders inline) — never to silence a screenshot or
+# generated build artifact; those route to an artifact store / PR attachment
+# instead, per the gate's own fail message.
