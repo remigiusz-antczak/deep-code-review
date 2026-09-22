@@ -16,6 +16,8 @@
 #                                        run the real installer, then verify vendored docs are real (not placeholders)
 #   enumeration <root>                   every shipped skill is present in all five hand-maintained lists
 #   size --config <file> <root>          every shipped SKILL.md/references/*.md is within its frozen size-budgets.tsv line budget
+#   binaries <root>                      no git-tracked file at a banned image/media/archive/build-output extension (allowlist: scripts/binaries-allowlist.tsv)
+#   mustload --config <file> <root>      every SKILL.md load-map archetype's MUST-LOAD token-est total is within its frozen mustload-budgets.tsv ceiling
 #
 set -euo pipefail
 
@@ -48,6 +50,8 @@ Usage:
   ci-gates.sh install --src <dir> --dest <dir> --mode <claude|minimal|full|codex|overlays|recommend>
   ci-gates.sh enumeration <root>
   ci-gates.sh size --config <file> <root>
+  ci-gates.sh binaries <root>
+  ci-gates.sh mustload --config <file> <root>
 EOF
 }
 
@@ -601,6 +605,247 @@ cmd_size() {
   printf 'size: ok (%d file(s) within budget)\n' "${#cfg_paths[@]}"
 }
 
+# ---------------------------------------------------------------------------
+# binaries — extension-scoped block on committed images/media/fonts/archives
+# and common compiled build output, so the "committed screenshot" bloat class
+# (and its cousins — 1.1GB of committed screenshots, a 3.75MB file committed
+# 457 times, in the owner's separate audited project) can never land here.
+#
+# Deliberately NOT a raw-size check: a large but legitimate TEXT artifact (an
+# evals.json fixture, a long transcript) is fine at any size; a screenshot is
+# wrong at any size. Scans only git-TRACKED files (`git ls-files`), so an
+# untracked/gitignored build directory never trips it — matching content is
+# never read, only the tracked path's extension.
+#
+# A small, reasoned, path-scoped allowlist at <root>/scripts/binaries-allowlist.tsv
+# exempts a genuinely-committed binary (one row per exact tracked path, blank/
+# comment lines ignored); missing or empty means zero exemptions — the safe
+# default, not a fail-closed condition (unlike cmd_privacy's banlist, an
+# absent allowlist here is stricter, not weaker). Every other tracked file at a
+# banned extension fails, naming the path and where it belongs instead.
+# ---------------------------------------------------------------------------
+cmd_binaries() {
+  local -a roots=()
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      -*) die "binaries: unknown option: $1" ;;
+      *) roots+=("$1"); shift ;;
+    esac
+  done
+  [ "${#roots[@]}" -eq 1 ] || die "binaries: exactly one root directory is required"
+  local root="${roots[0]}"
+  [ -d "$root" ] || die "binaries: root not found: $root (fail closed)"
+
+  local tracked_raw
+  tracked_raw="$(git -C "$root" ls-files 2>&1)" \
+    || die "binaries: git ls-files failed for $root (fail closed; is it a git repo?): $tracked_raw"
+
+  # Images, media, fonts, archives (explicitly named) + common compiled build
+  # output (exe/dll/so/dylib/class/jar/pyc/pyo). Matched case-insensitively
+  # against the tracked path's extension only.
+  local ext_re='\.(png|jpg|jpeg|gif|webp|bmp|pdf|zip|tar|gz|tgz|mp4|mov|woff|woff2|exe|dll|so|dylib|class|jar|pyc|pyo)$'
+
+  local allowlist="$root/scripts/binaries-allowlist.tsv"
+  local -a allow_paths=()
+  if [ -f "$allowlist" ]; then
+    local _line _trimmed
+    while IFS= read -r _line || [ -n "$_line" ]; do
+      _trimmed="${_line#"${_line%%[![:space:]]*}"}"
+      case "$_trimmed" in
+        ''|'#'*) continue ;;
+      esac
+      allow_paths+=("$_trimmed")
+    done < "$allowlist"
+  fi
+
+  local -a tracked=()
+  local f
+  while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    tracked+=("$f")
+  done < <(printf '%s\n' "$tracked_raw" | LC_ALL=C sort)
+
+  local fail=0 allowed a n_flagged=0
+  # `${arr[@]+"${arr[@]}"}` (not bare `"${arr[@]}"`): bash 3.2 (this repo's own
+  # local bash — see cmd_size) treats a zero-element array's `[@]` expansion as
+  # an unbound variable under `set -u`; both tracked and allow_paths are
+  # legitimately empty in real cases (a repo with no tracked files yet; no
+  # allowlist configured), so this guard is required, not defensive
+  # over-caution (matches the same guard cmd_install already uses for
+  # mode_flags).
+  for f in "${tracked[@]+"${tracked[@]}"}"; do
+    printf '%s' "$f" | LC_ALL=C grep -qiE "$ext_re" || continue
+    allowed=0
+    for a in "${allow_paths[@]+"${allow_paths[@]}"}"; do
+      [ "$a" = "$f" ] && { allowed=1; break; }
+    done
+    if [ "$allowed" -eq 0 ]; then
+      printf 'BINARY TRACKED: %s (extension-banned; route to an artifact store, do not commit)\n' "$f" >&2
+      fail=1
+      n_flagged=$((n_flagged + 1))
+    fi
+  done
+
+  [ "$fail" -eq 0 ] \
+    || die "binaries: $n_flagged git-tracked file(s) at a banned extension (see paths above)"
+  printf 'binaries: ok (%d tracked file(s) scanned, %d allowlisted)\n' "${#tracked[@]}" "${#allow_paths[@]}"
+}
+
+# ---------------------------------------------------------------------------
+# mustload — frozen per-archetype MUST-LOAD token-est ceilings, extending the
+# size gate's freeze-ratchet policy to deep-code-review/SKILL.md's
+# "Archetype -> load map" table: every archetype names a set of MUST-LOAD
+# references an agent reads before touching any project code. This gate sums
+# each archetype's token-est (chars/4, matching skill-authoring-and-size.md's
+# "a token estimate of chars/4 is enough") and pins it in
+# scripts/mustload-budgets.tsv.
+#
+# POLICY = FREEZE-RATCHET, same as cmd_size: a ceiling is the archetype's
+# CURRENT must-load total at adoption (GREEN today), and only ever moves DOWN
+# as references are split/trimmed (P1b), never up. This makes the
+# already-mandatory read cost visible and reducible — most notably the web
+# archetype's ~93K-token must-load tax, the single biggest context-hoarding
+# cost this suite measured. It does NOT replace the coverage floor
+# (cmd_enumeration / cmd_routing's routed-reference check): no ref is ever
+# dropped to satisfy a ceiling here, only measured.
+#
+# Fails closed in BOTH directions, mirroring cmd_size: an archetype in
+# SKILL.md's load map with no row in the config is a failure (a new/renamed
+# archetype must declare a ceiling), and a config row naming an archetype the
+# load map no longer defines is also a failure (a stale entry cannot silently
+# stop being checked). Plain indexed arrays only (no `declare -A`): the
+# repo's own local bash is 3.2, which has no associative arrays.
+# ---------------------------------------------------------------------------
+cmd_mustload() {
+  local config="" root=""
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --config) config="${2:-}"; shift 2 ;;
+      --config=*) config="${1#*=}"; shift ;;
+      -*) die "mustload: unknown option: $1" ;;
+      *) [ -z "$root" ] || die "mustload: unexpected extra argument: $1"; root="$1"; shift ;;
+    esac
+  done
+  [ -n "$config" ] || die "mustload: --config <file> is required (fail closed)"
+  [ -f "$config" ] || die "mustload: config not found: $config (fail closed)"
+  [ -n "$root" ] || die "mustload: <root> directory is required (fail closed)"
+  [ -d "$root" ] || die "mustload: root not found: $root (fail closed)"
+
+  local skill_md="$root/.claude/skills/deep-code-review/SKILL.md"
+  local refs_dir="$root/.claude/skills/deep-code-review/references"
+  [ -f "$skill_md" ] || die "mustload: SKILL.md not found: $skill_md (fail closed)"
+
+  # Parse actionable config rows (archetype<TAB>ceiling-tokens); blank/comment
+  # lines are skipped. Plain parallel arrays, aligned by index.
+  local -a cfg_archetypes=() cfg_ceilings=()
+  local _line _trimmed _a _c
+  while IFS= read -r _line || [ -n "$_line" ]; do
+    _trimmed="${_line#"${_line%%[![:space:]]*}"}"
+    case "$_trimmed" in
+      ''|'#'*) continue ;;
+    esac
+    _a="${_trimmed%%$'\t'*}"
+    [ "$_a" != "$_trimmed" ] \
+      || die "mustload: malformed row (no TAB separator) in $config: $_trimmed"
+    _c="${_trimmed#*$'\t'}"
+    case "$_c" in
+      ''|*[!0-9]*) die "mustload: malformed ceiling \"$_c\" for $_a in $config (fail closed)" ;;
+    esac
+    cfg_archetypes+=("$_a")
+    cfg_ceilings+=("$_c")
+  done < "$config"
+  [ "${#cfg_archetypes[@]}" -gt 0 ] \
+    || die "mustload: config has no actionable rows (only blanks/comments): $config"
+
+  # Parse SKILL.md's "Archetype -> load map" table: the ONLY definition of
+  # which refs are must-load per archetype (never a second hardcoded copy in
+  # this script). Every data row between the header and the first line that
+  # is no longer part of the table.
+  local -a disk_archetypes=() disk_totals=()
+  local fail=0
+  local rowline inrow=0 archetype refs_field refs_list rf rc rt total
+  while IFS= read -r rowline; do
+    case "$rowline" in
+      '| Archetype | Default domains | Must-load refs |') inrow=1; continue ;;
+    esac
+    [ "$inrow" -eq 1 ] || continue
+    case "$rowline" in
+      '|---'*) continue ;;
+      '|'*)
+        archetype="$(printf '%s' "$rowline" | awk -F'|' '{print $2}' \
+          | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')"
+        refs_field="$(printf '%s' "$rowline" | awk -F'|' '{print $4}')"
+        [ -n "$archetype" ] || die "mustload: unparseable load-map row in $skill_md: $rowline"
+        disk_archetypes+=("$archetype")
+
+        refs_list="$(printf '%s' "$refs_field" \
+          | grep -oE '`[A-Za-z0-9._-]+\.md`' | tr -d '`')"
+        total=0
+        for rf in $refs_list; do
+          if [ ! -f "$refs_dir/$rf" ]; then
+            printf 'MUSTLOAD MISSING REF: archetype "%s" names references/%s, not on disk (fail closed)\n' \
+              "$archetype" "$rf" >&2
+            fail=1
+            continue
+          fi
+          rc="$(LC_ALL=C wc -c < "$refs_dir/$rf" | tr -d '[:space:]')"
+          rt=$(( rc / 4 ))
+          total=$(( total + rt ))
+        done
+        disk_totals+=("$total")
+        ;;
+      *) inrow=0 ;;
+    esac
+  done < "$skill_md"
+  [ "${#disk_archetypes[@]}" -gt 0 ] \
+    || die "mustload: no Archetype -> load map table rows found in $skill_md (fail closed)"
+
+  # 1) Every archetype the load map defines must have a config row.
+  local i j found ceiling archetype2
+  for i in "${!disk_archetypes[@]}"; do
+    archetype="${disk_archetypes[$i]}"
+    found=0
+    for j in "${!cfg_archetypes[@]}"; do
+      [ "${cfg_archetypes[$j]}" = "$archetype" ] && { found=1; break; }
+    done
+    if [ "$found" -eq 0 ]; then
+      printf 'MUSTLOAD MISSING BUDGET: archetype "%s" has no row in %s (fail closed)\n' \
+        "$archetype" "$config" >&2
+      fail=1
+    fi
+  done
+
+  # 2) Every config row must resolve to a load-map archetype and stay at/under
+  #    its frozen ceiling.
+  for j in "${!cfg_archetypes[@]}"; do
+    archetype2="${cfg_archetypes[$j]}"
+    ceiling="${cfg_ceilings[$j]}"
+    found=0
+    for i in "${!disk_archetypes[@]}"; do
+      if [ "${disk_archetypes[$i]}" = "$archetype2" ]; then
+        found=1
+        total="${disk_totals[$i]}"
+        break
+      fi
+    done
+    if [ "$found" -eq 0 ]; then
+      printf 'MUSTLOAD DANGLING: archetype "%s" in %s is not in SKILL.md'"'"'s load map (fail closed)\n' \
+        "$archetype2" "$config" >&2
+      fail=1
+      continue
+    fi
+    if [ "$total" -gt "$ceiling" ]; then
+      printf 'MUSTLOAD FAIL: archetype "%s" must-load totals %s tokens (ceiling %s) -- ratchet violated; shrink or split refs (P1b)\n' \
+        "$archetype2" "$total" "$ceiling" >&2
+      fail=1
+    fi
+  done
+
+  [ "$fail" -eq 0 ] \
+    || die "mustload: one or more archetypes exceed their frozen ceiling, or are un-budgeted/dangling"
+  printf 'mustload: ok (%d archetype(s) within ceiling)\n' "${#cfg_archetypes[@]}"
+}
+
 [ "$#" -gt 0 ] || { usage; exit 2; }
 subcmd="$1"; shift
 case "$subcmd" in
@@ -610,6 +855,8 @@ case "$subcmd" in
   install) cmd_install "$@" ;;
   enumeration) cmd_enumeration "$@" ;;
   size) cmd_size "$@" ;;
+  binaries) cmd_binaries "$@" ;;
+  mustload) cmd_mustload "$@" ;;
   -h|--help) usage; exit 0 ;;
   *) printf 'ci-gates: unknown subcommand: %s\n' "$subcmd" >&2; usage; exit 2 ;;
 esac

@@ -1,0 +1,37 @@
+# scripts/mustload-budgets.tsv — frozen per-archetype MUST-LOAD token-est
+# ceilings for .claude/skills/deep-code-review/SKILL.md's "Archetype -> load
+# map" table (dogfoods the same freeze-ratchet policy as
+# scripts/size-budgets.tsv, enforced by `scripts/ci-gates.sh mustload`).
+#
+# POLICY = FREEZE-RATCHET. Each ceiling below is the archetype's CURRENT
+# must-load token-est total (chars/4 per file, summed across its MUST-LOAD
+# refs — matching .claude/skills/deep-code-review/references/
+# skill-authoring-and-size.md's "a token estimate of chars/4 is enough") at
+# the moment this config was adopted — not an aspirational target. The gate
+# is GREEN today by construction. From here, a ceiling moves in exactly one
+# direction: DOWN, as P1b splits/trims the archetype's must-load refs into
+# smaller routed sub-files. Raising a ceiling to let a bloated ref grow
+# defeats the point.
+#
+# This is the FIRST time that cost was made visible: the `web` archetype
+# alone carries a ~93K-token must-load tax (security-appsec.md +
+# frontend-a11y.md + product-ux-quality.md) before a web-archetype review
+# reads one line of project code — now measured and frozen, not free to grow
+# further, and a P1b split has a concrete number to reduce.
+#
+# FORMAT: one row per archetype, `<archetype, exactly as SKILL.md's load-map
+# table names it>\t<max tokens>`. Blank lines and lines starting with '#' are
+# ignored. Every archetype row in SKILL.md's load map must have exactly one
+# row here (fail closed: an archetype on disk with no row, or a row whose
+# archetype no longer exists in the load map, is a gate failure — see
+# scripts/ci-gates.sh cmd_mustload). This does NOT replace the coverage floor
+# (cmd_enumeration / cmd_routing's routed-reference check) — no ref is ever
+# dropped to satisfy a ceiling, only measured.
+#
+web	93463
+mobile	33070
+api / service	33516
+data / ETL	29582
+agent / LLM / MCP	38008
+IaC / platform	4342
+lib / SDK	10926

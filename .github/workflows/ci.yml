@@ -52,6 +52,16 @@ jobs:
           # every shipped SKILL.md/references/*.md must stay within its
           # budget, which only ratchets down via consolidation, never up.
           bash scripts/ci-gates.sh size --config scripts/size-budgets.tsv .
+          # No git-tracked file at a banned image/media/archive/build-output
+          # extension (scripts/binaries-allowlist.tsv): stops the
+          # committed-screenshot/artifact bloat class; extension-scoped, not
+          # size-scoped, so a legitimately large text fixture never trips it.
+          bash scripts/ci-gates.sh binaries .
+          # Frozen per-archetype MUST-LOAD token-est ceilings
+          # (scripts/mustload-budgets.tsv), parsed from SKILL.md's own
+          # "Archetype -> load map" table: makes the always-paid must-load
+          # read cost per archetype visible and ratchets it down, never up.
+          bash scripts/ci-gates.sh mustload --config scripts/mustload-budgets.tsv .
 
       - name: SKILL.md name matches its directory
         run: |
