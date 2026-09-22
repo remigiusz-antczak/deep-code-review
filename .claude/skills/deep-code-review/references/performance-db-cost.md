@@ -342,6 +342,25 @@ Every billable or slow call must map to value delivered.
   Require **single-flight** (coalesce concurrent recomputes behind one lock/lease)
   or a **soft-TTL / early-recompute** with jitter; the de-dupe under *External
   calls* above is the same mechanism applied at cache-expiry.
+- **An unconditional refresh-on-every-read cache is not a stampede risk (no expiry to race), but
+  paired with a query whose sort the primary key can't serve, the two compound into a full-table
+  sort on every single request — check both halves, not one.** A synchronous cache getter that
+  fires a background reload on **every** call — single-flighted so concurrent calls collapse to one
+  in-flight reload, but with **no TTL or staleness gate** at all — looks like a reasonable "never
+  more than a request or two stale, never blocks" design in isolation, and often is: the
+  single-flight guard means it isn't the stampede-on-expiry case above (there is no expiry here to
+  race — the reload is retriggered by call volume, not by a timer). The compounding risk sits on the
+  query side: a composite primary key covering the natural identity columns (`(tenant, as_of,
+  recorded_at)`) reads as "the table is indexed" at a glance, but a hot read ordering by a
+  **different** leading column (`ORDER BY as_of DESC, recorded_at DESC` — newest-first by date
+  rather than by the PK's leading id) can't be served by that PK — with no matching index, the
+  engine scans and sorts the **whole table** on every execution (*Indexes*, above, for the
+  EXPLAIN-driven detection). Reviewed separately, each half is defensible (a documented, deliberate
+  cache policy; a table that visibly has a primary key); reviewed together, an unpruned append-only
+  source table growing in one dimension and read frequency growing in another multiply into a
+  per-request full-table sort that is invisible while the table is small. **Fix:** add an index
+  matching the actual `ORDER BY` shape and, independently, consider gating the reload behind a short
+  TTL so read volume stops multiplying query volume 1:1.
 - **Cache-aside write race.** Read-miss → load → set can interleave with a
   concurrent write so the cache ends up holding a value already superseded. Order
   it **write-store-then-invalidate** (not set-after-write), use versioned keys, or

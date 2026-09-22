@@ -3,6 +3,17 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.433.0] — 2026-09-22
+
+### deep-code-review + agentic-delivery — pre-commit/merge-gate hygiene, a stacked-PR orphan, a reload-every-read cache, and subagent-handback verbosity as a token-cost lever (#1031, #1032, #1033, #1034, #1035)
+
+- **`release-engineering.md`** (#1031): ordering hook tiers cheapest-first isn't enough if the expensive tier still runs in **pre-commit** — a full test/build suite on every commit deadlocks fast local iteration; move the heavy tier to **pre-push** (or CI), keep pre-commit to fast checks. Tight extend of the cheapest-first ordering rule (#953).
+- **`branch-and-merge-hygiene.md`** (#1032): a PR **stacked on a base branch that is deleted on merge** gets auto-closed/orphaned; once auto-closed, pushing more commits to its branch does **not** revive it — check merged-not-closed and re-target/reopen deliberately.
+- **`branch-and-merge-hygiene.md`** (#1033): a **conflict-free `git merge` never invokes `pre-commit`** at all (the merge commit skips the hook) — not a "bypass" but a structural gap; a change that would fail the hook lands clean via a merge. Use a **pre-merge-commit** hook (or a server-side/CI gate) for anything the pre-commit hook must guarantee. Empirically verified (a pre-commit set to always-fail did not block a clean merge; pre-merge-commit did).
+- **`performance-db-cost.md`** (#1034): an **unconditional refresh-on-every-read** cache (no expiry to race, so not a stampede) is a pure overhead layer — every read re-fetches; combined with an **unindexed / PK-mismatched-sort** query it degrades to a full scan per read. Cache with a real invalidation/TTL, and index the sort/filter path.
+- **`fast-agentic-delivery.md`** (#1035): **subagent handback verbosity is its own token-cost lever**, distinct from *what* a report claims (report-the-artifact-not-the-activity governs truthfulness; this governs word-count of an otherwise-truthful report). A verbose per-lane report + progress narration multiplies across N lanes × M rounds; brief lanes to a **minimal structured handback** (verdict + file:line + branch/SHA + gate status, no essays/worked-examples), size the handback to the next decision, and keep chat near-zero since the human rarely reads it.
+- +5 evals (deep-code-review 556, agentic-delivery 119). Built cheaply (sonnet lanes, batched into one PR). Closes #1031, #1032, #1033, #1034, #1035.
+
 ## [1.432.0] — 2026-09-21
 
 ### deep-code-review — two a11y naming traps: a computed aria-label that drifts from the visible text only in the empty branch, and a role dropped to dodge nested-interactive that silently loses the aria-label (#1027, #1028)
