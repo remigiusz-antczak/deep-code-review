@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.433.2] — 2026-09-22
+
+### deep-code-review + agentic-delivery — compact two more references + land held delivery fixes (#1037, #1039)
+
+- Compacted `fast-agentic-delivery.md` 2618→2345 (−10.4%) and `frontend-a11y.md` 1497→1260 (−15.8%), coverage-preserving: bold-lead sets and specifics verified identical (or a known superset) at source — only prose-tightening and content-neutral rewrap, no dropped mechanism/discriminator/specifier. Both files' frozen size budgets ratcheted down accordingly.
+- Landed two delivery fixes that had been held under the size freeze: **#1037** — a gate-parsed PR-body marker must be its own line (a true claim buried in prose still fails the gate); and **#1039** — a standing "keep producing" directive is not discharged by the agent's own exhaustion read (wind-down needs the owner's confirmation, not just a thorough check). The latter directly addresses the "agents stop continuing autonomously" regression. +2 `agentic-delivery` evals.
+
 ## [1.433.1] — 2026-09-22
 
 ### deep-code-review — compact product-ux-quality.md (coverage-preserving)
