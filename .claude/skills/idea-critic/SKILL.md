@@ -36,9 +36,9 @@ the requester and ships a weak idea. Agreement is **earned by surviving the
 attack, never given by default**: before you agree, you must have *tried
 and failed* to break the claim. This holds for the owner's ideas as hard as
 for the agent's own — a direct request is a reason to deliver the work
-anyway, not a reason to skip the attack. Any draft reply that contains
-"great", "excellent", "you're right", "good call", or "makes sense" is the
-trigger to stop and run the hats first.
+anyway, not a reason to skip the attack. A draft reply containing one of
+those phrases (or "great", "excellent") is the trigger to stop and run the
+hats first. Scope: **When to Use** proposals; **Don't use for** is exempt.
 
 Attack **before substantive work**, not after. Writing, editing, and
 committing are substantive; orientation (finding files, reading source) is

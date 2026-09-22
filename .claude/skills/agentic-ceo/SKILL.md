@@ -105,8 +105,8 @@ rest, act on colliding orders) or to patronise ("calm down"). Support is
 3. **Triage to the vital few** — a first-hit-wins chain: blocks-others or
    irreversible → Now; failing on the live surface → Now; time-critical but
    reversible → Next; else → Held (visible, not dropped).
-4. **One highest-leverage next action** — the lead domino + a one-line why,
-   offered as an A/B decision so the owner keeps final say.
+4. **One highest-leverage next action** — the lead domino + a one-line why;
+   start it if reversible and in scope, offer an A/B only when it needs the owner.
 5. **Hold the rest as a tracked backlog** — each item has a visible state
    (in-flight / next / held / dropped-with-reason); WIP-limit to one primary
    action.
@@ -154,7 +154,7 @@ that bar.
 | "Spin up subagents to look fast." | On a small or write-heavy job a swarm burns tokens and collides. One agent, several skill-hats; fan out only read-mostly work. |
 | "Just answer the market-size question." | It is outside the model. Route to the owner or real research; never fabricate it. |
 | "The owner is stressed — tell them it's fine." | Affect-management invalidates and provokes reactance. Show the captured list and the one next action instead. |
-| "Do the fix myself, briefing is slower." | The cost of doing it yourself is that you stopped routing. Dispatch to the right skill/lane and oversee. |
+| "Do the fix myself, briefing is slower." | Small project: yes, one agent does it. With lanes in flight, doing it yourself means you stopped routing — dispatch and oversee. |
 | "Restate the skill's steps here so it's handy." | That makes the registry a bundle and duplicates the skill. Point to the skill; let it hold the method. |
 
 ## Related skills (this repository)

@@ -1386,6 +1386,46 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# autonomy-doctrine — a STRUCTURAL check, not a behavioural eval: pins the
+# standing-grant clause (Human gates + termination conditions), the no-drop
+# timebox, and bans "hand off or drop". Planted copies prove it fails closed.
+# ---------------------------------------------------------------------------
+autonomy_doctrine() {  # <root>: 0 when every assertion holds, 1 otherwise
+  local ad="$1/.claude/skills/agentic-delivery" sec
+  # Capture first: grep -q on a pipe can SIGPIPE awk under pipefail.
+  sec="$(awk '/^## Human gates/{f=1;next} /^(## |---)/{f=0} f' "$ad/SKILL.md")"
+  grep -qi 'standing grant' <<<"$sec" || return 1
+  sec="$(awk '/^- \*\*Name the termination conditions/{f=1;print;next} /^- \*\*/{f=0} f' \
+    "$ad/references/fast-agentic-delivery.md")"
+  grep -qi 'standing grant' <<<"$sec" || return 1
+  grep -qi 'never silently drop' "$ad/references/unattended-operating-mode.md" || return 1
+  ! grep -rqiE 'hand(s|ing)?[- ]off,? or (a )?drop|dedicated lane or drops? it' \
+    --include='*.md' --include='*.json' "$1/.claude/skills"
+}
+if autonomy_doctrine "$ROOT"; then
+  record 0 "autonomy-doctrine: real skills pass"
+else
+  record 1 "autonomy-doctrine: real skills pass"
+fi
+ADW="$WORK/autonomy"
+for plant in drop grant; do
+  rm -rf "$ADW"; mkdir -p "$ADW/.claude/skills"
+  cp -R "$ROOT/.claude/skills/agentic-delivery" "$ADW/.claude/skills/"
+  if [ "$plant" = drop ]; then
+    printf '\nOne attempt, then hand off or drop it.\n' \
+      >>"$ADW/.claude/skills/agentic-delivery/references/unattended-operating-mode.md"
+  else
+    sed 's/[Ss]tanding grant/standing note/g' "$ROOT/.claude/skills/agentic-delivery/SKILL.md" \
+      >"$ADW/.claude/skills/agentic-delivery/SKILL.md"
+  fi
+  if autonomy_doctrine "$ADW"; then
+    record 1 "autonomy-doctrine: planted $plant fails"
+  else
+    record 0 "autonomy-doctrine: planted $plant fails"
+  fi
+done
+
+# ---------------------------------------------------------------------------
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

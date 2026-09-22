@@ -14,6 +14,7 @@ follows Keep a Changelog; versioning follows Semantic Versioning.
 
 ### Changed
 - Size budgets: `agentic-delivery/SKILL.md` 478→483 and `references/host-enforcement.md` 69→102 (growth, justified: the handback cap is an owner hard requirement and must be routed from the always-loaded map).
+- Autonomy: a recorded standing grant lets push / open PR / merge of green, reviewed work proceed; a gated item is parked, not a stop. A stuck change is recorded and passed, never dropped. The Conductor drift rule, idea-critic, and DCR principle 7 no longer interrupt single-agent or build work. Budgets lowered: unattended 255→252, multi-session 764→758. A structural `test-ci-gates.sh` check pins this.
 
 ## [1.433.8] — 2026-09-23
 
