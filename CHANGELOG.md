@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.433.3] — 2026-09-22
+
+### deep-code-review — compact two more references (coverage-preserving)
+
+- Compacted `security-appsec.md` 1403→1067 (−23.9%) and `branch-and-merge-hygiene.md` 1130→936 (−17.2%), coverage-preserving: bold-lead sets, all 🚩 flags, section headers, and every specific (CVE / CWE / ASVS / SP 800-63 / git flags / `#`-refs) verified identical at source (prose-tightening + content-neutral rewrap only; each lane also ran a CommonMark backtick tokenizer confirming code spans byte-identical). Both size budgets ratcheted down.
+
 ## [1.433.2] — 2026-09-22
 
 ### deep-code-review + agentic-delivery — compact two more references + land held delivery fixes (#1037, #1039)
