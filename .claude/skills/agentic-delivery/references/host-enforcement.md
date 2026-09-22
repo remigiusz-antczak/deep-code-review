@@ -95,8 +95,8 @@ it to named agent types):
 
 `scripts/handback_cap.py` — **use this when** a subagent's chat handback is
 landing in an orchestrator's context uncapped. Stdlib-only; blocks (exit 2,
-which per the host's docs re-runs the subagent's stop turn rather than losing
-its work) a chat handback over 800 chars / 10 lines; exempts read-only agent
-types whose chat answer is itself the deliverable (`HANDBACK_EXEMPT_TYPES`);
-releases after 3 blocks per agent so a non-compliant agent never loops
-forever. `--selftest` proves it fires.
+which per the host's docs continues the subagent instead of stopping it, so no
+work is lost) a chat handback over 800 chars / 10 lines; exempts only agent
+types named in `HANDBACK_EXEMPT_TYPES` (default: 4 built-in types) — it never
+inspects tools, so add a custom read-only review lane's type there; releases
+after 3 blocks per agent so it never loops forever. `--selftest` proves it fires.

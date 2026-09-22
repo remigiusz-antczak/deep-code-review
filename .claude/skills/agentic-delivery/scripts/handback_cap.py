@@ -11,16 +11,23 @@ per event"), exit code 2 on SubagentStop "prevents the subagent from
 stopping, continues the subagent" — so a block does not lose the subagent's
 work, it sends the same turn back to compose a shorter handback.
 
-EXEMPT_TYPES are read-only agent types with no Write tool, where the chat
-answer itself IS the deliverable (there is no file to point at instead) —
-those are never capped, at any length.
+EXEMPTION IS A NAME LIST, NOT A TOOL CHECK. A subagent is exempt (never
+capped, at any length) iff its `agent_type` is listed in the comma-separated
+HANDBACK_EXEMPT_TYPES env var. The default list is four built-in agent types
+whose chat answer is itself the deliverable: `Explore`, `Plan`,
+`claude-code-guide`, `statusline-setup`. This hook does NOT inspect an
+agent's tools — it cannot tell whether a type has a Write tool, so a custom
+read-only review lane (whose findings ARE its chat answer) is capped unless
+you add its type name, e.g.
+    HANDBACK_EXEMPT_TYPES="Explore,Plan,claude-code-guide,statusline-setup,security-reviewer"
+Setting the variable REPLACES the default list, so repeat the defaults you
+still want. Alternatively scope the hook with a SubagentStop `matcher` so it
+never runs for those types at all.
 
 After MAX_BLOCKS blocks for one agent_id, this hook lets the stop through
 unconditionally, so a subagent that cannot comply never loops forever. Block
 counters live in per-agent_id state files under a temp dir (sanitized id;
 directory overridable via HANDBACK_STATE_DIR, e.g. for isolated tests).
-
-Reference: ported from ~/.claude/hooks/subagent-handback-cap.py.
 """
 import json
 import os
@@ -30,7 +37,8 @@ import tempfile
 MAX_CHARS = int(os.environ.get("HANDBACK_MAX_CHARS", "800"))
 MAX_LINES = int(os.environ.get("HANDBACK_MAX_LINES", "10"))
 MAX_BLOCKS = 3
-# Read-only agent types have no Write tool: chat IS their deliverable, never cap it.
+# Default exempt agent-type NAMES (chat IS their deliverable). Matched by name
+# only; override/extend via HANDBACK_EXEMPT_TYPES (replaces this list).
 DEFAULT_EXEMPT_TYPES = "Explore,Plan,claude-code-guide,statusline-setup"
 STATE_DIR = os.environ.get(
     "HANDBACK_STATE_DIR", os.path.join(tempfile.gettempdir(), "claude-handback-cap")
@@ -152,6 +160,20 @@ def _selftest():
         check({"agent_id": "a6", "agent_type": "builder", "last_assistant_message": huge_msg}),
         2,
     )
+
+    # exemption is by listed NAME: a custom review-lane type is capped by
+    # default, and exempt once added via HANDBACK_EXEMPT_TYPES.
+    lane = {"agent_id": "a7", "agent_type": "security-reviewer", "last_assistant_message": huge_msg}
+    case("custom-type-capped-by-default", check(dict(lane)), 2)
+    saved = os.environ.get("HANDBACK_EXEMPT_TYPES")
+    os.environ["HANDBACK_EXEMPT_TYPES"] = DEFAULT_EXEMPT_TYPES + ",security-reviewer"
+    try:
+        case("custom-type-exempt-via-env", check(dict(lane, agent_id="a8")), 0)
+    finally:
+        if saved is None:
+            os.environ.pop("HANDBACK_EXEMPT_TYPES", None)
+        else:
+            os.environ["HANDBACK_EXEMPT_TYPES"] = saved
 
     shutil.rmtree(tmp, ignore_errors=True)
     print(f"\nselftest: {passed}/{passed + failed} passed")

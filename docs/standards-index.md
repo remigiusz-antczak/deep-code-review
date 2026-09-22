@@ -1166,3 +1166,12 @@ Sourced for the `language-stack-redflags.md` Shell/Bash fold that a bracket *ran
 | Standard / source | URL | What was confirmed |
 |---|---|---|
 | POSIX (The Open Group Base Specifications Issue 7, 2018) — RE Bracket Expression | https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap09.html | §9.3.5 RE Bracket Expression, range expressions. Verbatim: "In the POSIX locale, a range expression represents the set of collating elements that fall between two elements in the collation sequence, inclusive"; and "in other locales, a range expression has unspecified behavior." Confirms a bracket-range match set is defined by `LC_COLLATE` (the locale's collating sequence), not by codepoint, and is unspecified outside the POSIX/C locale — the basis for treating a shell range used in a validation gate (`*[!0-9a-f]*`, `[[ =~ ^[0-9a-f]+$ ]]`, `grep '[0-9a-f]'`) as locale-dependent and pinning `LC_ALL=C` or using an explicit set. The glibc dictionary-collation manifestation (case-interleaved ranges) is the well-known concrete case, not quoted from this page; the GNU grep manual was not reachable this session and is not cited. Fetched + verified 2026-09-21. |
+
+## Verified by direct fetch (2026-09-23) — Claude Code hooks (SubagentStop)
+
+Sourced for `agentic-delivery/scripts/handback_cap.py` and the handback-cap section of
+`agentic-delivery/references/host-enforcement.md`.
+
+| Standard / source | URL | What was confirmed |
+|---|---|---|
+| Claude Code — Hooks reference | https://code.claude.com/docs/en/hooks | "Exit code 2 behavior per event" table, `SubagentStop` row verbatim: can block — "Prevents the subagent from stopping, continues the subagent". `SubagentStop` "Fires when a subagent finishes"; hooks needing the final text "should use `last_assistant_message` on Stop and SubagentStop instead of reading the transcript". Inside a subagent the input also carries `agent_id` ("Unique identifier for the subagent") and `agent_type` ("Agent name (for example, `"Explore"` or `"security-reviewer"`)"). Matcher table: the `SubagentStop` matcher filters on **agent type**, same values as `SubagentStart` (`general-purpose`, `Explore`, `Plan`, custom agent names). Fetched + verified 2026-09-23. |

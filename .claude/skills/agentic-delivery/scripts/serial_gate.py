@@ -36,7 +36,14 @@ select --map <map.tsv> [--base REF --head REF | --changed-file PATH ...]
       # comment or blank line      — ignored
     The map file's OWN path is always FULL-forcing, whether or not it also
     appears as a `!full` row — a change to the routing table itself is by
-    definition a change no fixed row can vouch for.
+    definition a change no fixed row can vouch for. "Own path" is compared
+    both as given and relative to the repository top level (`git rev-parse
+    --show-toplevel`, run in --repo or the cwd), so an absolute or
+    cwd-relative --map still matches the repo-relative path git reports.
+
+    The diff is read with `git diff --name-only --no-renames`: a rename is
+    reported as its deleted OLD path plus its added NEW path, so moving a
+    file out of a `!full` or mapped area can never hide the old path.
 
     GLOB SEMANTICS (exactly what is implemented, not "glob-like"): each
     changed path is normalized to a repo-root-relative POSIX path (backslashes
@@ -57,20 +64,54 @@ select --map <map.tsv> [--base REF --head REF | --changed-file PATH ...]
       (f) otherwise: union of every matched row's target(s), deduped, sorted
 
 run --lock-dir DIR [--stale-after SECONDS] [--timeout SECONDS] -- <cmd...>
-    Serialize <cmd...> across lanes on one host using an atomic `os.mkdir`
-    lock at DIR (never `flock` — no portable directory-flock on macOS). The
-    lock directory holds `owner.json` (pid, host, UTC start ISO-8601). A
-    waiter polls with bounded exponential backoff (capped, jittered) until it
-    acquires the lock or --timeout elapses (default 120s) — on timeout, exits
-    124 and NEVER runs <cmd...> unlocked. A waiter reclaims a STALE lock
-    (owner pid dead on this host, or owner age > --stale-after, default
-    900s) by an atomic rename-aside of the lock dir followed by its own
-    `os.mkdir` — exactly one of any number of concurrent reclaimers can
-    rename-away a given lock dir (the loser's `rename` raises because the
-    source is already gone), so exactly one proceeds while the rest fall
-    back to the normal poll loop. The lock is always released — in `finally`
-    and in a SIGTERM/SIGINT handler — and the child's own exit code is
-    propagated as this process's exit code.
+    Serialize <cmd...> across lanes using an atomic `os.mkdir` lock at DIR
+    (never `flock` — no portable directory-flock on macOS). A process HOLDS
+    the lock only after both its `os.mkdir(DIR)` succeeded AND it created
+    `DIR/owner.json` exclusively (`O_CREAT|O_EXCL`) holding its pid, host,
+    UTC start (ISO-8601), and a random per-acquisition token. A waiter polls
+    with bounded exponential backoff (capped, jittered) until it acquires the
+    lock or --timeout elapses (default 120s) — on timeout, exits 124 and
+    NEVER runs <cmd...> unlocked. The child's own exit code is propagated.
+
+    STALENESS — exactly when a held lock may be reclaimed:
+      * owner on THIS host: stale only if its pid is provably dead
+        (`os.kill(pid, 0)` raises ProcessLookupError). A live same-host owner
+        is NEVER stale, however long it runs — --stale-after does not apply.
+      * owner on ANOTHER host (a shared filesystem; its pid cannot be probed
+        from here): stale when the lock directory's mtime is older than
+        --stale-after (default 900s). A foreign owner that legitimately runs
+        longer than --stale-after WILL be reclaimed, and the age is measured
+        against this host's clock, so set --stale-after well above both the
+        longest run and any clock skew.
+      * lock dir with no readable `owner.json`: an acquirer between its mkdir
+        and its owner write. Live for a 30s grace measured from the dir
+        mtime; only after that is it treated as an abandoned acquisition.
+
+    RECLAIM — a waiter that sees a stale lock takes a short reclaim mutex
+    (atomic `os.mkdir` of `DIR.reclaim`; a mutex older than 10s is treated
+    as left by a dead reclaimer and removed). Under it, it re-reads
+    `owner.json` and proceeds only if the SAME token is still there and still
+    stale. The commit point is an atomic `os.rename` of `owner.json` to a
+    unique aside name followed by a re-check of the moved file's token: two
+    reclaimers can never both claim one owner file, and a claim that turns
+    out to hold a different token (a new owner raced in) is put back with
+    `os.link` (which never overwrites) and nothing is removed. An owner-less
+    stale dir is removed with `os.rmdir` only, which fails harmlessly if an
+    acquirer has since written its owner file (side files a dead reclaimer
+    left behind are restored if they still name a live owner, else deleted).
+
+    RELEASE — in `finally` and on SIGTERM/SIGINT, the holder removes DIR only
+    if `owner.json` still carries its own pid AND token; a process whose lock
+    was reclaimed never deletes its successor's lock.
+
+    WHAT THIS DOES NOT GUARANTEE (residual assumptions, stated plainly):
+      * an acquirer must not stall longer than the 30s grace between its
+        mkdir and its owner write — a stall that long lets its dir be
+        reclaimed as abandoned;
+      * pid reuse: if a dead owner's pid is reused by an unrelated live
+        process, the lock looks live and waiters time out (exit 124, fail
+        closed — never a second holder); remove DIR by hand after checking;
+      * the foreign-host age rule above.
 
 USAGE
 -----
@@ -87,6 +128,7 @@ import json
 import os
 import posixpath
 import random
+import secrets
 import signal
 import socket
 import subprocess
@@ -107,6 +149,11 @@ DEFAULT_LOCK_TIMEOUT = 120.0
 _POLL_START = 0.05
 _POLL_CAP = 1.0
 _POLL_BACKOFF = 1.6
+# An owner-less lock dir (acquirer between mkdir and its owner write) is live
+# for this long, by dir mtime; only then is it an abandoned acquisition.
+_OWNERLESS_GRACE = 30.0
+# A reclaim mutex older than this was left by a reclaimer that died.
+_RECLAIM_MUTEX_STALE = 10.0
 
 
 # --------------------------------------------------------------------------
@@ -178,17 +225,56 @@ def _git_diff_paths(base: str, head: str, repo_dir: str | None) -> list[str]:
     cmd = ["git"]
     if repo_dir:
         cmd += ["-C", repo_dir]
-    cmd += ["diff", "--name-only", base, head]
+    # --no-renames: a rename must surface BOTH its old and new path. With
+    # rename detection on (git's porcelain default), only the new path is
+    # printed, so moving a file out of a `!full`/mapped area would silently
+    # drop the old path from selection — a fail-open.
+    cmd += ["diff", "--name-only", "--no-renames", base, head]
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True)
     except OSError as exc:
         raise MapError(f"git invocation failed: {exc}") from exc
     if proc.returncode != 0:
         raise MapError(
-            f"git diff --name-only {base} {head} failed (exit "
+            f"git diff --name-only --no-renames {base} {head} failed (exit "
             f"{proc.returncode}): {proc.stderr.strip()}"
         )
     return [line for line in proc.stdout.splitlines() if line.strip()]
+
+
+def _map_self_paths(map_path: str, repo_dir: str | None) -> set[str]:
+    """Every normalized form under which the map file itself may appear in
+    the changed-path list.
+
+    Always includes the --map argument as given. Additionally includes the
+    map's path relative to the repository top level (resolved via
+    `git rev-parse --show-toplevel` in `repo_dir`, or the cwd), because git
+    and `--changed-file` report repo-relative paths while --map may be
+    absolute or relative to a different cwd. Both sides are `realpath`-ed so
+    symlinked temp dirs (e.g. macOS /var -> /private/var) compare equal. If
+    the top level cannot be resolved, or the map lies outside it, only the
+    as-given form is used (no guess).
+    """
+    selves = {_normalize_path(map_path)}
+    cmd = ["git"]
+    if repo_dir:
+        cmd += ["-C", repo_dir]
+    cmd += ["rev-parse", "--show-toplevel"]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True)
+    except OSError:
+        return selves
+    top = proc.stdout.strip()
+    if proc.returncode != 0 or not top:
+        return selves
+    try:
+        rel = os.path.relpath(os.path.realpath(map_path), os.path.realpath(top))
+    except ValueError:  # e.g. different drives on Windows: not inside the repo
+        return selves
+    rel = _normalize_path(rel)
+    if rel != ".." and not rel.startswith("../"):
+        selves.add(rel)
+    return selves
 
 
 def select_targets(
@@ -229,11 +315,11 @@ def select_targets(
     if not changed:
         return OK, [FULL]
 
-    map_self = _normalize_path(map_path)
+    map_selves = _map_self_paths(map_path, repo_dir)
     force_full_globs = list(full_globs)
 
     for path in changed:
-        if path == map_self:
+        if path in map_selves:
             return OK, [FULL]
         if any(fnmatch.fnmatchcase(path, g) for g in force_full_globs):
             return OK, [FULL]
@@ -271,141 +357,264 @@ def _owner_path(lock_dir: str) -> str:
     return os.path.join(lock_dir, "owner.json")
 
 
-def _write_owner(lock_dir: str) -> None:
+def _reclaim_mutex_path(lock_dir: str) -> str:
+    return lock_dir.rstrip("/\\") + ".reclaim"
+
+
+def _write_owner(lock_dir: str) -> str:
+    """Create `owner.json` EXCLUSIVELY and return this acquisition's token.
+
+    `O_CREAT|O_EXCL` means the write can never clobber another process's
+    owner file: if one already exists (an acquirer that raced into the same
+    directory incarnation), this raises FileExistsError and the caller does
+    not hold the lock. Raises OSError (e.g. FileNotFoundError) if `lock_dir`
+    vanished between the caller's mkdir and this write.
+    """
+    token = secrets.token_hex(16)
     owner = {
         "pid": os.getpid(),
         "host": socket.gethostname(),
         "start_utc": datetime.now(timezone.utc).isoformat(),
+        "token": token,
     }
-    tmp = _owner_path(lock_dir) + f".tmp-{os.getpid()}"
-    with open(tmp, "w", encoding="utf-8") as fh:
+    fd = os.open(_owner_path(lock_dir), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+    with os.fdopen(fd, "w", encoding="utf-8") as fh:
         json.dump(owner, fh)
-    os.replace(tmp, _owner_path(lock_dir))
+    return token
 
 
-def _read_owner(lock_dir: str) -> dict | None:
+def _read_owner(path_dir_or_file: str) -> dict | None:
+    """Parse an owner file (given its lock dir, or the file path itself).
+
+    Returns None when the file is missing, unreadable, not valid JSON, or not
+    a JSON object — every one of which the staleness verdict treats as an
+    acquirer that has not finished writing yet (grace), never as proof of a
+    dead owner.
+    """
+    path = path_dir_or_file
+    if os.path.isdir(path):
+        path = _owner_path(path)
     try:
-        with open(_owner_path(lock_dir), encoding="utf-8") as fh:
-            return json.load(fh)
-    except (OSError, json.JSONDecodeError):
+        with open(path, encoding="utf-8") as fh:
+            data = json.load(fh)
+    except (OSError, ValueError):
         return None
+    return data if isinstance(data, dict) else None
 
 
-def _is_stale(lock_dir: str, stale_after: float) -> bool:
-    """A lock is stale iff its owner is provably gone or provably too old.
+def _pid_alive(pid: int) -> bool:
+    """True unless `pid` is provably dead on this host.
 
-    Missing/unparsable `owner.json` is treated as "recently created, not yet
-    written" rather than automatically stale — a partial write during
-    another process's own acquisition must not be reclaimed out from under
-    it just because the file briefly did not parse. Age is measured off the
-    lock directory's own mtime, which exists the instant `os.mkdir` succeeds
-    and survives a missing/corrupt owner file.
+    `PermissionError` means the process exists but belongs to another user —
+    alive. Only `ProcessLookupError` proves death.
     """
     try:
-        mtime = os.stat(lock_dir).st_mtime
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
     except OSError:
-        return False  # dir vanished underneath us; treat as "not our problem"
-    return _is_stale_info(mtime, _read_owner(lock_dir), stale_after)
+        return True  # unknown error: fail closed (treat as alive)
+    return True
 
 
-def _is_stale_info(mtime: float, owner: dict | None, stale_after: float) -> bool:
-    """Pure staleness verdict from an already-captured `(mtime, owner)` pair.
+def _stale_verdict(owner: dict | None, dir_mtime: float, stale_after: float,
+                   now: float | None = None) -> bool:
+    """Pure staleness rule (see the module docstring, STALENESS).
 
-    Split out from `_is_stale` so `_reclaim` can re-run this EXACT check on
-    data frozen by a successful `os.rename` (see `_reclaim`), instead of
-    re-reading the live, still-mutable path — that split closes the races
-    below, not just style.
+    * no parsable owner (or no integer pid): stale only after
+      `_OWNERLESS_GRACE` seconds of directory age — an acquirer mid-write is
+      live;
+    * same-host owner: stale iff its pid is provably dead — age is never
+      consulted, so a long-running live owner is never reclaimed;
+    * foreign-host owner: stale iff directory age exceeds `stale_after`.
     """
-    age = time.time() - mtime
-    if owner is not None and owner.get("host") == socket.gethostname():
-        pid = owner.get("pid")
-        if isinstance(pid, int):
-            try:
-                os.kill(pid, 0)
-            except ProcessLookupError:
-                return True  # owner process is provably dead on this host
-            except PermissionError:
-                pass  # alive, just not ours to signal — fall through to age
+    now = time.time() if now is None else now
+    age = now - dir_mtime
+    if owner is None or not isinstance(owner.get("pid"), int):
+        return age > _OWNERLESS_GRACE
+    if owner.get("host") == socket.gethostname():
+        return not _pid_alive(owner["pid"])
     return age > stale_after
 
 
-def _reclaim(lock_dir: str, stale_after: float) -> bool:
-    """Atomically rename the (believed-stale) lock dir aside, and commit to
-    removing it ONLY if a frozen re-check of the moved copy still says
-    stale. Returns True iff this call actually removed a stale lock (the
-    caller may then retry `os.mkdir` immediately).
-
-    Two races this closes, both required for "exactly one reclaimer
-    proceeds, and a live lock is never destroyed out from under its owner":
-
-    1. Two waiters both see the same stale lock and both call this. POSIX
-       `os.rename` removes the source name atomically, so only the first
-       racer's `os.rename` can succeed; every later racer's `os.rename` on
-       the now-vanished source raises and returns False immediately —
-       never touching anything.
-    2. The winner's pre-rename staleness read can be stale ITSELF: by the
-       time its `os.rename` lands, a DIFFERENT process may already have
-       reclaimed and replaced `lock_dir` with a brand-new, legitimately
-       live lock (this is exactly what a second concurrent reclaimer of the
-       same original stale dir would otherwise steal). So staleness is
-       re-decided here on the data that just got moved into `aside` —
-       which cannot change again once moved, because only this call holds
-       that path — and if that re-check says "actually live," the moved
-       copy is put straight back (own `os.rename`, which only succeeds if
-       `lock_dir` is still empty) rather than deleted, so a live owner's
-       lock is never destroyed by a loser's late rename.
-    """
-    aside = f"{lock_dir}.stale-{uuid.uuid4().hex}"
+def _snapshot(lock_dir: str) -> tuple[float, dict | None] | None:
+    """`(dir_mtime, owner)` for `lock_dir`, or None if it does not exist."""
     try:
-        os.rename(lock_dir, aside)
-    except OSError as exc:
-        _dbg(f"reclaim: rename-away FAILED {exc}")
-        return False
-    _dbg("reclaim: rename-away OK")
-
-    try:
-        mtime = os.stat(aside).st_mtime
+        mtime = os.stat(lock_dir).st_mtime
     except OSError:
-        return False  # can't happen (we just renamed it), but never crash
-    owner = _read_owner(aside)
+        return None
+    return mtime, _read_owner(lock_dir)
 
-    if _is_stale_info(mtime, owner, stale_after):
-        _dbg(f"reclaim: post-rename verdict STALE owner={owner}")
-        _rmtree_best_effort(aside)
-        return True
 
-    # We raced ahead of a legitimate acquirer and stole its brand-new lock
-    # by mistake. Put it back if the slot is still free; if a third party
-    # has since claimed `lock_dir`, that claim is the linearizable outcome
-    # and this stolen copy is simply discarded.
-    _dbg(f"reclaim: post-rename verdict LIVE owner={owner} — restoring")
-    try:
-        os.rename(aside, lock_dir)
-        _dbg("reclaim: restore OK")
-    except OSError as exc:
-        _dbg(f"reclaim: restore FAILED {exc} — discarding stolen live copy")
-        _rmtree_best_effort(aside)
+def _is_stale(lock_dir: str, stale_after: float) -> bool:
+    """Staleness verdict for the lock dir as it is right now (False if absent)."""
+    snap = _snapshot(lock_dir)
+    if snap is None:
+        return False
+    return _stale_verdict(snap[1], snap[0], stale_after)
+
+
+def _take_reclaim_mutex(lock_dir: str) -> bool:
+    """Try once to take the short reclaim mutex; True iff taken.
+
+    The mutex is an empty directory created with atomic `os.mkdir`. One left
+    behind by a reclaimer that died mid-reclaim (older than
+    `_RECLAIM_MUTEX_STALE` seconds) is removed with `os.rmdir` and the take is
+    retried once. The mutex only narrows contention; correctness does not
+    depend on it being exclusive, because `_reclaim`'s commit point is the
+    atomic owner-file rename (see there).
+    """
+    mutex = _reclaim_mutex_path(lock_dir)
+    for _ in range(2):
+        try:
+            os.mkdir(mutex)
+            return True
+        except FileExistsError:
+            try:
+                age = time.time() - os.stat(mutex).st_mtime
+            except OSError:
+                continue  # vanished between mkdir and stat: retry the mkdir
+            if age <= _RECLAIM_MUTEX_STALE:
+                return False
+            try:
+                os.rmdir(mutex)
+            except OSError:
+                return False
+        except OSError:
+            return False
     return False
 
 
-def _rmtree_best_effort(path: str) -> None:
+def _drop_reclaim_mutex(lock_dir: str) -> None:
     try:
-        for name in os.listdir(path):
-            try:
-                os.remove(os.path.join(path, name))
-            except OSError:
-                pass
-        os.rmdir(path)
+        os.rmdir(_reclaim_mutex_path(lock_dir))
     except OSError:
         pass
 
 
-def acquire_lock(lock_dir: str, stale_after: float, timeout: float) -> None:
-    """Block until this process holds `lock_dir`, or raise `LockTimeout`.
+def _restore_or_clear_leftovers(lock_dir: str, stale_after: float) -> bool:
+    """Deal with `owner.json.*` side files in an owner-less lock dir.
 
-    Never returns while unlocked: every exit from this function other than
-    the timeout raise means `os.mkdir(lock_dir)` just succeeded for this
-    process.
+    Called only under the reclaim mutex, so any such file was left by a
+    reclaimer (or a pre-token release of this tool) that died mid-operation.
+    If one still names a LIVE owner, it is put back as `owner.json` (with
+    `os.link`, which never overwrites) and True is returned: the lock is
+    live and must not be removed. Every other side file is deleted so the
+    following `os.rmdir` can succeed. Returns False when nothing was
+    restored.
+    """
+    try:
+        names = os.listdir(lock_dir)
+    except OSError:
+        return False
+    now = time.time()
+    for name in names:
+        if not name.startswith("owner.json."):
+            continue
+        path = os.path.join(lock_dir, name)
+        leftover = _read_owner(path)
+        try:
+            leftover_mtime = os.stat(path).st_mtime
+        except OSError:
+            continue
+        if (leftover is not None and isinstance(leftover.get("pid"), int)
+                and not _stale_verdict(leftover, leftover_mtime, stale_after, now)):
+            try:
+                os.link(path, _owner_path(lock_dir))
+            except OSError:
+                pass
+            try:
+                os.remove(path)
+            except OSError:
+                pass
+            return True
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+    return False
+
+
+def _reclaim(lock_dir: str, stale_after: float) -> bool:
+    """Remove `lock_dir` iff it is stale; True iff this call removed it.
+
+    Under the reclaim mutex:
+      1. Re-snapshot. Not stale any more (or gone) -> do nothing.
+      2. Owner-less stale dir (abandoned acquisition): `os.rmdir` only. If an
+         acquirer wrote its owner file meanwhile, rmdir fails ENOTEMPTY and
+         the live lock is left alone.
+      3. Owned stale dir: atomically `os.rename` `owner.json` to a unique
+         aside name. Only one caller can move a given file; the rest get
+         FileNotFoundError. Then re-read the MOVED file: if its token is not
+         the token judged stale in step 1 (a new owner raced in), put it
+         back with `os.link` (never overwrites) and stop. Otherwise delete
+         the aside file and `os.rmdir` the now-empty lock dir.
+    """
+    if not _take_reclaim_mutex(lock_dir):
+        _dbg("reclaim: mutex busy")
+        return False
+    try:
+        snap = _snapshot(lock_dir)
+        if snap is None:
+            return False
+        mtime, owner = snap
+        if not _stale_verdict(owner, mtime, stale_after):
+            _dbg(f"reclaim: re-check LIVE owner={owner}")
+            return False
+
+        if owner is None or not isinstance(owner.get("pid"), int):
+            if _restore_or_clear_leftovers(lock_dir, stale_after):
+                return False
+            try:
+                os.rmdir(lock_dir)
+            except OSError as exc:
+                _dbg(f"reclaim: owner-less rmdir refused {exc}")
+                return False
+            _dbg("reclaim: removed abandoned owner-less dir")
+            return True
+
+        stale_token = owner.get("token")
+        aside = os.path.join(lock_dir, f"owner.json.reclaim-{uuid.uuid4().hex}")
+        try:
+            os.rename(_owner_path(lock_dir), aside)
+        except OSError as exc:
+            _dbg(f"reclaim: claim rename lost {exc}")
+            return False
+        moved = _read_owner(aside)
+        if moved is None or moved.get("token") != stale_token:
+            _dbg(f"reclaim: claimed a DIFFERENT owner {moved} — restoring")
+            try:
+                os.link(aside, _owner_path(lock_dir))
+            except OSError as exc:
+                _dbg(f"reclaim: restore refused {exc}")
+            try:
+                os.remove(aside)
+            except OSError:
+                pass
+            return False
+        try:
+            os.remove(aside)
+        except OSError:
+            pass
+        try:
+            os.rmdir(lock_dir)
+        except OSError as exc:
+            _dbg(f"reclaim: rmdir after claim refused {exc}")
+            return False
+        _dbg(f"reclaim: removed stale owner={owner}")
+        return True
+    finally:
+        _drop_reclaim_mutex(lock_dir)
+
+
+def acquire_lock(lock_dir: str, stale_after: float, timeout: float) -> str:
+    """Block until this process holds `lock_dir`; return its owner token.
+
+    Raises `LockTimeout` once `timeout` elapses. Never returns while unlocked:
+    a return means this process's `os.mkdir(lock_dir)` succeeded AND its
+    exclusive `owner.json` write succeeded.
     """
     deadline = time.monotonic() + timeout
     delay = _POLL_START
@@ -415,36 +624,46 @@ def acquire_lock(lock_dir: str, stale_after: float, timeout: float) -> None:
         except FileExistsError:
             _dbg("acquire: mkdir FileExistsError")
         else:
-            _dbg("acquire: mkdir OK")
             try:
-                _write_owner(lock_dir)
-                _dbg("acquire: write_owner OK -> HOLD")
-                return
+                token = _write_owner(lock_dir)
+                _dbg("acquire: HOLD")
+                return token
             except OSError as exc:
-                _dbg(f"acquire: write_owner FAILED {exc} — retry loop")
-                # Lost a pathological race: lock_dir was reclaimed out from
-                # under us between our mkdir and our own owner-file write.
-                # Not a crash — just retry the whole acquire loop.
-                pass
+                # Another acquirer already owns this directory incarnation,
+                # or it was removed under us: we do NOT hold it. Never delete
+                # anything here — just retry.
+                _dbg(f"acquire: owner write refused {exc}")
 
         if time.monotonic() >= deadline:
             raise LockTimeout(f"timed out after {timeout}s waiting for lock: {lock_dir}")
 
-        stale = os.path.isdir(lock_dir) and _is_stale(lock_dir, stale_after)
-        _dbg(f"acquire: stale-check={stale}")
-        if stale:
-            _reclaim(lock_dir, stale_after)  # win, lose, or bounce back — loop and retry mkdir
-            continue
+        if _is_stale(lock_dir, stale_after) and _reclaim(lock_dir, stale_after):
+            continue  # removed a stale lock: retry mkdir immediately
 
         time.sleep(min(delay, _POLL_CAP) + random.uniform(0, delay * 0.1))
         delay = min(delay * _POLL_BACKOFF, _POLL_CAP)
 
 
-def release_lock(lock_dir: str) -> None:
-    """Best-effort release. Safe to call even if the lock was never held or
-    was already reclaimed by someone else (never raises).
+def release_lock(lock_dir: str, token: str) -> bool:
+    """Release `lock_dir` iff this process still owns it; True iff removed.
+
+    Removes the lock only when `owner.json` carries BOTH this process's pid
+    and `token`. A process whose lock was reclaimed (and possibly re-acquired
+    by a successor) leaves the successor's lock untouched. Never raises.
     """
-    _rmtree_best_effort(lock_dir)
+    owner = _read_owner(lock_dir)
+    if owner is None or owner.get("pid") != os.getpid() or owner.get("token") != token:
+        _dbg(f"release: not ours (owner={owner}) — leaving it")
+        return False
+    try:
+        os.remove(_owner_path(lock_dir))
+    except OSError:
+        return False
+    try:
+        os.rmdir(lock_dir)
+    except OSError:
+        pass  # an acquirer already wrote into the dir: it is theirs now
+    return True
 
 
 def run_locked(lock_dir: str, stale_after: float, timeout: float, cmd: list[str]) -> int:
@@ -454,7 +673,7 @@ def run_locked(lock_dir: str, stale_after: float, timeout: float, cmd: list[str]
     the lock: the handler raises `SystemExit`, which unwinds through the
     `finally` below exactly like any other exception.
     """
-    acquired = {"value": False}
+    held: dict[str, str | None] = {"token": None}
 
     def _on_signal(signum, _frame):
         raise SystemExit(128 + signum)
@@ -463,16 +682,15 @@ def run_locked(lock_dir: str, stale_after: float, timeout: float, cmd: list[str]
     old_int = signal.signal(signal.SIGINT, _on_signal)
     try:
         try:
-            acquire_lock(lock_dir, stale_after, timeout)
-            acquired["value"] = True
+            held["token"] = acquire_lock(lock_dir, stale_after, timeout)
         except LockTimeout as exc:
             print(f"serial_gate: {exc}", file=sys.stderr)
             return LOCK_TIMEOUT
         proc = subprocess.run(cmd)
         return proc.returncode
     finally:
-        if acquired["value"]:
-            release_lock(lock_dir)
+        if held["token"] is not None:
+            release_lock(lock_dir, held["token"])
         signal.signal(signal.SIGTERM, old_term)
         signal.signal(signal.SIGINT, old_int)
 
@@ -519,7 +737,7 @@ def main(argv: list[str] | None = None) -> int:
     p_select.add_argument("--map", required=True, help="path to the <glob>\\t<target> TSV map")
     p_select.add_argument("--base", help="base git ref")
     p_select.add_argument("--head", help="head git ref")
-    p_select.add_argument("--repo", help="run git in this directory (default: cwd)")
+    p_select.add_argument("--repo", help="run git in this directory (default: cwd); also locates the repo top level for the map self-check")
     p_select.add_argument(
         "--changed-file", action="append", default=[],
         help="a changed path (repeatable); bypasses git entirely",
@@ -675,6 +893,48 @@ def _selftest_select(tmp: str, check) -> None:
     code, lines = select_targets(repo_map, base="does-not-exist-ref", head=head_sha, repo_dir=repo)
     check("git-unresolvable-rc2", code == USAGE_ERROR and lines == [FULL], f"got {code} {lines}")
 
+    # Rename out of a !full area into a mapped one. With git's default rename
+    # detection only the NEW (mapped) path is reported and selection would be
+    # just `test_alpha` — a fail-open. --no-renames surfaces the old !full
+    # path too, so the result must be FULL. Content is long enough for git to
+    # detect the rename with detection on (the pre-fix behaviour).
+    os.makedirs(os.path.join(repo, "config"))
+    with open(os.path.join(repo, "config", "critical.yaml"), "w") as fh:
+        fh.write("".join(f"line {i}\n" for i in range(20)))
+    _git(repo, ["add", "."])
+    _git(repo, ["commit", "-q", "-m", "add critical config"])
+    pre_mv = _git(repo, ["rev-parse", "HEAD"]).strip()
+    _git(repo, ["mv", "config/critical.yaml", "src/alpha/moved.yaml"])
+    _git(repo, ["commit", "-q", "-m", "move critical config"])
+    post_mv = _git(repo, ["rev-parse", "HEAD"]).strip()
+    renamed_seen = _git(repo, ["diff", "-M", "--name-only", pre_mv, post_mv]).split()
+    check("rename-precondition-git-detects-rename", renamed_seen == ["src/alpha/moved.yaml"],
+          f"git default diff reported {renamed_seen} — test no longer exercises rename detection")
+    rename_map = os.path.join(repo, "rename_map.tsv")
+    _write_map(rename_map, ["src/alpha/**\ttest_alpha", "!full\tconfig/critical.*"])
+    code, lines = select_targets(rename_map, base=pre_mv, head=post_mv, repo_dir=repo)
+    check("rename-old-path-not-dropped", code == OK and lines == [FULL], f"got {code} {lines}")
+
+    # Map self-check against the repo top level: the map lives at ci/map.tsv
+    # and a row maps ci/** to a target, so without the top-level comparison
+    # an absolute --map would select `test_ci` instead of forcing FULL.
+    os.makedirs(os.path.join(repo, "ci"))
+    ci_map = os.path.join(repo, "ci", "map.tsv")
+    _write_map(ci_map, ["ci/**\ttest_ci", "src/**\ttest_src"])
+    code, lines = select_targets(os.path.abspath(ci_map), changed_files=["ci/map.tsv"], repo_dir=repo)
+    check("abs-map-vs-repo-relative-changed-file", code == OK and lines == [FULL], f"got {code} {lines}")
+    code, lines = select_targets(os.path.abspath(ci_map), changed_files=["ci/other.txt"], repo_dir=repo)
+    check("abs-map-sibling-still-mapped", code == OK and lines == ["test_ci"], f"got {code} {lines}")
+    _git(repo, ["add", "ci/map.tsv"])
+    _git(repo, ["commit", "-q", "-m", "add ci map"])
+    pre_ci = _git(repo, ["rev-parse", "HEAD"]).strip()
+    with open(ci_map, "a") as fh:
+        fh.write("docs/**\ttest_docs\n")
+    _git(repo, ["commit", "-q", "-am", "edit ci map"])
+    post_ci = _git(repo, ["rev-parse", "HEAD"]).strip()
+    code, lines = select_targets(os.path.abspath(ci_map), base=pre_ci, head=post_ci, repo_dir=repo)
+    check("abs-map-git-diff-forces-full", code == OK and lines == [FULL], f"got {code} {lines}")
+
 
 def _git(cwd: str, args: list[str]) -> str:
     proc = subprocess.run(["git"] + args, cwd=cwd, capture_output=True, text=True)
@@ -769,16 +1029,15 @@ def _selftest_lock(tmp: str, check) -> None:
             f"while not r.exists(): time.sleep(0.02)\n"
         )
 
-    # stale-after is deliberately large: the two waiters' shared contention is
-    # over the DEAD-PID owner only (dead-pid staleness is unconditional, not
-    # age-gated) — a small/zero stale-after would also make the WINNER's own
-    # freshly-written, legitimately-live lock look instantly stale again and
-    # spuriously re-trigger reclaim churn between the two racers.
+    # stale-after is deliberately tiny: the dead-pid owner is reclaimable
+    # regardless of age, and the WINNER's own live same-host lock must stay
+    # un-reclaimable even though it is instantly "older" than stale-after
+    # (same-host owners are never age-stale).
     proc = {}
     for key in ("c", "d"):
         proc[key] = subprocess.Popen([
             sys.executable, script_path, "run", "--lock-dir", lock_dir3,
-            "--stale-after", "999999", "--timeout", "30",
+            "--stale-after", "0.01", "--timeout", "30",
             "--", sys.executable, "-c", waiter[key],
         ])
 
@@ -817,7 +1076,7 @@ def _selftest_lock(tmp: str, check) -> None:
 
     # 15) timeout -> non-zero, and the command is NEVER executed.
     lock_dir5 = os.path.join(tmp, "lock_timeout")
-    os.mkdir(lock_dir5)  # held forever (no owner.json => not stale within window)
+    os.mkdir(lock_dir5)  # held by this (live) selftest process for the whole case
     _write_owner(lock_dir5)
     marker2 = os.path.join(tmp, "timeout_marker_should_not_exist")
     rc = subprocess.run([
@@ -828,6 +1087,222 @@ def _selftest_lock(tmp: str, check) -> None:
     check("timeout-nonzero", rc != 0, f"got {rc}")
     check("timeout-command-not-run", not os.path.exists(marker2),
           "command ran despite the lock never being acquired")
+
+    _selftest_lock_verdicts(tmp, check)
+    _selftest_lock_release(tmp, check)
+    _selftest_lock_live_owner_not_aged_out(tmp, check, script_path)
+    _selftest_lock_many_racers(tmp, check, script_path)
+
+
+def _dead_pid() -> int:
+    proc = subprocess.Popen([sys.executable, "-c", "pass"])
+    proc.wait()
+    return proc.pid
+
+
+def _plant_owner(lock_dir: str, owner: dict, age: float = 0.0) -> None:
+    """Create `lock_dir` with an owner file, then back-date the dir mtime."""
+    os.mkdir(lock_dir)
+    with open(_owner_path(lock_dir), "w", encoding="utf-8") as fh:
+        json.dump(owner, fh)
+    if age:
+        past = time.time() - age
+        os.utime(lock_dir, (past, past))
+
+
+def _selftest_lock_verdicts(tmp: str, check) -> None:
+    """Pure staleness rules plus the reclaim branches that need no racing."""
+    host = socket.gethostname()
+    ancient = 0.0  # epoch: older than any stale-after
+    live_here = {"pid": os.getpid(), "host": host, "token": "t-live"}
+    check("verdict-live-same-host-never-age-stale",
+          _stale_verdict(live_here, ancient, stale_after=1.0) is False)
+    check("verdict-dead-same-host-stale",
+          _stale_verdict({"pid": _dead_pid(), "host": host, "token": "t"}, time.time(), 1e9) is True)
+    foreign = {"pid": 1, "host": "other-host.example", "token": "t-f"}
+    check("verdict-foreign-fresh-live", _stale_verdict(foreign, time.time(), 60.0) is False)
+    check("verdict-foreign-aged-stale", _stale_verdict(foreign, time.time() - 120, 60.0) is True)
+    check("verdict-ownerless-in-grace-live",
+          _stale_verdict(None, time.time() - (_OWNERLESS_GRACE - 5), 0.0) is False)
+    check("verdict-ownerless-past-grace-stale",
+          _stale_verdict(None, time.time() - (_OWNERLESS_GRACE + 5), 1e9) is True)
+
+    # Owner-less dir inside the grace window: an acquirer mid-write. Never
+    # reclaimed, even with stale-after 0.
+    d = os.path.join(tmp, "v_ownerless_fresh")
+    os.mkdir(d)
+    check("reclaim-ownerless-in-grace-refused", _reclaim(d, 0.0) is False and os.path.isdir(d))
+    past = time.time() - (_OWNERLESS_GRACE + 5)
+    os.utime(d, (past, past))
+    check("reclaim-ownerless-past-grace-removed", _reclaim(d, 0.0) is True and not os.path.exists(d))
+
+    # Live same-host owner with an ancient dir: never reclaimed.
+    d = os.path.join(tmp, "v_live_ancient")
+    _plant_owner(d, live_here, age=10_000)
+    check("reclaim-live-same-host-ancient-refused",
+          _reclaim(d, 1.0) is False and _read_owner(d) == live_here)
+
+    # Foreign-host owner: fresh is kept, aged is reclaimed.
+    d = os.path.join(tmp, "v_foreign")
+    _plant_owner(d, foreign)
+    check("reclaim-foreign-fresh-refused", _reclaim(d, 60.0) is False and os.path.isdir(d))
+    past = time.time() - 120
+    os.utime(d, (past, past))
+    check("reclaim-foreign-aged-removed", _reclaim(d, 60.0) is True and not os.path.exists(d))
+
+    # A fresh reclaim mutex (another reclaimer at work) blocks; an old one
+    # (a reclaimer that died) is broken and the reclaim proceeds.
+    d = os.path.join(tmp, "v_mutex")
+    _plant_owner(d, {"pid": _dead_pid(), "host": host, "token": "t-dead"})
+    os.mkdir(_reclaim_mutex_path(d))
+    check("reclaim-fresh-mutex-blocks", _reclaim(d, 1e9) is False and os.path.isdir(d))
+    past = time.time() - (_RECLAIM_MUTEX_STALE + 5)
+    os.utime(_reclaim_mutex_path(d), (past, past))
+    check("reclaim-dead-mutex-broken", _reclaim(d, 1e9) is True and not os.path.exists(d)
+          and not os.path.exists(_reclaim_mutex_path(d)))
+
+    # A reclaimer that died after moving a LIVE owner's file aside leaves an
+    # owner-less dir; the next reclaim must restore that owner, not delete it.
+    d = os.path.join(tmp, "v_leftover_live")
+    os.mkdir(d)
+    with open(os.path.join(d, "owner.json.reclaim-deadbeef"), "w", encoding="utf-8") as fh:
+        json.dump(live_here, fh)
+    past = time.time() - (_OWNERLESS_GRACE + 5)
+    os.utime(d, (past, past))
+    check("reclaim-leftover-live-owner-restored",
+          _reclaim(d, 1.0) is False and _read_owner(d) == live_here)
+
+
+def _selftest_lock_release(tmp: str, check) -> None:
+    """Release deletes only this process's own lock (pid AND token)."""
+    d = os.path.join(tmp, "rel_own")
+    token = acquire_lock(d, stale_after=1e9, timeout=5)
+    check("release-wrong-token-refused", release_lock(d, "not-" + token) is False and os.path.isdir(d))
+    check("release-own-lock-removed", release_lock(d, token) is True and not os.path.exists(d))
+
+    # Same token but a different pid in the file: not ours, keep it.
+    d = os.path.join(tmp, "rel_pid")
+    _plant_owner(d, {"pid": os.getppid(), "host": socket.gethostname(), "token": "shared"})
+    check("release-wrong-pid-refused", release_lock(d, "shared") is False and os.path.isdir(d))
+
+    # A holder whose lock was reclaimed and re-acquired by a successor must
+    # not delete the successor's lock on its own (late) release.
+    d = os.path.join(tmp, "rel_successor")
+    old_token = acquire_lock(d, stale_after=1e9, timeout=5)
+    os.remove(_owner_path(d))
+    os.rmdir(d)  # simulate the reclaim of the old holder's lock
+    successor = {"pid": os.getppid(), "host": socket.gethostname(), "token": "successor"}
+    _plant_owner(d, successor)
+    check("release-late-holder-keeps-successor",
+          release_lock(d, old_token) is False and _read_owner(d) == successor)
+
+
+def _selftest_lock_live_owner_not_aged_out(tmp: str, check, script_path: str) -> None:
+    """A live same-host owner running far past --stale-after keeps the lock."""
+    lock = os.path.join(tmp, "live_long")
+    started = os.path.join(tmp, "live_long_started")
+    release = os.path.join(tmp, "live_long_release")
+    marker = os.path.join(tmp, "live_long_intruder_ran")
+    holder_child = (
+        f"import pathlib,time; pathlib.Path({started!r}).touch(); "
+        f"r=pathlib.Path({release!r})\n"
+        f"while not r.exists(): time.sleep(0.02)\n"
+    )
+    holder = subprocess.Popen([
+        sys.executable, script_path, "run", "--lock-dir", lock,
+        "--stale-after", "0.1", "--timeout", "30", "--", sys.executable, "-c", holder_child,
+    ])
+    try:
+        check("live-long-holder-started", _wait_for(started, timeout=10))
+        owner_before = _read_owner(lock)
+        time.sleep(0.3)  # the holder is now well past --stale-after
+        rc = subprocess.run([
+            sys.executable, script_path, "run", "--lock-dir", lock,
+            "--stale-after", "0.1", "--timeout", "1.5",
+            "--", sys.executable, "-c", f"open({marker!r}, 'w').close()",
+        ], stderr=subprocess.DEVNULL).returncode
+        check("live-long-intruder-timed-out", rc == LOCK_TIMEOUT, f"rc={rc}")
+        check("live-long-intruder-never-ran", not os.path.exists(marker))
+        check("live-long-owner-unchanged",
+              owner_before is not None and _read_owner(lock) == owner_before,
+              f"before={owner_before} after={_read_owner(lock)}")
+    finally:
+        open(release, "w").close()
+        holder.wait(timeout=15)
+    check("live-long-holder-released", holder.returncode == 0 and not os.path.exists(lock),
+          f"rc={holder.returncode}")
+
+
+def _selftest_lock_many_racers(tmp: str, check, script_path: str) -> None:
+    """>= 4 concurrent `run`s, repeated, over clean / dead-pid / owner-less /
+    aged-foreign starting states: at most one child is ever inside the lock.
+
+    Each child appends `enter <id>` then `exit <id>` to one O_APPEND log and
+    also keeps a per-holder marker in an `active/` dir while inside; entering
+    with any other marker present is written as `overlap`. Exclusivity holds
+    iff the log is a strict enter/exit alternation with matching ids, no
+    `overlap` line, and one enter per racer. stale-after is tiny so any
+    regression to age-based reclaim of a live same-host owner shows up here.
+    """
+    racers = 5
+    host = socket.gethostname()
+    seeds = ["clean", "dead-pid", "ownerless-aged", "foreign-aged", "clean", "dead-pid"]
+    for rnd, seed in enumerate(seeds):
+        base = os.path.join(tmp, f"race_{rnd}")
+        os.makedirs(base)
+        lock = os.path.join(base, "lock")
+        log = os.path.join(base, "log")
+        active = os.path.join(base, "active")
+        os.mkdir(active)
+        if seed == "dead-pid":
+            _plant_owner(lock, {"pid": _dead_pid(), "host": host, "token": "t-dead"})
+        elif seed == "ownerless-aged":
+            os.mkdir(lock)
+            past = time.time() - (_OWNERLESS_GRACE + 5)
+            os.utime(lock, (past, past))
+        elif seed == "foreign-aged":
+            _plant_owner(lock, {"pid": 1, "host": "other-host.example", "token": "t-f"}, age=10_000)
+        child_tmpl = (
+            "import os,sys,time\n"
+            "rid=sys.argv[1]; log={log!r}; active={active!r}\n"
+            "def w(s):\n"
+            "    fd=os.open(log, os.O_WRONLY|os.O_APPEND|os.O_CREAT, 0o644); os.write(fd, s.encode()); os.close(fd)\n"
+            "if os.listdir(active): w('overlap '+rid+'\\n')\n"
+            "open(os.path.join(active, rid), 'w').close()\n"
+            "w('enter '+rid+'\\n')\n"
+            "time.sleep(0.1)\n"
+            "w('exit '+rid+'\\n')\n"
+            "os.remove(os.path.join(active, rid))\n"
+        )
+        child = child_tmpl.format(log=log, active=active)
+        procs = [
+            subprocess.Popen([
+                sys.executable, script_path, "run", "--lock-dir", lock,
+                "--stale-after", "0.01", "--timeout", "60",
+                "--", sys.executable, "-c", child, str(i),
+            ])
+            for i in range(racers)
+        ]
+        rcs = [p.wait(timeout=90) for p in procs]
+        try:
+            with open(log, encoding="utf-8") as fh:
+                events = [ln.split() for ln in fh.read().splitlines() if ln.strip()]
+        except OSError:
+            events = []
+        ok = all(len(e) == 2 for e in events) and len(events) == 2 * racers
+        if ok:
+            for i in range(0, len(events), 2):
+                if events[i][0] != "enter" or events[i + 1] != ["exit", events[i][1]]:
+                    ok = False
+                    break
+        entered = sorted(e[1] for e in events if e and e[0] == "enter")
+        check(f"racers-{seed}-{rnd}-exclusive",
+              ok and not any(e and e[0] == "overlap" for e in events),
+              f"log={events}")
+        check(f"racers-{seed}-{rnd}-all-ran",
+              rcs == [0] * racers and entered == sorted(str(i) for i in range(racers)),
+              f"rcs={rcs} entered={entered}")
+        check(f"racers-{seed}-{rnd}-lock-released", not os.path.exists(lock))
 
 
 def _wait_for(path: str, timeout: float) -> bool:

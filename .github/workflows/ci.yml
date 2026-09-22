@@ -73,10 +73,15 @@ jobs:
           python3 .claude/skills/deep-code-review/scripts/parity_differ.py --selftest
           python3 .claude/skills/deep-code-review/scripts/fix_class_gate.py --selftest
           python3 .claude/skills/agentic-delivery/scripts/serial_gate.py --selftest
+          python3 .claude/skills/agentic-delivery/scripts/handback_cap.py --selftest
 
       # Every fix(...) commit in the pushed/PR range must touch a test surface
       # or carry a non-empty No-Test-Reason: trailer. Fails closed on an
       # unresolvable range (e.g. the all-zeros before-SHA of a new branch).
+      # A shipped script is deliberately NOT its own test surface: editing the
+      # script under test would satisfy the gate by itself (fail-open). Known
+      # limitation: touching ANY skill's evals/evals.json satisfies it, not
+      # only the fixed skill's.
       - name: Fix commits carry a pinned test
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
@@ -86,8 +91,7 @@ jobs:
           python3 .claude/skills/deep-code-review/scripts/fix_class_gate.py \
             --base "$BASE_SHA" --head "$HEAD_SHA" \
             --test-glob '.claude/skills/*/evals/evals.json' \
-            --test-glob 'scripts/test-ci-gates.sh' \
-            --test-glob '.claude/skills/*/scripts/*.py'
+            --test-glob 'scripts/test-ci-gates.sh'
 
       - name: SKILL.md name matches its directory
         run: |

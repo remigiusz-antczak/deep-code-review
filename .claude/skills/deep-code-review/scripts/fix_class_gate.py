@@ -21,6 +21,14 @@ tree, stays the reviewer's job (see `references/method.md`, class-discipline
 passage). Any claim that this tool "enforces whole-class fixes" is a
 fabrication. The accurate claim is: it enforces a pinned test per fix.
 
+MERGE COMMITS ARE NOT CHECKED (known bypass). The range is walked with
+`git rev-list --no-merges`, so every merge commit is skipped — even one whose
+subject is `fix:`. A so-called evil merge (a merge commit that carries its own
+code change beyond resolving the two parents) can therefore introduce an
+untested fix and this gate will not see it. If that matters for a repo,
+forbid code changes in merge commits by policy/review, or squash/rebase
+instead of merging; this tool does not detect it.
+
 WHAT COUNTS AS A "FIX" COMMIT
 ------------------------------
 The commit subject matches, case-sensitively on the literal `fix`:
@@ -57,7 +65,9 @@ EXIT CODES (fail-closed; every branch below is load-bearing)
 ---------------------------------------------------------------
   0  every fix commit in range passed (touched a test surface or was
      exempted by a non-empty `No-Test-Reason` trailer), including the
-     legitimately-empty case of zero commits in range.
+     legitimately-empty case of zero commits in range. Merge commits are
+     never counted (see HONESTY), so a range whose only fix is a merge
+     commit also exits 0.
   1  at least one fix commit failed; each is printed as its own FAIL line.
   2  FAIL CLOSED — the range could not be evaluated at all, never a silent
      pass: not a git repository; `--base`/`--head` unresolvable; `--base` is
