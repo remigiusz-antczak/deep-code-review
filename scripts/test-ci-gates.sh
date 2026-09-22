@@ -192,6 +192,66 @@ else
   record 1 "routing: allowlisted skill (agentic-delivery) may exceed the size budget"
 fi
 
+# ---------------------------------------------------------------------------
+# size — frozen per-file line-count budgets (scripts/size-budgets.tsv), the
+# ratchet skill-authoring-and-size.md prescribes ("a documented budget,
+# enforced"), applied to this repo's own SKILL.md/references files.
+# ---------------------------------------------------------------------------
+
+sizeroot="$WORK/size-fixture/root"
+mkdir -p "$sizeroot/.claude/skills/demo/references"
+printf 'line1\nline2\nline3\n' >"$sizeroot/.claude/skills/demo/SKILL.md"
+printf 'a\nb\n' >"$sizeroot/.claude/skills/demo/references/ref.md"
+printf '# header comment\n.claude/skills/demo/SKILL.md\t3\n.claude/skills/demo/references/ref.md\t2\n' \
+  >"$WORK/size-config.tsv"
+
+gate "$GATES" size --config "$WORK/size-config.tsv" "$sizeroot"
+if [ "$GATE_RC" -eq 0 ]; then
+  record 0 "size: passes when every file is at or under its budget"
+else
+  record 1 "size: passes when every file is at or under its budget"
+fi
+
+# Planted RED: grow one fixture file past its frozen budget. The gate must
+# FIRE (non-zero) and name the offending file, not merely fail generically.
+printf 'a\nb\nc\nd\n' >"$sizeroot/.claude/skills/demo/references/ref.md"
+gate "$GATES" size --config "$WORK/size-config.tsv" "$sizeroot"
+if [ "$GATE_RC" -ne 0 ] && grep -q 'SIZE FAIL: .claude/skills/demo/references/ref.md' "$WORK/last.log"; then
+  record 0 "size: FIRES on an oversized fixture and names the file (planted RED)"
+else
+  record 1 "size: FIRES on an oversized fixture and names the file (planted RED)"
+fi
+# restore under-budget content so the cases below start clean
+printf 'a\nb\n' >"$sizeroot/.claude/skills/demo/references/ref.md"
+
+# Fail closed: a shipped file on disk with no row in the config.
+printf '.claude/skills/demo/SKILL.md\t3\n' >"$WORK/size-config-missing.tsv"
+gate "$GATES" size --config "$WORK/size-config-missing.tsv" "$sizeroot"
+if [ "$GATE_RC" -ne 0 ] && grep -q 'SIZE MISSING BUDGET: .claude/skills/demo/references/ref.md' "$WORK/last.log"; then
+  record 0 "size: fails closed on a shipped file absent from the config"
+else
+  record 1 "size: fails closed on a shipped file absent from the config"
+fi
+
+# Fail closed: a config row naming a file that no longer exists on disk.
+printf '.claude/skills/demo/SKILL.md\t3\n.claude/skills/demo/references/ref.md\t2\n.claude/skills/demo/references/ghost.md\t5\n' \
+  >"$WORK/size-config-dangling.tsv"
+gate "$GATES" size --config "$WORK/size-config-dangling.tsv" "$sizeroot"
+if [ "$GATE_RC" -ne 0 ] && grep -q 'SIZE DANGLING: .claude/skills/demo/references/ghost.md' "$WORK/last.log"; then
+  record 0 "size: fails closed on a config row whose file no longer exists"
+else
+  record 1 "size: fails closed on a config row whose file no longer exists"
+fi
+
+# The real repo config passes against the real repo tree: adding this gate
+# touched no skill content, so it must be green day one (the freeze-ratchet).
+gate "$GATES" size --config "$ROOT/scripts/size-budgets.tsv" "$ROOT"
+if [ "$GATE_RC" -eq 0 ]; then
+  record 0 "size: the real repo's SKILL.md/references files are all within their frozen budget"
+else
+  record 1 "size: the real repo's SKILL.md/references files are all within their frozen budget"
+fi
+
 # Every overlay flag that ADDS a skill (a WITH_* var guarding a SKILLS+= block)
 # must also appear in the AGENTS.md overlay-stamp guard, or a standalone
 # --with-<x> install lands the skill but writes no stamp — the guard-omission bug

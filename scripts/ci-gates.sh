@@ -15,6 +15,7 @@
 #   install --src <dir> --dest <dir> --mode <claude|minimal|full|codex|overlays|recommend>
 #                                        run the real installer, then verify vendored docs are real (not placeholders)
 #   enumeration <root>                   every shipped skill is present in all five hand-maintained lists
+#   size --config <file> <root>          every shipped SKILL.md/references/*.md is within its frozen size-budgets.tsv line budget
 #
 set -euo pipefail
 
@@ -46,6 +47,7 @@ Usage:
   ci-gates.sh version <root>
   ci-gates.sh install --src <dir> --dest <dir> --mode <claude|minimal|full|codex|overlays|recommend>
   ci-gates.sh enumeration <root>
+  ci-gates.sh size --config <file> <root>
 EOF
 }
 
@@ -510,6 +512,95 @@ cmd_enumeration() {
   printf 'enumeration: ok\n'
 }
 
+# ---------------------------------------------------------------------------
+# size — frozen line-count budgets for shipped skill docs (dogfoods this
+# repo's own skill-authoring-and-size.md: "A documented budget, enforced").
+#
+# POLICY = FREEZE-RATCHET: scripts/size-budgets.tsv pins each file's budget at
+# its size when adopted; a budget only ever moves down (consolidation), never
+# up. Fails closed in BOTH directions: a shipped SKILL.md/references/*.md with
+# no row in the config is a failure (forces a new file to declare a budget,
+# mirroring cmd_routing's "every reference is routed"), and a config row whose
+# file no longer exists is also a failure (a stale entry cannot silently mask
+# a rename/delete). Plain indexed arrays only (no `declare -A`): the repo's own
+# local bash is 3.2, which has no associative arrays.
+# ---------------------------------------------------------------------------
+cmd_size() {
+  local config="" root=""
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --config) config="${2:-}"; shift 2 ;;
+      --config=*) config="${1#*=}"; shift ;;
+      -*) die "size: unknown option: $1" ;;
+      *) [ -z "$root" ] || die "size: unexpected extra argument: $1"; root="$1"; shift ;;
+    esac
+  done
+  [ -n "$config" ] || die "size: --config <file> is required (fail closed)"
+  [ -f "$config" ] || die "size: config not found: $config (fail closed)"
+  [ -n "$root" ] || die "size: <root> directory is required (fail closed)"
+  [ -d "$root" ] || die "size: root not found: $root (fail closed)"
+
+  # Parse actionable rows (path<TAB>budget); blank/comment lines are skipped.
+  # Plain parallel arrays, aligned by index — portable to bash 3.2.
+  local -a cfg_paths=() cfg_budgets=()
+  local _line _trimmed _path _budget
+  while IFS= read -r _line || [ -n "$_line" ]; do
+    _trimmed="${_line#"${_line%%[![:space:]]*}"}"   # strip leading whitespace
+    case "$_trimmed" in
+      ''|'#'*) continue ;;
+    esac
+    _path="${_trimmed%%$'\t'*}"
+    [ "$_path" != "$_trimmed" ] \
+      || die "size: malformed row (no TAB separator) in $config: $_trimmed"
+    _budget="${_trimmed#*$'\t'}"
+    case "$_budget" in
+      ''|*[!0-9]*) die "size: malformed budget \"$_budget\" for $_path in $config (fail closed)" ;;
+    esac
+    cfg_paths+=("$_path")
+    cfg_budgets+=("$_budget")
+  done < "$config"
+
+  [ "${#cfg_paths[@]}" -gt 0 ] \
+    || die "size: config has no actionable rows (only blanks/comments): $config"
+
+  local fail=0 f rel i found budget lines
+  # 1) Every shipped SKILL.md / references/*.md on disk must have a budget row.
+  while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    rel="${f#"$root"/}"
+    found=0
+    for i in "${!cfg_paths[@]}"; do
+      if [ "${cfg_paths[$i]}" = "$rel" ]; then found=1; break; fi
+    done
+    if [ "$found" -eq 0 ]; then
+      printf 'SIZE MISSING BUDGET: %s has no row in %s (fail closed)\n' "$rel" "$config" >&2
+      fail=1
+    fi
+  done < <(find "$root/.claude/skills" \( -name 'SKILL.md' -o -path '*/references/*.md' \) -type f 2>/dev/null | LC_ALL=C sort)
+
+  # 2) Every budget row must resolve to a real file and stay within budget.
+  for i in "${!cfg_paths[@]}"; do
+    rel="${cfg_paths[$i]}"
+    budget="${cfg_budgets[$i]}"
+    f="$root/$rel"
+    if [ ! -f "$f" ]; then
+      printf 'SIZE DANGLING: %s in %s does not exist on disk (fail closed)\n' "$rel" "$config" >&2
+      fail=1
+      continue
+    fi
+    lines="$(LC_ALL=C wc -l < "$f" | tr -d '[:space:]')"
+    if [ "$lines" -gt "$budget" ]; then
+      printf 'SIZE FAIL: %s is %s lines (budget %s) — consolidate; budgets ratchet down, never up\n' \
+        "$rel" "$lines" "$budget" >&2
+      fail=1
+    fi
+  done
+
+  [ "$fail" -eq 0 ] \
+    || die "size: one or more files exceed their frozen budget, or are un-budgeted/dangling"
+  printf 'size: ok (%d file(s) within budget)\n' "${#cfg_paths[@]}"
+}
+
 [ "$#" -gt 0 ] || { usage; exit 2; }
 subcmd="$1"; shift
 case "$subcmd" in
@@ -518,6 +609,7 @@ case "$subcmd" in
   version) cmd_version "$@" ;;
   install) cmd_install "$@" ;;
   enumeration) cmd_enumeration "$@" ;;
+  size) cmd_size "$@" ;;
   -h|--help) usage; exit 0 ;;
   *) printf 'ci-gates: unknown subcommand: %s\n' "$subcmd" >&2; usage; exit 2 ;;
 esac

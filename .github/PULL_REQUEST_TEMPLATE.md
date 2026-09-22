@@ -10,6 +10,7 @@
 - [ ] `bash scripts/ci-gates.sh routing --max-bytes 100000 .claude/skills/idea-critic`
 - [ ] `bash scripts/ci-gates.sh version .`
 - [ ] `bash scripts/ci-gates.sh privacy --banlist .banlist.txt .`
+- [ ] `bash scripts/ci-gates.sh size --config scripts/size-budgets.tsv .`
 - [ ] `bash -n install.sh`
 - [ ] Description of each new/changed `SKILL.md` is ≤1024 characters
 - [ ] Every `references/*.md` is routed from its skill's `SKILL.md`
