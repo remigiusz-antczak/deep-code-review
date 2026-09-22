@@ -1,0 +1,23 @@
+<!doctype html>
+<!--
+  parity_differ.py self-test fixture: an UNSEEDED app.
+  alpha, beta, gamma are all present (structurally built) but each contains
+  only an empty-state placeholder, no data-item -> expect CANNOT_COMPARE
+  (exit 4): seed the app's data to the design's data state first, never
+  condense/remove the empty sections.
+-->
+<html>
+<body>
+<main>
+  <section data-section="alpha">
+    <div class="empty-state" data-empty>Nothing here yet</div>
+  </section>
+  <section data-section="beta">
+    <div class="empty-state" data-empty>Nothing here yet</div>
+  </section>
+  <section data-section="gamma">
+    <div class="empty-state" data-empty>Nothing here yet</div>
+  </section>
+</main>
+</body>
+</html>

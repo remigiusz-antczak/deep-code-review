@@ -1,0 +1,23 @@
+<!doctype html>
+<!--
+  parity_differ.py self-test fixture: an APP that partially matches the design.
+  alpha populated; beta present but only an empty-state child (empty);
+  gamma omitted entirely (missing); plus an extra populated "delta" section
+  (superset, info-only) -> expect MISMATCH (exit 1): missing gamma, empty
+  beta, extra delta.
+-->
+<html>
+<body>
+<main>
+  <section data-section="alpha">
+    <div data-item>Alpha card one</div>
+  </section>
+  <section data-section="beta">
+    <div class="empty-state" data-empty>Nothing here yet</div>
+  </section>
+  <section data-section="delta">
+    <div data-item>Delta card one</div>
+  </section>
+</main>
+</body>
+</html>

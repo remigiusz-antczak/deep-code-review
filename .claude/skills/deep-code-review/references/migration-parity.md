@@ -72,13 +72,11 @@ integration PR — the same table shape as the fan-out **Unit manifest** (`paral
   built on (the per-surface-divergence, unbounded-defect-stream failure this file opens
   with).
 
-**Severity.** Spawning a restyle fan-out with **no ownership ledger** is a **High**
-coordination defect (do-no-harm, principle 4 — the lanes clobber the shell, invisibly until
-integration); a cross-lane shell-path edit is its own finding against the owning lane.
-
-These are **review-side** detections — a missing ledger, an unpartitioned path, or a
-cross-lane edit. *Enforcing* single-writer ownership at write-time is a delivery-overlay
-concern, out of scope for this self-contained review-only rule.
+**Severity.** A restyle fan-out with **no ownership ledger** is a **High** coordination defect
+(do-no-harm, principle 4 — lanes clobber the shell, invisibly until integration); a cross-lane
+shell-path edit is its own finding against the owning lane. Both are **review-side**
+detections; *enforcing* single-writer ownership at write-time is a delivery-overlay concern,
+out of scope for this self-contained review-only rule.
 
 ## Verify parity surface-by-surface, on real data — never from a structural or seed-data audit
 
@@ -93,6 +91,21 @@ default state, every field, every sub-view/mode, data population — not its sta
 screenshot. Treat every "matches well" as **unverified** until the real surface is exercised
 against the real reference. (The structural / green-suite / seed-screenshot stand-ins are
 the "Beware the proxy" completion trap — `report-format.md`.)
+
+**"Aligned / matched / mirrored" is a two-sided claim, gated by `scripts/parity_differ.py`.**
+Read this when a port, restyle, or migration is about to be called aligned to its reference:
+run the differ, section-by-section, before the claim. MATCH (exit 0) requires comparing the
+**rendered** design against the **rendered, running** app, per named section — a page height,
+a screenshot, a token-name similarity, or a lane's self-report is not alignment and may never
+be quoted as a verdict; a one-sided measurement produces a confident **wrong** pass. One side
+missing or unreadable → `COULD_NOT_CHECK`, never a pass. Design-populated sections present
+but empty in the app → `CANNOT_COMPARE`: seed the app's data to the design's data state first
+— never condense or remove the empty sections to "match," the design wants them populated.
+Extra app sections beyond the design are kept as a superset and reported, never failed. The
+`MISMATCH` list **is** the work queue — mirror it section-by-section, and never spawn a
+mirror lane for a section the differ already reports MATCH. Compare like-for-like: the
+design's default view against the app's **same** view, and verify the owner's stated-priority
+surface first, not whichever view the app happens to default to.
 
 ## Scope a parity claim to the correspondence table — one screen verified is not the product
 
