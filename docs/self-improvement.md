@@ -18,7 +18,7 @@ itself).
 | 4 | **Attack** | Run `idea-critic` (skeptic / better-way / kill-criteria) and the advisor *before* substantive work; adopt or rebut each finding against the bytes | [`idea-critic`](../.claude/skills/idea-critic/SKILL.md) |
 | 5 | **Eval** | Add one *behavioral* eval per lens (a prompt and the behavior a correct answer must show) | `.claude/skills/<skill>/evals/evals.json` |
 | 6 | **Review** | An independent dogfood reviewer, held to Perun's own bar, reads the diff for anti-duplication, placement, correctness, privacy, and fabrication — before merge | [roadmap.md](roadmap.md) ("independent reviewer pass before merge"); named as procedure here |
-| 7 | **Gate** | The mechanical gate suite (routing / version / privacy / enumeration / checksums) plus the offline eval-predicate net must all pass | [`ci.yml`](../.github/workflows/ci.yml), [`scripts/ci-gates.sh`](../scripts/ci-gates.sh), [`scripts/eval_predicates.py`](../scripts/eval_predicates.py) |
+| 7 | **Gate** | The mechanical gate suite (routing / version / privacy / enumeration / size / checksums) plus the offline eval-predicate net must all pass | [`ci.yml`](../.github/workflows/ci.yml), [`scripts/ci-gates.sh`](../scripts/ci-gates.sh), [`scripts/eval_predicates.py`](../scripts/eval_predicates.py) |
 | 8 | **Ship** | Lockstep version bump, CHANGELOG, regenerate `SHA256SUMS` last, tag; a human authorizes the landing | the [version gate](../.github/workflows/ci.yml) checks the CHANGELOG announces the version, and [`scripts/write-checksums.sh`](../scripts/write-checksums.sh) regenerates the pin; the full lockstep sequence is maintainer practice, not yet an in-repo doc |
 
 Steps 4–7 are `deep-code-review` and `idea-critic` pointed at Perun's own tree.
