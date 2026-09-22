@@ -193,39 +193,45 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# size — frozen per-file line-count budgets (scripts/size-budgets.tsv), the
+# size — frozen per-file BYTE-count budgets (scripts/size-budgets.tsv), the
 # ratchet skill-authoring-and-size.md prescribes ("a documented budget,
 # enforced"), applied to this repo's own SKILL.md/references files.
+#
+# Measured in bytes (`wc -c`), not lines: a line-count budget is beaten by
+# packing more prose onto fewer, longer lines. The planted-RED case below
+# proves that directly — it SHRINKS the fixture's line count while GROWING
+# its byte count past budget, which a line-count gate would have missed.
 # ---------------------------------------------------------------------------
 
 sizeroot="$WORK/size-fixture/root"
 mkdir -p "$sizeroot/.claude/skills/demo/references"
-printf 'line1\nline2\nline3\n' >"$sizeroot/.claude/skills/demo/SKILL.md"
-printf 'a\nb\n' >"$sizeroot/.claude/skills/demo/references/ref.md"
-printf '# header comment\n.claude/skills/demo/SKILL.md\t3\n.claude/skills/demo/references/ref.md\t2\n' \
+printf 'hello\nworld\n' >"$sizeroot/.claude/skills/demo/SKILL.md"        # 12 bytes, 2 lines
+printf 'ab\n' >"$sizeroot/.claude/skills/demo/references/ref.md"        # 3 bytes, 1 line
+printf '# header comment\n.claude/skills/demo/SKILL.md\t12\n.claude/skills/demo/references/ref.md\t3\n' \
   >"$WORK/size-config.tsv"
 
 gate "$GATES" size --config "$WORK/size-config.tsv" "$sizeroot"
 if [ "$GATE_RC" -eq 0 ]; then
-  record 0 "size: passes when every file is at or under its budget"
+  record 0 "size: passes when every file is at or under its byte budget"
 else
-  record 1 "size: passes when every file is at or under its budget"
+  record 1 "size: passes when every file is at or under its byte budget"
 fi
 
-# Planted RED: grow one fixture file past its frozen budget. The gate must
-# FIRE (non-zero) and name the offending file, not merely fail generically.
-printf 'a\nb\nc\nd\n' >"$sizeroot/.claude/skills/demo/references/ref.md"
+# Planted RED, byte-vs-line: fewer lines (1 -> 0, no trailing newline) but MORE
+# bytes (3 -> 8), past the frozen budget of 3. The gate must FIRE and name the
+# offending file — proving it is truly measuring bytes, not lines.
+printf 'abcdefgh' >"$sizeroot/.claude/skills/demo/references/ref.md"
 gate "$GATES" size --config "$WORK/size-config.tsv" "$sizeroot"
-if [ "$GATE_RC" -ne 0 ] && grep -q 'SIZE FAIL: .claude/skills/demo/references/ref.md' "$WORK/last.log"; then
-  record 0 "size: FIRES on an oversized fixture and names the file (planted RED)"
+if [ "$GATE_RC" -ne 0 ] && grep -q 'SIZE FAIL: .claude/skills/demo/references/ref.md is 8 bytes' "$WORK/last.log"; then
+  record 0 "size: FIRES on a fixture that shrinks lines but grows bytes past budget (planted RED)"
 else
-  record 1 "size: FIRES on an oversized fixture and names the file (planted RED)"
+  record 1 "size: FIRES on a fixture that shrinks lines but grows bytes past budget (planted RED)"
 fi
 # restore under-budget content so the cases below start clean
-printf 'a\nb\n' >"$sizeroot/.claude/skills/demo/references/ref.md"
+printf 'ab\n' >"$sizeroot/.claude/skills/demo/references/ref.md"
 
 # Fail closed: a shipped file on disk with no row in the config.
-printf '.claude/skills/demo/SKILL.md\t3\n' >"$WORK/size-config-missing.tsv"
+printf '.claude/skills/demo/SKILL.md\t12\n' >"$WORK/size-config-missing.tsv"
 gate "$GATES" size --config "$WORK/size-config-missing.tsv" "$sizeroot"
 if [ "$GATE_RC" -ne 0 ] && grep -q 'SIZE MISSING BUDGET: .claude/skills/demo/references/ref.md' "$WORK/last.log"; then
   record 0 "size: fails closed on a shipped file absent from the config"
@@ -234,7 +240,7 @@ else
 fi
 
 # Fail closed: a config row naming a file that no longer exists on disk.
-printf '.claude/skills/demo/SKILL.md\t3\n.claude/skills/demo/references/ref.md\t2\n.claude/skills/demo/references/ghost.md\t5\n' \
+printf '.claude/skills/demo/SKILL.md\t12\n.claude/skills/demo/references/ref.md\t3\n.claude/skills/demo/references/ghost.md\t5\n' \
   >"$WORK/size-config-dangling.tsv"
 gate "$GATES" size --config "$WORK/size-config-dangling.tsv" "$sizeroot"
 if [ "$GATE_RC" -ne 0 ] && grep -q 'SIZE DANGLING: .claude/skills/demo/references/ghost.md' "$WORK/last.log"; then
@@ -243,13 +249,102 @@ else
   record 1 "size: fails closed on a config row whose file no longer exists"
 fi
 
-# The real repo config passes against the real repo tree: adding this gate
-# touched no skill content, so it must be green day one (the freeze-ratchet).
+# The real repo config passes against the real repo tree: this change
+# re-baselined every row at today's exact byte size, so it is green day one
+# (the freeze-ratchet).
 gate "$GATES" size --config "$ROOT/scripts/size-budgets.tsv" "$ROOT"
 if [ "$GATE_RC" -eq 0 ]; then
-  record 0 "size: the real repo's SKILL.md/references files are all within their frozen budget"
+  record 0 "size: the real repo's SKILL.md/references files are all within their frozen byte budget"
 else
-  record 1 "size: the real repo's SKILL.md/references files are all within their frozen budget"
+  record 1 "size: the real repo's SKILL.md/references files are all within their frozen byte budget"
+fi
+
+# ---------------------------------------------------------------------------
+# size-ratchet — CI-checkable enforcement that no scripts/size-budgets.tsv row
+# may increase vs a base ref without an explicit `size-budget-raise:` marker
+# line in the commit range or CHANGELOG.md. Own fixture repo (needs real git
+# commits, unlike the plain `git add` fixtures above) and own block.
+# ---------------------------------------------------------------------------
+
+ratchetroot="$WORK/ratchet-fixture/root"
+mkdir -p "$ratchetroot/.claude/skills/demo/references"
+git -C "$ratchetroot" init -q
+git -C "$ratchetroot" config user.email "test@example.com"
+git -C "$ratchetroot" config user.name "Test"
+mkdir -p "$ratchetroot/scripts"
+printf 'hello\nworld\n' >"$ratchetroot/.claude/skills/demo/SKILL.md"
+printf 'ab\n' >"$ratchetroot/.claude/skills/demo/references/ref.md"
+printf '.claude/skills/demo/SKILL.md\t12\n.claude/skills/demo/references/ref.md\t3\n' \
+  >"$ratchetroot/scripts/size-budgets.tsv"
+git -C "$ratchetroot" add -A >/dev/null 2>&1
+git -C "$ratchetroot" commit -qm base >/dev/null 2>&1
+ratchet_base="$(git -C "$ratchetroot" rev-parse HEAD)"
+
+# Case A: shrink a row -> no marker needed, passes.
+printf '.claude/skills/demo/SKILL.md\t10\n.claude/skills/demo/references/ref.md\t3\n' \
+  >"$ratchetroot/scripts/size-budgets.tsv"
+git -C "$ratchetroot" add -A >/dev/null 2>&1
+git -C "$ratchetroot" commit -qm shrink >/dev/null 2>&1
+
+gate "$GATES" size-ratchet --base "$ratchet_base" --config "$ratchetroot/scripts/size-budgets.tsv" "$ratchetroot"
+if [ "$GATE_RC" -eq 0 ]; then
+  record 0 "size-ratchet: a shrunk row needs no marker and passes"
+else
+  record 1 "size-ratchet: a shrunk row needs no marker and passes"
+fi
+
+# Case B: planted RED — a raised row with NO marker anywhere must FAIL.
+git -C "$ratchetroot" reset --hard "$ratchet_base" -q >/dev/null 2>&1
+printf '.claude/skills/demo/SKILL.md\t20\n.claude/skills/demo/references/ref.md\t3\n' \
+  >"$ratchetroot/scripts/size-budgets.tsv"
+git -C "$ratchetroot" add -A >/dev/null 2>&1
+git -C "$ratchetroot" commit -qm "raise no marker" >/dev/null 2>&1
+
+gate "$GATES" size-ratchet --base "$ratchet_base" --config "$ratchetroot/scripts/size-budgets.tsv" "$ratchetroot"
+if [ "$GATE_RC" -ne 0 ] && grep -q 'RATCHET FAIL: .claude/skills/demo/SKILL.md raised 12->20' "$WORK/last.log"; then
+  record 0 "size-ratchet: FIRES on an undocumented raise and names the row (planted RED)"
+else
+  record 1 "size-ratchet: FIRES on an undocumented raise and names the row (planted RED)"
+fi
+
+# Case C: the SAME raise, but the marker is in the commit message -> passes.
+git -C "$ratchetroot" reset --hard "$ratchet_base" -q >/dev/null 2>&1
+printf '.claude/skills/demo/SKILL.md\t20\n.claude/skills/demo/references/ref.md\t3\n' \
+  >"$ratchetroot/scripts/size-budgets.tsv"
+git -C "$ratchetroot" add -A >/dev/null 2>&1
+git -C "$ratchetroot" commit -qm "raise with marker
+
+size-budget-raise: .claude/skills/demo/SKILL.md 12→20 fixture growth is deliberate" >/dev/null 2>&1
+
+gate "$GATES" size-ratchet --base "$ratchet_base" --config "$ratchetroot/scripts/size-budgets.tsv" "$ratchetroot"
+if [ "$GATE_RC" -eq 0 ]; then
+  record 0 "size-ratchet: a raise with a commit-message marker passes"
+else
+  record 1 "size-ratchet: a raise with a commit-message marker passes"
+fi
+
+# Case D: the SAME raise, marker instead lives in CHANGELOG.md -> passes.
+git -C "$ratchetroot" reset --hard "$ratchet_base" -q >/dev/null 2>&1
+printf '.claude/skills/demo/SKILL.md\t20\n.claude/skills/demo/references/ref.md\t3\n' \
+  >"$ratchetroot/scripts/size-budgets.tsv"
+printf 'size-budget-raise: .claude/skills/demo/SKILL.md 12→20 fixture growth is deliberate\n' \
+  >"$ratchetroot/CHANGELOG.md"
+git -C "$ratchetroot" add -A >/dev/null 2>&1
+git -C "$ratchetroot" commit -qm "raise with changelog marker" >/dev/null 2>&1
+
+gate "$GATES" size-ratchet --base "$ratchet_base" --config "$ratchetroot/scripts/size-budgets.tsv" "$ratchetroot"
+if [ "$GATE_RC" -eq 0 ]; then
+  record 0 "size-ratchet: a raise with a CHANGELOG.md marker passes"
+else
+  record 1 "size-ratchet: a raise with a CHANGELOG.md marker passes"
+fi
+
+# Case E: fail closed on an unresolvable base ref.
+gate "$GATES" size-ratchet --base "totally-bogus-ref-xyz" --config "$ratchetroot/scripts/size-budgets.tsv" "$ratchetroot"
+if [ "$GATE_RC" -ne 0 ] && grep -qi 'unresolvable base' "$WORK/last.log"; then
+  record 0 "size-ratchet: fails closed on an unresolvable base ref"
+else
+  record 1 "size-ratchet: fails closed on an unresolvable base ref"
 fi
 
 # Every overlay flag that ADDS a skill (a WITH_* var guarding a SKILLS+= block)

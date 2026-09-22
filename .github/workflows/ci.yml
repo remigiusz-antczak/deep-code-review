@@ -50,9 +50,11 @@ jobs:
           bash scripts/ci-gates.sh version .
           bash scripts/ci-gates.sh privacy --banlist .banlist.txt .
           bash scripts/ci-gates.sh enumeration .
-          # Frozen per-file line-count budgets (scripts/size-budgets.tsv):
+          # Frozen per-file byte-count budgets (scripts/size-budgets.tsv):
           # every shipped SKILL.md/references/*.md must stay within its
           # budget, which only ratchets down via consolidation, never up.
+          # (scripts/ci-gates.sh size-ratchet is a separate, opt-in check an
+          # orchestrator runs against a meaningful base ref; not wired here.)
           bash scripts/ci-gates.sh size --config scripts/size-budgets.tsv .
           # No git-tracked file at a banned image/media/archive/build-output
           # extension (scripts/binaries-allowlist.tsv): stops the

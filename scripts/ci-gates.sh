@@ -15,7 +15,9 @@
 #   install --src <dir> --dest <dir> --mode <claude|minimal|full|codex|overlays|recommend>
 #                                        run the real installer, then verify vendored docs are real (not placeholders)
 #   enumeration <root>                   every shipped skill is present in all five hand-maintained lists
-#   size --config <file> <root>          every shipped SKILL.md/references/*.md is within its frozen size-budgets.tsv line budget
+#   size --config <file> <root>          every shipped SKILL.md/references/*.md is within its frozen size-budgets.tsv byte budget
+#   size-ratchet --base <ref> --config <file> <root>
+#                                        no size-budgets.tsv row may increase vs <ref> without a `size-budget-raise:` marker (fail closed on unresolvable base)
 #   binaries <root>                      no git-tracked file at a banned image/media/archive/build-output extension (allowlist: scripts/binaries-allowlist.tsv)
 #   mustload --config <file> <root>      every SKILL.md load-map archetype's MUST-LOAD token-est total is within its frozen mustload-budgets.tsv ceiling
 #
@@ -50,6 +52,7 @@ Usage:
   ci-gates.sh install --src <dir> --dest <dir> --mode <claude|minimal|full|codex|overlays|recommend>
   ci-gates.sh enumeration <root>
   ci-gates.sh size --config <file> <root>
+  ci-gates.sh size-ratchet --base <ref> --config <file> <root>
   ci-gates.sh binaries <root>
   ci-gates.sh mustload --config <file> <root>
 EOF
@@ -517,12 +520,18 @@ cmd_enumeration() {
 }
 
 # ---------------------------------------------------------------------------
-# size — frozen line-count budgets for shipped skill docs (dogfoods this
+# size — frozen byte-count budgets for shipped skill docs (dogfoods this
 # repo's own skill-authoring-and-size.md: "A documented budget, enforced").
+#
+# Measured in BYTES (`wc -c`), not lines: a line-count budget can be beaten by
+# packing more prose onto fewer, longer lines — the file gets bigger (more
+# context tokens paid on load) while its line count goes down or holds still.
+# Bytes track the actual on-load cost skill-authoring-and-size.md is pricing.
 #
 # POLICY = FREEZE-RATCHET: scripts/size-budgets.tsv pins each file's budget at
 # its size when adopted; a budget only ever moves down (consolidation), never
-# up. Fails closed in BOTH directions: a shipped SKILL.md/references/*.md with
+# up (see cmd_size_ratchet below for the CI-checkable version of that rule).
+# Fails closed in BOTH directions: a shipped SKILL.md/references/*.md with
 # no row in the config is a failure (forces a new file to declare a budget,
 # mirroring cmd_routing's "every reference is routed"), and a config row whose
 # file no longer exists is also a failure (a stale entry cannot silently mask
@@ -567,7 +576,7 @@ cmd_size() {
   [ "${#cfg_paths[@]}" -gt 0 ] \
     || die "size: config has no actionable rows (only blanks/comments): $config"
 
-  local fail=0 f rel i found budget lines
+  local fail=0 f rel i found budget bytes
   # 1) Every shipped SKILL.md / references/*.md on disk must have a budget row.
   while IFS= read -r f; do
     [ -n "$f" ] || continue
@@ -592,10 +601,10 @@ cmd_size() {
       fail=1
       continue
     fi
-    lines="$(LC_ALL=C wc -l < "$f" | tr -d '[:space:]')"
-    if [ "$lines" -gt "$budget" ]; then
-      printf 'SIZE FAIL: %s is %s lines (budget %s) — consolidate; budgets ratchet down, never up\n' \
-        "$rel" "$lines" "$budget" >&2
+    bytes="$(LC_ALL=C wc -c < "$f" | tr -d '[:space:]')"
+    if [ "$bytes" -gt "$budget" ]; then
+      printf 'SIZE FAIL: %s is %s bytes (budget %s) — consolidate; budgets ratchet down, never up\n' \
+        "$rel" "$bytes" "$budget" >&2
       fail=1
     fi
   done
@@ -603,6 +612,138 @@ cmd_size() {
   [ "$fail" -eq 0 ] \
     || die "size: one or more files exceed their frozen budget, or are un-budgeted/dangling"
   printf 'size: ok (%d file(s) within budget)\n' "${#cfg_paths[@]}"
+}
+
+# ---------------------------------------------------------------------------
+# size-ratchet — CI-checkable enforcement of cmd_size's freeze-ratchet POLICY:
+# no row in a byte-budget config (e.g. scripts/size-budgets.tsv) may increase
+# versus a base ref's copy of that same config, unless the commit range being
+# checked (or CHANGELOG.md at the working tree) carries an explicit marker
+# line naming the exact raise:
+#
+#   size-budget-raise: <path> <old-bytes>→<new-bytes> <reason>
+#
+# This is a separate, opt-in subcommand — NOT wired into ci.yml by this
+# change; an orchestrator invokes it explicitly where it has a meaningful base
+# ref (e.g. a release branch's merge-base with main), typically as:
+#
+#   bash scripts/ci-gates.sh size-ratchet --base <ref> \
+#     --config scripts/size-budgets.tsv .
+#
+# Fails closed: an unresolvable --base (bad ref, shallow clone missing the
+# commit, not a git repo) is a hard failure, never a silent skip. A config
+# row that is new at HEAD (absent from the base ref's copy) has nothing to
+# ratchet against and is not a violation. A row present in both that shrank
+# or held steady is never a violation. Only a row present in both whose
+# budget is strictly greater at HEAD than at the base ref requires the
+# marker. Plain indexed arrays only (no `declare -A`/`local -n`): the repo's
+# own local bash is 3.2, which has neither associative arrays nor namerefs —
+# so the base-ref and working-tree configs are parsed with two separate
+# inline loops into their own arrays, mirroring cmd_size's style.
+# ---------------------------------------------------------------------------
+cmd_size_ratchet() {
+  local base="" config="" root=""
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --base) base="${2:-}"; shift 2 ;;
+      --base=*) base="${1#*=}"; shift ;;
+      --config) config="${2:-}"; shift 2 ;;
+      --config=*) config="${1#*=}"; shift ;;
+      -*) die "size-ratchet: unknown option: $1" ;;
+      *) [ -z "$root" ] || die "size-ratchet: unexpected extra argument: $1"; root="$1"; shift ;;
+    esac
+  done
+  [ -n "$base" ] || die "size-ratchet: --base <ref> is required (fail closed)"
+  [ -n "$config" ] || die "size-ratchet: --config <file> is required (fail closed)"
+  [ -f "$config" ] || die "size-ratchet: config not found: $config (fail closed)"
+  [ -n "$root" ] || die "size-ratchet: <root> directory is required (fail closed)"
+  [ -d "$root" ] || die "size-ratchet: root not found: $root (fail closed)"
+
+  git -C "$root" rev-parse --git-dir >/dev/null 2>&1 \
+    || die "size-ratchet: $root is not a git repository (fail closed)"
+  git -C "$root" rev-parse --verify --quiet "${base}^{commit}" >/dev/null \
+    || die "size-ratchet: base ref \"$base\" does not resolve to a commit (fail closed; unresolvable base)"
+
+  # Resolve config's path relative to the repo top level, so it can be looked
+  # up inside the base ref's tree via `git show <base>:<relpath>`.
+  local config_abs root_abs relconfig
+  config_abs="$(cd "$(dirname "$config")" && pwd)/$(basename "$config")" \
+    || die "size-ratchet: cannot resolve config path: $config"
+  root_abs="$(cd "$root" && pwd)" || die "size-ratchet: cannot resolve root path: $root"
+  case "$config_abs" in
+    "$root_abs"/*) relconfig="${config_abs#"$root_abs"/}" ;;
+    *) die "size-ratchet: config ($config) must live under root ($root)" ;;
+  esac
+
+  # Parse the current (working-tree) config — same row grammar as cmd_size.
+  local -a new_paths=() new_budgets=()
+  local _line _trimmed _path _budget
+  while IFS= read -r _line || [ -n "$_line" ]; do
+    _trimmed="${_line#"${_line%%[![:space:]]*}"}"
+    case "$_trimmed" in
+      ''|'#'*) continue ;;
+    esac
+    _path="${_trimmed%%$'\t'*}"
+    [ "$_path" != "$_trimmed" ] \
+      || die "size-ratchet: malformed row (no TAB separator) in $config: $_trimmed"
+    _budget="${_trimmed#*$'\t'}"
+    case "$_budget" in
+      ''|*[!0-9]*) die "size-ratchet: malformed budget \"$_budget\" for $_path in $config (fail closed)" ;;
+    esac
+    new_paths+=("$_path")
+    new_budgets+=("$_budget")
+  done < "$config"
+  [ "${#new_paths[@]}" -gt 0 ] \
+    || die "size-ratchet: config has no actionable rows (only blanks/comments): $config"
+
+  # Parse the base ref's copy of the same config, if it existed there. A
+  # config absent at base (new file since then) means every current row is
+  # new — nothing to ratchet against, not a failure.
+  local -a old_paths=() old_budgets=()
+  local old_content
+  if old_content="$(git -C "$root" show "${base}:${relconfig}" 2>/dev/null)"; then
+    while IFS= read -r _line || [ -n "$_line" ]; do
+      _trimmed="${_line#"${_line%%[![:space:]]*}"}"
+      case "$_trimmed" in
+        ''|'#'*) continue ;;
+      esac
+      _path="${_trimmed%%$'\t'*}"
+      [ "$_path" != "$_trimmed" ] || continue
+      _budget="${_trimmed#*$'\t'}"
+      case "$_budget" in
+        ''|*[!0-9]*) continue ;;
+      esac
+      old_paths+=("$_path")
+      old_budgets+=("$_budget")
+    done <<<"$old_content"
+  fi
+
+  local fail=0 i j p new_b old_b found marker
+  for i in "${!new_paths[@]}"; do
+    p="${new_paths[$i]}"
+    new_b="${new_budgets[$i]}"
+    found=0
+    old_b=""
+    for j in "${!old_paths[@]}"; do
+      if [ "${old_paths[$j]}" = "$p" ]; then found=1; old_b="${old_budgets[$j]}"; break; fi
+    done
+    [ "$found" -eq 1 ] || continue
+    [ "$new_b" -gt "$old_b" ] || continue
+
+    marker="size-budget-raise: $p ${old_b}→${new_b}"
+    if git -C "$root" log --format=%B "${base}..HEAD" 2>/dev/null | grep -qF "$marker" \
+       || { [ -f "$root/CHANGELOG.md" ] && grep -qF "$marker" "$root/CHANGELOG.md"; }; then
+      printf 'size-ratchet: %s raised %s->%s with a documented marker (ok)\n' "$p" "$old_b" "$new_b"
+    else
+      printf 'RATCHET FAIL: %s raised %s->%s bytes with no "%s <reason>" line in the %s..HEAD commit range or CHANGELOG.md\n' \
+        "$p" "$old_b" "$new_b" "$marker" "$base" >&2
+      fail=1
+    fi
+  done
+
+  [ "$fail" -eq 0 ] \
+    || die "size-ratchet: one or more budget rows increased vs $base with no documented size-budget-raise marker"
+  printf 'size-ratchet: ok (no undocumented budget increases vs %s)\n' "$base"
 }
 
 # ---------------------------------------------------------------------------
@@ -855,6 +996,7 @@ case "$subcmd" in
   install) cmd_install "$@" ;;
   enumeration) cmd_enumeration "$@" ;;
   size) cmd_size "$@" ;;
+  size-ratchet) cmd_size_ratchet "$@" ;;
   binaries) cmd_binaries "$@" ;;
   mustload) cmd_mustload "$@" ;;
   -h|--help) usage; exit 0 ;;
