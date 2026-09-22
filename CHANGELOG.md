@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.433.4] — 2026-09-22
+
+### agentic-delivery — fold a new reliability lesson (#1049), net-neutral
+
+- Folded **#1049** into `fast-agentic-delivery.md` net-neutral (offset by tightening 4 sibling paragraphs; file stays at its frozen 2345-line budget): a `git worktree add` failure must be **fail-loud** — never a silent degrade to the shared checkout — and if forced onto the shared tree, safe-stash the *owner's* WIP (distinct from the existing rule against stashing a *peer lane's* WIP). +1 eval (122). Triaged peers **#1048** (interim-handback≠terminal) and **#1046** (verify each cited issue current before building) as **already-covered** — no duplicate folded, per the no-duplication thesis.
+
 ## [1.433.3] — 2026-09-22
 
 ### deep-code-review — compact two more references (coverage-preserving)
