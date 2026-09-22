@@ -3,6 +3,19 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.433.1] — 2026-09-22
+
+### deep-code-review — compact product-ux-quality.md (coverage-preserving)
+
+Reduced the repo's largest reference, `product-ux-quality.md`, from 1877 to 1565
+lines (−16.6%) by tightening each bullet's prose to mechanism + fix + discriminator
+and rewrapping — with **no coverage change**: the 83 bold-lead bullets, 15 🚩 flags,
+32 section headers, and every named standard / percentage / specifier are preserved
+(verified by an independent multi-line-aware bold-lead diff and a specifics multiset
+diff — both identical before/after). Ratchets this file's frozen size budget down to
+match. First pass of the size-consolidation the 1.433.0 `size` gate is meant to drive;
+no behavioral change to the skill.
+
 ## [1.433.0] — 2026-09-22
 
 ### deep-code-review + agentic-delivery — pre-commit/merge-gate hygiene, a stacked-PR orphan, a reload-every-read cache, and subagent-handback verbosity as a token-cost lever (#1031, #1032, #1033, #1034, #1035)
