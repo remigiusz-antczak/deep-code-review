@@ -21,6 +21,8 @@ jobs:
     steps:
       # SHA-pinned, not a mutable tag (the skill's own K rule for CI actions).
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # fix-class gate diffs base..head; a depth-1 clone cannot resolve the range
 
       # Prove the gate helper against its own fixtures (routing/version/privacy
       # + the real install path) before trusting it on this repo.
@@ -62,6 +64,30 @@ jobs:
           # "Archetype -> load map" table: makes the always-paid must-load
           # read cost per archetype visible and ratchets it down, never up.
           bash scripts/ci-gates.sh mustload --config scripts/mustload-budgets.tsv .
+
+      # Shipped gate scripts prove they FIRE on planted violations before any
+      # result of theirs is trusted (independent oracle per script).
+      - name: Shipped script self-tests
+        run: |
+          set -euo pipefail
+          python3 .claude/skills/deep-code-review/scripts/parity_differ.py --selftest
+          python3 .claude/skills/deep-code-review/scripts/fix_class_gate.py --selftest
+          python3 .claude/skills/agentic-delivery/scripts/serial_gate.py --selftest
+
+      # Every fix(...) commit in the pushed/PR range must touch a test surface
+      # or carry a non-empty No-Test-Reason: trailer. Fails closed on an
+      # unresolvable range (e.g. the all-zeros before-SHA of a new branch).
+      - name: Fix commits carry a pinned test
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          python3 .claude/skills/deep-code-review/scripts/fix_class_gate.py \
+            --base "$BASE_SHA" --head "$HEAD_SHA" \
+            --test-glob '.claude/skills/*/evals/evals.json' \
+            --test-glob 'scripts/test-ci-gates.sh' \
+            --test-glob '.claude/skills/*/scripts/*.py'
 
       - name: SKILL.md name matches its directory
         run: |
