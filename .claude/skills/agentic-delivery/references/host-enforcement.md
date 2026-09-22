@@ -67,3 +67,36 @@ malformed/stale events, replay, crash-after-effect, cancellation, revoked
 authorization, and missing-hook cases, and record the observed result for that
 host version and covered path. Downgrade the claim where support is missing;
 never assert a cross-host conformance result you did not observe.
+
+## Subagent handback: fields-only, mechanically capped (a Host-enforced instance)
+
+Chat narration a subagent hands back to its caller is billed output nobody
+re-reads — `fast-agentic-delivery.md`'s cost argument, made a **hook** here
+instead of a prompt instruction alone (a prompt-level "keep it short" stays
+Protocol above, never Host-enforced). The cap is on **chat narration only**:
+deliverables (code, reports, long findings) go in files, which are
+uncapped — a compliant handback names the file path instead of pasting its
+content into chat. A handback is **fields-only**: verdict, branch/SHA, file
+paths, gate results, open issues, as key=value or short lines. The
+orchestrator never relays a subagent's prose; it reads the fields and the
+named files.
+
+Install (`SubagentStop`; no `matcher` runs on every agent, a `matcher` scopes
+it to named agent types):
+
+```json
+"hooks": {
+  "SubagentStop": [
+    { "hooks": [{ "type": "command",
+        "command": "python3 .claude/skills/agentic-delivery/scripts/handback_cap.py" }] }
+  ]
+}
+```
+
+`scripts/handback_cap.py` — **use this when** a subagent's chat handback is
+landing in an orchestrator's context uncapped. Stdlib-only; blocks (exit 2,
+which per the host's docs re-runs the subagent's stop turn rather than losing
+its work) a chat handback over 800 chars / 10 lines; exempts read-only agent
+types whose chat answer is itself the deliverable (`HANDBACK_EXEMPT_TYPES`);
+releases after 3 blocks per agent so a non-compliant agent never loops
+forever. `--selftest` proves it fires.

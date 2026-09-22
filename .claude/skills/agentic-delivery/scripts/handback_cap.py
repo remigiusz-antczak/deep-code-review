@@ -1,0 +1,164 @@
+#!/usr/bin/env python3
+"""SubagentStop hook: enforce a minimal, fields-only subagent handback.
+
+Caps CHAT NARRATION only — a subagent's final chat message to its caller.
+Deliverables (code, reports, long findings) belong in FILES, which are
+uncapped by this hook; a compliant handback names the file path instead of
+pasting its content into chat. Blocks (exit 2) a message longer than
+MAX_CHARS or MAX_LINES; stderr carries the rewrite instruction. Per the
+official docs (https://code.claude.com/docs/en/hooks, "Exit code 2 behavior
+per event"), exit code 2 on SubagentStop "prevents the subagent from
+stopping, continues the subagent" — so a block does not lose the subagent's
+work, it sends the same turn back to compose a shorter handback.
+
+EXEMPT_TYPES are read-only agent types with no Write tool, where the chat
+answer itself IS the deliverable (there is no file to point at instead) —
+those are never capped, at any length.
+
+After MAX_BLOCKS blocks for one agent_id, this hook lets the stop through
+unconditionally, so a subagent that cannot comply never loops forever. Block
+counters live in per-agent_id state files under a temp dir (sanitized id;
+directory overridable via HANDBACK_STATE_DIR, e.g. for isolated tests).
+
+Reference: ported from ~/.claude/hooks/subagent-handback-cap.py.
+"""
+import json
+import os
+import sys
+import tempfile
+
+MAX_CHARS = int(os.environ.get("HANDBACK_MAX_CHARS", "800"))
+MAX_LINES = int(os.environ.get("HANDBACK_MAX_LINES", "10"))
+MAX_BLOCKS = 3
+# Read-only agent types have no Write tool: chat IS their deliverable, never cap it.
+DEFAULT_EXEMPT_TYPES = "Explore,Plan,claude-code-guide,statusline-setup"
+STATE_DIR = os.environ.get(
+    "HANDBACK_STATE_DIR", os.path.join(tempfile.gettempdir(), "claude-handback-cap")
+)
+
+
+def _exempt_types():
+    return set(filter(None, os.environ.get("HANDBACK_EXEMPT_TYPES", DEFAULT_EXEMPT_TYPES).split(",")))
+
+
+def _state_path(agent_id):
+    safe = "".join(c for c in agent_id if c.isalnum() or c in "-_") or "unknown"
+    return os.path.join(STATE_DIR, safe)
+
+
+def _read_blocks(path):
+    try:
+        with open(path) as fh:
+            return int(fh.read().strip() or 0)
+    except (OSError, ValueError):
+        return 0
+
+
+def check(data):
+    """Return the hook exit code (0 pass, 2 block) for one hook-input dict."""
+    if str(data.get("agent_type") or "") in _exempt_types():
+        return 0
+    msg = data.get("last_assistant_message") or ""
+    agent_id = str(data.get("agent_id") or "unknown")
+    chars = len(msg)
+    lines = msg.count("\n") + 1 if msg else 0
+    if chars <= MAX_CHARS and lines <= MAX_LINES:
+        return 0
+    os.makedirs(STATE_DIR, exist_ok=True)
+    path = _state_path(agent_id)
+    blocks = _read_blocks(path)
+    if blocks >= MAX_BLOCKS:
+        return 0
+    with open(path, "w") as fh:
+        fh.write(str(blocks + 1))
+    sys.stderr.write(
+        f"Handback too long ({chars} chars, {lines} lines; cap {MAX_CHARS} chars / "
+        f"{MAX_LINES} lines). Rewrite your final message as a fields-only handback: "
+        "key=value lines only (verdict, branch/sha, file paths, gate results, open issues). "
+        "No prose, no progress narration. Put any long content in a file and give its path.\n"
+    )
+    return 2
+
+
+def main():
+    try:
+        data = json.load(sys.stdin)
+    except Exception:
+        return 0  # unparseable input: never wedge a subagent
+    return check(data)
+
+
+# ---------------------------------------------------------------------------
+# --selftest — exercises check() directly (no subprocess, no real stdin) so
+# the state dir and env overrides are trivially isolated per case.
+# ---------------------------------------------------------------------------
+def _selftest():
+    import shutil
+
+    global STATE_DIR
+    tmp = tempfile.mkdtemp(prefix="handback-cap-selftest-")
+    STATE_DIR = tmp
+    passed = 0
+    failed = 0
+
+    def case(name, got, want):
+        nonlocal passed, failed
+        if got == want:
+            passed += 1
+            print(f"PASS  {name} (rc={got})")
+        else:
+            failed += 1
+            print(f"FAIL  {name} (got rc={got}, want rc={want})")
+
+    # short message passes
+    case("short-passes", check({"agent_id": "a1", "last_assistant_message": "verdict=ok"}), 0)
+
+    # long message (chars) blocks MAX_BLOCKS times then releases
+    long_msg = "x" * 900
+    for i in range(MAX_BLOCKS):
+        case(f"long-blocks-{i+1}", check({"agent_id": "a2", "last_assistant_message": long_msg}), 2)
+    case("long-releases-after-max-blocks", check({"agent_id": "a2", "last_assistant_message": long_msg}), 0)
+
+    # >10 lines but <800 chars still blocks
+    many_lines = "\n".join(["line"] * 15)
+    case("many-lines-blocks", check({"agent_id": "a3", "last_assistant_message": many_lines}), 2)
+
+    # garbage stdin (simulated: main() catches JSON errors; check() only takes dicts,
+    # so exercise main()'s parse-failure path via a broken stdin stand-in)
+    class _BadStdin:
+        def read(self):
+            return "not json"
+
+    real_stdin = sys.stdin
+    sys.stdin = _BadStdin()
+    try:
+        case("garbage-stdin-passes", main(), 0)
+    finally:
+        sys.stdin = real_stdin
+
+    # per-agent_id counters are independent: a4 fresh, still blocks despite a2 exhausted
+    case("independent-agent-id-still-blocks", check({"agent_id": "a4", "last_assistant_message": long_msg}), 2)
+
+    # exempt type: 5000-char message always passes, no state file, no block count spent
+    huge_msg = "y" * 5000
+    case(
+        "exempt-type-huge-message-passes",
+        check({"agent_id": "a5", "agent_type": "Explore", "last_assistant_message": huge_msg}),
+        0,
+    )
+    # same huge message, non-exempt type: blocks
+    case(
+        "non-exempt-type-huge-message-blocks",
+        check({"agent_id": "a6", "agent_type": "builder", "last_assistant_message": huge_msg}),
+        2,
+    )
+
+    shutil.rmtree(tmp, ignore_errors=True)
+    print(f"\nselftest: {passed}/{passed + failed} passed")
+    return 0 if failed == 0 else 1
+
+
+if __name__ == "__main__":
+    if "--selftest" in sys.argv:
+        sys.exit(_selftest())
+    sys.exit(main())

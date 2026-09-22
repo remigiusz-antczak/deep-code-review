@@ -174,6 +174,11 @@ otherwise write "the gate / budget / permission is enforced." Model-tier
 selection (which tier, and when to escalate) is `model-tiering.md` in the
 `deep-code-review` skill.
 
+**A subagent's handback narration is capped by a host hook, not only asked to
+be short** — `references/host-enforcement.md` routes `scripts/handback_cap.py`,
+the `SubagentStop` hook that mechanically enforces the Output contract's
+fields-only shape below.
+
 **Operational readiness — incidents and continuity (bus factor = 1).** The
 binder that must exist *before* the system is on fire or the solo operator is
 gone: `references/incident-response.md` — **read it when** drafting an incident
