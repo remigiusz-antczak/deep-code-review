@@ -979,6 +979,14 @@ agents, one branch. State it explicitly, one line per brief:
 - **Never resolve it by stashing.** `git stash` on another lane's uncommitted work removes it from that lane's
   tree silently and is unrecoverable from the lane's point of view — a data-loss fix for a coordination bug.
   Reassign the path instead.
+- **A `git worktree add` failure is fail-loud, never a silent degrade to the shared tree.** Whatever the cause —
+  the branch-in-use refusal above, disk, permissions, an unsupported git version — a write-lane that catches the
+  error and keeps going by writing straight into the shared/main checkout trades an unannounced collision with the
+  owner's or a sibling lane's tree for the honest option: report **BLOCKED: worktree creation failed — `<error>`**
+  and stop; never retry into the shared tree as a fallback. If a step genuinely cannot avoid the shared tree, `git
+  status --short` it first (as above): foreign lane WIP is still never stashed (the rule just above); the **owner's
+  own** uncommitted work is preserved first with `git stash create` (the dangling-SHA, shared-stack-safe mechanic
+  above), never a bare `stash push`, rather than left to be silently overwritten.
 
 ## Delegate visual / parity work by measured number, not adjective
 
@@ -1719,10 +1727,9 @@ reversible. Declaring a *running lane* dead is the higher bar — that still nee
 rule's positive actual-product signal, **never elapsed time alone** (killing a live lane is destructive;
 reconciling a stale claim is not). **Announce-then-take:** claim the objective (a draft PR, or a posted "taking
 this") **before** opening the worktree, never after — take-then-announce races two lanes onto the same work. And
-**two lanes reporting the same bug idiom at different callsites is a *missed sweep*, not two findings** — grep
-the idiom and land every instance in one lane, then a single follow-up verifies none remain (the review-side
-rule that a pattern-finding is scoped to its full instance set lives once in `deep-code-review` `method.md`
-Phase 4).
+**two lanes reporting the same bug idiom at different callsites is a *missed sweep*, not two findings** — grep it,
+land every instance in one lane, one follow-up confirms none remain (its full instance set is scoped
+once, `deep-code-review` `method.md` Phase 4).
 
 **The converse over-caution: a shared artifact in flight blocks only the lanes that touch it.** Withholding
 *every* lane because one in-flight branch edits a shared file (a design-token file, a lockfile, a config) is the
@@ -1731,49 +1738,42 @@ them idles capacity for a conflict that cannot occur. Gate a lane on whether **i
 in-flight write, not on whether **any** shared write is open.
 
 **A read-only *review* of a contested surface is wasted even though it cannot write-conflict.** The converse
-just above clears any lane whose surface is disjoint from every in-flight write; read literally it *greenlights*
-a review lane, which writes nothing and so never conflicts. But a defect sweep run against a base that an
-in-flight or held branch is mid-rewriting is throwaway, not safe — its findings go stale the instant that branch
-lands, and a fix dispatched from them collides with it (#912). The write-conflict gate is the wrong gate for a
-read-only lane: the test is whether the branch already owning the file set is
-**rewriting the code the finding would be about**. So before sweeping a file set for defects, run the same
-in-flight-ownership probe the main rule above uses (forge state *and* local git), and if a branch owns it,
-**review that branch's tip, not the stale base** — a review of the tip is a PR review whose findings reach that
-lane's author and land *with* the change, turning a throwaway pass into useful work — or **defer** the sweep
-until it lands (`multi-session-coordination.md`'s *in-flight work is the anchor*: the started work stays put and
-the reviewer yields to it, rather than re-reviewing the base it will discard). This is **not** "review nothing
-anyone touches," the over-block mirror error the converse already warns against: findings on a
-**different axis**, or on a region the branch does not touch, survive its landing and are safe to file now —
-only the overlap is contested, and a static domain partition (`multi-session-coordination.md`) keeps most review
-lanes clear of a write lane's surface in the first place. Any finding carried across the landing is a lead, not
-a verdict — re-confirm it at the new head
-(*discovery findings are durable as leads; a discovery verdict is disposable*, above).
+above clears a lane whose surface is disjoint from every in-flight write — read literally that also
+*greenlights* a review lane, since it writes nothing and never conflicts. But a defect sweep against a base an
+in-flight or held branch is mid-rewriting is throwaway: its findings go stale the instant that branch lands,
+and a fix dispatched from them collides with it (#912). The write-conflict gate is the wrong gate for a
+read-only lane — the real test is whether the owning branch is
+**rewriting the code the finding would be about**. Run the same in-flight-ownership probe first (forge state
+*and* local git); if a branch owns the surface, **review that branch's tip, not the stale base** (a PR review
+whose findings land *with* the change) or **defer** until it lands (`multi-session-coordination.md`'s
+*in-flight work is the anchor*) — **not** "review nothing anyone touches": findings on a **different axis**,
+or a region the branch does not touch, are safe to file now — only the overlap is contested (a static domain
+partition, `multi-session-coordination.md`, keeps most review lanes clear of it already). Any finding carried
+across a landing is a lead, re-confirmed at the new head, never a verdict (*discovery findings are durable as
+leads; a discovery verdict is disposable*, above).
 
 **When one redesign contests the *whole* surface, repoint the lens class, not just the base.** The rule above
 handles a contested *file set* — review the owning branch's tip, or defer. A large redesign/release PR that
 rewrites an entire UI surface contests something bigger: an entire **review-lens class** — accessibility, visual
-polish, design-system conformance, empty/loading/error states — because *every* finding any of those lenses
-produces lands on a file the redesign already rewrites, so each is contested and none is actionable until it
-merges, and several lanes (or machines) re-derive the same "surface contested" conclusion at full cost.
-Reviewing the tip helps little here: the tip is a many-hundred-file work-in-progress whose findings churn until
-it lands. The move is to repoint the **lens rotation itself** onto the dimensions a UI redesign structurally
-does not touch — non-UI logic, data/model layers, shared utilities, API/data-access, security — whose findings
-are actionable now *and* survive the redesign landing (the *different-axis survivors* the rule above already
-names, now an **active routing decision** rather than a passive "safe to file"). Enumerate the contested set
-once and cache it on the shared channel so no lane re-derives it (the paginate-then-reconcile probe below, which
-a truncated file list defeats by failing open — #936); resume the UI lenses once the redesign merges and the
-rewritten surface is the real target. Distinct from #936's
-*route the peripheral fixes now, hold the contested ones* — that routes **fix** lanes by file; this repoints
-**review** lenses off a wholly-contested *dimension* onto an uncontested one, rather than deferring the review
-outright.
+polish, design-system conformance, empty/loading/error states — since *every* finding any of those lenses
+produces lands on a file the redesign already rewrites, so nothing is actionable until it merges, and several
+lanes re-derive that same conclusion at full cost. Reviewing the tip helps little — it is a many-hundred-file
+work-in-progress whose findings churn until it lands. Repoint the **lens rotation itself** onto dimensions a UI
+redesign structurally does not touch — non-UI logic, data/model layers, shared utilities, API/data-access,
+security — whose findings are actionable now *and* survive the landing (the *different-axis survivors* above,
+now an **active routing decision**, not a passive "safe to file"). Cache the contested set once on the shared
+channel so no lane re-derives it (the paginate-then-reconcile probe below, defeated by a truncated file list
+failing open — #936); resume UI lenses once the redesign merges. Distinct from #936's
+*route the peripheral fixes now, hold the contested ones* — routes **fix** lanes by file; this repoints
+**review** lenses off a contested *dimension* onto an uncontested one.
 
-**A commit or PR attribution trailer names the agent that actually did the work.** When a fleet commits under a
-shared template, the co-author / attribution trailer must identify the *real* executing agent or model for each
-lane — a template that **hardcodes one model name** into every lane's co-author line makes the history lie about
-who produced what — the same wrong-producer / false-attribution failure mode the review side treats as a
-correctness defect. Parameterize the trailer, or let each lane stamp its own identity at commit time; never let
-a lane silently inherit the orchestrator's identity as a default. This is provenance hygiene for a multi-agent
-fleet — the delivery-side analogue of the evidence-provenance the review side already demands.
+**A commit or PR attribution trailer names the agent that actually did the work.** Under a shared commit
+template, the co-author / attribution trailer must name the *real* executing agent or model per lane — a
+template that **hardcodes one model name** makes history lie about who produced what, the same wrong-producer /
+false-attribution failure the review side treats as a correctness defect. Parameterize the trailer or let each
+lane stamp its own identity at commit time, never inheriting the orchestrator's identity by default —
+provenance hygiene for a fleet, the delivery-side analogue of the evidence-provenance the review side already
+demands.
 
 ## A contention probe against a truncated file list fails open — reconcile the returned count against the PR's own changed-file total
 
