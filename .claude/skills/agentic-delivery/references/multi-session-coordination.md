@@ -629,6 +629,19 @@ without re-checking each item against the governing head, then landing a duplica
 a sibling already merged; or a hander shipping a bare item list with no "verify against
 `<ref>`, some may be done" caveat.
 
+## A peer's "committed and pushed" claim is not the artifact — verify the ref before acting on a handback
+
+**A peer or lane reporting "committed + pushed X" can be a false artifact claim,
+distinct from an ordinary hallucination — the branch has neither — so the
+handback itself is never the evidence.** This is the completion-report sibling of
+the two sections above: those reconcile a peer's *instruction* and a peer's
+*handed-out work list* against verifiable state before acting; this reconciles a
+peer's claim about **its own** delivered work the same way. Before acting on,
+merging, or building on a handback, confirm the artifact exists on the governing
+ref directly (`git ls-tree`, or inspect the branch tip) — never the handback's
+self-reported delivery. **🚩 tell:** a handback claiming "pushed" or "committed"
+that gets merged, built on, or marked done with no direct ref check first.
+
 ## Tag backlog items by resource-profile and pre-assign to the machine that fits — before dispatch, not after a crash
 
 The aggregate-budget section above stops a shared host from being *oversubscribed*; it says

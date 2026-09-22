@@ -187,6 +187,35 @@ wake/poll cadence is not the work cadence**). A worked default set:
   removal to the blocker clearing (`fast-agentic-delivery.md` **A degradation
   workaround is temporary by default**).
 
+## A loop that duplicates another loop's scope is a design defect — collapse it, don't stagger it
+
+**Phase-offsetting and fire-consolidation (above) fix loops that land on the same
+tick; they don't fix loops that cover the same ground.** Two or more self-prompt
+loops sweeping identical scope at different cadences (e.g. the same backlog scan
+fired every 5m, 10m, and 15m) aren't a timing collision — every wake past the
+tightest one covering that ground is a guaranteed no-op, and a no-op wake still
+burns a full sweep's tokens (a wake that changes nothing is a no-op; overlapping
+cadences over one scope guarantee it). Fix at design time: run that scope at its
+own tightest useful cadence and drop the rest, rather than staggering or
+fire-consolidating duplicates that were never distinct jobs. Not the add-only
+policy's target either (`fast-agentic-delivery.md` **The loop set is add-only when
+the operator asked for "more"**) — that guards against shrinking the count to
+answer an operator's ask for more loops; a same-scope duplicate was never a
+separate job to preserve.
+
+## A stuck trivial change gets one recovery attempt, then a hand-off or a drop — never a nursing loop
+
+**A small change failing to commit/push on an environment issue (a hung hook, a
+missing binary, a worktree race) gets exactly one recovery attempt from the main
+loop; a repeat failure hands it to a single dedicated lane or drops it, never
+another retry.** This bounds the main loop's own recovery the way
+`fast-agentic-delivery.md`'s **Bound every flaky finalize step** already bounds a
+lane's finalize tail (N attempts / a wall-clock cap, then fail to a report) —
+applied here to the loop's own commit/push, not a delegated lane's. Nursing a
+trivial change through repeated failed attempts is the exact slow, expensive
+pattern a bounded run exists to avoid; spend on recovery must not exceed the
+change's own worth.
+
 ## The Human-gate boundary (unchanged)
 
 The mode changes **what stopping requires a reason for**, never **what needs a
