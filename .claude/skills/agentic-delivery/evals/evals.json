@@ -1329,6 +1329,18 @@
         "Names this as a false-artifact-claim risk distinct from an ordinary hallucination",
         "Checks the branch directly rather than re-asking the peer or re-reading the same claim"
       ]
+    },
+    {
+      "id": "orchestrator-must-not-relay-verbose-subagent-narration-cap-at-the-host",
+      "prompt": "An orchestrator dispatches a build subagent. The subagent's final chat message opens by restating its full brief, narrates every debugging step it tried, and only in its last two lines states the verdict, branch/SHA, and gate results. The orchestrator pastes the whole message into its own status update to the owner because 'it's all accurate and nothing in it is wrong.' Is that acceptable, and if not, what actually fixes it?",
+      "expected_output": "No -- accuracy is not the defect here; verbosity is. Every word of the subagent's narration is tokens it was billed to generate and tokens the orchestrator re-pays to read once it lands in the orchestrator's own context, and relaying that narration onward to the owner compounds the cost a third time for no added signal (fast-agentic-delivery.md's handback-verbosity-is-its-own-cost-lever point). Asking the subagent nicely to 'be more concise' is a prompt-level, Protocol-only control -- nothing stops the next subagent from padding again, and the orchestrator has no mechanical reason not to keep relaying whatever comes back. The actual fix is a host-level SubagentStop hook (this skill's scripts/handback_cap.py) that mechanically blocks (exit 2) a chat handback over a small char/line cap before it ever reaches the orchestrator's context, forcing a fields-only rewrite -- verdict, branch/SHA, file paths, gate results, open issues -- with any long content routed to a file and named by path. The orchestrator's own job changes too: read the fields and the named files, never relay a subagent's prose verbatim into a status update. Read-only agent types whose chat answer is itself the deliverable are exempted from the cap, but a build subagent with files to write is not one of those (references/host-enforcement.md).",
+      "expectations": [
+        "Rejects 'the content is accurate' as sufficient -- verbosity itself is the defect, independent of truthfulness",
+        "Names the cost as compounding: billed to generate, re-paid by the orchestrator to read, then re-paid again by whoever the orchestrator relays it to",
+        "Identifies a prompt-level 'be concise' ask as Protocol-only (no mechanical enforcement) and prescribes a host-level SubagentStop hook (scripts/handback_cap.py) that blocks (exit 2) an oversized chat handback before it reaches the orchestrator's context",
+        "States the required shape is fields-only (verdict, branch/SHA, file paths, gate results, open issues) with deliverables and long content in files, not chat",
+        "Notes the orchestrator itself must not relay a subagent's raw prose onward, and that read-only agent types whose chat IS the deliverable are the narrow exemption -- not a build lane with files to write"
+      ]
     }
   ]
 }
