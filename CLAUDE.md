@@ -14,7 +14,8 @@ Everything else (`README.md`,
 `install.sh`, `docs/standards-index.md`) supports distributing and trusting
 those skills.
 There is no application to build and no runtime — the "product" is prose a
-human or an agent executes. Default install is review-only.
+human or an agent executes. Default `install.sh` install is review-only; the
+plugin manifest (`.claude-plugin/plugin.json`) ships every skill.
 
 ## How to work here
 - **Edit the skill, not a copy of it.** Each skill has exactly one home

@@ -1259,19 +1259,11 @@ reach nor speed up.
   small, well-defined, and low-risk, do it directly rather than keeping a whole agent — and its context and
   budget — alive, or spawning a fresh one, for a one-command finalize.
 
-Distinct from **confirm a subagent is idle before dispatching a duplicate** (above): that is a false-*positive*
-"completed" leading to a wasteful duplicate **dispatch** into the same worktree; here the lane is still
-**alive but unreachable**, and the fix is stop-then-finish, never a duplicate. It reuses the liveness discipline
-of **a transcript's size or mtime is not a liveness signal** (above) — verify a positive, durable signal and
-confirm no in-flight write before the kill — but its trigger is a *positive* no-progress-across-pings read plus
-a **void nudge**, and its action is a bounded stop-then-finalize, not a stat-based guess. It is the
-receiver-side companion to **a monitor emits on state-transition or terminal state only** (below): that stops a
-monitor from *emitting* redundant "still pending" ticks; this is what to do when a lane is emitting them and
-cannot take a nudge. And finishing the step yourself is **not** the Conductor drift the operating-rhythm rule
-bans (`SKILL.md`): drift is seizing a lane's tactical work because "doing it myself is faster"; this is the
-narrow keyhole that rule already carves out — the lane genuinely cannot be re-dispatched or nudged, and the
-residual is a minimal finalize/coordination step handed straight back to the orchestrator's own remit, not
-tactical work taken for speed.
+Distinct from **confirm a subagent is idle before dispatching a duplicate** (above: a false "completed" invites a
+duplicate dispatch; here the lane is alive but unreachable, so stop-then-finish, never a duplicate); the
+receiver-side companion to **a monitor emits on state-transition or terminal state only** (below). Finishing the
+step yourself is not Conductor drift (`SKILL.md`): the lane cannot be nudged or re-dispatched, and the residual is
+a minimal finalize step, the exception that rule already carves out.
 
 **🚩 tell:** an orchestrator sending nudge after nudge to a lane whose externally-checkable state has not moved
 across several pings while its own reports keep saying "done, background work still running" — the nudges are
@@ -1964,9 +1956,9 @@ budget as *work the ranked backlog until a termination condition fires*, not *do
   own claims against the artifact before closing (`method.md`, the `deep-code-review` skill), which runs
   **once at the end** rather than being read live throughout.
 - **Name the termination conditions up front, each with its evidence.** The loop ends when the backlog is empty;
-  when every remaining item is *blocked* on another party — including an item whose next step is an
-  owner-approved action (push, merge, deploy: the **Human gates**, `SKILL.md`), which an unattended run cannot
-  self-authorize; when the granted window or stated **appetite** is spent (`SKILL.md` G0); or when a resource
+  when every remaining item is *blocked* on another party — including an item whose next step is a **Human
+  gate** (`SKILL.md`), except a push or merge a recorded standing grant covers: that is not a stop, and the loop
+  continues; when the granted window or stated **appetite** is spent (`SKILL.md` G0); or when a resource
   ceiling is hit (the environment-probe ceilings above). Each ending is stated with the evidence that it holds
   ("backlog re-read; the tracker shows only owner-approval-gated items"), never asserted bare.
 - **A milestone is a cue to pull the next item, not to stop.** Finishing an item or hitting a checkpoint
@@ -2017,14 +2009,10 @@ budget as *work the ranked backlog until a termination condition fires*, not *do
 
 ## A standing "keep producing" directive is not satisfied by the agent's own exhaustion read — wind-down needs the owner's confirmation, not just a thorough check
 
-*Terminus is a claim about ALL work queues* (below) fixes **how thoroughly** to look before declaring done —
-enumerate every surface, not just the one queue worked. This is a separate axis: even a fully thorough,
-every-surface-checked "empty" is still only the **agent's own** read, and where the owner issued a **standing**
-instruction to keep producing, that read is not what discharges it — only the owner is. The
-termination-conditions list above treats *backlog empty* as a self-sufficient, autonomous stop once its evidence
-holds; under a standing directive it is not: an empty *known* queue is a narrower claim than "the directive is
-satisfied," and treating the first as proof of the second is the agent unilaterally retiring an instruction only
-the owner issued.
+*Terminus is a claim about ALL work queues* (below) fixes **how thoroughly** to look. Separate axis: even a
+thorough "empty" is only the **agent's own** read, and a **standing** owner instruction to keep producing is
+discharged only by the owner. *Backlog empty* is an autonomous stop in the termination conditions above; under a
+standing directive an empty *known* queue is a narrower claim than "the directive is satisfied."
 
 - **Before winding down, self-source rather than stop on "empty."** A fresh-scope adversarial
   security/correctness review over code no open issue names, or a decision/spec lane that advances an
@@ -2035,8 +2023,8 @@ the owner issued.
   not only once a pressure tick questions it).
 - **Report the check performed; let the owner confirm the stop.** "Queue exhausted, winding down" after a
   self-scan answers the directive with the agent's own state, not the owner's intent. Name what was (re-)checked
-  and what was self-sourced, then hold for the owner's explicit confirmation before treating the directive as
-  retired — never let a quiet "nothing left" stand in for it.
+  and what was self-sourced; the directive stays live until the owner confirms it retired, so keep self-sourcing
+  while that finds real work — never let a quiet "nothing left" stand in for it.
 - **Scope: this governs only a *standing* directive against the *empty-queue* termination condition.** A spent
   time-box, a resource ceiling, or an owner-approval-gated block are still self-evident, unrelated stops;
   nothing here reopens those or asks a loop to keep running past a hard ceiling.
@@ -2057,7 +2045,8 @@ demand for a **new visible action** and **manufacture low-value work** — spawn
 adding risk to look busy.
 - **Distinguish *stalled* from *correctly holding*.** Stalled = nothing is progressing, you are blocked on
   yourself → a new move is warranted. Holding = async work is progressing without a new action from you, or the
-  rest is owner-gated → no new move. Only the first warrants motion.
+  rest is owner-gated (a standing-grant-covered push/merge is not: `SKILL.md` **Human gates**) → no new move.
+  Only the first warrants motion.
 - **Answer the pressure with the truth, not filler** — what's running, what's blocked and on whom, why holding
   is correct — in one line. This is the *if the loop is idling, say so loudly* rule above answered to an
   **external** trigger: same whole-window status, opposite failure — there the risk is **silence** (going quiet
@@ -2139,28 +2128,15 @@ handback on a later wake), burying the tick that is real: a new PR, a base gone 
 - **A no-change wake is not itself a mandate to act.** When the orchestrator wakes on its own schedule and the
   monitor shows nothing new (a rule-1 monitor emits nothing on an unchanged poll, so there is nothing to react
   to), that is none of the four events the Conductor's attention is triggered by (`SKILL.md`,
-  *Conductor operating rhythm*), so it carries no obligation beyond noting nothing changed and ending the turn —
-  cheap **no-change → end turn**, not manufactured motion. This narrows only that no-change case: it does not
-  relax *on any wake, for any reason, take every currently-admissible action before ending the turn* (above) for
-  whatever other work is independently ready that same turn.
+  *Conductor operating rhythm*), so it carries no obligation of its own — note nothing changed and end the turn
+  once no other admissible action is ready, not manufactured motion. This narrows only that no-change case: it
+  does not relax *on any wake, for any reason, take every currently-admissible action before ending the turn*
+  (above) for whatever other work is independently ready that same turn.
 
-Distinct from *consolidate overlapping fires into a single reconciliation pass* (above): that rule merges
-**N different recurring loops** landing on the same tick into one orchestrator-side sweep; this section is
-**one monitor's** own emission discipline plus its lifecycle. The two compose rather than overlap: a
-correctly-built monitor produces no tick at all when nothing changed, so there is less for that reconciliation
-pass to ever need to consolidate on a given turn — this section reduces the N and the tick rate that rule's fast
-no-op is defending against, it does not re-decide how to merge simultaneous fires. And distinct from the
-enclosing *A go-faster signal fires on a clock, not on state* section itself, whose "a tick is not a demand for
-busywork" shape rule 3 above shares: that section governs an agent's response to an **external**
-operator-pressure cadence; rule 3 here classifies a **monitor's own** tick against the Conductor's fixed
-four-event model — the emitter's taxonomy, not the responder's.
-
-Also distinct from — and not a restatement of — *confirm a subagent is idle before dispatching a duplicate*
-(above): that section is the **receiver-side** defense for the harness-level case where "a subagent that has
-armed a background monitor/watch cycles stop→wake and emits 'completed' on **each** stop" — inferring the signal
-is unreliable and confirming real state before trusting it. This section is the **source-side** fix for the same
-shape of noise: don't emit the redundant signal, and retire the emitter once its artifact lands, so there is
-less unreliable signal for that section's defense to ever have to catch.
+Distinct from *consolidate overlapping fires into a single reconciliation pass* (above: N loops on one tick;
+this is one monitor's emission and lifecycle, which shrinks what that pass consolidates), from the enclosing
+go-faster section (an external pressure cadence; here a monitor's own tick), and from *confirm a subagent is idle
+before dispatching a duplicate* (above: the receiver-side defense; this is the source-side fix).
 
 **🚩 tell:** an orchestrator turn history that is a run of near-identical "still pending" / "still waiting"
 notifications from the same monitor, or a lane re-delivering its already-captured final handback on a later wake

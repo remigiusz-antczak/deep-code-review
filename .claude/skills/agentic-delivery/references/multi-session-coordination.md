@@ -631,16 +631,10 @@ a sibling already merged; or a hander shipping a bare item list with no "verify 
 
 ## A peer's "committed and pushed" claim is not the artifact — verify the ref before acting on a handback
 
-**A peer or lane reporting "committed + pushed X" can be a false artifact claim,
-distinct from an ordinary hallucination — the branch has neither — so the
-handback itself is never the evidence.** This is the completion-report sibling of
-the two sections above: those reconcile a peer's *instruction* and a peer's
-*handed-out work list* against verifiable state before acting; this reconciles a
-peer's claim about **its own** delivered work the same way. Before acting on,
-merging, or building on a handback, confirm the artifact exists on the governing
-ref directly (`git ls-tree`, or inspect the branch tip) — never the handback's
-self-reported delivery. **🚩 tell:** a handback claiming "pushed" or "committed"
-that gets merged, built on, or marked done with no direct ref check first.
+A "committed + pushed" handback can be a false artifact claim: check the ref
+directly (`git ls-tree`, the branch tip) before merging or building on it. The
+rule is `fast-agentic-delivery.md` **A completion claim in a PR body or handback
+carries a `Verify:` line**, applied to a peer's own delivered work.
 
 ## Tag backlog items by resource-profile and pre-assign to the machine that fits — before dispatch, not after a crash
 

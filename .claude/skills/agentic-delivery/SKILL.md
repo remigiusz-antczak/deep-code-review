@@ -101,31 +101,24 @@ stronger tier only when blast radius already calls for decorrelation
 (`idea-critic`'s high-blast rule), not by default; a cheaper tier that clears the
 gate is preferred.
 
-**An independent, empirical check on this shape:** Cemri et al. (2025),
-across 1600+ multi-agent traces, found failures cluster into three named
-categories — system design, inter-agent misalignment, and task verification
-(under-specified tasks, agents stepping on each other, results accepted
-without real verification). They map onto this roster's own gates without
-forcing a new one: system design → G0/G1, misalignment → G2 and the worktree
-preflight, task verification → G5/G6 — confirmation the gate shape already
-covers the failure surface that occurs, not a reason to add an eleventh gate.
+**Empirical check:** Cemri et al. (2025), 1600+ multi-agent traces: failures
+cluster into system design (→ G0/G1), inter-agent misalignment (→ G2, worktree
+preflight), and task verification (→ G5/G6) — the gate shape already covers
+them; not a reason for an eleventh gate.
 
 **Sweeping the whole ready queue on every trigger** — a completeness fix to
 this event-driven model, not a change to it: `references/fast-agentic-delivery.md`.
 
 **Catch and reverse your own drift into a lane's work** — the completeness
-fix applied to *action*, not only attention. Name the tell **behaviourally**:
-the Conductor has drifted when its *own* recent turns are a **run of
-consecutive tool calls that query, build, edit, or mutate the target** rather
-than dispatch a lane, read a receipt, or decide. Two such turns in a row is
-the signal; "delegating is slower than doing it myself" is the rationalisation,
-not an exception. On the signal: **stop** before finishing the hands-on task;
-**package** it as a lane brief (goal, exact scope, acceptance check, output
-contract); **dispatch** it (a fresh, non-forked unit for narrow work —
-*Worktrees and occupancy*); **resume** status-reading. The lone exception is
-work only the Conductor's own session can perform (a connector, credential, or
-surface no lane holds) — done **minimally** and handed straight back; a keyhole
-for the irreducible step, never a licence to run the tactical job by hand.
+fix applied to *action*, not only attention. Scope: only while the Conductor
+role is active **and** at least one lane is in flight; in single-agent mode
+(`agentic-ceo` **Size effort to the project**) the agent does the work itself.
+The tell: two consecutive Conductor turns that query, build, edit, or mutate
+the target instead of dispatching, reading a receipt, or deciding. On the
+signal: **stop**, **package** a lane brief (goal, scope, acceptance check,
+output contract), **dispatch** it (*Worktrees and occupancy*), **resume**
+status-reading. Exception: a step only the Conductor's session can perform (a
+connector, credential, or surface no lane holds), done minimally.
 
 ---
 
@@ -218,14 +211,10 @@ silent past a missed-cycle threshold, or trusting cross-peer convergence as a ba
 run).** When this skill runs as a **continuous loop over a backlog** rather than
 one feature at a time: `references/unattended-operating-mode.md` — **read it when**
 starting or shaping an unattended / overnight autonomous run. It composes
-`deep-code-review` (review), `idea-critic` (decision), and this skill's own gates
-into one bounded-and-reversible loop, and adds only the connective doctrine: the
-default-mode framing (stopping needs a stated termination condition; the Human
-gates below are unchanged), the five-rung delivery loop with its FREEZE-THEN-TRAIN
-and SIZE-TO-MEASURED-HEADROOM sequencing rules, the **run-start checklist +
-run-end self-audit** that bound a run, the running ≠ merged ≠ live reporting
-ladder, and the default set of offset recurring loops. A **loop, not a standing
-swarm**.
+`deep-code-review` (review), `idea-critic` (decision), and this skill's gates
+into one bounded loop: stopping needs a stated termination condition, a
+**run-start checklist + run-end self-audit** bound the run, and a default set of
+offset recurring loops runs it. A **loop, not a standing swarm**.
 
 **A work item's own completion is G7, not G8.** Once a lane's change is
 integrated (G7), the work item it closes is done; G8 Release is a separate,
@@ -328,7 +317,7 @@ is the **headed-browser** evidence G5 requires (`product-ux-quality.md`).
 
 ---
 
-## Human gates (never autonomous)
+## Human gates
 
 Agents prepare. Humans approve:
 
@@ -340,6 +329,15 @@ Agents prepare. Humans approve:
 - feature-flag flip, canary widen;
 - waiving a Blocker/High security finding.
 
+**Standing grant.** When the owner has **recorded** a standing grant (scope +
+date, in the project state record or `CLAUDE.md`), push / open PR / merge to
+the integration branch it names, for green, reviewed work inside that scope,
+proceed without asking and are logged as taken. Force-push, history rewrite,
+deploy/prod, secrets/IAM, spend, external sends, and destructive data stay
+gated always. The un-gated half of an unattended run is
+`references/unattended-operating-mode.md` **The Human-gate boundary**. A gated
+item is parked with its next step while the loop continues; it is not a stop.
+
 Shape every ask as one issue, two approaches:
 
 ```
@@ -348,8 +346,9 @@ A: <approach> (recommended) — <why, ≤12 words>
 B: <approach> — <why, ≤12 words>
 ```
 
-Never a list of questions. `idea-critic` must have attacked A before it
-is marked recommended. Before raising a gate, apply gate epistemology principle 12 below — a fork a ratified invariant already decides is not a human gate.
+Never a list of questions. An agent-originated A is attacked by `idea-critic`
+before it is marked recommended; confirming already-reviewed work is exempt
+(`idea-critic` **Don't use for**). Before raising a gate, apply gate epistemology principle 12 below — a fork a ratified invariant already decides is not a human gate.
 
 ---
 
@@ -445,7 +444,7 @@ started.
   guard's) job. Re-polling a green PR burns turns on unchanged news; report
   once, then stop — the "event-driven, not polled" discipline applied by a lane
   to itself.
-- After two equivalent failures, change approach.
+- After two equivalent failures, change approach; never a silent drop.
 - Provider/model unavailable: fail that lane closed; no silent fallback.
 - Owner-session end: no uncommitted writer work without a recovery
   record.

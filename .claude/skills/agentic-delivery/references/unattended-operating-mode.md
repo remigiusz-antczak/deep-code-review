@@ -22,7 +22,8 @@ loop, not a single task**. Frame it as the default stance:
 
 - **Starting the loop never needs a reason; stopping does.** The loop runs until a
   **named termination condition** fires (backlog empty; every remaining item blocked
-  on another party or on a Human gate; the granted window / appetite spent; a
+  on another party or on a Human gate no recorded standing grant covers
+  (`SKILL.md` **Human gates**); the granted window / appetite spent; a
   resource ceiling hit), each reported **with the evidence that it holds** — never a
   drift into silence. Depth + the four conditions: `fast-agentic-delivery.md` **An
   unattended time budget is a work loop** (termination-conditions bullet).
@@ -39,8 +40,9 @@ loop, not a single task**. Frame it as the default stance:
 
 The mode is not new machinery — it is the suite's existing gates run continuously:
 
-- **`idea-critic` = the decision gate.** Every non-trivial decision (an
-  agent-originated approach, an A/B fork) is attacked before it is acted on, with
+- **`idea-critic` = the decision gate.** Every agent-originated approach choice
+  (a new approach, an A/B fork) is attacked before it is acted on — not routine
+  execution or gate confirmations (`idea-critic` **Don't use for**) — with
   **premises verified against live data, not memory** — `SKILL.md` G0/G1 + Gate
   epistemology principle 3 (a surprising conclusion re-fetches the state) and
   `fast-agentic-delivery.md` **A remembered constraint-state is a guess**.
@@ -189,44 +191,39 @@ wake/poll cadence is not the work cadence**). A worked default set:
 
 ## A loop that duplicates another loop's scope is a design defect — collapse it, don't stagger it
 
-**Phase-offsetting and fire-consolidation (above) fix loops that land on the same
-tick; they don't fix loops that cover the same ground.** Two or more self-prompt
-loops sweeping identical scope at different cadences (e.g. the same backlog scan
-fired every 5m, 10m, and 15m) aren't a timing collision — every wake past the
-tightest one covering that ground is a guaranteed no-op, and a no-op wake still
-burns a full sweep's tokens (a wake that changes nothing is a no-op; overlapping
-cadences over one scope guarantee it). Fix at design time: run that scope at its
-own tightest useful cadence and drop the rest, rather than staggering or
-fire-consolidating duplicates that were never distinct jobs. Not the add-only
-policy's target either (`fast-agentic-delivery.md` **The loop set is add-only when
-the operator asked for "more"**) — that guards against shrinking the count to
-answer an operator's ask for more loops; a same-scope duplicate was never a
-separate job to preserve.
+Phase offsets and fire-consolidation fix loops that land on the same tick, not
+loops that sweep the same scope at different cadences: every wake past the
+tightest one is a guaranteed no-op that still burns a full sweep. Run that scope
+at its own tightest useful cadence and drop the duplicates at design time. The
+add-only policy (`fast-agentic-delivery.md` **The loop set is add-only when the
+operator asked for "more"**) does not protect them: a same-scope duplicate was
+never a separate job.
 
-## A stuck trivial change gets one recovery attempt, then a hand-off or a drop — never a nursing loop
+## A stuck trivial change gets one recovery attempt, then is recorded and passed — never a nursing loop
 
 **A small change failing to commit/push on an environment issue (a hung hook, a
 missing binary, a worktree race) gets exactly one recovery attempt from the main
-loop; a repeat failure hands it to a single dedicated lane or drops it, never
-another retry.** This bounds the main loop's own recovery the way
-`fast-agentic-delivery.md`'s **Bound every flaky finalize step** already bounds a
-lane's finalize tail (N attempts / a wall-clock cap, then fail to a report) —
-applied here to the loop's own commit/push, not a delegated lane's. Nursing a
-trivial change through repeated failed attempts is the exact slow, expensive
-pattern a bounded run exists to avoid; spend on recovery must not exceed the
-change's own worth.
+loop; on a repeat failure, record the item (ledger / state record: what, the
+failing command as evidence, the next step) and move to the next item — never
+another retry, never silently drop.** A fault that blocks every commit (a hung
+hook) is systemic: escalate it as a blocker with one root-cause lane, not a
+per-item skip. The original failure plus the recovery are `SKILL.md`
+**Failure**'s two equivalent failures; the recorded item satisfies the logged
+acknowledgement the run-end self-audit requires. Same bound as
+`fast-agentic-delivery.md` **Bound every flaky finalize step**, applied to the
+loop's own commit/push; recovery spend must not exceed the change's worth.
 
 ## The Human-gate boundary (unchanged)
 
 The mode changes **what stopping requires a reason for**, never **what needs a
 human**. An item whose next step is a Human gate (push, merge, deploy, external
-send, secret / scope change) is a **termination condition to queue, not a task to
-self-authorize** — surface a one-action, self-updating human escape hatch up front
-rather than narrating "holding". The autonomous **PUSH** and **MERGE** loops above
-are the un-gated half only — a lane's own **feature-branch** push and the **G7
-integration** merge; a **shared-branch** push, a **merge-to-default**, a deploy, or
-an external send stays a Human gate, and a loop only schedules the re-check — it
-never authorizes a gated action. `SKILL.md` **Human gates**;
+send, secret / scope change) is **parked, not self-authorized**, and the loop
+continues on the rest — surface a one-action, self-updating human escape hatch up
+front rather than narrating "holding". The autonomous **PUSH** and **MERGE** loops
+above are the un-gated half only — a lane's own **feature-branch** push and the
+**G7 integration** merge. A **shared-branch** push or a **merge-to-default**
+stays a Human gate unless a recorded standing grant covers it; a deploy or an
+external send stays gated always (`SKILL.md` **Human gates**);
 `fast-agentic-delivery.md` **When no autonomous path exists, surface the human-run
 escape hatch** and the termination-conditions bullet. Never silently reverse a
 dated / ratified decision (`SKILL.md` Gate epistemology principle 12).
