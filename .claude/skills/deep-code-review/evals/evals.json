@@ -5842,6 +5842,17 @@
         "Requires idempotent automatic rehydration on boot/deploy with no manual step",
         "Requires a data-freshness gate or alert to catch a silently-broken rehydration"
       ]
+    },
+    {
+      "id": "repeated-align-rounds-need-a-token-foundation-check",
+      "prompt": "A team has been through four rounds of \"align the app to the Figma mockup.\" Each round: compare screenshots, patch the mismatched spacing and colours screen by screen, reviewer signs off \"looks aligned now.\" Two weeks later the stakeholder says it still looks off almost everywhere -- and no new screens shipped in between. What diagnostic should have run before round one, and what would explain the pattern?",
+      "expected_output": "The repeated per-screen patch-and-sign-off loop that never converges is the tell of a foundation-level mismatch, not scattered per-screen drift -- diagnose it before touching a single screen: extract both sides' design tokens (colour/spacing/type -- the design's export or CSS custom properties, and the app's) and diff them by resolved/computed value, not by name, since names rarely agree between a design file and an app's codebase. A low match (one real audit found the app matched only ~4% of the design's colours, ~3 of roughly 1,400 token names) means the app was built on a different token foundation entirely -- every screen inherits the wrong palette/spacing/type independently, so each round finds a fresh crop of \"new\" mismatches even though nothing about the task changed. No amount of per-screen restyling converges until the foundation itself is remapped. Fix: adopt the design's token VALUES under the app's existing token NAMES, so components don't need rewriting -- then a per-screen pass (classifying each remaining diff as a genuine treatment gap, a data-volume artifact, or a real extra feature worth preserving) is the right tool, because it is now operating on a shared foundation. (migration-parity.md.)",
+      "expectations": [
+        "Diagnoses the non-converging per-screen patch loop as evidence of a foundation-level (design-token) mismatch, not independent per-screen drift",
+        "Prescribes diffing both sides' design tokens by resolved/computed value, not by name, before any per-screen work",
+        "Explains why a low token match means every screen inherits the wrong foundation independently, so per-screen fixes never converge",
+        "Prescribes adopting the design's token values under the app's existing token names rather than a per-screen rewrite"
+      ]
     }
   ]
 }

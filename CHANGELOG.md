@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.433.6] — 2026-09-22
+
+### deep-code-review — fold a design-parity lesson (#1053 / #1058), net-neutral
+
+- Folded **#1053** into `migration-parity.md` (net-neutral, offset by prose compaction): before classifying a design-alignment screen-by-screen, run a **token-foundation check** — diff both sides' design tokens by *resolved value*, not name; a low match (one case: ~4% of colours, ~3 of ~1,400 names) means a different token foundation that no per-screen restyle converges on until remapped. Also closes **#1058**'s one real gap (the token-parity lens; its other lenses — visual/IA/functional/consistency/states — were already covered). +1 `deep-code-review` eval (560). **#1042** triaged as covered (preserve-superset rule + differ-gate mechanical path already present); its live-route-mount render-gate variant is an incremental enhancement, deferred.
+
 ## [1.433.5] — 2026-09-22
 
 ### deep-code-review + agentic-delivery — fold 4 new reliability lessons (#1044, #1050, #1047, #1041), net-neutral/below budget
