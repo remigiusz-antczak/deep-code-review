@@ -108,6 +108,35 @@ throughput. Distinct from the WIP-cap section just above (which throttles lane *
 **🚩** an orchestrator raising lane concurrency past the probed CPU/RAM cap to "go faster" while per-lane
 cycle-time (setup + gate) is untouched — that lowers throughput, not raises it.
 
+## A lane's own handback is billed output — verbosity is a cost lever distinct from what it reports
+
+`SKILL.md`'s Output contract states what a worker returns; nothing there bounds how much prose
+carries it. In a fan-out or an unattended multi-round loop that gap compounds: every lane's
+progress narration and closing report is tokens the lane is billed to generate and, wherever a
+handback reaches an orchestrator's own context, tokens the reader re-pays to process — cost scales
+roughly as **lane count × output length per lane × rounds**, invisible in one lane and dominant
+across N lanes and M rounds of an overnight run.
+
+- **Terse the prose, never the required fields.** Cut narration, a restated brief, an unrequested
+  worked example, step-by-step "now I'll" chatter — never a required Output-contract field (role,
+  exact SHA, artifacts, acceptance covered, commands actually run with exit status, findings with
+  severity + location + evidence, remaining risk, cost/`UNPRICED`). A shorter report missing a
+  field is not terse, it is `UNVERIFIED` by omission (gate epistemology principle 3), not a cost win.
+- **Size the closing handback to the next decision, not to the transcript that produced it** — a
+  gate verdict, the finding's `file:line`, the branch/SHA pushed, and each required check's
+  pass/fail is what the next action consumes; the turn-by-turn narrative is not, and mid-lane
+  progress chatter pays the identical per-lane, per-round multiplication as a bloated final report.
+
+Distinct from *report the artifact, not the activity* (above): that rule is about a status being
+**truthful** (artifact vs transcript), not about how many words carry an otherwise-truthful report.
+Distinct too from baking a terse register into the agent definition
+(`multi-session-coordination.md`): that is the **enforcement mechanism** that makes a compressed
+register durable across every spawned subagent; this is what the register should be terse **about**.
+
+**🚩 tell:** per-lane token spend that tracks the words in each handback rather than the work it
+describes — two lanes doing the identical task costing differently for no difference in delivered
+artifact.
+
 ## Gate on free RAM and the swap trend — `load1` is not a reliable signal alone
 
 `SKILL.md`'s environment probe states the act-on predicate — free RAM and the

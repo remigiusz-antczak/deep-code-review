@@ -573,6 +573,25 @@ is **advisory**, never a passing control:
   executed. "The repo has hooks" or "the PR says tests pass" is **never** logged as a green
   control — record only a forge run pinned to the reviewed SHA (a required status that never ran
   is the merge-blocker above, not "the author ran it locally").
+- **A conflict-free `git merge` never invokes `pre-commit` at all — this is not a bypass, it's a
+  missing hook, verified against git's own behavior (a clean merge completes despite a `pre-commit`
+  hook set to always fail).** Git's internal merge-commit codepath for a **clean** (non-conflicting)
+  merge runs `commit-msg` but not `pre-commit`; only a project-installed **`pre-merge-commit`** hook
+  fires there. A repo that wires `pre-commit` as its quality gate but never adds `pre-merge-commit`
+  ships every merge-forward, sync-from-main, or integration-branch merge **ungated** — no
+  `--no-verify`, no drift, no worktree misconfiguration required; the hook the repo relies on simply
+  was never wired to that codepath (distinct from both the bypass and the drift bullets above and
+  below — nothing was skipped or stale, the codepath never called it). **Compounds** with a custom
+  merge driver that resolves a generated/compiled-file conflict by taking one side outright (the
+  merge-driver mechanics are in §6 below, not restated here): a clean auto-merge can silently leave
+  that generated file **stale** (missing the other side's regenerated contribution), and with no
+  `pre-merge-commit` hook, nothing re-checks freshness before the merge commit lands. **Detect:**
+  `git config --get-regexp '^merge\.'` for a take-one-side driver on a generated path, and confirm
+  whether `pre-merge-commit` exists alongside `pre-commit` (`.git/hooks/` or the configured
+  `core.hooksPath`). **Fix:** add a `pre-merge-commit` hook mirroring `pre-commit` — at minimum the
+  cheap regenerate/freshness check for any generated artifact — and a test asserting a zero-conflict
+  merge is actually gated; re-generate and diff generated files after any merge even when git
+  reports no conflict.
 - **A *drifted local copy* of a CI gate is a false green even when the author ran it in good
   faith.** The rule above covers a local check *skipped or bypassed*; the subtler case is one
   that **ran and passed and still means nothing** — the same gate lives as both a CI job and a
@@ -708,6 +727,18 @@ explicit approval** — the same opt-in bar as the Phase 6 imprint.
   (`gh pr edit <n> --base <new-base>`) or get explicit confirmation that losing
   that PR's thread is acceptable — every time, not only when a stack is
   suspected.
+- **Once a stacked PR has already auto-closed this way, pushing more commits to its branch does
+  not revive it — it recreates a bare orphan branch with no PR attached**, so the work must be
+  re-proposed as a new PR (retargeted onto the shared base, or rebased onto the parent's
+  post-merge commits) rather than "fixed" by pushing again. Prevent it instead: retarget the
+  child PR onto the shared base **before** merging the parent (`gh pr edit <n> --base
+  <shared-base>`), or open the child against the shared base from the start and rebase onto the
+  parent's commits rather than branching off the parent's own branch — the check-before-delete
+  mechanics are the bullet above. **Corollary for reading PR state during any triage:** a forge's
+  `closed` state does not distinguish "closed via merge" from "closed unmerged" — this orphan-close
+  and a normal squash/merge both read `closed`. Before treating a closed PR as done or its branch as
+  safe to delete, check the `merged` field too (`gh pr view --json state,mergedAt`), never `state`
+  alone.
 - **Never hand-resolve a merge conflict inside a generated/compiled file.**
   When two branches both regenerate the same derived artifact (a build output,
   a compiled config, a generated manifest/index) and a merge conflicts inside

@@ -190,6 +190,24 @@ on.
   / workflow definition (`.pre-commit-config.yaml`, `.husky/`, a `lefthook.yml`, a
   `.github/workflows/*.yml` job `needs:` graph or step order) and read whether a fast
   lint/format/message check gates the slow build/test tier or merely trails it.
+- **Ordering the tiers cheapest-first is not sufficient when the expensive tier still runs in
+  `pre-commit` at all — under concurrent lanes it can deadlock, not just waste minutes.** Even
+  correctly ordered (cheap checks first, per the bullet above), a `pre-commit` stage that runs the
+  **whole** test suite unconditionally — with no changed-path scoping, while sibling stages in the
+  same chain (lint, type-check) do scope to changed files — blocks every `git commit` for the
+  suite's full runtime, serializing concurrent agent/developer lanes competing for CPU. Worse: a
+  workflow that requires a **follow-up** commit (a generated changelog fragment, a lockfile update)
+  can deadlock outright — the second commit hangs in the same slow hook, so the PR stays red for the
+  missing artifact while the very commit that would add it is stuck running the full suite, with no
+  single commit able to escape quickly; a lane that responds by re-polling CI burns tool calls and
+  tokens waiting on a result that cannot arrive until its own blocking commit finishes. **Fix:**
+  scope `pre-commit` to a fast, changed-path subset (or an explicitly-marked fast tier) and run the
+  full suite in **pre-push** or **CI**, where the added latency amortizes across a batch instead of
+  taxing every commit. Distinct from the ordering fix above — reordering stages cheapest-first still
+  pays the full cost on every commit once the cheap stage passes; this is about **which lifecycle
+  stage** the expensive tier runs at, not its position within one stage. CI-side path-filtered
+  staging is `parallel-audit.md`'s path→gate manifest (cross-referenced there, not restated here);
+  this is the local-hook-lifecycle sibling of that same scoping discipline.
 
 ---
 

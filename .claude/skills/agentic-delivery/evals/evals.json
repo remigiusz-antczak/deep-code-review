@@ -1244,6 +1244,17 @@
         "On a confirmed run, stops or sharply reduces the timed posting rather than continuing to fire on the timer",
         "Raises the sibling's prolonged absence to the owner or a channel that is actually read, once -- not another post into the unread board each cycle"
       ]
+    },
+    {
+      "id": "handback-verbosity-is-its-own-token-cost-lever-not-just-what-it-reports",
+      "prompt": "Fifteen build lanes ran overnight against a backlog. Every lane pushed a green branch and every gate passed -- solid delivery. Each lane's final handback report, though, opens by restating its brief in full, walks through every debugging step it tried before the one that worked, includes a worked example of the fix applied to a second file 'for illustration,' and only then states the verdict, branch, and gate status in its last two lines. Nothing in the reports is false and nothing required is missing. Is there still something worth fixing here, and if so what's the actual problem and the fix?",
+      "expected_output": "Yes -- the reports themselves are a cost problem even though nothing in them is false or missing. Every lane's narration and worked-example padding is tokens that lane is billed to generate, and wherever the handback reaches an orchestrator's own context it is tokens the orchestrator re-pays to read -- cost scales roughly as lane count times output length per lane times rounds, so fifteen lanes each padding by a few paragraphs is a large, avoidable multiply, not a per-lane rounding error. This is a distinct axis from 'report the artifact, not the activity' (that rule is about a status being truthful -- artifact vs transcript -- not about how many words carry an otherwise-truthful report) and from baking a terse register into the agent definition (that is the enforcement mechanism; this is what the terse register should be terse ABOUT). The fix is not to drop required content -- the verdict, file:line, branch/SHA, and each gate's pass/fail already at the bottom are exactly the required Output-contract fields and must stay. The fix is to cut everything ahead of them: the restated brief, the blow-by-blow of steps that did not work, and the illustrative worked example nobody asked for. Size the closing handback to what the next decision consumes, not to the transcript that produced it. (fast-agentic-delivery.md.)",
+      "expectations": [
+        "Identifies the reports' own verbosity/padding as a real problem despite every gate passing and nothing false or missing -- distinct from a delivery defect",
+        "States the cost mechanism as lane count x output-length-per-lane x rounds, so per-lane padding compounds across many lanes and rounds",
+        "Distinguishes this from 'report the artifact, not the activity' (truthfulness of status content) and from baking a terse register into the agent definition (the enforcement mechanism) -- this is what that terse register should be terse about",
+        "Prescribes cutting narration/restated-brief/unrequested worked example while keeping every required Output-contract field (verdict, file:line, branch/SHA, gate pass/fail) intact -- terse the prose, not the fields"
+      ]
     }
   ]
 }
