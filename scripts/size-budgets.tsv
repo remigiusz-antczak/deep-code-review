@@ -46,14 +46,14 @@
 .claude/skills/communication-structure/SKILL.md	5196
 .claude/skills/contribution/SKILL.md	11222
 .claude/skills/contribution/references/contribution-procedure.md	7018
-.claude/skills/deep-code-review/SKILL.md	23289
+.claude/skills/deep-code-review/SKILL.md	23612
 .claude/skills/deep-code-review/references/api-contracts.md	27668
 .claude/skills/deep-code-review/references/billing-correctness.md	8429
 .claude/skills/deep-code-review/references/branch-and-merge-hygiene.md	84938
 .claude/skills/deep-code-review/references/concurrency-shared-state.md	30012
 .claude/skills/deep-code-review/references/data-quality.md	75247
 .claude/skills/deep-code-review/references/dependency-currency-and-upgrades.md	16037
-.claude/skills/deep-code-review/references/docs-and-dx.md	22205
+.claude/skills/deep-code-review/references/docs-and-dx.md	22511
 .claude/skills/deep-code-review/references/docs-evolution-by-stage.md	4820
 .claude/skills/deep-code-review/references/domain-checklists.md	63927
 .claude/skills/deep-code-review/references/example-review-report.md	394

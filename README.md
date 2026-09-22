@@ -169,6 +169,15 @@ delivery + critic + comms); add each with its flag. `install.sh` **copies** the
 skills — it never symlinks — so re-run it after a `git pull` to update. It's the
 air-gapped, SHA-stamped path; see [`SECURITY.md`](SECURITY.md).
 
+**CI enforcement, not a skill:** `./install.sh --with-gates /path/to/project`
+wires the *installed* skill's own gate scripts into the target's own CI —
+`fix_class_gate.py` (a pinned test per `fix:` commit) and `binaries_gate.py`
+(no committed screenshots/build output) — via `.github/workflows/dcr-gates.yml`
+and `scripts/dcr-gates.sh`. Never overwrites an existing file at either path
+(writes `<path>.new` instead). Without it, the skillset's mechanisms only ever
+run inside this repository's own CI — a target that installs the skill gets
+the doctrine as prose an agent may or may not follow.
+
 To check whether an already-installed copy has fallen behind upstream `main`,
 run `scripts/skill-drift-check.sh` — a read-only helper (needs the `gh` CLI,
 authenticated) that compares the installed `deep-code-review` VERSION against the

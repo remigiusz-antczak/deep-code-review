@@ -5,6 +5,57 @@ follows Keep a Changelog; versioning follows Semantic Versioning.
 
 ## [1.434.0] — 2026-09-23
 
+### Added — opt-in CI enforcement for target repos (`install.sh --with-gates`)
+
+The skillset's own mechanisms (`fix_class_gate.py`, `binaries_gate.py`, and friends)
+previously only ran in this repository's own CI; a project that installed the skill
+got the doctrine as prose an agent may or may not follow, with the mechanism itself
+never enforced there. `install.sh --with-gates` closes that gap:
+
+- `deep-code-review/scripts/binaries_gate.py` — the extension-scoped no-committed-
+  binaries check, ported from `ci-gates.sh`'s `binaries` subcommand into a shipped,
+  stdlib-only skill script (`--selftest` 5/5) so it is callable from an installed
+  target, not only from this repo's own dev tooling. `ci-gates.sh binaries` now
+  **delegates** to this script (resolved from this repo's own tree via a new
+  `CI_GATES_REPO_ROOT`, never from the directory being scanned) — one implementation,
+  two callers. All 4 existing `binaries` self-tests still pass unchanged.
+- `deep-code-review/templates/dcr-gates.yml` + `templates/dcr-gates.sh` — a CI
+  workflow template (SHA-pinned `actions/checkout`, `fetch-depth: 0`, `contents:
+  read`) plus its runner. `dcr-gates.sh` resolves the INSTALLED skill's own gate
+  scripts at runtime across every host `install.sh` can write to (no copies, no
+  duplicated gate logic): runs `fix_class_gate.py` on the PR/push range (configurable
+  test globs via `DCR_TEST_GLOBS`), `binaries_gate.py` (configurable allowlist via
+  `DCR_BINARIES_ALLOWLIST`), and `--selftest` on every shipped gate script it finds
+  (including `agentic-delivery`'s `serial_gate.py` / `handback_cap.py` when that
+  overlay is also installed). Fails closed if no installed skill is found.
+- `install.sh --with-gates` — copies the two files above into
+  `.github/workflows/dcr-gates.yml` and `scripts/dcr-gates.sh`; **never overwrites**
+  an existing file at either path (writes `<path>.new` instead, with a note).
+  Prints (does not write) a `SubagentStop` settings snippet for `agentic-delivery`'s
+  `handback_cap.py` hook. `ci-gates.sh install --mode gates` wraps it for this
+  repo's own self-tests.
+- `scripts/recommend-overlays.py` — `--recommend` now lists the CI-enforcement
+  mechanism (what it wires, what it writes, that it never overwrites) alongside the
+  advisory-overlay list, so an owner learns it exists at pack-selection time.
+- `scripts/test-ci-gates.sh`: 4 new cases appended at the end of the file (own lane,
+  never touching earlier sections) — fresh target gets both files; an existing
+  workflow is never overwritten; the runner resolves the installed skill's own
+  script paths and calls them; the runner exits clean end-to-end on a binaries-free
+  target.
+- `references/docs-and-dx.md`'s Standards-imprint bullet 2 and `SKILL.md`'s Optional
+  overlays section each name `--with-gates` as the mechanized version of "pair a
+  standard with a gate." Size budgets ratcheted up, justified by this growth:
+  `SKILL.md` 418→424, `references/docs-and-dx.md` 359→363.
+
+### Fixed
+- `dcr-gates.sh`'s default `BASE_SHA`/`HEAD_SHA` resolution now uses
+  `git rev-parse --verify -q` instead of a bare `git rev-parse <ref>`: on an
+  unresolvable ref (e.g. `HEAD~1` in a single-commit repo) plain `rev-parse` still
+  prints the literal ref text to stdout alongside its non-zero exit — a real git
+  quirk caught by manual end-to-end testing before this shipped, not a self-test
+  fixture. `--verify` never does that, so a failed resolution is reliably empty.
+  Pinned by the "runner exits clean end-to-end" case in `scripts/test-ci-gates.sh`.
+
 ### Added
 - `deep-code-review/scripts/fix_class_gate.py` — every `fix(...)` commit in a range must touch a test surface or carry a non-empty `No-Test-Reason:` trailer; fails closed (exit 2) on an unresolvable or all-zeros base. It enforces a pinned test per fix, not class completeness (that stays the reviewer's `method.md` sweep). `--selftest` 14/14. Wired into CI on the push/PR range (checkout now `fetch-depth: 0`). Merge commits are skipped (`rev-list --no-merges`), so a merge commit carrying its own code change bypasses it; documented as a known limitation in the script's HONESTY section. In CI the test surface is `evals/evals.json` or `scripts/test-ci-gates.sh`; a shipped script is not its own test surface (editing it would self-certify). Known limitation: touching any skill's `evals.json` satisfies the gate, not only the fixed skill's.
 - `agentic-delivery/scripts/serial_gate.py` — `select` does fail-closed path-scoped test selection (unmapped path, `!full` path, map change, empty diff, or unresolvable ref → FULL; never "nothing to run, pass"); `select` reads the diff with `--no-renames` (a rename can no longer drop its old path) and matches the map's own path relative to the repo top level as well as as-given. `run` serializes a command across lanes with a **kernel advisory lock** — `fcntl.flock(fd, LOCK_EX | LOCK_NB)` on `<lock-dir>/lock` — not a hand-rolled `mkdir`/stale-reclaim scheme: the OS releases the lock the instant the holder's process ends for any reason, including `SIGKILL`, so there is no staleness window, no age-based reclaim, and no `--stale-after` flag (removed; a same-host live holder was already never age-reclaimed, so nothing well-behaved regresses). After acquire, the same fd is truncated and rewritten with an informational owner record (pid, host, UTC) for humans only — never read back, never load-bearing. A waiter polls with bounded, jittered backoff until `--timeout` (default 120s) or gives up with exit 124 and never runs the command unlocked; the child's own exit code is propagated. POSIX-only (`fcntl` absent on Windows) — `run` fails closed with exit 2 rather than running unlocked. Scope: a single host's local filesystem; not for NFS or other network filesystems. `--selftest` 39/39, including never more than one holder across 5-way/3-round exclusivity races, a SIGKILLed holder unblocking a waiter promptly, a held lock surviving a back-dated mtime with no reclaim, timeout, exit-code propagation, release-on-exit, and the no-`fcntl` fail-closed path; 30 consecutive green runs. Routed from the SKILL.md serialize bullet. Completes P1a (4 of 4 gates).
@@ -18,6 +69,8 @@ follows Keep a Changelog; versioning follows Semantic Versioning.
 - size-budget-raise: .claude/skills/agentic-ceo/SKILL.md 11178→11227 standing-grant and keep-producing wording (net −160 bytes across the change)
 - size-budget-raise: .claude/skills/deep-code-review/SKILL.md 23226→23289 principle 7 standing-grant carve-out
 - size-budget-raise: .claude/skills/idea-critic/SKILL.md 12544→12581 owner-gate asks no longer HOLD local reversible work
+- size-budget-raise: .claude/skills/deep-code-review/SKILL.md 23289→23612 route binaries_gate.py + templates/dcr-gates.* (install --with-gates)
+- size-budget-raise: .claude/skills/deep-code-review/references/docs-and-dx.md 22205→22511 target-repo gate install guidance
 - Size budgets: `agentic-delivery/SKILL.md` 478→483 and `references/host-enforcement.md` 69→102 (growth, justified: the handback cap is an owner hard requirement and must be routed from the always-loaded map).
 - Autonomy: a recorded standing grant lets push / open PR / merge of green, reviewed work proceed; a gated item is parked, not a stop. A stuck change is recorded and passed, never dropped. The Conductor drift rule, idea-critic, and DCR principle 7 no longer interrupt single-agent or build work. Budgets lowered: unattended 255→252, multi-session 764→758. A structural `test-ci-gates.sh` check pins this.
 

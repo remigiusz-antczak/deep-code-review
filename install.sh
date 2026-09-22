@@ -5,6 +5,7 @@
 #   ./install.sh [--minimal] [--with-codex] [TARGET_DIR]
 #   ./install.sh --with-delivery [--with-critic] [TARGET_DIR]
 #   ./install.sh --full [TARGET_DIR]
+#   ./install.sh --with-gates [TARGET_DIR]
 #   ./install.sh --recommend [TARGET_DIR]
 #
 # Default (agent-agnostic): copies the REVIEW skill into every common skill
@@ -28,6 +29,13 @@
 #   --with-output-safety also product-output-safety (govern harm from the product's own AI outputs; HITL on high-stakes actions; not in --full)
 #   --full               review + delivery + critic + comms
 #   --recommend          inspect TARGET, print a pack, install nothing
+# CI enforcement (mechanism, not a skill; opt-in; never overwrites a file):
+#   --with-gates         also write .github/workflows/dcr-gates.yml +
+#                         scripts/dcr-gates.sh, wiring the INSTALLED skill's
+#                         own gate scripts (fix_class_gate, binaries_gate)
+#                         into the target's own CI. Prints (does not write)
+#                         a SubagentStop settings.json snippet for
+#                         agentic-delivery's handback_cap hook.
 # Narrow:
 #   --minimal            only .claude/skills/ + AGENTS.md
 #   --claude-only        only .claude/skills/ ; skip AGENTS.md
@@ -73,6 +81,12 @@ on re-install). Overlay skills are opt-in.
   --with-business      Also install business-ops (Lane A pricing/unit-economics apply vs Lane R legal/tax/securities route; default off, not in --full)
   --with-output-safety Also install product-output-safety (govern harm from the product's own AI outputs; HITL on high-stakes actions; default off, not in --full)
   --full               Review + delivery + critic + comms
+  --with-gates         Write .github/workflows/dcr-gates.yml + scripts/dcr-gates.sh,
+                       wiring the INSTALLED skill's own gate scripts (fix_class_gate,
+                       binaries_gate) into the target's own CI; never overwrites an
+                       existing file at either path (writes .new instead). Prints
+                       (does not write) a SubagentStop settings.json snippet for
+                       agentic-delivery's handback_cap hook. Mechanism, not a skill.
   --recommend          Inspect TARGET and print a recommended pack; no writes
   -h, --help           Show this help
 
@@ -101,6 +115,7 @@ WITH_GROWTH=0
 WITH_POSITIONING=0
 WITH_BUSINESS=0
 WITH_OUTPUT_SAFETY=0
+WITH_GATES=0
 RECOMMEND_ONLY=0
 POSITIONAL=()
 for arg in "$@"; do
@@ -119,6 +134,7 @@ for arg in "$@"; do
     --with-positioning) WITH_POSITIONING=1 ;;
     --with-business) WITH_BUSINESS=1 ;;
     --with-output-safety) WITH_OUTPUT_SAFETY=1 ;;
+    --with-gates) WITH_GATES=1 ;;
     --full) WITH_DELIVERY=1; WITH_CRITIC=1; WITH_COMMS=1 ;;
     --recommend) RECOMMEND_ONLY=1 ;;
     --with-cursor) echo "note: --with-cursor is default now; ignoring." >&2 ;;
@@ -261,6 +277,63 @@ for skill in "${SKILLS[@]}"; do
       "${TARGET_DIR}/${host}/skill-backups"
   done
 done
+
+# write_gate_file <src> <dest> <executable:0|1> — copy a CI-gates template
+# into the target. NEVER overwrites an existing file at <dest>: if one is
+# already there, writes <dest>.new (or .new-N on a further collision) instead
+# and prints a note so the owner reviews/merges by hand. This is the only
+# writer for --with-gates output; both call sites below share it so the
+# never-overwrite rule cannot drift between the workflow and the runner.
+write_gate_file() {
+  local src="$1" dest="$2" make_exec="$3"
+  mkdir -p "$(dirname "${dest}")"
+  if [[ -e "${dest}" ]]; then
+    local newdest="${dest}.new"
+    if [[ -e "${newdest}" ]]; then
+      local n=1
+      while [[ -e "${newdest}-${n}" ]]; do
+        n=$((n + 1))
+      done
+      newdest="${newdest}-${n}"
+    fi
+    cp "${src}" "${newdest}"
+    [[ "${make_exec}" -eq 1 ]] && chmod +x "${newdest}"
+    echo "note: ${dest} already exists -> wrote ${newdest} instead (review and merge by hand)"
+  else
+    cp "${src}" "${dest}"
+    [[ "${make_exec}" -eq 1 ]] && chmod +x "${dest}"
+    echo "installed: ${dest}"
+  fi
+}
+
+if [[ "${WITH_GATES}" -eq 1 ]]; then
+  GATES_SRC="${SCRIPT_DIR}/.claude/skills/${REVIEW_NAME}/templates"
+  if [[ ! -f "${GATES_SRC}/dcr-gates.yml" || ! -f "${GATES_SRC}/dcr-gates.sh" ]]; then
+    echo "error: cannot find ${GATES_SRC}/dcr-gates.{yml,sh}" >&2
+    exit 1
+  fi
+  write_gate_file "${GATES_SRC}/dcr-gates.yml" "${TARGET_DIR}/.github/workflows/dcr-gates.yml" 0
+  write_gate_file "${GATES_SRC}/dcr-gates.sh" "${TARGET_DIR}/scripts/dcr-gates.sh" 1
+  cat <<'EOF'
+
+CI enforcement wired (--with-gates):
+  .github/workflows/dcr-gates.yml  runs on push/PR; SHA-pinned checkout, fetch-depth 0
+  scripts/dcr-gates.sh             calls the INSTALLED skill's own gate scripts
+                                    (fix_class_gate, binaries_gate) by resolved
+                                    path -- no duplicated gate logic, no copies
+Edit the workflow's trigger branch if this repo's default branch isn't `main`.
+
+Optional (not written -- add yourself if wanted, and only useful alongside
+--with-delivery): cap a subagent's chat handback via the SubagentStop hook in
+.claude/settings.json:
+  "hooks": {
+    "SubagentStop": [
+      { "hooks": [{ "type": "command",
+          "command": "python3 .claude/skills/agentic-delivery/scripts/handback_cap.py" }] }
+    ]
+  }
+EOF
+fi
 
 upsert_agents_block() {
   local agents="$1"
@@ -438,4 +511,7 @@ if [[ "${WITH_CRITIC}" -eq 1 ]]; then
 fi
 if [[ "${WITH_COMMS}" -eq 1 ]]; then
   echo "  comms:    load communication-structure before any human-facing message"
+fi
+if [[ "${WITH_GATES}" -eq 1 ]]; then
+  echo "  gates:    dcr-gates.yml + scripts/dcr-gates.sh wired -- push/open a PR to run them"
 fi

@@ -1480,6 +1480,81 @@ else
   fi
 fi
 
+# ===========================================================================
+# install --with-gates — CI-gates wiring (own lane; APPENDED AT THE END of
+# this file by convention so other lanes editing earlier sections never
+# collide with this block). Covers: a fresh target gets both files; an
+# existing workflow is never overwritten (a .new sibling is written instead);
+# the shipped scripts/dcr-gates.sh runner resolves the INSTALLED skill's own
+# script paths at runtime (no copies) and actually runs them; `bash -n`.
+# ===========================================================================
+
+gates_fresh="$WORK/gates-fresh"
+mkdir -p "$gates_fresh"
+git -C "$gates_fresh" init -q
+git -C "$gates_fresh" config user.email "a@example.com"
+git -C "$gates_fresh" config user.name "Test"
+printf 'hello\n' >"$gates_fresh/README.md"
+git -C "$gates_fresh" add README.md >/dev/null 2>&1
+git -C "$gates_fresh" commit -q -m 'chore: init'
+
+gates_workflow="$gates_fresh/.github/workflows/dcr-gates.yml"
+gates_runner="$gates_fresh/scripts/dcr-gates.sh"
+
+# 1) Fresh target: `install --mode gates` lands both files, the runner is
+#    executable and `bash -n` clean, and the workflow names a SHA-pinned
+#    checkout (not a mutable tag) — the same K-rule discipline as this repo's
+#    own ci.yml.
+gate "$GATES" install --src "$ROOT" --dest "$gates_fresh" --mode gates
+if [ "$GATE_RC" -eq 0 ] \
+  && [ -f "$gates_workflow" ] \
+  && [ -x "$gates_runner" ] \
+  && grep -q 'actions/checkout@' "$gates_workflow" \
+  && bash -n "$gates_runner"; then
+  record 0 "install --with-gates: fresh target gets dcr-gates.yml + executable dcr-gates.sh"
+else
+  record 1 "install --with-gates: fresh target gets dcr-gates.yml + executable dcr-gates.sh"
+fi
+
+# 2) A workflow file already at the destination is NEVER overwritten — a
+#    second install (or a target that already tracks its own dcr-gates.yml)
+#    writes <path>.new instead; the original's bytes are untouched.
+printf 'name: pre-existing-owner-authored\n' >"$gates_workflow"
+before_hash="$(shasum -a 256 "$gates_workflow" | awk '{print $1}')"
+gate "$GATES" install --src "$ROOT" --dest "$gates_fresh" --mode gates
+after_hash="$(shasum -a 256 "$gates_workflow" | awk '{print $1}')"
+if [ "$GATE_RC" -eq 0 ] \
+  && [ "$before_hash" = "$after_hash" ] \
+  && [ -f "${gates_workflow}.new" ] \
+  && grep -q 'actions/checkout@' "${gates_workflow}.new"; then
+  record 0 "install --with-gates: existing workflow is never overwritten (.new written instead)"
+else
+  record 1 "install --with-gates: existing workflow is never overwritten (.new written instead)"
+fi
+
+# 3) The runner resolves the INSTALLED skill's own gate scripts at runtime —
+#    no copies pasted into the template — and actually calls them: output
+#    names the resolved install path, and every shipped script it calls
+#    proves itself with a passing --selftest (the same planted-violation
+#    self-proof CI's own "Shipped script self-tests" step requires).
+gates_run_log="$WORK/gates-run.log"
+bash "$gates_runner" >"$gates_run_log" 2>&1 || true
+if grep -qF "using deep-code-review at $gates_fresh/.claude/skills/deep-code-review" "$gates_run_log" \
+  && grep -q 'SELFTEST OK' "$gates_run_log"; then
+  record 0 "install --with-gates: runner resolves the installed skill's own script paths"
+else
+  record 1 "install --with-gates: runner resolves the installed skill's own script paths"
+fi
+
+# 4) On a clean, no-binaries, single-commit target the runner's own gates all
+#    pass end to end (fix_class_gate skips cleanly on an unresolvable
+#    HEAD~1..HEAD range; binaries_gate passes; every selftest passes) — exit 0.
+if grep -q 'dcr-gates: all gates passed' "$gates_run_log"; then
+  record 0 "install --with-gates: runner exits clean on a binaries-free target"
+else
+  record 1 "install --with-gates: runner exits clean on a binaries-free target"
+fi
+
 # ---------------------------------------------------------------------------
 # autonomy-doctrine — a STRUCTURAL check, not a behavioural eval: pins the
 # standing-grant clause (Human gates + termination conditions), the no-drop

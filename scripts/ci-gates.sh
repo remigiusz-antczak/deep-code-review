@@ -12,7 +12,7 @@
 #   privacy --banlist <file> <path...>   scan paths for banned patterns (files only, never content)
 #   routing [--max-bytes N] <skill-dir>  every references/*.md routed from SKILL.md; SKILL.md over N bytes FAILS (reasoned allowlist)
 #   version <root>                       VERSION is byte-exact ASCII core semver; first CHANGELOG heading announces it
-#   install --src <dir> --dest <dir> --mode <claude|minimal|full|codex|overlays|recommend>
+#   install --src <dir> --dest <dir> --mode <claude|minimal|full|codex|overlays|gates|recommend>
 #                                        run the real installer, then verify vendored docs are real (not placeholders)
 #   enumeration <root>                   every shipped skill is present in all five hand-maintained lists
 #   size --config <file> <root>          every shipped SKILL.md/references/*.md is within its frozen size-budgets.tsv byte budget
@@ -22,6 +22,12 @@
 #   mustload --config <file> <root>      every SKILL.md load-map archetype's MUST-LOAD token-est total is within its frozen mustload-budgets.tsv ceiling
 #
 set -euo pipefail
+
+# This repo's own root (one level up from this script) — used only to locate
+# canonical shipped-skill scripts this helper delegates to (e.g.
+# `binaries` -> deep-code-review/scripts/binaries_gate.py), independent of
+# whatever <root>/<path> a subcommand is asked to SCAN.
+CI_GATES_REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 die() { printf 'ci-gates: %s\n' "$*" >&2; exit 1; }
 
@@ -49,7 +55,7 @@ Usage:
   ci-gates.sh privacy --banlist <file> <path...>
   ci-gates.sh routing [--max-bytes N] <skill-dir>
   ci-gates.sh version <root>
-  ci-gates.sh install --src <dir> --dest <dir> --mode <claude|minimal|full|codex|overlays|recommend>
+  ci-gates.sh install --src <dir> --dest <dir> --mode <claude|minimal|full|codex|overlays|gates|recommend>
   ci-gates.sh enumeration <root>
   ci-gates.sh size --config <file> <root>
   ci-gates.sh size-ratchet --base <ref> --config <file> <root>
@@ -300,7 +306,7 @@ cmd_install() {
 
   [ -n "$src" ]  || die "install: --src <dir> is required"
   [ -n "$dest" ] || die "install: --dest <dir> is required"
-  [ -n "$mode" ] || die "install: --mode <claude|minimal|full|codex|overlays|recommend> is required"
+  [ -n "$mode" ] || die "install: --mode <claude|minimal|full|codex|overlays|gates|recommend> is required"
   [ -d "$src" ]  || die "install: --src not found: $src"
   [ -d "$dest" ] || die "install: --dest not found: $dest"
 
@@ -314,8 +320,9 @@ cmd_install() {
     codex)        mode_flags=(--with-codex) ;;   # multi-path plus codex adapter
     full|default) : ;;   # agent-agnostic multi-path default (review only)
     overlays)     mode_flags=(--full) ;;         # review + delivery + critic
+    gates)        mode_flags=(--claude-only --with-gates) ;;  # CI-gates wiring, review-only host
     recommend)    mode_flags=(--recommend) ;;    # inspect only; no writes
-    *) die "install: unsupported mode: $mode (want claude|minimal|full|codex|overlays|recommend)" ;;
+    *) die "install: unsupported mode: $mode (want claude|minimal|full|codex|overlays|gates|recommend)" ;;
   esac
 
   # Run the REAL installer; set -e preserves its exit code (no || true).
@@ -770,6 +777,14 @@ cmd_size_ratchet() {
 # default, not a fail-closed condition (unlike cmd_privacy's banlist, an
 # absent allowlist here is stricter, not weaker). Every other tracked file at a
 # banned extension fails, naming the path and where it belongs instead.
+#
+# ONE IMPLEMENTATION: the scan itself lives in the SHIPPED skill script
+# `deep-code-review/scripts/binaries_gate.py` (stdlib, `--selftest`), resolved
+# from THIS repo's own tree (CI_GATES_REPO_ROOT), never from `<root>` (the
+# directory being SCANNED, which is a throwaway fixture in the self-tests and
+# has no skill tree of its own). Installed targets that opt into
+# `install.sh --with-gates` run the identical script via `scripts/dcr-gates.sh`
+# — one scan, two callers.
 # ---------------------------------------------------------------------------
 cmd_binaries() {
   local -a roots=()
@@ -783,59 +798,9 @@ cmd_binaries() {
   local root="${roots[0]}"
   [ -d "$root" ] || die "binaries: root not found: $root (fail closed)"
 
-  local tracked_raw
-  tracked_raw="$(git -C "$root" ls-files 2>&1)" \
-    || die "binaries: git ls-files failed for $root (fail closed; is it a git repo?): $tracked_raw"
-
-  # Images, media, fonts, archives (explicitly named) + common compiled build
-  # output (exe/dll/so/dylib/class/jar/pyc/pyo). Matched case-insensitively
-  # against the tracked path's extension only.
-  local ext_re='\.(png|jpg|jpeg|gif|webp|bmp|pdf|zip|tar|gz|tgz|mp4|mov|woff|woff2|exe|dll|so|dylib|class|jar|pyc|pyo)$'
-
-  local allowlist="$root/scripts/binaries-allowlist.tsv"
-  local -a allow_paths=()
-  if [ -f "$allowlist" ]; then
-    local _line _trimmed
-    while IFS= read -r _line || [ -n "$_line" ]; do
-      _trimmed="${_line#"${_line%%[![:space:]]*}"}"
-      case "$_trimmed" in
-        ''|'#'*) continue ;;
-      esac
-      allow_paths+=("$_trimmed")
-    done < "$allowlist"
-  fi
-
-  local -a tracked=()
-  local f
-  while IFS= read -r f; do
-    [ -n "$f" ] || continue
-    tracked+=("$f")
-  done < <(printf '%s\n' "$tracked_raw" | LC_ALL=C sort)
-
-  local fail=0 allowed a n_flagged=0
-  # `${arr[@]+"${arr[@]}"}` (not bare `"${arr[@]}"`): bash 3.2 (this repo's own
-  # local bash — see cmd_size) treats a zero-element array's `[@]` expansion as
-  # an unbound variable under `set -u`; both tracked and allow_paths are
-  # legitimately empty in real cases (a repo with no tracked files yet; no
-  # allowlist configured), so this guard is required, not defensive
-  # over-caution (matches the same guard cmd_install already uses for
-  # mode_flags).
-  for f in "${tracked[@]+"${tracked[@]}"}"; do
-    printf '%s' "$f" | LC_ALL=C grep -qiE "$ext_re" || continue
-    allowed=0
-    for a in "${allow_paths[@]+"${allow_paths[@]}"}"; do
-      [ "$a" = "$f" ] && { allowed=1; break; }
-    done
-    if [ "$allowed" -eq 0 ]; then
-      printf 'BINARY TRACKED: %s (extension-banned; route to an artifact store, do not commit)\n' "$f" >&2
-      fail=1
-      n_flagged=$((n_flagged + 1))
-    fi
-  done
-
-  [ "$fail" -eq 0 ] \
-    || die "binaries: $n_flagged git-tracked file(s) at a banned extension (see paths above)"
-  printf 'binaries: ok (%d tracked file(s) scanned, %d allowlisted)\n' "${#tracked[@]}" "${#allow_paths[@]}"
+  local script="${CI_GATES_REPO_ROOT}/.claude/skills/deep-code-review/scripts/binaries_gate.py"
+  [ -f "$script" ] || die "binaries: shipped binaries_gate.py not found at $script (fail closed)"
+  python3 "$script" "$root"
 }
 
 # ---------------------------------------------------------------------------
