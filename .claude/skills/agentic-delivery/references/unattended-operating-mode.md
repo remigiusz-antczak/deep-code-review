@@ -1,14 +1,13 @@
 # The unattended / autonomous operating mode
 
-Read this when: an agent or a Conductor is granted a block of **unattended time
-to work a backlog** — an overnight or multi-hour autonomous run — and needs the
-whole run's shape: how the mode composes the other skills, the delivery loop it
-runs, the run-start checklist and run-end self-audit that bound it, what "done"
-it may claim, and the default set of recurring loops. This file **names and
-wires together** doctrine that already lives in the sections it points to; it
-adds only the connective mode-framing, the run-start/run-end gate, and the
-default loop set. It does **not** restate the depth it routes to — follow the
-pointer.
+Read this when: an agent or a Conductor is granted a block of **unattended time to
+work a backlog** — an overnight or multi-hour autonomous run — and needs the whole
+run's shape: how the mode composes the other skills, the delivery loop it runs, the
+run-start checklist and run-end self-audit that bound it, what "done" it may claim,
+and the default set of recurring loops. This file **names and wires together**
+doctrine that already lives in the sections it points to; it adds only the
+connective mode-framing, the run-start/run-end gate, and the default loop set. It
+does **not** restate the depth it routes to — follow the pointer.
 
 This is **not a new runtime or a standing swarm** (`SKILL.md` intro) — it is how
 the same opt-in, one-Conductor, hats-not-headcount pattern operates *as a loop*
@@ -22,21 +21,19 @@ the substance is `fast-agentic-delivery.md` **An unattended time budget is a wor
 loop, not a single task**. Frame it as the default stance:
 
 - **Starting the loop never needs a reason; stopping does.** The loop runs until a
-  **named termination condition** fires (backlog empty; every remaining item
-  blocked on another party or on a Human gate; the granted window / appetite
-  spent; a resource ceiling hit), each reported **with the evidence that it
-  holds** — never a drift into silence. Depth + the four conditions:
-  `fast-agentic-delivery.md` **An unattended time budget is a work loop**
-  (termination-conditions bullet).
+  **named termination condition** fires (backlog empty; every remaining item blocked
+  on another party or on a Human gate; the granted window / appetite spent; a
+  resource ceiling hit), each reported **with the evidence that it holds** — never a
+  drift into silence. Depth + the four conditions: `fast-agentic-delivery.md` **An
+  unattended time budget is a work loop** (termination-conditions bullet).
 - **A go-faster tick is not a demand for busywork; holding can be correct.**
   `fast-agentic-delivery.md` **A go-faster signal fires on a clock, not on state**.
-- **Measure delivery, not activity.** Report the **operator's own metric** and
-  grade against durable output. Useful delivery signals to track — define them,
-  attach **no** target thresholds (a threshold here would be fabricated):
-  merged-**to-default** per window, base-red **minutes-to-green**, **fix-forward
-  share**. Routing: `fast-agentic-delivery.md` **Report the artifact, not the
-  activity** and **reconcile status against the operator's open-issue metric**;
-  review-side DORA depth is `deep-code-review`'s `release-engineering.md`.
+- **Measure delivery, not activity.** Report the **operator's own metric** and grade
+  against durable output. Useful signals — **no** target thresholds (fabricated
+  otherwise): merged-**to-default** per window, base-red **minutes-to-green**,
+  **fix-forward share**. Routing: `fast-agentic-delivery.md` **Report the artifact,
+  not the activity** and **reconcile status against the operator's open-issue
+  metric**; DORA: `deep-code-review`'s `release-engineering.md`.
 
 ## What it composes (three skills, three gates, one bounded loop)
 
@@ -52,10 +49,9 @@ The mode is not new machinery — it is the suite's existing gates run continuou
 - **`agentic-delivery` = the gated delivery.** G2–G8 with the Human gates intact.
 
 The **bounded-and-reversible spine** holds throughout: every gate **fails closed**
-(a gate that cannot run is `UNVERIFIED` / could-not-check, never a pass —
-`SKILL.md` Gate epistemology principle 3), and nothing irreversible or outward
-happens without the reversibility boundary or a human tap (`SKILL.md` **Human
-gates**).
+(a gate that cannot run is `UNVERIFIED` / could-not-check, never a pass — `SKILL.md`
+Gate epistemology principle 3), and nothing irreversible or outward happens without
+the reversibility boundary or a human tap (`SKILL.md` **Human gates**).
 
 ## The delivery loop (five rungs — depth routed, not restated)
 
@@ -135,6 +131,11 @@ closed):
 - **What is staged / in-flight** — pushed branches, open PRs.
 - **What is blocked, and on whom** — each owner-gated next step named.
 - **Spend used vs the ceiling.**
+- **Net removal vs a protected baseline** — the checks above measure
+  activity, not value; diff the run's cumulative surface and data inventory
+  against a committed must-keep baseline each cycle, and flag a cycle that
+  removed more than it added as a regression to reverse, not progress to
+  report — removal needs a logged acknowledgement, never a silent side effect.
 
 Depth: `fast-agentic-delivery.md` **If the loop is idling, say so loudly** (report
 the window, not the item) and the honest-reporting ladder below.
@@ -144,10 +145,9 @@ the window, not the item) and the honest-reporting ladder below.
 A proxy is never a completion claim. Keep the three rungs distinct, each verified
 on its own surface:
 
-- **running** — a spawned / computing lane is **not started** until it has a
-  durable artifact (`fast-agentic-delivery.md` **Progress is a durable artifact,
-  not a spawned lane**; `SKILL.md` **Failure** — a running lane is not a finished
-  one).
+- **running** — a spawned / computing lane is **not started** until it has a durable
+  artifact (`fast-agentic-delivery.md` **Progress is a durable artifact, not a
+  spawned lane**; `SKILL.md` **Failure** — a running lane is not a finished one).
 - **merged** — integrated is G7, and a merge **off the default branch is
   done-in-tree but still open** (`SKILL.md` — *A work item's own completion is G7*;
   `fast-agentic-delivery.md` **An open tracker issue is not proof the fix is

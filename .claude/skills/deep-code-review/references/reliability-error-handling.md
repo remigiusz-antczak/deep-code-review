@@ -224,40 +224,12 @@ Review:
   omitted its own guard. Wrap each decode/parse in its own try/catch (or prove it
   sits inside the outer one), and test the helper with malformed input for every
   such call.
-- **In a parallel fan-out whose contract is "every read fails soft," one read left unguarded takes the
-  whole page down — find it by diffing the siblings, not by trusting the repeated shape.** A
-  server-rendered page (or any loader) that starts N independent reads — `Promise.all`, or N promises
-  kicked off then awaited later — often documents a **whole-function** contract in a docstring or
-  comment: *every read degrades to an empty/fallback result on failure rather than taking the page
-  down*. The fail-soft wrapper (`.catch(err => { log(err); return <safe fallback> })`) tends to be
-  added **read-by-read** across several change sets, each closing one incident, so N-1 reads carry it
-  and exactly **one** is left bare and `await`ed unguarded — often the **first** promise started
-  (textually distant from the cluster) or the one whose failure "obviously can't happen" (a store that
-  is "always up"). When that read's I/O rejects (a transient DB blip, a timeout, a flaky upstream) the
-  rejection propagates out of the loader — past any local try/catch, which the doc's own promise usually
-  means there is none — and one transient failure crashes the **entire** page, taking down the N-1
-  siblings that would have degraded invisibly. It is invisible on the happy path (every test resolves),
-  so it defeats the exact resilience it was reviewed for, and a reviewer scanning the block sees `.catch`
-  repeated four times and pattern-matches the whole fan-out as safe. **Detect it by diffing the fan-out
-  against its stated contract:** for any function whose doc claims "every read degrades," list every
-  promise it starts and confirm each has its **own** `.catch`/try resolving to a safe fallback (not a
-  re-throw) — a `.catch` chained after the `await` still leaves a window if the promise is also awaited
-  elsewhere unguarded. Don't stop at "most of them do." **Verify before filing:** confirm the underlying
-  call genuinely **can** reject (a bare `pool.query`/`fetch` with no guard anywhere down its own chain,
-  not one already fail-soft two levels down), the value is actually consumed downstream (not dead code),
-  and no wrapping try/catch higher in the same function already neutralizes it. **The fix** is the same
-  one-line `.catch(fallback)` the siblings use; the value is in **finding** it — add a regression test
-  that stubs the one read to reject and asserts the loader still resolves with a degraded-but-honest
-  result instead of throwing. Distinct from the *"never throws" helper* bullet above (a **single** helper
-  whose own `decodeURIComponent`/`JSON.parse` throws past its contract — here the siblings' wrappers
-  *establish* the fail-soft pattern and the gap is the one outlier that diverges from them), from the
-  *find-the-house-primitive / uniform-routing* bullet above (which greps a **shared** retry/timeout
-  wrapper and confirms every I/O site routes through it — here the "pattern" is a per-function repeated
-  `.catch` keyed on a stated whole-function contract, not a house wrapper), and from
-  `testing-and-evals.md`'s *diff-the-guard-conditions-across-N-sibling-copies* rule (which diffs a
-  **logic guard clause** across N reconciliation checks, harm = an inflated miscount — this diffs an
-  **error-handling wrapper** across N I/O reads, harm = a crash that violates a stated fail-soft
-  contract).
+- **In a parallel fan-out whose contract is "every read fails soft," one read left unguarded takes the whole page down — find it by diffing the siblings, not by trusting the repeated shape.**
+  A server-rendered page (or any loader) that starts N independent reads — `Promise.all`, or N promises kicked off then awaited later — often documents a **whole-function** contract in a docstring or comment: *every read degrades to an empty/fallback result on failure rather than taking the page down*.
+  The fail-soft wrapper (`.catch(err => { log(err); return <safe fallback> })`) tends to be added **read-by-read** across several change sets, each closing one incident, so N-1 reads carry it and exactly **one** is left bare and `await`ed unguarded — often the **first** promise started (textually distant from the cluster) or the one whose failure "obviously can't happen" (a store that is "always up"). When that read's I/O rejects (a transient DB blip, a timeout, a flaky upstream) the rejection propagates out of the loader — past any local try/catch, which the doc's own promise usually means there is none — and one transient failure crashes the **entire** page, taking down the N-1 siblings that would have degraded invisibly. It is invisible on the happy path (every test resolves), so it defeats the exact resilience it was reviewed for, and a reviewer scanning the block sees `.catch` repeated four times and pattern-matches the whole fan-out as safe.
+  **Detect it by diffing the fan-out against its stated contract:** for any function whose doc claims "every read degrades," list every promise it starts and confirm each has its **own** `.catch`/try resolving to a safe fallback (not a re-throw) — a `.catch` chained after the `await` still leaves a window if the promise is also awaited elsewhere unguarded. Don't stop at "most of them do."
+  **Verify before filing:** confirm the underlying call genuinely **can** reject (a bare `pool.query`/`fetch` with no guard anywhere down its own chain, not one already fail-soft two levels down), the value is actually consumed downstream (not dead code), and no wrapping try/catch higher in the same function already neutralizes it. **The fix** is the same one-line `.catch(fallback)` the siblings use; the value is in **finding** it — add a regression test that stubs the one read to reject and asserts the loader still resolves with a degraded-but-honest result instead of throwing.
+  Distinct from the *"never throws" helper* bullet above (a **single** helper whose own `decodeURIComponent`/`JSON.parse` throws past its contract — here the siblings' wrappers *establish* the fail-soft pattern and the gap is the one outlier that diverges from them), from the *find-the-house-primitive / uniform-routing* bullet above (which greps a **shared** retry/timeout wrapper and confirms every I/O site routes through it — here the "pattern" is a per-function repeated `.catch` keyed on a stated whole-function contract, not a house wrapper), and from `testing-and-evals.md`'s *diff-the-guard-conditions-across-N-sibling-copies* rule (which diffs a **logic guard clause** across N reconciliation checks, harm = an inflated miscount — this diffs an **error-handling wrapper** across N I/O reads, harm = a crash that violates a stated fail-soft contract).
 - **The near-inverse of the unguarded read: a fail-soft `.catch` that returns a bare
   *empty* value launders a failed load into a legitimate-looking empty state — every read
   is guarded, yet a failure is indistinguishable from a genuinely-empty section.** Harden
@@ -311,6 +283,18 @@ Review:
   data"). Reuse the exact downstream gate/`check` path so the two can't diverge.
   Distinct from retry — a persistent failure like a rotated key survives every
   retry; a valid cached snapshot does not.
+- **A UI backed only by a volatile local cache blanks on every routine rebuild, not an
+  outage — the fix is architectural, not a longer timeout.** Unlike the last-good preflight
+  above (a *live-read failure* falling back to an existing snapshot), here the cache itself
+  does not survive the rebuild — an ephemeral disk, a fresh container, a cleared build cache —
+  so the very first request after every deploy has no last-good to serve, renders blank, and
+  reads as "flaky prod" that never reproduces locally (the cache there is never wiped). Fix
+  needs three parts together: a **committed fallback** dataset in the repo so a cold cache
+  never renders bare-blank; **idempotent auto-rehydration** that repopulates it on boot with
+  no manual step; and a **data-freshness gate** alerting when served data exceeds an age
+  bound, so a silently-broken rehydration is caught before a user notices. Cross-ref
+  `data-quality.md`'s disposable-cache rule — there the fix is a system-of-record; here, often
+  a store-less front-end/edge surface, the durable copy is the one committed to git.
 
 ---
 

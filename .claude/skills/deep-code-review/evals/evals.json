@@ -5808,6 +5808,40 @@
         "Explains why each half passed review separately: the cache's refresh-every-read design is legitimate in isolation, and the composite primary key reasonably reads as 'the table is indexed' without checking whether its leading column matches the query's sort column",
         "Recommends adding an index matching the actual `ORDER BY` shape (verified via EXPLAIN) and, independently, gating `reload()` behind a short TTL so read volume stops multiplying query volume one-to-one"
       ]
+    },
+    {
+      "id": "regression-test-oracle-independent-of-code-under-test",
+      "prompt": "A teammate fixed a config-validation gate that was silently letting an empty config through. Their regression test: run the fixed gate against the old bad config, capture whatever it now outputs, save that as `expected`, and assert future runs match it. They say this proves the gate rejects empty configs going forward. Review the test -- is it sound, and if not, why?",
+      "expected_output": "Not sound: the test's oracle was derived by running the very gate it is supposed to verify, which is circular. It only proves the gate agrees with itself today -- if the gate has any residual defect (e.g. it still half-accepts some other malformed shape), that defect ships baked into the captured `expected` value, and the test can never catch it because it will always agree with whatever the gate currently outputs. This is different from the legitimate practice of probing a real, already-trusted function to pin its current behavior -- that practice assumes the behavior is correct; here the whole point of the test is to prove the gate's correctness, so it cannot borrow its own answer as the check. The fix is to build the oracle independently of the gate: assert against a fact established before the gate ever runs -- e.g. a fixture that is deliberately, verifiably invalid and so must be rejected regardless of what today's code does (a planted-defect fixture with a known verdict), or a hand-verified expected value -- never the gate's own captured output. (testing-and-evals.md.)",
+      "expectations": [
+        "Identifies the core flaw: the expected value was derived by running the same code/gate under test, making the oracle self-referential/circular",
+        "Explains the consequence: a residual defect in the gate would be captured into `expected` and the test could never catch it",
+        "Recommends an independent oracle instead -- e.g. a fixture with a verdict known in advance (a planted defect) or a hand-verified value -- not the gate's own output",
+        "Does not accept the teammate's claim that the test proves the gate is correct going forward"
+      ]
+    },
+    {
+      "id": "sleep-then-assert-flakes-under-multi-lane-ci-contention",
+      "prompt": "A browser test opens a modal, calls `await page.waitForTimeout(500)`, then asserts the modal's content is visible. It passes reliably whenever a developer runs it alone, but fails intermittently in CI -- always in the same suite, never reproducing locally. The team's working theory is \"flaky browser, add a retry.\" Evaluate that theory and the test itself.",
+      "expected_output": "The \"flaky browser, add a retry\" theory masks the real cause and a retry would only paper over it. The fixed 500ms wait is a timing bet that the modal always finishes rendering within 500ms; that bet holds on an idle local machine but not on a CI runner where several job lanes share the host's CPU -- under that contention the same render can take well over 500ms, so the assertion fires before the modal is actually ready. This is not browser flakiness, it is a wall-clock assumption embedded in the test, and it explains exactly the observed pattern: never locally (nothing contends there), intermittently in CI (contention varies run to run). The fix is to replace the fixed sleep with a poll/wait for the actual observable readiness signal -- the modal's content actually present or visible (e.g. a selector-based wait or an assertion with built-in retry/polling) -- bounded by a generous upper bound, never a guessed duration. A blanket retry-until-green would hide the same class of failure elsewhere and erode trust in a genuinely red CI run. (testing-and-evals.md.)",
+      "expectations": [
+        "Rejects \"add a retry\" / generic browser flakiness as the fix and identifies the root cause as a fixed-duration wait racing the real render time",
+        "Names CPU contention from other concurrent CI lanes/jobs sharing the host as why this reproduces in CI but never locally",
+        "Recommends replacing the fixed sleep with polling/waiting for the actual observable readiness condition rather than asserting on a wall-clock duration",
+        "Does not conflate this with a genuinely nondeterministic flaky test needing quarantine -- treats it as an authoring-time defect to fix directly"
+      ]
+    },
+    {
+      "id": "ui-blanks-after-every-rebuild-because-cache-is-not-durable",
+      "prompt": "An internal dashboard reads from a local on-disk cache that's populated by a background job. Since the last infra migration, the team has noticed the dashboard renders completely empty right after every deploy, then \"fixes itself\" within a few minutes. Nobody has found an error in the logs. What's actually going on, and what would you require before calling this fixed?",
+      "expected_output": "Each deploy runs in a fresh, ephemeral environment (a new container, a cleared build cache, redeployed disk), so the on-disk cache the dashboard reads does not survive the rebuild. \"Fixes itself in a few minutes\" is the background job re-populating the cache from scratch after boot; the empty window in between is the defect itself, not a transient error any log would catch -- which is why nobody found one. Waiting it out, or adding a longer health-check delay before routing traffic, does not fix it -- it only hides the same blank window behind a slower rollout. Before calling this fixed, require three things together: a committed fallback dataset shipped in the repo so a cold cache never renders bare-blank on the very first request; automatic, idempotent rehydration that repopulates the cache on boot with no manual runbook step, safe to run again if a redeploy retries; and a data-freshness gate or alert that fires when served data exceeds an expected age bound, so a rehydration that silently stops working is caught before a user notices. This differs from a live-read failure that can fall back to an existing last-good snapshot -- here there is no last-good, because the cache itself is what the rebuild wipes, so the durable fallback has to be the copy committed to git, not a database the surface may not even have. (reliability-error-handling.md.)",
+      "expectations": [
+        "Identifies the root cause as the on-disk/local cache not surviving the rebuild/redeploy (ephemeral storage), not a logged error or a transient blip",
+        "Rejects waiting for it to self-heal or adding a longer health-check delay as an actual fix",
+        "Requires a committed fallback dataset in the repo so a cold cache never renders blank",
+        "Requires idempotent automatic rehydration on boot/deploy with no manual step",
+        "Requires a data-freshness gate or alert to catch a silently-broken rehydration"
+      ]
     }
   ]
 }
