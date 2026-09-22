@@ -24,7 +24,7 @@
 #     printf '%s\t%s\n' "$f" "$(LC_ALL=C wc -l < "$f" | tr -d '[:space:]')"; done
 .claude/skills/agentic-ceo/SKILL.md	187
 .claude/skills/agentic-delivery/SKILL.md	478
-.claude/skills/agentic-delivery/references/fast-agentic-delivery.md	2618
+.claude/skills/agentic-delivery/references/fast-agentic-delivery.md	2345
 .claude/skills/agentic-delivery/references/host-enforcement.md	69
 .claude/skills/agentic-delivery/references/incident-response.md	154
 .claude/skills/agentic-delivery/references/multi-session-coordination.md	751
@@ -52,7 +52,7 @@
 .claude/skills/deep-code-review/references/docs-evolution-by-stage.md	60
 .claude/skills/deep-code-review/references/domain-checklists.md	853
 .claude/skills/deep-code-review/references/example-review-report.md	10
-.claude/skills/deep-code-review/references/frontend-a11y.md	1497
+.claude/skills/deep-code-review/references/frontend-a11y.md	1260
 .claude/skills/deep-code-review/references/i18n-l10n.md	134
 .claude/skills/deep-code-review/references/infra-evolution-by-stage.md	79
 .claude/skills/deep-code-review/references/infra-iac-containers.md	248
