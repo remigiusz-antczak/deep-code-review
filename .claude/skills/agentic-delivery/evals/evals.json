@@ -1255,6 +1255,28 @@
         "Distinguishes this from 'report the artifact, not the activity' (truthfulness of status content) and from baking a terse register into the agent definition (the enforcement mechanism) -- this is what that terse register should be terse about",
         "Prescribes cutting narration/restated-brief/unrequested worked example while keeping every required Output-contract field (verdict, file:line, branch/SHA, gate pass/fail) intact -- terse the prose, not the fields"
       ]
+    },
+    {
+      "id": "gate-marker-must-be-its-own-line-not-buried-in-prose",
+      "prompt": "A lane's PR touches a page-rendering component. The gate requires either narrow/wide screenshots or a standalone 'No UX change: <reason>' line in the PR body. The lane's body reads: 'This PR only swaps a retry constant from 3 to 5; no UX change results from this edit, and tests are green.' The gate runs and reports the UX-evidence requirement as unmet, so CI reds a diff whose author is confident is UX-neutral. Did the lane do something wrong, and what should it do differently?",
+      "expected_output": "The lane's claim is true and honestly stated, but the gate is a grep for a standalone marker line (a fixed prefix at line-start), not a semantic reader of prose -- 'no UX change results from this edit' inside a sentence does not match the line shape the check looks for, so a correct claim still reads as absent and the gate fails closed. This is a position/format defect, not a substance defect: the fix is not more justification, it is putting the exact required marker on its own line, e.g. 'No UX change: swaps a retry constant, no rendered surface touched.' Before marking the PR ready, the lane should run the gate's own checker against its drafted body rather than discovering the miss only after CI reds it -- a purely textual failure is cheap to catch pre-flight. The same discipline applies to any gate parsing a structured marker (a co-author trailer, an opt-out flag, an acknowledgment line) out of free-form text: the check is grep-shaped, the input is prose-shaped, and only an exact-shape marker bridges the two.",
+      "expectations": [
+        "Identifies the gate as a standalone-line grep, not a semantic parser -- the claim being true and honestly stated does not make it match",
+        "States the fix is reformatting the marker onto its own line in the required shape, not adding more justification or disputing the gate",
+        "Requires running the gate's own checker against the drafted PR body before marking ready, rather than discovering the miss after CI reds it",
+        "Generalizes the failure to any gate parsing a structured marker out of free-form PR/commit text, not only the UX-evidence case"
+      ]
+    },
+    {
+      "id": "self-assessed-queue-empty-needs-owner-confirmation-not-a-quiet-winddown",
+      "prompt": "An unattended delivery agent was told at the start of its run: 'keep producing until I say stop.' Several hours in, it has merged everything in the issue tracker, checked the backlog file and the skipped-test list, and confirmed all three are drained. The owner has not replied to anything since the initial instruction. The agent posts 'queue exhausted, winding down' and goes idle. Is that the right call?",
+      "expected_output": "No. Checking every surface (tracker, backlog file, skipped tests) is necessary -- it satisfies the separate 'terminus is a claim about ALL work queues' requirement -- but it is not sufficient here, because the owner's instruction was a standing directive ('keep producing until I say stop'), and only the owner retracting or confirming that instruction discharges it. An empty known queue is a narrower claim than 'the directive is satisfied,' and the agent treating its own thorough-but-self-assessed read as equivalent to the owner's sign-off is unilaterally retiring an instruction it was not given authority to retire. The correct move before winding down is to self-source further: run a fresh-scope adversarial security/correctness review over code no open issue names, or advance a decision/spec item toward owner ratification -- both cheap, read-only-until-filed, and likely to surface real work a name-only queue never listed. Then report exactly what was checked and self-sourced, and hold for the owner's explicit confirmation rather than quietly treating silence as permission to stop.",
+      "expectations": [
+        "Distinguishes thoroughness of the check (every surface enumerated) from authority to stop (only the owner's standing directive being retracted or confirmed) -- checking every surface is necessary but not sufficient",
+        "Requires self-sourcing further work (a fresh-scope security/correctness review, or a decision/spec item advanced toward ratification) before treating the queue as genuinely exhausted",
+        "States the agent must report what was checked/self-sourced and hold for the owner's explicit confirmation, rather than treating owner silence as consent to wind down",
+        "Does not extend this to unrelated termination conditions (a spent time-box, a resource ceiling, an owner-approval-gated block) -- scopes the objection to the empty-queue condition under a standing directive specifically"
+      ]
     }
   ]
 }
