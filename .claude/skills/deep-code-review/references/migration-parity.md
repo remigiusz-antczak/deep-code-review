@@ -1,85 +1,80 @@
 # Migration & prototype-reference parity
 
-Read this when the reference you are matching is a **prototype / mockup / design
-export** (a static page, a design-tool frame, a clickable prototype — typically
-built on a handful of seed rows), or the task is a **port / migration to a
-reference design**. Expands section P of `SKILL.md`, alongside `frontend-a11y.md`
-(a11y correctness) and `product-ux-quality.md` (the design half). The failures this
-file prevents: porting a migration screen-by-screen with **no unified chrome** (an
-unbounded defect stream), over-claiming parity from the wrong evidence, recommending
-the **deletion of real features** to match a sparse reference, and shipping a UI that
-matches structurally yet feels poor to use.
+Read this when the reference you are matching is a **prototype / mockup / design export** (a
+static page, a design-tool frame, a clickable prototype — typically built on a handful of
+seed rows), or the task is a **port / migration to a reference design**. Expands section P
+of `SKILL.md`, alongside `frontend-a11y.md` (a11y correctness) and `product-ux-quality.md`
+(the design half). The failures this file prevents: porting a migration screen-by-screen
+with **no unified chrome** (an unbounded defect stream), over-claiming parity from the wrong
+evidence, recommending the **deletion of real features** to match a sparse reference, and
+shipping a UI that matches structurally yet feels poor to use.
 
 ---
 
 ## Unify the chrome/shell before porting screens — one level above component unification
 
-The unification precondition (`product-ux-quality.md`, one component per concept)
-has a level **above** individual components: the **chrome/shell** — per-page header,
-tab/section strip, stat-tile frame, sub-nav, and the rule that decides which tabs a
-surface shows. Porting the *outer* frame (sidebar, top bar) to a shared component
-does **not** unify the *inner* chrome: it can still split into independently-authored
-families — one composing the shared header + nav-link tabs, a sibling bypassing it
-with a bespoke inline header (a raw font-size, not the token) + a hand-rolled
-local-state pill strip. When it does, every downstream "why is this styled
-differently / this has fewer sections / the strip won't stick" complaint is one
-divergence per surface, "fixed" per-surface without converging. **A per-surface
-migration with no unified chrome is an unbounded defect stream** — the tell that the
-divergence is structural, not per-screen.
+The unification precondition (`product-ux-quality.md`, one component per concept) has a
+level **above** individual components: the **chrome/shell** — per-page header, tab/section
+strip, stat-tile frame, sub-nav, and the rule that decides which tabs a surface shows.
+Porting the *outer* frame (sidebar, top bar) to a shared component does **not** unify the
+*inner* chrome: it can still split into independently-authored families — one composing the
+shared header + nav-link tabs, a sibling bypassing it with a bespoke inline header (a raw
+font-size, not the token) + a hand-rolled local-state pill strip. When it does, every
+downstream "why is this styled differently / this has fewer sections / the strip won't
+stick" complaint is one divergence per surface, "fixed" per-surface without converging. **A
+per-surface migration with no unified chrome is an unbounded defect stream** — the tell that
+the divergence is structural, not per-screen.
 
-- **Enumerate the chrome primitives first, and confirm every surface renders through
-  the shared ones *before* porting individual screens.** A surface that reimplements
-  a chrome primitive is a **structural defect**, not a nit.
+- **Enumerate the chrome primitives first, and confirm every surface renders through the
+  shared ones *before* porting individual screens.** A surface that reimplements a chrome
+  primitive is a **structural defect**, not a nit.
 - **Align the outlier family *to* the consistent majority**, not the reverse — if two
   surfaces diverge and thirteen agree, fix the two; don't rebuild all fifteen.
-- **Render the same sub-view *superset* across structurally-similar surfaces**
-  (per-entity dashboards) with honest-empty states — not a hand-picked per-entity
-  subset — so absence reads as "nothing here yet," not "this entity is different."
-  **The one exception is load-bearing:** if a view would render a **misleading
-  aggregate** at that scope (a rate/total that is wrong or meaningless for this
-  entity), keep it **hidden** — **computed-not-fabricated (principle 3) beats
-  tab-count symmetry**. Symmetry is the default; a hidden view is justified only by
-  "the number it would show is wrong here," stated in the finding.
-- **Unify a control that exists in two *behaviors* by its styling, not by one
-  dual-mode component.** A navigation link and a local-state toggle can look
-  identical yet carry **different semantics** — `aria-current` for the nav location
-  vs `aria-pressed`/expanded for the toggle. Extract the **styling** into one shared
-  primitive and wrap it in two thin behavior wrappers; do **not** collapse them into
-  a single component with two mutually-exclusive prop modes, which breaks a11y (the
-  unwired mode emits the wrong role, focus, and keyboard order — `frontend-a11y.md`).
-  This is the **complement** of the feature-flag rule, not a contradiction of it: a
-  feature that is *present-or-absent with the same semantics* belongs **inside** the
-  component (`product-ux-quality.md`, one component per concept, #123); two
-  *different behaviors* stay **separate wrappers over one shared style**.
+- **Render the same sub-view *superset* across structurally-similar surfaces** (per-entity
+  dashboards) with honest-empty states — not a hand-picked per-entity subset — so absence
+  reads as "nothing here yet," not "this entity is different." **The one exception is
+  load-bearing:** if a view would render a **misleading aggregate** at that scope (a
+  rate/total that is wrong or meaningless for this entity), keep it **hidden** —
+  **computed-not-fabricated (principle 3) beats tab-count symmetry**. Symmetry is the
+  default; a hidden view is justified only by "the number it would show is wrong here,"
+  stated in the finding.
+- **Unify a control that exists in two *behaviors* by its styling, not by one dual-mode
+  component.** A navigation link and a local-state toggle can look identical yet carry
+  **different semantics** — `aria-current` for the nav location vs `aria-pressed`/expanded
+  for the toggle. Extract the **styling** into one shared primitive and wrap it in two thin
+  behavior wrappers; do **not** collapse them into a single component with two
+  mutually-exclusive prop modes, which breaks a11y (the unwired mode emits the wrong role,
+  focus, and keyboard order — `frontend-a11y.md`). This is the **complement** of the
+  feature-flag rule, not a contradiction of it: a feature that is *present-or-absent with
+  the same semantics* belongs **inside** the component (`product-ux-quality.md`, one
+  component per concept, #123); two *different behaviors* stay **separate wrappers over one
+  shared style**.
 
 ## Own the shared shell before the page lanes spawn — one writer per shell primitive
 
 Unifying the chrome/shell (above) is a **precondition**; the moment a multi-screen
-port/restyle **fans out to parallel page lanes**, the shared shell becomes contested
-write state — every lane needs the same handful of files (layout, nav, tokens, chrome
-primitives), so concurrent edits **clobber or silently revert** each other's changes,
-invisible to a per-PR review that passes each lane while the defect lives **between**
-them.
+port/restyle **fans out to parallel page lanes**, the shared shell becomes contested write
+state — every lane needs the same handful of files (layout, nav, tokens, chrome primitives),
+so concurrent edits **clobber or silently revert** each other's changes, invisible to a
+per-PR review that passes each lane while the defect lives **between** them.
 
 Before spawning any page lane, the lead publishes a **shell-ownership ledger** on the
-integration PR — the same table shape as the fan-out **Unit manifest**
-(`parallel-audit.md` §1, lead-owned, filled before spawn); do **not** restate it. Its
-load-bearing rules:
+integration PR — the same table shape as the fan-out **Unit manifest** (`parallel-audit.md`
+§1, lead-owned, filled before spawn); do **not** restate it. Its load-bearing rules:
 
-- **Exactly one lane owns each shared-shell path** (layout, nav, tokens, chrome
-  primitives). Ownership is a **partition**, not a suggestion: two lanes listing the
-  same shell path is the collision, on paper, before a line is written.
-- **The shell lands first.** Page lanes branch from / rebase onto the merged shell, so
-  they restyle **against** the unified chrome, not alongside a moving one.
-- **A page lane editing a shared-shell path it does not own is a finding** — even when
-  its diff is correct in isolation — because it silently diverges the shell the other
-  lanes built on (the per-surface-divergence, unbounded-defect-stream failure this file
-  opens with).
+- **Exactly one lane owns each shared-shell path** (layout, nav, tokens, chrome primitives).
+  Ownership is a **partition**, not a suggestion: two lanes listing the same shell path is
+  the collision, on paper, before a line is written.
+- **The shell lands first.** Page lanes branch from / rebase onto the merged shell, so they
+  restyle **against** the unified chrome, not alongside a moving one.
+- **A page lane editing a shared-shell path it does not own is a finding** — even when its
+  diff is correct in isolation — because it silently diverges the shell the other lanes
+  built on (the per-surface-divergence, unbounded-defect-stream failure this file opens
+  with).
 
 **Severity.** Spawning a restyle fan-out with **no ownership ledger** is a **High**
-coordination defect (do-no-harm, principle 4 — the lanes clobber the shell, invisibly
-until integration); a cross-lane shell-path edit is its own finding against the
-owning lane.
+coordination defect (do-no-harm, principle 4 — the lanes clobber the shell, invisibly until
+integration); a cross-lane shell-path edit is its own finding against the owning lane.
 
 These are **review-side** detections — a missing ledger, an unpartitioned path, or a
 cross-lane edit. *Enforcing* single-writer ownership at write-time is a delivery-overlay
@@ -87,246 +82,248 @@ concern, out of scope for this self-contained review-only rule.
 
 ## Verify parity surface-by-surface, on real data — never from a structural or seed-data audit
 
-A structural component audit, a green test suite, and a section-by-section
-screenshot comparison **over-report** parity. They miss exactly the divergences
-that appear only on real data and real use: which view a route **defaults** to,
-whether a composer carries every field the reference has, whether shared components
-are actually unified or quietly reimplemented per page, whether a sub-view was
-dropped, whether live data is even populated. Parity is verified
-**surface-by-surface, interactively, on real data**: for each surface, drive the
-real control and diff against the reference's **actual rendered behaviour** —
+A structural component audit, a green test suite, and a section-by-section screenshot
+comparison **over-report** parity. They miss exactly the divergences that appear only on
+real data and real use: which view a route **defaults** to, whether a composer carries every
+field the reference has, whether shared components are actually unified or quietly
+reimplemented per page, whether a sub-view was dropped, whether live data is even populated.
+Parity is verified **surface-by-surface, interactively, on real data**: for each surface,
+drive the real control and diff against the reference's **actual rendered behaviour** —
 default state, every field, every sub-view/mode, data population — not its static
-screenshot. Treat every "matches well" as **unverified** until the real surface is
-exercised against the real reference. (The structural / green-suite / seed-screenshot
-stand-ins are the "Beware the proxy" completion trap — `report-format.md`.)
+screenshot. Treat every "matches well" as **unverified** until the real surface is exercised
+against the real reference. (The structural / green-suite / seed-screenshot stand-ins are
+the "Beware the proxy" completion trap — `report-format.md`.)
 
 ## Scope a parity claim to the correspondence table — one screen verified is not the product
 
 `product-ux-quality.md` gate 4 already defines *done* on a parity task as the
-present-or-absent lists empty **"for every screen in the correspondence table."** That
-table **is** the coverage ledger; #200's rule is only that it **exists before any
-claim** and that a claim is **scoped to the rows actually verified**, never phrased over
-the product.
+present-or-absent lists empty **"for every screen in the correspondence table."** That table
+**is** the coverage ledger; #200's rule is only that it **exists before any claim** and that
+a claim is **scoped to the rows actually verified**, never phrased over the product.
 
 - **Enumerate every in-scope route/screen as a row before claiming parity.** Each row
   carries its own state: `verified` (rendered and compared, with the evidence) /
   `unverified` / `n-a (out of scope, reason)`. An unrendered screen is an **unprobed
-  surface** — `unverified`, not matched (`SKILL.md` principle 2: an absence is evidence
-  only after a positive control fires).
+  surface** — `unverified`, not matched (`SKILL.md` principle 2: an absence is evidence only
+  after a positive control fires).
 - **A parity status is scoped to the `verified` rows and may never be phrased over the
   product.** Aggregate phrasing — "the app matches," "parity achieved," "all pages" — is
-  valid **only** when **every** row reads `verified`; otherwise the honest form is
-  `N of M screens verified — remaining: <list>`. Generalizing a claim from a sample to
-  the population is a **High** communication defect: it retires the verification task —
-  the owner stands the lanes down and stops checking — and the mismatch surfaces later
-  as the trust-collapse dynamic (`product-ux-quality.md`'s repeated-owner-rejection
-  rule). The verdict cap lives in `report-format.md` (capped below Approve while any
-  in-scope screen is `unverified`).
+  valid **only** when **every** row reads `verified`; otherwise the honest form is `N of M
+  screens verified — remaining: <list>`. Generalizing a claim from a sample to the
+  population is a **High** communication defect: it retires the verification task — the
+  owner stands the lanes down and stops checking — and the mismatch surfaces later as the
+  trust-collapse dynamic (`product-ux-quality.md`'s repeated-owner-rejection rule). The
+  verdict cap lives in `report-format.md` (capped below Approve while any in-scope screen is
+  `unverified`).
 - **Sample the strongest screen first, not the cheapest.** When screens are verified
   incrementally, verify a **chrome-bearing, data-dense** screen first; a static prose /
-  changelog page is the **weakest** possible sample — it exercises almost none of the
-  shared shell, and this file already puts shell unification ahead of screens, so a
-  screen with no shell proves almost nothing about the shell.
+  changelog page is the **weakest** possible sample — it exercises almost none of the shared
+  shell, and this file already puts shell unification ahead of screens, so a screen with no
+  shell proves almost nothing about the shell.
 
 ## Anchor findings on treatment, not data-volume — a sparse mockup is not a feature spec
 
-When the reference is a prototype on seed data, a section-by-section comparison
-flags the production surface as "too dense / too tall / a wall of cards" because it
-renders **real** data (dozens–hundreds of rows) while the mockup shows three to
-five. Much of that "gap" is a **data-volume artifact**, not a design difference —
-the mockup's calm emptiness is partly just emptiness. Anchor findings on
-**treatment** (layout structure, spacing scale, component choice, hierarchy,
-chrome/nav, default view, empty/overflow handling), **not** absolute list length,
-page height, or item count.
+When the reference is a prototype on seed data, a section-by-section comparison flags the
+production surface as "too dense / too tall / a wall of cards" because it renders **real**
+data (dozens–hundreds of rows) while the mockup shows three to five. Much of that "gap" is a
+**data-volume artifact**, not a design difference — the mockup's calm emptiness is partly
+just emptiness. Anchor findings on **treatment** (layout structure, spacing scale, component
+choice, hierarchy, chrome/nav, default view, empty/overflow handling), **not** absolute list
+length, page height, or item count.
 
-**Run a foundation check before classifying screen-by-screen: diff both sides' design
-tokens by resolved value, not name.** Bucket-(a) gaps recurring on every screen despite
-repeated restyling are usually one root — a **different token foundation**. Match
-colour/spacing/type by **computed value**; a low match (one audit: ~4% of the design's
-colours, ~3 of ~1,400 names) confirms it, and no per-screen fix converges until
-remapped — adopt the design's **values** under the app's existing token **names**.
+**Run a foundation check before classifying screen-by-screen: diff both sides' design tokens
+by resolved value, not name.** Bucket-(a) gaps recurring on every screen despite repeated
+restyling are usually one root — a **different token foundation**. Match colour/spacing/type
+by **computed value**; a low match (one audit: ~4% of the design's colours, ~3 of ~1,400
+names) confirms it, and no per-screen fix converges until remapped — adopt the design's
+**values** under the app's existing token **names**.
 
 Separate three kinds of "gap" explicitly — they have **opposite** fixes:
 - **(a) genuine treatment difference** — restyle to match.
-- **(b) data-volume artifact** — the surface is larger because it holds real data;
-  the fix is **progressive disclosure / capping / pagination**, *never* deletion.
-- **(c) a real extra feature** the production surface has and the mockup lacks —
-  **preserve it**: preserve the *capability* and **restyle it into the target's
-  design language**, never delete it (see *Restyle an app-only feature into the
-  target's design language* below for the classification, its **High** severity, and
-  the ledger). A design mockup is a look reference, not a feature spec.
+- **(b) data-volume artifact** — the surface is larger because it holds real data; the fix
+  is **progressive disclosure / capping / pagination**, *never* deletion.
+- **(c) a real extra feature** the production surface has and the mockup lacks — **preserve
+  it**: preserve the *capability* and **restyle it into the target's design language**,
+  never delete it (see *Restyle an app-only feature into the target's design language* below
+  for the classification, its **High** severity, and the ledger). A design mockup is a look
+  reference, not a feature spec.
 
-**"Drop / replace / remove X to match the reference" is a review smell** for any
-surface that renders real data: it is a path to deleting working features and
-violates do-no-harm (principle 4) and the never-remove-a-working-feature-without-
-confirmation bar — and when the *X* is app-only **functionality** (removing it loses
-a user capability), deleting it without a named owner approval is not merely a smell
-but a **High**-severity finding (*Restyle an app-only feature into the target's
-design language* below). Rewrite the recommendation as "adopt the reference's layout
-and default; move the extra content behind progressive disclosure" for a data-volume
-gap, or "restyle the feature into the target's design language" for a real app-only
-feature. A page-height or item-count delta versus a seed-data mockup is a **notice,
-not a defect** — say so in the finding, so a downstream implementer does not read it
-as a cut order. Before recommending any structural change to a real surface from a
-mockup, confirm the difference is **treatment** (reproducible on **equal** data), not
-volume.
+**"Drop / replace / remove X to match the reference" is a review smell** for any surface
+that renders real data: it is a path to deleting working features and violates do-no-harm
+(principle 4) and the never-remove-a-working-feature-without-confirmation bar — and when
+the *X* is app-only **functionality** (removing it loses a user capability), deleting it
+without a named owner approval is not merely a smell but a **High**-severity finding
+(*Restyle an app-only feature into the target's design language* below). Rewrite the
+recommendation as "adopt the reference's layout and default; move the extra content behind
+progressive disclosure" for a data-volume gap, or "restyle the feature into the target's
+design language" for a real app-only feature. A page-height or item-count delta versus a
+seed-data mockup is a **notice, not a defect** — say so in the finding, so a downstream
+implementer does not read it as a cut order. Before recommending any structural change to a
+real surface from a mockup, confirm the difference is **treatment** (reproducible on
+**equal** data), not volume.
 
 ## Restyle an app-only feature into the target's design language — don't delete it, don't leave it old
 
-`product-ux-quality.md`'s parity differ runs **both ways** and flags an **app-only
-element** (present in the app, absent from the design) as a finding. That rule and
-the *preserve-a-real-extra-feature* rule above read as **opposites** — "mismatch" vs
-"preserve it" — and when two rules collide an implementer reaches for the **harsher**
-one: *delete it to match*, the wrong default and the costliest mistake on a restyle.
-Resolve the tension by **classifying** the app-only element with the differ's
-operative test — *does removing it lose a user capability?* (`product-ux-quality.md`
-owns that test) — into exactly one of three buckets:
+`product-ux-quality.md`'s parity differ runs **both ways** and flags an **app-only element**
+(present in the app, absent from the design) as a finding. That rule and the
+*preserve-a-real-extra-feature* rule above read as **opposites** — "mismatch" vs "preserve
+it" — and when two rules collide an implementer reaches for the **harsher** one: *delete it
+to match*, the wrong default and the costliest mistake on a restyle. Resolve the tension by
+**classifying** the app-only element with the differ's operative test — *does removing it
+lose a user capability?* (`product-ux-quality.md` owns that test) — into exactly one of
+three buckets:
 
-- **Decoration / pure shell** (no capability, no real data — an extra header, a
-  "Showing N of N" line, a duplicated label) → **remove-to-match.** This is the only
-  bucket that deletes, and it deletes nothing a user can *do*.
-- **Real functionality** (removing it loses a capability — a filter, a view tab, an
-  upvote, a deep link) → **restyle it into the target's design language.** Re-express
-  the capability in the reference's own primitives (its button, its tab, its filter
-  control): **look** reaches parity, **capability** stays — not "leave it in the old
-  visual language," not "escalate and wait." Only when **no** target primitive fits
-  does the element escalate to owner adjudication — the **fallback**, never the
-  default.
+- **Decoration / pure shell** (no capability, no real data — an extra header, a "Showing N
+  of N" line, a duplicated label) → **remove-to-match.** This is the only bucket that
+  deletes, and it deletes nothing a user can *do*.
+- **Real functionality** (removing it loses a capability — a filter, a view tab, an upvote,
+  a deep link) → **restyle it into the target's design language.** Re-express the capability
+  in the reference's own primitives (its button, its tab, its filter control): **look**
+  reaches parity, **capability** stays — not "leave it in the old visual language," not
+  "escalate and wait." Only when **no** target primitive fits does the element escalate to
+  owner adjudication — the **fallback**, never the default.
 - **Owner-approved removal** → a **named decision**: an owner has accepted losing the
   capability to reach parity. Record who accepted it and where.
 
-**Severity.** Deleting — or recommending deletion of — app-only **functionality**
-without a named owner approval is **High** (do-no-harm, principle 4; `SKILL.md`
-severity rubric): it **blocks** unless a named owner accepts the loss (the
-*owner-approved-removal* bucket **is** that acceptance). Removing pure **decoration**
-is not this finding — no capability is lost.
+**Severity.** Deleting — or recommending deletion of — app-only **functionality** without a
+named owner approval is **High** (do-no-harm, principle 4; `SKILL.md` severity rubric): it
+**blocks** unless a named owner accepts the loss (the *owner-approved-removal* bucket **is**
+that acceptance). Removing pure **decoration** is not this finding — no capability is lost.
 
-**Fill an exception ledger before implementing a restyle** — one row per app-only
-element: `element · bucket (decoration/functionality/owner-approved) · verdict
-(remove/restyle/named-removal) · target primitive`. The ledger proves each element
-was **classified**, not silently deleted; a restyle deleting an unledgered element is
-the do-no-harm finding above.
+**Fill an exception ledger before implementing a restyle** — one row per app-only element:
+`element · bucket (decoration/functionality/owner-approved) · verdict
+(remove/restyle/named-removal) · target primitive`. The ledger proves each element was
+**classified**, not silently deleted; a restyle deleting an unledgered element is the
+do-no-harm finding above.
+
+**Classifying a difference is a diagnostic step, not the deliverable — it must terminate in
+the bucket's resolution, never a report of it.** A concrete "align X to the reference"
+instruction is not a request to audit and adjudicate: bucketing every gap as intentional /
+acceptable / already-superset and landing nothing is the instruction quietly downgraded into
+a judgement call nobody delegated — worse across a multi-agent pipeline, where a reviewer's
+classification reads to the orchestrator as verified alignment (`agentic-delivery`). "Keep
+current" is a bucket outcome too, not a default: valid only behind a **named owner's
+sign-off on that difference**, never an agent self-granting itself the exemption — the
+*owner-approved-removal* row above is that sign-off, not a template for the rest.
 
 ## Match the chrome, never the mock's data — copying a sample value is fabrication
 
-Separate **chrome** (layout, colour, geometry, tab set, headers, control affordances
-— **must match**) from **data** (values, counts, denominators, series — **must stay
-real**). A mock is built to *look* complete, so it fills every number with plausible
-sample values — the one thing that must **not** cross into the product. **Copying a
-mock's number into the real product is fabrication** (principle 3), a Blocker-class
-data-integrity defect surfacing weeks later when someone trusts a value lifted from an
-illustration, not computed. **Inverse** of the treatment-not-volume smell above: there
-the mock's *sparse* data tempts a wrong cut, here its *invented* values tempt a wrong
-copy — a design mockup is neither a feature spec nor a data spec.
+Separate **chrome** (layout, colour, geometry, tab set, headers, control affordances —
+**must match**) from **data** (values, counts, denominators, series — **must stay real**). A
+mock is built to *look* complete, so it fills every number with plausible sample values —
+the one thing that must **not** cross into the product. **Copying a mock's number into the
+real product is fabrication** (principle 3), a Blocker-class data-integrity defect surfacing
+weeks later when someone trusts a value lifted from an illustration, not computed.
+**Inverse** of the treatment-not-volume smell above: there the mock's *sparse* data tempts a
+wrong cut, here its *invented* values tempt a wrong copy — a design mockup is neither a
+feature spec nor a data spec.
 
-- **Read the prototype's own disclaimers first.** Mocks routinely label their
-  sample numbers ("values marked *sample* are illustrative until the backend is
-  wired"); that label is the boundary between chrome-to-match and data-to-ignore.
-- **Brief the chrome-vs-data split into every parallel worker.** A lane without the
-  caveat will "helpfully" reconcile the numbers and inject fabricated data, invisible
-  to the coordinator until it ships (`agentic-delivery`).
-- **This is why the parity differ ignores text values entirely** — the differ's
-  rule follows from this one; see the Phase-6 parity-differ gate (which owns the
-  differ's exact scope) in `product-ux-quality.md`.
+- **Read the prototype's own disclaimers first.** Mocks routinely label their sample numbers
+  ("values marked *sample* are illustrative until the backend is wired"); that label is the
+  boundary between chrome-to-match and data-to-ignore.
+- **Brief the chrome-vs-data split into every parallel worker.** A lane without the caveat
+  will "helpfully" reconcile the numbers and inject fabricated data, invisible to the
+  coordinator until it ships (`agentic-delivery`).
+- **This is why the parity differ ignores text values entirely** — the differ's rule follows
+  from this one; see the Phase-6 parity-differ gate (which owns the differ's exact scope) in
+  `product-ux-quality.md`.
 
-**Acceptance:** every number in the matched product traces to a real computation or
-an honest empty state; no value present in the product originates from the design
-mock.
+**Acceptance:** every number in the matched product traces to a real computation or an
+honest empty state; no value present in the product originates from the design mock.
 
 ## Flow-cost — navigation cost, scroll burden, and cognitive load are first-class
 
-Structural and pixel parity are necessary but not sufficient: a UI can match the
-reference element-for-element and still feel poor, because the failures live in the
-**interaction flow**, invisible to a per-screen diff. Run a **flow-cost pass**,
-distinct from structural correctness, for each primary task:
-- **Navigation cost** — count clicks + scroll distance to complete the task **and
-  to reverse / switch**. Flag "must scroll back up to a top nav to change section"
-  (→ sticky nav or tabbed sections), "N clicks for a common toggle," and "content
-  pushed below a tall element."
-- **Cognitive load** — the number of simultaneous choices offered, instructional
-  sentences that could be a tooltip or removed, competing primary actions. (N
-  interchangeable variants of one thing is the **variant-bloat** smell — cut to one
-  default: `product-ux-quality.md`.)
-- **Completion bar** — "the components match" or a green suite is not "done" for UI
-  work; the bar is the subjective-quality completion bar defined under "Beware the
-  proxy" (`report-format.md`).
+Structural and pixel parity are necessary but not sufficient: a UI can match the reference
+element-for-element and still feel poor, because the failures live in the **interaction
+flow**, invisible to a per-screen diff. Run a **flow-cost pass**, distinct from structural
+correctness, for each primary task:
+- **Navigation cost** — count clicks + scroll distance to complete the task **and to reverse
+  / switch**. Flag "must scroll back up to a top nav to change section" (→ sticky nav or
+  tabbed sections), "N clicks for a common toggle," and "content pushed below a tall
+  element."
+- **Cognitive load** — the number of simultaneous choices offered, instructional sentences
+  that could be a tooltip or removed, competing primary actions. (N interchangeable variants
+  of one thing is the **variant-bloat** smell — cut to one default:
+  `product-ux-quality.md`.)
+- **Completion bar** — "the components match" or a green suite is not "done" for UI work;
+  the bar is the subjective-quality completion bar defined under "Beware the proxy"
+  (`report-format.md`).
 
 ## Ground the craft bar in cited heuristics, not ad-hoc taste
 
 "Looks about right" is not a standard, and a redesign that references no established
 heuristics is guessing — which produces the weak hierarchy, inconsistent spacing,
-low-contrast grey-on-tint, and wall-of-text that draw repeated rejection. Apply a
-**cited** per-screen checklist and **name the principle** each item comes from: a
-review cites the principle, it does not assert "this looks off / fine."
+low-contrast grey-on-tint, and wall-of-text that draw repeated rejection. Apply a **cited**
+per-screen checklist and **name the principle** each item comes from: a review cites the
+principle, it does not assert "this looks off / fine."
 
-Grounded in **Nielsen Norman Group's 10 Usability Heuristics** (Nielsen, 1994; last
-reviewed 2024 — verbatim names in `docs/standards-index.md`), **Refactoring UI**
-(cited by name), and the **target's own design system** where it publishes
-principles. The heuristic names below are NN/g's own:
+Grounded in **Nielsen Norman Group's 10 Usability Heuristics** (Nielsen, 1994; last reviewed
+2024 — verbatim names in `docs/standards-index.md`), **Refactoring UI** (cited by name), and
+the **target's own design system** where it publishes principles. The heuristic names below
+are NN/g's own:
 
-- **Visibility of system status** (NN/g #1) — loading / empty / error / offline
-  states exist and are honest; the current view and selection are always legible.
-- **Match between the system and the real world** (NN/g #2) — labels in the user's
-  language, not the schema's.
-- **User control and freedom** (NN/g #3) — a clear exit and undo from every state;
-  nothing irreversible on one mis-click.
-- **Consistency and standards** (NN/g #4) — one component per concept, one spacing
-  scale, one type scale, platform conventions (depth: `product-ux-quality.md`, one
-  component per concept; scales from Refactoring UI).
+- **Visibility of system status** (NN/g #1) — loading / empty / error / offline states exist
+  and are honest; the current view and selection are always legible.
+- **Match between the system and the real world** (NN/g #2) — labels in the user's language,
+  not the schema's.
+- **User control and freedom** (NN/g #3) — a clear exit and undo from every state; nothing
+  irreversible on one mis-click.
+- **Consistency and standards** (NN/g #4) — one component per concept, one spacing scale,
+  one type scale, platform conventions (depth: `product-ux-quality.md`, one component per
+  concept; scales from Refactoring UI).
 - **Error prevention** (NN/g #5) — constrain inputs; confirm the consequential.
-- **Recognition rather than recall** (NN/g #6) — keep options visible; don't force
-  the user to carry state across screens.
+- **Recognition rather than recall** (NN/g #6) — keep options visible; don't force the user
+  to carry state across screens.
 - **Flexibility and efficiency of use** (NN/g #7) — one strong default path plus an
-  accelerator for the expert; keep power **behind progressive disclosure**, off the
-  default surface.
-- **Aesthetic and minimalist design** (NN/g #8) — hierarchy and **de-emphasis**
-  (Refactoring UI); every added element competes with the primary action; cut
-  self-evident instructional prose.
-- **Help users recognize, diagnose, and recover from errors** (NN/g #9) — errors
-  say what happened and how to fix it, in plain language.
-- **Help and documentation** (NN/g #10) — reachable when needed, never a substitute
-  for a self-evident UI.
-- From Refactoring UI (by name): **one spacing scale and one type scale**,
-  **semantic colour** (not decorative), intentional **empty states**, and
-  **motion** with specific durations / easings that honour `prefers-reduced-motion`.
+  accelerator for the expert; keep power **behind progressive disclosure**, off the default
+  surface.
+- **Aesthetic and minimalist design** (NN/g #8) — hierarchy and **de-emphasis** (Refactoring
+  UI); every added element competes with the primary action; cut self-evident instructional
+  prose.
+- **Help users recognize, diagnose, and recover from errors** (NN/g #9) — errors say what
+  happened and how to fix it, in plain language.
+- **Help and documentation** (NN/g #10) — reachable when needed, never a substitute for a
+  self-evident UI.
+- From Refactoring UI (by name): **one spacing scale and one type scale**, **semantic
+  colour** (not decorative), intentional **empty states**, and **motion** with specific
+  durations / easings that honour `prefers-reduced-motion`.
 
-A **"does this feel premium?"** pass closes it — but as a prompt to locate the
-specific heuristic a screen violates, never as a substitute for naming it.
-(Benchmarking the redesign *direction* against two or three comparable products is
-a separate move: `product-ux-quality.md`, *Match a named standard*.)
+A **"does this feel premium?"** pass closes it — but as a prompt to locate the specific
+heuristic a screen violates, never as a substitute for naming it. (Benchmarking the redesign
+*direction* against two or three comparable products is a separate move:
+`product-ux-quality.md`, *Match a named standard*.)
 
 ---
 
 ## 🚩 grep / signals
 
-- A parity claim ("matches the reference") backed only by a structural audit, a
-  green suite, or seed-data screenshots — with no surface-by-surface real-data pass.
-- A parity / completion claim phrased over **the product / the app / all pages** with
-  **no correspondence table** and no `N/M` coverage fraction — a sample generalized to
-  the population (a **High** communication defect); worse when the one screen verified
-  is a static, shell-less page.
-- A **"matches"** claim on a parity task with **no mechanical differ** — no diff
-  image or structured mismatch list attached, only an assertion.
-- A **structural** divergence (different columns / grouping / composition)
-  characterised as **"close" / "1:1" / "mostly there"** — a category error; a
-  different structure is a different screen.
-- A number in the matched product **copied from the design mock's *sample* value** —
-  present in the product but tracing to the mock, not a real computation.
-- A recommendation to **drop / remove / replace** a surface or its content to match
-  a **prototype / mockup** reference (real data → progressive disclosure, not
-  deletion).
+- A parity claim ("matches the reference") backed only by a structural audit, a green suite,
+  or seed-data screenshots — with no surface-by-surface real-data pass.
+- A parity / completion claim phrased over **the product / the app / all pages** with **no
+  correspondence table** and no `N/M` coverage fraction — a sample generalized to the
+  population (a **High** communication defect); worse when the one screen verified is a
+  static, shell-less page.
+- A **"matches"** claim on a parity task with **no mechanical differ** — no diff image or
+  structured mismatch list attached, only an assertion.
+- A **structural** divergence (different columns / grouping / composition) characterised as
+  **"close" / "1:1" / "mostly there"** — a category error; a different structure is a
+  different screen.
+- A number in the matched product **copied from the design mock's *sample* value** — present
+  in the product but tracing to the mock, not a real computation.
+- A recommendation to **drop / remove / replace** a surface or its content to match a
+  **prototype / mockup** reference (real data → progressive disclosure, not deletion).
 - An app-only **feature** (removing it loses a capability) **deleted or slated for
   deletion** to reach visual parity, with **no named owner approval** and **no
   restyle-into-target attempt** — a **High** do-no-harm finding, not a parity win.
-- A restyle that resolves app-only elements with **no exception ledger** classifying
-  each as decoration / functionality / owner-approved before implementation.
+- A restyle that resolves app-only elements with **no exception ledger** classifying each as
+  decoration / functionality / owner-approved before implementation.
 - A multi-screen restyle **fanned out to parallel page lanes with no shell-ownership
-  ledger** (single owner per shared-shell path, shell-lands-first — a **High**
-  coordination defect), or a page lane's diff **editing a shared-shell path it does
-  not own** (layout / nav / tokens / chrome primitive), even when correct in isolation.
-- A comparison treating **page height / row count** versus a seed-data mockup as a
-  defect rather than a notice.
-- "Match the reference and use judgment" with **no cited heuristic** named behind a
-  redesign recommendation.
-- A primary task that needs a **scroll back to the top nav** to switch sections, or
-  N clicks for a common toggle.
+  ledger** (single owner per shared-shell path, shell-lands-first — a **High** coordination
+  defect), or a page lane's diff **editing a shared-shell path it does not own** (layout /
+  nav / tokens / chrome primitive), even when correct in isolation.
+- A comparison treating **page height / row count** versus a seed-data mockup as a defect
+  rather than a notice.
+- "Match the reference and use judgment" with **no cited heuristic** named behind a redesign
+  recommendation.
+- A primary task that needs a **scroll back to the top nav** to switch sections, or N clicks
+  for a common toggle.

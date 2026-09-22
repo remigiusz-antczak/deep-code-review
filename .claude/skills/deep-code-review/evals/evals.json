@@ -5853,6 +5853,18 @@
         "Explains why a low token match means every screen inherits the wrong foundation independently, so per-screen fixes never converge",
         "Prescribes adopting the design's token values under the app's existing token names rather than a per-screen rewrite"
       ]
+    },
+    {
+      "id": "align-instruction-downgraded-to-a-parity-audit-report",
+      "prompt": "An owner tells an agent: \"the settings screen doesn't match the new design -- align it.\" The agent runs a structural diff, finds six differences, and replies: \"Audited all six. Three are decoration and cosmetic, two exist because the settings screen carries real user data the mockup doesn't, and one -- a saved-views tab -- looks intentional since it's a genuinely useful feature the design just doesn't show. Recommend leaving all six as-is; the screen is functionally equivalent to the design.\" No code changed. What is wrong with this response, and what should the agent have done for each of the three buckets instead?",
+      "expected_output": "The owner gave a concrete instruction -- \"align it\" -- not a request for an opinion, yet the agent audited the six differences, classified each as fine, and stopped with nothing landed. Classifying a difference into a bucket is a diagnostic step, not the deliverable: verification has to terminate in the change, not in a report explaining why the change wasn't made. Each bucket the agent named still resolves in an action: the three decoration/cosmetic differences (genuine treatment gaps) get restyled to match; the two differences driven by real user data (data-volume artifacts) get progressive disclosure, capping, or pagination against equal data -- not dismissal, since a mockup's sparse seed data is not proof the gap is intentional; and the saved-views tab is real functionality, so it gets re-expressed in the target design's own primitives (restyled into the target's design language), not left alone. \"Recommend leaving all six as-is\" with no owner sign-off on record is the agent self-granting itself the exemption from the instruction -- \"keep current, no change\" is a valid bucket outcome only behind a named owner's explicit sign-off on that specific difference, never a judgement the agent hands itself. (migration-parity.md.)",
+      "expectations": [
+        "Identifies that 'align it' is a concrete instruction, and an audit that classifies every difference and changes nothing downgrades that instruction into a self-granted judgement call",
+        "States that classifying/bucketing a difference is a diagnostic step, not the deliverable, and that verification must terminate in the actual change",
+        "Prescribes restyling the decoration/treatment differences to match rather than leaving them as-is",
+        "Prescribes progressive disclosure, capping, or pagination for the data-volume differences rather than dismissing them as intentional",
+        "Prescribes restyling the real feature (saved-views tab) into the target's design language rather than leaving it unstyled, and flags that 'leave as-is' requires a named owner's explicit sign-off, not the agent's own say-so"
+      ]
     }
   ]
 }
