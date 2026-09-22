@@ -3,6 +3,17 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.434.0] — 2026-09-23
+
+### Added
+- `deep-code-review/scripts/fix_class_gate.py` — every `fix(...)` commit in a range must touch a test surface or carry a non-empty `No-Test-Reason:` trailer; fails closed (exit 2) on an unresolvable or all-zeros base. It enforces a pinned test per fix, not class completeness (that stays the reviewer's `method.md` sweep). `--selftest` 14/14. Wired into CI on the push/PR range (checkout now `fetch-depth: 0`).
+- `agentic-delivery/scripts/serial_gate.py` — `select` does fail-closed path-scoped test selection (unmapped path, `!full` path, map change, empty diff, or unresolvable ref → FULL; never "nothing to run, pass"); `run` serializes a full-suite run across lanes on one host with an atomic `mkdir` lock, stale-PID/age reclaim, and child exit-code propagation. `--selftest` 21/21. Routed from the SKILL.md serialize bullet. Completes P1a (4 of 4 gates).
+- `agentic-delivery/scripts/handback_cap.py` — a `SubagentStop` hook that blocks (exit 2) a subagent's final chat message over 800 chars / 10 lines and asks for a fields-only rewrite; deliverables go to files and are uncapped; read-only agent types (no Write tool) are exempt; releases after 3 blocks per agent so a subagent never loops. Install snippet in `references/host-enforcement.md`. `--selftest` 10/10. +1 agentic-delivery eval.
+- CI: a "Shipped script self-tests" step runs `parity_differ`, `fix_class_gate`, and `serial_gate` `--selftest`.
+
+### Changed
+- Size budgets: `agentic-delivery/SKILL.md` 478→483 and `references/host-enforcement.md` 69→102 (growth, justified: the handback cap is an owner hard requirement and must be routed from the always-loaded map).
+
 ## [1.433.8] — 2026-09-23
 
 ### Added
