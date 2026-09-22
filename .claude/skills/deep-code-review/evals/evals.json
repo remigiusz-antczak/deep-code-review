@@ -5865,6 +5865,18 @@
         "Prescribes progressive disclosure, capping, or pagination for the data-volume differences rather than dismissing them as intentional",
         "Prescribes restyling the real feature (saved-views tab) into the target's design language rather than leaving it unstyled, and flags that 'leave as-is' requires a named owner's explicit sign-off, not the agent's own say-so"
       ]
+    },
+    {
+      "id": "parity-one-sided-cannot-align",
+      "prompt": "An agent is porting a settings page to a new design. It has the running app's rendered HTML and a page-height screenshot, but the design side of the port isn't available in this pass (the mockup lives in a different tool). The agent runs its checklist against the app alone, sees three clean, generously-spaced sections, and reports: 'App renders cleanly at 1840px, three sections, all populated -- aligned to the design.' What's wrong, and what should it report instead?",
+      "expected_output": "'Aligned/matched/mirrored' is a two-sided claim -- the agent measured only the app and never touched the design, so 'aligned' is unearned: a page height and a self-read screenshot are not alignment evidence no matter how clean the app looks, and can't be quoted as a verdict. scripts/parity_differ.py is structurally unable to emit a pass here: with the design side absent or unreadable it exits COULD_NOT_CHECK (3) -- never a score, never a pass, it refuses to compare rather than guess 'looks fine'. The correct report is 'not yet verified -- design side unavailable for this pass, cannot certify alignment,' not 'aligned.' Once the design render is available, the differ compares per named section (data-section/data-item): MATCH (exit 0) is the only pass, requiring every design section present in the app and every design-populated section populated; MISMATCH (1) lists missing/empty sections as the work queue; and if the design's populated sections are all present in the app but uniformly empty, that's CANNOT_COMPARE (4), an unseeded precondition -- seed the app's data to the design's data state, never condense or remove the empty sections to look tidy. (migration-parity.md.)",
+      "expectations": [
+        "Rejects the 'aligned' claim because only the app side was measured -- a page height and a self-read screenshot are not two-sided evidence",
+        "States the report should read 'not yet verified' / 'cannot certify' rather than 'aligned' while the design side is unavailable",
+        "Names the parity differ (scripts/parity_differ.py) and its fail-closed contract: COULD_NOT_CHECK when either side is missing, never a pass or a similarity score",
+        "Once both sides exist, requires MATCH (both sides present, every design section present and populated) as the only pass, with MISMATCH naming missing/empty sections as the work queue",
+        "Flags design-populated sections present but empty in the app as CANNOT_COMPARE (unseeded), resolved only by seeding data -- never by condensing or removing the empty sections"
+      ]
     }
   ]
 }

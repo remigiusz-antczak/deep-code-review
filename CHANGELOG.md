@@ -3,6 +3,14 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.433.8] — 2026-09-23
+
+### Added
+- `deep-code-review/scripts/parity_differ.py` — a two-sided design/app section-parity gate, shipped with the skill. "Aligned / matched / mirrored" is claimable only when the differ returns MATCH (exit 0) comparing the rendered design against the rendered, running app, per named section. A missing/unreadable side returns COULD_NOT_CHECK; an app whose design-populated sections are all present but empty returns CANNOT_COMPARE (seed the data — never condense the empties). Neither is ever a pass or a similarity score. Committed fixtures + `--selftest` prove it fires. Doctrine folded into `references/migration-parity.md`.
+- CI gates (P1a, 2 of 4): an extension-scoped no-committed-binaries gate and a must-load context-ceiling gate, each self-testing on a planted violation.
+- `agentic-delivery` operating-mode folds: collapse duplicate-scope loops; timebox a stuck trivial change (one recovery attempt, then hand off or drop); verify a peer's "committed and pushed" claim against the ref, not the report.
+- Evals: +1 (deep-code-review, parity two-sided gate) and +3 (agentic-delivery) pinning the folds above.
+
 ## [1.433.7] — 2026-09-22
 
 ### deep-code-review — fold an instruction-fidelity guard (#1062), net-neutral/below

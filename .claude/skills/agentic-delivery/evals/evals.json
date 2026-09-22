@@ -1299,6 +1299,36 @@
         "States a cycle that removed more than it added is a regression to reverse, not progress to report -- and that a 'cleanup'/'consolidation' framing does not exempt a PR from that check",
         "Requires removal of a shipped feature or data entity to carry an explicit, logged acknowledgement rather than being allowed to ride silently inside an otherwise-legitimate-looking PR"
       ]
+    },
+    {
+      "id": "collapse-duplicate-scope-loops",
+      "prompt": "Three self-prompt loops are running at 5m, 10m, and 15m, each independently scanning the same backlog for admissible work.",
+      "expected_output": "Collapse to one loop at the tightest cadence (5m) covering that scope; drop the other two rather than staggering or fire-consolidating them.",
+      "expectations": [
+        "Recognizes same-scope duplication as a design defect, not a timing collision",
+        "Does not invoke the phase-offset or add-only rules, which apply to distinct-purpose loops",
+        "States the wasted-tokens mechanism: every wake past the tightest loop is a guaranteed no-op"
+      ]
+    },
+    {
+      "id": "timebox-stuck-trivial-change",
+      "prompt": "A one-line config fix keeps failing to commit because a pre-commit hook hangs; the main loop has retried the commit five times over the last hour.",
+      "expected_output": "After one recovery attempt, hand the change to a single dedicated lane or drop it -- never keep retrying from the main loop.",
+      "expectations": [
+        "Bounds recovery to one attempt from the main loop before escalating or dropping",
+        "Names environment issues (hung hook, missing binary, worktree race) as the trigger, not the change's own correctness",
+        "Rejects continued retries as spend disproportionate to the change's value"
+      ]
+    },
+    {
+      "id": "verify-handback-artifact-on-ref",
+      "prompt": "A peer session posts a handback: 'committed and pushed the fix to branch X.' The recipient is about to merge it.",
+      "expected_output": "Confirm the artifact exists on the ref directly (e.g. git ls-tree or inspect the branch tip) before merging or building on the handback -- never trust the self-reported claim alone.",
+      "expectations": [
+        "Treats a 'committed + pushed' claim as unverified until checked against the ref",
+        "Names this as a false-artifact-claim risk distinct from an ordinary hallucination",
+        "Checks the branch directly rather than re-asking the peer or re-reading the same claim"
+      ]
     }
   ]
 }
