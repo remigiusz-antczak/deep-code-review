@@ -580,7 +580,7 @@ never the first callsite alone. Stopping at one site under-scopes the finding an
 second fix into a later increment — the review analogue of the *one component per concept*
 duplicate-twin sweep (`product-ux-quality.md`), for a bug pattern rather than a duplicated
 component; after the fix, a re-grep of the idiom confirms none remain (the class is closed
-only when that search returns clean — a zero-survivor check, principle 2). **A fix that already scoped itself to an
+only when that search returns clean — a zero-survivor check, principle 2). `scripts/fix_class_gate.py` automates one narrow slice of this — every fix-labeled commit in a range must touch a test-surface path or carry a `No-Test-Reason:` trailer — but it only enforces a pinned test per fix, never class completeness; use it as evidence, not a substitute, for the grep-and-re-grep sweep above. **A fix that already scoped itself to an
 enumerated list is judged against that list — but a green test pinning the list proves
 non-regression, not completeness.** The same class discipline runs in reverse when the
 fix is the review *target*: a change that lands as *apply treatment T to instances
