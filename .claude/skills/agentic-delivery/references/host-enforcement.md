@@ -100,3 +100,34 @@ work is lost) a chat handback over 800 chars / 10 lines; exempts only agent
 types named in `HANDBACK_EXEMPT_TYPES` (default: 4 built-in types) — it never
 inspects tools, so add a custom read-only review lane's type there; releases
 after 3 blocks per agent so it never loops forever. `--selftest` proves it fires.
+
+## Subagent model + cache-TTL pin (a Host-enforced instance, Claude Code)
+
+A CLAUDE.md line telling every subagent "default to the cheapest tier" is
+**Protocol** only — a subagent's own `model:` frontmatter still wins over it.
+On Claude Code, `CLAUDE_CODE_SUBAGENT_MODEL` (an alias or model ID) plus
+`CLAUDE_CODE_SUBAGENT_MODEL_FORCE=1` in `settings.json`'s `env` block is
+**Host-enforced** instead: with both set, every subagent, teammate, and
+workflow agent runs on the named model regardless of its own `model:`
+frontmatter; with only the `FORCE` var set, they run on the main
+conversation's model (requires Claude Code v2.1.257+).
+
+Cache lifetime is the sibling spend control, same enforcement split: the main
+conversation's `promptCacheTtl` setting or `CLAUDE_CODE_PROMPT_CACHE_TTL` env
+var, and every other request's (including subagents') `subagentPromptCacheTtl`
+setting or `CLAUDE_CODE_SUBAGENT_PROMPT_CACHE_TTL` env var, pin a `5m`/`1h`
+cache TTL bucket at the host level (both require v2.1.242+); a single
+subagent can instead opt into its own TTL via `experimental.cacheTtl` in its
+own frontmatter (v2.1.248+; per-agent, so it is Protocol, not Host-enforced,
+unless the host-level setting also constrains it). Declare which of the three
+is actually set — an undeclared default silently runs the 5-minute floor.
+
+```json
+{
+  "env": {
+    "CLAUDE_CODE_SUBAGENT_MODEL": "haiku",
+    "CLAUDE_CODE_SUBAGENT_MODEL_FORCE": "1",
+    "CLAUDE_CODE_SUBAGENT_PROMPT_CACHE_TTL": "1h"
+  }
+}
+```

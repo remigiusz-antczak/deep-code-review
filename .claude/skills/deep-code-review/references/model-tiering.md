@@ -43,18 +43,38 @@ provider with an equivalent primitive, even where the exact mechanism differs.
    tuning effort down often costs little quality for real savings on knowledge
    work, and the tradeoff stays favorable at a middle setting even on
    long-horizon coding. Same-model, zero-architecture change — try it first.
-2. **Turn on prefix/prompt caching before any other lever.** An agentic task
-   resends its whole growing conversation every turn, so cost grows roughly with
-   the square of turn count; a cached prefix is billed far below fresh input.
-   Cache reads are routinely the largest single component of task cost — worth
-   more than most model-choice decisions. `parallel-audit.md` §1's "assemble the
-   shared context packet once, hand it to every subagent" is already a stable,
-   reused prefix by construction; mark it cacheable rather than re-deriving it
-   per unit.
-3. **Batch anything unattended.** A flat, large discount on every token
-   (cached tokens included) in exchange for async turnaround is the
-   second-largest free lever after caching for work no one is waiting on —
-   evaluation runs, backfills, scheduled jobs, and a `FULL` review's Tier-1
+2. **Turn on prefix/prompt caching before any other lever — and pay it inside one
+   model, not across a cascade.** An agentic task resends its whole growing
+   conversation every turn, so cost grows roughly with the square of turn count;
+   a cached prefix is billed far below fresh input — writes cost 1.25x base input
+   at a 5-minute TTL or 2x at a 1-hour TTL, reads cost 0.1x base input on most
+   models (0.05x on Opus 5.5, 0.025x on Fable 5.1/Mythos 5.1), and a prompt under
+   the model's own minimum-cacheable-token floor (512–4,096 tokens, model-
+   dependent) is silently served uncached, no error raised (Claude docs —
+   Prompt caching). **Each model keeps its own cache: tiering a task across
+   models forfeits every prior model's cached prefix on the very next request,
+   even when the resent content is byte-identical** (Claude Code — How Claude
+   Code uses prompt caching) — so exhaust lever 1 (tune effort down inside the
+   current model namespace) before tiering the model down, and cost a cascade's
+   later tiers as a fresh full-price read, never the cached rate. Cache reads
+   are routinely the largest single component of task cost — worth more than
+   most model-choice decisions. `parallel-audit.md` §1's "assemble the shared
+   context packet once, hand it to every subagent" is already a stable, reused
+   prefix by construction; mark it cacheable rather than re-deriving it per
+   unit. For a long single-model session whose own input keeps growing (a big
+   fan-out packet, a long tool-result chain), pair caching with context editing:
+   the `clear_tool_uses_20250919` strategy clears the oldest tool results once
+   the prompt passes a token trigger (100,000 input tokens by default), keeping
+   the most recent tool-use/result pairs (3 by default) and replacing the rest
+   with a placeholder; this itself invalidates the cache at the clear point, so
+   set `clear_at_least` to a size worth that one write, and name any
+   result whose content must never be cleared in `exclude_tools` (Claude docs —
+   Context editing).
+3. **Batch anything unattended.** The Batch API is a flat 50% discount off
+   every token — cached tokens included, and the caching and batch discounts
+   stack — in exchange for async turnaround: the second-largest free lever
+   after caching for work no one is waiting on — evaluation runs, backfills,
+   scheduled jobs, and a `FULL` review's Tier-1
    candidate sweep are exactly this shape.
 4. **Escalate-on-failure instead of running everything at full strength.**
    Running cheap first and only re-running failures at full strength reaches the
@@ -156,5 +176,9 @@ cost per *solved* task, never cost per token).
 Cross-references: the fan-out mechanics and Tier-1/Tier-2 split this file
 extends live in `parallel-audit.md`; the LLM-cost attack surface (unbounded
 consumption) this file's tiering discipline mitigates lives in
-`security-ai-agents.md`; verified sources and fetch dates in
+`security-ai-agents.md`; on a Claude Code host, the host-enforced (not
+prompt-level) subagent model pin, cache-TTL settings, and the already-shipped
+subagent handback-size cap live in `agentic-delivery`'s `host-enforcement.md`
+— read the levers above as the protocol-level rationale, that file as the
+enforced instance; verified sources and fetch dates in
 `docs/standards-index.md`.

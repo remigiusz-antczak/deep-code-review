@@ -32,7 +32,7 @@
 .claude/skills/agentic-delivery/references/dev-env-ownership.md	25172
 .claude/skills/agentic-delivery/references/fanout-host-sizing.md	35536
 .claude/skills/agentic-delivery/references/fast-agentic-delivery.md	6242
-.claude/skills/agentic-delivery/references/host-enforcement.md	6320
+.claude/skills/agentic-delivery/references/host-enforcement.md	7818
 .claude/skills/agentic-delivery/references/incident-response.md	7665
 .claude/skills/agentic-delivery/references/merge-queue-worktrees.md	55121
 .claude/skills/agentic-delivery/references/multi-session-coordination.md	54710
@@ -71,7 +71,7 @@
 .claude/skills/deep-code-review/references/method.md	67386
 .claude/skills/deep-code-review/references/migration-parity.md	24956
 .claude/skills/deep-code-review/references/mobile-appsec.md	25887
-.claude/skills/deep-code-review/references/model-tiering.md	10662
+.claude/skills/deep-code-review/references/model-tiering.md	12529
 .claude/skills/deep-code-review/references/observability.md	17989
 .claude/skills/deep-code-review/references/parallel-audit.md	37150
 .claude/skills/deep-code-review/references/performance-db-cost.md	43081

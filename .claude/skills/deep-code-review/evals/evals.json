@@ -5899,6 +5899,28 @@
         "Once both sides exist, requires MATCH (both sides present, every design section present and populated) as the only pass, with MISMATCH naming missing/empty sections as the work queue",
         "Flags design-populated sections present but empty in the app as CANNOT_COMPARE (unseeded), resolved only by seeding data -- never by condensing or removing the empty sections"
       ]
+    },
+    {
+      "id": "a-model-cascade-forfeits-its-own-prompt-cache-on-every-tier-switch",
+      "prompt": "An agent designs a review pipeline: Tier 1 (cheap model) reads a 40,000-token shared context packet and does a candidate sweep; Tier 2 (a stronger model) re-sends the identical 40,000-token packet to confirm survivors, and the agent reasons: 'Tier 1 already warmed the cache with this packet, so Tier 2's request will hit the cached rate for it.' Is that reasoning right? What actually happens on Tier 2's first request, and what should the agent do differently if the pipeline must stay a cascade?",
+      "expected_output": "The reasoning is wrong. Each model keeps its own prompt cache; Tier 1's cache was warmed under Tier 1's model, and Tier 2 is a different model, so Tier 2's first request reads the entire 40,000-token packet at full, uncached input price even though the content is byte-identical -- switching models forfeits the cache regardless of content match. The fix is ordering, not architecture: exhaust the same-model levers first -- tune effort/reasoning-depth down within Tier 1's own model namespace -- before tiering the model down, since a model swap is the one lever guaranteed to forfeit whatever cache the run has built. If the cascade is kept anyway (because a stronger model is genuinely needed for confirmation), the pipeline's own cost accounting must book Tier 2's packet re-read as a fresh full-price read, not the cached rate, when computing cost-per-solved-task -- never assume a cascade inherits an earlier tier's cache.",
+      "expectations": [
+        "States the cross-model cache-reuse assumption is wrong: prompt caches are model-scoped, not content-scoped",
+        "States Tier 2's first request re-reads the whole packet at full uncached price even though the resent content is byte-identical to what Tier 1 cached",
+        "Prescribes trying the same-model lever (tuning effort/reasoning-depth down) before tiering the model down, since a model swap is the lever that forfeits the cache",
+        "If the cascade is kept, requires costing the later tier's re-read as a fresh full-price read in any cost-per-solved-task accounting, not the cached rate"
+      ]
+    },
+    {
+      "id": "prompt-instruction-cannot-pin-a-subagent-model-tier-only-a-host-setting-can",
+      "prompt": "A team's CLAUDE.md tells every subagent to 'default to the cheapest tier.' An audit later finds three subagent definitions whose own frontmatter sets `model: opus`, overriding that default. The team argues the CLAUDE.md line already 'enforces' a cheap-tier fleet. Per the host-enforcement claim-honesty framework, is that a Host-enforced claim? What is the actual host-enforced fix on Claude Code, and what does it require?",
+      "expected_output": "No -- a CLAUDE.md instruction is Protocol-level only: it is a prompt the agent follows, and a subagent's own `model:` frontmatter can still override it, exactly as the audit found. The Host-enforced fix is a host setting the worker cannot edit from inside its own definition: set `CLAUDE_CODE_SUBAGENT_MODEL` to the desired model alias/ID and `CLAUDE_CODE_SUBAGENT_MODEL_FORCE=1` in `settings.json`'s `env` block. With both set, every subagent, teammate, and workflow agent runs on the named model regardless of its own `model:` frontmatter; this requires Claude Code v2.1.257 or later, so the version must be confirmed before the claim is raised to Host-enforced. The sibling spend control at the same enforcement split is cache lifetime: `promptCacheTtl`/`CLAUDE_CODE_PROMPT_CACHE_TTL` (main conversation) and `subagentPromptCacheTtl`/`CLAUDE_CODE_SUBAGENT_PROMPT_CACHE_TTL` (everything else, v2.1.242+) are host-level pins, while a subagent's own `experimental.cacheTtl` frontmatter field is a per-agent opt-in and stays Protocol-level unless a host-level setting also constrains it.",
+      "expectations": [
+        "Declares the CLAUDE.md 'default to cheapest tier' line Protocol-level only, since a subagent's own model: frontmatter can still override it -- not Host-enforced",
+        "Names CLAUDE_CODE_SUBAGENT_MODEL plus CLAUDE_CODE_SUBAGENT_MODEL_FORCE=1 in settings.json's env block as the Host-enforced fix, overriding every subagent/teammate/workflow-agent's own model: frontmatter",
+        "Names the version gate (Claude Code v2.1.257+) as a precondition to check before claiming this control is available",
+        "Identifies the cache-TTL settings (promptCacheTtl/subagentPromptCacheTtl or their env-var equivalents) as the sibling host-level spend control, distinct from the per-agent experimental.cacheTtl frontmatter opt-in"
+      ]
     }
   ]
 }
