@@ -40,14 +40,19 @@ expect(screen.getByText(rows[5].label)).toBeInTheDocument();       // expanded
 
 **Mechanism.** `scripts/source_scan_tests.py` (opt-in via
 `DCR_SOURCE_SCAN_LINT=1` in `templates/dcr-gates.sh`) is a heuristic lint,
-not a parser: it lists test files (`*.test.*`, `*.spec.*`, `__tests__/`)
-that read a UI source file as text and regex/`.includes()` it with **no**
-render/mount/`screen.` call anywhere in the same file, printing `path:line`
-for each. It cannot tell a mislabeled behaviour test from a genuine
-lint-shaped grep sharing a file with real render coverage — a file carrying
-both is exempt (under-flag is the safe direction). A flagged test is a lead
-for a human to add the missing rendered-DOM assertion, not an automatic
-defect.
+not a parser: it lists test files (`*.test.*`, `*.spec.*`, `__tests__/`,
+pytest's `test_*.py`/`*_test.py`) that read a UI source file (`readFileSync`,
+`fs.promises.readFile`, a `?raw` import, Python `open()`/`Path().read_text()`,
+or a path via a variable) and check it with a regex/`.includes()`/Jest
+matcher (`.toMatch(`/`.toContain(`/`.toMatchSnapshot(` count too), with
+**no** render/mount/`screen.` call anywhere in the file, printing
+`path:line` for each. A file carrying both a check and real render coverage
+is exempt (under-flag is the safe direction) — so is a comment/string
+mentioning `render(`/`mount(`, and so is a plain `.ts`/`.js` or other
+(`.astro`) component: only `.tsx`/`.jsx`/`.vue`/`.svelte` are seen. Fails
+closed (exit 2) on an unreadable test file or zero files found, unless
+`--allow-empty`. A flagged test is a lead for a human to add the missing
+rendered-DOM assertion, not an automatic defect.
 
 ## Prove a rendered-layout claim with geometry, not class names
 

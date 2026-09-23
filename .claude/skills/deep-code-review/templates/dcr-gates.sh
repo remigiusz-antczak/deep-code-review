@@ -344,7 +344,12 @@ if opt_in DCR_SOURCE_SCAN_LINT; then
       FAIL=1
     # "${arr[@]+"${arr[@]}"}": bash 3.2 treats an empty array as unset
     # under `set -u`; this form expands to nothing instead of aborting.
-    elif (cd "${REPO_ROOT}" && python3 "${SOURCE_SCAN_LINT}" "${scan_paths[@]+"${scan_paths[@]}"}"); then
+    # --allow-empty: a caller-scoped DCR_SOURCE_SCAN_LINT_PATHS may
+    # legitimately name a path with no test files yet (source_scan_tests.py
+    # itself fails closed, exit 2, on zero test files by default — the
+    # correct behaviour for its own bare CLI, not for a narrower opt-in
+    # scan this gate already selftested).
+    elif (cd "${REPO_ROOT}" && python3 "${SOURCE_SCAN_LINT}" --allow-empty "${scan_paths[@]+"${scan_paths[@]}"}"); then
       printf 'dcr-gates: source_scan_tests PASS\n'
     else
       printf 'dcr-gates: source_scan_tests FAIL\n' >&2
