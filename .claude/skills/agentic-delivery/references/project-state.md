@@ -44,9 +44,9 @@ across sources, `delta --design` marks each item `IN_DESIGN` / `NOT_IN_DESIGN` /
 `CONFLICTS_WITH_DESIGN` / `SUPERSEDED`, and `status --app` marks it `IMPLEMENTED` /
 `PENDING` / `REGRESSED`. `conflicts` prints each owner decision as a two-line
 question; record only the owner's answer with `decide --quote`. The Conductor
-asks and never decides. Before any lane re-aligns to a design, run `accept-file`
-and pass its output to the parity differ, so implemented feedback the design never
-captured cannot be overridden.
+asks and never decides. Before a lane re-aligns to a design, run `accept-file`;
+once the owner commits it as the differ's `--accept`, implemented feedback the
+design lacks cannot be overridden.
 
 ## Receipt contract (extends the SKILL.md Output contract)
 

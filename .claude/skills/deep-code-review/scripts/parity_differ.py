@@ -166,6 +166,8 @@ USAGE
 -----
   parity_differ.py --design <file> --app <file> [--accept <tsv> [--accept-rev REV]] [--json]
   parity_differ.py --selftest
+Public API for sibling scripts: `compare()` (the dict `--json` prints) and
+`inventory_keys()` (one side's item keys, never a verdict).
 """
 from __future__ import annotations
 
@@ -773,6 +775,25 @@ def _show(item: dict) -> str:
     return f"{item['key']} ({item['count']} rows)" if item["count"] is not None else item["key"]
 
 
+def inventory_keys(path: str | None) -> list[dict] | None:
+    """Public one-side inventory: `[{"id", "populated", "items", "unresolved"}]`.
+
+    For callers that must ask "does this side show element K?" without a
+    two-sided verdict (agentic-delivery's `feedback_ledger.py`). `items` lists
+    each item key exactly as a diff row prints it (`kind:role:label`, unmasked,
+    since masking needs both sides), or is None for a `.json` side (no
+    inventory). `unresolved` is `extract_side`'s class-hiding list; a non-empty
+    one means presence cannot be trusted and the caller must fail closed. None
+    for the whole side under `extract_side`'s contract. Never a verdict.
+    """
+    side = extract_side(path)
+    if side is None:
+        return None
+    return [{"id": s["id"], "populated": s["populated"], "unresolved": list(s["unresolved"]),
+             "items": None if s["inventory"] is None
+             else [it["key"] for it in _prepare(s["inventory"], False)]} for s in side]
+
+
 def diff_inventory(design: list[dict], app: list[dict], mask: bool) -> dict:
     """Diff two sections' raw inventories; return matched/total/rows.
 
@@ -1287,6 +1308,20 @@ def _selftest() -> int:
         code, report = diff_sides(js, js)
         check("json-no-inventory", code, report, COULD_NOT_CHECK, must_not=("MATCH:",))
 
+        # Public one-side inventory: keys exactly as diff rows print them; a
+        # .json side has none; a hiding class is surfaced, not guessed.
+        keys = inventory_keys(write("keys.html", '<section data-section="s"><h2>Totals</h2>'
+                                    '<button aria-label="Save changes">Save</button>'
+                                    '<button class="d-none">Ghost</button></section>'))
+        want_keys = ["heading:h2:Totals", "control:button:Save [aria-label: Save changes]",
+                     "control:button:Ghost"]
+        if not keys or len(keys) != 1 or keys[0]["id"] != "s" or keys[0]["populated"] \
+                or keys[0]["items"] != want_keys or not keys[0]["unresolved"]:
+            failures.append(f"inventory-keys: {keys}")
+        if inventory_keys(js) != [{"id": "s", "populated": True, "unresolved": [], "items": None}] \
+                or inventory_keys(nonexistent) is not None:
+            failures.append("inventory-keys: .json side must carry items=None; an absent side None")
+
         # 1. Hidden: closed dialog/details bodies and opacity:0 are not inventoried
         # (open ones and opacity:0.5 are); a hiding class needs the export's marker.
         pair("hidden-dialog", "", "<dialog><button>Delete</button></dialog>", MATCH)
@@ -1356,7 +1391,8 @@ def _selftest() -> int:
         "refuse(app-absent)=3 inventory(missing)=1 inventory(taller)=0 "
         "inventory(changed)=1 pct(floor)=ok mask(one-sided)=1 icon-button-label=ok "
         "json(no-inventory)=3 hidden(dialog,details,opacity,class)=ok label(visible,placeholder)=ok "
-        "coverage(media,icon,option,mask-count,broken)=ok accept(owner,count,pin,untrusted)=ok"
+        "coverage(media,icon,option,mask-count,broken)=ok accept(owner,count,pin,untrusted)=ok "
+        "inventory-keys=ok"
     )
     return 0
 

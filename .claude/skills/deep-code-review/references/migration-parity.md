@@ -127,7 +127,7 @@ ask the design owner (`method-situational.md`'s stale-input rule).
 Even the pinned export is **one requirement source, not the requirement set**: feedback from
 other sources that it never captured is kept in the delivery ledger
 (`agentic-delivery/scripts/feedback_ledger.py`). Before re-aligning to the design, run its
-`accept-file` and pass the output as the differ's `--accept` file. Send a design-vs-feedback
+`accept-file`; the owner commits it as the differ's `--accept`. Send a design-vs-feedback
 conflict to the owner; never settle it by re-aligning.
 
 **Check order: cheap and deterministic first — an earlier mismatch stops the rest.** Inventory
