@@ -28,14 +28,14 @@
 #     -type f | LC_ALL=C sort | while IFS= read -r f; do \
 #     printf '%s\t%s\n' "$f" "$(LC_ALL=C wc -c < "$f" | tr -d '[:space:]')"; done
 .claude/skills/agentic-ceo/SKILL.md	11611
-.claude/skills/agentic-delivery/SKILL.md	29178
-.claude/skills/agentic-delivery/references/dev-env-ownership.md	25172
-.claude/skills/agentic-delivery/references/fanout-host-sizing.md	35536
+.claude/skills/agentic-delivery/SKILL.md	29153
+.claude/skills/agentic-delivery/references/dev-env-ownership.md	25648
+.claude/skills/agentic-delivery/references/fanout-host-sizing.md	36033
 .claude/skills/agentic-delivery/references/fast-agentic-delivery.md	6242
-.claude/skills/agentic-delivery/references/host-enforcement.md	6320
+.claude/skills/agentic-delivery/references/host-enforcement.md	9683
 .claude/skills/agentic-delivery/references/incident-response.md	7665
 .claude/skills/agentic-delivery/references/merge-queue-worktrees.md	55121
-.claude/skills/agentic-delivery/references/multi-session-coordination.md	54710
+.claude/skills/agentic-delivery/references/multi-session-coordination.md	54707
 .claude/skills/agentic-delivery/references/production-grade-product-playbook.md	6535
 .claude/skills/agentic-delivery/references/project-state.md	6407
 .claude/skills/agentic-delivery/references/retrospective.md	4577
@@ -69,15 +69,15 @@
 .claude/skills/deep-code-review/references/language-stack-redflags.md	43496
 .claude/skills/deep-code-review/references/machine-report.md	10061
 .claude/skills/deep-code-review/references/method.md	67386
-.claude/skills/deep-code-review/references/migration-parity.md	24956
+.claude/skills/deep-code-review/references/migration-parity.md	25512
 .claude/skills/deep-code-review/references/mobile-appsec.md	25887
-.claude/skills/deep-code-review/references/model-tiering.md	10662
+.claude/skills/deep-code-review/references/model-tiering.md	12975
 .claude/skills/deep-code-review/references/observability.md	17989
 .claude/skills/deep-code-review/references/parallel-audit.md	37150
 .claude/skills/deep-code-review/references/performance-db-cost.md	43081
 .claude/skills/deep-code-review/references/privacy-by-design.md	4813
 .claude/skills/deep-code-review/references/privacy-compliance.md	17478
-.claude/skills/deep-code-review/references/product-ux-quality.md	133351
+.claude/skills/deep-code-review/references/product-ux-quality.md	133349
 .claude/skills/deep-code-review/references/readme-authoring.md	6910
 .claude/skills/deep-code-review/references/release-engineering.md	20815
 .claude/skills/deep-code-review/references/reliability-error-handling.md	41410
@@ -87,7 +87,7 @@
 .claude/skills/deep-code-review/references/security-agent-skills.md	6511
 .claude/skills/deep-code-review/references/security-ai-agents.md	39129
 .claude/skills/deep-code-review/references/security-api.md	17450
-.claude/skills/deep-code-review/references/security-appsec.md	89231
+.claude/skills/deep-code-review/references/security-appsec.md	89219
 .claude/skills/deep-code-review/references/skill-authoring-and-size.md	3677
 .claude/skills/deep-code-review/references/standards-index.md	470
 .claude/skills/deep-code-review/references/testing-and-evals.md	64828
