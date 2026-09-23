@@ -51,13 +51,21 @@ CONTRACT (fail-closed; every branch below is load-bearing, not cosmetic)
 * COULD_NOT_CHECK (3) — either side is missing, unreadable, empty, or yields
   no sections; a section uses a class-based hiding token with no computed-
   visibility marker (VISIBILITY below); the `--accept` file is not owner-
-  authored, not committed, or malformed; or a would-be MATCH rests on a side
-  with no inventory (a `.json` section list). Never a score, never a pass.
+  authored, not committed, or malformed; a would-be MATCH rests on a side
+  with no inventory (a `.json` section list) or on zero matched element
+  pairs; or fewer pairs matched than the caller's `--min-pairs N` (a harness
+  that compared an empty or wrong page — this outranks MISMATCH, whose work
+  queue would then point the wrong way). N is caller-supplied, never
+  guessed. Never a score, never a pass.
 * CANNOT_COMPARE (4) — the app is UNSEEDED: every design-populated section
   exists in the app but is uniformly empty. This is a precondition failure
   (seed the app's data), NOT a structural mismatch — it must never be "fixed"
   by condensing or deleting the empty sections. Distinct from MISMATCH so an
   agent cannot quietly reclassify "unseeded" as "aligned once trimmed down."
+* STYLE_DIFF (5) — `--style` only: the inventory passes but a text-matched
+  pair differs in computed style (COMPUTED STYLE below). A failing inventory
+  exit always wins; `verdict` stays the completeness verdict and
+  `style.verdict` is reported separately.
 * Extra app sections beyond the design are reported as info ("kept as
   superset") and never cause a failure on their own. Extra ITEMS inside a
   matched section are EXTRA_IN_APP rows and do fail until resolved or
@@ -162,9 +170,31 @@ an agent following its own attribution convention, not a forger.
 An accepted row still prints (ACCEPTED) and never counts as matched; a row
 covering fewer differences than its count prints as info (stale).
 
+COMPUTED STYLE (`--style`) — reported separately, never a completeness input
+------------------------------------------------------------------------------
+Export contract: an element to style-check carries
+`data-cs='{"line-height":"20px", ...}'`, a JSON object holding a non-empty
+value for EVERY property in `_STYLE_PROPS` (font-family, font-size, font-weight,
+line-height, letter-spacing, color, background-color, padding,
+border-radius, box-shadow), set from `getComputedStyle` when the DOM is
+snapshotted, e.g. `el.setAttribute('data-cs', JSON.stringify(
+Object.fromEntries(PROPS.map(p => [p, getComputedStyle(el)
+.getPropertyValue(p)]))))`. Export both sides from the same browser: values
+compare as normalized text (case, whitespace, quotes), with no unit
+conversion. A visible `data-cs` element is paired by section + role
+(heading level, control role, explicit `role`, else `text`) + its full
+visible text (masked as in the inventory), duplicates in document order;
+an element with no visible text or no counterpart is not style-checked.
+Rows print grouped by property. A property that differs on more than half
+of all pairs is one FOUNDATION row — a global type/box mismatch to fix
+before any per-section work — instead of one row per pair. Style verdict:
+STYLE_MATCH, STYLE_DIFF, or COULD_NOT_CHECK (a malformed `data-cs`, zero
+pairs, or fewer than `--min-pairs`). No accept path covers style rows.
+
 USAGE
 -----
-  parity_differ.py --design <file> --app <file> [--accept <tsv> [--accept-rev REV]] [--json]
+  parity_differ.py --design <file> --app <file> [--accept <tsv> [--accept-rev REV]]
+                   [--min-pairs N] [--style] [--json]
   parity_differ.py --selftest
 Public API for sibling scripts: `compare()` (the dict `--json` prints) and
 `inventory_keys()` (one side's item keys, never a verdict).
@@ -180,6 +210,7 @@ import re
 import subprocess
 import sys
 import tempfile
+from collections import Counter
 from html.parser import HTMLParser
 from pathlib import Path
 
@@ -194,10 +225,14 @@ MISMATCH = 1
 USAGE_ERROR = 2
 COULD_NOT_CHECK = 3
 CANNOT_COMPARE = 4
+STYLE_DIFF = 5                                # --style only; inventory passed
 MATCH_WITH_ACCEPTED = "MATCH_WITH_ACCEPTED"   # verdict name; exit code is MATCH
 
 _VERDICT_NAMES = {MATCH: "MATCH", MISMATCH: "MISMATCH", USAGE_ERROR: "USAGE_ERROR",
                   COULD_NOT_CHECK: "COULD_NOT_CHECK", CANNOT_COMPARE: "CANNOT_COMPARE"}
+# Computed-style properties every `data-cs` export must carry (COMPUTED STYLE).
+_STYLE_PROPS = ("font-family", "font-size", "font-weight", "line-height", "letter-spacing",
+                "color", "background-color", "padding", "border-radius", "box-shadow")
 
 # Elements with no closing tag in HTML. Never pushed onto the open-tag stack,
 # so a document full of bare `<img>`/`<input>`/... never desyncs it.
@@ -253,6 +288,8 @@ class _Frame:
         "cells",
         "container",
         "control",
+        "cs",
+        "cscap",
         "hidden",
         "id",
         "idcap",
@@ -281,6 +318,8 @@ class _Frame:
         self.row: dict | None = None
         self.cells = 0
         self.control: dict | None = None
+        self.cs: dict | None = None             # this element's computed-style record
+        self.cscap: list[str] | None = None     # passive: its full visible text
 
 
 class _SectionExtractor(HTMLParser):
@@ -329,7 +368,7 @@ class _SectionExtractor(HTMLParser):
         sid = attr_map.get("data-section")
         if sid is not None and sid not in self._by_id:
             record = {"id": sid, "items": 0, "empties": 0, "inv": [], "marked": False,
-                      "unresolved": []}
+                      "unresolved": [], "styles": [], "cs_bad": []}
             self.sections.append(record)
             self._by_id[sid] = record
 
@@ -447,7 +486,36 @@ class _SectionExtractor(HTMLParser):
                 row_frame.cells += 1
                 if row_frame.cells == 1:
                     frame.kind, frame.capture, frame.row = "cell0", [], row_frame.row
+        if "data-cs" in attr_map and sec in self._by_id:
+            self._start_style(frame, tag, attr_map["data-cs"], role)
         return frame
+
+    def _start_style(self, frame: _Frame, tag: str, raw: str | None, role: str) -> None:
+        """Record one visible `data-cs` element for the `--style` pairing.
+
+        The record is appended in document order and its text is filled at
+        `_finalize`. A `data-cs` that is not a JSON object carrying every
+        `_STYLE_PROPS` key as a non-empty string/number is logged to the section's
+        `cs_bad` list (fail closed; never a guessed value).
+        """
+        sec = self._by_id[frame.section]
+        try:
+            props = json.loads(raw or "")
+        except json.JSONDecodeError:
+            props = None
+        if not isinstance(props, dict) or any(   # "" = the browser did not serialize it
+                not isinstance(props.get(p), (str, int, float)) or not str(props[p]).strip()
+                for p in _STYLE_PROPS):
+            sec["cs_bad"].append(f"<{tag} data-cs>")
+            return
+        if frame.kind == "heading" and frame.item is not None:
+            role = frame.item["role"]
+        elif frame.kind == "control" and frame.control["item"] is not None:
+            role = frame.control["item"]["role"]
+        frame.cs = {"role": role or "text", "text": "",
+                    "props": {p: str(props[p]) for p in _STYLE_PROPS}}
+        frame.cscap = []
+        sec["styles"].append(frame.cs)
 
     @staticmethod
     def _is_native_control(tag: str, attr_map: dict) -> bool:
@@ -524,12 +592,16 @@ class _SectionExtractor(HTMLParser):
                 owned = True
             if f.idcap is not None:
                 f.idcap.append(text)
+            if f.cscap is not None:
+                f.cscap.append(text)
         return owned
 
     def _finalize(self, frame: _Frame) -> None:
         """Close one frame: fill its item label from the captured text."""
         if frame.tag in _BLOCK_TAGS or frame.sid is not None:
             self._flush()
+        if frame.cs is not None:
+            frame.cs["text"] = "".join(frame.cscap)
         if frame.kind == "icon":
             text = " ".join(frame.item["text"].split())
             if not text or frame.hidden:   # a visible text run inside <i> is italic text
@@ -657,10 +729,12 @@ class _SectionExtractor(HTMLParser):
 def extract_side(path: str | None) -> list[dict] | None:
     """Return this side's ordered section records, or None if it cannot compare.
 
-    Each record is `{"id", "populated", "inventory", "marked", "unresolved"}`;
-    `inventory` is a list of raw items for an HTML side and None for a `.json`
-    side (which carries no inventory); `unresolved` lists class-based hiding
-    tokens that carry no `data-visible` marker (VISIBILITY). None for the
+    Each record is `{"id", "populated", "inventory", "marked", "unresolved",
+    "styles", "cs_bad"}`; `inventory` is a list of raw items for an HTML side
+    and None for a `.json` side (which carries no inventory); `unresolved`
+    lists class-based hiding tokens that carry no `data-visible` marker
+    (VISIBILITY); `styles` lists `data-cs` records `{"role", "text", "props"}`
+    (None for `.json`) and `cs_bad` the malformed ones. None for the
     whole side covers every fail-closed case in one place: no path given,
     file absent, unreadable, empty/whitespace-only, invalid JSON, or zero
     sections. A caller must treat None as COULD_NOT_CHECK, never as an
@@ -684,7 +758,8 @@ def extract_side(path: str | None) -> list[dict] | None:
         if not isinstance(data, list):
             return None
         rows = [{"id": str(row["id"]), "populated": bool(row.get("populated", False)),
-                 "inventory": None, "marked": False, "unresolved": []}
+                 "inventory": None, "marked": False, "unresolved": [], "styles": None,
+                 "cs_bad": []}
                 for row in data if isinstance(row, dict) and "id" in row]
         return rows or None
 
@@ -695,7 +770,8 @@ def extract_side(path: str | None) -> list[dict] | None:
     if not parser.sections:
         return None
     return [{"id": s["id"], "populated": s["items"] > 0, "inventory": s["inv"],
-             "marked": s["marked"], "unresolved": s["unresolved"]} for s in parser.sections]
+             "marked": s["marked"], "unresolved": s["unresolved"], "styles": s["styles"],
+             "cs_bad": s["cs_bad"]} for s in parser.sections]
 
 
 def extract_sections(path: str | None) -> list[tuple[str, bool]] | None:
@@ -848,6 +924,83 @@ def diff_inventory(design: list[dict], app: list[dict], mask: bool) -> dict:
     rows += [{"status": "MISSING_IN_APP", "item": i["key"], "design": i["key"], "app": None} for i in d_left]
     rows += [{"status": "EXTRA_IN_APP", "item": o["key"], "design": None, "app": o["key"]} for o in a_left]
     return {"matched": matched, "total": len(d_items), "rows": rows}
+
+
+def _style_norm(value: str) -> str:
+    """Canonical text of one computed value: case, whitespace, and quotes folded."""
+    text = " ".join(value.replace('"', "").replace("'", "").split()).casefold()
+    return re.sub(r"\s*([,()])\s*", r"\1", text)
+
+
+def diff_styles(design: list[dict], app: list[dict], min_pairs: int | None = None) -> dict:
+    """Pair `data-cs` elements across two sides and diff their computed styles.
+
+    Pure. Pairs by (section, role, case-folded visible text), masked as the
+    inventory masks when both sections carry value markers; duplicates pair
+    in document order. Returns `{"verdict", "pairs", "identical", "unpaired",
+    "foundation", "rows", "lines"}`, each row `{"section", "element",
+    "property", "design", "app", "foundation"}`. A property differing on more
+    than half of all pairs is FOUNDATION. COULD_NOT_CHECK on any malformed
+    `data-cs`, zero pairs, or fewer pairs than `min_pairs`. Style never feeds
+    inventory completeness.
+    """
+    bad = [f"{side} section '{s['id']}': {b}" for side, recs in (("design", design), ("app", app))
+           for s in recs for b in s["cs_bad"]]
+    app_map = {s["id"]: s for s in app}
+    pairs, unpaired = [], 0
+    for sec in design:
+        a_sec = app_map.get(sec["id"]) or {}
+        mask = sec["marked"] and a_sec.get("marked", False)
+        pool: dict = {}
+        for rec in a_sec.get("styles") or ():
+            pool.setdefault((rec["role"], _clean(rec["text"], mask).casefold()), []).append(rec)
+        for rec in sec["styles"] or ():
+            text = _clean(rec["text"], mask)
+            hits = pool.get((rec["role"], text.casefold())) if text else None
+            if hits:
+                pairs.append((sec["id"], f"{rec['role']}:{text}", rec["props"], hits.pop(0)["props"]))
+            elif text:
+                unpaired += 1
+    by_prop: dict = {p: [] for p in _STYLE_PROPS}
+    identical = 0
+    for sid, element, d, a in pairs:
+        diffs = [p for p in _STYLE_PROPS if _style_norm(d[p]) != _style_norm(a[p])]
+        identical += not diffs
+        for p in diffs:
+            by_prop[p].append({"section": sid, "element": element, "property": p,
+                               "design": d[p], "app": a[p]})
+    n = len(pairs)
+    foundation = [p for p in _STYLE_PROPS if 2 * len(by_prop[p]) > n]
+    rows = [dict(r, foundation=p in foundation) for p in _STYLE_PROPS for r in by_prop[p]]
+    head = (f"style: {n} text-matched pair(s); style-identical {identical}/{n} = {_pct(identical, n)}; "
+            f"{unpaired} design element(s) with no counterpart not style-checked.")
+    if bad or not n or (min_pairs is not None and n < min_pairs):
+        verdict = "COULD_NOT_CHECK"
+        why = (f"malformed data-cs (needs a JSON object with {', '.join(_STYLE_PROPS)}): "
+               f"{'; '.join(bad[:5])}" if bad else
+               "no text-matched data-cs pairs — export computed styles on both sides" if not n else
+               f"{n} style pair(s), below the caller's --min-pairs {min_pairs}")
+        lines = [f"STYLE COULD_NOT_CHECK: {why}.", head]
+    elif rows:
+        verdict = "STYLE_DIFF"
+        lines = [f"STYLE_DIFF: {len(rows)} property difference(s) on {n - identical} of {n} pair(s); "
+                 f"{len(foundation)} FOUNDATION propert(ies). Reported apart from completeness.", head]
+    else:
+        verdict = "STYLE_MATCH"
+        lines = ["STYLE_MATCH: every text-matched pair is identical on every compared property.", head]
+    for p in _STYLE_PROPS:
+        group = by_prop[p]
+        if p in foundation:
+            (d, a), _ = Counter((r["design"], r["app"]) for r in group).most_common(1)[0]
+            lines.append(f"FOUNDATION {p}: differs on {len(group)}/{n} pairs in "
+                         f"{len({r['section'] for r in group})} section(s) (most common: {d} -> {a}) "
+                         "— fix the global type/box foundation before any per-section work.")
+        elif group:
+            lines.append(f"STYLE_DIFF {p} ({len(group)} pair(s)):")
+            lines += [f"  section '{r['section']}' {r['element'][:60]}: {r['design']} -> {r['app']}"
+                      for r in group]
+    return {"verdict": verdict, "pairs": n, "identical": identical, "unpaired": unpaired,
+            "foundation": foundation, "rows": rows, "lines": lines}
 
 
 def _norm(text: str | None) -> str:
@@ -1012,16 +1165,21 @@ _BASIS = ("basis: element inventory (headings, visible text, controls by role + 
 
 
 def compare(design_path: str | None, app_path: str | None, accept_path: str | None = None,
-            accept_rev: str | None = None, use_focus_gate: bool | None = None) -> dict:
+            accept_rev: str | None = None, use_focus_gate: bool | None = None,
+            min_pairs: int | None = None, style: bool = False) -> dict:
     """Compare a design render against an app render; return the full result.
 
     The result dict carries `exit_code`, `verdict`, `report` (human text) and,
-    once both sides load, `sections` / `overall` completeness and
-    `accepted_n`. Two-sided or no output: a missing/unreadable/empty/
+    once both sides load, `sections` / `overall` completeness, `accepted_n`,
+    `pairs` (matched element pairs), and `style` (`diff_styles`' dict when
+    `style`, else None). Two-sided or no output: a missing/unreadable/empty/
     sectionless side on EITHER end, an unresolved class-based hiding token,
     or an accept file that is not owner-authored or is malformed returns
-    COULD_NOT_CHECK before any comparison runs. `use_focus_gate` is passed
-    to `read_owner_authored`.
+    COULD_NOT_CHECK before any comparison runs; so do zero pairs on a
+    would-be pass and fewer pairs than `min_pairs` on any verdict.
+    `verdict` stays the completeness verdict; a passing inventory takes the
+    style exit (STYLE_DIFF / COULD_NOT_CHECK). `use_focus_gate` is passed to
+    `read_owner_authored`.
     """
     def early(code: int, report: str) -> dict:
         """Result for a verdict reached before any inventory comparison."""
@@ -1135,7 +1293,15 @@ def compare(design_path: str | None, app_path: str | None, accept_path: str | No
         info.append(f"info: accept row(s) covering fewer differences than their count (stale): {', '.join(stale)}")
 
     verdict = None
-    if missing or empty or open_rows:
+    if min_pairs is not None and tot_matched < min_pairs:
+        code = COULD_NOT_CHECK
+        report = [
+            (f"COULD_NOT_CHECK: {tot_matched} design/app element pair(s) matched, below the "
+             f"caller's --min-pairs {min_pairs} — the harness likely compared an empty or wrong "
+             "page. Spot-check the pair list below; no verdict or work queue from this run is "
+             "trusted."),
+            *body, _BASIS, *info]
+    elif missing or empty or open_rows:
         code = MISMATCH
         report = [
             (f"MISMATCH: {len(missing)} missing + {len(empty)} empty of {len(design_ids)} "
@@ -1148,6 +1314,12 @@ def compare(design_path: str | None, app_path: str | None, accept_path: str | No
             ("COULD_NOT_CHECK: sections match, but element inventory is unavailable for "
              f"section(s) {', '.join(no_inventory)} — export both rendered DOM snapshots "
              "as HTML; section presence alone cannot certify completeness."),
+            *body, _BASIS, *info]
+    elif not tot_matched:
+        code = COULD_NOT_CHECK
+        report = [
+            ("COULD_NOT_CHECK: zero design/app element pairs matched — an empty comparison is "
+             "never a MATCH; confirm both exports carry visible inventory."),
             *body, _BASIS, *info]
     elif accepted_n:
         code, verdict = MATCH, MATCH_WITH_ACCEPTED
@@ -1163,8 +1335,16 @@ def compare(design_path: str | None, app_path: str | None, accept_path: str | No
              "design-populated section is populated in the app; element inventory "
              f"{completeness}."),
             *body, _BASIS, *info]
-    return {"exit_code": code, "verdict": verdict or _VERDICT_NAMES[code], "overall": overall,
-            "accepted_n": accepted_n, "sections": sections,
+    verdict = verdict or _VERDICT_NAMES[code]
+    style_res = diff_styles(design, app, min_pairs) if style else None
+    if style_res is not None:
+        if code == MATCH and style_res["verdict"] != "STYLE_MATCH":
+            code = STYLE_DIFF if style_res["verdict"] == "STYLE_DIFF" else COULD_NOT_CHECK
+            report = style_res["lines"] + report   # the headline names what set the exit
+        else:
+            report += style_res["lines"]
+    return {"exit_code": code, "verdict": verdict, "overall": overall, "pairs": tot_matched,
+            "min_pairs": min_pairs, "style": style_res, "accepted_n": accepted_n, "sections": sections,
             "section_gaps": {"missing": missing, "empty": empty},
             "extra_sections": extra, "report": "\n".join(report)}
 
@@ -1381,6 +1561,9 @@ def _selftest() -> int:
         # with a count; the verdict is MATCH_WITH_ACCEPTED, never plain MATCH.
         _selftest_accept(tmp, write, check, failures, inv_design, fx)
 
+        # 5. --min-pairs floor (#1112) and --style computed-style diff (#1108).
+        _selftest_floor_style(write, check, failures, design, app_full)
+
     if failures:
         print("SELFTEST FAILED:")
         for failure in failures:
@@ -1392,9 +1575,85 @@ def _selftest() -> int:
         "inventory(changed)=1 pct(floor)=ok mask(one-sided)=1 icon-button-label=ok "
         "json(no-inventory)=3 hidden(dialog,details,opacity,class)=ok label(visible,placeholder)=ok "
         "coverage(media,icon,option,mask-count,broken)=ok accept(owner,count,pin,untrusted)=ok "
-        "inventory-keys=ok"
+        "inventory-keys=ok min-pairs(floor,outranks-mismatch,zero-pairs)=ok "
+        "style(foundation,opt-in,normalized,inventory-wins,malformed,empty-value,no-export,floor)=ok"
     )
     return 0
+
+
+def _selftest_floor_style(write, check, failures: list, design: str, app_full: str) -> None:
+    """`--min-pairs` floor and `--style` self-test cases (inline fixtures)."""
+    res = compare(design, app_full)
+    got = res.get("pairs") or 0
+    r = compare(design, app_full, min_pairs=got + 1)
+    check("floor-below", r["exit_code"], r["report"], COULD_NOT_CHECK,
+          must_have=(f"--min-pairs {got + 1}", "wrong page"), must_not=("MATCH:",))
+    r = compare(design, app_full, min_pairs=got)
+    check("floor-at", r["exit_code"], r["report"], MATCH)
+    # A wrong page with the same section ids: MISMATCH would queue a rebuild;
+    # below the caller's floor it is COULD_NOT_CHECK instead.
+    d = write("fl-d.html", '<section data-section="s"><p data-item>x</p><h2>Totals</h2>'
+                           '<button>Save</button></section>')
+    a = write("fl-a.html", '<section data-section="s"><p data-item>x</p><h2>Sign in</h2></section>')
+    check("floor-no-flag-mismatch", *diff_sides(d, a), MISMATCH)
+    r = compare(d, a, min_pairs=3)
+    check("floor-outranks-mismatch", r["exit_code"], r["report"], COULD_NOT_CHECK,
+          must_have=("1 design/app element pair(s)",), must_not=("MISMATCH",))
+    empty = write("fl-empty.html", '<section data-section="s"></section>')
+    check("zero-pairs-never-match", *diff_sides(empty, empty), COULD_NOT_CHECK,
+          must_have=("zero design/app element pairs",), must_not=("MATCH:",))
+    try:
+        _min_pairs("0")
+        failures.append("min-pairs-type: 0 accepted, want ArgumentTypeError")
+    except argparse.ArgumentTypeError:
+        pass
+
+    base = {"font-family": "Inter, sans-serif", "font-size": "14px", "font-weight": "400",
+            "line-height": "20px", "letter-spacing": "0px", "color": "rgb(17, 24, 39)",
+            "background-color": "rgba(0, 0, 0, 0)", "padding": "0px", "border-radius": "0px",
+            "box-shadow": "none"}
+
+    def page(over: dict | None = None, bold: tuple | None = None, attr: str | None = None) -> str:
+        """Three sections x (heading, button, text), each element carrying data-cs."""
+        out = []
+        for sid in ("overview", "holdings", "activity"):
+            els = []
+            for tag, text in (("h2", sid.title()), ("button", f"Open {sid}"), ("p", f"{sid} note")):
+                props = {**base, **(over or {}), **({"font-weight": "600"} if bold == (sid, tag) else {})}
+                els.append(f"<{tag} data-cs='{attr if attr is not None else json.dumps(props)}'>{text}</{tag}>")
+            out.append(f'<section data-section="{sid}"><div data-item>x</div>{"".join(els)}</section>')
+        return "".join(out)
+
+    sd = write("st-d.html", page())
+    sa = write("st-a.html", page({"line-height": "24px"}, bold=("holdings", "button")))
+    r = compare(sd, sa, style=True)
+    st = r.get("style") or {}
+    check("style-foundation", r["exit_code"], r["report"], STYLE_DIFF,
+          must_have=("FOUNDATION line-height: differs on 9/9", "STYLE_DIFF font-weight (1 pair(s))",
+                     "section 'holdings' button:Open holdings: 400 -> 600"))
+    rows = sorted((x["property"], x["foundation"]) for x in st.get("rows", []))
+    if (r.get("verdict") != "MATCH" or st.get("foundation") != ["line-height"]
+            or rows != [("font-weight", False)] + [("line-height", True)] * 9
+            or r["report"].count("20px -> 24px") != 1 or not r["report"].startswith("STYLE_DIFF:")):
+        failures.append(f"style-foundation: verdict {r.get('verdict')} style {st.get('foundation')} rows {rows}")
+    r = compare(sd, sa)
+    check("style-opt-in", r["exit_code"], r["report"], MATCH, must_not=("FOUNDATION", "STYLE"))
+    norm = write("st-n.html", page({"color": "rgb(17,24,39)", "font-family": '"Inter",SANS-SERIF'}))
+    r = compare(sd, norm, style=True)
+    check("style-normalized", r["exit_code"], r["report"], MATCH, must_have=("STYLE_MATCH", "style-identical 9/9 = 100.0%"))
+    wrong = write("st-w.html", page({"line-height": "24px"}).replace("Open activity", "Launch activity"))
+    r = compare(sd, wrong, style=True)
+    check("style-inventory-wins", r["exit_code"], r["report"], MISMATCH, must_have=("FOUNDATION line-height",))
+    r = compare(sd, write("st-bad.html", page(attr='{"color": "red"}')), style=True)
+    check("style-malformed", r["exit_code"], r["report"], COULD_NOT_CHECK, must_have=("malformed data-cs",))
+    blank = page({"padding": ""})   # an unserialized shorthand on BOTH sides is not "equal"
+    r = compare(write("st-bd.html", blank), write("st-ba.html", blank), style=True)
+    check("style-empty-value", r["exit_code"], r["report"], COULD_NOT_CHECK, must_have=("malformed data-cs",))
+    r = compare(sd, write("st-none.html", re.sub(r" data-cs='[^']*'", "", page())), style=True)
+    check("style-no-export", r["exit_code"], r["report"], COULD_NOT_CHECK, must_have=("no text-matched",))
+    r = compare(sd, norm, style=True, min_pairs=10)   # 12 inventory pairs, 9 style pairs
+    check("style-floor", r["exit_code"], r["report"], COULD_NOT_CHECK,
+          must_have=("9 style pair(s), below the caller's --min-pairs 10",))
 
 
 def _selftest_accept(tmp: str, write, check, failures: list, inv_design: str, fx) -> None:
@@ -1491,6 +1750,13 @@ def _selftest_accept(tmp: str, write, check, failures: list, inv_design: str, fx
                 os.environ[key] = val
 
 
+def _min_pairs(text: str) -> int:
+    """argparse type for `--min-pairs`: an integer >= 1 (a floor of 0 checks nothing)."""
+    if not re.fullmatch(r"[1-9][0-9]*", text.strip()):
+        raise argparse.ArgumentTypeError(f"must be an integer >= 1: {text!r}")
+    return int(text)
+
+
 def main(argv: list[str] | None = None) -> int:
     """CLI entry point: `--selftest`, or `--design <f> --app <f>` (two-sided only)."""
     parser = argparse.ArgumentParser(
@@ -1502,6 +1768,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--accept", help="owner-authored accepted-deviations TSV (7 fields; see module doc)")
     parser.add_argument("--accept-rev", help="git revision to read and verify the accept file at "
                                              "(default HEAD; required without focus_gate.py)")
+    parser.add_argument("--min-pairs", type=_min_pairs, help="COULD_NOT_CHECK when fewer matched "
+                        "element pairs than N (your floor for this page; never guessed)")
+    parser.add_argument("--style", action="store_true", help="also diff computed styles (data-cs) of "
+                        "text-matched pairs; reported apart from completeness")
     parser.add_argument("--json", action="store_true", help="print the full result as JSON (board posts)")
     parser.add_argument("--selftest", action="store_true", help="run the committed-fixture self-test")
     args = parser.parse_args(argv)
@@ -1515,7 +1785,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.accept_rev and not args.accept:
         parser.error("--accept-rev needs --accept")
 
-    result = compare(args.design, args.app, args.accept, args.accept_rev)
+    result = compare(args.design, args.app, args.accept, args.accept_rev,
+                     min_pairs=args.min_pairs, style=args.style)
     print(json.dumps(result, indent=2, ensure_ascii=False) if args.json else result["report"])
     return result["exit_code"]
 

@@ -27,8 +27,10 @@ CONTRACT (fail-closed; only one passing exit)
   UNRESOLVED. The per-token list is the work queue.
 * 2 COULD_NOT_CHECK — either side (or a given --map) is missing, unreadable,
   empty, invalid, or yields zero tokens; a --map `$type` that is not a DTCG
-  type is invalid. Never a pass. (argparse usage errors also exit 2 —
-  equally non-passing.)
+  type is invalid; or fewer design tokens paired with an app token than the
+  caller's `--min-pairs N` (a wrong file or map; N is never guessed, and
+  this outranks MISMATCH). Never a pass. (argparse usage errors also exit
+  2 — equally non-passing.)
 Per-token status:
 * MATCH — resolved values are equal after normalization.
 * MISMATCH — both resolved; values differ (both values printed).
@@ -72,7 +74,7 @@ a fold collision on either side is UNRESOLVED), or an explicit `--map` TSV:
 
 USAGE
 -----
-  token_differ.py --design <file> --app <file> [--map <tsv>] [--root-px 16]
+  token_differ.py --design <file> --app <file> [--map <tsv>] [--root-px 16] [--min-pairs N]
   token_differ.py --selftest
 """
 from __future__ import annotations
@@ -88,6 +90,7 @@ import tempfile
 MATCH = 0
 MISMATCH = 1
 COULD_NOT_CHECK = 2
+_NAMES = {MATCH: "MATCH", MISMATCH: "MISMATCH", COULD_NOT_CHECK: "COULD_NOT_CHECK"}
 
 _NUM = r"[+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?"
 _ALIAS_RE = re.compile(r"\{([^{}]+)\}")
@@ -772,11 +775,13 @@ def _compare_one(design: _Side, dname: str | None, app: _Side, aname: str | None
 
 
 def compare(design_path: str | None, app_path: str | None, map_path: str | None = None,
-            root_px: float = 16.0) -> tuple[int, list[tuple[str, str]], str]:
+            root_px: float = 16.0, min_pairs: int | None = None) -> tuple[int, list[tuple[str, str]], str]:
     """Diff two sides; return (exit_code, [(design_name, status)], report).
 
     Two-sided or no verdict: an unloadable side or --map returns
-    COULD_NOT_CHECK before any token is compared.
+    COULD_NOT_CHECK before any token is compared. With `min_pairs`, fewer
+    design tokens paired with exactly one app token (the report's `paired=`
+    count) also returns COULD_NOT_CHECK, whatever the per-token statuses.
     """
     design = load_side(design_path)
     if design is None:
@@ -836,13 +841,18 @@ def compare(design_path: str | None, app_path: str | None, map_path: str | None 
         lines.append(f"{status:<15} {dn} -> {an}  {detail}")
     counts = {s: sum(1 for _, st in results if st == s)
               for s in ("MATCH", "MISMATCH", "MISSING_IN_APP", "UNRESOLVED")}
+    paired = sum(1 for p in pairs if p[3] is not None)
     code = MATCH if counts["MATCH"] == len(results) and results else MISMATCH
-    header = (f"TOKEN PARITY: {'MATCH' if code == MATCH else 'MISMATCH'} — design={design_path} "
+    if min_pairs is not None and paired < min_pairs:
+        code = COULD_NOT_CHECK
+        info.insert(0, f"COULD_NOT_CHECK: {paired} design/app token pair(s), below the caller's "
+                       f"--min-pairs {min_pairs} — a wrong file or map; no verdict from this run is trusted.")
+    header = (f"TOKEN PARITY: {_NAMES[code]} — design={design_path} "
               f"({design.fmt}) app={app_path} ({app.fmt})"
               + (f" map={map_path}" if map_path else "") + f" root_px={root_px:g}")
     summary = (f"counts: compared={len(results)} match={counts['MATCH']} "
                f"mismatch={counts['MISMATCH']} missing_in_app={counts['MISSING_IN_APP']} "
-               f"unresolved={counts['UNRESOLVED']}")
+               f"unresolved={counts['UNRESOLVED']} paired={paired}")
     scope = ("scope: verifies resolved token VALUES only, not that components use them; "
              "completeness is parity_differ.py's element inventory; screenshots last.")
     return code, results, "\n".join([header, *lines, summary, *info, scope])
@@ -886,10 +896,21 @@ def _selftest() -> int:
     check("full", compare(design, app), MISMATCH, want_full,
           ("reference cycle: loop.a -> loop.b -> loop.a", "design=12px app=10px",
            "defined more than once", "app-only token(s)", "--app-only-shadow",
-           "counts: compared=18 match=12 mismatch=1 missing_in_app=1 unresolved=4",
+           "counts: compared=18 match=12 mismatch=1 missing_in_app=1 unresolved=4 paired=15",
            "VALUES only"))
     want_map = {n: "MATCH" for n in matching if n != "color.brand.accent"}
     check("mapped", compare(design, app, mapping), MATCH, want_map)
+    # --min-pairs (#1112): below the caller's floor is COULD_NOT_CHECK even on
+    # a would-be MATCH (a one-row map) and even over a MISMATCH; at it, unchanged.
+    check("floor-at", compare(design, app, mapping, min_pairs=11), MATCH, want_map, ("paired=11",))
+    check("floor-below", compare(design, app, mapping, min_pairs=12), COULD_NOT_CHECK, want_map,
+          ("TOKEN PARITY: COULD_NOT_CHECK", "11 design/app token pair(s), below the caller's --min-pairs 12"))
+    check("floor-outranks-mismatch", compare(design, app, min_pairs=18), COULD_NOT_CHECK, want_full)
+    try:
+        _min_pairs("0")
+        failures.append("min-pairs-type: 0 accepted, want ArgumentTypeError")
+    except argparse.ArgumentTypeError:
+        pass
     # rem conversion is load-bearing: a wrong root size must flip rem rows.
     check("root-px", compare(design, app, mapping, root_px=10.0), MISMATCH,
           {**want_map, "spacing.md": "MISMATCH", "spacing.sm": "MISMATCH"})
@@ -979,7 +1000,8 @@ def _selftest() -> int:
           "css-data-url=1 css-quoted-semicolon=1 css-family-quoted-comma=1 "
           "css-container-prelude=0 css-unbalanced=1 css-unterminated-url=1 "
           "map-type-keeps-declared-conflict=1 map-type-contradicts-declared=1 "
-          "refuse(absent/empty/invalid/no-tokens/bad-map/map-unknown-type)=2")
+          "refuse(absent/empty/invalid/no-tokens/bad-map/map-unknown-type)=2 "
+          "min-pairs(at=0,below=2,outranks-mismatch=2)")
     return 0
 
 
@@ -994,6 +1016,13 @@ def _positive_float(text: str) -> float:
     return value
 
 
+def _min_pairs(text: str) -> int:
+    """argparse type for `--min-pairs`: an integer >= 1 (a floor of 0 checks nothing)."""
+    if not re.fullmatch(r"[1-9][0-9]*", text.strip()):
+        raise argparse.ArgumentTypeError(f"must be an integer >= 1: {text!r}")
+    return int(text)
+
+
 def main(argv: list[str] | None = None) -> int:
     """CLI entry point: `--selftest`, or `--design <f> --app <f>` (two-sided only)."""
     parser = argparse.ArgumentParser(
@@ -1003,13 +1032,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--map", help="TSV design<TAB>app[<TAB>type]; compare only these rows")
     parser.add_argument("--root-px", type=_positive_float, default=16.0,
                         help="px per rem (default 16)")
+    parser.add_argument("--min-pairs", type=_min_pairs, help="COULD_NOT_CHECK when fewer design "
+                        "tokens pair with an app token than N (your floor; never guessed)")
     parser.add_argument("--selftest", action="store_true", help="run the planted-case self-test")
     args = parser.parse_args(argv)
     if args.selftest:
         return _selftest()
     if not args.design or not args.app:
         parser.error("--design and --app are both required (two-sided input, or no verdict)")
-    code, _results, report = compare(args.design, args.app, args.map, args.root_px)
+    code, _results, report = compare(args.design, args.app, args.map, args.root_px, args.min_pairs)
     print(report)
     return code
 
