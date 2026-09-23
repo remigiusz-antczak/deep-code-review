@@ -74,6 +74,7 @@ jobs:
           python3 .claude/skills/deep-code-review/scripts/parity_differ.py --selftest
           python3 .claude/skills/deep-code-review/scripts/token_differ.py --selftest
           python3 .claude/skills/deep-code-review/scripts/fix_class_gate.py --selftest
+          python3 .claude/skills/deep-code-review/scripts/closes_lint.py --selftest
           python3 .claude/skills/deep-code-review/scripts/binaries_gate.py --selftest
           python3 .claude/skills/deep-code-review/scripts/reaper_lint.py --selftest
           python3 .claude/skills/deep-code-review/scripts/source_scan_tests.py --selftest
