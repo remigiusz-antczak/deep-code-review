@@ -148,7 +148,7 @@ One skill, three hats. Default: run all three. Do not invent a fourth.
    - `PASS_TO_USER` — show the rec **and** a short dissent ledger.
    - `UNVERIFIED` — review could not run; it adds no authorization for a
      dependent material action and cannot revoke authorization the owner already
-     gave. Report the gap and continue any owner-requested work that does not
+     gave (owner-authored only — `agentic-delivery` **Human gates**). Report the gap and continue any owner-requested work that does not
      depend on the unresolved decision.
 6. **Join before claiming reviewed.** A background critic is a dependency of that
    claim; a pending or missing review stays `UNVERIFIED`, never a silent pass.

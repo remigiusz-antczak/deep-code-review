@@ -14,8 +14,11 @@ never enforced there. `install.sh --with-gates` closes that gap:
 
 - `deep-code-review/scripts/binaries_gate.py` — the extension-scoped no-committed-
   binaries check, ported from `ci-gates.sh`'s `binaries` subcommand into a shipped,
-  stdlib-only skill script (`--selftest` 5/5) so it is callable from an installed
-  target, not only from this repo's own dev tooling. `ci-gates.sh binaries` now
+  stdlib-only skill script (`--selftest` 6/6) so it is callable from an installed
+  target, not only from this repo's own dev tooling. It lists tracked files with
+  `git ls-files -z` and splits on NUL: without `-z`, git quotes a non-ASCII path,
+  its extension reads as `png"`, and the file slipped through (pinned by a
+  non-ASCII `.png` selftest case). `ci-gates.sh binaries` now
   **delegates** to this script (resolved from this repo's own tree via a new
   `CI_GATES_REPO_ROOT`, never from the directory being scanned) — one implementation,
   two callers. All 4 existing `binaries` self-tests still pass unchanged.
@@ -27,7 +30,11 @@ never enforced there. `install.sh --with-gates` closes that gap:
   test globs via `DCR_TEST_GLOBS`), `binaries_gate.py` (configurable allowlist via
   `DCR_BINARIES_ALLOWLIST`), and `--selftest` on every shipped gate script it finds
   (including `agentic-delivery`'s `serial_gate.py` / `handback_cap.py` when that
-  overlay is also installed). Fails closed if no installed skill is found.
+  overlay is also installed). Fails closed if no installed skill is found, or if
+  any gate or selftest script it expects is missing from that install (never a
+  skip). `DCR_TEST_GLOBS` is split with `read -ra`, so each glob reaches
+  `fix_class_gate.py` as a pattern instead of being expanded against the current
+  directory.
 - `install.sh --with-gates` — copies the two files above into
   `.github/workflows/dcr-gates.yml` and `scripts/dcr-gates.sh`; **never overwrites**
   an existing file at either path (writes `<path>.new` instead, with a note).
@@ -37,11 +44,12 @@ never enforced there. `install.sh --with-gates` closes that gap:
 - `scripts/recommend-overlays.py` — `--recommend` now lists the CI-enforcement
   mechanism (what it wires, what it writes, that it never overwrites) alongside the
   advisory-overlay list, so an owner learns it exists at pack-selection time.
-- `scripts/test-ci-gates.sh`: 4 new cases appended at the end of the file (own lane,
+- `scripts/test-ci-gates.sh`: 7 new cases appended at the end of the file (own lane,
   never touching earlier sections) — fresh target gets both files; an existing
   workflow is never overwritten; the runner resolves the installed skill's own
   script paths and calls them; the runner exits clean end-to-end on a binaries-free
-  target.
+  target; `DCR_TEST_GLOBS` globs pass as patterns; a missing gate script and a
+  missing selftest script each make the runner exit non-zero.
 - `references/docs-and-dx.md`'s Standards-imprint bullet 2 and `SKILL.md`'s Optional
   overlays section each name `--with-gates` as the mechanized version of "pair a
   standard with a gate." Size budgets ratcheted up, justified by this growth:
@@ -64,15 +72,23 @@ never enforced there. `install.sh --with-gates` closes that gap:
 - `docs/standards-index.md`: the Claude Code hooks reference (SubagentStop exit-2 behaviour, input fields, matcher), verified 2026-09-23.
 
 ### Changed
-- Autonomy regressions removed (12 over-broad stop rules, 6 of 8 contradictions fully resolved): a recorded owner standing grant now covers push / open PR / merge-to-integration on green + reviewed (force-push, deploy, secrets, spend, external sends, destructive data stay gated); an item gated only on a covered push/merge no longer ends the loop; a stuck item is recorded and skipped, never silently dropped. A structural check in `test-ci-gates.sh` pins the wording.
-- Size gate budgets BYTES, not lines (line budgets let "compaction" stuff text into long lines); all rows re-baselined at current bytes. New `ci-gates.sh size-ratchet --base <ref>` fails any row increase lacking a `size-budget-raise:` marker.
-- size-budget-raise: .claude/skills/agentic-ceo/SKILL.md 11178→11227 standing-grant and keep-producing wording (net −160 bytes across the change)
-- size-budget-raise: .claude/skills/deep-code-review/SKILL.md 23226→23289 principle 7 standing-grant carve-out
-- size-budget-raise: .claude/skills/idea-critic/SKILL.md 12544→12581 owner-gate asks no longer HOLD local reversible work
-- size-budget-raise: .claude/skills/deep-code-review/SKILL.md 23289→23612 route binaries_gate.py + templates/dcr-gates.* (install --with-gates)
-- size-budget-raise: .claude/skills/deep-code-review/references/docs-and-dx.md 22205→22511 target-repo gate install guidance
+- Autonomy regressions removed (12 over-broad stop rules, 6 of 8 contradictions fully resolved): an owner standing grant now covers push / open PR / merge-to-integration on green + reviewed (a merge that triggers deploy or publish, force-push, deploy, secrets, spend, external sends, destructive data stay gated); an item gated only on a covered push/merge no longer ends the loop; a stuck item is recorded and skipped, never silently dropped. A structural check in `test-ci-gates.sh` pins the wording.
+- Size gate budgets BYTES, not lines (line budgets let "compaction" stuff text into long lines); all rows re-baselined at current bytes. New `ci-gates.sh size-ratchet --base <ref>` fails any row increase lacking a `size-budget-raise:` marker in a commit message in range or in a CHANGELOG line the change itself adds (a marker already in the base's CHANGELOG never approves a new raise). Both `size` and `size-ratchet` fail closed when the config lacks its `# unit: bytes` line, which closes a delete-then-re-add bypass; the ratchet skips only when the base config predates byte adoption.
+- Standing grants count only from an owner-authored artifact: the owner's own commit to `CLAUDE.md` or the state record, or the owner's message quoted verbatim with date and place. The agent never creates, widens, extends, or re-dates a grant (being the state record's writer is not authority); absent or ambiguous means gated; a merge into a branch whose merge triggers deploy or publish is a deploy and is never covered. Applied in `agentic-delivery` (`SKILL.md` Human gates, `project-state.md`, `unattended-operating-mode.md`, `fast-agentic-delivery.md`), `agentic-ceo`, `idea-critic`, and `deep-code-review` principle 7. +1 agentic-delivery eval (`standing-grant-counts-only-from-an-owner-authored-artifact`); the keep-producing eval now bounds "keep the directive live" to while it finds real work, within the spend ceiling. `test-ci-gates.sh`'s autonomy check pins the owner-authored rule and the deploy-merge exclusion.
+- size-budget-raise: .claude/skills/agentic-ceo/SKILL.md 11178→11227 triage step 4 starts reversible in-scope work itself; the "do the fix myself" row lets a small project self-fix
+- size-budget-raise: .claude/skills/deep-code-review/SKILL.md 23226→23289 principle 7 requires write confirmation in review tasks only; a build/fix task's permission governs
+- size-budget-raise: .claude/skills/idea-critic/SKILL.md 12544→12581 prime-directive trigger phrases condensed and scoped to When to Use proposals (Don't use for exempt)
+- size-budget-raise: .claude/skills/deep-code-review/SKILL.md 23289→23612 new --with-gates paragraph: wires fix_class_gate.py and binaries_gate.py via scripts/dcr-gates.sh, routes to the docs-and-dx.md Standards-imprint section
+- size-budget-raise: .claude/skills/deep-code-review/references/docs-and-dx.md 22205→22511 Standards-imprint bullet 2 names install.sh --with-gates as the mechanized slice of its gate bullet
+- size-budget-raise: .claude/skills/agentic-ceo/SKILL.md 11227→11312 triage step 4: a Human gate always needs the owner absent an owner-authored grant
+- size-budget-raise: .claude/skills/agentic-delivery/SKILL.md 28230→28658 standing grant counts only from an owner-authored artifact; agent cannot create, widen, extend, or re-date one; deploy-triggering merge excluded
+- size-budget-raise: .claude/skills/agentic-delivery/references/fast-agentic-delivery.md 206117→206207 termination and holding bullets require an owner-authored grant and exclude a deploy-triggering merge
+- size-budget-raise: .claude/skills/agentic-delivery/references/unattended-operating-mode.md 15702→15818 termination list and Human-gate boundary require an owner-authored grant and exclude a deploy-triggering merge
+- size-budget-raise: .claude/skills/deep-code-review/SKILL.md 23612→23663 principle 7: the build/fix permission is the owner's, never self-granted
+- size-budget-raise: .claude/skills/idea-critic/SKILL.md 12581→12642 UNVERIFIED preserves only owner-authored authorization
+- size-budget-raise: .claude/skills/agentic-delivery/references/project-state.md 5871→5970 Authority row and resume step: grant source is owner-authored only; the record's writer never authors a grant
 - Size budgets: `agentic-delivery/SKILL.md` 478→483 and `references/host-enforcement.md` 69→102 (growth, justified: the handback cap is an owner hard requirement and must be routed from the always-loaded map).
-- Autonomy: a recorded standing grant lets push / open PR / merge of green, reviewed work proceed; a gated item is parked, not a stop. A stuck change is recorded and passed, never dropped. The Conductor drift rule, idea-critic, and DCR principle 7 no longer interrupt single-agent or build work. Budgets lowered: unattended 255→252, multi-session 764→758. A structural `test-ci-gates.sh` check pins this.
+- Autonomy: an owner-authored standing grant lets push / open PR / merge of green, reviewed work proceed; a gated item is parked, not a stop. A stuck change is recorded and passed, never dropped. The Conductor drift rule, idea-critic, and DCR principle 7 no longer interrupt single-agent or build work. Budgets lowered: unattended 255→252, multi-session 764→758. A structural `test-ci-gates.sh` check pins this.
 
 ## [1.433.8] — 2026-09-23
 

@@ -17,7 +17,7 @@ identical check. Edit the check here; `ci-gates.sh` is a thin caller.
 
 WHAT COUNTS
 ------------
-Only git-TRACKED files (`git -C <root> ls-files`), matched case-insensitively
+Only git-TRACKED files (`git -C <root> ls-files -z`), matched case-insensitively
 against a fixed extension list: png jpg jpeg gif webp bmp pdf zip tar gz tgz
 mp4 mov woff woff2 exe dll so dylib class jar pyc pyo. A path is exempt iff it
 appears verbatim (relative to `<root>`) in the allowlist file — one exact
@@ -87,20 +87,27 @@ def run_gate(root: str, allowlist_path: str | None) -> tuple[int, list[str]]:
         return ERROR, [f"binaries: root not found: {root} (fail closed)"]
 
     try:
+        # `-z`: NUL-separated, never quoted. Without it git C-quotes any path
+        # with non-ASCII bytes ("\303\251cran.png" plus a closing quote), so
+        # the extension reads as `png"` and a banned file slips through.
         proc = subprocess.run(
-            ["git", "-C", root, "ls-files"],
-            capture_output=True, text=True, check=False,
+            ["git", "-C", root, "ls-files", "-z"],
+            capture_output=True, check=False,
         )
     except OSError as exc:
         return ERROR, [f"binaries: git ls-files failed for {root} (fail closed): {exc}"]
     if proc.returncode != 0:
-        detail = (proc.stderr or proc.stdout or "").strip()
+        detail = (proc.stderr or proc.stdout or b"").decode("utf-8", "replace").strip()
         return ERROR, [
             f"binaries: git ls-files failed for {root} "
             f"(fail closed; is it a git repo?): {detail}"
         ]
 
-    tracked = sorted(line for line in proc.stdout.splitlines() if line)
+    # Invalid UTF-8 decodes with U+FFFD: the extension is still read, and such
+    # a name can never match an allowlist row, so it fails closed, not open.
+    tracked = sorted(
+        name for name in proc.stdout.decode("utf-8", "replace").split("\0") if name
+    )
 
     resolved_allowlist = allowlist_path
     if resolved_allowlist is None:
@@ -217,12 +224,24 @@ def _selftest() -> int:
         rc, lines = run_gate(override, custom_allow)
         check("custom-allowlist-path-used", rc, lines, OK)
 
+        # 6) a tracked banned file with a NON-ASCII name -> FAIL. Without `-z`,
+        #    git quotes such a path ("\303\251cran.png" with a trailing quote),
+        #    so its extension reads as `png"` and the file slipped through.
+        nonascii = os.path.join(tmp, "nonascii")
+        _init_repo(nonascii)
+        name = "\u00e9cran.png"
+        with open(os.path.join(nonascii, name), "w") as fh:
+            fh.write("not a real png\n")
+        _sh(nonascii, "add", name)
+        rc, lines = run_gate(nonascii, None)
+        check("non-ascii-name-fires", rc, lines, FAIL, must_have=(f"BINARY TRACKED: {name}",))
+
     if failures:
         print("SELFTEST FAILED:")
         for f in failures:
             print(f"  - {f}")
         return 1
-    print("SELFTEST OK: 5/5 cases passed")
+    print("SELFTEST OK: 6/6 cases passed")
     return 0
 
 

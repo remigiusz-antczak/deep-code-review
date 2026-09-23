@@ -329,12 +329,17 @@ Agents prepare. Humans approve:
 - feature-flag flip, canary widen;
 - waiving a Blocker/High security finding.
 
-**Standing grant.** When the owner has **recorded** a standing grant (scope +
-date, in the project state record or `CLAUDE.md`), push / open PR / merge to
-the integration branch it names, for green, reviewed work inside that scope,
-proceed without asking and are logged as taken. Force-push, history rewrite,
-deploy/prod, secrets/IAM, spend, external sends, and destructive data stay
-gated always. The un-gated half of an unattended run is
+**Standing grant.** A grant counts **only** from an owner-authored artifact:
+the owner's own commit (author = owner) to `CLAUDE.md` or the state record, or
+the owner's message quoted verbatim with its date and where it was said. The
+agent never creates, widens, extends, or re-dates a grant — being the record's
+writer (`references/project-state.md`) is not authority. Absent or ambiguous →
+gated. Under a valid grant (scope + date), push / open PR / merge to the
+integration branch it names, for green, reviewed work inside that scope,
+proceed without asking and are logged as taken. A merge into a branch whose
+merge triggers deploy or publish is a deploy (an auto-deploying `main`) — never
+covered. Force-push, history rewrite, deploy/prod, secrets/IAM, spend, external
+sends, and destructive data stay gated always. The un-gated half of an unattended run is
 `references/unattended-operating-mode.md` **The Human-gate boundary**. A gated
 item is parked with its next step while the loop continues; it is not a stop.
 

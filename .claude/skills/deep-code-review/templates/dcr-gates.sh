@@ -22,8 +22,10 @@
 # Configuration (env vars, all optional):
 #   DCR_TEST_GLOBS         space-separated globs a fix commit's test-surface
 #                           touch must match (passed to fix_class_gate.py
-#                           --test-glob, once per glob). Unset -> the script's
-#                           own defaults (tests/** etc; see its --help).
+#                           --test-glob, once per glob, as literal patterns —
+#                           never expanded against this directory). Unset ->
+#                           the script's own defaults (tests/** etc; see its
+#                           --help).
 #   DCR_BINARIES_ALLOWLIST path to the binaries-gate allowlist file. Unset ->
 #                           <repo-root>/scripts/binaries-allowlist.tsv if it
 #                           exists, else no exemptions.
@@ -33,8 +35,8 @@
 #                           HEAD~1..HEAD when both are unset.
 #
 # Exit code: 0 iff every gate below passed. Fails closed — an unresolvable
-# skill install, or any gate script itself failing to run, is a failure, not
-# a skip.
+# skill install, a gate or selftest script missing from that install, or any
+# gate script itself failing to run, is a failure, not a skip.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -92,7 +94,11 @@ if [ -f "${FIX_CLASS_GATE}" ]; then
   else
     glob_args=()
     if [ -n "${DCR_TEST_GLOBS:-}" ]; then
-      for g in ${DCR_TEST_GLOBS}; do
+      # `read -ra` splits on whitespace WITHOUT pathname expansion, so a glob
+      # like `tests/*` reaches fix_class_gate.py as a pattern, not as whatever
+      # files it happens to match in the current directory.
+      read -r -a test_globs <<<"${DCR_TEST_GLOBS}"
+      for g in "${test_globs[@]+"${test_globs[@]}"}"; do
         glob_args+=(--test-glob "$g")
       done
     fi
@@ -107,7 +113,8 @@ if [ -f "${FIX_CLASS_GATE}" ]; then
     fi
   fi
 else
-  printf 'dcr-gates: fix_class_gate.py not found at %s (skipped)\n' "${FIX_CLASS_GATE}"
+  printf 'dcr-gates: fix_class_gate.py not found at %s (FAIL, fail closed)\n' "${FIX_CLASS_GATE}" >&2
+  FAIL=1
 fi
 
 # ---------------------------------------------------------------------------
@@ -127,7 +134,8 @@ if [ -f "${BINARIES_GATE}" ]; then
     FAIL=1
   fi
 else
-  printf 'dcr-gates: binaries_gate.py not found at %s (skipped)\n' "${BINARIES_GATE}"
+  printf 'dcr-gates: binaries_gate.py not found at %s (FAIL, fail closed)\n' "${BINARIES_GATE}" >&2
+  FAIL=1
 fi
 
 # ---------------------------------------------------------------------------
@@ -147,7 +155,13 @@ if [ -n "${DELIVERY_ROOT}" ]; then
   )
 fi
 for script in "${SELFTEST_SCRIPTS[@]}"; do
-  [ -f "${script}" ] || continue
+  if [ ! -f "${script}" ]; then
+    # Every listed script ships with its skill; a missing one means a partial
+    # or tampered install, never a reason to skip its selftest.
+    printf 'dcr-gates: selftest script not found at %s (FAIL, fail closed)\n' "${script}" >&2
+    FAIL=1
+    continue
+  fi
   if python3 "${script}" --selftest; then
     :
   else

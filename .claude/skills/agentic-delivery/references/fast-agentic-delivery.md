@@ -1957,9 +1957,10 @@ budget as *work the ranked backlog until a termination condition fires*, not *do
   **once at the end** rather than being read live throughout.
 - **Name the termination conditions up front, each with its evidence.** The loop ends when the backlog is empty;
   when every remaining item is *blocked* on another party — including an item whose next step is a **Human
-  gate** (`SKILL.md`), except a push or merge a recorded standing grant covers: that is not a stop, and the loop
-  continues; when the granted window or stated **appetite** is spent (`SKILL.md` G0); or when a resource
-  ceiling is hit (the environment-probe ceilings above). Each ending is stated with the evidence that it holds
+  gate** (`SKILL.md`), except a push or merge an owner-authored standing grant covers (never a self-written
+  grant, never a deploy-triggering merge): that is not a stop, and the loop continues; when the granted window
+  or stated **appetite** is spent (`SKILL.md` G0); or when a resource ceiling is hit (the environment-probe
+  ceilings above). Each ending is stated with the evidence that it holds
   ("backlog re-read; the tracker shows only owner-approval-gated items"), never asserted bare.
 - **A milestone is a cue to pull the next item, not to stop.** Finishing an item or hitting a checkpoint
   re-enters the loop: pull the next backlog item and re-check the termination conditions. Stopping is a
@@ -2045,7 +2046,8 @@ demand for a **new visible action** and **manufacture low-value work** — spawn
 adding risk to look busy.
 - **Distinguish *stalled* from *correctly holding*.** Stalled = nothing is progressing, you are blocked on
   yourself → a new move is warranted. Holding = async work is progressing without a new action from you, or the
-  rest is owner-gated (a standing-grant-covered push/merge is not: `SKILL.md` **Human gates**) → no new move.
+  rest is owner-gated (a push/merge an owner-authored standing grant covers is not: `SKILL.md` **Human gates**)
+  → no new move.
   Only the first warrants motion.
 - **Answer the pressure with the truth, not filler** — what's running, what's blocked and on whom, why holding
   is correct — in one line. This is the *if the loop is idling, say so loudly* rule above answered to an

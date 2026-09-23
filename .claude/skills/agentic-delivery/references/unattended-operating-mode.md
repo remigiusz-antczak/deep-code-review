@@ -22,7 +22,7 @@ loop, not a single task**. Frame it as the default stance:
 
 - **Starting the loop never needs a reason; stopping does.** The loop runs until a
   **named termination condition** fires (backlog empty; every remaining item blocked
-  on another party or on a Human gate no recorded standing grant covers
+  on another party or on a Human gate no owner-authored standing grant covers
   (`SKILL.md` **Human gates**); the granted window / appetite spent; a
   resource ceiling hit), each reported **with the evidence that it holds** — never a
   drift into silence. Depth + the four conditions: `fast-agentic-delivery.md` **An
@@ -222,8 +222,9 @@ continues on the rest — surface a one-action, self-updating human escape hatch
 front rather than narrating "holding". The autonomous **PUSH** and **MERGE** loops
 above are the un-gated half only — a lane's own **feature-branch** push and the
 **G7 integration** merge. A **shared-branch** push or a **merge-to-default**
-stays a Human gate unless a recorded standing grant covers it; a deploy or an
-external send stays gated always (`SKILL.md` **Human gates**);
+stays a Human gate unless an owner-authored standing grant covers it — never one
+the agent wrote, widened, or re-dated, and never a merge that triggers deploy or
+publish; a deploy or an external send stays gated always (`SKILL.md` **Human gates**);
 `fast-agentic-delivery.md` **When no autonomous path exists, surface the human-run
 escape hatch** and the termination-conditions bullet. Never silently reverse a
 dated / ratified decision (`SKILL.md` Gate epistemology principle 12).

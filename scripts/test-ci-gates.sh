@@ -207,7 +207,7 @@ sizeroot="$WORK/size-fixture/root"
 mkdir -p "$sizeroot/.claude/skills/demo/references"
 printf 'hello\nworld\n' >"$sizeroot/.claude/skills/demo/SKILL.md"        # 12 bytes, 2 lines
 printf 'ab\n' >"$sizeroot/.claude/skills/demo/references/ref.md"        # 3 bytes, 1 line
-printf '# header comment\n.claude/skills/demo/SKILL.md\t12\n.claude/skills/demo/references/ref.md\t3\n' \
+printf '# unit: bytes\n# header comment\n.claude/skills/demo/SKILL.md\t12\n.claude/skills/demo/references/ref.md\t3\n' \
   >"$WORK/size-config.tsv"
 
 gate "$GATES" size --config "$WORK/size-config.tsv" "$sizeroot"
@@ -231,7 +231,7 @@ fi
 printf 'ab\n' >"$sizeroot/.claude/skills/demo/references/ref.md"
 
 # Fail closed: a shipped file on disk with no row in the config.
-printf '.claude/skills/demo/SKILL.md\t12\n' >"$WORK/size-config-missing.tsv"
+printf '# unit: bytes\n.claude/skills/demo/SKILL.md\t12\n' >"$WORK/size-config-missing.tsv"
 gate "$GATES" size --config "$WORK/size-config-missing.tsv" "$sizeroot"
 if [ "$GATE_RC" -ne 0 ] && grep -q 'SIZE MISSING BUDGET: .claude/skills/demo/references/ref.md' "$WORK/last.log"; then
   record 0 "size: fails closed on a shipped file absent from the config"
@@ -240,13 +240,25 @@ else
 fi
 
 # Fail closed: a config row naming a file that no longer exists on disk.
-printf '.claude/skills/demo/SKILL.md\t12\n.claude/skills/demo/references/ref.md\t3\n.claude/skills/demo/references/ghost.md\t5\n' \
+printf '# unit: bytes\n.claude/skills/demo/SKILL.md\t12\n.claude/skills/demo/references/ref.md\t3\n.claude/skills/demo/references/ghost.md\t5\n' \
   >"$WORK/size-config-dangling.tsv"
 gate "$GATES" size --config "$WORK/size-config-dangling.tsv" "$sizeroot"
 if [ "$GATE_RC" -ne 0 ] && grep -q 'SIZE DANGLING: .claude/skills/demo/references/ghost.md' "$WORK/last.log"; then
   record 0 "size: fails closed on a config row whose file no longer exists"
 else
   record 1 "size: fails closed on a config row whose file no longer exists"
+fi
+
+# Fail closed: a config without the `# unit: bytes` declaration. Otherwise a
+# change could delete the line (size stays green), then re-add it together with
+# a raise, and size-ratchet would read the base as pre-byte-adoption and skip.
+printf '.claude/skills/demo/SKILL.md\t12\n.claude/skills/demo/references/ref.md\t3\n' \
+  >"$WORK/size-config-nounit.tsv"
+gate "$GATES" size --config "$WORK/size-config-nounit.tsv" "$sizeroot"
+if [ "$GATE_RC" -ne 0 ] && grep -q "lacks the required '# unit: bytes' line" "$WORK/last.log"; then
+  record 0 "size: fails closed when the config lacks the '# unit: bytes' line"
+else
+  record 1 "size: fails closed when the config lacks the '# unit: bytes' line"
 fi
 
 # The real repo config passes against the real repo tree: this change
@@ -274,14 +286,14 @@ git -C "$ratchetroot" config user.name "Test"
 mkdir -p "$ratchetroot/scripts"
 printf 'hello\nworld\n' >"$ratchetroot/.claude/skills/demo/SKILL.md"
 printf 'ab\n' >"$ratchetroot/.claude/skills/demo/references/ref.md"
-printf '.claude/skills/demo/SKILL.md\t12\n.claude/skills/demo/references/ref.md\t3\n' \
+printf '# unit: bytes\n.claude/skills/demo/SKILL.md\t12\n.claude/skills/demo/references/ref.md\t3\n' \
   >"$ratchetroot/scripts/size-budgets.tsv"
 git -C "$ratchetroot" add -A >/dev/null 2>&1
 git -C "$ratchetroot" commit -qm base >/dev/null 2>&1
 ratchet_base="$(git -C "$ratchetroot" rev-parse HEAD)"
 
 # Case A: shrink a row -> no marker needed, passes.
-printf '.claude/skills/demo/SKILL.md\t10\n.claude/skills/demo/references/ref.md\t3\n' \
+printf '# unit: bytes\n.claude/skills/demo/SKILL.md\t10\n.claude/skills/demo/references/ref.md\t3\n' \
   >"$ratchetroot/scripts/size-budgets.tsv"
 git -C "$ratchetroot" add -A >/dev/null 2>&1
 git -C "$ratchetroot" commit -qm shrink >/dev/null 2>&1
@@ -295,7 +307,7 @@ fi
 
 # Case B: planted RED — a raised row with NO marker anywhere must FAIL.
 git -C "$ratchetroot" reset --hard "$ratchet_base" -q >/dev/null 2>&1
-printf '.claude/skills/demo/SKILL.md\t20\n.claude/skills/demo/references/ref.md\t3\n' \
+printf '# unit: bytes\n.claude/skills/demo/SKILL.md\t20\n.claude/skills/demo/references/ref.md\t3\n' \
   >"$ratchetroot/scripts/size-budgets.tsv"
 git -C "$ratchetroot" add -A >/dev/null 2>&1
 git -C "$ratchetroot" commit -qm "raise no marker" >/dev/null 2>&1
@@ -309,7 +321,7 @@ fi
 
 # Case C: the SAME raise, but the marker is in the commit message -> passes.
 git -C "$ratchetroot" reset --hard "$ratchet_base" -q >/dev/null 2>&1
-printf '.claude/skills/demo/SKILL.md\t20\n.claude/skills/demo/references/ref.md\t3\n' \
+printf '# unit: bytes\n.claude/skills/demo/SKILL.md\t20\n.claude/skills/demo/references/ref.md\t3\n' \
   >"$ratchetroot/scripts/size-budgets.tsv"
 git -C "$ratchetroot" add -A >/dev/null 2>&1
 git -C "$ratchetroot" commit -qm "raise with marker
@@ -325,7 +337,7 @@ fi
 
 # Case D: the SAME raise, marker instead lives in CHANGELOG.md -> passes.
 git -C "$ratchetroot" reset --hard "$ratchet_base" -q >/dev/null 2>&1
-printf '.claude/skills/demo/SKILL.md\t20\n.claude/skills/demo/references/ref.md\t3\n' \
+printf '# unit: bytes\n.claude/skills/demo/SKILL.md\t20\n.claude/skills/demo/references/ref.md\t3\n' \
   >"$ratchetroot/scripts/size-budgets.tsv"
 printf 'size-budget-raise: .claude/skills/demo/SKILL.md 12→20 fixture growth is deliberate\n' \
   >"$ratchetroot/CHANGELOG.md"
@@ -345,6 +357,70 @@ if [ "$GATE_RC" -ne 0 ] && grep -qi 'unresolvable base' "$WORK/last.log"; then
   record 0 "size-ratchet: fails closed on an unresolvable base ref"
 else
   record 1 "size-ratchet: fails closed on an unresolvable base ref"
+fi
+
+# Case F: planted RED — a marker that ALREADY exists in the base's CHANGELOG.md
+# must not approve a new raise; only lines the change itself adds count.
+git -C "$ratchetroot" reset --hard "$ratchet_base" -q >/dev/null 2>&1
+printf 'size-budget-raise: .claude/skills/demo/SKILL.md 12→20 an older, unrelated raise\n' \
+  >"$ratchetroot/CHANGELOG.md"
+git -C "$ratchetroot" add -A >/dev/null 2>&1
+git -C "$ratchetroot" commit -qm "base with an old marker" >/dev/null 2>&1
+ratchet_base_log="$(git -C "$ratchetroot" rev-parse HEAD)"
+printf '# unit: bytes\n.claude/skills/demo/SKILL.md\t20\n.claude/skills/demo/references/ref.md\t3\n' \
+  >"$ratchetroot/scripts/size-budgets.tsv"
+git -C "$ratchetroot" add -A >/dev/null 2>&1
+git -C "$ratchetroot" commit -qm "raise relying on the old marker" >/dev/null 2>&1
+gate "$GATES" size-ratchet --base "$ratchet_base_log" --config "$ratchetroot/scripts/size-budgets.tsv" "$ratchetroot"
+if [ "$GATE_RC" -ne 0 ] && grep -q 'RATCHET FAIL: .claude/skills/demo/SKILL.md raised 12->20' "$WORK/last.log"; then
+  record 0 "size-ratchet: an old marker in the pre-existing CHANGELOG does not approve a new raise (planted RED)"
+else
+  record 1 "size-ratchet: an old marker in the pre-existing CHANGELOG does not approve a new raise (planted RED)"
+fi
+
+# Case G: planted RED — re-wording the old marker line (the diff now shows it
+# as an ADDED line) still must not approve the raise: the base already has it.
+printf 'size-budget-raise: .claude/skills/demo/SKILL.md 12→20 re-dated reason\n' \
+  >"$ratchetroot/CHANGELOG.md"
+git -C "$ratchetroot" add -A >/dev/null 2>&1
+git -C "$ratchetroot" commit -qm "re-word the old marker" >/dev/null 2>&1
+gate "$GATES" size-ratchet --base "$ratchet_base_log" --config "$ratchetroot/scripts/size-budgets.tsv" "$ratchetroot"
+if [ "$GATE_RC" -ne 0 ] && grep -q 'RATCHET FAIL: .claude/skills/demo/SKILL.md raised 12->20' "$WORK/last.log"; then
+  record 0 "size-ratchet: a re-worded (re-added) old CHANGELOG marker does not approve a new raise (planted RED)"
+else
+  record 1 "size-ratchet: a re-worded (re-added) old CHANGELOG marker does not approve a new raise (planted RED)"
+fi
+
+# Case H: fail closed when the working-tree config lacks '# unit: bytes'.
+git -C "$ratchetroot" reset --hard "$ratchet_base" -q >/dev/null 2>&1
+printf '.claude/skills/demo/SKILL.md\t12\n.claude/skills/demo/references/ref.md\t3\n' \
+  >"$ratchetroot/scripts/size-budgets.tsv"
+git -C "$ratchetroot" add -A >/dev/null 2>&1
+git -C "$ratchetroot" commit -qm "drop the unit line" >/dev/null 2>&1
+gate "$GATES" size-ratchet --base "$ratchet_base" --config "$ratchetroot/scripts/size-budgets.tsv" "$ratchetroot"
+if [ "$GATE_RC" -ne 0 ] && grep -q "lacks the required '# unit: bytes' line" "$WORK/last.log"; then
+  record 0 "size-ratchet: fails closed when the working-tree config lacks the '# unit: bytes' line"
+else
+  record 1 "size-ratchet: fails closed when the working-tree config lacks the '# unit: bytes' line"
+fi
+
+# Case I: the one legitimate skip — the BASE config predates byte adoption (no
+# unit line, line-count rows), so rows are not comparable and nothing ratchets.
+git -C "$ratchetroot" reset --hard "$ratchet_base" -q >/dev/null 2>&1
+printf '.claude/skills/demo/SKILL.md\t2\n.claude/skills/demo/references/ref.md\t1\n' \
+  >"$ratchetroot/scripts/size-budgets.tsv"
+git -C "$ratchetroot" add -A >/dev/null 2>&1
+git -C "$ratchetroot" commit -qm "pre-adoption line-count base" >/dev/null 2>&1
+ratchet_base_lines="$(git -C "$ratchetroot" rev-parse HEAD)"
+printf '# unit: bytes\n.claude/skills/demo/SKILL.md\t12\n.claude/skills/demo/references/ref.md\t3\n' \
+  >"$ratchetroot/scripts/size-budgets.tsv"
+git -C "$ratchetroot" add -A >/dev/null 2>&1
+git -C "$ratchetroot" commit -qm "adopt bytes" >/dev/null 2>&1
+gate "$GATES" size-ratchet --base "$ratchet_base_lines" --config "$ratchetroot/scripts/size-budgets.tsv" "$ratchetroot"
+if [ "$GATE_RC" -eq 0 ] && grep -q 'pre-byte adoption' "$WORK/last.log"; then
+  record 0 "size-ratchet: skips only when the base config predates byte adoption"
+else
+  record 1 "size-ratchet: skips only when the base config predates byte adoption"
 fi
 
 # Every overlay flag that ADDS a skill (a WITH_* var guarding a SKILLS+= block)
@@ -1555,9 +1631,58 @@ else
   record 1 "install --with-gates: runner exits clean on a binaries-free target"
 fi
 
+# 5) DCR_TEST_GLOBS reaches fix_class_gate.py as literal PATTERNS. The runner
+#    is invoked from a directory whose own checks/ holds an unrelated file: an
+#    unquoted `for g in ${DCR_TEST_GLOBS}` would expand `checks/*` to that file
+#    and FAIL a fix commit that touches checks/b.txt; `read -ra` keeps the
+#    pattern, so the gate PASSES.
+mkdir -p "$gates_fresh/checks"
+printf 'a\n' >"$gates_fresh/checks/a.txt"
+git -C "$gates_fresh" add checks/a.txt >/dev/null 2>&1
+git -C "$gates_fresh" commit -q -m 'chore: add checks dir'
+printf 'b\n' >"$gates_fresh/checks/b.txt"
+git -C "$gates_fresh" add checks/b.txt >/dev/null 2>&1
+git -C "$gates_fresh" commit -q -m 'fix(demo): pin a regression check'
+gates_globcwd="$WORK/gates-globcwd"
+mkdir -p "$gates_globcwd/checks"
+printf 'x\n' >"$gates_globcwd/checks/unrelated.txt"
+gates_glob_log="$WORK/gates-glob.log"
+(cd "$gates_globcwd" && DCR_TEST_GLOBS='checks/*' bash "$gates_runner") >"$gates_glob_log" 2>&1 || true
+if grep -q 'dcr-gates: fix_class_gate PASS' "$gates_glob_log"; then
+  record 0 "install --with-gates: DCR_TEST_GLOBS passes globs as patterns, never cwd-expanded"
+else
+  record 1 "install --with-gates: DCR_TEST_GLOBS passes globs as patterns, never cwd-expanded"
+fi
+
+# 6) Planted RED: a gate script missing from the installed skill fails the
+#    runner closed (non-zero exit), never a silent skip.
+gates_bin="$gates_fresh/.claude/skills/deep-code-review/scripts/binaries_gate.py"
+mv "$gates_bin" "$gates_bin.away"
+if bash "$gates_runner" >"$WORK/gates-missing.log" 2>&1; then gates_missing_rc=0; else gates_missing_rc=$?; fi
+mv "$gates_bin.away" "$gates_bin"
+if [ "$gates_missing_rc" -ne 0 ] \
+  && grep -q 'binaries_gate.py not found at .* (FAIL, fail closed)' "$WORK/gates-missing.log"; then
+  record 0 "install --with-gates: runner with a missing gate script exits non-zero (planted RED)"
+else
+  record 1 "install --with-gates: runner with a missing gate script exits non-zero (planted RED)"
+fi
+
+# 7) Planted RED: an expected selftest-only script missing fails closed too.
+gates_pd="$gates_fresh/.claude/skills/deep-code-review/scripts/parity_differ.py"
+mv "$gates_pd" "$gates_pd.away"
+if bash "$gates_runner" >"$WORK/gates-missing-st.log" 2>&1; then gates_missing_rc=0; else gates_missing_rc=$?; fi
+mv "$gates_pd.away" "$gates_pd"
+if [ "$gates_missing_rc" -ne 0 ] \
+  && grep -q 'selftest script not found at .*parity_differ.py (FAIL, fail closed)' "$WORK/gates-missing-st.log"; then
+  record 0 "install --with-gates: runner with a missing selftest script exits non-zero (planted RED)"
+else
+  record 1 "install --with-gates: runner with a missing selftest script exits non-zero (planted RED)"
+fi
+
 # ---------------------------------------------------------------------------
 # autonomy-doctrine — a STRUCTURAL check, not a behavioural eval: pins the
-# standing-grant clause (Human gates + termination conditions), the no-drop
+# standing-grant clause (Human gates + termination conditions), its
+# owner-authored-only source and deploy-merge exclusion, the no-drop
 # timebox, and bans "hand off or drop". Planted copies prove it fails closed.
 # ---------------------------------------------------------------------------
 autonomy_doctrine() {  # <root>: 0 when every assertion holds, 1 otherwise
@@ -1565,9 +1690,13 @@ autonomy_doctrine() {  # <root>: 0 when every assertion holds, 1 otherwise
   # Capture first: grep -q on a pipe can SIGPIPE awk under pipefail.
   sec="$(awk '/^## Human gates/{f=1;next} /^(## |---)/{f=0} f' "$ad/SKILL.md")"
   grep -qi 'standing grant' <<<"$sec" || return 1
+  grep -qi 'owner-authored artifact' <<<"$sec" || return 1
+  grep -qi 'never creates, widens, extends, or re-dates' <<<"$sec" || return 1
+  grep -qi 'triggers deploy or publish' <<<"$sec" || return 1
   sec="$(awk '/^- \*\*Name the termination conditions/{f=1;print;next} /^- \*\*/{f=0} f' \
     "$ad/references/fast-agentic-delivery.md")"
   grep -qi 'standing grant' <<<"$sec" || return 1
+  grep -qi 'owner-authored' <<<"$sec" || return 1
   grep -qi 'never silently drop' "$ad/references/unattended-operating-mode.md" || return 1
   ! grep -rqiE 'hand(s|ing)?[- ]off,? or (a )?drop|dedicated lane or drops? it' \
     --include='*.md' --include='*.json' "$1/.claude/skills"
@@ -1578,14 +1707,18 @@ else
   record 1 "autonomy-doctrine: real skills pass"
 fi
 ADW="$WORK/autonomy"
-for plant in drop grant; do
+for plant in drop grant selfgrant; do
   rm -rf "$ADW"; mkdir -p "$ADW/.claude/skills"
   cp -R "$ROOT/.claude/skills/agentic-delivery" "$ADW/.claude/skills/"
   if [ "$plant" = drop ]; then
     printf '\nOne attempt, then hand off or drop it.\n' \
       >>"$ADW/.claude/skills/agentic-delivery/references/unattended-operating-mode.md"
-  else
+  elif [ "$plant" = grant ]; then
     sed 's/[Ss]tanding grant/standing note/g' "$ROOT/.claude/skills/agentic-delivery/SKILL.md" \
+      >"$ADW/.claude/skills/agentic-delivery/SKILL.md"
+  else
+    # A grant the agent could author itself: drop the owner-authored source rule.
+    sed 's/owner-authored artifact/recorded artifact/g' "$ROOT/.claude/skills/agentic-delivery/SKILL.md" \
       >"$ADW/.claude/skills/agentic-delivery/SKILL.md"
   fi
   if autonomy_doctrine "$ADW"; then

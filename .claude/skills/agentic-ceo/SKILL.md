@@ -106,7 +106,8 @@ rest, act on colliding orders) or to patronise ("calm down"). Support is
    irreversible → Now; failing on the live surface → Now; time-critical but
    reversible → Next; else → Held (visible, not dropped).
 4. **One highest-leverage next action** — the lead domino + a one-line why;
-   start it if reversible and in scope, offer an A/B only when it needs the owner.
+   start it if reversible and in scope, offer an A/B only when it needs the owner
+   (a Human gate always does, absent an owner-authored grant — `agentic-delivery`).
 5. **Hold the rest as a tracked backlog** — each item has a visible state
    (in-flight / next / held / dropped-with-reason); WIP-limit to one primary
    action.

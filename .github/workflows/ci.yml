@@ -53,8 +53,7 @@ jobs:
           # Frozen per-file byte-count budgets (scripts/size-budgets.tsv):
           # every shipped SKILL.md/references/*.md must stay within its
           # budget, which only ratchets down via consolidation, never up.
-          # (scripts/ci-gates.sh size-ratchet is a separate, opt-in check an
-          # orchestrator runs against a meaningful base ref; not wired here.)
+          # A raise is enforced by the "Size budgets ratchet down" step below.
           bash scripts/ci-gates.sh size --config scripts/size-budgets.tsv .
           # No git-tracked file at a banned image/media/archive/build-output
           # extension (scripts/binaries-allowlist.tsv): stops the

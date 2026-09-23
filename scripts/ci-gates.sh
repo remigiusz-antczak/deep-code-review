@@ -559,6 +559,11 @@ cmd_size() {
   [ -f "$config" ] || die "size: config not found: $config (fail closed)"
   [ -n "$root" ] || die "size: <root> directory is required (fail closed)"
   [ -d "$root" ] || die "size: root not found: $root (fail closed)"
+  # The unit declaration is mandatory: without it size-ratchet would read the
+  # config as pre-byte-adoption and skip, so deleting the line (then re-adding
+  # it alongside a raise) would bypass the ratchet. Fail closed when absent.
+  grep -q '^# unit: bytes$' "$config" \
+    || die "size: config lacks the required '# unit: bytes' line: $config (fail closed)"
 
   # Parse actionable rows (path<TAB>budget); blank/comment lines are skipped.
   # Plain parallel arrays, aligned by index — portable to bash 3.2.
@@ -624,18 +629,23 @@ cmd_size() {
 # ---------------------------------------------------------------------------
 # size-ratchet — CI-checkable enforcement of cmd_size's freeze-ratchet POLICY:
 # no row in a byte-budget config (e.g. scripts/size-budgets.tsv) may increase
-# versus a base ref's copy of that same config, unless the commit range being
-# checked (or CHANGELOG.md at the working tree) carries an explicit marker
-# line naming the exact raise:
+# versus a base ref's copy of that same config, unless a commit message in
+# <base>..HEAD, or a CHANGELOG.md line ADDED since <base> (and absent from the
+# base's CHANGELOG.md), carries an explicit marker line naming the exact raise:
 #
 #   size-budget-raise: <path> <old-bytes>→<new-bytes> <reason>
 #
-# This is a separate, opt-in subcommand — NOT wired into ci.yml by this
-# change; an orchestrator invokes it explicitly where it has a meaningful base
-# ref (e.g. a release branch's merge-base with main), typically as:
+# A marker already in the base's CHANGELOG.md never approves a new raise: only
+# lines the change itself adds count. Wired into ci.yml ("Size budgets ratchet
+# down") against the PR base / push before-SHA; run locally as:
 #
 #   bash scripts/ci-gates.sh size-ratchet --base <ref> \
 #     --config scripts/size-budgets.tsv .
+#
+# The working-tree config must declare `# unit: bytes` (fail closed, like
+# cmd_size). The one skip: a base config WITHOUT that line predates byte
+# adoption (its rows are line counts), so rows are not comparable. cmd_size
+# requires the line, so after adoption a base without it cannot exist.
 #
 # Fails closed: an unresolvable --base (bad ref, shallow clone missing the
 # commit, not a git repo) is a hard failure, never a silent skip. A config
@@ -702,6 +712,8 @@ cmd_size_ratchet() {
   done < "$config"
   [ "${#new_paths[@]}" -gt 0 ] \
     || die "size-ratchet: config has no actionable rows (only blanks/comments): $config"
+  grep -q '^# unit: bytes$' "$config" \
+    || die "size-ratchet: config lacks the required '# unit: bytes' line: $config (fail closed)"
 
   # Parse the base ref's copy of the same config, if it existed there. A
   # config absent at base (new file since then) means every current row is
@@ -709,9 +721,10 @@ cmd_size_ratchet() {
   local -a old_paths=() old_budgets=()
   local old_content
   if old_content="$(git -C "$root" show "${base}:${relconfig}" 2>/dev/null)"; then
-    # Unit change (base budgets were line counts): rows are not comparable
-    # across units, so the adoption commit cannot ratchet — say so, pass.
-    if grep -q '^# unit: bytes$' "$config" && ! printf '%s\n' "$old_content" | grep -q '^# unit: bytes$'; then
+    # Base predates byte adoption (its budgets are line counts): rows are not
+    # comparable across units, so the adoption commit cannot ratchet — say so,
+    # pass. Only the BASE is consulted; the working tree must carry the line.
+    if ! printf '%s\n' "$old_content" | grep -q '^# unit: bytes$'; then
       printf 'size-ratchet: base %s budgets use a different unit (pre-byte adoption) -- not comparable, skipped\n' "$base"
       return 0
     fi
@@ -731,6 +744,18 @@ cmd_size_ratchet() {
     done <<<"$old_content"
   fi
 
+  # Marker sources, computed once: commit messages in range, and only the
+  # CHANGELOG.md lines added since base (working tree vs base, so a local
+  # pre-commit run sees the same thing CI sees on a clean checkout). A line
+  # that already exists in the base's CHANGELOG.md is dropped, so moving or
+  # re-adding an old marker cannot approve a new raise.
+  local range_msgs added_log base_log
+  range_msgs="$(git -C "$root" log --format=%B "${base}..HEAD" 2>/dev/null)" \
+    || die "size-ratchet: cannot read commit messages in ${base}..HEAD (fail closed)"
+  base_log="$(git -C "$root" show "${base}:CHANGELOG.md" 2>/dev/null || true)"
+  added_log="$(git -C "$root" diff --no-color --no-ext-diff -U0 "$base" -- CHANGELOG.md 2>/dev/null \
+    | grep -E '^\+' | grep -vE '^\+\+\+ ' | sed 's/^+//' || true)"
+
   local fail=0 i j p new_b old_b found marker
   for i in "${!new_paths[@]}"; do
     p="${new_paths[$i]}"
@@ -744,11 +769,12 @@ cmd_size_ratchet() {
     [ "$new_b" -gt "$old_b" ] || continue
 
     marker="size-budget-raise: $p ${old_b}→${new_b}"
-    if git -C "$root" log --format=%B "${base}..HEAD" 2>/dev/null | grep -qF "$marker" \
-       || { [ -f "$root/CHANGELOG.md" ] && grep -qF "$marker" "$root/CHANGELOG.md"; }; then
+    if printf '%s\n' "$range_msgs" | grep -qF -- "$marker" \
+       || { printf '%s\n' "$added_log" | grep -qF -- "$marker" \
+            && ! printf '%s\n' "$base_log" | grep -qF -- "$marker"; }; then
       printf 'size-ratchet: %s raised %s->%s with a documented marker (ok)\n' "$p" "$old_b" "$new_b"
     else
-      printf 'RATCHET FAIL: %s raised %s->%s bytes with no "%s <reason>" line in the %s..HEAD commit range or CHANGELOG.md\n' \
+      printf 'RATCHET FAIL: %s raised %s->%s bytes with no "%s <reason>" line in the %s..HEAD commit range or among CHANGELOG.md lines added since base\n' \
         "$p" "$old_b" "$new_b" "$marker" "$base" >&2
       fail=1
     fi

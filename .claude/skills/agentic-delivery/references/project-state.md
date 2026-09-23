@@ -21,7 +21,7 @@ record.
 | Acceptance | Criterion, required check, artifact revision, `PASS`/`FAIL`/`UNVERIFIED`, evidence source + observer |
 | Artifacts | Real immutable identities + locations, producing task, integration/publication/visibility receipts; never invent an id for uncreated work |
 | Resources | Aggregate + per-lane budgets, spent/reserved/unknown, remaining bound, requested vs actual model config (see `model-tiering.md` in the `deep-code-review` skill) |
-| Authority | Grant source, authorized actor/action/resource/scope, conditions/expiry, current applicability; pending actions + denial reasons; **no credentials** |
+| Authority | Grant source (owner-authored only; the writer never authors a grant — `SKILL.md` Human gates), authorized actor/action/resource/scope, conditions/expiry, current applicability; pending actions + denial reasons; **no credentials** |
 | Recovery | Active owners, unfinished effects + action ids, last observed result, safe next action, reconciliation needed |
 
 Checkpoint at objective/decision changes, dispatch or ownership handoff, receipt
@@ -63,9 +63,9 @@ unaffected criterion or rerun the check. Whether a control is *claimed* or
    for resolution. Without observable status or safe (idempotent) retry
    semantics, do **not** replay an uncertain side effect.
 3. Revalidate current permissions, required evidence, and the aggregate budget. A
-   saved grant never revives expired or revoked authority; applicable explicit
-   standing authorization remains usable (confirm-before-action still governs
-   anything it does not cover — see `SKILL.md` Human gates).
+   saved grant never revives expired or revoked authority; applicable explicit,
+   owner-authored standing authorization remains usable (confirm-before-action
+   still governs anything it does not cover — see `SKILL.md` Human gates).
 4. Cancel or reassign obsolete work with acknowledged ownership transfer,
    preserving its artifacts, failures, and cost; choose the next action against
    the *current* objective; checkpoint the reconciled record, then proceed.

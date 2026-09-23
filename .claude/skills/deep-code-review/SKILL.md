@@ -152,7 +152,8 @@ tree. Skip of the planted-defect probe caps only the gate-self-test claim.
 6. **Rank ruthlessly.** Severity rubric below. Never bury a Critical under Nits.
 7. **Least-privilege actions.** Review is read-only by default; deliverable is
    out-of-tree. In a review task, writes (report-in-repo, code, Phase 6 imprint)
-   need confirmation; in a build/fix task, its permission governs. Unprompted
+   need confirmation; in a build/fix task, the owner's task permission governs,
+   never one the agent grants itself. Unprompted
    mutation is confined to **transient dedicated-worktree probes, each reverted
    or deleted and confirmed**. Fan-out inherits this by toolset:
    `references/parallel-audit.md`. A red-team pass proves exploitability locally
