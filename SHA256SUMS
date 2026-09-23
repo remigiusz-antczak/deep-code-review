@@ -1,7 +1,12 @@
-eae53eabc5079bcab694f4ad1b90bc0abe8019cd365be8ebdd889a337e6b643d  .claude/skills/agentic-ceo/SKILL.md
+f7bd13a9321b582634e2671a0a94b42549fb178c0405ea26d05a7a0b5fb21d2c  .claude/skills/agentic-ceo/SKILL.md
 cc52f678848b814373757b460383bf61960e4943c203735adde0a350b3e50989  .claude/skills/agentic-ceo/VERSION
-963c913c0d61a161634c2f7edac120f4b0701db2938322c81ffd532d2b562669  .claude/skills/agentic-ceo/evals/evals.json
+c6d8a3f82ab3d135138c45d96c3d8309f0f98447d563ccbc54eac565b16a502d  .claude/skills/agentic-ceo/evals/evals.json
+c055291d4401717a50cb0dd296efc03d7270496fb0e769440cff6f0a112a77e9  .claude/skills/agentic-ceo/scripts/fixtures/token/session.jsonl
+ffb91de9b1b3d7797cff7e55c464f4b132e0ad96fc602010e2185404be12ed62  .claude/skills/agentic-ceo/scripts/fixtures/token/session/subagents/agent-alpha.jsonl
+d7c9da05ebfccc9a17e768351f8b7171bb03bd3ae21741b32f2f78a73eb1be40  .claude/skills/agentic-ceo/scripts/fixtures/token/session/subagents/agent-alpha.meta.json
+e3229aa03cb46428a334e96ea8ad00dc27dfb5606ffbe99ca99c2524597d353f  .claude/skills/agentic-ceo/scripts/fixtures/token/session/subagents/agent-beta.jsonl
 b7cfe7316bb0d0f4a2219dc017998494a34206b9899dea6349bb4441d542054e  .claude/skills/agentic-ceo/scripts/task_ledger.py
+0de1f06b124c17ed7101179af844b78e33836bc619d438583080a7fff6f024ef  .claude/skills/agentic-ceo/scripts/token_report.py
 4a8e60b54a9c77ace269fdd62e050fc24892c8c922ff53502941036d8ecc934f  .claude/skills/agentic-delivery/SKILL.md
 3687881bd7e73e381f862871e32f0cbcc09e36d4fd80322ee7d548c2387e831b  .claude/skills/agentic-delivery/VERSION
 d9efd9e77f0d34a86552b09ac54a14c6884fda34d896341945b1e008386c0968  .claude/skills/agentic-delivery/evals/evals.json
