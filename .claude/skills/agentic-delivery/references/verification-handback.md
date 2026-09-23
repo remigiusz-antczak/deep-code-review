@@ -208,7 +208,7 @@ equally "recent" for an agent that has already exited. Acting on the stat cuts b
 **destructive, shared-state action** (principle 9 — closing or deleting shared state needs evidence, not
 presumption): confirm the agent is genuinely idle by a *positive* signal before terminating. If nothing but the
 transcript is observable, the honest state is **`UNVERIFIED`**, not "dead." **`scripts/lane_liveness.py
---worktree <path> [--pid N]`** computes exactly this positive-signal read offline — ALIVE / QUIET / DEAD from a
+--worktree <path> [--pid N]`** computes this positive-signal read offline — ALIVE/QUIET/UNVERIFIED/DEAD from a
 live process, file/git-state mtimes, and a CPU-time sample, never a kill verdict — so "slow, not stuck" is a
 checkable report instead of prose alone (#1070). Distinct from the Conductor's
 context-isolation rule ("read status, not the raw transcript" — do not consume the transcript as *context*):

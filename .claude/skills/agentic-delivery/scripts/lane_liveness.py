@@ -13,33 +13,39 @@ POSITIVE, checkable signals, so "no PR yet" is never mistaken for "dead."
 
 THE RULE
 --------
-Report exactly one of three states for a worktree `P`, each backed by the
+Report exactly one of four states for a worktree `P`, each backed by the
 evidence lines that produced it:
 
-  ALIVE  a process is running for this lane (an explicit --pid that answers,
-         or a process whose current working directory resolves inside `P`)
-         AND that lane shows recent product activity: a file under `P`
-         (excluding `.git`) modified within `--quiet-minutes`, the git
-         index/refs modified within that window, or measured CPU time moving
-         on the lane's process(es) across a short sample.
+  ALIVE       a process is running for this lane (an explicit --pid that
+              answers, or a process whose current working directory resolves
+              inside `P`) AND that lane shows recent product activity: a file
+              under `P` (excluding `.git`) modified within `--quiet-minutes`,
+              the git index/refs modified within that window, or measured CPU
+              time moving on the lane's process(es) across a short sample.
 
-  QUIET  everything short of ALIVE and short of DEAD — a live process with no
-         recent product signal (long silent work: compiling, a slow test
-         suite, a network wait), or recent product activity with no process
-         currently found (a lane that just finished a step and is between
-         processes). QUIET is a prompt to look closer, never a kill signal.
+  QUIET       a live process with no recent product signal (long silent work:
+              compiling, a slow test suite, a network wait), or recent product
+              activity with no process currently found (a lane that just
+              finished a step and is between processes). QUIET is a prompt to
+              look closer, never a kill signal.
 
-  DEAD   no process has its cwd in `P` (and --pid, if given, does not answer)
-         AND no product activity (file mtime, or git index/refs mtime) is
-         younger than `--quiet-minutes`. This is the ONLY state this script
-         ever reports as fully inactive, and even DEAD is not by itself a
-         mandate to kill (`verification-handback.md`: killing a lane is a
-         destructive, shared-state action — closing or deleting shared state
-         needs evidence, not presumption. This script supplies the evidence;
-         the kill decision, and its confirmation, stay with the caller).
+  UNVERIFIED  no process and no recent activity were found, BUT a detector
+              was blind: the cwd-scan could not run or did not succeed (no
+              `lsof` and no `/proc`, an lsof error or timeout, or a scan that
+              could not see this script's own process), or the file walk hit
+              an unreadable directory. Absence of evidence from a blind
+              detector is not evidence of absence, so this is never DEAD.
 
-This script NEVER prints a kill recommendation and never exits in a way meant
-to be read as one — DEAD is a report, not an instruction.
+  DEAD        the cwd-scan RAN AND SUCCEEDED and found no process with its cwd
+              in `P` (and --pid, if given, does not answer) AND the file walk
+              completed without error AND no product activity (file mtime, or
+              git index/refs mtime) is younger than `--quiet-minutes`.
+
+DEAD is the only state that can justify reaping a lane, and even then it is
+evidence, not a mandate: killing a lane is a destructive, shared-state action
+(`verification-handback.md`: closing or deleting shared state needs evidence,
+not presumption), so the orchestrator confirms before it acts. This script
+NEVER prints a kill recommendation — DEAD is a report, not an instruction.
 
 EVIDENCE SOURCES
 -----------------
@@ -47,9 +53,10 @@ EVIDENCE SOURCES
    including a zombie the OS hasn't reaped — a known limitation, noted below),
    OR a process whose cwd resolves inside `P` — found via `lsof -a -d cwd -F
    pn` when the `lsof` binary is available, else (Linux only) by reading
-   `/proc/<pid>/cwd` for every numeric entry in `/proc`. Neither source is
-   available (no lsof, not Linux) -> the cwd-scan finds nothing; an explicit
-   `--pid` is the only process evidence left.
+   `/proc/<pid>/cwd` for every numeric entry in `/proc`. A scan counts as
+   SUCCEEDED only if it ran without error or timeout AND it saw this script's
+   own process (a scan that cannot see its own caller cannot be trusted to
+   have seen the lane's). Otherwise the scan is BLIND, which rules out DEAD.
 2. Newest file mtime under `P`, walking the tree and excluding any `.git`
    directory (a lane's own git operations must not look like "no activity").
 3. git index/refs mtime: resolves the real git-dir for `P` (`git rev-parse
@@ -60,8 +67,10 @@ EVIDENCE SOURCES
    whole run.
 4. Child CPU time delta: for every pid found in (1), reads cumulative CPU
    time via `ps -o time= -p <pid>` twice, `--sample-seconds` apart (default
-   0.5s), and reports whether it moved. A pid that exits between samples, or
-   that `ps` cannot see, contributes no delta (never misread as "moved").
+   0.5s), and reports whether it moved. Both `ps` TIME shapes parse: procps
+   `[dd-]hh:mm:ss` and macOS `mm:ss.cc` (minutes unbounded). A pid that
+   exits between samples, or that `ps` cannot see, contributes no delta
+   (never misread as "moved").
 
 LIMITATIONS (stated, not hidden)
 ---------------------------------
@@ -70,7 +79,10 @@ LIMITATIONS (stated, not hidden)
   cwd-scan and CPU-delta checks are unaffected (a zombie has no cwd entry and
   no moving CPU time), so a zombie alone does not produce a false ALIVE.
 - The cwd-scan needs `lsof` or `/proc` (Linux); on a host with neither, an
-  explicit `--pid` is the only process evidence available.
+  explicit `--pid` is the only process evidence available, and a lane with no
+  answering --pid and no recent activity reports UNVERIFIED, never DEAD.
+- The own-process canary proves the scan can see this user's processes, not
+  another user's; a lane running as a different user may be invisible.
 - This tool answers "is this lane alive," never "is this lane's OUTPUT
   correct" — a live, busy process can still be building the wrong thing.
 
@@ -79,8 +91,17 @@ USAGE
   lane_liveness.py --worktree PATH [--pid N] [--quiet-minutes M] [--sample-seconds S]
   lane_liveness.py --selftest
 
-Exit codes: 0 ALIVE, 1 QUIET, 2 DEAD (a caller may branch on these, but must
-not treat exit 2 as authorization to kill — see THE RULE above).
+EXIT CODES
+----------
+  0  ALIVE
+  1  QUIET
+  2  error: a usage error (unknown flag, missing --worktree) or a --worktree
+     that is not a directory — never a verdict
+  3  UNVERIFIED
+  4  DEAD (a caller may branch on it, but it is not authorization to kill;
+     see THE RULE above)
+`--help` exits 0 and prints no LANE_LIVENESS line; parse the verdict line,
+not the exit code alone, when a flag could be malformed.
 """
 from __future__ import annotations
 
@@ -91,11 +112,12 @@ import subprocess
 import sys
 import time
 
-ALIVE, QUIET, DEAD = 0, 1, 2
-_VERDICT_NAME = {ALIVE: "ALIVE", QUIET: "QUIET", DEAD: "DEAD"}
+ALIVE, QUIET, ERROR, UNVERIFIED, DEAD = 0, 1, 2, 3, 4
+_VERDICT_NAME = {ALIVE: "ALIVE", QUIET: "QUIET", UNVERIFIED: "UNVERIFIED", DEAD: "DEAD"}
 _TRAILER = {
     ALIVE: "positive signal found; no action implied.",
     QUIET: "no recent product signal — look closer, this is not a kill signal.",
+    UNVERIFIED: "a detector was blind — liveness unknown, never a kill signal.",
     DEAD: "no process and no recent activity — evidence only, not a kill verdict.",
 }
 DEFAULT_QUIET_MINUTES = 20.0
@@ -115,41 +137,54 @@ def _pid_alive(pid: int) -> bool:
     return True
 
 
-def _cwd_pids_via_lsof(root: str) -> set:
-    """pids of processes whose cwd resolves inside `root`, via `lsof -a -d cwd -F pn`."""
+def _cwd_pids_via_lsof(root: str):
+    """pids whose cwd resolves inside `root`, via `lsof -a -d cwd -F pn`.
+
+    Returns (pids, None) on a scan that succeeded, or (None, reason) when the
+    scan is blind: lsof erroring, timing out, or not seeing this process's own
+    pid (the canary that the scan saw this user's processes at all).
+    """
     try:
+        # cwd="/" so lsof never lists itself as a process inside the lane.
         proc = subprocess.run(
             ["lsof", "-a", "-d", "cwd", "-F", "pn"],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True, text=True, timeout=10, cwd="/",
         )
-    except (OSError, subprocess.SubprocessError):
-        return set()
+    except subprocess.TimeoutExpired:
+        return None, "lsof timed out"
+    except (OSError, subprocess.SubprocessError) as exc:
+        return None, f"lsof failed to run ({exc.__class__.__name__})"
     if proc.returncode not in (0, 1):  # lsof exits 1 when some processes are unreadable
-        return set()
+        return None, f"lsof exited {proc.returncode}"
     pids = set()
+    seen = set()
     pid = None
     for line in proc.stdout.splitlines():
         if not line:
             continue
         tag, value = line[0], line[1:]
         if tag == "p":
-            pid = value
-        elif tag == "n" and pid is not None:
-            if _inside(value, root):
-                try:
-                    pids.add(int(pid))
-                except ValueError:
-                    pass
-    return pids
+            try:
+                pid = int(value)
+            except ValueError:
+                pid = None
+                continue
+            seen.add(pid)
+        elif tag == "n" and pid is not None and _inside(value, root):
+            pids.add(pid)
+    if os.getpid() not in seen:
+        return None, "lsof ran but did not see this script's own process"
+    return pids, None
 
 
-def _cwd_pids_via_proc(root: str) -> set:
-    """Linux fallback: read /proc/<pid>/cwd when lsof is unavailable."""
-    pids = set()
+def _cwd_pids_via_proc(root: str):
+    """Linux fallback: read /proc/<pid>/cwd. Same (pids, None) / (None, reason) contract as lsof."""
     try:
         entries = os.listdir("/proc")
     except OSError:
-        return pids
+        return None, "/proc unavailable"
+    pids = set()
+    saw_self = False
     for name in entries:
         if not name.isdigit():
             continue
@@ -157,9 +192,13 @@ def _cwd_pids_via_proc(root: str) -> set:
             cwd = os.readlink(f"/proc/{name}/cwd")
         except OSError:
             continue
+        if int(name) == os.getpid():
+            saw_self = True
         if _inside(cwd, root):
             pids.add(int(name))
-    return pids
+    if not saw_self:
+        return None, "/proc listed but this script's own cwd was unreadable"
+    return pids, None
 
 
 def _inside(candidate: str, root: str) -> bool:
@@ -171,21 +210,41 @@ def _inside(candidate: str, root: str) -> bool:
     return c == r or c.startswith(r + os.sep)
 
 
-def cwd_pids(root: str) -> set:
-    """Processes whose cwd is inside `root`; lsof first, /proc as the Linux fallback."""
+def cwd_pids(root: str):
+    """Processes whose cwd is inside `root`; lsof first, /proc as the fallback.
+
+    Returns (pids, detail): `pids` is a set when a scan succeeded (possibly
+    empty — a real "none found"), or None when every available scan was blind;
+    `detail` names the backend used, or why each one was blind. This script's
+    own process is never counted as the lane's, even when run from inside it.
+    """
     import shutil
 
+    reasons = []
     if shutil.which("lsof"):
-        found = _cwd_pids_via_lsof(root)
-        if found:
-            return found
-    return _cwd_pids_via_proc(root)
+        found, why = _cwd_pids_via_lsof(root)
+        if found is not None:
+            return found - {os.getpid()}, "lsof ok"
+        reasons.append(why)
+    else:
+        reasons.append("lsof not installed")
+    found, why = _cwd_pids_via_proc(root)
+    if found is not None:
+        return found - {os.getpid()}, "/proc ok"
+    reasons.append(why)
+    return None, "BLIND (" + "; ".join(reasons) + ")"
 
 
 def newest_mtime_excluding_git(root: str):
-    """Newest mtime under `root`, skipping any `.git` directory; None if nothing found."""
+    """Newest mtime under `root`, skipping any `.git` directory.
+
+    Returns (newest_or_None, walk_errors): `walk_errors` counts directories the
+    walk could not read; non-zero means a recent file may be hidden, so the
+    caller must not treat "nothing recent" as proven.
+    """
     newest = None
-    for dirpath, dirnames, filenames in os.walk(root):
+    errors = []
+    for dirpath, dirnames, filenames in os.walk(root, onerror=errors.append):
         dirnames[:] = [d for d in dirnames if d != ".git"]
         for name in filenames:
             path = os.path.join(dirpath, name)
@@ -195,7 +254,7 @@ def newest_mtime_excluding_git(root: str):
                 continue
             if newest is None or mtime > newest:
                 newest = mtime
-    return newest
+    return newest, len(errors)
 
 
 def git_state_mtime(root: str):
@@ -235,17 +294,21 @@ def git_state_mtime(root: str):
     return newest
 
 
-_PS_TIME_RE = re.compile(r"^(?:(\d+)-)?(?:(\d+):)?(\d+):(\d+)$")
+_PS_TIME_RE = re.compile(r"^(?:(\d+)-)?(?:(\d+):)?(\d+):(\d+(?:\.\d+)?)$")
 
 
 def _parse_ps_time(value: str):
-    """Parse ps's `-o time=` ([[dd-]hh:]mm:ss) into seconds; None if unparseable."""
+    """Parse ps's `-o time=` into seconds (float); None if unparseable.
+
+    Accepts procps `[dd-][hh:]mm:ss` and macOS `mm:ss.cc` (minutes may exceed
+    59, e.g. `277:49.40`), plus `h:mm:ss.cc`.
+    """
     value = value.strip()
     m = _PS_TIME_RE.match(value)
     if not m:
         return None
     days, hours, minutes, seconds = m.groups()
-    total = int(minutes) * 60 + int(seconds)
+    total = int(minutes) * 60 + float(seconds)
     if hours:
         total += int(hours) * 3600
     if days:
@@ -282,12 +345,19 @@ def cpu_delta(pids, sample_seconds: float) -> bool:
 
 
 def evaluate(worktree: str, pid=None, quiet_minutes: float = DEFAULT_QUIET_MINUTES,
-             sample_seconds: float = DEFAULT_SAMPLE_SECONDS):
-    """Return (verdict, [evidence lines]). Pure aside from the filesystem/process reads."""
+             sample_seconds: float = DEFAULT_SAMPLE_SECONDS, scanner=None):
+    """Return (verdict, [evidence lines]). Pure aside from the filesystem/process reads.
+
+    `scanner` (default `cwd_pids`) maps a root to (pids_or_None, detail); None
+    means the scan was blind, which can yield UNVERIFIED but never DEAD.
+    """
     root = os.path.realpath(worktree)
     evidence = [f"worktree: {root}"]
 
-    found_pids = set(cwd_pids(root))
+    scanned, scan_detail = (scanner or cwd_pids)(root)
+    scan_ok = scanned is not None
+    found_pids = set(scanned or ())
+    evidence.append(f"process detection: {scan_detail}")
     pid_note = "n/a"
     if pid is not None:
         alive = _pid_alive(pid)
@@ -295,20 +365,24 @@ def evaluate(worktree: str, pid=None, quiet_minutes: float = DEFAULT_QUIET_MINUT
         if alive:
             found_pids.add(pid)
     evidence.append(f"--pid {pid}: {pid_note}" if pid is not None else "--pid: not given")
-    evidence.append(
-        f"cwd-scan: {sorted(found_pids) or 'none'} process(es) with cwd inside worktree"
-        if found_pids else "cwd-scan: no process found with cwd inside worktree"
-    )
+    if not scan_ok:
+        evidence.append("cwd-scan: blind — cannot rule out a process with cwd inside worktree")
+    elif scanned:
+        evidence.append(f"cwd-scan: {sorted(scanned)} process(es) with cwd inside worktree")
+    else:
+        evidence.append("cwd-scan: no process found with cwd inside worktree")
 
     now = time.time()
     quiet_seconds = quiet_minutes * 60.0
 
-    file_mtime = newest_mtime_excluding_git(root)
+    file_mtime, walk_errors = newest_mtime_excluding_git(root)
     file_age = (now - file_mtime) if file_mtime is not None else None
     evidence.append(
         f"newest file mtime (excl .git): {file_age:.0f}s ago" if file_age is not None
         else "newest file mtime (excl .git): no files found"
     )
+    if walk_errors:
+        evidence.append(f"file walk: {walk_errors} unreadable director(ies) — a recent file may be hidden")
 
     git_mtime = git_state_mtime(root)
     git_age = (now - git_mtime) if git_mtime is not None else None
@@ -332,10 +406,13 @@ def evaluate(worktree: str, pid=None, quiet_minutes: float = DEFAULT_QUIET_MINUT
 
     if process_alive and recent_activity:
         verdict = ALIVE
-    elif not process_alive and not recent_activity:
+    elif process_alive or recent_activity:
+        verdict = QUIET
+    elif scan_ok and not walk_errors:
+        # DEAD only when every detector ran, succeeded, and found nothing.
         verdict = DEAD
     else:
-        verdict = QUIET
+        verdict = UNVERIFIED
     return verdict, evidence
 
 
@@ -345,15 +422,24 @@ def _format_report(verdict: int, evidence) -> str:
     return "\n".join(lines)
 
 
+class _Parser(argparse.ArgumentParser):
+    """ArgumentParser whose usage errors exit ERROR (2), never a verdict code."""
+
+    def error(self, message):
+        self.print_usage(sys.stderr)
+        print(f"LANE_LIVENESS ERROR: {message}", file=sys.stderr)
+        sys.exit(ERROR)
+
+
 def main(argv=None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser = _Parser(description=__doc__.splitlines()[0])
     parser.add_argument("--worktree", help="path to the lane's worktree")
     parser.add_argument("--pid", type=int, default=None, help="explicit pid to check, in addition to the cwd scan")
     parser.add_argument("--quiet-minutes", type=float, default=DEFAULT_QUIET_MINUTES,
                         help=f"activity window in minutes (default {DEFAULT_QUIET_MINUTES})")
     parser.add_argument("--sample-seconds", type=float, default=DEFAULT_SAMPLE_SECONDS,
                         help=f"CPU-delta sample window in seconds (default {DEFAULT_SAMPLE_SECONDS})")
-    parser.add_argument("--selftest", action="store_true", help="prove ALIVE/QUIET/DEAD each fire, offline")
+    parser.add_argument("--selftest", action="store_true", help="prove each verdict and exit code fires, offline")
     args = parser.parse_args(argv)
 
     if args.selftest:
@@ -363,7 +449,7 @@ def main(argv=None) -> int:
         parser.error("--worktree is required (or use --selftest)")
     if not os.path.isdir(args.worktree):
         print(f"LANE_LIVENESS ERROR: not a directory: {args.worktree}", file=sys.stderr)
-        return DEAD
+        return ERROR
 
     verdict, evidence = evaluate(args.worktree, args.pid, args.quiet_minutes, args.sample_seconds)
     print(_format_report(verdict, evidence))
@@ -383,21 +469,59 @@ def _selftest() -> int:
             failures.append(f"{label}: got {_VERDICT_NAME.get(got, got)!r}, want {_VERDICT_NAME.get(want, want)!r}")
 
     tmp = tempfile.mkdtemp(prefix="lane_liveness_selftest_")
+    old = time.time() - 3600
+
+    def blind(_root):
+        return None, "BLIND (selftest: simulated detector failure)"
+
+    def stale_lane(name):
+        lane_dir = os.path.join(tmp, name)
+        os.makedirs(lane_dir)
+        path = os.path.join(lane_dir, "output.txt")
+        with open(path, "w") as fh:
+            fh.write("stale\n")
+        os.utime(path, (old, old))
+        return lane_dir
+
+    def run_main(*args, env=None, cwd=None):
+        return subprocess.run([sys.executable, os.path.abspath(__file__), *args],
+                              capture_output=True, text=True, env=env, cwd=cwd, timeout=60)
+
     try:
         # ALIVE: a live child process with cwd inside the worktree, plus a
-        # just-written file inside the quiet window.
+        # just-written file inside the quiet window, found via --pid.
         lane = os.path.join(tmp, "lane-alive")
         os.makedirs(lane)
         with open(os.path.join(lane, "output.txt"), "w") as fh:
             fh.write("progress\n")
         child = subprocess.Popen(["sleep", "5"], cwd=lane)
         try:
-            verdict, evidence = evaluate(lane, pid=child.pid, quiet_minutes=5.0, sample_seconds=0.05)
+            verdict, _ = evaluate(lane, pid=child.pid, quiet_minutes=5.0, sample_seconds=0.05)
             expect("alive-process-and-recent-file", verdict, ALIVE)
-            assert any("cwd-scan" in line and "none" not in line.split(":")[1] for line in evidence) or True
         finally:
             child.terminate()
             child.wait(timeout=5)
+
+        # ALIVE via the cwd-scan alone (no --pid): the scan itself must find
+        # the child whose cwd is inside the worktree, and say so.
+        lane_scan = os.path.join(tmp, "lane-scan")
+        os.makedirs(lane_scan)
+        with open(os.path.join(lane_scan, "output.txt"), "w") as fh:
+            fh.write("progress\n")
+        child_scan = subprocess.Popen(["sleep", "5"], cwd=lane_scan)
+        try:
+            verdict, evidence = evaluate(lane_scan, pid=None, quiet_minutes=5.0, sample_seconds=0.05)
+            expect("cwd-scan-without-pid-is-alive", verdict, ALIVE)
+            scan_lines = [line for line in evidence if line.startswith("cwd-scan:")]
+            total[0] += 1
+            if not (scan_lines and str(child_scan.pid) in scan_lines[0]):
+                failures.append(f"cwd-scan-names-child-pid: {child_scan.pid} not in {scan_lines!r}")
+            total[0] += 1
+            if not any(line.endswith(" ok") for line in evidence if line.startswith("process detection:")):
+                failures.append(f"cwd-scan-reports-backend-ok: {evidence!r}")
+        finally:
+            child_scan.terminate()
+            child_scan.wait(timeout=5)
 
         # QUIET: a live process, but no recent product signal — quiet-minutes
         # set to 0 so even a just-written file does not count as "recent",
@@ -414,22 +538,16 @@ def _selftest() -> int:
             child2.terminate()
             child2.wait(timeout=5)
 
-        # DEAD: no process (a pid that has already exited and been reaped),
-        # and the only file is backdated well past the quiet window.
-        lane_dead = os.path.join(tmp, "lane-dead")
-        os.makedirs(lane_dead)
-        stale = os.path.join(lane_dead, "output.txt")
-        with open(stale, "w") as fh:
-            fh.write("stale\n")
-        old = time.time() - 3600
-        os.utime(stale, (old, old))
+        # DEAD: the scan ran and succeeded, no process (a pid that has
+        # already exited and been reaped), and the only file is backdated
+        # well past the quiet window.
+        lane_dead = stale_lane("lane-dead")
         exited = subprocess.Popen(["true"])
         exited.wait()
         expect("no-process-no-recent-activity-is-dead",
                evaluate(lane_dead, pid=exited.pid, quiet_minutes=1.0, sample_seconds=0.05)[0], DEAD)
 
-        # QUIET: recent file activity but no process found at all (the
-        # complement DEAD's own definition leaves open).
+        # QUIET: recent file activity but no process found at all.
         lane_between = os.path.join(tmp, "lane-between")
         os.makedirs(lane_between)
         with open(os.path.join(lane_between, "output.txt"), "w") as fh:
@@ -438,22 +556,77 @@ def _selftest() -> int:
                evaluate(lane_between, pid=None, quiet_minutes=5.0, sample_seconds=0.05)[0], QUIET)
 
         # Nonexistent pid never mistaken for alive.
-        lane_badpid = os.path.join(tmp, "lane-badpid")
-        os.makedirs(lane_badpid)
-        old_path = os.path.join(lane_badpid, "f.txt")
-        with open(old_path, "w") as fh:
-            fh.write("x\n")
-        os.utime(old_path, (old, old))
+        lane_badpid = stale_lane("lane-badpid")
         huge_pid = 2**30  # astronomically unlikely to exist
         expect("nonexistent-pid-is-dead",
                evaluate(lane_badpid, pid=huge_pid, quiet_minutes=1.0, sample_seconds=0.05)[0], DEAD)
 
-        # _parse_ps_time covers each documented shape and rejects garbage.
-        cases = [("01:02", 62), ("1:01:02", 3662), ("2-01:01:02", 176462), ("garbage", None)]
+        # A blind process detector never yields DEAD, with or without --pid.
+        lane_blind = stale_lane("lane-blind")
+        verdict, evidence = evaluate(lane_blind, pid=None, quiet_minutes=1.0,
+                                     sample_seconds=0.05, scanner=blind)
+        expect("blind-scan-no-activity-is-unverified", verdict, UNVERIFIED)
+        total[0] += 1
+        if not any("BLIND" in line for line in evidence):
+            failures.append(f"blind-scan-evidence-names-blind: {evidence!r}")
+        expect("blind-scan-dead-pid-is-unverified",
+               evaluate(lane_blind, pid=huge_pid, quiet_minutes=1.0,
+                        sample_seconds=0.05, scanner=blind)[0], UNVERIFIED)
+
+        # An unreadable directory hides possible activity: never DEAD.
+        if os.geteuid() != 0:  # root reads mode-000 dirs, so the case cannot be staged
+            lane_walk = stale_lane("lane-walk")
+            locked = os.path.join(lane_walk, "locked")
+            os.makedirs(locked)
+            os.chmod(locked, 0)
+            try:
+                expect("walk-error-no-activity-is-unverified",
+                       evaluate(lane_walk, pid=None, quiet_minutes=1.0, sample_seconds=0.05)[0],
+                       UNVERIFIED)
+            finally:
+                os.chmod(locked, 0o700)
+
+        # End to end with lsof off PATH: where /proc is also absent (macOS)
+        # the scan is blind -> UNVERIFIED; where /proc exists the fallback
+        # scan succeeds -> DEAD.
+        lane_nolsof = stale_lane("lane-nolsof")
+        proc = run_main("--worktree", lane_nolsof, "--quiet-minutes", "1", "--sample-seconds", "0.05",
+                        env={"PATH": os.path.join(tmp, "empty-path")})
+        want_code = DEAD if os.path.isdir("/proc/self") else UNVERIFIED
+        total[0] += 1
+        if proc.returncode != want_code:
+            failures.append(f"no-lsof-end-to-end: exit {proc.returncode}, want {want_code}: {proc.stdout}{proc.stderr}")
+
+        # Exit codes: verdicts and errors never collide.
+        total[0] += 1
+        if len({ALIVE, QUIET, ERROR, UNVERIFIED, DEAD}) != 5:
+            failures.append("exit-codes-distinct: verdict/error codes collide")
+        for label, args in (
+            ("missing-worktree", ()),
+            ("unknown-flag", ("--worktree", tmp, "--no-such-flag")),
+            ("non-int-pid", ("--worktree", tmp, "--pid", "abc")),
+            ("not-a-directory", ("--worktree", os.path.join(tmp, "missing"))),
+        ):
+            proc = run_main(*args)
+            total[0] += 1
+            if proc.returncode != ERROR or "LANE_LIVENESS ERROR" not in proc.stderr:
+                failures.append(f"usage-error-{label}: exit {proc.returncode}, want {ERROR}: {proc.stderr!r}")
+        # Run from INSIDE the lane: the script's own process must not count.
+        proc = run_main("--worktree", ".", "--quiet-minutes", "1", "--sample-seconds", "0.05",
+                        cwd=lane_dead)
+        total[0] += 1
+        if proc.returncode != DEAD or "LANE_LIVENESS DEAD" not in proc.stdout:
+            failures.append(f"main-dead-exit-4-own-process-excluded: exit {proc.returncode}: "
+                            f"{proc.stdout}{proc.stderr}")
+
+        # _parse_ps_time covers procps and macOS shapes and rejects garbage.
+        cases = [("01:02", 62), ("1:01:02", 3662), ("2-01:01:02", 176462),
+                 ("0:00.03", 0.03), ("277:49.40", 16669.4), ("1:02:03.50", 3723.5),
+                 ("garbage", None), ("1:2:3:4", None)]
         for text, want in cases:
             got = _parse_ps_time(text)
             total[0] += 1
-            if got != want:
+            if (got is None) != (want is None) or (want is not None and abs(got - want) > 1e-6):
                 failures.append(f"parse-ps-time({text!r}): got {got!r}, want {want!r}")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
