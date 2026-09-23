@@ -4,10 +4,11 @@ Read this when: an agent or a Conductor is granted a block of **unattended time 
 work a backlog** — an overnight or multi-hour autonomous run — and needs the whole
 run's shape: how the mode composes the other skills, the delivery loop it runs, the
 run-start checklist and run-end self-audit that bound it, what "done" it may claim,
-and the default set of recurring loops. This file **names and wires together**
-doctrine that already lives in the sections it points to; it adds only the
-connective mode-framing, the run-start/run-end gate, and the default loop set. It
-does **not** restate the depth it routes to — follow the pointer.
+the default set of recurring loops, and the churn / priority-inversion gates. This
+file **names and wires together** doctrine that already lives in the sections it
+points to; it adds only the connective mode-framing, the run-start/run-end gate,
+the default loop set, and the routing to the two gate scripts. It does **not**
+restate the depth it routes to — follow the pointer.
 
 This is **not a new runtime or a standing swarm** (`SKILL.md` intro) — it is how
 the same opt-in, one-Conductor, hats-not-headcount pattern operates *as a loop*
@@ -100,6 +101,30 @@ Each rung is a name and a pointer; the mechanism lives at the pointer.
   On a shared host, read the gates as **machine-wide aggregates**
   (`multi-session-coordination.md` **Every peer honoring its own heavy-lane cap
   still oversubscribes the machine**).
+
+## Two mechanical gates on what the loop ships: churn and priority inversion
+
+A loop graded on activity drifts to cheap, visible work. One private audit
+(generalized): 86% of commits reworked earlier work, 26 files were fixed ten or
+more times at a median 22.5 h apart, and presentation PRs rose to 48% while
+feature work fell to 9%, with every P0 / mechanism issue still open and cited by
+zero PRs. Attention caught neither drift. Two opt-in stdlib gates make each a
+blocking fact (`--selftest`; fail closed on unresolvable input; wired into a
+target's CI behind env flags by `deep-code-review`'s `templates/dcr-gates.sh`):
+
+- `scripts/refix_gate.py` — **use this when** a lane re-touches a file a recent
+  `fix:` commit touched. A range doing so inside `--window-hours` (default 72)
+  must add a test/eval path matching `--class-glob` or carry a `Refix-Reason:`
+  trailer; output names the file, prior fix SHA, and age. It forces a
+  class-level artifact to exist; it cannot judge class completeness (that stays
+  the reviewer's — `deep-code-review` `method.md`, class discipline).
+- `scripts/priority_gate.py` — **use this when** ordering dispatch or reviewing a
+  presentation PR (by label, or every path matching a presentation glob). It
+  fails that PR while any P0 / mechanism issue older than `--min-age-hours` has
+  no other open or merged PR citing it; `--budget` caps the presentation share of the
+  last 24 h of merges. Pure over a JSON document (`--labels-json`), or fetched by
+  paginated `gh api` (`--repo`). It proves a citing PR exists, not that the PR
+  advances the issue.
 
 ## The run-lifecycle gate: a run-start checklist and a run-end self-audit
 

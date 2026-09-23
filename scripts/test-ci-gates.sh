@@ -1728,6 +1728,194 @@ for plant in drop grant selfgrant; do
   fi
 done
 
+# ===========================================================================
+# lesson -> mechanism ratchet (own lane; appended at the end). A filed lesson
+# must land as an executable mechanism, not only prose. Covers: this repo's
+# ci.yml wires fix_class_gate.py trigger mode on skill prose; the contribution
+# and retrospective doctrine keep the rule (planted removals fail); the
+# shipped dcr-gates.sh runner honours DCR_TRIGGER_GLOBS and fails closed.
+# ===========================================================================
+
+if grep -qF -- "--trigger-glob '.claude/skills/*/SKILL.md'" "$ROOT/.github/workflows/ci.yml" \
+  && grep -qF -- "--trigger-glob '.claude/skills/*/references/*.md'" "$ROOT/.github/workflows/ci.yml"; then
+  record 0 "lesson-ratchet: ci.yml runs fix_class_gate trigger mode on skill prose"
+else
+  record 1 "lesson-ratchet: ci.yml runs fix_class_gate trigger mode on skill prose"
+fi
+
+lesson_doctrine() {  # <root>: 0 when both doctrine rules are present
+  grep -qF 'fails before the edit and passes' "$1/.claude/skills/contribution/SKILL.md" || return 1
+  grep -qF 'file an issue, never' "$1/.claude/skills/contribution/SKILL.md" || return 1
+  grep -qF 'never only a doc line' "$1/.claude/skills/agentic-delivery/references/retrospective.md" || return 1
+}
+if lesson_doctrine "$ROOT"; then
+  record 0 "lesson-ratchet: contribution + retrospective doctrine present"
+else
+  record 1 "lesson-ratchet: contribution + retrospective doctrine present"
+fi
+LRW="$WORK/lesson-ratchet"
+for plant in contribution retro; do
+  rm -rf "$LRW"; mkdir -p "$LRW/.claude/skills"
+  cp -R "$ROOT/.claude/skills/contribution" "$ROOT/.claude/skills/agentic-delivery" "$LRW/.claude/skills/"
+  if [ "$plant" = contribution ]; then
+    sed 's/fails before the edit and passes/is described in/' "$ROOT/.claude/skills/contribution/SKILL.md" \
+      >"$LRW/.claude/skills/contribution/SKILL.md"
+  else
+    sed 's/never only a doc line/or a doc line/' \
+      "$ROOT/.claude/skills/agentic-delivery/references/retrospective.md" \
+      >"$LRW/.claude/skills/agentic-delivery/references/retrospective.md"
+  fi
+  if lesson_doctrine "$LRW"; then
+    record 1 "lesson-ratchet: planted $plant doctrine removal fails"
+  else
+    record 0 "lesson-ratchet: planted $plant doctrine removal fails"
+  fi
+done
+
+# dcr-gates.sh trigger mode, on the gates_fresh target installed above. A
+# prose-only commit on a trigger path FAILS; the same with a test-surface
+# touch PASSES; a whitespace-only DCR_TRIGGER_GLOBS fails closed.
+mkdir -p "$gates_fresh/docs"
+printf 'lesson\n' >"$gates_fresh/docs/lesson.md"
+git -C "$gates_fresh" add docs/lesson.md >/dev/null 2>&1
+git -C "$gates_fresh" commit -q -m 'docs: file a lesson as prose only'
+lr_log="$WORK/lesson-trigger-red.log"
+(cd "$gates_fresh" && DCR_TRIGGER_GLOBS='docs/*' DCR_TEST_GLOBS='checks/*' bash "$gates_runner") >"$lr_log" 2>&1 || true
+if grep -q 'dcr-gates: fix_class_gate trigger mode FAIL' "$lr_log" \
+  && grep -q 'No-Mechanism-Reason' "$lr_log"; then
+  record 0 "lesson-ratchet: DCR_TRIGGER_GLOBS fails a prose-only trigger commit (planted RED)"
+else
+  record 1 "lesson-ratchet: DCR_TRIGGER_GLOBS fails a prose-only trigger commit (planted RED)"
+fi
+printf 'lesson v2\n' >"$gates_fresh/docs/lesson.md"
+printf 'c\n' >"$gates_fresh/checks/c.txt"
+git -C "$gates_fresh" add docs/lesson.md checks/c.txt >/dev/null 2>&1
+git -C "$gates_fresh" commit -q -m 'feat: lesson with its check'
+lr_log="$WORK/lesson-trigger-green.log"
+(cd "$gates_fresh" && DCR_TRIGGER_GLOBS='docs/*' DCR_TEST_GLOBS='checks/*' bash "$gates_runner") >"$lr_log" 2>&1 || true
+if grep -q 'dcr-gates: fix_class_gate trigger mode PASS' "$lr_log" \
+  && grep -q 'dcr-gates: all gates passed' "$lr_log"; then
+  record 0 "lesson-ratchet: DCR_TRIGGER_GLOBS passes a trigger commit with a mechanism"
+else
+  record 1 "lesson-ratchet: DCR_TRIGGER_GLOBS passes a trigger commit with a mechanism"
+fi
+if (cd "$gates_fresh" && DCR_TRIGGER_GLOBS='   ' bash "$gates_runner") >"$WORK/lesson-trigger-blank.log" 2>&1; then
+  lr_rc=0
+else
+  lr_rc=$?
+fi
+if [ "$lr_rc" -ne 0 ] && grep -q 'DCR_TRIGGER_GLOBS names no glob' "$WORK/lesson-trigger-blank.log"; then
+  record 0 "lesson-ratchet: whitespace-only DCR_TRIGGER_GLOBS fails closed"
+else
+  record 1 "lesson-ratchet: whitespace-only DCR_TRIGGER_GLOBS fails closed"
+fi
+
+# ===========================================================================
+# dcr-gates opt-in delivery gates — refix_gate.py and priority_gate.py (own
+# lane; APPENDED AT THE END by convention). Both are OFF by default; a set
+# flag with agentic-delivery missing, a bad flag value, or a missing input
+# fails closed; each gate FIRES on a planted violation through the runner.
+# ===========================================================================
+
+og="$WORK/optin-gates"
+mkdir -p "$og/src"
+git -C "$og" init -q
+git -C "$og" config user.email "jane@example.com"
+git -C "$og" config user.name "Jane Smith"
+git -C "$og" config commit.gpgsign false
+printf 'x = 1\n' >"$og/src/a.txt"
+git -C "$og" add src/a.txt >/dev/null 2>&1
+git -C "$og" commit -q -m 'chore: init'
+gate "$GATES" install --src "$ROOT" --dest "$og" --mode gates
+og_runner="$og/scripts/dcr-gates.sh"
+
+# og_run <log> [VAR=value ...] — run the target's runner under env overrides;
+# sets OG_RC to its real exit code.
+og_run() {
+  local log="$1"
+  shift
+  if env "$@" bash "$og_runner" >"$log" 2>&1; then OG_RC=0; else OG_RC=$?; fi
+}
+
+# 1) A set flag with agentic-delivery NOT installed fails closed.
+og_run "$WORK/og-nodelivery.log" DCR_REFIX_GATE=1
+if [ "$GATE_RC" -eq 0 ] && [ "$OG_RC" -ne 0 ] \
+  && grep -q 'refix_gate.py not found (agentic-delivery not installed?) (FAIL, fail closed)' "$WORK/og-nodelivery.log"; then
+  record 0 "dcr-gates opt-in: DCR_REFIX_GATE=1 without agentic-delivery fails closed"
+else
+  record 1 "dcr-gates opt-in: DCR_REFIX_GATE=1 without agentic-delivery fails closed"
+fi
+
+cp -R "$ROOT/.claude/skills/agentic-delivery" "$og/.claude/skills/"
+rm -rf "$og/.claude/skills/agentic-delivery/scripts/__pycache__"
+printf 'x = 2\n' >"$og/src/a.txt"
+git -C "$og" add src/a.txt >/dev/null 2>&1
+git -C "$og" commit -q -m 'fix(a): clamp x' -m 'No-Test-Reason: fixture commit'
+printf 'x  = 2\n' >"$og/src/a.txt"
+git -C "$og" add src/a.txt >/dev/null 2>&1
+git -C "$og" commit -q -m 'style(a): reformat'
+
+# 2) Default run (no flags): neither opt-in gate runs.
+og_run "$WORK/og-default.log"
+if [ "$OG_RC" -eq 0 ] && ! grep -qE 'refix_gate|priority_gate' "$WORK/og-default.log"; then
+  record 0 "dcr-gates opt-in: both gates are off by default"
+else
+  record 1 "dcr-gates opt-in: both gates are off by default"
+fi
+
+# 3) Planted RED: re-touching a just-fixed file with no test/eval change FIRES.
+og_run "$WORK/og-refix.log" DCR_REFIX_GATE=1
+if [ "$OG_RC" -ne 0 ] && grep -q 'REFIX src/a.txt prior-fix=' "$WORK/og-refix.log" \
+  && grep -q 'dcr-gates: refix_gate FAIL' "$WORK/og-refix.log"; then
+  record 0 "dcr-gates opt-in: refix_gate fires on a re-touched fixed file (planted RED)"
+else
+  record 1 "dcr-gates opt-in: refix_gate fires on a re-touched fixed file (planted RED)"
+fi
+
+# 4) The same churn with a Refix-Reason: trailer passes.
+printf 'x   = 2\n' >"$og/src/a.txt"
+git -C "$og" add src/a.txt >/dev/null 2>&1
+git -C "$og" commit -q -m 'style(a): align' -m 'Refix-Reason: whitespace only, no behavior change'
+og_run "$WORK/og-refix-ok.log" DCR_REFIX_GATE=1
+if [ "$OG_RC" -eq 0 ] && grep -q 'dcr-gates: refix_gate PASS' "$WORK/og-refix-ok.log"; then
+  record 0 "dcr-gates opt-in: refix_gate passes with a Refix-Reason trailer"
+else
+  record 1 "dcr-gates opt-in: refix_gate passes with a Refix-Reason trailer"
+fi
+
+# 5) A flag value other than unset/0/1 fails closed.
+og_run "$WORK/og-badflag.log" DCR_REFIX_GATE=yes
+if [ "$OG_RC" -ne 0 ] && grep -q 'FAIL DCR_REFIX_GATE=yes' "$WORK/og-badflag.log"; then
+  record 0 "dcr-gates opt-in: an unrecognized flag value fails closed"
+else
+  record 1 "dcr-gates opt-in: an unrecognized flag value fails closed"
+fi
+
+# 6) DCR_PRIORITY_GATE=1 with no input fails closed.
+og_run "$WORK/og-prio-noinput.log" DCR_PRIORITY_GATE=1
+if [ "$OG_RC" -ne 0 ] && grep -q 'FAIL priority_gate (DCR_PRIORITY_GATE=1 needs' "$WORK/og-prio-noinput.log"; then
+  record 0 "dcr-gates opt-in: priority_gate with no input fails closed"
+else
+  record 1 "dcr-gates opt-in: priority_gate with no input fails closed"
+fi
+
+# 7) Planted RED: a presentation PR while a 48h-old P0 has no citing PR FIRES;
+#    the same document with a citing open PR passes.
+og_prio_json() {  # <file> <prs-json-array>
+  printf '{"now":"2026-01-10T12:00:00Z","pr":{"number":7,"labels":["ui"],"paths":["web/app.css"]},"issues":[{"number":3,"labels":["P0"],"created_at":"2026-01-08T12:00:00Z"}],"prs":%s}\n' "$2" >"$1"
+}
+og_prio_json "$WORK/og-prio-red.json" '[]'
+og_prio_json "$WORK/og-prio-ok.json" '[{"number":9,"body":"Refs #3","state":"open"}]'
+og_run "$WORK/og-prio-red.log" DCR_PRIORITY_GATE=1 DCR_PRIORITY_JSON="$WORK/og-prio-red.json"
+og_red_rc="$OG_RC"
+og_run "$WORK/og-prio-ok.log" DCR_PRIORITY_GATE=1 DCR_PRIORITY_JSON="$WORK/og-prio-ok.json"
+if [ "$og_red_rc" -ne 0 ] && grep -q 'BLOCKING #3' "$WORK/og-prio-red.log" \
+  && [ "$OG_RC" -eq 0 ] && grep -q 'dcr-gates: priority_gate PASS' "$WORK/og-prio-ok.log"; then
+  record 0 "dcr-gates opt-in: priority_gate fires on an inversion, passes once cited (planted RED)"
+else
+  record 1 "dcr-gates opt-in: priority_gate fires on an inversion, passes once cited (planted RED)"
+fi
+
 # ---------------------------------------------------------------------------
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"

@@ -1400,6 +1400,28 @@
         "Requires checking at a phone viewport, on the surface the reviewer was looking at",
         "Recognizes that shrinking the tiles can satisfy the paraphrase while still failing the quoted criterion"
       ]
+    },
+    {
+      "id": "refix-gate-demands-class-artifact-on-churn",
+      "prompt": "During an unattended run, a lane opens a PR that edits src/parser.py for the fourth time this week. A fix(parser) commit touched that file 20 hours ago. The PR adds no test or eval, and its commits carry no trailers. refix_gate.py fails it. The lane proposes adding a one-line test for this exact input and calling the bug class covered. Accept?",
+      "expected_output": "Accept the added test as the thing that clears the gate, not as proof that the class is covered. refix_gate.py fails because the range re-touches a file a fix: commit touched inside the window (default 72 hours; this one was 20 hours ago) and adds no path matching the class globs. Its output names the file, the prior fix SHA, and the age. Two things clear it: a test/eval change matching the class globs, or a Refix-Reason: trailer with a real reason. A one-line test for the single reported input does satisfy the gate. But the gate only proves a class-level artifact exists. It cannot tell whether that artifact covers the class, so 'the class is covered' is a claim the gate does not back. The fourth edit in a week is a churn signal. The reviewer still has to check that the test pins the whole input class the bug belongs to, and that the same shape is fixed everywhere else in the tree. A lone repro test for the latest case is how the fifth refix happens. (unattended-operating-mode.md, Two mechanical gates on what the loop ships.)",
+      "expectations": [
+        "Explains the failure: a file touched by a fix: commit inside the window was modified with no class-glob test/eval change and no Refix-Reason trailer",
+        "Names the two ways to clear it: a matching test/eval change, or a non-empty Refix-Reason: trailer",
+        "States the gate forces a class-level artifact to exist but cannot judge whether it covers the bug class",
+        "Refuses to treat a single-input repro test as proof the class is covered, and routes that judgment to review"
+      ]
+    },
+    {
+      "id": "priority-gate-blocks-polish-over-uncited-p0",
+      "prompt": "Three P0 issues have been open for four days and no PR references any of them. A lane has a ready PR labeled 'ui' that only changes CSS files. priority_gate.py fails it. The lane says the change is tiny and safe, and asks to merge it now and pick up the P0s next. Merge?",
+      "expected_output": "No. This is the priority inversion the gate exists to block. The PR is presentation work: it has a presentation label, and every path matches a presentation glob. Meanwhile at least one P0 older than the age threshold has no open or merged PR citing it. That is the pattern where cosmetic work grows while mechanism issues sit untouched, and every cosmetic PR looks small and safe on its own. Being tiny does not exempt it. Unblock it by dispatching priority work: open or land a PR that cites each aged P0 (a #N reference, or a cross-reference on the issue timeline). A closed, unmerged PR does not count. If the owner actually wants a different priority, the fix is to relabel the issue or change the gate's labels or thresholds, which is an explicit decision on record. Merging anyway to 'pick them up next' is not that decision. Be honest about the limit: the gate proves a citing PR exists, not that the PR moves the issue forward. (unattended-operating-mode.md, Two mechanical gates on what the loop ships.)",
+      "expectations": [
+        "Refuses to merge the presentation-only PR while an aged P0 has no citing PR",
+        "Identifies the PR as presentation work by its label or by all of its paths matching presentation globs",
+        "Prescribes dispatching a PR that cites each aged P0 (a #N reference or a timeline cross-reference), and notes a closed, unmerged PR does not count",
+        "States the gate proves a citing PR exists, not that the PR advances the issue, and that changing priority is an explicit relabel or config decision rather than a merge-anyway"
+      ]
     }
   ]
 }

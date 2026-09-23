@@ -96,6 +96,9 @@ contribution.
 3. **Draft the full change** — in a checkout of the *public* repository (where the
    gate and the Definition of Done live), write the skill edit + CHANGELOG entry +
    eval + routing to the repo's Definition of Done (`CLAUDE.md`). No half-changes.
+   A correctness lesson needs a mechanism that fails before the edit and passes
+   after (an eval, or a gate script + selftest); without one, file an issue, never
+   fold the prose.
    Generalizing and stripping identifiers as you write (step 2) means the files
    already carry no third-party specifics.
 4. **Scrub (mechanical floor).** Run the repo's own fail-closed privacy gate on the

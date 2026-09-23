@@ -52,7 +52,9 @@ filed as margin), Timeline, Supporting information.
 An action item with no owner or no tracking reference is not done — it is a
 sentence that will be forgotten. Every item in the table carries a named owner
 and a bug/issue reference; `In progress`/`Open` items are re-checked at the
-next retrospective touching the same area, not left to rot.
+next retrospective touching the same area, not left to rot. An item that is a
+lesson lands as a gate, eval, or regression test proven red on the planted
+defect — never only a doc line; a prose-only fix leaves it `Open`.
 
 ## Repeat-root-cause check
 

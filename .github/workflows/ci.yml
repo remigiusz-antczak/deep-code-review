@@ -80,6 +80,8 @@ jobs:
           python3 .claude/skills/agentic-delivery/scripts/board_sync.py --selftest
           python3 .claude/skills/agentic-delivery/scripts/board_post.py --selftest
           python3 .claude/skills/agentic-delivery/scripts/board_state.py --selftest
+          python3 .claude/skills/agentic-delivery/scripts/refix_gate.py --selftest
+          python3 .claude/skills/agentic-delivery/scripts/priority_gate.py --selftest
 
       # Every fix(...) commit in the pushed/PR range must touch a test surface
       # or carry a non-empty No-Test-Reason: trailer. Fails closed on an
@@ -97,6 +99,31 @@ jobs:
           python3 .claude/skills/deep-code-review/scripts/fix_class_gate.py \
             --base "$BASE_SHA" --head "$HEAD_SHA" \
             --test-glob '.claude/skills/*/evals/evals.json' \
+            --test-glob 'scripts/test-ci-gates.sh'
+
+      # Lesson -> mechanism: a commit that edits skill prose (a SKILL.md or a
+      # references/*.md) must also land an executable mechanism (an eval, a
+      # shipped script, or a gate self-test case) or carry a non-empty
+      # No-Mechanism-Reason: trailer, so a filed lesson cannot stay prose that
+      # never fires. Same gate implementation, range, and fail-closed exits as
+      # the fix-class step above, except that merge commits are judged by their
+      # own changes and a SKILL.md version-stamp-only bump is not a trigger.
+      # Here a shipped script DOES count: in this mode the script is the
+      # mechanism being added, not the code under test.
+      # Known limitation: it proves a mechanism path was touched, not that the
+      # mechanism pins the lesson (review judges that).
+      - name: Prose lessons carry a mechanism
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          python3 .claude/skills/deep-code-review/scripts/fix_class_gate.py \
+            --base "$BASE_SHA" --head "$HEAD_SHA" \
+            --trigger-glob '.claude/skills/*/references/*.md' \
+            --trigger-glob '.claude/skills/*/SKILL.md' \
+            --test-glob '.claude/skills/*/evals/evals.json' \
+            --test-glob '.claude/skills/*/scripts/*' \
             --test-glob 'scripts/test-ci-gates.sh'
 
       # A size-budget row may only rise with a `size-budget-raise:` marker
