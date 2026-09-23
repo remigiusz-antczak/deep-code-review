@@ -225,7 +225,7 @@ short backoff), retry **only `UNKNOWN`**, and never auto-retry a definite `CONFL
 Both value-flip cases above are the **stale-base failure below at the mergeability layer** — a quantity
 computed against one base head, consumed against another — except the moving head breaks *mergeability* here,
 not a gate's diff. A fleet coordinator applies this whenever it batches merges; `agentic-delivery`'s
-`fast-agentic-delivery.md` cross-references here rather than restating it.
+`merge-queue-worktrees.md` cross-references here rather than restating it.
 
 ### A finished check's green can be stale off a prior evaluation — confirm it ran against the current head, and know each gate's trigger model
 

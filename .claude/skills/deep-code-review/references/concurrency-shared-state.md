@@ -369,7 +369,7 @@ tcp:PORT`) matches nothing.
   next scheduler pass reclaims it rather than trips on it.
 
 The shedding **trigger** (memory/swap or contention, never staleness) lives in
-`agentic-delivery/references/fast-agentic-delivery.md`; this file is the **mechanism**.
+`agentic-delivery/references/fanout-host-sizing.md`; this file is the **mechanism**.
 
 ---
 

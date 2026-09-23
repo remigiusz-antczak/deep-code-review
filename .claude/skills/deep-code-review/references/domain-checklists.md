@@ -451,7 +451,7 @@ Apply to any pipeline, ETL, enrichment, scraping, or dataset producer. Judge the
   **out-of-order and duplicate** delivery. Never trust a webhook body's identity
   claims without verification.
 - For HTTP/GraphQL APIs, overlay the OWASP API Security Top 10 (2023) — see the
-  appsec reference (`security-appsec.md`); contract evolution and webhook
+  appsec overlay (`security-api.md`); contract evolution and webhook
   procedures live in `api-contracts.md`.
 - 🚩 unverified webhook handler, unvalidated request body, silent contract change,
   required-field added to a live message schema, inconsistent error shapes.
@@ -576,10 +576,12 @@ outcome distinction live there.
   files,  a public repo with no LICENSE/SECURITY.md, a default branch mergeable with no
   review, a standards doc no gate enforces.
 
-### P. Frontend / UI / UX / accessibility → `references/frontend-a11y.md` + `references/product-ux-quality.md` + `references/migration-parity.md`
-Apply if the code produces UI. Target **WCAG 2.2 AA**. Three references:
+### P. Frontend / UI / UX / accessibility → `references/frontend-a11y.md` + `references/product-ux-quality.md` + `references/rendered-parity.md` + `references/migration-parity.md`
+Apply if the code produces UI. Target **WCAG 2.2 AA**. Four references:
 `frontend-a11y.md` owns a11y **correctness**; `product-ux-quality.md` owns the
 **design half** (read it when the target renders a product UI a human operates);
+`rendered-parity.md` owns a **"matches / looks the same" claim** (read it
+on a port / restyle / design-parity task);
 `migration-parity.md` owns the **port / prototype-reference half** (read it when the
 reference is a prototype/mockup or the task is a migration to a reference design).
 - **Respect the existing design** (principle 5): fix accessibility/usability

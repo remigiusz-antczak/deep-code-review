@@ -28,7 +28,7 @@ orphaned, or (c) make several role-reviewers add up to one whole-target audit.
 | **Product & requirements** | A O J | `docs-and-dx.md` | **Lightweight product planning** |
 | **UX & UI** | P R | `frontend-a11y.md` | — |
 | **Frontend** | P · A (client logic) · B (client-side authz/XSS) · N (no secrets in bundle) | `frontend-a11y.md`, `security-appsec.md` | — |
-| **Backend (API & DB)** | B I E A G T | `security-appsec.md`, `api-contracts.md`, `performance-db-cost.md` | — |
+| **Backend (API & DB)** | B I E A G T | `security-appsec.md`, `security-api.md`, `api-contracts.md`, `performance-db-cost.md` | — |
 | **Data & AI** | D C E J Q | `data-quality.md`, `security-ai-agents.md`, `privacy-compliance.md` | — |
 | **Platform / DevOps / SRE** | L K M N F W | `infra-iac-containers.md`, `observability.md`, `reliability-error-handling.md` | **SLI/SLO, error budget & burn-rate** |
 | **QA / performance / a11y** | J E P | `testing-and-evals.md`, `performance-db-cost.md`, `frontend-a11y.md` | — |

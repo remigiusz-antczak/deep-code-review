@@ -40,7 +40,7 @@ instead — one entry per active peer/lane, minimally `agent_id`,
 single current holder of any exclusive step (e.g. who may run the merge), so the
 collision probe below has a well-known field to check. The registry, not the thread, is the
 source of truth for "is this spoken for." Multi-machine sibling of
-`fast-agentic-delivery.md`'s ownership-map / claim-staleness rule (which
+`dev-env-ownership.md`'s ownership-map / claim-staleness rule (which
 already covers *reconciling* a stale claim) — this section is about
 *shape*: machine-readable and diffable, never prose a peer must interpret.
 
@@ -56,7 +56,7 @@ behind a given post (#901). That silently voids two rules already in these
 files. The liveness **tell** below (*a one-sided board — every recent entry from
 the same peer*) is meaningless under a shared account: every board is one-sided
 by construction, so it fires always and distinguishes nothing. And
-`fast-agentic-delivery.md`'s stale-claim reconcile checks *that lane's* liveness
+`dev-env-ownership.md`'s stale-claim reconcile checks *that lane's* liveness
 signal — impossible when the claim never recorded **whose** liveness to probe.
 
 Fix: one stable **per-agent id** — a session/agent id, or a worktree/host tag —
@@ -72,7 +72,7 @@ vacuous if its holder value is only the shared account name. Pair it with an
 of liveness — *is this recent or stale?* — is a fact, not a guess from a
 local-vs-UTC clock skew.
 
-- **Not the auto-merger rule** (`fast-agentic-delivery.md`, *shared identity
+- **Not the auto-merger rule** (`merge-queue-worktrees.md`, *shared identity
   makes authorship useless*): that is agent-**vs-human**, read by a merge robot
   to decide **admission**, and fixed by a manufactured **ownership** mark
   (label/branch-prefix). This is agent-**vs-agent**, read by a **peer** to
@@ -98,7 +98,7 @@ agents *are* the author, so git yields zero ownership signal.
 
 The owner-vs-agent discriminator does **not** resolve this. The held-PR
 merge-classification rule below, and the auto-merger rule in
-`fast-agentic-delivery.md` (*shared identity makes authorship useless*), tell an
+`merge-queue-worktrees.md` (*shared identity makes authorship useless*), tell an
 **owner's** action from an **agent's** by a merger/actor identity that is *not* the
 shared bot — a third, human identity. That discriminates owner-vs-agent; it yields
 nothing for **agent-A-vs-agent-B**, where both are the same shared bot, so
@@ -110,7 +110,7 @@ ownership signal**, the write-ownership extension of the per-agent id above:
 - **(b) a per-agent trailer on the commit/PR** that names *which* agent authored it —
   the same per-agent id above, stamped into the **commit/PR trailer**, not only onto
   chat posts (the co-author/attribution-trailer provenance rule in
-  `fast-agentic-delivery.md` is the stamping side).
+  `dev-env-ownership.md` is the stamping side).
 
 The preventive trailer works **only if it actually lands and is checked**: a
 convention-stamped trailer that is **absent from the very commits whose ownership is in
@@ -132,7 +132,7 @@ the *one-writer-per-file / never-rewrite-another-agent's-WIP* violation this pre
   merge by `mergedBy` (owner vs agent); this is a **pre-action** edit/rebase-ownership
   question between two agents who share identity, where `mergedBy` and author are both
   silent.
-- **Distinct from the auto-merger rule** (`fast-agentic-delivery.md`, #424): that is a
+- **Distinct from the auto-merger rule** (`merge-queue-worktrees.md`, #424): that is a
   robot deciding future **admission** (which PRs it may merge), fixed by a manufactured
   ownership **mark** (label / branch-prefix) with default-deny; this is a peer deciding
   whether to **edit** a peer's WIP, fixed by a channel claim or per-agent trailer, with
@@ -189,7 +189,7 @@ ambiguous is exactly why you must positively read the `mergedBy` field, and a
 third, human identity is the tell that the principal acted. This is a **third**
 case beside the two that section already separates — neither the per-agent
 **sender** id (agent-vs-agent attribution) nor the auto-merger's manufactured
-**ownership** mark (`fast-agentic-delivery.md`, *shared identity makes authorship
+**ownership** mark (`merge-queue-worktrees.md`, *shared identity makes authorship
 useless* — a robot deciding, going forward, which PRs it may **admit**). This one
 is a **monitor** classifying a merge that **already happened**, keyed on the
 merger, and the human acting is **legitimate**, not something to fence out. The
@@ -209,7 +209,7 @@ inactive and get zero lift for it — "sync with the peer" gets followed
 literally even into a void (#709). Before writing a hand-off, check an
 explicit liveness signal: the peer's process/session is up, or it posted
 within a recent window — the same don't-infer-aliveness-from-a-stale-artifact
-discipline as `fast-agentic-delivery.md`'s transcript-is-not-liveness
+discipline as `verification-handback.md`'s transcript-is-not-liveness
 section, applied there to a lane's transcript and here to a peer's last
 board post. No live peer: stop writing essays, degrade to solo at full
 tilt, and escalate the absence rather than silently compensating. **🚩
@@ -244,7 +244,7 @@ peer**, so hard-stopping on the first quiet tick is as wrong as posting forever.
   the standing instruction.** Drop to a low-frequency heartbeat or stop the timed
   emit; "post each cycle" was written blind to whether anyone reads. Backing off is
   **not going dark** (*if the loop is idling, say so loudly*,
-  `fast-agentic-delivery.md`) — it is refusing to spend cycles on an emit with no
+  `unattended-trackers.md`) — it is refusing to spend cycles on an emit with no
   reader.
 - **Escalate the absence to a durable, read channel — not one more post into the
   dead one.** The silence itself is the finding: surface "peer <id> silent N
@@ -256,7 +256,7 @@ Distinct from **#709 no-live-peer** (above): that gates a **discrete hand-off** 
 a **single-window** liveness read; this governs a **standing fixed-timer emit**,
 adds the **transient-vs-confirmed-dead threshold** #709 has no notion of, and
 **tapers the cadence** rather than gating one post. Distinct from **a monitor
-emits on state-transition only** (`fast-agentic-delivery.md`): that suppresses a
+emits on state-transition only** (`unattended-trackers.md`): that suppresses a
 **reader's** output when the **watched state** has not changed (unchanged poll →
 stay silent); this backs off a **sender's** emit when the **audience is confirmed
 absent** — a watched state can keep changing while no peer reads it, so *no change*
@@ -345,7 +345,7 @@ its domain drains first (load imbalance), so it is strongest when the domains
 are roughly balanced. When a partition drains, **re-partition explicitly** on
 the channel; do not let the idle peer silently start firing in the other's
 domain — that reintroduces exactly the race the split removed. This is where
-the peer / no-conductor case **diverges** from `fast-agentic-delivery.md`'s *an
+the peer / no-conductor case **diverges** from `unattended-trackers.md`'s *an
 agent that drains its slice broadens into the shared remainder* (the slice is a
 floor, not a ceiling): that broadening is safe **only while the
 announce-then-take claim layer is retained** to catch the resulting dual grab;
@@ -368,7 +368,7 @@ recipient is equally entitled to act (#933). It is a **high duplicate-work trigg
 all recipients run the pre-write collision probe (above) at nearly the same instant, all
 read an empty board, and all start; the probe's *read-then-claim* ordering is defeated by
 **simultaneity**, not by a skipped check. Announce-then-take
-(`fast-agentic-delivery.md`) already orders *claim before you start* for one agent, but
+(`dev-env-ownership.md`) already orders *claim before you start* for one agent, but
 it does **not arbitrate** two claims posted seconds apart where neither saw the other —
 exactly what a broadcast produces.
 
@@ -397,7 +397,7 @@ this if you're idle, otherwise it's mine" — while its **own lane for that item
 dispatched**. Now three things contend, not two: the offer, the peer's acceptance, and the
 offerer's in-flight lane — and the peer's accepted claim **plus** the offerer's own running
 lane both produce a PR for the same work (#952). *Claim before you start* (the broadcast
-section above; *announce-then-take* in `fast-agentic-delivery.md`) is necessary but **not
+section above; *announce-then-take* in `dev-env-ownership.md`) is necessary but **not
 sufficient** here, because the offerer is not racing another *claim* it could lose on a
 timestamp — it is racing its **own already-running lane**, which no claim or arbitration
 rule observes.
@@ -477,7 +477,7 @@ token anywhere in the path.
 
 ## Every peer honoring its own heavy-lane cap still oversubscribes the machine — coordinate the shared budget, not each session's slice
 
-A per-session heavy-lane cap — `fast-agentic-delivery.md`'s environment
+A per-session heavy-lane cap — `fanout-host-sizing.md`'s environment
 probe, which gates one session's own fan-out on free RAM and the swap trend
 *that session* can see — bounds what that session spawns against that
 session's own view of the machine. It says nothing about a second or third
@@ -503,7 +503,7 @@ summed count, or a raw shared-machine signal (`git worktree list | wc -l`,
 activity, not just its own — and when the aggregate reads distressed (load
 far past the core count, swap actively growing, or a peer's own crash/OOM
 report on the shared channel — the peer-session extension of
-`fast-agentic-delivery.md`'s rule that a subagent's own crash report
+`fanout-host-sizing.md`'s rule that a subagent's own crash report
 outranks a healthy orchestrator probe), every peer sheds heavy lanes
 immediately; waiting for your own per-session cap to trip is waiting on a
 number that was never the actual constraint. **🚩 tell:** every peer individually
@@ -516,7 +516,7 @@ operations) — the caps were never coordinated, only summed by accident.
 but on a **multi-machine fleet**, disk is the opposite: each machine's disk is local
 to that machine, not a shared pool, so one peer reporting "out of disk" is true for
 **that peer's machine alone**, never a fleet-wide signal. Gate disk-heavy work
-per-machine against that machine's own probe (`fast-agentic-delivery.md`'s disk
+per-machine against that machine's own probe (`fanout-host-sizing.md`'s disk
 arithmetic); don't fold a disk shortfall into the shared heavy-lane budget above, and
 don't shed fleet-wide on one peer's local disk pressure the way the aggregate shed
 above correctly does for RAM/swap/load.
@@ -528,7 +528,7 @@ reason, can leave **two peers each paused waiting on the other** — peer A hold
 because it read B as still working the shared resource, B holds because it read A the
 same way, and neither is wrong at the moment it paused. Nothing about a mutual pause
 makes either side re-check; each can wait indefinitely on a condition it never stated.
-This is the peer-coordination instance of `fast-agentic-delivery.md`'s *a degradation
+This is the peer-coordination instance of `unattended-trackers.md`'s *a degradation
 workaround is temporary by default — tie its removal to the condition that caused it*
 rule, not a new mechanism: a pause is a workaround for a perceived conflict, so name
 the **un-pause condition** explicitly when pausing — the aggregate reading clear, the
@@ -539,7 +539,7 @@ posted (or checked for) the condition that would end it.
 
 ## A persistent cross-peer permission asymmetry silently stalls the blocked peer — route the action, never launder it
 
-Distinct from `fast-agentic-delivery.md`'s classifier-asymmetry section,
+Distinct from `merge-queue-worktrees.md`'s classifier-asymmetry section,
 which lives **inside one session** — an orchestrator denied its own merge
 while the identical action succeeds from a sub-agent it spawned, under one
 classifier, resolved there by a preflight-keyed allow-rule or explicit
@@ -617,7 +617,7 @@ a dispatch order, it re-does delivered work (#960).
 
 - **A handed partition is a set of leads, not a work queue.** Before claiming or building
   each item, run the **already-delivered / reproduce-on-current-head** check exactly as
-  `fast-agentic-delivery.md`'s *an open tracker issue is not proof the fix is absent*
+  `unattended-trackers.md`'s *an open tracker issue is not proof the fix is absent*
   specifies, testing **containment against the ref that governs "shipped"** per
   `deep-code-review`'s `branch-and-merge-hygiene.md` (*is X shipped / already fixed* — name
   the governing ref, grep **its** tree). That mechanism is **not restated here.** The new
@@ -637,7 +637,7 @@ the check is **containment against the governing head** (was it delivered?), not
 read (is a peer on it now?). Distinct from *a peer's correction is a lead* (above): that
 reconciles an **instruction** against the receiver's **own** verified state; this reconciles
 a **work-list** against the **shared** governing head. Distinct from *enumerate the
-contested set once* (#936, `fast-agentic-delivery.md`): that caches a release PR's
+contested set once* (#936, `dev-env-ownership.md`): that caches a release PR's
 changed-**file** set for collision checks; this re-verifies handed **work-items** for
 already-done-ness — a different variable and a different failure (redone work, not a file
 collision). **🚩 tell:** a peer building straight down a handed partition or gap list
@@ -649,7 +649,7 @@ a sibling already merged; or a hander shipping a bare item list with no "verify 
 
 A "committed + pushed" handback can be a false artifact claim: check the ref
 directly (`git ls-tree`, the branch tip) before merging or building on it. The
-rule is `fast-agentic-delivery.md` **A completion claim in a PR body or handback
+rule is `verification-handback.md` **A completion claim in a PR body or handback
 carries a `Verify:` line**, applied to a peer's own delivered work.
 
 ## Tag backlog items by resource-profile and pre-assign to the machine that fits — before dispatch, not after a crash
@@ -660,12 +660,12 @@ nothing about **which** peer/machine should take **which** item. On a heterogene
 big build, a headless-browser suite, a large-checkout worktree — to whichever peer grabs it first
 lets a disk- or RAM-poor machine take work it cannot finish, and the failure surfaces **late** (an
 ENOSPC or OOM mid-run — the disk arithmetic and the RAM/swap environment probe in
-`fast-agentic-delivery.md`; and disk is **per-machine, not pooled** — *disk does not pool the same
+`fanout-host-sizing.md`; and disk is **per-machine, not pooled** — *disk does not pool the same
 way*, above) instead of at assignment. Tag each queued item with a **resource-profile** — its heavy-lane footprint (disk ≈
 build-dir + deps, peak RAM, whether it needs a browser/GPU) — and pre-assign it to a machine whose
 free capacity fits, **published in the claim registry before dispatch**, so peers route by fit, not
 by race. This is a **routing default, not a boundary**: the assigned slice is still a floor, never
-a ceiling (`fast-agentic-delivery.md` — an agent that drains its slice broadens into the shared
+a ceiling (`unattended-trackers.md` — an agent that drains its slice broadens into the shared
 remainder), and a machine may pull an unclaimed item it *can* run; the tag prevents the
 **predictable** misassignment, it does not fence a capable peer out. **🚩 tell:** a heavy item
 dispatched round-robin / first-grab across a fleet with mixed disk, then a lane dying of ENOSPC on
@@ -693,14 +693,14 @@ acceptance branch of a multi-branch check.
 
 One agent's own scan reporting "nothing left" is **weak** evidence of terminus — it cannot see its
 own blind spots (the surface-type / keyword-filter / assignment-partition gaps
-`fast-agentic-delivery.md` catalogs). **Independent** peers, working from **different** scan
+`unattended-trackers.md` catalogs). **Independent** peers, working from **different** scan
 methods, all arriving at the same "only owner-gated items remain" is far stronger: decorrelated
 agreement rules out any single agent's method-specific blind spot — the same reason two
 **decorrelated** reviewers/lenses outrank one (`deep-code-review`'s `parallel-audit.md`:
 same-model-family reviewers are not decorrelated second opinions). When
 peers converge on exhaustion, that authorizes **stopping production** — not blanket-closing:
 convergence is evidence the *search* is done, and each remaining item still gets the per-item
-close-verification bar (`fast-agentic-delivery.md`) before it is closed or escalated. The move at
+close-verification bar (`unattended-trackers.md`) before it is closed or escalated. The move at
 that point is non-fan-out — surface the decision/spend frontier to the owner and harden landed
 work, exactly as the terminus rule prescribes; this section is only about **what makes the terminus
 signal trustworthy across peers**, not what to do at it. **🚩 tell:** one peer declaring fleet-wide
@@ -763,7 +763,7 @@ Two operational riders:
   dashboard opt-in — a fleet default must never silently route private traffic
   through a third party.
 
-Extends `fast-agentic-delivery.md`'s *a prohibition in a delegate's brief is a soft
+Extends `verification-handback.md`'s *a prohibition in a delegate's brief is a soft
 control* (a brief lowers a rate but never to zero) from **intent-vs-capability
 drift within one lane** to the **reach of a standing default across the
 main-loop/subagent boundary and across a fleet**; the enforcement-*level* grading

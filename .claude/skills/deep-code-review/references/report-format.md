@@ -78,7 +78,7 @@ above rather than one green label with a footnote. And a status
 names the **surface** its evidence came from; for a UI / product parity claim the
 canonical surface is the **default served state** a user lands on (signed-out /
 no-role / default route / local default), not only a mock or a hand-picked state
-(`product-ux-quality.md`). **When more than one tree can serve the app** — the
+(`rendered-parity.md`). **When more than one tree can serve the app** — the
 normal agent topology, each write lane in its own worktree while a human runs a dev
 server from a different (often dirty) checkout — "the default served state" silently
 means *whichever process holds the port*, not the tree that contains the change, and
