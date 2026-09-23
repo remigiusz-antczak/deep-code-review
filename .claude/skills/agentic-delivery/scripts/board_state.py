@@ -14,12 +14,15 @@ two markers, so the body IS the current state and the stream is its log.
 WHAT THE RECORD HOLDS
 ---------------------
 - Claims with TTL. A CLAIM holds each ref for `ttl:` minutes (default
-  DEFAULT_TTL_MINUTES); the holder re-posting CLAIM renews it (a heartbeat).
+  DEFAULT_TTL_MINUTES); the holder re-posting CLAIM renews it (a heartbeat)
+  and keeps its first claim's id and time, which tie-break verdicts cite.
   A CLAIM on a ref another agent holds unexpired does not take it: the first
   valid claim holds and the later one is listed as contested. An expired
   claim is marked EXPIRED and reclaimable by the next CLAIM. RELEASE by the
-  holder frees the ref; HANDOFF by the holder moves it to `to:`. A RELEASE or
-  HANDOFF from a non-holder changes nothing and is listed as ignored.
+  holder frees the ref (with or without `rule:`); HANDOFF by the holder moves
+  it to `to:`. A RELEASE by an agent that contested the ref is its stand-down
+  and clears its contested row; any other RELEASE or HANDOFF from a
+  non-holder changes nothing and is listed as ignored.
 - Known issues, keyed by `topic:` (else the refs). BLOCKER opens an entry;
   FIX-CLAIM marks it fix-claimed with its sha/test; a BLOCKER after a
   FIX-CLAIM on the same key reopens it and counts a recurrence, so "fixed for
@@ -143,19 +146,32 @@ def _apply(st: dict, c: dict, post: dict) -> None:
     if ptype == "CLAIM":
         for ref in refs:
             cur = st["claims"].get(ref)
-            if cur and cur["agent"] != agent and cur["expires"] > at:
+            live = bool(cur) and cur["expires"] > at
+            if live and cur["agent"] != agent:
                 st["contested"].append((ref, agent, cid, cur["agent"]))
             else:
-                st["claims"][ref] = {"agent": agent, "since": at, "expires": at + ttl, "id": cid}
+                # A live holder's re-claim is a renewal: `since`/`id` move to it,
+                # but the tenure's first claim (the one a crossed claim lost to)
+                # is kept, so a tie-break verdict never cites the renewal.
+                first = (cur["first_id"], cur["first_since"]) if live else (cid, at)
+                st["claims"][ref] = {"agent": agent, "since": at, "expires": at + ttl, "id": cid,
+                                     "first_id": first[0], "first_since": first[1]}
     elif ptype in ("RELEASE", "HANDOFF"):
         for ref in refs:
             cur = st["claims"].get(ref)
             if not cur or cur["agent"] != agent:
-                st["ignored"].append(cid)
+                # A RELEASE by an agent that contested the ref is its
+                # stand-down: drop its contested rows so the cross is settled.
+                mine = [row for row in st["contested"] if row[0] == ref and row[1] == agent]
+                if ptype == "RELEASE" and mine:
+                    st["contested"] = [row for row in st["contested"] if row not in mine]
+                else:
+                    st["ignored"].append(cid)
             elif ptype == "RELEASE":
                 del st["claims"][ref]
             else:
-                st["claims"][ref] = {"agent": fields["to"], "since": at, "expires": at + ttl, "id": cid}
+                st["claims"][ref] = {"agent": fields["to"], "since": at, "expires": at + ttl, "id": cid,
+                                     "first_id": cid, "first_since": at}
     elif ptype in ("BLOCKER", "FIX-CLAIM"):
         key = fields.get("topic") or post["refs"]
         entry = st["issues"].setdefault(key, {"status": "", "blocker": 0, "fixes": 0, "recurrences": 0, "fix": None})
@@ -177,6 +193,45 @@ def _apply(st: dict, c: dict, post: dict) -> None:
         q["answered_by"] = q["answered_by"] or cid
     if ptype == "DECISION":
         st["decisions"].append((cid, agent, post["refs"], fields.get("of", ""), bc.snippet(c["body"], True)))
+
+
+def live_contests(st: dict, ref: str) -> list:
+    """The folded contested rows on `ref` that still bind its current holder. Pure.
+
+    A row `(ref, contester, comment_id, holder)` is live only while `holder`
+    still holds `ref` in the same tenure: the same agent, and a contesting
+    comment later than that tenure's first claim (`first_id`, which a
+    renewal keeps). A row recorded against a holder who since released,
+    handed off, or let the claim expire and re-claimed is history, not a
+    live cross. Returns [] when nobody holds `ref`. Shared by claim_probe.py
+    (KEEP/YIELD) and board_post.py (when a RELEASE must name its rule).
+    """
+    cl = st["claims"].get(ref)
+    if not cl:
+        return []
+    return [row for row in st["contested"] if row[0] == ref and row[3] == cl["agent"] and row[2] > cl["first_id"]]
+
+
+def release_rule_needed(st: dict, agent: str, refs) -> list:
+    """Why a RELEASE by `agent` on `refs` must name its `rule:`; [] = it need not. Pure.
+
+    A rule is required when a ref carries a live crossed claim (see
+    `live_contests`): either `agent` contested it (its stand-down must cite
+    the tie-break, e.g. `earliest-claim`) or someone else contests it
+    (releasing settles that contest, so say why, e.g. `handoff`). A plain
+    release of an uncontested ref returns [] and board_post.py defaults it
+    to `rule:done`. One reason per live row, in fold order.
+    """
+    reasons = []
+    for ref in refs:
+        for _, contester, cid, holder in live_contests(st, ref):
+            if contester == agent:
+                reasons.append(f"you contested `{ref}` (comment {cid}) while agent:{holder} held it: "
+                               "name the tie-break you stand down under (e.g. rule:earliest-claim)")
+            else:
+                reasons.append(f"agent:{contester} contests `{ref}` (comment {cid}): releasing it settles "
+                               "that contest, so name why (e.g. rule:handoff or rule:superseded)")
+    return reasons
 
 
 def render(st: dict) -> str:
@@ -397,7 +452,7 @@ def _fixture() -> list:
         _c(3, 2, "[agent:beta] CLAIM refs:#12\nalso want this"),
         _c(4, 3, "[agent:beta] STATUS refs:-\nstill going"),
         _c(5, 4, "[agent:beta] CLAIM refs:#20 ttl:30\ntaking docs"),
-        _c(6, 5, "[agent:beta] RELEASE refs:#13\nnot mine but releasing"),
+        _c(6, 5, "[agent:beta] RELEASE refs:#13 rule:earliest-claim\nnot mine but releasing"),
         _c(7, 6, "[agent:alpha] BLOCKER refs:#30 topic:ratchet\nmain red on the ratchet check"),
         _c(8, 7, "[agent:alpha] FIX-CLAIM refs:#30 sha:abc1234 test:tests/test_ratchet.py topic:ratchet\npinned"),
         _c(9, 8, "[agent:beta] BLOCKER refs:#31 topic:ratchet\nred again, same class"),
@@ -454,6 +509,60 @@ def _selftest() -> int:
     def expired_claim_reclaimable():
         text = rendered([_c(1, 0, "[agent:beta] CLAIM refs:#20 ttl:5\nx"), _c(2, 10, "[agent:alpha] CLAIM refs:#20\nmine now")])
         return "`#20` - agent:alpha" in text and "contested" not in text, text
+
+    def release_with_rule_frees_ref():
+        text = rendered([_c(1, 0, "[agent:alpha] CLAIM refs:#9 ttl:30\nx"),
+                         _c(2, 1, "[agent:alpha] RELEASE refs:#9 rule:earliest-claim\nyielding")])
+        claims_block = text.split("### Claims")[1].split("###")[0]
+        return "#9" not in claims_block and "- none" in claims_block, text
+
+    def legacy_release_without_rule_frees_ref():
+        # A RELEASE posted before `rule:` existed stays valid on read: `rule`
+        # is required only when composing a post, never when folding one.
+        text = rendered([_c(1, 0, "[agent:alpha] CLAIM refs:#9 ttl:30\nx"),
+                         _c(2, 1, "[agent:alpha] RELEASE refs:#9\ndone with it")])
+        claims_block = text.split("### Claims")[1].split("###")[0]
+        return "#9" not in claims_block and "0 malformed" in text, text
+
+    def loser_release_clears_contest():
+        # beta crossed alpha's claim, then stood down: its RELEASE removes its
+        # contested row instead of being ignored as a non-holder's no-op.
+        st = fold([_c(1, 0, "[agent:alpha] CLAIM refs:#55 ttl:60\nx"), _c(2, 1, "[agent:beta] CLAIM refs:#55 ttl:60\nx"),
+                   _c(3, 2, "[agent:beta] RELEASE refs:#55 rule:earliest-claim\nalpha claimed first")], now)
+        text = render(st)
+        return (st["contested"] == [] and st["ignored"] == [] and st["claims"]["#55"]["agent"] == "alpha"
+                and "- contested:" not in text and "- ignored release" not in text), text
+
+    def renewal_keeps_first_claim():
+        st = fold([_c(1, 0, "[agent:alpha] CLAIM refs:#55 ttl:60\nx"), _c(2, 1, "[agent:beta] CLAIM refs:#55 ttl:60\nx"),
+                   _c(3, 5, "[agent:alpha] CLAIM refs:#55 ttl:60\nheartbeat")], now)
+        cl = st["claims"]["#55"]
+        return (cl["id"] == 3 and cl.get("first_id") == 1 and cl.get("first_since") == bc.parse_ts(T0)
+                and live_contests(st, "#55") == [("#55", "beta", 2, "alpha")]), cl
+
+    def contests_die_with_the_tenure():
+        # Released then re-claimed (by anyone), expired then re-claimed, or
+        # handed off: a row recorded against the old tenure is history.
+        base = [_c(1, 0, "[agent:alpha] CLAIM refs:#55 ttl:10\nx"), _c(2, 1, "[agent:beta] CLAIM refs:#55\nx")]
+        worlds = {
+            "release-then-gamma": base + [_c(3, 2, "[agent:alpha] RELEASE refs:#55 rule:done\nx"),
+                                          _c(4, 3, "[agent:gamma] CLAIM refs:#55\nx")],
+            "release-then-alpha": base + [_c(3, 2, "[agent:alpha] RELEASE refs:#55 rule:done\nx"),
+                                          _c(4, 3, "[agent:alpha] CLAIM refs:#55\nx")],
+            "expired-then-alpha": base + [_c(3, 20, "[agent:alpha] CLAIM refs:#55\nx")],
+            "handoff-to-gamma": base + [_c(3, 2, "[agent:alpha] HANDOFF refs:#55 to:gamma\nx")],
+        }
+        live = {k: live_contests(fold(v, now), "#55") for k, v in worlds.items()}
+        return all(v == [] for v in live.values()), live
+
+    def release_rule_needed_cases():
+        crossed = fold([_c(1, 0, "[agent:alpha] CLAIM refs:#55 ttl:60\nx"), _c(2, 1, "[agent:beta] CLAIM refs:#55\nx"),
+                        _c(3, 2, "[agent:alpha] CLAIM refs:#56 ttl:60\nx")], now)
+        loser, holder = release_rule_needed(crossed, "beta", ["#55"]), release_rule_needed(crossed, "alpha", ["#55"])
+        plain = release_rule_needed(crossed, "alpha", ["#56"])
+        ok = (len(loser) == 1 and "earliest-claim" in loser[0] and len(holder) == 1 and "agent:beta" in holder[0]
+              and plain == [])
+        return ok, (loser, holder, plain)
 
     def write_appends_then_idempotent():
         gh = bc.FakeGh(_fixture(), body="Protocol text the owner wrote.\n")
@@ -620,6 +729,12 @@ def _selftest() -> int:
         ("deterministic-under-shuffle", deterministic_under_shuffle),
         ("holder-reclaim-renews", renew_by_holder),
         ("expired-claim-reclaimable", expired_claim_reclaimable),
+        ("release-with-rule-frees-ref", release_with_rule_frees_ref),
+        ("legacy-release-without-rule-frees-ref", legacy_release_without_rule_frees_ref),
+        ("loser-release-clears-contest", loser_release_clears_contest),
+        ("renewal-keeps-first-claim", renewal_keeps_first_claim),
+        ("contests-die-with-the-tenure", contests_die_with_the_tenure),
+        ("release-rule-needed-cases", release_rule_needed_cases),
         ("write-appends-then-idempotent", write_appends_then_idempotent),
         ("write-replaces-between-markers-only", write_replaces_between_markers_only),
         ("malformed-markers-refused", malformed_markers_refused),

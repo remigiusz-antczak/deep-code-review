@@ -156,7 +156,9 @@ Every user-facing output the suite produces — message, report, plan, table, or
 template, not just messages — clears the no-slop bar (BLUF: lead with the answer,
 numbers over adjectives, no filler) before it ships; when `communication-structure`
 is installed it is the fuller standard. The conductor holds every skill's output to
-that bar.
+that bar. In an unattended run, that means one line per material landing to the
+human, no status essays — `agentic-delivery`'s `unattended-operating-mode.md`
+**Less talk, more work**; not restated here.
 
 ## Definition of done
 - The right skill was named for the (stage, area, artifact) — not a method

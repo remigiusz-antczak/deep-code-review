@@ -42,6 +42,15 @@ RULES (each rejection names the rule; exit 1)
   whole quoted string, never a bare substring. A claim of "fixed" is thus
   pinned to a commit on the governing branch and a regression test that
   exists in it.
+- RELEASE carries `rule:` from a closed set (earliest-claim, done,
+  superseded, handoff). With no `--rule` the script reads the board: on a
+  ref with a live crossed claim (you contested it, or a peer contests your
+  hold) the RELEASE is rejected until it names one (a loser's stand-down
+  cites `earliest-claim`, the verdict `claim_probe.py` prints as YIELD) —
+  never yield on a peer's own "I stopped" message alone
+  (`multi-session-coordination.md`); a holder's plain release gets
+  `rule:done`. An unreadable board fails closed (exit 2). The requirement is
+  post-time only: a RELEASE that predates `rule:` still frees its claim.
 - AUDIT requires `--sha` and `--verdict gap|done|na`: one peer's measured
   verdict on each ref, taken at a commit that must be an ancestor of the
   default branch (the same check as FIX-CLAIM's sha). It is the shared
@@ -78,9 +87,11 @@ import shlex
 import subprocess
 import sys
 import tempfile
+from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import board_common as bc  # noqa: E402  (sibling module, path set above)
+import board_state as bs  # noqa: E402
 
 OK = 0
 REJECTED = 1
@@ -257,13 +268,40 @@ def verify_fix_claim(sha: str, test: str, default_branch: str | None, repo_dir: 
     return []
 
 
-def compose(args, body: str, rules: list, runner) -> tuple:
-    """Validate one post; return (violations, composed_text). Pure except git.
+def settle_release_rule(args, fields: dict, runner) -> list:
+    """Decide a `--rule`-less RELEASE's `rule:` from the board; return violations.
 
-    Side-effects: only the read-only git queries a FIX-CLAIM or AUDIT needs.
+    Reads and folds the board (`board_state.read_board` + `fold`): when any
+    ref carries a live crossed claim (`board_state.release_rule_needed`) the
+    RELEASE must name its rule and one violation per reason is returned;
+    otherwise it is a plain release and `fields["rule"]` is set to `done`.
+    Side-effects: two read-only `gh api` calls through `runner`; mutates
+    `fields`. Raises bc.ForgeError on a failed, truncated, or unfoldable
+    read, which the caller turns into exit 2 — an unread board is not an
+    uncontested one.
+    """
+    _, comments = bs.read_board(args.repo, args.issue, runner)
+    try:
+        state = bs.fold(comments, datetime.now(timezone.utc))
+    except (KeyError, TypeError, ValueError) as exc:
+        raise bc.ForgeError(f"board comments could not be folded ({exc})") from exc
+    refs = [r for r in args.refs.split(",") if r != "-"]
+    reasons = bs.release_rule_needed(state, args.agent, refs)
+    if reasons:
+        return [f"RELEASE requires rule: here; {reason}" for reason in reasons]
+    fields["rule"] = "done"
+    return []
+
+
+def compose(args, body: str, rules: list, runner) -> tuple:
+    """Validate one post; return (violations, composed_text). Pure except git and the board read.
+
+    Side-effects: only the read-only git queries a FIX-CLAIM or AUDIT needs,
+    and, for a RELEASE with no --rule, the board read in settle_release_rule.
     """
     fields = {k: str(v) for k, v in (("sha", args.sha), ("test", args.test), ("verdict", args.verdict), ("topic", args.topic),
-                                     ("ttl", args.ttl), ("to", args.to), ("of", args.of), ("gate", args.gate)) if v is not None}
+                                     ("ttl", args.ttl), ("to", args.to), ("of", args.of), ("gate", args.gate),
+                                     ("rule", args.rule)) if v is not None}
     errors = []
     if not bc.validate_agent(args.agent):
         errors.append("--agent must match [A-Za-z0-9][A-Za-z0-9._-]{0,63}")
@@ -275,6 +313,8 @@ def compose(args, body: str, rules: list, runner) -> tuple:
         errors.append("body is only an acknowledgement: your board_sync.py cursor advance is the ack")
     if stripped.startswith("[agent:"):
         errors.append("body starts with its own [agent:] header; the script writes the only header")
+    if args.type == "RELEASE" and "rule" not in fields and not errors:
+        errors += settle_release_rule(args, fields, runner)
     header = bc.format_header(args.agent, args.type, args.refs, fields)
     text = f"{header}\n{body.rstrip()}\n"
     if len(text) > MAX_POST_CHARS:
@@ -304,6 +344,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--to")
     p.add_argument("--of")
     p.add_argument("--gate")
+    p.add_argument("--rule", help=f"RELEASE only: {' | '.join(bc.RELEASE_RULES)}; required on a contested ref, "
+                                  "else defaults to done")
     p.add_argument("--default-branch")
     p.add_argument("--repo-dir", default=".")
     p.add_argument("--banlist")
@@ -333,7 +375,7 @@ def run(argv, runner, out=sys.stdout) -> int:
             body = fh.read()
         rules = load_rules(args.banlist, args.repo_dir, runner)
         errors, text = compose(args, body, rules, runner)
-    except (OSError, ValueError, GitError) as exc:
+    except (OSError, ValueError, GitError, bc.ForgeError) as exc:
         print(f"board_post: {exc}", file=sys.stderr)
         return ERROR
     if errors:
@@ -395,11 +437,12 @@ def _selftest() -> int:
     with open(bad_banlist, "w") as fh:
         fh.write("Acme[\n")
 
-    def attempt(body, *extra, post=False):
+    def attempt(body, *extra, post=False, board=(), outage=False):
         path = os.path.join(tmp, f"body-{len(os.listdir(tmp))}.md")
         with open(path, "w") as fh:
             fh.write(body)
-        gh = bc.FakeGh()
+        gh = bc.FakeGh([bc.make_comment(i, text, "2026-01-05T10:00:00Z") for i, text in enumerate(board, 1)])
+        gh.fail = outage
         runner = lambda a, cwd=None: gh(a, cwd) if a[0] == "gh" else bc.default_runner(a, cwd)  # noqa: E731
         argv = ["--repo", "acme/board", "--issue", "7", "--agent", "alpha", "--body-file", path,
                 "--repo-dir", g["repo"], "--default-branch", "main", "--banlist", banlist, *extra]
@@ -408,8 +451,8 @@ def _selftest() -> int:
         result, stderr = _capture_stderr(lambda buf: run(argv, runner, buf))
         return result, stderr, gh, path
 
-    def expect(code_want, body, *extra, needle="", post=False, absent=""):
-        (rc, stdout), stderr, gh, path = attempt(body, *extra, post=post)
+    def expect(code_want, body, *extra, needle="", post=False, absent="", board=(), outage=False):
+        (rc, stdout), stderr, gh, path = attempt(body, *extra, post=post, board=board, outage=outage)
         ok = rc == code_want and needle in (stderr + stdout) and not (absent and absent in stderr + stdout)
         return ok, f"rc={rc} want={code_want} out={stdout!r} err={stderr!r}"
 
@@ -438,6 +481,14 @@ def _selftest() -> int:
         body = "q" * (1000 - len(header) - 1)  # literal 1000: the cap is pinned, not read back
         return expect(OK, body, "--type", "QUESTION")
 
+    def release_plain_holder_defaults_done():
+        # A holder releasing an uncontested claim needs no --rule: the script
+        # reads the board and writes `rule:done` into the header itself.
+        (rc, stdout), stderr, _, path = attempt("Shipped; releasing.", "--type", "RELEASE", "--refs", "#12",
+                                                board=("[agent:alpha] CLAIM refs:#12\ntaking it",))
+        posted = open(path + ".post").read() if rc == OK else ""
+        return rc == OK and posted.startswith("[agent:alpha] RELEASE refs:#12 rule:done\n"), f"{rc} {stderr!r} {posted!r}"
+
     def token_not_echoed():
         (rc, _), stderr, _, _ = attempt(f"use {token}", "--type", "QUESTION")
         return rc == REJECTED and "forge token" in stderr and token not in stderr, stderr
@@ -463,6 +514,21 @@ def _selftest() -> int:
         ("banlist-ere-word-boundary-not-substring", lambda: expect(OK, "ask Janet first", "--type", "QUESTION")),
         ("banlist-invalid-ere-fails-closed", lambda: expect(ERROR, "x y", "--type", "QUESTION", "--banlist", bad_banlist, needle="not a valid grep -E pattern", absent="Acme[")),
         ("zero-ttl-rejected", lambda: expect(REJECTED, "taking it", "--type", "CLAIM", "--refs", "#12", "--ttl", "0", needle="ttl must be")),
+        ("release-plain-holder-defaults-done", release_plain_holder_defaults_done),
+        ("release-by-loser-without-rule-rejected", lambda: expect(
+            REJECTED, "standing down", "--type", "RELEASE", "--refs", "#12", needle="earliest-claim",
+            board=("[agent:beta] CLAIM refs:#12\nx", "[agent:alpha] CLAIM refs:#12\ncrossed"))),
+        ("release-of-contested-hold-without-rule-rejected", lambda: expect(
+            REJECTED, "done here", "--type", "RELEASE", "--refs", "#12", needle="agent:beta contests",
+            board=("[agent:alpha] CLAIM refs:#12\nx", "[agent:beta] CLAIM refs:#12\ncrossed"))),
+        ("release-by-loser-with-rule-accepted", lambda: expect(
+            OK, "standing down: beta claimed first.", "--type", "RELEASE", "--refs", "#12", "--rule", "earliest-claim",
+            board=("[agent:beta] CLAIM refs:#12\nx", "[agent:alpha] CLAIM refs:#12\ncrossed"))),
+        ("release-rule-outside-closed-set-rejected", lambda: expect(
+            REJECTED, "standing down", "--type", "RELEASE", "--refs", "#12", "--rule", "because", needle="rule: has a malformed")),
+        ("release-board-unreadable-fails-closed", lambda: expect(
+            ERROR, "done here", "--type", "RELEASE", "--refs", "#12", needle="simulated outage", outage=True)),
+        ("release-with-rule-accepted", lambda: expect(OK, "standing down: peer claimed first.", "--type", "RELEASE", "--refs", "#12", "--rule", "earliest-claim")),
         ("claim-without-refs-rejected", lambda: expect(REJECTED, "taking it", "--type", "CLAIM", needle="must name the item")),
         ("bad-agent-id-rejected", lambda: expect(REJECTED, "x y", "--type", "QUESTION", "--agent", "a b", needle="--agent")),
         ("fix-claim-without-sha-rejected", lambda: expect(REJECTED, "fixed", *fix, "--test", "tests/test_ratchet.py", needle="requires sha:")),

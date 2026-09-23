@@ -200,7 +200,11 @@ Also usable **as a one-shot prompt** (paste the installed `SKILL.md`, name the
 target and scope) or **as a human checklist** (walk the domain sections A–W
 directly). Chat voice is not vendored — if you want compressed assistant prose,
 add [JuliusBrussee/caveman](https://github.com/JuliusBrussee/caveman) separately;
-code, PR bodies, and docs stay normal English.
+code, PR bodies, and docs stay normal English. For a minimal-code bias on plumbing,
+bug-fix, and QA work, [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail)
+pairs with it — pin a reviewed release, and exempt design-port work (exact design
+fidelity and required tests/docs beat minimal code; ponytail can be scoped away
+from a lane type with `PONYTAIL_SUBAGENT_MATCHER`).
 
 ---
 

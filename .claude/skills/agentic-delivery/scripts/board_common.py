@@ -8,7 +8,9 @@ all speak ONE typed-post grammar over ONE forge channel (a GitHub issue's
 comment stream). Keeping the grammar, the field rules, and the `gh api`
 plumbing here means the three scripts can never disagree about what a valid
 post is: a post `board_post.py` accepts is exactly a post `board_state.py`
-folds into state, and a post it rejects is exactly one the state ignores.
+folds into state, and a post it rejects is exactly one the state ignores —
+save one deliberate exception: RELEASE's `rule:` is required at post time
+only (see TYPE_REQUIRED), so a RELEASE that predates it still folds.
 
 THE POST GRAMMAR (first line of every coordination comment)
 -----------------------------------------------------------
@@ -53,7 +55,7 @@ from urllib.parse import parse_qs, urlsplit
 TYPES = ("CLAIM", "RELEASE", "DECISION", "HANDOFF", "BLOCKER", "FIX-CLAIM", "QUESTION", "ANSWER", "AUDIT")
 CHATTER_TYPES = ("STATUS", "ACK", "READY", "LANDED")
 
-FIELD_ORDER = ("sha", "test", "verdict", "topic", "ttl", "to", "of", "gate")
+FIELD_ORDER = ("sha", "test", "verdict", "topic", "ttl", "to", "of", "gate", "rule")
 
 AGENT_PATTERN = r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}"
 _AGENT_RE = re.compile(rf"^{AGENT_PATTERN}$")
@@ -63,6 +65,12 @@ _REPO_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 
 MAX_TTL_MINUTES = 7 * 24 * 60  # a claim older than a week is abandoned, not "held"
 DEFAULT_TTL_MINUTES = 120
+
+# The closed set a RELEASE's `rule:` names: `earliest-claim` (the loser of a
+# crossed claim stands down; claim_probe.py's YIELD), `done` (the work is
+# finished; a holder's plain release gets it by default), `superseded` (the
+# item no longer needs doing), `handoff` (released for a named peer to claim).
+RELEASE_RULES = ("earliest-claim", "done", "superseded", "handoff")
 
 FIELD_RULES = {
     "sha": re.compile(r"^[0-9a-f]{7,40}$"),
@@ -75,13 +83,19 @@ FIELD_RULES = {
     # AUDIT outcome for one item: a real gap to build, already done, or not
     # applicable (no counterpart). Only `gap` is dispatchable work.
     "verdict": re.compile(r"^(?:gap|done|na)$"),
+    # Why a RELEASE stands down, from RELEASE_RULES only: never a free-text
+    # excuse. Optional in the grammar, so a RELEASE posted before `rule:`
+    # existed still frees its claim on read; board_post.py requires it at
+    # post time on a contested ref (multi-session-coordination.md: never
+    # yield on a peer's own stand-down message alone).
+    "rule": re.compile(rf"^(?:{'|'.join(map(re.escape, RELEASE_RULES))})$"),
 }
 
 # Which optional fields each TYPE may carry. A field outside its TYPE's set is
 # a grammar error, so e.g. a CLAIM cannot carry `sha:` and look like a fix.
 TYPE_FIELDS = {
     "CLAIM": {"ttl"},
-    "RELEASE": set(),
+    "RELEASE": {"rule"},
     "HANDOFF": {"to", "ttl"},
     "DECISION": {"of", "topic"},
     "BLOCKER": {"topic", "gate"},
@@ -90,6 +104,8 @@ TYPE_FIELDS = {
     "ANSWER": {"of"},
     "AUDIT": {"sha", "verdict", "topic"},
 }
+# Required on read and write alike. RELEASE's `rule` is deliberately absent:
+# it is a post-time requirement (board_post.py), not a grammar one.
 TYPE_REQUIRED = {
     "HANDOFF": {"to"},
     "FIX-CLAIM": {"sha", "test"},
@@ -379,6 +395,12 @@ def _selftest() -> int:
         ("field-not-allowed-errors", lambda: (bool(parse_header("[agent:a] CLAIM refs:#1 sha:abc1234")["errors"]), "no error")),
         ("duplicate-field-errors", lambda: (bool(parse_header("[agent:a] CLAIM refs:#1 ttl:5 ttl:6")["errors"]), "no error")),
         ("claim-needs-refs", lambda: (bool(validate_post("CLAIM", "-", {})), "accepted refs:-")),
+        ("legacy-release-without-rule-parses", lambda: (
+            (lambda p: (p is not None and not p["errors"], p))(parse_header("[agent:a] RELEASE refs:#1")))),
+        ("release-rule-closed-set", lambda: (
+            (lambda ok, bad: (not any(ok) and all(bad), (ok, bad)))(
+                [validate_post("RELEASE", "#1", {"rule": r}) for r in ("earliest-claim", "done", "superseded", "handoff")],
+                [validate_post("RELEASE", "#1", {"rule": r}) for r in ("because", "earliest", "done-ish")]))),
         ("fix-claim-needs-sha", lambda: (any("sha" in e for e in validate_post("FIX-CLAIM", "#1", {"test": "t.py"})), "no sha error")),
         ("audit-roundtrip", lambda: (
             (lambda p: (p is not None and not p["errors"] and p["fields"] == {"sha": "abc1234", "verdict": "na"}, p))(
