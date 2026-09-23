@@ -12,6 +12,21 @@ stale, unread, or already contradicted by the time it's read. Use
 lane's own liveness inside one session; use this file for the peer-to-peer
 case that model doesn't cover.
 
+**Routed triggers** — the full list `SKILL.md` routes here (it names the claim/lock registry, pre-write collision probe, and peer-liveness check itself). Also read this file when designing a
+shared-board reader, deduplicating a broadcast ask that reached every peer at
+once, reconciling two peers' crossed work-splits, coordinating
+a shared machine-wide resource budget across peers, routing an action one peer
+is persistently denied, vetting a peer's correction before acting on it, or breaking a
+mutual pause where two peers each wait on the other, routing backlog items to the machine whose
+resources fit, relaying a shared gate's accepted format to a peer, classifying who merged a PR
+that landed under a peer's merge-hold before calling it a violation, attributing a PR or
+branch's edit/rebase-ownership to a peer under one shared VCS identity, enforcing a standing
+house comms or review-method default so it reaches every spawned subagent and not only the
+main loop, retracting your own in-flight lane before offering that same work to a peer,
+re-verifying a peer-handed work-partition against the governing branch head before
+building its items, backing off a fixed-cadence status post to a peer confirmed
+silent past a missed-cycle threshold, or trusting cross-peer convergence as a backlog-exhausted signal.
+
 **Scripts** (`scripts/`, stdlib Python over `gh api`, each with `--selftest`)
 replace hand-reading and hand-posting a board issue:
 - `scripts/board_sync.py` — run at every loop start and before any claim:
