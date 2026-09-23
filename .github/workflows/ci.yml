@@ -83,6 +83,7 @@ jobs:
           python3 .claude/skills/agentic-delivery/scripts/board_sync.py --selftest
           python3 .claude/skills/agentic-delivery/scripts/board_post.py --selftest
           python3 .claude/skills/agentic-delivery/scripts/board_state.py --selftest
+          python3 .claude/skills/agentic-delivery/scripts/claim_probe.py --selftest
           python3 .claude/skills/agentic-delivery/scripts/refix_gate.py --selftest
           python3 .claude/skills/agentic-delivery/scripts/priority_gate.py --selftest
 

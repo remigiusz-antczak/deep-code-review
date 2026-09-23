@@ -35,15 +35,15 @@ Read this when `method.md` routes here: a gate verdict is disputed, a finding mu
   this is a repro you *did* run, with the wrong mechanism), and from repro-fidelity
   w.r.t. the **build environment** (the production-build bullet next).
 - **Reproduce a built-artifact finding against the build it audits, not the dev
-  server.** The same rule at the environment axis: an audit gate that scores the
-  **production build** (a bundled/minified deploy artifact) can surface a real defect
-  — a control obscured by a sticky header, a WCAG focus-not-obscured failure — that
-  the **dev server never shows**, because minification, CSS ordering, hydration
-  timing, and asset paths differ between them. A dev-server "I can't reproduce it"
-  does **not** refute a production-build finding; reproduce against the same artifact
-  the gate scored (build it, or hit the deployed/preview URL), the way the local≠CI
-  rule names the divergent axis (below). Chasing it on the dev server fixes the wrong
-  tree, or dismisses a live defect.
+  server.** The same rule at the environment axis: a gate scoring the **production
+  build** can surface a real defect (a WCAG focus-not-obscured failure under a sticky
+  header) the **dev server never shows**, because minification, CSS ordering,
+  hydration timing, and asset paths differ. A dev-server "I can't reproduce it" does
+  **not** refute a production-build finding; reproduce against the artifact the gate
+  scored (build it, or hit the deployed/preview URL), per the local≠CI rule (below).
+  Converse: a dev-only symptom (hot-reload remount, dev-mode double-invoked effects, a
+  dev overlay) is not a finding until a scripted path reproduces it on a production
+  build.
 - **A no-regressions gate keys on *reachability*, not surface-position stability.**
   A destructive-change gate that watches a surface label or slot (a top-level nav
   entry, a route path, a menu position) false-fires on a legitimate reorganisation —

@@ -24,6 +24,7 @@ replace hand-reading and hand-posting a board issue:
 - `scripts/board_state.py` — run after any CLAIM, RELEASE, HANDOFF, BLOCKER,
   FIX-CLAIM, or DECISION: renders claims with TTL, known issues, and
   owner-gated items into the issue body between markers.
+- `scripts/claim_probe.py` — run before any claim or write: GO/NO-GO (below).
 
 A coordination lesson closes only when a script or gate enforcing it lands
 with an eval exercising it; prose alone leaves it open.
@@ -145,15 +146,13 @@ the *one-writer-per-file / never-rewrite-another-agent's-WIP* violation this pre
 
 ## Collision-check mechanically before you claim or write — never "read the thread and hope"
 
-Reading the thread and diffing open PRs by hand before every claim, or
-before a shared exclusive step (a merge only one side should run), is easy
-to skip under volume (#597). Fold it into one deterministic pre-write probe
-run before any write-lane or exclusive step: (a) glob-match planned paths
-against the claim registry's active entries; (b) diff live open-PR file
-lists against the same paths — a claim can lag its PR; (c) check the one
-well-known "exclusive role" field and refuse if another peer holds it and is
-still live. Output is go/no-go plus the exact colliding file, issue, or PR —
-never a prose inference a peer might skip.
+Hand-reading the thread and open PRs before a claim or an exclusive step (a
+merge only one side should run) is skipped under volume, and a claim can lag
+its PR (#597, #1102). Before any write-lane or exclusive step run
+`scripts/claim_probe.py --repo R --issue <board> --paths <globs> [--ref
+<item-or-role>]`: it matches live, unexpired CLAIMs (an exclusive-role ref
+included), open and draft PR file lists, and un-PR'd branches, and prints GO
+or NO-GO with the colliding claim, PR, or file. Exit 2 is not GO.
 
 ## An agent-set merge-hold does not bind the human owner — classify a held-PR merge by who merged before calling it a breach
 
