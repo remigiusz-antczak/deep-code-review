@@ -38,15 +38,16 @@ When requirements arrive from several sources (survey-tool CSV rows, doc
 comments, meeting-transcript action items, a design export labelled "latest"),
 **the ledger is the requirement set; no single source is**, and the design is
 one source that often lags the feedback. `scripts/feedback_ledger.py` keeps one
-durable file (default `.claude/feedback-ledger.json` plus a readable `.md`), so no
-lane needs every source in context: `ingest` normalizes and links duplicates
-across sources, `delta --design` marks each item `IN_DESIGN` / `NOT_IN_DESIGN` /
-`CONFLICTS_WITH_DESIGN` / `SUPERSEDED`, and `status --app` marks it `IMPLEMENTED` /
-`PENDING` / `REGRESSED`. `conflicts` prints each owner decision as a two-line
-question; record only the owner's answer with `decide --quote`. The Conductor
-asks and never decides. Before a lane re-aligns to a design, run `accept-file`;
-once the owner commits it as the differ's `--accept`, implemented feedback the
-design lacks cannot be overridden.
+durable file (default `.claude/feedback-ledger.json` + `.md`), so no lane needs
+every source in context: `ingest` links exact restatements, `delta --design`
+marks items `IN_DESIGN` / `NOT_IN_DESIGN` / `CONFLICTS_WITH_DESIGN` /
+`SUPERSEDED`; `status --app` marks them `IMPLEMENTED` / `PENDING` /
+`REGRESSED` / `UNMEASURED`. **The ledger never decides:** only a newer
+same-source item supersedes; every other contradiction or implemented design
+deviation is a `conflicts` question. Record only owner answers
+(`decide --quote`). `accept-file` drafts rows only for owner-decided items;
+once the owner commits it as the differ's `--accept`, a design re-align can't
+override them.
 
 ## Receipt contract (extends the SKILL.md Output contract)
 

@@ -16,45 +16,68 @@ design export is one source among several.
 
 THE MODEL (deterministic; the script never calls a model)
 ---------------------------------------------------------
+THE LEDGER NEVER DECIDES A REQUIREMENT; ONLY THE OWNER DOES. It links exact
+restatements, orders same-source updates, and hands every other disagreement
+to the owner as a question.
+
 Each ledger item is one requirement:
   id          stable 12-hex hash of normalized text + normalized target
+              (plus the ask's fields when that id is already taken)
   source      csv | doc | transcript | design (first source that reported it)
-  source_ref  where in that source: spreadsheet row, comment id, timestamp
-  date        YYYY-MM-DD; the newest date among all linked reports
-  role        author ROLE only (e.g. "designer", "end user") — never a name
+  source_ref  where in that source, reduced to its row/timestamp part
+              ("Jane Smith 00:14:05" -> "00:14:05"); a ref with no number
+              falls back to the row/item position
+  date        YYYY-MM-DD in UTC (an offset is applied before the time is
+              dropped); the newest date among all linked reports
+  role        author ROLE only, and only when it is in the `--roles`
+              allowlist; anything else is "unspecified" — never a name
   target      "section" or "section/element"; the first segment must equal
-              the section id used by the parity inventory (`data-section`)
-  text        the requirement in words (email addresses are redacted)
+              the section id used by the parity inventory (`data-section`).
+              Case, spaces, hyphens, and underscores are one form
+              ("Promo-Banner" = "promo_banner" = "promo banner").
+  text        the requirement in words (emails redacted, @mentions stripped)
   kind        add | change | remove | keep
   expect      the element key the requirement makes checkable, in
               parity_differ's item-key form `kind:role:label` or `kind:label`
               (e.g. `control:button:Export CSV`, `heading:h2:Reports`).
               For `remove` it is the element that must be absent.
   was         optional; for `change`, the element key being replaced
+  attribute   optional; the property the ask sets ("color", "position").
+              Default: a `change` sets its `was` element; add/keep/remove
+              set the presence of `expect`.
+  value       optional; the value the ask sets ("green"). Default: `expect`.
 Transcripts and doc comments arrive already extracted to JSON/CSV by an agent
 or a person; this script only normalizes, links, and compares.
 
-Dedupe (cross-source linking): an incoming item joins an existing item when
-it has the same id, OR the same normalized target and either near-identical
-normalized text (difflib ratio >= 0.9) or the same (kind, expect, was). The
-report is appended to the item's `refs` (so every source stays traceable) and
-the incoming id is kept as an alias. Re-ingesting the same source row is a
-no-op (idempotent).
+Linking (cross-source dedupe): an incoming report joins an existing item only
+when both have the same normalized target, the same id or near-identical
+normalized text (difflib ratio >= 0.9), AND the same ask (kind, expect, was,
+attribute, value). The report is appended to the item's `refs` (every source
+stays traceable) and its id is kept as an alias. Anything else is a separate
+item: "make the Export button green" and "move the Export button to the top"
+are two items. Re-ingesting the same source row is a no-op (idempotent).
 
-Superseding (same element, several requests): items whose full target has an
-element part ("section/element") and is identical are about the same thing.
-The newest date wins and older items are SUPERSEDED. Items on the same date
-cannot be ordered, so they are a feedback-vs-feedback conflict for the owner.
-An owner decision (`decide --choose feedback`) makes its item win over every
-item dated on or before the decision date; an item dated AFTER the decision is
-new information and re-opens a conflict rather than silently winning. A
-`design` or `other` answer lapses the same way when a source re-raises the
-item after the decision date. Section-only targets never supersede each other.
+Contradictions: two items on one normalized target contradict when one needs
+an element the other removes or replaces, when add/keep meets remove on the
+same `section/element`, when they set the same attribute to different values,
+or when two changes of unknown attribute ask for different values. Items
+that do not contradict never affect each other. A contradiction is settled
+without the owner in exactly one case: a newer item reported by the SAME
+single source kind on the same target+attribute supersedes the older one. A
+design row never supersedes feedback by date; every other contradiction —
+cross-source, same date, or unknown attribute — is an owner CONFLICT. An
+owner decision (`decide --choose feedback`) makes its item win over every
+contradicting item dated on or before the decision date; an item dated AFTER
+the decision is new information and re-opens the conflict. A `design` or
+`other` answer lapses the same way when a source re-raises the item after
+the decision date.
 
 COMMANDS
 --------
   ingest --source csv|doc|transcript|design --file F [--map mapping.json]
+         [--roles "designer,end user"]
       F is .csv (header row) or .json (a list of objects, or {"items": [...]}).
+      `--roles` is the role allowlist; without it every role is "unspecified".
       The mapping maps ledger field -> source column; a value starting with
       "=" is a constant (e.g. {"kind": "=add"}). Required per row: text,
       target, kind, expect, date. Any bad row rejects the whole file and
@@ -65,11 +88,15 @@ COMMANDS
       CONFLICTS_WITH_DESIGN (the design shows the `was` element, or still
       shows what the item removes), or SUPERSEDED.
   status --app F [--date YYYY-MM-DD]
-      Per live item: IMPLEMENTED, PENDING, or REGRESSED (was implemented at
-      an earlier status run, now missing).
+      Per live item: IMPLEMENTED, PENDING, REGRESSED (was implemented at
+      an earlier status run, now missing), or UNMEASURED (its section is
+      missing from the app export — never counted as implemented; exit 2
+      and the ledger is left untouched).
   conflicts
       Only the items needing an owner decision, each as a question of at
-      most two lines with both options, dates, and source refs.
+      most two lines with both options, dates, and source refs: open
+      contradictions, CONFLICTS_WITH_DESIGN items, and IMPLEMENTED items
+      that are NOT_IN_DESIGN (the app deviates from the design).
   decide --id ID --choose feedback|design|other --quote "<owner words>" --date D
       Records the OWNER's answer verbatim. The agent asks; it never decides.
       `design` declines the item; `other` closes it (ingest the owner's
@@ -77,8 +104,10 @@ COMMANDS
   accept-file --design D --app A [--out F]
       Drafts parity_differ's 7-field accepted-deviations TSV
       (`section status item app-value count reason owner-quote-or-commit`)
-      for every IMPLEMENTED item that intentionally deviates from the design
-      (NOT_IN_DESIGN, or CONFLICTS_WITH_DESIGN decided `feedback`). D and A
+      ONLY for IMPLEMENTED items the owner decided to keep against the design
+      (NOT_IN_DESIGN or CONFLICTS_WITH_DESIGN with `decide --choose
+      feedback`); the owner column is that recorded quote and date. An
+      undecided deviation stays in `conflicts`, never in the file. D and A
       must be the HTML renders `delta` and `status` last read (sha256
       checked). The rows are the parity differ's own printed differences
       (its public `compare` result, the same dict `--json` prints), so
@@ -111,7 +140,10 @@ FILES
 -----
   --ledger PATH (default `.claude/feedback-ledger.json`) plus a
   human-readable companion `<same name>.md`, rewritten on every change.
-  Writes are atomic (temp file + rename).
+  Every write command (ingest, delta, status, decide) holds an exclusive
+  `fcntl` lock on `<ledger>.lock` for its whole read-modify-write (exit 2
+  after LOCK_TIMEOUT_S), and every write is atomic (fsynced temp + rename).
+  `fcntl` makes the script POSIX-only by design.
 
 EXIT CODES (fail closed)
 ------------------------
@@ -121,6 +153,7 @@ EXIT CODES (fail closed)
      (an eligible item with no covering parity row)
   2  input error: missing/unreadable/malformed file, bad row, unknown id,
      empty owner quote, missing ledger, an inventory with no element data,
+     an UNMEASURED item (status), a ledger locked by another writer,
      or accept-file renders that differ from the ones delta/status read or
      that the parity differ cannot compare
 
@@ -135,6 +168,7 @@ import argparse
 import contextlib
 import csv
 import difflib
+import fcntl
 import hashlib
 import importlib.util
 import io
@@ -144,8 +178,9 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
 from datetime import date as _date
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 # Loading the sibling parity_differ must not litter __pycache__ into a
@@ -159,9 +194,14 @@ SCHEMA = 1
 SOURCES = ("csv", "doc", "transcript", "design")
 KINDS = ("add", "change", "remove", "keep")
 CHOICES = ("feedback", "design", "other")
-FIELDS = ("text", "target", "kind", "expect", "was", "date", "role", "source_ref")
+FIELDS = ("text", "target", "kind", "expect", "was", "attribute", "value", "date", "role", "source_ref")
 REQUIRED = ("text", "target", "kind", "expect", "date")
 NEAR_DUP_RATIO = 0.9
+LOCK_TIMEOUT_S = 10.0
+# Words a source_ref may keep beside numbers and timestamps; every other word
+# (a name, a team, an email handle) is dropped, so a ref locates, never identifies.
+REF_WORDS = frozenset({"row", "item", "comment", "line", "page", "slide", "cell", "note", "reply",
+                       "thread", "entry", "message", "frame", "at"})
 # Every key the commands read from a stored item; a ledger item missing one fails closed.
 _ITEM_KEYS = ("id", "target", "kind", "expect", "was", "text", "date", "refs", "aliases", "decisions")
 
@@ -169,10 +209,15 @@ IN_DESIGN = "IN_DESIGN"
 NOT_IN_DESIGN = "NOT_IN_DESIGN"
 CONFLICTS = "CONFLICTS_WITH_DESIGN"
 SUPERSEDED = "SUPERSEDED"
-IMPLEMENTED, PENDING, REGRESSED = "IMPLEMENTED", "PENDING", "REGRESSED"
+IMPLEMENTED, PENDING, REGRESSED, UNMEASURED = "IMPLEMENTED", "PENDING", "REGRESSED", "UNMEASURED"
 
 _EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
-_DATE = re.compile(r"^(\d{4}-\d{2}-\d{2})(?:[T ][0-9:.]+(?:Z|[+-]\d{2}:?\d{2})?)?$")
+_DATE = re.compile(r"^(\d{4}-\d{2}-\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?"
+                   r"(Z|[+-]\d{2}:?\d{2})?)?$")
+_MENTION = re.compile(r"(?<![\w@])@\w[\w.-]*")
+_REF_TOKEN = re.compile(r"\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2})?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?)?"
+                        r"|\d{1,2}:\d{2}(?::\d{2})?(?:\.\d+)?|\d+|[^\W\d_]+")
+_SEGMENT_SEP = re.compile(r"[\s_-]+")
 
 
 class InputError(Exception):
@@ -190,13 +235,22 @@ def norm_text(text: str) -> str:
     return " ".join(re.sub(r"[^0-9a-z]+", " ", text.casefold()).split())
 
 
+def norm_segment(segment: str) -> str:
+    """Case-fold one target segment or section id; hyphen, underscore, and whitespace runs become one space.
+
+    "Promo-Banner", "promo_banner", and "PROMO  banner" are the same segment,
+    so the same element named three ways is one target (and one section).
+    """
+    return " ".join(_SEGMENT_SEP.sub(" ", segment).split()).casefold()
+
+
 def norm_target(target: str) -> str:
     """Normalize a `section[/element...]` target; raise InputError when empty.
 
-    Each segment is whitespace-collapsed and case-folded. An empty segment
-    (e.g. "reports//x" or "/x") is rejected rather than guessed at.
+    Each segment goes through `norm_segment`. An empty segment (e.g.
+    "reports//x" or "/x") is rejected rather than guessed at.
     """
-    parts = [" ".join(p.split()).casefold() for p in target.split("/")]
+    parts = [norm_segment(p) for p in target.split("/")]
     if not parts or any(not p for p in parts):
         raise InputError(f"target {target!r} has an empty segment")
     return "/".join(parts)
@@ -214,20 +268,59 @@ def item_id(text: str, target: str) -> str:
 
 
 def parse_date(value: str, where: str) -> str:
-    """Return the YYYY-MM-DD part of an ISO date/datetime, or raise InputError."""
+    """Return the UTC calendar day (YYYY-MM-DD) of an ISO date/datetime, or raise InputError.
+
+    A datetime with an offset is converted to UTC BEFORE the time is dropped
+    ("2026-09-10T23:30:00-05:00" is 2026-09-11), so one moment reported by
+    sources in different zones gets one date. A datetime without an offset,
+    and a bare date, are read as UTC.
+    """
     match = _DATE.match(value.strip())
     if not match:
         raise InputError(f"{where}: date {value!r} is not ISO YYYY-MM-DD")
+    day, hour, minute, second, offset = match.groups()
     try:
-        _date.fromisoformat(match.group(1))
+        stamp = datetime.combine(_date.fromisoformat(day), datetime.min.time(), timezone.utc)
+        if hour is not None:
+            stamp = stamp.replace(hour=int(hour), minute=int(minute), second=int(second or 0))
+        if offset and offset != "Z":
+            hours, minutes = int(offset[1:3]), int(offset[-2:])
+            if hours > 23 or minutes > 59:
+                raise ValueError("offset out of range")
+            stamp -= (1 if offset[0] == "+" else -1) * timedelta(hours=hours, minutes=minutes)
     except ValueError as exc:
         raise InputError(f"{where}: date {value!r} is not a real date") from exc
-    return match.group(1)
+    return stamp.date().isoformat()
 
 
 def redact(text: str) -> str:
-    """Replace email addresses with `[email]`; the ledger records roles, not people."""
-    return _EMAIL.sub("[email]", text)
+    """Replace email addresses with `[email]` and strip @mentions; the ledger records roles, not people."""
+    return " ".join(_MENTION.sub("", _EMAIL.sub("[email]", text)).split())
+
+
+def safe_ref(ref: str, default: str) -> str:
+    """Keep only the locating part of a source_ref: numbers, timestamps, and REF_WORDS.
+
+    "Jane Smith 00:14:05" -> "00:14:05"; "row 12 (Bruce Wayne)" -> "row 12".
+    A ref left with no number or timestamp falls back to `default` (the
+    row/item position), so a name-only ref never reaches the ledger.
+    """
+    kept = [t for t in _REF_TOKEN.findall(ref) if t[0].isdigit() or t.casefold() in REF_WORDS]
+    return " ".join(kept) if any(t[0].isdigit() for t in kept) else default
+
+
+def parse_roles(spec: str | None) -> dict:
+    """Parse the `--roles` allowlist ("designer,end user") into {casefolded: as configured}.
+
+    No allowlist -> {} -> every role is recorded as "unspecified". An empty
+    entry fails closed.
+    """
+    if spec is None:
+        return {}
+    roles = [" ".join(r.split()) for r in spec.split(",")]
+    if any(not r for r in roles):
+        raise InputError("--roles must be a comma-separated list of non-empty role names")
+    return {r.casefold(): r for r in roles}
 
 
 def one_line(text: str, limit: int = 0) -> str:
@@ -306,12 +399,15 @@ def load_rows(path: str) -> list[tuple[str, dict]]:
     return rows
 
 
-def normalize_row(raw: dict, mapping: dict, source: str, default_ref: str) -> dict:
+def normalize_row(raw: dict, mapping: dict, source: str, default_ref: str, roles: dict | None = None) -> dict:
     """Turn one source row into a ledger report; raise InputError on any gap.
 
     Field lookup: the mapping's column (or "=constant"), else the ledger field
     name itself. Required fields must be non-empty; `kind` must be one of
-    KINDS; `date` must be ISO. Names are never read — only `role`.
+    KINDS; `date` must be ISO (normalized to UTC). Names are never kept:
+    `role` is recorded only when it is in the `roles` allowlist (else
+    "unspecified"), `source_ref` keeps only its row/timestamp part, and text
+    loses emails and @mentions.
     """
     def get(field: str) -> str:
         """Resolve one ledger field from the row via the mapping."""
@@ -321,7 +417,7 @@ def normalize_row(raw: dict, mapping: dict, source: str, default_ref: str) -> di
         value = raw.get(spec)
         return "" if value is None else str(value).strip()
 
-    ref = get("source_ref") or default_ref
+    ref = safe_ref(one_line(get("source_ref")), default_ref)
     where = f"{source} {ref}"
     for field in REQUIRED:
         if not get(field):
@@ -335,36 +431,52 @@ def normalize_row(raw: dict, mapping: dict, source: str, default_ref: str) -> di
     return {
         "id": item_id(text, target),
         "source": source,
-        "source_ref": one_line(ref),
+        "source_ref": ref,
         "date": parse_date(get("date"), where),
-        "role": redact(one_line(get("role"))) or "unspecified",
+        "role": (roles or {}).get(one_line(get("role")).casefold(), "unspecified"),
         "target": target,
         "text": text,
         "kind": kind,
         "expect": one_line(get("expect")),
         "was": one_line(get("was")),
+        "attribute": redact(one_line(get("attribute"))),
+        "value": redact(one_line(get("value"))),
     }
 
 
+def _fields(item: dict) -> tuple:
+    """What an item asks for, normalized: (kind, expect, was, attribute, value)."""
+    return (item["kind"], norm_key(item["expect"]), norm_key(item["was"] or ""),
+            norm_text(item.get("attribute") or ""), norm_text(item.get("value") or ""))
+
+
 def _same_requirement(item: dict, new: dict) -> bool:
-    """True when `new` restates `item` (same target + near-same text or same anchor)."""
-    if norm_target(item["target"]) != norm_target(new["target"]):
+    """True when `new` restates `item`: same target, same id or near-identical text, and the same ask.
+
+    Text alone never links: "set the page size to 10 rows" and "... 20 rows"
+    are >= 0.9 similar but ask different things, so they stay two items and
+    `contradicts` hands them to the owner. A shared anchor with different
+    words ("rename it Export CSV" beside "change Download to Export CSV")
+    stays a separate, agreeing item.
+    """
+    if norm_target(item["target"]) != norm_target(new["target"]) or _fields(item) != _fields(new):
         return False
-    if difflib.SequenceMatcher(None, norm_text(item["text"]), norm_text(new["text"])).ratio() >= NEAR_DUP_RATIO:
+    if item["id"] == new["id"] or new["id"] in item["aliases"]:
         return True
-    return (item["kind"], norm_key(item["expect"]), norm_key(item["was"])) == (
-        new["kind"], norm_key(new["expect"]), norm_key(new["was"]))
+    return difflib.SequenceMatcher(None, norm_text(item["text"]), norm_text(new["text"])).ratio() >= NEAR_DUP_RATIO
 
 
 def merge_report(ledger: dict, new: dict) -> str:
     """Add one normalized report to the ledger; return "new", "linked", or "present".
 
-    Links to an existing item by id/alias or by `_same_requirement`; a report
-    whose (source, source_ref) is already recorded on that item is a no-op.
+    Links to an existing item only by `_same_requirement`; a report whose
+    (source, source_ref) is already recorded on that item is a no-op. A new
+    item whose text id is already taken by a different ask gets an id that
+    also hashes its fields, so ids stay unique.
     """
     ref = {k: new[k] for k in ("source", "source_ref", "date", "role", "text")}
     for item in ledger["items"]:
-        if item["id"] == new["id"] or new["id"] in item["aliases"] or _same_requirement(item, new):
+        if _same_requirement(item, new):
             if any(r["source"] == ref["source"] and r["source_ref"] == ref["source_ref"] for r in item["refs"]):
                 return "present"
             item["refs"].append(ref)
@@ -372,6 +484,12 @@ def merge_report(ledger: dict, new: dict) -> str:
             if new["id"] != item["id"] and new["id"] not in item["aliases"]:
                 item["aliases"].append(new["id"])
             return "linked"
+    taken = {i["id"] for i in ledger["items"]} | {a for i in ledger["items"] for a in i["aliases"]}
+    if new["id"] in taken:
+        salt = "|".join(_fields(new)).encode("utf-8")
+        new = {**new, "id": hashlib.sha256(new["id"].encode("utf-8") + b"|" + salt).hexdigest()[:12]}
+        if new["id"] in taken:
+            raise InputError(f"id collision for {new['target']!r}: {one_line(new['text'], 60)!r}")
     ledger["items"].append({
         **new, "refs": [ref], "aliases": [], "design_state": None, "app_state": None,
         "ever_implemented": False, "implemented_on": None, "decisions": [],
@@ -408,14 +526,48 @@ def load_ledger(path: str, create: bool = False) -> dict:
     return data
 
 
+@contextlib.contextmanager
+def ledger_lock(path: str, create: bool = False):
+    """Hold an exclusive `fcntl.flock` on `<ledger>.lock` for one read-modify-write.
+
+    Two lanes writing the ledger at once would otherwise lose one lane's
+    update (both read, both write). Waits up to LOCK_TIMEOUT_S, then fails
+    closed with InputError. Validates the `.json` suffix first and, unless
+    `create`, that the ledger exists, so a refused command litters no lock
+    file. Side effect: creates the ledger folder and the lock file.
+    """
+    if not path.lower().endswith(".json"):
+        raise InputError(f"ledger path must end in .json: {path}")
+    if not create and not os.path.exists(path):
+        raise InputError(f"ledger not found: {path} (run ingest first)")
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    fd = os.open(path + ".lock", os.O_RDWR | os.O_CREAT, 0o644)
+    try:
+        deadline = time.monotonic() + LOCK_TIMEOUT_S
+        while True:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except BlockingIOError as exc:
+                if time.monotonic() >= deadline:
+                    raise InputError(f"ledger {path} is locked by another writer; "
+                                     f"retry when it finishes (waited {LOCK_TIMEOUT_S:g}s)") from exc
+                time.sleep(0.05)
+        yield
+    finally:
+        os.close(fd)   # closing the descriptor releases the lock
+
+
 def _atomic_write(path: str, text: str) -> None:
-    """Write `text` to `path` via a temp file in the same dir + os.replace."""
+    """Write `text` to `path` via a flushed, fsynced temp file in the same dir + os.replace."""
     folder = os.path.dirname(os.path.abspath(path))
     os.makedirs(folder, exist_ok=True)
     fd, tmp = tempfile.mkstemp(dir=folder, prefix=".tmp-", suffix=os.path.basename(path))
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
             fh.write(text)
+            fh.flush()
+            os.fsync(fh.fileno())
         os.replace(tmp, path)
     except BaseException:
         with contextlib.suppress(OSError):
@@ -464,13 +616,100 @@ def effective_decision(item: dict) -> dict | None:
 
 # ------------------------------------------------------------------ resolve
 
+def attribute_key(item: dict) -> str | None:
+    """Which property of the target the item sets, or None when it cannot be told.
+
+    An explicit `attribute` names it. Otherwise a `change` sets whatever its
+    `was` element is (unknown without `was`), and add/keep/remove set the
+    presence of their `expect` element.
+    """
+    attr = norm_text(item.get("attribute") or "")
+    if attr:
+        return f"attr:{attr}"
+    if item["kind"] == "change":
+        return f"was:{norm_key(item['was'])}" if item["was"] else None
+    return f"el:{norm_key(item['expect'])}"
+
+
+def _value(item: dict) -> str:
+    """The value the item asks for: its explicit `value`, else its `expect` key."""
+    return norm_text(item.get("value") or "") or norm_key(item["expect"])
+
+
+def contradicts(a: dict, b: dict) -> bool:
+    """True when two items on one normalized target cannot both hold.
+
+    Contradiction: one requires an element present that the other removes or
+    replaces; add/keep vs remove on the same `section/element`; the same
+    attribute set to different values; or two changes whose attribute is
+    unknown asking for different values (fail closed: the owner decides).
+    Different attributes of one element ("make it green", "move it to the
+    top") never contradict.
+    """
+    target = norm_target(a["target"])
+    if target != norm_target(b["target"]):
+        return False
+
+    def present(i: dict) -> set:
+        return set() if i["kind"] == "remove" else {norm_key(i["expect"])}
+
+    def absent(i: dict) -> set:
+        if i["kind"] == "remove":
+            return {norm_key(i["expect"])}
+        return {norm_key(i["was"])} if i["kind"] == "change" and i["was"] else set()
+
+    if present(a) & absent(b) or present(b) & absent(a):
+        return True
+    kinds = {a["kind"], b["kind"]}
+    if "/" in target and "remove" in kinds and kinds & {"add", "keep"}:
+        return True
+    ka, kb = attribute_key(a), attribute_key(b)
+    if ka is None or kb is None:
+        return a["kind"] == b["kind"] == "change" and _value(a) != _value(b)
+    return ka == kb and _value(a) != _value(b)
+
+
+def _source_kinds(item: dict) -> set:
+    """Every source kind that reported the item."""
+    return {r["source"] for r in item["refs"]} or {item.get("source")}
+
+
+def _pair_winner(a: dict, b: dict) -> dict | None:
+    """The item that stands in a contradiction, or None when only the owner can say.
+
+    An owner `feedback` decision wins over an item dated on or before it (the
+    later decision wins when both qualify; a same-day tie stays open). An
+    item dated after the decision re-opens the question. Without a decision,
+    only a newer item reported by the SAME single source kind on the same
+    attribute supersedes; a design row never outranks feedback by date, and
+    any cross-source contradiction goes to the owner.
+    """
+    wins = []
+    for x, y in ((a, b), (b, a)):
+        dec = effective_decision(x)
+        if dec and dec["choose"] == "feedback" and y["date"] <= dec["date"]:
+            wins.append((dec["date"], x))
+    if len(wins) == 1:
+        return wins[0][1]
+    if len(wins) == 2:
+        return max(wins, key=lambda w: w[0])[1] if wins[0][0] != wins[1][0] else None
+    if effective_decision(a) or effective_decision(b):
+        return None
+    kinds = _source_kinds(a)
+    if (len(kinds) == 1 and kinds == _source_kinds(b) and attribute_key(a) is not None
+            and attribute_key(a) == attribute_key(b) and a["date"] != b["date"]):
+        return a if a["date"] > b["date"] else b
+    return None
+
+
 def resolve(ledger: dict) -> dict:
     """Compute each item's lifecycle: {id: {"state", "by", "peers"}}.
 
     state is ACTIVE, SUPERSEDED, DECLINED (owner chose the design), or CLOSED
-    (owner chose other). `peers` is the list of ids in an open
-    feedback-vs-feedback conflict with this item (empty when none). Pure
-    function of items + decisions; see the module docstring for the rules.
+    (owner chose other). `peers` is the list of ids in an open contradiction
+    with this item that only the owner can settle (empty when none). Items
+    that do not `contradict` never affect each other. Pure function of items
+    + decisions; see the module docstring for the rules.
     """
     out = {}
     groups: dict[str, list[dict]] = {}
@@ -478,35 +717,40 @@ def resolve(ledger: dict) -> dict:
         dec = effective_decision(item)
         state = {"design": "DECLINED", "other": "CLOSED"}.get(dec["choose"] if dec else "", "ACTIVE")
         out[item["id"]] = {"state": state, "by": None, "peers": []}
-        target = norm_target(item["target"])
-        if state == "ACTIVE" and "/" in target:
-            groups.setdefault(target, []).append(item)
+        if state == "ACTIVE":
+            groups.setdefault(norm_target(item["target"]), []).append(item)
     for members in groups.values():
-        if len(members) < 2:
-            continue
-        decided = [m for m in members if (effective_decision(m) or {}).get("choose") == "feedback"]
-        if decided:
-            winner = max(decided, key=lambda m: effective_decision(m)["date"])
-            cutoff = effective_decision(winner)["date"]
-            contenders = [winner] + [m for m in members if m is not winner and m["date"] > cutoff]
-        else:
-            newest = max(m["date"] for m in members)
-            contenders = [m for m in members if m["date"] == newest]
-            winner = contenders[0]
-        for m in members:
-            if m not in contenders:
-                out[m["id"]].update(state="SUPERSEDED", by=winner["id"])
-        if len(contenders) > 1:
-            for m in contenders:
-                out[m["id"]]["peers"] = [c["id"] for c in contenders if c is not m]
+        beaten: dict[str, str] = {}
+        edges = []
+        for n, a in enumerate(members):
+            for b in members[n + 1:]:
+                if not contradicts(a, b):
+                    continue
+                winner = _pair_winner(a, b)
+                if winner is None:
+                    edges.append((a, b))
+                else:
+                    beaten.setdefault((b if winner is a else a)["id"], winner["id"])
+        for ident, by in beaten.items():
+            out[ident].update(state="SUPERSEDED", by=by)
+        for a, b in edges:
+            if a["id"] not in beaten and b["id"] not in beaten:
+                out[a["id"]]["peers"].append(b["id"])
+                out[b["id"]]["peers"].append(a["id"])
     return out
 
 
 def open_conflicts(ledger: dict, life: dict) -> tuple[list[dict], list[list[dict]]]:
-    """Return (undecided design conflicts, feedback-vs-feedback groups)."""
+    """Return (undecided design deviations, contradicting-item groups).
+
+    A design deviation is an ACTIVE item with no owner decision that is
+    CONFLICTS_WITH_DESIGN, or NOT_IN_DESIGN and already IMPLEMENTED: the
+    app deviates from the design and only the owner may accept that.
+    """
     design = [i for i in ledger["items"] if life[i["id"]]["state"] == "ACTIVE"
-              and not life[i["id"]]["peers"] and i.get("design_state") == CONFLICTS
-              and not effective_decision(i)]
+              and not life[i["id"]]["peers"] and not effective_decision(i)
+              and (i.get("design_state") == CONFLICTS
+                   or (i.get("design_state") == NOT_IN_DESIGN and i.get("app_state") == IMPLEMENTED))]
     seen, ff = set(), []
     for item in ledger["items"]:
         peers = life[item["id"]]["peers"]
@@ -538,29 +782,29 @@ def load_parity_differ():
 def load_inventory(path: str, label: str, ids: dict | None = None) -> dict:
     """Read a design/app inventory as {normalized section id: set(keys) | None}.
 
-    None for a section means "present, but no element inventory" — any item
-    that needs it fails closed. See INVENTORY INPUT in the module docstring.
-    When `ids` is given it is filled with {normalized id: id as exported}, so
-    the accept file can name a section exactly as the parity differ sees it.
+    Section ids are normalized with `norm_segment`, the same rule targets
+    use; two exported sections that normalize alike fail closed. None for a
+    section means "present, but no element inventory" — any item that needs
+    it fails closed. See INVENTORY INPUT in the module docstring. When `ids`
+    is given it is filled with {normalized id: id as exported}, so the accept
+    file can name a section exactly as the parity differ sees it.
     """
     if not os.path.isfile(path):
         raise InputError(f"{label} inventory not found: {path}")
+    pairs: list[tuple[str, list | None]] = []
     if path.lower().endswith(".json"):
         data = _read_json(path, f"{label} inventory")
         if isinstance(data, dict):
             data = data.get("sections")
         if not isinstance(data, list):
             raise InputError(f"{label} inventory must be a section list or {{\"sections\": [...]}}")
-        out = {}
         for row in data:
             if not isinstance(row, dict) or "id" not in row:
                 raise InputError(f"{label} inventory has a section without an id")
             inv = row.get("inventory")
             if inv is not None and not (isinstance(inv, list) and all(isinstance(k, str) for k in inv)):
                 raise InputError(f"{label} inventory section {row['id']!r}: inventory must be a list of strings")
-            out[norm_key(str(row["id"]))] = None if inv is None else {norm_key(k) for k in inv}
-            if ids is not None:
-                ids[norm_key(str(row["id"]))] = str(row["id"])
+            pairs.append((str(row["id"]), inv))
     else:
         pd = load_parity_differ()
         if pd is None:
@@ -573,27 +817,36 @@ def load_inventory(path: str, label: str, ids: dict | None = None) -> dict:
             if hidden:
                 raise InputError(f"{label} export hides elements by class with no data-visible marker "
                                  f"({'; '.join(hidden[:3])}); re-export with computed visibility")
-            out = {norm_key(s["id"]): None if s["items"] is None else {norm_key(k) for k in s["items"]}
-                   for s in side}
-            if ids is not None:
-                ids.update({norm_key(s["id"]): s["id"] for s in side})
+            pairs = [(s["id"], s["items"]) for s in side]
         else:
             sections = pd.extract_sections(path)
             if sections is None:
                 raise InputError(f"{label} export unreadable or has no data-section markers: {path}")
-            out = {norm_key(sid): None for sid, _populated in sections}
-            if ids is not None:
-                ids.update({norm_key(sid): sid for sid, _populated in sections})
+            pairs = [(sid, None) for sid, _populated in sections]
+    out: dict = {}
+    for raw_id, keys in pairs:
+        section = norm_segment(raw_id)
+        if section in out:
+            raise InputError(f"{label} inventory has two sections that normalize to {section!r}; "
+                             "section ids must differ by more than case, spaces, hyphens, or underscores")
+        out[section] = None if keys is None else {norm_key(k) for k in keys}
+        if ids is not None:
+            ids[section] = raw_id
     if not out:
         raise InputError(f"{label} inventory has no sections: {path}")
     return out
 
 
-def _has(inv: dict, item: dict, key: str, label: str) -> bool:
-    """True when the item's section in `inv` holds element `key`; fail closed on no inventory."""
+def _has(inv: dict, item: dict, key: str, label: str) -> bool | None:
+    """Whether the item's section in `inv` holds element `key`; None when the section is absent.
+
+    A section present without an element inventory fails closed (InputError).
+    Callers decide what an absent section means: the design never captured
+    it (delta), or the app state is UNMEASURED (status) — never "done".
+    """
     section = norm_target(item["target"]).split("/")[0]
     if section not in inv:
-        return False
+        return None
     keys = inv[section]
     if keys is None:
         raise InputError(f"{label} section {section!r} carries no element inventory; "
@@ -610,11 +863,16 @@ def _file_meta(path: str, when: str | None) -> dict:
 
 # ----------------------------------------------------------------- commands
 
-def cmd_ingest(ledger_path: str, source: str, file: str, map_path: str | None) -> int:
-    """Normalize and merge one source file; the whole file or nothing."""
+def cmd_ingest(ledger_path: str, source: str, file: str, map_path: str | None, roles: str | None = None) -> int:
+    """Normalize and merge one source file; the whole file or nothing.
+
+    `roles` is the `--roles` allowlist; a role outside it is recorded as
+    "unspecified".
+    """
     ledger = load_ledger(ledger_path, create=True)
     mapping = load_mapping(map_path)
-    reports = [normalize_row(raw, mapping, source, ref) for ref, raw in load_rows(file)]
+    allowed = parse_roles(roles)
+    reports = [normalize_row(raw, mapping, source, ref, allowed) for ref, raw in load_rows(file)]
     tally = {"new": 0, "linked": 0, "present": 0}
     for rep in reports:
         tally[merge_report(ledger, rep)] += 1
@@ -668,7 +926,7 @@ def _life_note(item: dict, life: dict) -> str:
     if info["state"] in ("DECLINED", "CLOSED"):
         return f"  [owner chose {dec['choose']} on {dec['date']}]"
     if info["peers"]:
-        return f"  [conflicts with feedback {', '.join(info['peers'])}]"
+        return f"  [contradicts {', '.join(info['peers'])}; owner decides]"
     if dec:
         return f"  [owner chose {dec['choose']} on {dec['date']}]"
     if lapsed:
@@ -677,7 +935,13 @@ def _life_note(item: dict, life: dict) -> str:
 
 
 def cmd_status(ledger_path: str, app: str, today: str | None) -> int:
-    """Check every live item against the app inventory; detect regressions."""
+    """Check every live item against the app inventory; detect regressions.
+
+    An item whose section the app export lacks is UNMEASURED: nothing was
+    observed, so it is never IMPLEMENTED (a `remove` is not "done" because
+    its whole section is missing). Any UNMEASURED item exits 2 and leaves the
+    ledger untouched.
+    """
     ledger = load_ledger(ledger_path)
     when = parse_date(today, "--date") if today else datetime.now(timezone.utc).date().isoformat()
     inv = load_inventory(app, "app")
@@ -687,6 +951,9 @@ def cmd_status(ledger_path: str, app: str, today: str | None) -> int:
             item["app_state"] = None
             continue
         present = _has(inv, item, item["expect"], "app")
+        if present is None:
+            item["app_state"] = UNMEASURED
+            continue
         done = not present if item["kind"] == "remove" else present
         if done:
             item["app_state"] = IMPLEMENTED
@@ -694,9 +961,7 @@ def cmd_status(ledger_path: str, app: str, today: str | None) -> int:
                 item["ever_implemented"], item["implemented_on"] = True, when
         else:
             item["app_state"] = REGRESSED if item.get("ever_implemented") else PENDING
-    ledger["app"] = _file_meta(app, when)
-    save_ledger(ledger_path, ledger)
-    counts = {IMPLEMENTED: 0, PENDING: 0, REGRESSED: 0}
+    counts = {IMPLEMENTED: 0, PENDING: 0, REGRESSED: 0, UNMEASURED: 0}
     for item in ledger["items"]:
         state = item["app_state"]
         if state is None:
@@ -705,6 +970,12 @@ def cmd_status(ledger_path: str, app: str, today: str | None) -> int:
         counts[state] += 1
         print(f"{state:<12} {item['id']}  {item['target']}  — {one_line(item['text'], 70)}")
     print("status: " + ", ".join(f"{v} {k}" for k, v in counts.items()) + ".")
+    if counts[UNMEASURED]:
+        print(f"error: {counts[UNMEASURED]} item(s) UNMEASURED — their section is missing from the app export "
+              f"{app}; ledger not updated. Export every section the ledger targets.", file=sys.stderr)
+        return INPUT_ERROR
+    ledger["app"] = _file_meta(app, when)
+    save_ledger(ledger_path, ledger)
     return OPEN if counts[PENDING] or counts[REGRESSED] else CLEAN
 
 
@@ -723,8 +994,11 @@ def conflict_questions(ledger: dict) -> tuple[list[str], int]:
     lines, n = [], 0
     for item in design_open:
         n += 1
-        shown = item["was"] if item["kind"] == "change" else item["expect"]
-        lines.append(f"Q{n} [{item['id']}] {item['target']}: design ({design_when}) shows \"{shown}\"; "
+        if item.get("design_state") == NOT_IN_DESIGN:
+            shown = f"never shows \"{item['expect']}\" but the app now implements it"
+        else:
+            shown = f"shows \"{item['was'] if item['kind'] == 'change' else item['expect']}\""
+        lines.append(f"Q{n} [{item['id']}] {item['target']}: design ({design_when}) {shown}; "
                      f"feedback ({_ref(item)}) says {item['kind']} \"{item['expect']}\": "
                      f"\"{one_line(item['text'], 60)}\".")
         lines.append(f"    Keep feedback or design? Record: decide --id {item['id']} "
@@ -732,7 +1006,8 @@ def conflict_questions(ledger: dict) -> tuple[list[str], int]:
     for group in ff:
         n += 1
         sides = " vs ".join(f"[{g['id']}] \"{one_line(g['text'], 50)}\" ({_ref(g)})" for g in group)
-        lines.append(f"Q{n} {group[0]['target']}: {sides} — same date, or raised after an owner decision.")
+        lines.append(f"Q{n} {group[0]['target']}: {sides} — contradicting requests the ledger may not order "
+                     "(different sources, same date, or raised after an owner decision).")
         lines.append("    Which stands? Record on the winner: decide --id <winner> --choose feedback "
                      "--quote \"<owner words>\" --date YYYY-MM-DD")
     unclassified = sum(1 for i in ledger["items"] if life[i["id"]]["state"] == "ACTIVE"
@@ -767,11 +1042,13 @@ def cmd_decide(ledger_path: str, ident: str, choose: str, quote: str, when: str)
     return CLEAN
 
 
-def _deviating(ledger: dict) -> list[tuple[dict, dict | None]]:
-    """(item, owner decision) for IMPLEMENTED items that deliberately deviate from the design.
+def _deviating(ledger: dict) -> list[tuple[dict, dict]]:
+    """(item, owner decision) for IMPLEMENTED items the OWNER decided to keep against the design.
 
-    Eligible: ACTIVE with no peer conflict, and NOT_IN_DESIGN or
-    CONFLICTS_WITH_DESIGN decided `feedback` (decision None otherwise).
+    Eligible only with a recorded, still-effective `decide --choose feedback`
+    (quote + date): ACTIVE, no open contradiction, IMPLEMENTED, and
+    NOT_IN_DESIGN or CONFLICTS_WITH_DESIGN. An undecided deviation is an owner
+    question in `conflicts`, never an accept row — the ledger never decides.
     """
     life = resolve(ledger)
     out = []
@@ -779,11 +1056,10 @@ def _deviating(ledger: dict) -> list[tuple[dict, dict | None]]:
         dec = effective_decision(item)
         if life[item["id"]]["state"] != "ACTIVE" or life[item["id"]]["peers"]:
             continue
-        if item.get("app_state") != IMPLEMENTED:
+        if item.get("app_state") != IMPLEMENTED or not dec or dec["choose"] != "feedback":
             continue
-        decided = item.get("design_state") == CONFLICTS and dec and dec["choose"] == "feedback"
-        if item.get("design_state") == NOT_IN_DESIGN or decided:
-            out.append((item, dec if decided else None))
+        if item.get("design_state") in (NOT_IN_DESIGN, CONFLICTS):
+            out.append((item, dec))
     return out
 
 
@@ -816,21 +1092,19 @@ def accept_rows(ledger: dict, result: dict) -> tuple[list[list[str]], list[str],
     covered_ids, open_rows = set(), 0
     for sec in result.get("sections") or []:
         for row in sec.get("rows") or []:
-            hit = next(((it, dec) for it, dec in by_section.get(norm_key(sec["id"]), ())
-                        if _covers(it, row)), None)
-            if hit is None:
+            hits = [(it, dec) for it, dec in by_section.get(norm_segment(sec["id"]), ()) if _covers(it, row)]
+            if not hits:
                 open_rows += 1
                 continue
-            item, dec = hit
-            covered_ids.add(item["id"])
+            covered_ids.update(it["id"] for it, _ in hits)
+            item, dec = hits[0]
             app = row["app"] or "-"
             key = (sec["id"], row["status"], norm_key(row["item"]), one_line(app))
             if key in groups:
                 groups[key][4] += 1
                 continue
             reason = one_line(f"feedback {item['id']}: {item['kind']} — {item['text']} ({_ref(item)})", 200)
-            owner = (one_line(f"owner {dec['date']}: \"{dec['quote']}\"") if dec
-                     else one_line(f"requirement source {_ref(item)}; the design never captured it"))
+            owner = one_line(f"owner {dec['date']}: \"{dec['quote']}\"")
             groups[key] = [sec["id"], row["status"], row["item"], app, 1, reason, owner]
     rows = [[str(v) for v in g] for g in groups.values()]
     uncovered = [it["id"] for group in by_section.values() for it, _ in group if it["id"] not in covered_ids]
@@ -997,6 +1271,205 @@ def _selftest_owner_commit(tmp: str, design: str, app: str, tsv: str) -> dict:
     return out
 
 
+def _selftest_owner_rules(tmp: str, expect) -> None:
+    """Pin "the ledger never decides a requirement; only the owner does" on fresh ledgers.
+
+    Cases: two different asks on one element stay separate items and do not
+    conflict; a contradiction (same attribute, different value — even at
+    >= 0.9 text similarity — or add vs remove) is an owner conflict, never a
+    merge; a restatement sharing only an anchor stays a separate, agreeing
+    item; a newer design row or a newer item from another source kind never
+    supersedes feedback (only the same source kind does); hyphen, space,
+    underscore, and case variants of a target are one target (conflict and
+    section lookup alike); `role` only from the `--roles` allowlist, with
+    @mentions and names in `source_ref` stripped; a missing app section is
+    UNMEASURED (exit 2, ledger untouched); a held ledger lock refuses the
+    write; dates are normalized to UTC before truncation. `expect(label,
+    cond, detail)` records failures. Local temp files only.
+    """
+    global LOCK_TIMEOUT_S
+
+    def write(name: str, content) -> str:
+        """Write a fixture (str or JSON-able) into `tmp`; return its path."""
+        target = os.path.join(tmp, name)
+        with open(target, "w", encoding="utf-8") as fh:
+            fh.write(content if isinstance(content, str) else json.dumps(content))
+        return target
+
+    def run(ledger: str, *args: str) -> tuple[int, str]:
+        """Run the CLI in-process on `ledger`; argparse exits count as their code."""
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
+            try:
+                code = main(["--ledger", ledger, *args])
+            except SystemExit as exc:
+                code = exc.code
+        return code, buf.getvalue()
+
+    def state(ledger: str) -> tuple[dict, dict]:
+        """({text: item}, resolve(ledger)) for a ledger on disk."""
+        with open(ledger, encoding="utf-8") as fh:
+            data = json.load(fh)
+        return {i["text"]: i for i in data["items"]}, resolve(data)
+
+    def row(ref, target, kind, text, date, expect_key, **extra) -> dict:
+        """One source row."""
+        return {"source_ref": ref, "target": target, "kind": kind, "text": text, "date": date,
+                "expect": expect_key, **extra}
+
+    # 1. linking: only a near-identical ask links; different asks stay separate; contradictions conflict.
+    led = os.path.join(tmp, "o-link.json")
+    run(led, "ingest", "--source", "doc", "--file", write("o-link-doc.json", [
+        row("comment 1", "reports/export", "change", "Make the Export button green", "2026-09-01",
+            "control:button:Export", attribute="color", value="green"),
+        row("comment 2", "reports/export", "change", "Move the Export button to the top", "2026-09-01",
+            "control:button:Export", attribute="position", value="top"),
+        row("comment 3", "reports/download", "change", "Rename that button so it reads Export CSV", "2026-09-01",
+            "control:button:Export CSV", was="control:button:Download"),
+        row("comment 4", "reports/paging", "change", "Set the page size to 10 rows", "2026-09-01",
+            "text:Page size", attribute="page size", value="10")]))
+    run(led, "ingest", "--source", "csv", "--file", write("o-link-csv.json", [
+        row("row 2", "reports/download", "change", "Change the Download button to Export CSV", "2026-09-02",
+            "control:button:Export CSV", was="control:button:Download"),
+        row("row 3", "reports/paging", "change", "Set the page size to 20 rows", "2026-09-01",
+            "text:Page size", attribute="page size", value="20")]))
+    run(led, "ingest", "--source", "transcript", "--file", write("o-link-tr.json", [
+        row("00:02:10", "Reports/Export", "change", "Make the Export button red", "2026-09-02",
+            "control:button:Export", attribute="color", value="red")]))
+    by, life = state(led)
+    green, top, red = (by.get(t, {}) for t in ("Make the Export button green", "Move the Export button to the top",
+                                               "Make the Export button red"))
+    expect("link-different-asks-separate", len(by) == 7, str(sorted(by)))
+    expect("link-different-asks-no-conflict", top.get("id") in life and not life[top["id"]]["peers"],
+           str(life.get(top.get("id"))))
+    expect("link-same-attribute-conflict", green.get("id") in life and red.get("id") in life
+           and life[green["id"]]["peers"] == [red["id"]], str(life.get(green.get("id"))))
+    ten, twenty = by.get("Set the page size to 10 rows", {}), by.get("Set the page size to 20 rows", {})
+    expect("link-similar-text-contradiction-conflicts", ten.get("id") in life and twenty.get("id") in life
+           and life[ten["id"]]["peers"] == [twenty["id"]], str(life.get(ten.get("id"))))
+    rename = by.get("Rename that button so it reads Export CSV", {})
+    expect("link-anchor-only-agrees", rename.get("id") in life and not life[rename["id"]]["peers"]
+           and life[rename["id"]]["state"] == "ACTIVE", str(life.get(rename.get("id"))))
+
+    # 2. superseding: only a newer item from the SAME source kind on the same target+attribute.
+    led = os.path.join(tmp, "o-sup.json")
+    was = "heading:h1:Reports"
+    run(led, "ingest", "--source", "doc", "--file", write("o-sup-doc.json", [
+        row("comment 1", "reports/title", "change", "Title should read Report center", "2026-09-01",
+            "heading:h1:Report center", was=was),
+        row("comment 2", "reports/title", "change", "Title should read Report hub", "2026-09-12",
+            "heading:h1:Report hub", was=was)]))
+    run(led, "ingest", "--source", "csv", "--file", write("o-sup-csv.json", [
+        row("row 2", "reports/title", "change", "Title should read Monthly reports", "2026-09-05",
+            "heading:h1:Monthly reports", was=was)]))
+    run(led, "ingest", "--source", "design", "--file", write("o-sup-design.json", [
+        row("frame 3", "reports/title", "change", "Title reads Overview", "2026-09-20",
+            "heading:h1:Overview", was=was)]))
+    by, life = state(led)
+    center, hub = by.get("Title should read Report center", {}), by.get("Title should read Report hub", {})
+    monthly, overview = by.get("Title should read Monthly reports", {}), by.get("Title reads Overview", {})
+    ok = all(i.get("id") in life for i in (center, hub, monthly, overview))
+    expect("supersede-same-source-newer", ok and life[center["id"]]["state"] == "SUPERSEDED"
+           and life[center["id"]]["by"] == hub["id"], str(life))
+    expect("supersede-design-never-wins-by-date", ok and life[hub["id"]]["state"] == "ACTIVE"
+           and overview["id"] in life[hub["id"]]["peers"], str(life))
+    expect("supersede-cross-source-is-conflict", ok and life[monthly["id"]]["state"] == "ACTIVE"
+           and hub["id"] in life[monthly["id"]]["peers"], str(life))
+
+    # 3. one normalized target across hyphen/space/underscore/case; add vs remove there conflicts.
+    try:
+        same = {norm_target("Reports/Promo-Banner"), norm_target("reports/promo_banner"),
+                norm_target("REPORTS / promo  banner")}
+    except InputError as exc:
+        same = {str(exc)}
+    expect("norm-target-unifies", len(same) == 1, str(same))
+    led = os.path.join(tmp, "o-norm.json")
+    run(led, "ingest", "--source", "csv", "--file", write("o-norm-csv.json", [
+        row("row 2", "reports/promo-banner", "add", "Show the promo banner", "2026-09-01", "text:Promo banner"),
+        row("row 3", "report_list/save", "add", "Add a Save button", "2026-09-01", "control:button:Save")]))
+    run(led, "ingest", "--source", "doc", "--file", write("o-norm-doc.json", [
+        row("comment 1", "Reports/Promo Banner", "remove", "Hide the banner", "2026-09-05", "text:Promo banner")]))
+    by, life = state(led)
+    show, hide = by.get("Show the promo banner", {}), by.get("Hide the banner", {})
+    expect("norm-target-add-vs-remove-conflict", show.get("id") in life and hide.get("id") in life
+           and life[show["id"]]["peers"] == [hide["id"]], str(life))
+    code, out = run(led, "status", "--app", write("o-norm-app.json", [
+        {"id": "Report-List", "populated": True, "inventory": ["control:button:Save"]},
+        {"id": "reports", "populated": True, "inventory": []}]), "--date", "2026-09-06")
+    save = state(led)[0].get("Add a Save button", {})
+    expect("norm-target-section-lookup", save.get("app_state") == IMPLEMENTED, out)
+    try:
+        load_inventory(write("o-norm-dup.json", [{"id": "Report-List", "inventory": []},
+                                                 {"id": "report list", "inventory": []}]), "app")
+        expect("norm-section-collision-fails-closed", False, "no InputError")
+    except InputError:
+        pass
+
+    # 5. privacy: role only from the allowlist; @mentions and names in source_ref stripped.
+    led = os.path.join(tmp, "o-priv.json")
+    src = write("o-priv.json.src.json", [
+        row("Jane Smith 00:14:05", "reports/save", "add", "Add a Save button, cc @peter.parker", "2026-09-01",
+            "control:button:Save", role="end user"),
+        row("row 12 (Bruce Wayne)", "reports/help", "add", "Link the help page", "2026-09-01",
+            "control:link:Help", role="Head of Sales at Acme Capital")])
+    code, out = run(led, "ingest", "--source", "transcript", "--file", src, "--roles", "end user,designer")
+    by = state(led)[0] if os.path.exists(led) else {}
+    saved, helped = by.get("Add a Save button, cc", {}), by.get("Link the help page", {})
+    expect("privacy-ingest", code == CLEAN, out)
+    expect("privacy-mention-stripped", saved and "@" not in json.dumps(saved), json.dumps(saved))
+    expect("privacy-role-allowlisted", saved.get("role") == "end user", str(saved.get("role")))
+    expect("privacy-role-unlisted", helped.get("role") == "unspecified", str(helped.get("role")))
+    expect("privacy-ref-names", saved.get("source_ref") == "00:14:05" and helped.get("source_ref") == "row 12",
+           f"{saved.get('source_ref')} / {helped.get('source_ref')}")
+    led = os.path.join(tmp, "o-priv2.json")
+    run(led, "ingest", "--source", "transcript", "--file", src)
+    by = state(led)[0] if os.path.exists(led) else {}
+    expect("privacy-role-no-allowlist", all(i.get("role") == "unspecified" for i in by.values()) and by, str(by))
+    expect("privacy-name-only-ref-falls-back", safe_ref("Jane Smith", "row 4") == "row 4",
+           safe_ref("Jane Smith", "row 4"))
+    code, _ = run(os.path.join(tmp, "o-priv3.json"), "ingest", "--source", "doc", "--file", src, "--roles", "designer,,")
+    expect("privacy-empty-role-entry-refused", code == INPUT_ERROR, f"exit {code}")
+
+    # 6. fail closed: missing app section, held lock, UTC dates.
+    led = os.path.join(tmp, "o-fail.json")
+    run(led, "ingest", "--source", "doc", "--file", write("o-fail-doc.json", [
+        row("comment 1", "reports/banner", "remove", "Drop the promo banner", "2026-09-01", "text:Promo banner"),
+        row("comment 2", "reports/save", "add", "Add a Save button", "2026-09-01", "control:button:Save")]))
+    with open(led, encoding="utf-8") as fh:
+        before = fh.read()
+    code, out = run(led, "status", "--app", write("o-fail-app.json", [
+        {"id": "settings", "populated": True, "inventory": ["text:Promo banner"]}]), "--date", "2026-09-02")
+    with open(led, encoding="utf-8") as fh:
+        after = fh.read()
+    expect("unmeasured-exit-2", code == INPUT_ERROR and "UNMEASURED" in out, f"exit {code}: {out}")
+    expect("unmeasured-never-implemented", after == before and IMPLEMENTED not in after, after[:300])
+    try:
+        import fcntl as _fcntl
+        saved_timeout = globals().get("LOCK_TIMEOUT_S")
+        LOCK_TIMEOUT_S = 0.2
+        try:
+            with open(led + ".lock", "a+", encoding="utf-8") as held:
+                _fcntl.flock(held.fileno(), _fcntl.LOCK_EX)
+                code, out = run(led, "decide", "--id", json.loads(before)["items"][0]["id"], "--choose",
+                                "feedback", "--quote", "Drop it.", "--date", "2026-09-02")
+        finally:
+            LOCK_TIMEOUT_S = saved_timeout
+        with open(led, encoding="utf-8") as fh:
+            expect("lock-held-refuses-write", code == INPUT_ERROR and fh.read() == before, f"exit {code}: {out}")
+    except ImportError:
+        expect("lock-fcntl-available", False, "fcntl unavailable")
+    leftovers = [n for n in os.listdir(tmp) if n.startswith(".tmp-")]
+    expect("atomic-no-temp-leftovers", not leftovers, str(leftovers))
+    for raw, want in (("2026-09-10T23:30:00-05:00", "2026-09-11"), ("2026-09-11T01:00:00+02:00", "2026-09-10"),
+                      ("2026-09-10T23:30:00Z", "2026-09-10"), ("2026-09-10T22:00:00+0530", "2026-09-10"),
+                      ("2026-09-10", "2026-09-10")):
+        try:
+            got = parse_date(raw, "selftest")
+        except InputError as exc:
+            got = str(exc)
+        expect(f"utc-date {raw}", got == want, got)
+
+
 def _selftest() -> int:
     """Prove each rule FIRES on neutral offline fixtures; exit 0 only if all hold.
 
@@ -1011,7 +1484,10 @@ def _selftest() -> int:
     plus a same-date feedback-vs-feedback conflict; a post-decision item
     re-opening the question; a declined item re-raised later being asked
     again; malformed input → 2 with the ledger left untouched; email
-    redaction; HTML inventory path.
+    redaction; HTML inventory path; and `_selftest_owner_rules` (linking,
+    contradictions, same-source-only superseding, target normalization,
+    role/mention/source_ref privacy, UNMEASURED, lock, UTC dates). An
+    undecided implemented deviation is an owner question, not an accept row.
     """
     failures: list[str] = []
 
@@ -1073,7 +1549,7 @@ def _selftest() -> int:
         expect("dedupe-exit", code == CLEAN, out)
         doc = write("doc.json", [
             {"source_ref": "comment 3", "target": "reports/export", "kind": "change",
-             "text": "Rename that button so it reads Export CSV", "date": "2026-09-09", "role": "designer",
+             "text": "Change the Download button to Export CSV.", "date": "2026-09-09", "role": "designer",
              "expect": "control:button:export csv", "was": "control:button:download"},
         ])
         run("ingest", "--source", "doc", "--file", doc)
@@ -1097,9 +1573,11 @@ def _selftest() -> int:
              "text": "Title should read Report center", "expect": "heading:h1:Report center",
              "was": "heading:h1:Reports"},
             {"source_ref": "comment 4", "target": "reports/legend", "kind": "add", "date": "2026-09-03",
-             "text": "Show the legend above the chart", "expect": "text:Legend above"},
+             "text": "Show the legend above the chart", "expect": "text:Legend above",
+             "attribute": "position", "value": "above"},
             {"source_ref": "comment 5", "target": "reports/legend", "kind": "add", "date": "2026-09-03",
-             "text": "Show the legend under the chart", "expect": "text:Legend under"},
+             "text": "Show the legend under the chart", "expect": "text:Legend under",
+             "attribute": "position", "value": "under"},
             {"source_ref": "comment 6", "target": "reports/banner", "kind": "remove", "date": "2026-09-04",
              "text": "Drop the promo banner", "expect": "text:Promo banner"},
             {"source_ref": "comment 7", "target": "reports/help", "kind": "add", "date": "2026-09-04",
@@ -1182,8 +1660,22 @@ def _selftest() -> int:
         html_states = {i["id"]: (i["design_state"], i["app_state"]) for i in items()}
         expect("html-states-equal-json", html_states == json_states, f"{json_states} vs {html_states}")
 
-        # 4c. accept-file drafts the differ's 7-field rows from the differ's own printed rows.
+        # 4c. an implemented item the design lacks is an OWNER question, never an automatic accept:
+        # before the owner decides, accept-file drafts only the decided rows and reports OPEN.
         accept = path("accept.tsv")
+        code, out = run("accept-file", "--design", design_html, "--app", app_html, "--out", accept)
+        tsv = read(accept) if os.path.exists(accept) else ""
+        expect("accept-undecided-not-accepted", code == OPEN and "Date range" not in tsv
+               and "Sort By Date" not in tsv and "Export CSV" in tsv, out + tsv)
+        filt_id = next(i["id"] for i in items() if i["target"] == "reports/filters")
+        sort_id = next(i["id"] for i in items() if i["target"] == "reports/sort")
+        code, out = run("conflicts")
+        qs = [ln for ln in out.splitlines() if ln.startswith("Q")]
+        expect("undecided-deviation-is-owner-question", code == OPEN and len(qs) == 2
+               and any(filt_id in q for q in qs) and any(sort_id in q for q in qs), out)
+        run("decide", "--id", filt_id, "--choose", "feedback", "--quote", "Keep the date filter.", "--date", "2026-09-13")
+        run("decide", "--id", sort_id, "--choose", "feedback", "--quote", "Keep sorting.", "--date", "2026-09-13")
+        # 4d. accept-file drafts the differ's 7-field rows from the differ's own printed rows.
         code, out = run("accept-file", "--design", design_html, "--app", app_html, "--out", accept)
         expect("accept-exit", code == CLEAN, out)
         expect("accept-inert-notice", "inert until the OWNER commits it" in out, out)
@@ -1197,6 +1689,8 @@ def _selftest() -> int:
         expect("accept-rows-exact", got == want and len(rows) == len(want), tsv)
         expect("accept-seven-fields", rows and all(len(r) == 7 and all(r) for r in rows), tsv)
         expect("accept-owner-quote", any(r[1] == "CHANGED" and "Go with Export CSV" in r[6] for r in rows), tsv)
+        expect("accept-owner-column-is-decision", rows and all(r[6].startswith("owner 2026-09-1") and '"' in r[6]
+                                                               for r in rows), tsv)
         expect("accept-inert-header", "INERT until the owner reviews and commits it" in tsv, tsv)
         pd = load_parity_differ()
         if pd is None or not hasattr(pd, "parse_accept"):
@@ -1218,7 +1712,7 @@ def _selftest() -> int:
         code, out = run("accept-file", "--design", design_html, "--app", app, "--out", path("stale.tsv"))
         expect("accept-stale-render", code == INPUT_ERROR and not os.path.exists(path("stale.tsv")), out)
 
-        # 4d. end to end: MISMATCH -> the owner commits the draft -> MATCH_WITH_ACCEPTED.
+        # 4e. end to end: MISMATCH -> owner decisions -> the owner commits the draft -> MATCH_WITH_ACCEPTED.
         # An agent-attributed or uncommitted copy of the same draft stays inert.
         e2e = _selftest_owner_commit(tmp, design_html, app_html, tsv)
         for label, (want_code, want_verdict) in (
@@ -1232,7 +1726,6 @@ def _selftest() -> int:
                str(e2e.get("e2e-owner-committed")))
 
         # an owner "design" answer removes an item at once, even before status re-runs
-        sort_id = [i for i in items() if i["target"] == "reports/sort"][0]["id"]
         run("decide", "--id", sort_id, "--choose", "design", "--quote", "No sorting yet.", "--date", "2026-09-14")
         run("decide", "--id", eid, "--choose", "design", "--quote", "Keep Download after all.", "--date", "2026-09-14")
         code, out = run("accept-file", "--design", design_html, "--app", app_html, "--out", accept)
@@ -1282,7 +1775,8 @@ def _selftest() -> int:
                and not any(ln.startswith("Q") for ln in out.splitlines()), out)
         # an item dated after an owner decision re-opens the question instead of winning silently
         write("later.json", [{"source_ref": "comment 12", "target": "reports/legend", "kind": "add",
-                              "date": "2026-09-13", "text": "Legend goes on the right", "expect": "text:Legend right"}])
+                              "date": "2026-09-13", "text": "Legend goes on the right", "expect": "text:Legend right",
+                              "attribute": "position", "value": "right"}])
         run("ingest", "--source", "doc", "--file", path("later.json"))
         life = resolve(json.loads(read(ledger)))
         right = [i for i in items() if i["text"] == "Legend goes on the right"][0]
@@ -1360,6 +1854,9 @@ def _selftest() -> int:
                 code, out = run("status", "--app", hid)
                 expect("html-unmarked-hiding-class-fails-closed", code == INPUT_ERROR and "data-visible" in out, out)
 
+        # 8. the ledger never decides a requirement; only the owner does.
+        _selftest_owner_rules(tmp, expect)
+
     if failures:
         print("SELFTEST FAILED:")
         for failure in failures:
@@ -1367,7 +1864,8 @@ def _selftest() -> int:
         return 1
     print("SELFTEST OK: dedupe=linked(3 sources) idempotent=ok superseded=by-date peer-conflict=ok "
           "design-lag=CONFLICTS/NOT_IN_DESIGN decide->accept-file(7-field,exact)=ok "
-          "owner-commit(MISMATCH->MATCH_WITH_ACCEPTED)=ok regression=1 malformed=2")
+          "owner-commit(MISMATCH->MATCH_WITH_ACCEPTED)=ok regression=1 malformed=2 "
+          "owner-rules(link/conflict/supersede/privacy/unmeasured/lock/utc)=ok")
     return 0
 
 
@@ -1383,6 +1881,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--source", required=True, choices=SOURCES)
     p.add_argument("--file", required=True)
     p.add_argument("--map", dest="map_path")
+    p.add_argument("--roles", help="comma-separated role allowlist; any other role is recorded as unspecified")
     p = sub.add_parser("delta", help="classify items against the latest design inventory")
     p.add_argument("--design", required=True)
     p.add_argument("--design-date")
@@ -1403,17 +1902,18 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.selftest:
         return _selftest()
+    writers = {
+        "ingest": lambda: cmd_ingest(args.ledger, args.source, args.file, args.map_path, args.roles),
+        "delta": lambda: cmd_delta(args.ledger, args.design, args.design_date),
+        "status": lambda: cmd_status(args.ledger, args.app, args.date),
+        "decide": lambda: cmd_decide(args.ledger, args.id, args.choose, args.quote, args.date),
+    }
     try:
-        if args.cmd == "ingest":
-            return cmd_ingest(args.ledger, args.source, args.file, args.map_path)
-        if args.cmd == "delta":
-            return cmd_delta(args.ledger, args.design, args.design_date)
-        if args.cmd == "status":
-            return cmd_status(args.ledger, args.app, args.date)
+        if args.cmd in writers:
+            with ledger_lock(args.ledger, create=args.cmd == "ingest"):
+                return writers[args.cmd]()
         if args.cmd == "conflicts":
             return cmd_conflicts(args.ledger)
-        if args.cmd == "decide":
-            return cmd_decide(args.ledger, args.id, args.choose, args.quote, args.date)
         if args.cmd == "accept-file":
             return cmd_accept_file(args.ledger, args.design, args.app, args.out)
     except InputError as exc:
