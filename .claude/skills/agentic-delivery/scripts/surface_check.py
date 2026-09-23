@@ -35,6 +35,24 @@ Modes (stdlib only, no third-party dependency):
       ref refs/remotes/<remote>/<B>, exactly as a plain `git fetch` would.
       Git runs with GIT_TERMINAL_PROMPT=0 and no terminal; a call past
       --timeout seconds is killed and reported as COULD_NOT_CHECK.
+      --require-clean also FAILs when --repo has any tracked change (staged
+      or not) that is not committed: a commit a hook rejected leaves the edit
+      staged while the already-pushed HEAD still passes — edit done is not
+      committed, and committed is not pushed. Pass HEAD's sha with it.
+
+  checks --gh-repo OWNER/NAME --sha S [--require NAME ...] [--timeout 60]
+      Read the forge's check-runs for S (`gh api`, filter=latest, every
+      page) and judge each check NAME by its own latest run — never a
+      combined status rollup, which can carry stale or empty entries and
+      undercount a green head. Per name: any run not completed is PENDING
+      (a live rerun supersedes an older result); otherwise the run with the
+      latest completion time decides: success / neutral / skipped is PASS,
+      cancelled is PENDING (transient, never red), anything else is FAIL.
+      With --require, only those names count and a missing one is NO-RUN.
+      Exit 1 on any FAIL; exit 2 on any PENDING / NO-RUN, no runs at all,
+      a page count short of total_count, or a `gh` error; else PASS. Legacy
+      commit statuses are not read: a check that reports only as a status
+      shows as NO-RUN under --require (fail closed).
 
   --json  print one JSON object (verdict, observed id, surface, reason, UTC
           observation time) for a board post or a handback `Verify:` line.
@@ -49,7 +67,9 @@ error, a timeout, a shallow clone, an ambiguous or too-short sha, or bad
 usage). Exit 2 is never a pass: an unverifiable claim stays unverified.
 
 Side effects: `served` performs HTTP GETs (proxy env vars are honoured);
-`ref` runs `git fetch` against the named remote. Nothing else is written.
+`ref` runs `git fetch` against the named remote (and `git status` with
+--require-clean); `checks` runs read-only `gh api` calls. Nothing else is
+written.
 """
 import argparse
 import contextlib
@@ -75,6 +95,9 @@ DEFAULT_GIT_TIMEOUT = 120.0  # seconds per git call in `ref` mode
 HEX_RE = re.compile(r"^[0-9a-f]+$")
 PROVES = "the surface serves this build; not that the feature works"
 PROVES_REF = "the remote branch contains this commit; not that it is deployed or works"
+PROVES_CHECKS = "each named check's latest run at this sha; not that the checks cover the change"
+CHECK_PASS = ("success", "neutral", "skipped")
+REPO_SLUG_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 # Tests swap this for {} so a local fixture never routes through a proxy.
 _PROXIES = None
 
@@ -310,13 +333,24 @@ def _git(repo, *args, timeout=DEFAULT_GIT_TIMEOUT):
     return subprocess.CompletedProcess(proc.args, proc.returncode, out, err)
 
 
-def check_ref(repo, remote, branch, expect, timeout=DEFAULT_GIT_TIMEOUT):
+def check_ref(repo, remote, branch, expect, timeout=DEFAULT_GIT_TIMEOUT, require_clean=False):
     """Return (code, observed-remote-head, reason) for the reachability check.
 
-    Every git call is bounded by `timeout` seconds; a timeout raises CheckError (exit 2).
+    With `require_clean`, any uncommitted tracked change in `repo` is a FAIL
+    before anything is fetched. Every git call is bounded by `timeout`
+    seconds; a timeout raises CheckError (exit 2).
     """
     git = lambda *a: _git(repo, *a, timeout=timeout)  # noqa: E731  (one bound runner for this check)
     expected = _sha(expect, "--expect-sha")
+    if require_clean:
+        st = git("status", "--porcelain=v1", "--untracked-files=no")
+        if st.returncode != 0:
+            raise CheckError(f"git status failed in {repo}: {st.stderr.strip()[:300]}")
+        dirty = [ln for ln in st.stdout.splitlines() if ln.strip()]
+        if dirty:
+            return FAIL, None, (f"{len(dirty)} tracked path(s) in {repo} changed but not committed (staged or not): "
+                                "a hook-rejected commit leaves the edit uncommitted; edit done is not committed "
+                                "is not pushed")
     shown = redact_url(remote)  # a URL remote can carry credentials
     if remote.startswith("-") or not remote:
         raise CheckError(f"bad --remote {shown!r}")
@@ -349,6 +383,85 @@ def check_ref(repo, remote, branch, expect, timeout=DEFAULT_GIT_TIMEOUT):
 
 
 # --------------------------------------------------------------------------
+# checks
+# --------------------------------------------------------------------------
+def _gh_default(args, timeout):
+    """Run one `gh` call without a shell; return (rc, stdout, stderr). A hang past `timeout` s is rc 124."""
+    try:
+        proc = subprocess.run(args, capture_output=True, text=True, timeout=timeout, stdin=subprocess.DEVNULL)
+    except FileNotFoundError as exc:
+        return 127, "", str(exc)
+    except subprocess.TimeoutExpired:
+        return 124, "", f"timed out after {timeout:g}s"
+    return proc.returncode, proc.stdout, proc.stderr
+
+
+_gh = _gh_default  # the selftest swaps in a fake forge
+
+
+def _decode_objects(text):
+    """Decode `gh api --paginate` output for an object endpoint: pages printed back to back."""
+    decoder, pos, out = json.JSONDecoder(), 0, []
+    while True:
+        while pos < len(text) and text[pos].isspace():
+            pos += 1
+        if pos >= len(text):
+            return out
+        try:
+            page, pos = decoder.raw_decode(text, pos)
+        except ValueError as exc:
+            raise CheckError(f"gh output is not JSON: {exc}")
+        if not isinstance(page, dict) or not isinstance(page.get("check_runs"), list):
+            raise CheckError("gh output held a page without a check_runs list")
+        out.append(page)
+
+
+def check_checks(slug, sha, required, timeout):
+    """Return (code, summary, reason) for the per-name latest check-run verdict (see `checks`)."""
+    expected = _sha(sha, "--sha")
+    if not REPO_SLUG_RE.match(slug or ""):
+        raise CheckError(f"--gh-repo {slug!r} is not OWNER/NAME")
+    rc, out, err = _gh(["gh", "api", "--paginate",
+                        f"repos/{slug}/commits/{expected}/check-runs?filter=latest&per_page=100"], timeout)
+    if rc != 0:
+        raise CheckError(f"gh api failed (rc {rc}): {err.strip()[:300]}")
+    pages = _decode_objects(out)
+    runs = {r.get("id"): r for pg in pages for r in pg["check_runs"] if isinstance(r, dict)}
+    total = pages[0].get("total_count") if pages else 0
+    if not isinstance(total, int) or len(runs) < total:
+        raise CheckError(f"read {len(runs)} check-runs, forge reports {total}: truncated, refusing to judge")
+    by_name = {}
+    for r in runs.values():
+        head = str(r.get("head_sha") or "").lower()
+        if HEX_RE.match(head) and len(head) >= MIN_SHA and _matches(expected, head) and r.get("name"):
+            by_name.setdefault(str(r["name"]), []).append(r)
+    if not by_name and not required:
+        return COULD_NOT_CHECK, None, f"no check-runs for {expected}: not passed, not failed; dispatch a run"
+    states = {}
+    for name in (required or sorted(by_name)):
+        group = by_name.get(name)
+        if not group:
+            states[name] = ("NO-RUN", "no run")
+            continue
+        live = [r for r in group if r.get("status") != "completed"]
+        if live:
+            states[name] = ("PENDING", str(live[0].get("status")))
+            continue
+        last = max(group, key=lambda r: (str(r.get("completed_at") or ""), r.get("id") or 0))
+        concl = str(last.get("conclusion"))
+        states[name] = ("PASS" if concl in CHECK_PASS else "PENDING" if concl == "cancelled" else "FAIL", concl)
+    tally = {k: sorted(n for n, (st, _) in states.items() if st == k) for k in ("PASS", "FAIL", "PENDING", "NO-RUN")}
+    summary = ", ".join(f"{len(v)} {k}" for k, v in tally.items())
+    detail = "; ".join(f"{k}: " + ", ".join(f"{n} ({states[n][1]})" if k != "NO-RUN" else n for n in v)
+                       for k, v in tally.items() if v and k != "PASS")
+    if tally["FAIL"]:
+        return FAIL, summary, f"{summary} — {detail}"
+    if tally["PENDING"] or tally["NO-RUN"]:
+        return COULD_NOT_CHECK, summary, f"{summary} — {detail}: wait or re-dispatch, then re-check"
+    return PASS, summary, f"{summary} at {expected[:12]} (latest run per check name)"
+
+
+# --------------------------------------------------------------------------
 # CLI
 # --------------------------------------------------------------------------
 def _parser():
@@ -371,6 +484,13 @@ def _parser():
     r.add_argument("--branch", required=True)
     r.add_argument("--expect-sha", required=True)
     r.add_argument("--timeout", type=float, default=DEFAULT_GIT_TIMEOUT, help="seconds per git call")
+    r.add_argument("--require-clean", action="store_true",
+                   help="also FAIL when --repo has an uncommitted tracked change (a hook-rejected commit)")
+    c = sub.add_parser("checks", parents=[common], help="judge each check name by its latest run at a sha")
+    c.add_argument("--gh-repo", required=True, help="OWNER/NAME on the forge")
+    c.add_argument("--sha", required=True)
+    c.add_argument("--require", action="append", default=[], help="a check name that must PASS (repeatable)")
+    c.add_argument("--timeout", type=float, default=60.0, help="seconds for the gh read")
     return p
 
 
@@ -383,20 +503,26 @@ def main(argv=None):
         _parser().print_usage(sys.stderr)
         return COULD_NOT_CHECK
     # Printed and JSON surfaces never carry userinfo, a query, or a fragment (tokens live there).
-    surface = (redact_url(args.url) if args.mode == "served"
-               else f"{redact_url(args.remote)}/{args.branch} in {args.repo}")
-    proves = PROVES if args.mode == "served" else PROVES_REF
+    if args.mode == "served":
+        surface, proves = redact_url(args.url), PROVES
+    elif args.mode == "ref":
+        surface, proves = f"{redact_url(args.remote)}/{args.branch} in {args.repo}", PROVES_REF
+    else:
+        surface, proves = f"check-runs of {args.gh_repo}", PROVES_CHECKS
     try:
         if args.mode == "served":
             code, observed, reason = check_served(args.url, args.expect_sha, args.probe, args.timeout)
+        elif args.mode == "ref":
+            code, observed, reason = check_ref(args.repo, args.remote, args.branch, args.expect_sha, args.timeout,
+                                               args.require_clean)
         else:
-            code, observed, reason = check_ref(args.repo, args.remote, args.branch, args.expect_sha, args.timeout)
+            code, observed, reason = check_checks(args.gh_repo, args.sha, args.require, args.timeout)
     except CheckError as exc:
         code, observed, reason = COULD_NOT_CHECK, None, str(exc)
     if getattr(args, "json", False):
         print(json.dumps({
             "mode": args.mode, "verdict": VERDICT[code], "exit": code, "surface": surface,
-            "expect_sha": args.expect_sha, "observed": observed, "reason": reason,
+            "expect_sha": args.sha if args.mode == "checks" else args.expect_sha, "observed": observed, "reason": reason,
             "checked_at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "proves": proves,
         }, sort_keys=True))
@@ -605,6 +731,26 @@ def _selftest():
             failed += 1
             print(f"FAIL  ref: ambiguity fixture no longer collides ({b1[:MIN_SHA]} vs {b2[:MIN_SHA]})")
 
+        # Edit done is not committed: a commit a hook rejected leaves the edit
+        # staged while HEAD (already pushed) still passes a plain reachability check.
+        with open(os.path.join(work, "app.txt"), "w") as fh:
+            fh.write("v1\n")
+        g("-C", work, "add", "app.txt")
+        g("-C", work, "commit", "--quiet", "-m", "c")
+        g("-C", work, "push", "--quiet", "origin", "HEAD:refs/heads/main")
+        clean_head = g("-C", work, "rev-parse", "HEAD")
+        case("ref --require-clean: committed and pushed passes", ref(clean_head) + ["--require-clean"], PASS)
+        with open(os.path.join(work, "app.txt"), "w") as fh:
+            fh.write("v2\n")
+        g("-C", work, "add", "app.txt")
+        case("ref: staged-not-committed edit is invisible without --require-clean", ref(clean_head), PASS)
+        case("ref --require-clean: staged-not-committed edit FIRES", ref(clean_head) + ["--require-clean"], FAIL,
+             "not committed")
+        g("-C", work, "reset", "--quiet", "app.txt")
+        case("ref --require-clean: unstaged edit FIRES", ref(clean_head) + ["--require-clean"], FAIL,
+             "1 tracked path")
+        g("-C", work, "checkout", "--quiet", "--", "app.txt")
+
         g("-C", work, "push", "--quiet", "origin", "HEAD:refs/heads/dev")
         shallow = os.path.join(tmp, "shallow")
         g("clone", "--quiet", "--depth", "1", "--branch", "dev", "file://" + remote, shallow)
@@ -630,8 +776,82 @@ def _selftest():
                 os.environ[k] = v
         shutil.rmtree(tmp, ignore_errors=True)
 
+    p2, f2 = _selftest_checks()
+    passed += p2
+    failed += f2
     print(f"\nselftest: {passed}/{passed + failed} passed")
     return 0 if failed == 0 else 1
+
+
+def _selftest_checks():
+    """Offline `checks` cases: a fake `gh` answers the check-runs read. Returns (passed, failed)."""
+    sha = "0123456789abcdef0123456789abcdef01234567"
+    passed = failed = 0
+
+    def cr(i, name, status="completed", conclusion="success", done="2026-09-23T10:00:00Z", head=sha):
+        return {"id": i, "name": name, "status": status, "conclusion": conclusion if status == "completed" else None,
+                "completed_at": done if status == "completed" else None, "head_sha": head}
+
+    def pages(*page_runs, total=None):
+        n = sum(len(r) for r in page_runs) if total is None else total
+        return "".join(json.dumps({"total_count": n, "check_runs": list(r)}) for r in page_runs)
+
+    def case(name, out, argv_extra, want, must, rc=0):
+        global _gh
+        nonlocal passed, failed
+        seen = []
+
+        def fake(args, timeout):
+            seen.append(args)
+            return rc, out, "HTTP 502" if rc else ""
+
+        saved, _gh = _gh, fake
+        buf = io.StringIO()
+        try:
+            with contextlib.redirect_stdout(buf):
+                got = main(["checks", "--gh-repo", "acme/app", "--sha", sha, *argv_extra])
+        finally:
+            _gh = saved
+        text = buf.getvalue()
+        ok = got == want and must in text and (not seen or "filter=latest" in seen[0][-1])
+        passed += ok
+        failed += not ok
+        print(f"{'PASS' if ok else 'FAIL'}  checks: {name} (rc={got}, want {want})" + ("" if ok else f"\n      {text.strip()}"))
+
+    stale_red_then_green = pages([cr(1, "test", conclusion="failure", done="2026-09-23T10:00:00Z"),
+                                  cr(2, "test", done="2026-09-23T10:05:00Z"), cr(3, "lint")])
+    case("older red + newer green rerun reads green (per-name latest, not the rollup)", stale_red_then_green, [],
+         PASS, "2 PASS")
+    case("newer red beats older green", pages([cr(1, "test", done="2026-09-23T10:00:00Z"),
+                                               cr(2, "test", conclusion="failure", done="2026-09-23T10:05:00Z")]),
+         [], FAIL, "FAIL: test (failure)")
+    case("a live rerun is pending, not the older green", pages([cr(1, "test"), cr(2, "test", status="in_progress")]),
+         [], COULD_NOT_CHECK, "PENDING: test (in_progress)")
+    case("cancelled latest is pending, never red", pages([cr(1, "test", conclusion="cancelled")]), [],
+         COULD_NOT_CHECK, "PENDING: test (cancelled)")
+    case("a required check with no run is NO-RUN", pages([cr(1, "lint")]), ["--require", "test", "--require", "lint"],
+         COULD_NOT_CHECK, "NO-RUN: test")
+    case("required subset ignores an unrelated red", pages([cr(1, "lint"), cr(2, "docs", conclusion="failure")]),
+         ["--require", "lint"], PASS, "1 PASS")
+    case("two pages summed", pages([cr(i, f"job{i}") for i in range(1, 101)], [cr(101, "job101")]), [], PASS,
+         "101 PASS")
+    case("truncated pages refused", pages([cr(1, "test")], total=5), [], COULD_NOT_CHECK, "truncated")
+    case("no check-runs for the sha", pages([]), [], COULD_NOT_CHECK, "no check-runs")
+    case("gh failure could not check", "", [], COULD_NOT_CHECK, "gh api failed", rc=1)
+    case("a run for another sha is ignored", pages([cr(1, "test", conclusion="failure", head="f" * 40), cr(2, "test")]),
+         [], PASS, "1 PASS")
+    case("unknown conclusion fails closed", pages([cr(1, "test", conclusion="startup_failure")]), [], FAIL,
+         "FAIL: test (startup_failure)")
+    case("completion time decides, not creation order",
+         pages([cr(2, "test", conclusion="cancelled", done="2026-09-23T10:00:00Z"),
+                cr(1, "test", done="2026-09-23T10:05:00Z")]), [], PASS, "1 PASS")
+    with contextlib.redirect_stdout(io.StringIO()):
+        rc = main(["checks", "--gh-repo", "not a slug", "--sha", sha])
+    ok = rc == COULD_NOT_CHECK
+    passed += ok
+    failed += not ok
+    print(f"{'PASS' if ok else 'FAIL'}  checks: bad --gh-repo refused (rc={rc})")
+    return passed, failed
 
 
 if __name__ == "__main__":

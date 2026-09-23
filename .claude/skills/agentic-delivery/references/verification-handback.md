@@ -444,7 +444,9 @@ makes the claim checkable, it does not replace the forge run.
   rests on a served app or a remote branch. `served --url U --expect-sha S --probe header:NAME` passes only on the
   serving process's own build id — none found, a payload timestamp, a redirect, or a non-200 exits 2;
   `ref --branch B --expect-sha S` fetches and checks reachability on the branch the reviewer uses, never a stale
-  local tree. Its `--json` is the `Verify:` evidence; it proves that build is served, not that the feature works.
+  local tree (`--require-clean`: an edit a rejected hook left uncommitted fails); `checks` reads each check's own
+  latest run, never a rollup (#1066). Its `--json` is the `Verify:` evidence, bounded by its `proves` field
+  (never "the feature works").
 
 ## A fan-out review is not complete until every worker has joined — a partial aggregate can drop the tail's top-severity finding
 
