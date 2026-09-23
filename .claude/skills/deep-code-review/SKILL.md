@@ -64,7 +64,7 @@ Batch-mark untouched domains N/A; escalate on any blast-radius 🚩. Procedure:
 |---|---|---|
 | web | A B E F J O P | `security-appsec.md`, `frontend-a11y.md`, `product-ux-quality.md` |
 | mobile | A B E F J P Q | `mobile-appsec.md`, `security-appsec.md` |
-| api / service | A B E F I J | `security-appsec.md`, `api-contracts.md` |
+| api / service | A B E F I J | `security-appsec.md`, `security-api.md`, `api-contracts.md` |
 | data / ETL | A D E F G J | `data-quality.md`, `performance-db-cost.md` |
 | agent / LLM / MCP | A B C E F J | `security-ai-agents.md`, `security-agent-skills.md`, `security-appsec.md` |
 | IaC / platform | B K L N | `infra-iac-containers.md` |
@@ -201,7 +201,7 @@ footguns: `references/language-stack-redflags.md`.
 | | Domain | Depth |
 |---|---|---|
 | A | Correctness & logic | `domain-checklists.md`, `time-date-correctness.md` (timestamps, durations, recurring/scheduled times, time zones) |
-| B | AppSec (OWASP Top 10:2025) | `security-appsec.md`; `mobile-appsec.md` — **read when** the target ships an iOS / Android / native mobile client (MASVS/MASTG deltas) |
+| B | AppSec (OWASP Top 10:2025) | `security-appsec.md`; `security-api.md` — **read when** the target serves its own HTTP / GraphQL / gRPC / WebSocket API (any archetype); `mobile-appsec.md` — **read when** the target ships an iOS / Android / native mobile client (MASVS/MASTG deltas) |
 | C | AI / LLM / agents | `security-ai-agents.md`, `security-agent-skills.md` |
 | D | Data integrity | `data-quality.md` |
 | E | Performance, efficiency & cost | `performance-db-cost.md`, `model-tiering.md`, `billing-correctness.md` (when the target meters, subscribes, or charges) |
@@ -215,7 +215,7 @@ footguns: `references/language-stack-redflags.md`.
 | M | Observability | `observability.md` |
 | N | Config, secrets, environments | `domain-checklists.md` |
 | O | Docs & DX | `docs-and-dx.md`, `docs-evolution-by-stage.md` (which-docs-when, by stage), `readme-authoring.md` (writing/reviewing a README for onboarding) |
-| P | Frontend / UI / a11y | `frontend-a11y.md`, `product-ux-quality.md` (rendered-appearance / design-parity — "make X look like Y", a port/restyle), `migration-parity.md` (matching a prototype / mockup / design-export — don't over-claim parity from a structural or seed-data audit, or delete real features to match a sparse mockup) |
+| P | Frontend / UI / a11y | `frontend-a11y.md`, `product-ux-quality.md` (design half), `rendered-parity.md` (rendered-appearance / design-parity — "make X look like Y", a port/restyle), `migration-parity.md` (matching a prototype / mockup / design-export — don't over-claim parity from a structural or seed-data audit, or delete real features to match a sparse mockup) |
 | Q | Privacy, compliance, licensing | `privacy-compliance.md` (code layer), `privacy-by-design.md` (pre-code product artifacts) |
 | R | i18n, encoding, localization | `domain-checklists.md`, `i18n-l10n.md` (depth: bidi/RTL, Unicode normalization, CLDR plurals) |
 | S | Branches, merges, open-work triage | `branch-and-merge-hygiene.md` |

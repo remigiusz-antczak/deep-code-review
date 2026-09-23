@@ -3,6 +3,49 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+### [Unreleased]
+
+(Level-3 heading on purpose: `ci-gates.sh version` requires the first `## ` heading to announce
+`VERSION`, so this block is promoted to the next release heading when that release is cut.)
+
+#### Changed — split the three largest reference files into routed sub-files (no content removed)
+
+Agents now load only the lesson or overlay a trigger names instead of a whole oversized file.
+Every original line survives exactly once across the parent and its sub-files, checked by a
+line-multiset script; the only added lines are titles, "Read this when" lines, index entries, and
+short pointers, plus one cross-reference repointed by filename.
+
+- `agentic-delivery/references/fast-agentic-delivery.md` (206,207 bytes, 73 sections) is now a
+  6,221-byte index (the original intro, one trigger line per sub-file, Sources, Cross-references)
+  over five themed files that keep their sections in original order: `fanout-host-sizing.md`,
+  `merge-queue-worktrees.md`, `verification-handback.md`, `dev-env-ownership.md`, and
+  `unattended-trackers.md`. The largest single-lesson load drops from about 51,500 tokens to at most
+  about 13,800 (bytes / 4). `SKILL.md`, `multi-session-coordination.md`,
+  `unattended-operating-mode.md`, `host-enforcement.md`, the skill's evals, the sibling skill's
+  `concurrency-shared-state.md`, `branch-and-merge-hygiene.md`, and `parallel-audit.md`, and the
+  `autonomy-doctrine` self-test now point at the exact sub-file.
+- `deep-code-review/references/security-appsec.md`: the API-specific overlay (OWASP API Security
+  Top 10, 2023) moved to `security-api.md`. It is must-load for the `api / service` archetype, and
+  domain B routes it for any archetype whose target serves its own HTTP, GraphQL, gRPC, or
+  WebSocket API, so no review that needed it loses it.
+- `deep-code-review/references/product-ux-quality.md`: the two parity-claim sections (the
+  default-state canonical surface, and the four "looks the same" axes) moved to
+  `rendered-parity.md`, routed from domain P and domain checklist P on a port / restyle /
+  design-parity task. The pre-ship checklist, the Phase-6 enforcing gate, and its parity differ
+  stay in `product-ux-quality.md`.
+- Must-load ceilings re-pinned (`scripts/mustload-budgets.tsv`, tokens = bytes / 4): web
+  93,463 → 86,836; mobile 33,070 → 28,778; agent / LLM / MCP 38,008 → 33,716; data / ETL
+  29,582 → 29,581; lib / SDK 10,926 → 10,913; IaC / platform unchanged at 4,342. One deliberate
+  rise: `api / service` 33,516 → 33,573 (+57), which is the new file's title and trigger line plus
+  the parent's pointer; that archetype loads the same content as before. The Phase 0-2 mandatory
+  floor cannot be expressed as a row, because `cmd_mustload` parses only the archetype table; that
+  needs a gate extension.
+- size-budget-raise: .claude/skills/agentic-delivery/SKILL.md 28658→29178 five exact sub-file routes plus the lesson-ledger trigger line
+- size-budget-raise: .claude/skills/agentic-delivery/references/unattended-operating-mode.md 15818→15969 dual-topic pointers now name both sub-files
+- size-budget-raise: .claude/skills/deep-code-review/SKILL.md 23663→23835 route security-api.md and rendered-parity.md with their triggers
+- size-budget-raise: .claude/skills/deep-code-review/references/domain-checklists.md 63927→64072 domain P names rendered-parity.md and its trigger
+- size-budget-raise: .claude/skills/deep-code-review/references/role-coverage.md 19586→19605 the backend role lists security-api.md
+
 ## [1.434.0] — 2026-09-23
 
 ### Added — opt-in CI enforcement for target repos (`install.sh --with-gates`)

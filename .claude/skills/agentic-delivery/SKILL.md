@@ -91,7 +91,7 @@ distilled summary while its own context stays isolated from its parent's
 never spawn more lanes than there are independently-verifiable objectives —
 and **pilot before full fan-out** on a wide, mechanical batch. Default tiers,
 the duplicated-work failure mode, and the pilot procedure:
-`references/fast-agentic-delivery.md`.
+`references/fanout-host-sizing.md`.
 
 **Escalate a lane, don't just retry it.** After two equivalent failures on the
 same lane, change approach — not the same fix again (*Failure*, below). In order
@@ -107,7 +107,15 @@ preflight), and task verification (→ G5/G6) — the gate shape already covers
 them; not a reason for an eleventh gate.
 
 **Sweeping the whole ready queue on every trigger** — a completeness fix to
-this event-driven model, not a change to it: `references/fast-agentic-delivery.md`.
+this event-driven model, not a change to it: `references/merge-queue-worktrees.md`.
+
+**Worked-lesson ledger** — five themed files, indexed one line each in
+`references/fast-agentic-delivery.md`. Read `references/verification-handback.md`
+when verifying, finalizing, or relaying a lane's result (liveness, `Verify:`
+lines, fan-out joins); `references/dev-env-ownership.md` when a lane serves a
+dev server, re-runs a generator or ratchet, or shares files under an ownership
+map; `references/unattended-trackers.md` when closing tracker issues or running
+a multi-hour work loop.
 
 **Catch and reverse your own drift into a lane's work** — the completeness
 fix applied to *action*, not only attention. Scope: only while the Conductor
@@ -278,8 +286,8 @@ holds a worktree slot). Decide HEAVY-lane count and model tier
 (`model-tiering.md` in the `deep-code-review` sibling) from that, not from
 habit. The probe commands, the decide-from-probe rules, the shell-semantics
 check (`branch-and-merge-hygiene.md` §6), the contention-vs-defect rule
-(`parallel-audit.md` §0), and CI-offload:
-`references/fast-agentic-delivery.md`.
+(`parallel-audit.md` §0): `references/fanout-host-sizing.md`; CI-offload:
+`references/merge-queue-worktrees.md`.
 
 - **Free RAM and the swap *trend* are the primary gate — `load1` is not a
   reliable term.** Spawn another heavy lane only while free RAM >15% AND swap
@@ -291,7 +299,7 @@ check (`branch-and-merge-hygiene.md` §6), the contention-vs-defect rule
   term** — it counts disk-I/O-wait, not only CPU. Throttle the instant free RAM
   or the swap trend trips; the numbers are a rule of thumb to recalibrate on
   the host in front of you. Why `load1` misleads, the worked example, and the
-  swap-blowout case: `references/fast-agentic-delivery.md`.
+  swap-blowout case: `references/fanout-host-sizing.md`.
 
 ## Local environment (own it)
 
@@ -397,7 +405,7 @@ Copied as principles, not as anyone's private playbook:
 10. **A fleet-wide external advisory is a third case for principle 3, and an
     independent-queue merge cascade is a cadence choice subordinate to
     principle 6** — neither restated here; depth and the honest limits of
-    each: `references/fast-agentic-delivery.md`.
+    each: `references/merge-queue-worktrees.md`.
 11. **"Visible/done" is measured on the owner's own surface, never a proxy.**
     Integrated to the mainline (G7), a green branch build, a passing test, an
     insert/row count, a grep count are engineering states — real, but none is

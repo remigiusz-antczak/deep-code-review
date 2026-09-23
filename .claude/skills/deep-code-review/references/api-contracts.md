@@ -3,8 +3,8 @@
 Read this when reviewing public HTTP/GraphQL/RPC surfaces, webhooks, message/
 queue payloads, SDK boundaries, or any serialized state that must evolve without
 breaking live consumers. Expands section I of `SKILL.md`. For authz/injection/
-SSRF on those surfaces, load `security-appsec.md` (OWASP API Security Top 10
-overlay lives there); this file is **contract correctness and evolution**.
+SSRF on those surfaces, load `security-appsec.md` and `security-api.md` (the OWASP API
+Security Top 10 overlay); this file is **contract correctness and evolution**.
 
 Standards (URLs + dates in `docs/standards-index.md`): OWASP API Security Top 10
 (2023), Semantic Versioning.
@@ -53,7 +53,7 @@ Standards (URLs + dates in `docs/standards-index.md`): OWASP API Security Top 10
   itself carry authorization: whatever offset/filter/tenant scope it encodes,
   the object/function check still has to run against the authenticated
   principal on every page — verify it with the BOLA/BFLA two-principal matrix
-  (`security-appsec.md`, API1+API5) rather than trusting the token.
+  (`security-api.md`, API1+API5) rather than trusting the token.
 - A **throttled response carries a back-off signal**: when the API returns `429 Too Many
   Requests` (or a `503` under load), emit **`Retry-After`** so clients back off by
   instruction, not by guess — HTTP's `Retry-After` tells a client how long to wait before
@@ -131,7 +131,7 @@ flag is a contract, which is the SDK-boundary scope this file's header claims.
   by name only) — so consumers are warned in-band. And you **cannot know the window has safely
   expired unless something measures calls to the deprecated path**: removal with no call-volume
   evidence is a guess, not a verified drop (the skip-rather-than-guess bar). Distinct from
-  `security-appsec.md`'s zombie/legacy-route sunset, which retires an already-orphaned surface rather
+  `security-api.md`'s zombie/legacy-route sunset, which retires an already-orphaned surface rather
   than planning the deprecation of a live one.
 
 ---
@@ -184,10 +184,10 @@ inbound rules above rely on.
 ## Streaming transports (WebSocket / SSE) — contract & reliability
 
 A live push connection is neither a queue nor an outbound call; its own failure modes need their own
-review. (The auth angle — upgrade auth, `Origin`/CSWSH, per-connection limits — is in `security-appsec.md`'s API-specific overlay (OWASP API Security Top 10), the WebSocket paragraph; not restated here.) The same
+review. (The auth angle — upgrade auth, `Origin`/CSWSH, per-connection limits — is in `security-api.md`, the WebSocket paragraph; not restated here.) The same
 failure modes apply to **gRPC streaming** (server-streaming, client-streaming, bidi) — a live push
 connection over HTTP/2 instead of a WS/SSE handshake, sharing the reconnect/backpressure/liveness concerns
-below; `security-appsec.md`'s gRPC paragraph owns its authz/TLS half, not restated here either. (The
+below; `security-api.md`'s gRPC paragraph owns its authz/TLS half, not restated here either. (The
 horizontal-scale angle — an in-process connection/subscription registry that silently stops delivering
 once the server is replicated — is `concurrency-shared-state.md`'s shared-mutable-resource-scope bullet;
 not restated here.)

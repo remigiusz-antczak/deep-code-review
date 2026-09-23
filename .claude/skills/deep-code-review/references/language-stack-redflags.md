@@ -338,7 +338,7 @@ finding.
   passed through a `Math.max(…, K)` / `max(…, K)` **and** a later `Math.min(…, expr)` /
   `min(…, expr)` (or `clamp()` calls) where `expr` derives from a position/offset — read whether
   any later bound can fall under the earlier floor. Distinct from a single size-cap clamp
-  (`security-appsec.md` clamps a requested size to a hard maximum — one bound, no floor for it to
+  (`security-api.md` clamps a requested size to a hard maximum — one bound, no floor for it to
   undo); the defect here is the **composition** of two individually-correct bounds, not either
   bound alone.
 
@@ -407,7 +407,7 @@ finding.
   observed examples, verbatim: "CPU consumption via inputs that cause many hash
   table collisions."). `performance-db-cost.md`'s count/iteration cap does not
   defend against this. Distinct from the GraphQL query-cost/batching/aliasing item
-  in `security-appsec.md` — that's request-*multiplication* (more fields/operations
+  in `security-api.md` — that's request-*multiplication* (more fields/operations
   than a per-request budget allows); this is worst-case complexity from
   attacker-*chosen values* inside one, already count-bounded request. Verify the
   target's hash-map implementation before prescribing a fix: a randomized hash
@@ -422,12 +422,12 @@ finding.
   verbatim: "Deeply nested arrays trigger stack exhaustion."). Distinct from the
   decompression bomb above — that's *byte-size* amplification, caught by an
   output-size cap; this is *call-stack depth*, which a tiny, low-byte payload sails
-  through that same cap to reach. Distinct too from `security-appsec.md`'s API10
+  through that same cap to reach. Distinct too from `security-api.md`'s API10
   "bound size and recursion" clause — that's the app **consuming an upstream
   response** (outbound/client direction); this bullet is the **inbound** direction,
   a public endpoint parsing an attacker-supplied request body. Distinct, too, from
   the generic "max depth" cost-cap in `performance-db-cost.md` (an efficiency bound,
-  not a stack-crash defense) and from `security-appsec.md`'s GraphQL query-depth
+  not a stack-crash defense) and from `security-api.md`'s GraphQL query-depth
   limit (which bounds resolver depth over a parsed query AST at the application
   layer, not a raw deserializer's call-stack depth at the syntax layer). Grep the inbound
   parse call itself (`json.loads(`, `JSON.parse(`, `yaml.safe_load(`, an XML
@@ -449,7 +449,7 @@ finding.
   `Buffer.alloc(declared_size)`, `make([]T, declared_len)` — and read backward to
   confirm whether that size traces to an unclamped value inside the payload.
   Distinct from the wire-level upload-size cap and the API10 "bound size" clause in
-  `security-appsec.md` — both bound bytes actually *transferred*/received, not a
+  `security-api.md` — both bound bytes actually *transferred*/received, not a
   size *claimed inside* a payload before those bytes arrive. Distinct too from the
   C/C++ section's "integer overflow before `malloc`" above — that's an *undersized*
   allocation from an overflowed calculation, leading to a buffer overflow (memory

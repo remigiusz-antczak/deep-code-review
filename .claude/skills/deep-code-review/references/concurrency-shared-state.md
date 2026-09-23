@@ -367,7 +367,7 @@ is invisible in any diff.
 
 The **trigger** for shedding — when memory/swap or contention says back off, and
 never on staleness — lives in the `agentic-delivery` overlay
-(`agentic-delivery/references/fast-agentic-delivery.md`); this is the **mechanism**
+(`agentic-delivery/references/fanout-host-sizing.md`); this is the **mechanism**
 for acting on it without collateral damage.
 
 ---

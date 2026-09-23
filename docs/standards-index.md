@@ -1110,7 +1110,7 @@ off-schema output, `max_tokens` truncation, and safety refusals.
 ## Verified by direct fetch (2026-09-21) — OWASP API4 detail (records-per-page & execution timeouts)
 
 Verification date for the row below: **2026-09-21**. Added for a `deep-code-review`
-`security-appsec.md` API4 fold on the response-size (records-per-page) and
+`security-api.md` API4 fold on the response-size (records-per-page) and
 execution-time (inbound request-execution timeout) axes.
 
 | Standard / source | URL | What was confirmed |
