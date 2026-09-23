@@ -132,6 +132,16 @@
         "Selects contribution for a private→public upstream-improvement request",
         "Preserves the privacy scrub + human merge gate (no autonomous push)"
       ]
+    },
+    {
+      "id": "measures-tokens-not-guesses",
+      "prompt": "A wave of subagents just finished. Did we spend too much on orchestration versus actual work, and how do you know rather than guess?",
+      "expected_output": "Run `scripts/token_report.py` against the session transcript rather than eyeballing it; read the orchestration-share figure (main vs subagents) and flag it if over 20%, and check per-subagent startup-token cost, instead of asserting an impression.",
+      "expectations": [
+        "Names scripts/token_report.py as the measurement, not a guess or an impression",
+        "Cites the orchestration-share / >20% flag as the concrete signal",
+        "Checks per-subagent startup-token cost, not only the aggregate"
+      ]
     }
   ]
 }

@@ -8,10 +8,11 @@ WHY THIS EXISTS (the failure it closes)
 Names prove nothing: the app can carry every design name with different
 values (a different token foundation), and then no per-screen restyle ever
 converges. This tool resolves every alias on both sides, normalizes each
-resolved value to a canonical form, and compares VALUES. It is tier 2 of the
-check order in `references/migration-parity.md`: cheap and deterministic, run
-after `parity_differ.py` (the element inventory, the only completeness check)
-and before any screenshot.
+resolved value to a canonical form, and compares VALUES. It is stage 1 (the
+foundation) of `parity_differ.py --workflow`, the check order in
+`references/migration-parity.md`: cheap and deterministic, before primitives,
+the per-section element inventory (the only completeness check), and any
+screenshot.
 
 WHAT IT DOES NOT VERIFY (read before quoting a MATCH)
 ------------------------------------------------------

@@ -133,6 +133,22 @@ else
   record 1 "privacy: load optional sibling .banlist.local.txt alongside primary .banlist.txt"
 fi
 
+# A named pipe in the scanned tree must not hang the scan (stray fixture).
+fifodir="$WORK/scan-fifo"
+mkdir -p "$fifodir" && printf 'clean\n' >"$fifodir/ok.txt" && mkfifo "$fifodir/pipe"
+( bash "$GATES" privacy --banlist "$WORK/banlist.valid" "$fifodir" >/dev/null 2>&1; echo $? >"$WORK/fifo.rc" ) &
+fifo_pid=$!
+for _ in $(seq 1 100); do kill -0 "$fifo_pid" 2>/dev/null || break; sleep 0.1; done
+if kill -0 "$fifo_pid" 2>/dev/null; then
+  kill "$fifo_pid" 2>/dev/null; pkill -f "privacy --banlist $WORK/banlist.valid $fifodir" 2>/dev/null
+  record 1 "privacy: a FIFO in the tree does not hang the scan"
+elif [ "$(cat "$WORK/fifo.rc")" = 0 ]; then
+  record 0 "privacy: a FIFO in the tree does not hang the scan"
+else
+  record 1 "privacy: a FIFO in the tree does not hang the scan"
+fi
+rm -f "$fifodir/pipe"
+
 # ---------------------------------------------------------------------------
 # routing — every references/*.md must be routed from SKILL.md
 # ---------------------------------------------------------------------------
@@ -2551,6 +2567,49 @@ else
   record 1 "pre-push-verify: a marker already in the base (outside the pushed range) does not block"
 fi
 
+# Case: HOLD. A DCR_HOLD file in the git common dir refuses every push and
+# prints its reason line, even when DCR_PREPUSH_CMD passes (planted RED --
+# before the HOLD check existed this push exited 0). The same file also holds
+# a push from a linked worktree (the common dir is shared), and a repo-root
+# .dcr-hold holds too. Removing the file lifts the hold.
+ppv_hold="$(cd "$ppvroot/local" && git rev-parse --git-common-dir)"
+case "$ppv_hold" in /*) ;; *) ppv_hold="$ppvroot/local/$ppv_hold" ;; esac
+printf 'release freeze: owner review\nsecond line\n' >"$ppv_hold/DCR_HOLD"
+ppv_run "$WORK/ppv-hold.log" "refs/heads/main $ppv_clean_sha refs/heads/main $ppv_clean_sha" \
+  DCR_PREPUSH_CMD=true
+if [ "$PPV_RC" -ne 0 ] && grep -q 'HOLD' "$WORK/ppv-hold.log" \
+  && grep -q 'release freeze: owner review' "$WORK/ppv-hold.log" && ! grep -q 'second line' "$WORK/ppv-hold.log"; then
+  record 0 "pre-push-verify: a DCR_HOLD file in the common dir refuses the push and prints its reason line"
+else
+  record 1 "pre-push-verify: a DCR_HOLD file in the common dir refuses the push and prints its reason line"
+fi
+git -C "$ppvroot/local" worktree add -q "$ppvroot/wt" HEAD >/dev/null 2>&1
+if printf 'refs/heads/x %s refs/heads/x %s\n' "$ppv_clean_sha" "$ppv_clean_sha" \
+  | (cd "$ppvroot/wt" && env DCR_PREPUSH_CMD=true bash "$PPV" origin) >"$WORK/ppv-hold-wt.log" 2>&1; then
+  record 1 "pre-push-verify: the common-dir DCR_HOLD also refuses a push from a linked worktree"
+elif grep -q 'release freeze' "$WORK/ppv-hold-wt.log"; then
+  record 0 "pre-push-verify: the common-dir DCR_HOLD also refuses a push from a linked worktree"
+else
+  record 1 "pre-push-verify: the common-dir DCR_HOLD also refuses a push from a linked worktree"
+fi
+rm -f "$ppv_hold/DCR_HOLD"
+printf 'demo freeze\n' >"$ppvroot/local/.dcr-hold"
+ppv_run "$WORK/ppv-hold-root.log" "refs/heads/main $ppv_zero refs/heads/main $ppv_clean_sha" \
+  DCR_PREPUSH_CMD=true
+rm -f "$ppvroot/local/.dcr-hold"
+if [ "$PPV_RC" -ne 0 ] && grep -q 'HOLD.*demo freeze' "$WORK/ppv-hold-root.log"; then
+  record 0 "pre-push-verify: a repo-root .dcr-hold refuses even a ref delete"
+else
+  record 1 "pre-push-verify: a repo-root .dcr-hold refuses even a ref delete"
+fi
+ppv_run "$WORK/ppv-hold-lifted.log" "refs/heads/main $ppv_clean_sha refs/heads/main $ppv_clean_sha" \
+  DCR_PREPUSH_CMD=true
+if [ "$PPV_RC" -eq 0 ]; then
+  record 0 "pre-push-verify: removing the hold file lifts the hold"
+else
+  record 1 "pre-push-verify: removing the hold file lifts the hold"
+fi
+
 # ===========================================================================
 # Web must-load isolation (own lane; APPENDED AT THE END by convention). The
 # `web` archetype must-loads only the parents frontend-a11y.md and
@@ -3158,6 +3217,128 @@ if [ "$clg_red_rc" -ne 0 ] && grep -q 'references other/lib#12, not in the allow
   record 0 "dcr-gates closes_lint: a stray same-number keyword in another repository fails; DCR_CLOSES_REPO reaches --repo (planted RED)"
 else
   record 1 "dcr-gates closes_lint: a stray same-number keyword in another repository fails; DCR_CLOSES_REPO reaches --repo (planted RED)"
+fi
+
+# ---------------------------------------------------------------------------
+
+# ===========================================================================
+# lane-preamble template: shipped, size-bounded, and every script command it
+# names actually exists — so a paste-ready command block can't silently rot
+# once the script it names moves or is deleted.
+# ===========================================================================
+
+lp="$ROOT/.claude/skills/agentic-delivery/templates/lane-preamble.md"
+if [ -f "$lp" ]; then
+  record 0 "lane-preamble: templates/lane-preamble.md exists"
+
+  lp_lines="$(wc -l <"$lp" | tr -d '[:space:]')"
+  if [ "$lp_lines" -le 60 ]; then
+    record 0 "lane-preamble: stays within 60 lines ($lp_lines)"
+  else
+    record 1 "lane-preamble: stays within 60 lines ($lp_lines)"
+  fi
+
+  lp_missing=0
+  while IFS= read -r lp_script; do
+    [ -n "$lp_script" ] || continue
+    if [ ! -f "$ROOT/$lp_script" ]; then
+      printf 'LANE PREAMBLE SCRIPT MISSING: %s\n' "$lp_script" >&2
+      lp_missing=1
+    fi
+  done < <(grep -oE '\.claude/skills/[A-Za-z0-9_-]+/scripts/[A-Za-z0-9_]+\.py' "$lp" | LC_ALL=C sort -u)
+  if [ "$lp_missing" -eq 0 ]; then
+    record 0 "lane-preamble: every named script exists under .claude/skills/*/scripts/"
+  else
+    record 1 "lane-preamble: every named script exists under .claude/skills/*/scripts/"
+  fi
+
+  # Every `<script> <subcommand> --flag` paste-ready command in the template
+  # must resolve to a real subcommand/flag on that script's own --help output
+  # today — so a renamed/removed flag or subcommand rots the doc, not silently.
+  lp_flag_report="$WORK/lp-flag-check.txt"
+  if python3 - "$lp" "$ROOT" >"$lp_flag_report" 2>&1 <<'PY'
+import re
+import shlex
+import subprocess
+import sys
+from pathlib import Path
+
+lp_path, root = sys.argv[1], Path(sys.argv[2])
+text = Path(lp_path).read_text(encoding="utf-8")
+cmds = re.findall(r"`([^`]*\.py[^`]*)`", text)
+
+SCRIPT_RE = re.compile(r"\.claude/skills/[A-Za-z0-9_-]+/scripts/[A-Za-z0-9_]+\.py")
+SUBS_RE = re.compile(r"\{([A-Za-z0-9_,-]+)\}\s*\.\.\.")
+
+help_cache: dict[tuple, str] = {}
+
+
+def help_text(script: Path, sub: str | None) -> str:
+    key = (str(script), sub)
+    if key in help_cache:
+        return help_cache[key]
+    argv = ["python3", str(script)] + ([sub] if sub else []) + ["--help"]
+    try:
+        out = subprocess.run(argv, capture_output=True, text=True, timeout=20)
+        combined = out.stdout + out.stderr
+    except Exception as exc:  # pragma: no cover - defensive
+        combined = f"(--help failed: {exc})"
+    help_cache[key] = combined
+    return combined
+
+
+ok = True
+for cmd in cmds:
+    m = SCRIPT_RE.search(cmd)
+    if not m:
+        continue
+    rel = m.group(0)
+    script = root / rel
+    if not script.is_file():
+        continue  # already reported by the exists-check above
+    try:
+        tokens = shlex.split(cmd)
+    except ValueError:
+        print(f"UNPARSEABLE COMMAND: {cmd}")
+        ok = False
+        continue
+    try:
+        si = next(i for i, t in enumerate(tokens) if t.endswith(rel))
+    except StopIteration:
+        continue
+    rest = tokens[si + 1 :]
+    base_help = help_text(script, None)
+    subs_m = SUBS_RE.search(base_help)
+    subcommand = None
+    flag_start = 0
+    if subs_m:
+        subs = set(subs_m.group(1).split(","))
+        if rest and not rest[0].startswith("--") and not rest[0].startswith("<"):
+            subcommand = rest[0]
+            flag_start = 1
+            if subcommand not in subs:
+                print(f"UNKNOWN SUBCOMMAND: {rel} {subcommand} (valid: {sorted(subs)})")
+                ok = False
+                continue
+    help_out = help_text(script, subcommand) if subcommand else base_help
+    known_flags = set(re.findall(r"(--[A-Za-z][A-Za-z0-9-]*)", help_out))
+    for tok in rest[flag_start:]:
+        if tok.startswith("--"):
+            flag = tok.split("=", 1)[0]
+            if flag not in known_flags:
+                print(f"UNKNOWN FLAG: {rel} {subcommand or ''} {flag}")
+                ok = False
+
+sys.exit(0 if ok else 1)
+PY
+  then
+    record 0 "lane-preamble: every <script> <subcommand> --flag matches its --help"
+  else
+    cat "$lp_flag_report" >&2
+    record 1 "lane-preamble: every <script> <subcommand> --flag matches its --help"
+  fi
+else
+  record 1 "lane-preamble: templates/lane-preamble.md exists"
 fi
 
 # ---------------------------------------------------------------------------

@@ -72,6 +72,9 @@ CONTRACT (fail-closed; every branch below is load-bearing, not cosmetic)
   the style lines appended; STYLE_MATCH leaves MATCH (0) as is; `verdict`
   stays the completeness verdict and `style.verdict` (STYLE_MATCH /
   STYLE_DIFF / STYLE_COULD_NOT_CHECK) is reported separately.
+* BLOCKED_BY_FOUNDATION (7) — `--workflow` only: the inventory and tokens
+  are comparable, but the token stage mismatches or a FOUNDATION/PRIMITIVE
+  style row is un-accepted; every section verdict is withheld (WORKFLOW).
 * Extra app sections beyond the design are reported as info ("kept as
   superset") and never cause a failure on their own. Extra ITEMS inside a
   matched section are EXTRA_IN_APP rows and do fail until resolved or
@@ -175,6 +178,22 @@ configuration: commit authorship is unauthenticated metadata, so this blocks
 an agent following its own attribution convention, not a forger.
 An accepted row still prints (ACCEPTED) and never counts as matched; a row
 covering fewer differences than its count prints as info (stale).
+Style approvals live in the same file (same trust): a row whose first field
+is `style` or `rule` and whose second is not a status above is
+  style  <scope: global|section id>  <property>  <design-value>  <app-value>  <reason>  <owner>
+  rule   min-<property>  <N>px  <reason>  <owner>
+A `style` row accepts every style difference on that property with exactly
+that normalized design -> app value pair (its section before `global`); a
+rule accepts a design px value below N rendered at exactly N (e.g. `rule
+min-font-size 12px`: a design 11px text is satisfied by 12px). Accepted
+style rows print as ACCEPTED, never STYLE_DIFF; a style verdict whose every
+difference is accepted is STYLE_MATCH_WITH_ACCEPTED (exit 0); an unused style
+row or rule prints as info (stale); an unknown property/rule fails closed.
+  visual-reviewed  <section id>  <reason>  <owner>
+marks a section with no text-bearing `data-cs` (image, chart, map) as
+owner-reviewed: its style reads `visual-reviewed` instead of `no pairs`, so
+it can PASS. It never rescues a page-wide STYLE_COULD_NOT_CHECK, and on a
+section that has style pairs it prints as info (stale).
 
 COMPUTED STYLE (`--style`) — reported separately, never a completeness input
 ------------------------------------------------------------------------------
@@ -197,25 +216,61 @@ per pair only when it differs on more than half of all pairs AND on pairs
 in >= 2 sections AND on >= max(3, `--style-min-pairs`) pairs; a narrower
 majority (2 pairs, or one section) prints per pair. Style verdict:
 STYLE_MATCH, STYLE_DIFF, or STYLE_COULD_NOT_CHECK (a malformed `data-cs`,
-zero pairs, or fewer than `--style-min-pairs`). No accept path covers style
-rows.
+zero pairs, or fewer than `--style-min-pairs`). Owner style approvals:
+ACCEPTED DEVIATIONS above; FOUNDATION and PRIMITIVE count open rows only.
+
+PER-SECTION PASS + PROGRESS
+---------------------------
+Every run that compares inventories ends with `sections passed k/n` and one
+row per section: PASS iff the section is present (populated where the
+design is), every inventory row is matched or accepted, and — with
+`--style` — it has style pairs and no un-accepted style row. FAIL on a gap
+or open row; UNVERIFIED when inventory or style could not be checked (never
+a pass). Without `--style` the table is labelled inventory-only.
+
+WORKFLOW (`--workflow --design-tokens F --app-tokens F [--token-map F]`)
+------------------------------------------------------------------------
+One foundation-first gate: (1) tokens — `token_differ.py` on the two token
+exports (COULD_NOT_CHECK there is exit 3); (2) primitives — open FOUNDATION
+properties plus PRIMITIVE rows: a (role, property) differing on more than
+half of that role's pairs in >= 2 sections (a heading size wrong on every
+screen); (3) sections — the table above, style always on. While a token
+mismatches or a primitive is open, exit is BLOCKED_BY_FOUNDATION (7) and each
+section reads BLOCKED_BY_FOUNDATION: fix the foundation once, not per
+section. Inventory COULD_NOT_CHECK / CANNOT_COMPARE outrank it; a would-be
+MATCH with an UNVERIFIED section exits 6.
+
+REPORT (`--report out.html [--design-shots DIR] [--app-shots DIR]`)
+-------------------------------------------------------------------
+A self-contained HTML file per section: verdict, design|app side by side
+(`DIR/<section id>.png|jpg|jpeg|webp|gif|svg` embedded as a data URI, else a
+sandboxed srcdoc iframe of that render showing only that section, led by a
+`default-src 'none'` CSP meta), then its open inventory rows, style rows,
+and accepted rows, escaped; no script or network fetch. Evidence for a
+human before "ready", never a verdict.
 
 USAGE
 -----
   parity_differ.py --design <file> --app <file> [--accept <tsv> [--accept-rev REV]]
                    [--min-pairs N] [--style [--style-min-pairs N]] [--json]
+                   [--workflow --design-tokens F --app-tokens F [--token-map F]
+                    [--token-min-pairs N]] [--report F [--design-shots D] [--app-shots D]]
   parity_differ.py --selftest
-Public API for sibling scripts: `compare()` (the dict `--json` prints) and
+Public API for sibling scripts: `compare()` (the dict `--json` prints),
+`run_workflow()` (the same dict plus `workflow`), `write_report()`, and
 `inventory_keys()` (one side's item keys, never a verdict).
 """
 from __future__ import annotations
 
 import argparse
+import base64
 import contextlib
 import functools
+import html
 import importlib.util
 import io
 import json
+import mimetypes
 import os
 import re
 import subprocess
@@ -238,13 +293,15 @@ COULD_NOT_CHECK = 3
 CANNOT_COMPARE = 4
 STYLE_DIFF = 5                                # --style only; inventory passed
 STYLE_COULD_NOT_CHECK = 6                     # --style only; inventory passed, style unverifiable
+BLOCKED_BY_FOUNDATION = 7                     # --workflow only; a foundation stage is failing
 MATCH_WITH_ACCEPTED = "MATCH_WITH_ACCEPTED"   # verdict name; exit code is MATCH
 # FOUNDATION breadth floors (COMPUTED STYLE): pairs and distinct sections.
 _FOUNDATION_MIN_PAIRS = 3
 _FOUNDATION_MIN_SECTIONS = 2
 
 _VERDICT_NAMES = {MATCH: "MATCH", MISMATCH: "MISMATCH", USAGE_ERROR: "USAGE_ERROR",
-                  COULD_NOT_CHECK: "COULD_NOT_CHECK", CANNOT_COMPARE: "CANNOT_COMPARE"}
+                  COULD_NOT_CHECK: "COULD_NOT_CHECK", CANNOT_COMPARE: "CANNOT_COMPARE",
+                  BLOCKED_BY_FOUNDATION: "BLOCKED_BY_FOUNDATION"}
 # Computed-style properties every `data-cs` export must carry (COMPUTED STYLE).
 _STYLE_PROPS = ("font-family", "font-size", "font-weight", "line-height", "letter-spacing",
                 "color", "background-color", "padding", "border-radius", "box-shadow")
@@ -947,20 +1004,55 @@ def _style_norm(value: str) -> str:
     return re.sub(r"\s*([,()])\s*", r"\1", text)
 
 
-def diff_styles(design: list[dict], app: list[dict], min_pairs: int | None = None) -> dict:
+def _px(value: str) -> float | None:
+    """A single `<number>px` computed value as a float, else None (no unit conversion)."""
+    m = re.fullmatch(r"(-?\d+(?:\.\d+)?)px", _style_norm(value))
+    return float(m.group(1)) if m else None
+
+
+def _style_accept(accept: dict, row: dict) -> dict | None:
+    """The owner accept entry covering one style diff row, else None.
+
+    A `style` row matches on property + normalized design and app values, its
+    section scope before `global`; a `min-<property>` rule covers a design px
+    value below its minimum that the app renders at exactly that minimum.
+    """
+    d, a = _style_norm(row["design"]), _style_norm(row["app"])
+    for scope in (row["section"], "global"):
+        hit = accept.get(("style", scope, row["property"], d, a))
+        if hit is not None:
+            return hit
+    rule = accept.get(("rule", row["property"]))
+    dp, ap = _px(d), _px(a)
+    if rule is not None and dp is not None and ap is not None and dp < rule["min"] == ap:
+        return rule
+    return None
+
+
+def diff_styles(design: list[dict], app: list[dict], min_pairs: int | None = None,
+                accept: dict | None = None) -> dict:
     """Pair `data-cs` elements across two sides and diff their computed styles.
 
-    Pure. Pairs by (section, role, case-folded visible text), masked as the
-    inventory masks when both sections carry value markers; duplicates pair
-    in document order. Returns `{"verdict", "pairs", "identical", "unpaired",
-    "foundation", "rows", "lines"}`, each row `{"section", "element",
-    "property", "design", "app", "foundation"}`. A property is FOUNDATION only
-    when it differs on more than half of all pairs AND on pairs in >= 2
-    sections AND on >= max(3, `min_pairs`) pairs; otherwise its rows print
-    per pair. STYLE_COULD_NOT_CHECK on any malformed `data-cs`, zero pairs, or
-    fewer pairs than `min_pairs` (the caller's `--style-min-pairs`, never the
-    inventory floor). Style never feeds inventory completeness.
+    Pure except that it counts `used` on the matching `accept` entries. Pairs
+    by (section, role, case-folded visible text), masked as the inventory
+    masks when both sections carry value markers; duplicates pair in document
+    order. Returns `{"verdict", "pairs", "identical", "unpaired", "foundation",
+    "primitives", "section_pairs", "accepted", "rows", "lines"}`, each row
+    `{"section", "element", "property", "design", "app", "foundation",
+    "accepted"}` (+ `reason`/`owner` when accepted). A row covered by an owner
+    `style`/`rule` accept entry (`_style_accept`) is ACCEPTED and never counts
+    toward FOUNDATION or STYLE_DIFF. A property is FOUNDATION only when its
+    OPEN rows differ on more than half of all pairs AND on pairs in >= 2
+    sections AND on >= max(3, `min_pairs`) pairs; otherwise its rows print per
+    pair. A PRIMITIVE is a (role, property) whose open rows span >= 2 sections
+    and more than half of that role's pairs, on a property not already
+    FOUNDATION (a `--workflow` blocker). STYLE_COULD_NOT_CHECK on any
+    malformed `data-cs`, zero pairs, or fewer pairs than `min_pairs` (the
+    caller's `--style-min-pairs`, never the inventory floor);
+    STYLE_MATCH_WITH_ACCEPTED when every difference is accepted. Style never
+    feeds inventory completeness.
     """
+    accept = accept or {}
     bad = [f"{side} section '{s['id']}': {b}" for side, recs in (("design", design), ("app", app))
            for s in recs for b in s["cs_bad"]]
     app_map = {s["id"]: s for s in app}
@@ -984,16 +1076,34 @@ def diff_styles(design: list[dict], app: list[dict], min_pairs: int | None = Non
         diffs = [p for p in _STYLE_PROPS if _style_norm(d[p]) != _style_norm(a[p])]
         identical += not diffs
         for p in diffs:
-            by_prop[p].append({"section": sid, "element": element, "property": p,
-                               "design": d[p], "app": a[p]})
+            row = {"section": sid, "element": element, "property": p, "design": d[p], "app": a[p]}
+            hit = _style_accept(accept, row)
+            row["accepted"] = hit is not None
+            if hit is not None:
+                hit["used"] += 1
+                row.update(reason=hit["reason"], owner=hit["owner"])
+            by_prop[p].append(row)
     n = len(pairs)
+    opened = {p: [r for r in by_prop[p] if not r["accepted"]] for p in _STYLE_PROPS}
     # A global type/box claim needs breadth, not just a majority: a majority
     # of 2 pairs, or of pairs all in one section, is a local diff.
     floor = max(_FOUNDATION_MIN_PAIRS, min_pairs or 0)
     foundation = [p for p in _STYLE_PROPS
-                  if 2 * len(by_prop[p]) > n and len(by_prop[p]) >= floor
-                  and len({r["section"] for r in by_prop[p]}) >= _FOUNDATION_MIN_SECTIONS]
+                  if 2 * len(opened[p]) > n and len(opened[p]) >= floor
+                  and len({r["section"] for r in opened[p]}) >= _FOUNDATION_MIN_SECTIONS]
+    role_pairs = Counter(el.split(":", 1)[0] for _, el, _, _ in pairs)
+    groups: dict = {}
+    for p in _STYLE_PROPS:
+        for r in opened[p] if p not in foundation else ():
+            groups.setdefault((r["element"].split(":", 1)[0], p), []).append(r)
+    primitives = [{"role": role, "property": p, "pairs": len(g), "of": role_pairs[role],
+                   "sections": len({r["section"] for r in g}),
+                   "common": Counter((r["design"], r["app"]) for r in g).most_common(1)[0][0]}
+                  for (role, p), g in groups.items()
+                  if len({r["section"] for r in g}) >= _FOUNDATION_MIN_SECTIONS and 2 * len(g) > role_pairs[role]]
     rows = [dict(r, foundation=p in foundation) for p in _STYLE_PROPS for r in by_prop[p]]
+    n_open = sum(len(g) for g in opened.values())
+    n_acc = len(rows) - n_open
     head = (f"style: {n} text-matched pair(s); style-identical {identical}/{n} = {_pct(identical, n)}; "
             f"{unpaired} design element(s) with no counterpart not style-checked.")
     if bad or not n or (min_pairs is not None and n < min_pairs):
@@ -1003,15 +1113,21 @@ def diff_styles(design: list[dict], app: list[dict], min_pairs: int | None = Non
                "no text-matched data-cs pairs — export computed styles on both sides" if not n else
                f"{n} style pair(s), below the caller's --style-min-pairs {min_pairs}")
         lines = [f"STYLE_COULD_NOT_CHECK: {why}.", head]
-    elif rows:
+    elif n_open:
         verdict = "STYLE_DIFF"
-        lines = [f"STYLE_DIFF: {len(rows)} property difference(s) on {n - identical} of {n} pair(s); "
-                 f"{len(foundation)} FOUNDATION propert(ies). Reported apart from completeness.", head]
+        n_pairs = len({(r["section"], r["element"]) for g in opened.values() for r in g})
+        lines = [(f"STYLE_DIFF: {n_open} property difference(s) on {n_pairs} of {n} pair(s); "
+                 f"{len(foundation)} FOUNDATION propert(ies); {n_acc} owner-accepted. "
+                 "Reported apart from completeness."), head]
+    elif n_acc:
+        verdict = "STYLE_MATCH_WITH_ACCEPTED"
+        lines = [(f"STYLE_MATCH_WITH_ACCEPTED (accepted={n_acc}): not a plain STYLE_MATCH — every style "
+                 "difference is a row or rule of the owner-authored accept file."), head]
     else:
         verdict = "STYLE_MATCH"
         lines = ["STYLE_MATCH: every text-matched pair is identical on every compared property.", head]
     for p in _STYLE_PROPS:
-        group = by_prop[p]
+        group = opened[p]
         if p in foundation:
             (d, a), _ = Counter((r["design"], r["app"]) for r in group).most_common(1)[0]
             lines.append(f"FOUNDATION {p}: differs on {len(group)}/{n} pairs in "
@@ -1021,8 +1137,15 @@ def diff_styles(design: list[dict], app: list[dict], min_pairs: int | None = Non
             lines.append(f"STYLE_DIFF {p} ({len(group)} pair(s)):")
             lines += [f"  section '{r['section']}' {r['element'][:60]}: {r['design']} -> {r['app']}"
                       for r in group]
+    acc = Counter((r["property"], r["design"], r["app"], r["reason"], r["owner"]) for r in rows if r["accepted"])
+    lines += [f"ACCEPTED {p}: {d} -> {a} on {k} pair(s)  [{why}; {who}]" for (p, d, a, why, who), k in acc.items()]
+    stale = [" ".join(k) for k, row in accept.items()
+             if len(k) != 4 and k[0] != "visual-reviewed" and not row["used"]]
+    if stale:
+        lines.append(f"info: style accept row(s)/rule(s) matching no difference (stale): {', '.join(stale)}")
     return {"verdict": verdict, "pairs": n, "identical": identical, "unpaired": unpaired,
-            "foundation": foundation, "rows": rows, "lines": lines}
+            "foundation": foundation, "primitives": primitives, "accepted": n_acc,
+            "section_pairs": dict(Counter(sid for sid, _, _, _ in pairs)), "rows": rows, "lines": lines}
 
 
 def _norm(text: str | None) -> str:
@@ -1038,6 +1161,13 @@ def parse_accept(text: str) -> tuple[dict | None, str | None]:
     positive integer, an app-value that is not `-` exactly for
     MISSING_IN_APP, or a duplicate key. `item` compares case-folded (as the
     diff does); `app-value` compares exactly after whitespace collapse.
+    A row whose first field is `style` or `rule` and whose second is not an
+    inventory status is a style approval: `style scope property design-value
+    app-value reason owner` (scope `global` or a section id; values compare
+    normalized) keyed `("style", scope, property, design, app)`, or `rule
+    min-<property> <N>px reason owner` keyed `("rule", property)`. An unknown
+    property or rule, or a malformed value, fails closed. `visual-reviewed
+    section reason owner` is keyed `("visual-reviewed", section)`.
     """
     rows: dict = {}
     first = True
@@ -1047,6 +1177,30 @@ def parse_accept(text: str) -> tuple[dict | None, str | None]:
         fields = [f.strip() for f in line.split("\t")]
         header, first = first and fields[0].lower() == "section", False
         if header:   # the first non-comment row may be a column header
+            continue
+        kind = fields[0] if fields[0] in ("style", "rule", "visual-reviewed") and fields[1:2] != [] \
+            and fields[1] not in _ROW_STATUSES else None
+        if kind == "visual-reviewed":
+            if len(fields) != 4 or not all(fields):
+                return None, (f"accept file row {n}: a visual-reviewed row needs 4 non-empty fields "
+                              "(visual-reviewed, section, reason, owner)")
+            key, entry = ("visual-reviewed", fields[1]), {}
+        elif kind == "rule":
+            prop = fields[1][4:] if fields[1].startswith("min-") else ""
+            if len(fields) != 5 or not all(fields) or prop not in _STYLE_PROPS or _px(fields[2]) is None:
+                return None, (f"accept file row {n}: a rule needs 5 non-empty fields (rule, min-<property>, "
+                              f"<N>px, reason, owner) with a property from {', '.join(_STYLE_PROPS)}")
+            key, entry = ("rule", prop), {"min": _px(fields[2])}
+        elif kind == "style":
+            if len(fields) != 7 or not all(fields) or fields[2] not in _STYLE_PROPS:
+                return None, (f"accept file row {n}: a style row needs 7 non-empty fields (style, scope, "
+                              f"property, design-value, app-value, reason, owner) with a property from "
+                              f"{', '.join(_STYLE_PROPS)}")
+            key, entry = ("style", fields[1], fields[2], _style_norm(fields[3]), _style_norm(fields[4])), {}
+        if kind:
+            if key in rows:
+                return None, f"accept file row {n} duplicates an earlier row"
+            rows[key] = {**entry, "used": 0, "reason": fields[-2], "owner": fields[-1]}
             continue
         if len(fields) != 7 or not all(fields):
             return None, (f"accept file row {n} needs 7 non-empty tab-separated fields (section, "
@@ -1311,8 +1465,8 @@ def compare(design_path: str | None, app_path: str | None, accept_path: str | No
     if extra:
         info.append("info: extra app section(s) beyond the design, kept as superset "
                     f"(not a failure): {', '.join(extra)}")
-    stale = [f"{s}/{st}/{i} ({row['used']} of {row['count']} used)"
-             for (s, st, i, _), row in accept.items() if row["used"] < row["count"]]
+    stale = [f"{k[0]}/{k[1]}/{k[2]} ({row['used']} of {row['count']} used)"
+             for k, row in accept.items() if len(k) == 4 and row["used"] < row["count"]]
     if stale:
         info.append(f"info: accept row(s) covering fewer differences than their count (stale): {', '.join(stale)}")
 
@@ -1360,17 +1514,270 @@ def compare(design_path: str | None, app_path: str | None, accept_path: str | No
              f"{completeness}."),
             *body, _BASIS, *info]
     verdict = verdict or _VERDICT_NAMES[code]
-    style_res = diff_styles(design, app, style_min_pairs) if style else None
+    inv_unverified = code == COULD_NOT_CHECK
+    style_res = diff_styles(design, app, style_min_pairs, accept) if style else None
     if style_res is not None:
-        if code == MATCH and style_res["verdict"] != "STYLE_MATCH":
+        if code == MATCH and style_res["verdict"] not in ("STYLE_MATCH", "STYLE_MATCH_WITH_ACCEPTED"):
             code = STYLE_DIFF if style_res["verdict"] == "STYLE_DIFF" else STYLE_COULD_NOT_CHECK
             report = style_res["lines"] + report   # the headline names what set the exit
         else:
             report += style_res["lines"]
+    visual = {k[1]: row for k, row in accept.items() if k[0] == "visual-reviewed" and len(k) == 2}
+    passed = _section_verdicts(sections, set(missing) | set(empty), inv_unverified, style_res, visual)
+    if style_res is not None:
+        report += [f"ACCEPTED visual-reviewed {sid}: no text-bearing data-cs; owner-reviewed  "
+                   f"[{row['reason']}; {row['owner']}]" for sid, row in visual.items() if row["used"]]
+        stale = [sid for sid, row in visual.items() if not row["used"]]
+        if stale:
+            report.append(f"info: visual-reviewed row(s) for a section that has style pairs or is "
+                          f"otherwise unverified (stale): {', '.join(stale)}")
+    report += _section_table(sections, passed, style_res)
     return {"exit_code": code, "verdict": verdict, "overall": overall, "pairs": tot_matched,
             "min_pairs": min_pairs, "style_min_pairs": style_min_pairs, "style": style_res, "accepted_n": accepted_n, "sections": sections,
+            "sections_passed": passed, "sections_total": len(sections),
             "section_gaps": {"missing": missing, "empty": empty},
             "extra_sections": extra, "report": "\n".join(report)}
+
+
+def _section_verdicts(sections: list[dict], gaps: set, inv_unverified: bool, style_res: dict | None,
+                      visual: dict | None = None) -> int:
+    """Set each section entry's `inventory`, `style`, and `verdict`; return the PASS count.
+
+    PASS iff the section is present (and populated where the design is),
+    every inventory row is matched or owner-accepted, and — with `--style` —
+    its style pairs exist and every style row is matched or accepted. FAIL on
+    a gap, an open inventory row, or an open style row; UNVERIFIED when the
+    inventory or style could not be checked (never counted as a pass). A
+    section with no style pair on an otherwise checkable page whose id has an
+    owner `visual-reviewed` accept entry in `visual` reads `visual-reviewed`
+    instead of UNVERIFIED; that entry's `used` is counted (side effect).
+    """
+    visual = visual or {}
+    rows = style_res["rows"] if style_res else []
+    for e in sections:
+        n_open = sum(not r["accepted"] for r in e["rows"])
+        n_acc = len(e["rows"]) - n_open
+        e["inventory"] = ("n/a" if e["design_items"] is None else e["state"] if e["id"] in gaps
+                          else f"{n_open} open" if n_open else f"ACCEPTED({n_acc})" if n_acc else "MATCH")
+        s_open = sum(r["section"] == e["id"] and not r["accepted"] for r in rows)
+        s_acc = sum(r["section"] == e["id"] and r["accepted"] for r in rows)
+        s_unver = style_res is not None and (style_res["verdict"] == "STYLE_COULD_NOT_CHECK"
+                                             or not style_res["section_pairs"].get(e["id"]))
+        seen = s_unver and style_res["verdict"] != "STYLE_COULD_NOT_CHECK" and e["id"] in visual
+        if seen:
+            visual[e["id"]]["used"] += 1
+            s_unver = False
+        e["style"] = ("-" if style_res is None else f"{s_open} open" if s_open else "no pairs" if s_unver
+                      else "visual-reviewed" if seen else f"ok +{s_acc} accepted" if s_acc else "ok")
+        e["verdict"] = ("FAIL" if e["inventory"] not in ("MATCH", "n/a") and not e["inventory"].startswith("ACC")
+                        else "UNVERIFIED" if inv_unverified or e["inventory"] == "n/a"
+                        else "FAIL" if s_open else "UNVERIFIED" if s_unver else "PASS")
+    return sum(e["verdict"] == "PASS" for e in sections)
+
+
+def _section_table(sections: list[dict], passed: int, style_res: dict | None) -> list[str]:
+    """The per-section progress table: `sections passed k/n` plus one row per section.
+
+    Without `--style` the table is labelled inventory-only and has no style
+    column, so an inventory-only PASS never reads as a styling pass.
+    """
+    if style_res is None:
+        out = [(f"sections passed {passed}/{len(sections)} (inventory only) — PASS = inventory MATCH "
+               "or MATCH_WITH_ACCEPTED:"), f"  {'section':<24} {'inventory':<14} verdict"]
+        return out + [f"  {e['id'][:24]:<24} {e['inventory']:<14} {e['verdict']}" for e in sections]
+    out = [(f"sections passed {passed}/{len(sections)} — PASS = inventory MATCH or "
+           "MATCH_WITH_ACCEPTED and no un-accepted style difference:"),
+           f"  {'section':<24} {'inventory':<14} {'style':<18} verdict"]
+    return out + [f"  {e['id'][:24]:<24} {e['inventory']:<14} {e['style']:<18} {e['verdict']}"
+                  for e in sections]
+
+
+def _token_differ():
+    """Import the sibling `token_differ.py` (same scripts dir); None when absent or broken."""
+    path = Path(__file__).resolve().with_name("token_differ.py")
+    try:
+        spec = importlib.util.spec_from_file_location("token_differ", path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+    except Exception:   # noqa: BLE001 — absent or broken sibling: the caller fails closed
+        return None
+
+
+def run_workflow(design_path: str | None, app_path: str | None, design_tokens: str | None,
+                 app_tokens: str | None, token_map: str | None = None, accept_path: str | None = None,
+                 accept_rev: str | None = None, use_focus_gate: bool | None = None,
+                 min_pairs: int | None = None, style_min_pairs: int | None = None,
+                 token_min_pairs: int | None = None) -> dict:
+    """Foundation-first parity: tokens -> primitives -> sections; return `compare`'s dict + `workflow`.
+
+    Stage 1 runs `token_differ.compare` on the token exports; stage 2 is the
+    open FOUNDATION properties and PRIMITIVE (role, property) rows of
+    `diff_styles` (style always on); stage 3 is the per-section table. Exit:
+    COULD_NOT_CHECK when the tokens cannot be compared (or token_differ.py
+    is absent) — every section verdict then reads UNVERIFIED and passed is
+    0; `compare`'s COULD_NOT_CHECK / CANNOT_COMPARE stand; otherwise
+    BLOCKED_BY_FOUNDATION while tokens mismatch or any foundation/primitive
+    row is un-accepted — every section verdict then reads
+    BLOCKED_BY_FOUNDATION (a withheld verdict is kept as `own_verdict`).
+    With no usable style pair stage 2 reads COULD_NOT_CHECK, never clean. A
+    would-be MATCH with an UNVERIFIED section becomes STYLE_COULD_NOT_CHECK.
+    """
+    td = _token_differ()
+    t_code, t_report = COULD_NOT_CHECK, "token_differ.py not found beside parity_differ.py"
+    if td is not None:
+        t_code, _, t_report = td.compare(design_tokens, app_tokens, token_map, min_pairs=token_min_pairs)
+    t_name = "MATCH" if td and t_code == td.MATCH else "MISMATCH" if td and t_code == td.MISMATCH else "COULD_NOT_CHECK"
+    res = compare(design_path, app_path, accept_path, accept_rev, use_focus_gate, min_pairs,
+                  style=True, style_min_pairs=style_min_pairs)
+    st = res.get("style") or {"verdict": "STYLE_COULD_NOT_CHECK", "foundation": [], "primitives": []}
+    prim_cnc = st["verdict"] == "STYLE_COULD_NOT_CHECK"   # no usable style pair: stage 2 checked nothing
+    prims = [f"PRIMITIVE {p['role']} {p['property']}: differs on {p['pairs']}/{p['of']} {p['role']} pair(s) "
+             f"in {p['sections']} section(s) (most common: {p['common'][0]} -> {p['common'][1]})"
+             for p in st["primitives"]]
+    found = [f"FOUNDATION {p}" for p in st["foundation"]] + prims
+    blocked = t_name == "MISMATCH" or bool(found)
+    stages = [f"workflow stage 1 tokens: {t_name} (token_differ.py)",
+              *(f"  {line}" for line in t_report.splitlines() if not line.startswith("MATCH ")),
+              "workflow stage 2 primitives: " + ("; ".join(found) if found else
+                                                 "COULD_NOT_CHECK (no usable style pair; never assumed clean)"
+                                                 if prim_cnc else "clean (no open FOUNDATION or PRIMITIVE row)")]
+    code = res["exit_code"]
+    if t_name == "COULD_NOT_CHECK":
+        code = COULD_NOT_CHECK
+        head = ("COULD_NOT_CHECK: the token stage could not compare — export both sides' design tokens "
+                "(--design-tokens / --app-tokens); the foundation is never assumed clean. "
+                "Section verdicts are withheld.")
+        for e in res.get("sections", []):
+            e["own_verdict"], e["verdict"] = e["verdict"], "UNVERIFIED"
+    elif code in (COULD_NOT_CHECK, CANNOT_COMPARE):
+        head = f"workflow: stopped at {_VERDICT_NAMES[code]} (see below)."
+    elif blocked:
+        code = BLOCKED_BY_FOUNDATION
+        head = ("BLOCKED_BY_FOUNDATION: fix the foundation once before any per-section work — "
+                f"tokens {t_name}; {len(found)} open foundation/primitive row(s). Section verdicts are withheld.")
+        for e in res.get("sections", []):
+            e["own_verdict"], e["verdict"] = e["verdict"], "BLOCKED_BY_FOUNDATION"
+    elif prim_cnc:
+        code = STYLE_COULD_NOT_CHECK if code == MATCH else code
+        head = ("workflow: stage 2 primitives COULD_NOT_CHECK — export data-cs on both sides' text "
+                f"elements; section stage exit {code}.")
+    elif code == MATCH and res.get("sections_passed") != res.get("sections_total"):
+        code = STYLE_COULD_NOT_CHECK
+        head = ("STYLE_COULD_NOT_CHECK: a section has no style pair — export data-cs on its text "
+                "elements; an unverified section is never ready.")
+    else:
+        head = f"workflow: foundation clean; section stage exit {code}."
+    if "sections" in res:
+        withheld = ("BLOCKED_BY_FOUNDATION" if code == BLOCKED_BY_FOUNDATION
+                    else "UNVERIFIED: token stage could not compare" if t_name == "COULD_NOT_CHECK" else "")
+        passed = 0 if withheld else res["sections_passed"]
+        stages.append(f"workflow stage 3 sections: passed {passed}/{res['sections_total']}"
+                      + (f" ({withheld})" if withheld else ""))
+        table = _section_table(res["sections"], passed, st)
+        lines = res["report"].splitlines()
+        res["report"] = "\n".join(lines[:-len(table)] + table)
+        res["sections_passed"] = passed
+    res.update(exit_code=code, workflow={"tokens": t_name, "foundation": st["foundation"],
+                                         "primitives": st["primitives"], "blocked": code == BLOCKED_BY_FOUNDATION})
+    res["report"] = "\n".join([head, *stages, res["report"]])
+    return res
+
+
+_SHOT_EXT = (".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg")
+# Leads every report srcdoc: blocks every network fetch (images, fonts, @import, frames).
+_SRCDOC_CSP = ('<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; '
+               'img-src data:; style-src \'unsafe-inline\'; font-src data:">')
+
+
+def _shot(folder: str | None, sid: str) -> str | None:
+    """`<folder>/<sid>.<image ext>` as a data URI, or None (no folder, unsafe id, or no file)."""
+    if not folder or sid != os.path.basename(sid) or sid.startswith("."):
+        return None
+    for ext in _SHOT_EXT:
+        path = os.path.join(folder, sid + ext)
+        if os.path.isfile(path):
+            mime = mimetypes.guess_type(path)[0] or "application/octet-stream"
+            with open(path, "rb") as fh:
+                return f"data:{mime};base64,{base64.b64encode(fh.read()).decode('ascii')}"
+    return None
+
+
+def write_report(result: dict, out: str, design_path: str | None, app_path: str | None,
+                 design_shots: str | None = None, app_shots: str | None = None) -> None:
+    """Write a self-contained HTML per-section evidence report to `out`.
+
+    Per section: its verdict, design|app side by side — the screenshot
+    `<shots dir>/<section id>.<png|jpg|jpeg|webp|gif|svg>` embedded as a data
+    URI when given, else a sandboxed `srcdoc` iframe of that render with
+    every other section hidden — then its inventory rows, style rows, and
+    accepted rows. Every value is HTML-escaped; no script, network, or
+    external asset is emitted, and each srcdoc opens with a `default-src
+    'none'` CSP meta (`_SRCDOC_CSP`) so an export's own absolute or relative
+    image, font, and @import URLs never fetch.
+    Side effect: writes `out`; raises OSError when it cannot.
+    """
+    def esc(value) -> str:
+        """HTML-escape one value (quotes included)."""
+        return html.escape(str(value), quote=True)
+
+    def doc(path: str | None) -> str | None:
+        """The render's text for srcdoc, or None when it is not a readable HTML file."""
+        if not path or path.lower().endswith(".json") or not os.path.isfile(path):
+            return None
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            return fh.read()
+
+    def pane(label: str, shots: str | None, raw: str | None, sid: str) -> str:
+        """One side of the side-by-side: a screenshot, an isolated iframe, or a note."""
+        uri = _shot(shots, sid)
+        if uri:
+            body = f'<img alt="{esc(label)} {esc(sid)}" src="{uri}">'
+        elif raw is not None:
+            # CSS string: every char outside [A-Za-z0-9_-] as a hex escape (quotes, `<`, non-ASCII).
+            sel = '"' + "".join(c if re.fullmatch(r"[A-Za-z0-9_-]", c) else f"\\{ord(c):x} " for c in sid) + '"'
+            hide = (f"<style>[data-section]:not([data-section={sel}]):not(:has([data-section={sel}]))"
+                    "{display:none!important}</style>")
+            body = f'<iframe sandbox="" srcdoc="{esc(_SRCDOC_CSP + raw + hide)}"></iframe>'
+        else:
+            body = "<p>no render or screenshot available</p>"
+        return f"<div><h4>{esc(label)}</h4>{body}</div>"
+
+    def table(head: tuple, rows: list[tuple]) -> str:
+        """An escaped HTML table, or "none" when there are no rows."""
+        if not rows:
+            return "<p>none</p>"
+        cells = "".join("<tr>" + "".join(f"<td>{esc(c)}</td>" for c in r) + "</tr>" for r in rows)
+        return "<table><tr>" + "".join(f"<th>{esc(h)}</th>" for h in head) + f"</tr>{cells}</table>"
+
+    d_raw, a_raw = doc(design_path), doc(app_path)
+    style_rows = (result.get("style") or {}).get("rows", [])
+    parts = [f"<h1>Parity report (exit {esc(result['exit_code'])})</h1>",
+             f"<p><strong>{esc(result['report'].splitlines()[0])}</strong></p>"]
+    if "sections_total" in result:
+        parts.append(f"<p>sections passed {esc(result['sections_passed'])}/{esc(result['sections_total'])}</p>")
+    for e in result.get("sections", []):
+        sid = e["id"]
+        inv = [(r["status"], r["design"] or "-", r["app"] or "-") for r in e["rows"] if not r["accepted"]]
+        sty = [(r["element"], r["property"], r["design"], r["app"], "FOUNDATION" if r["foundation"] else "STYLE_DIFF")
+               for r in style_rows if r["section"] == sid and not r["accepted"]]
+        acc = [(r["status"], r["design"] or "-", r["app"] or "-", r["reason"], r["owner"])
+               for r in e["rows"] if r["accepted"]]
+        acc += [(f"style {r['property']}", r["design"], r["app"], r["reason"], r["owner"])
+                for r in style_rows if r["section"] == sid and r["accepted"]]
+        parts.append(
+            f'<section><h2>{esc(sid)} — {esc(e.get("verdict", "?"))}</h2>'
+            f'<div class="sbs">{pane("design", design_shots, d_raw, sid)}{pane("app", app_shots, a_raw, sid)}</div>'
+            f"<h3>Inventory differences</h3>{table(('status', 'design', 'app'), inv)}"
+            f"<h3>Style differences</h3>{table(('element', 'property', 'design', 'app', 'kind'), sty)}"
+            f"<h3>Accepted (owner)</h3>{table(('row', 'design', 'app', 'reason', 'owner'), acc)}</section>")
+    parts.append(f"<h2>Full report</h2><pre>{esc(result['report'])}</pre>")
+    css = ("body{font:14px system-ui,sans-serif;margin:24px}.sbs{display:grid;grid-template-columns:1fr 1fr;"
+           "gap:12px}iframe,img{width:100%;min-height:360px;border:1px solid #999}table{border-collapse:collapse}"
+           "td,th{border:1px solid #ccc;padding:2px 6px;text-align:left}pre{white-space:pre-wrap}")
+    with open(out, "w", encoding="utf-8") as fh:
+        fh.write(f'<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Parity report</title>'
+                 f"<style>{css}</style></head><body>{''.join(parts)}</body></html>\n")
 
 
 def diff_sides(design_path: str | None, app_path: str | None, accept_path: str | None = None,
@@ -1601,9 +2008,38 @@ def _selftest() -> int:
         "coverage(media,icon,option,mask-count,broken)=ok accept(owner,count,pin,untrusted)=ok "
         "inventory-keys=ok min-pairs(floor,outranks-mismatch,zero-pairs)=ok "
         "style(foundation,opt-in,normalized,inventory-wins,malformed,empty-value,no-export,floor,"
-        "floor-separate,needs-style)=ok foundation-breadth(one-section,two-pairs,default,style-floor)=ok"
+        "floor-separate,needs-style)=ok foundation-breadth(one-section,two-pairs,default,style-floor)=ok "
+        "style-accept(global,section,pin,rule,malformed)=ok sections(pass,fail,unverified,inventory-only)=ok "
+        "workflow(tokens,foundation,primitive,accepted,local,unreadable,withheld,no-style-pairs,cli)=ok "
+        "visual-reviewed(owner,agent,has-pairs,page-could-not-check)=ok report(shots,escape,accepted,csp,css-escape)=ok"
     )
     return 0
+
+
+_ST_BASE = {"font-family": "Inter, sans-serif", "font-size": "14px", "font-weight": "400",
+            "line-height": "20px", "letter-spacing": "0px", "color": "rgb(17, 24, 39)",
+            "background-color": "rgba(0, 0, 0, 0)", "padding": "0px", "border-radius": "0px",
+            "box-shadow": "none"}
+
+
+def _st_page(over: dict | None = None, bold: tuple | None = None, attr: str | None = None,
+             sids: tuple = ("overview", "holdings", "activity"), over_in: tuple | None = None,
+             tags: tuple = ("h2", "button", "p")) -> str:
+    """Self-test page: sections (default three) x (heading, button, text), each carrying data-cs.
+
+    `over` applies to every section (or only those in `over_in`) and only to
+    elements whose tag is in `tags`; `bold` makes one (section, tag) 600.
+    """
+    out = []
+    for sid in sids:
+        els = []
+        here = over if over_in is None or sid in over_in else None
+        for tag, text in (("h2", sid.title()), ("button", f"Open {sid}"), ("p", f"{sid} note")):
+            props = {**_ST_BASE, **((here or {}) if tag in tags else {}),
+                     **({"font-weight": "600"} if bold == (sid, tag) else {})}
+            els.append(f"<{tag} data-cs='{attr if attr is not None else json.dumps(props)}'>{text}</{tag}>")
+        out.append(f'<section data-section="{sid}"><div data-item>x</div>{"".join(els)}</section>')
+    return "".join(out)
 
 
 def _selftest_floor_style(write, check, failures: list, design: str, app_full: str) -> None:
@@ -1633,25 +2069,7 @@ def _selftest_floor_style(write, check, failures: list, design: str, app_full: s
     except argparse.ArgumentTypeError:
         pass
 
-    base = {"font-family": "Inter, sans-serif", "font-size": "14px", "font-weight": "400",
-            "line-height": "20px", "letter-spacing": "0px", "color": "rgb(17, 24, 39)",
-            "background-color": "rgba(0, 0, 0, 0)", "padding": "0px", "border-radius": "0px",
-            "box-shadow": "none"}
-
-    def page(over: dict | None = None, bold: tuple | None = None, attr: str | None = None,
-             sids: tuple = ("overview", "holdings", "activity"), over_in: tuple | None = None) -> str:
-        """Sections (default three) x (heading, button, text), each element carrying data-cs;
-        `over` applies to every section, or only to those named in `over_in`."""
-        out = []
-        for sid in sids:
-            els = []
-            here = over if over_in is None or sid in over_in else None
-            for tag, text in (("h2", sid.title()), ("button", f"Open {sid}"), ("p", f"{sid} note")):
-                props = {**base, **(here or {}), **({"font-weight": "600"} if bold == (sid, tag) else {})}
-                els.append(f"<{tag} data-cs='{attr if attr is not None else json.dumps(props)}'>{text}</{tag}>")
-            out.append(f'<section data-section="{sid}"><div data-item>x</div>{"".join(els)}</section>')
-        return "".join(out)
-
+    base, page = _ST_BASE, _st_page
     sd = write("st-d.html", page())
     sa = write("st-a.html", page({"line-height": "24px"}, bold=("holdings", "button")))
     r = compare(sd, sa, style=True)
@@ -1806,12 +2224,206 @@ def _selftest_accept(tmp: str, write, check, failures: list, inv_design: str, fx
         check("accept-count-surplus-open", r["exit_code"], r["report"], MISMATCH, must_have=("1 unaccepted",))
         r = compare(d2, a2, commit(owner, "count2.tsv", row.format(2)), "HEAD")
         check("accept-count-exact", r["exit_code"], r["report"], MATCH, must_have=("accepted_n=2",))
+
+        # 5. Style approvals, the per-section table, --workflow, and --report.
+        _selftest_workflow(tmp, write, check, failures,
+                           lambda rel, body, email=owner: commit(email, rel, body))
     finally:
         for key, val in saved.items():
             if val is None:
                 os.environ.pop(key, None)
             else:
                 os.environ[key] = val
+
+
+def _selftest_workflow(tmp: str, write, check, failures: list, commit) -> None:
+    """Style accept rows/rules, per-section PASS table, `--workflow`, and `--report` cases.
+
+    `commit(rel, body[, email])` commits one accept file as the owner (see
+    `_selftest_accept`); every accept file is read at HEAD.
+    """
+    page = _st_page
+    sd, twin = write("wf-d.html", page()), write("wf-twin.html", page())
+    lh = write("wf-lh.html", page({"line-height": "24px"}))   # a global FOUNDATION line-height diff
+    row = "style\tglobal\tline-height\t20px\t{}\tlooser body rhythm\towner quote: \"keep 24px\"\n"
+    glob = commit("st-g.tsv", row.format("24px"))
+
+    # 1. Style approvals: a value pair (global / section scope) and a min-<property> rule.
+    r = compare(sd, lh, glob, "HEAD", style=True)
+    check("style-accept-global", r["exit_code"], r["report"], MATCH,
+          must_have=("STYLE_MATCH_WITH_ACCEPTED (accepted=9)", "ACCEPTED line-height: 20px -> 24px on 9 pair(s)"),
+          must_not=("STYLE_DIFF", "FOUNDATION line-height"))
+    r = compare(sd, lh, commit("st-pin.tsv", row.format("26px")), "HEAD", style=True)
+    check("style-accept-pins-app-value", r["exit_code"], r["report"], STYLE_DIFF,
+          must_have=("FOUNDATION line-height", "stale"))
+    bold_h, bold_o = write("wf-bh.html", page(bold=("holdings", "button"))), write("wf-bo.html", page(bold=("overview", "button")))
+    sec = commit("st-s.tsv", "style\tholdings\tfont-weight\t400\t600\tbrand CTA\towner quote: \"bold CTA\"\n")
+    r = compare(sd, bold_h, sec, "HEAD", style=True)
+    check("style-accept-section", r["exit_code"], r["report"], MATCH, must_have=("ACCEPTED font-weight: 400 -> 600",))
+    r = compare(sd, bold_o, sec, "HEAD", style=True)
+    check("style-accept-section-scoped", r["exit_code"], r["report"], STYLE_DIFF,
+          must_have=("section 'overview' button:Open overview: 400 -> 600", "stale"))
+    rule = commit("rule.tsv", "rule\tmin-font-size\t12px\taccessibility floor\towner quote: \"nothing under 12px\"\n")
+    d11, d13 = write("wf-d11.html", page({"font-size": "11px"})), write("wf-d13.html", page({"font-size": "13px"}))
+    a12, a13 = write("wf-a12.html", page({"font-size": "12px"})), write("wf-a13.html", page({"font-size": "13px"}))
+    r = compare(d11, a12, rule, "HEAD", style=True)
+    check("style-rule-min-font-size", r["exit_code"], r["report"], MATCH,
+          must_have=("STYLE_MATCH_WITH_ACCEPTED (accepted=9)", "accessibility floor"))
+    for label, d, a in (("style-rule-design-above-min", d13, a12), ("style-rule-app-not-at-min", d11, a13)):
+        r = compare(d, a, rule, "HEAD", style=True)
+        check(label, r["exit_code"], r["report"], STYLE_DIFF, must_have=("FOUNDATION font-size",))
+    for label, body in (("style-row-unknown-property", "style\tglobal\tmargin\t0px\t4px\tr\to\n"),
+                        ("style-row-short", "style\tglobal\tline-height\t20px\tr\to\n"),
+                        ("rule-unknown-property", "rule\tmin-colour\t12px\tr\to\n"),
+                        ("rule-not-px", "rule\tmin-font-size\t12\tr\to\n"),
+                        ("visual-row-short", "visual-reviewed\tactivity\tr\n")):
+        r = compare(sd, lh, commit(f"{label}.tsv", body), "HEAD", style=True)
+        check(label, r["exit_code"], r["report"], COULD_NOT_CHECK, must_have=("accept file row 1",))
+    parsed, err = parse_accept("style\tMISSING_IN_APP\tcontrol:button:Save\t-\t1\tr\to\n")
+    if err or list(parsed or ()) != [("style", "MISSING_IN_APP", "control:button:save", "-")]:
+        failures.append(f"accept-section-named-style: {parsed} {err}")
+
+    # 2. Per-section PASS rule + progress metric.
+    def verdicts(res: dict) -> dict:
+        """Section id -> verdict."""
+        return {e["id"]: e["verdict"] for e in res.get("sections", [])}
+
+    r = compare(sd, bold_h, style=True)
+    check("section-table", r["exit_code"], r["report"], STYLE_DIFF, must_have=("sections passed 2/3 —",))
+    if verdicts(r) != {"overview": "PASS", "holdings": "FAIL", "activity": "PASS"} or r.get("sections_passed") != 2:
+        failures.append(f"section-table: {verdicts(r)} passed={r.get('sections_passed')}")
+    r = compare(sd, bold_h, sec, "HEAD", style=True)
+    check("section-table-accepted", r["exit_code"], r["report"], MATCH, must_have=("sections passed 3/3", "ok +1 accepted"))
+    r = compare(sd, bold_h)
+    check("section-table-inventory-only", r["exit_code"], r["report"], MATCH,
+          must_have=("sections passed 3/3 (inventory only)",))
+    r = compare(sd, write("wf-inv.html", page().replace("Open activity", "Launch activity")), style=True)
+    if verdicts(r).get("activity") != "FAIL" or r.get("sections_passed") != 2:
+        failures.append(f"section-table-inventory-fail: {verdicts(r)}")
+    stripped = re.sub(r"(<section data-section=\"activity\".*?</section>)",
+                      lambda m: re.sub(r" data-cs='[^']*'", "", m.group(1)), page())
+    r = compare(sd, write("wf-np.html", stripped), style=True)
+    if verdicts(r).get("activity") != "UNVERIFIED" or "no pairs" not in r["report"]:
+        failures.append(f"section-table-no-pairs-unverified: {verdicts(r)}")
+
+    # 3. --workflow: tokens -> primitives -> sections; a failing foundation blocks every section.
+    tok_d = write("wf-t.json", '{"color": {"$type": "color", "brand": {"$value": "#ff0000"}}}')
+    tok_ok, tok_bad = write("wf-ok.css", ":root { --color-brand: #f00; }"), write("wf-bad.css", ":root { --color-brand: #00f; }")
+    r = run_workflow(sd, twin, tok_d, tok_ok)
+    check("workflow-clean", r["exit_code"], r["report"], MATCH,
+          must_have=("workflow stage 1 tokens: MATCH", "stage 2 primitives: clean", "passed 3/3"))
+    r = run_workflow(sd, twin, tok_d, tok_bad)
+    check("workflow-tokens-block", r["exit_code"], r["report"], BLOCKED_BY_FOUNDATION,
+          must_have=("BLOCKED_BY_FOUNDATION:", "tokens: MISMATCH", "passed 0/3 (BLOCKED_BY_FOUNDATION)"))
+    if set(verdicts(r).values()) != {"BLOCKED_BY_FOUNDATION"} or \
+            {e["own_verdict"] for e in r["sections"]} != {"PASS"}:
+        failures.append(f"workflow-tokens-block: {verdicts(r)}")
+    r = run_workflow(sd, lh, tok_d, tok_ok)
+    check("workflow-foundation-block", r["exit_code"], r["report"], BLOCKED_BY_FOUNDATION,
+          must_have=("FOUNDATION line-height",))
+    r = run_workflow(sd, lh, tok_d, tok_ok, accept_path=glob, accept_rev="HEAD")
+    check("workflow-foundation-accepted", r["exit_code"], r["report"], MATCH, must_have=("passed 3/3",))
+    heads = write("wf-h.html", page({"font-size": "16px"}, tags=("h2",)))   # 3 of 9 pairs: no FOUNDATION
+    r = compare(sd, heads, style=True)
+    check("primitive-per-pair-without-workflow", r["exit_code"], r["report"], STYLE_DIFF,
+          must_not=("FOUNDATION font-size", "PRIMITIVE"))
+    r = run_workflow(sd, heads, tok_d, tok_ok)
+    check("workflow-primitive-block", r["exit_code"], r["report"], BLOCKED_BY_FOUNDATION,
+          must_have=("PRIMITIVE h2 font-size: differs on 3/3 h2 pair(s) in 3 section(s)",))
+    r = run_workflow(sd, bold_h, tok_d, tok_ok)
+    check("workflow-local-diff-not-blocked", r["exit_code"], r["report"], STYLE_DIFF,
+          must_have=("stage 2 primitives: clean", "passed 2/3"), must_not=("BLOCKED_BY_FOUNDATION:",))
+    r = run_workflow(sd, twin, os.path.join(tmp, "absent.json"), tok_ok)
+    check("workflow-tokens-unreadable", r["exit_code"], r["report"], COULD_NOT_CHECK,
+          must_have=("token stage could not compare", "passed 0/3 (UNVERIFIED"))
+    if set(verdicts(r).values()) != {"UNVERIFIED"} or r.get("sections_passed") != 0:
+        failures.append(f"workflow-tokens-unreadable-withholds: {verdicts(r)} passed={r.get('sections_passed')}")
+    nocs = write("wf-nocs.html", re.sub(r" data-cs='[^']*'", "", page()))
+    r = run_workflow(sd, nocs, tok_d, tok_ok)   # zero style pairs: stage 2 checked nothing
+    check("workflow-no-style-pairs", r["exit_code"], r["report"], STYLE_COULD_NOT_CHECK,
+          must_have=("stage 2 primitives: COULD_NOT_CHECK",), must_not=("primitives: clean", "foundation clean"))
+    # A chart/map section has no text-bearing data-cs: UNVERIFIED (exit 6) until the
+    # OWNER commits a visual-reviewed row; an agent-authored one fails the trust gate.
+    np_ = write("wf-np.html", stripped)
+    r = run_workflow(sd, np_, tok_d, tok_ok)
+    check("workflow-visual-default-unverified", r["exit_code"], r["report"], STYLE_COULD_NOT_CHECK)
+    vis = "visual-reviewed\tactivity\tchart-only section\towner quote: \"chart reviewed\"\n"
+    r = run_workflow(sd, np_, tok_d, tok_ok, accept_path=commit("vis.tsv", vis), accept_rev="HEAD")
+    check("workflow-visual-reviewed", r["exit_code"], r["report"], MATCH,
+          must_have=("passed 3/3", "visual-reviewed", "chart-only section"))
+    if verdicts(r).get("activity") != "PASS":
+        failures.append(f"workflow-visual-reviewed: {verdicts(r)}")
+    r = run_workflow(sd, np_, tok_d, tok_ok, accept_path=commit("vis-a.tsv", vis, "lane-bot@example.com"),
+                     accept_rev="HEAD")
+    check("workflow-visual-agent-authored", r["exit_code"], r["report"], COULD_NOT_CHECK,
+          must_have=("not the owner",))
+    r = compare(sd, bold_h, commit("vis-h.tsv", vis.replace("activity", "holdings")), "HEAD", style=True)
+    check("visual-reviewed-needs-no-pairs", r["exit_code"], r["report"], STYLE_DIFF, must_have=("stale",))
+    if verdicts(r).get("holdings") != "FAIL":
+        failures.append(f"visual-reviewed-needs-no-pairs: {verdicts(r)}")
+    r = compare(sd, write("wf-nocs2.html", re.sub(r" data-cs='[^']*'", "", page())),
+                commit("vis-all.tsv", vis), "HEAD", style=True)
+    if verdicts(r).get("activity") != "UNVERIFIED":   # a page-wide STYLE_COULD_NOT_CHECK is never rescued
+        failures.append(f"visual-reviewed-page-could-not-check: {verdicts(r)}")
+    out = io.StringIO()
+    with contextlib.redirect_stdout(out):
+        rc = main(["--design", sd, "--app", lh, "--workflow", "--design-tokens", tok_d, "--app-tokens", tok_ok])
+    if rc != BLOCKED_BY_FOUNDATION:
+        failures.append(f"workflow-cli: exit {rc}, want {BLOCKED_BY_FOUNDATION}")
+    for label, argv in (("workflow-needs-tokens", ["--workflow"]), ("tokens-need-workflow", ["--app-tokens", tok_ok]),
+                        ("shots-need-report", ["--design-shots", tmp])):
+        try:
+            with contextlib.redirect_stderr(io.StringIO()):
+                main(["--design", sd, "--app", twin, *argv])
+            failures.append(f"{label}: accepted")
+        except SystemExit as exc:
+            if exc.code != USAGE_ERROR:
+                failures.append(f"{label}: exit {exc.code}, want {USAGE_ERROR}")
+
+    # 4. --report: self-contained HTML, escaped, screenshots embedded by section id.
+    shots_d, shots_a = os.path.join(tmp, "shots-d"), os.path.join(tmp, "shots-a")
+    for folder in (shots_d, shots_a):
+        os.makedirs(folder)
+        with open(os.path.join(folder, "overview.png"), "wb") as fh:
+            fh.write(b"\x89PNG\r\n\x1a\nfixture")
+    rep = os.path.join(tmp, "report.html")
+
+    def run_report(argv: list) -> tuple[int, str]:
+        """Run main() with --report; return (exit, report HTML)."""
+        with contextlib.redirect_stdout(io.StringIO()):
+            rc = main([*argv, "--report", rep])
+        with open(rep, encoding="utf-8") as fh:
+            return rc, fh.read()
+
+    rc, page_html = run_report(["--design", sd, "--app", bold_h, "--style", "--design-shots", shots_d,
+                                "--app-shots", shots_a])
+    if rc != STYLE_DIFF or page_html.count("data:image/png;base64,") != 2 or "srcdoc=" not in page_html \
+            or "sections passed 2/3" not in page_html or "holdings — FAIL" not in page_html \
+            or "font-weight" not in page_html or "<script" in page_html or re.search(r"https?:", page_html):
+        failures.append(f"report-shots: exit {rc}")
+    srcdocs = [html.unescape(v) for v in re.findall(r'srcdoc="([^"]*)"', page_html)]
+    if not srcdocs or not all(d.startswith(_SRCDOC_CSP) for d in srcdocs):
+        failures.append("report-srcdoc-csp: a srcdoc lacks the leading no-network CSP meta")
+    uni = write("wf-u.html", page(sids=("r\u00e9sum\u00e9", "b")))   # a non-ASCII section id
+    write_report(compare(uni, uni), rep, uni, uni)
+    with open(rep, encoding="utf-8") as fh:
+        sels = re.findall(r':not\(\[data-section="((?:[^"\\]|\\.)*)"\]\)', html.unescape(fh.read()))
+    decoded = {re.sub(r"\\([0-9a-fA-F]{1,6})\s?|\\(.)", lambda m: chr(int(m[1], 16)) if m[1] else m[2], x)
+               for x in sels}   # CSS string escapes, decoded per CSS Syntax
+    if decoded != {"r\u00e9sum\u00e9", "b"}:
+        failures.append(f"report-css-escape: selectors decode to {sorted(decoded)}")
+    xss = write("wf-x.html", '<section data-section="s"><p data-item>x</p><p>&lt;img src=x onerror=alert(1)&gt;</p></section>')
+    rc, page_html = run_report(["--design", xss, "--app", write("wf-xa.html", '<section data-section="s"><p data-item>x</p></section>')])
+    if rc != MISMATCH or "<img src=x onerror" in page_html or "MISSING_IN_APP" not in page_html:
+        failures.append(f"report-escapes: exit {rc}")
+    write_report(compare(sd, bold_h, sec, "HEAD", style=True), rep, sd, bold_h)
+    with open(rep, encoding="utf-8") as fh:
+        if "brand CTA" not in fh.read():
+            failures.append("report-accepted-rows: owner reason missing")
+    with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+        rc = main(["--design", sd, "--app", twin, "--report", os.path.join(tmp, "no-dir", "r.html")])
+    if rc != USAGE_ERROR:
+        failures.append(f"report-unwritable: exit {rc}, want {USAGE_ERROR}")
 
 
 def _min_pairs(text: str) -> int:
@@ -1838,6 +2450,15 @@ def main(argv: list[str] | None = None) -> int:
                         "text-matched pairs; reported apart from completeness")
     parser.add_argument("--style-min-pairs", type=_min_pairs, help="with --style: STYLE_COULD_NOT_CHECK "
                         "(exit 6) when fewer text-matched style pairs than N; separate from --min-pairs")
+    parser.add_argument("--workflow", action="store_true", help="foundation-first gate: tokens -> "
+                        "primitives -> sections (implies --style; exit 7 BLOCKED_BY_FOUNDATION)")
+    parser.add_argument("--design-tokens", help="with --workflow: design token export (DTCG .json or CSS)")
+    parser.add_argument("--app-tokens", help="with --workflow: app token export (DTCG .json or CSS)")
+    parser.add_argument("--token-map", help="with --workflow: token_differ.py --map TSV")
+    parser.add_argument("--token-min-pairs", type=_min_pairs, help="with --workflow: token_differ.py --min-pairs")
+    parser.add_argument("--report", help="write a self-contained per-section HTML evidence report here")
+    parser.add_argument("--design-shots", help="with --report: dir of design screenshots named <section id>.png")
+    parser.add_argument("--app-shots", help="with --report: dir of app screenshots named <section id>.png")
     parser.add_argument("--json", action="store_true", help="print the full result as JSON (board posts)")
     parser.add_argument("--selftest", action="store_true", help="run the committed-fixture self-test")
     args = parser.parse_args(argv)
@@ -1850,11 +2471,28 @@ def main(argv: list[str] | None = None) -> int:
         return USAGE_ERROR  # pragma: no cover — parser.error() already exits(2)
     if args.accept_rev and not args.accept:
         parser.error("--accept-rev needs --accept")
-    if args.style_min_pairs is not None and not args.style:
+    if args.style_min_pairs is not None and not (args.style or args.workflow):
         parser.error("--style-min-pairs needs --style")
+    if args.workflow and not (args.design_tokens and args.app_tokens):
+        parser.error("--workflow needs --design-tokens and --app-tokens (the foundation is never assumed)")
+    if not args.workflow and (args.design_tokens or args.app_tokens or args.token_map or args.token_min_pairs):
+        parser.error("--design-tokens/--app-tokens/--token-map/--token-min-pairs need --workflow")
+    if (args.design_shots or args.app_shots) and not args.report:
+        parser.error("--design-shots/--app-shots need --report")
 
-    result = compare(args.design, args.app, args.accept, args.accept_rev,
-                     min_pairs=args.min_pairs, style=args.style, style_min_pairs=args.style_min_pairs)
+    if args.workflow:
+        result = run_workflow(args.design, args.app, args.design_tokens, args.app_tokens, args.token_map,
+                              args.accept, args.accept_rev, min_pairs=args.min_pairs,
+                              style_min_pairs=args.style_min_pairs, token_min_pairs=args.token_min_pairs)
+    else:
+        result = compare(args.design, args.app, args.accept, args.accept_rev,
+                         min_pairs=args.min_pairs, style=args.style, style_min_pairs=args.style_min_pairs)
+    if args.report:
+        try:
+            write_report(result, args.report, args.design, args.app, args.design_shots, args.app_shots)
+        except OSError as exc:
+            print(f"parity_differ: cannot write --report {args.report}: {exc}", file=sys.stderr)
+            return USAGE_ERROR
     print(json.dumps(result, indent=2, ensure_ascii=False) if args.json else result["report"])
     return result["exit_code"]
 

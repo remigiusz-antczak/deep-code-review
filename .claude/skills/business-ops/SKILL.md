@@ -30,7 +30,8 @@ this skill exists to prevent.
 educational information, not legal, tax, accounting, financial, or investment
 advice.
 
-Persisted artifacts stay normal English. Chat may be terse.
+Persisted artifacts stay normal English. Chat may be terse. Lookup table:
+`INDEX.md`; read it instead of opening references blindly.
 
 ---
 

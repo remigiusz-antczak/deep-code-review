@@ -26,7 +26,8 @@ first, and whether what shipped works. A coding agent now builds the
 worth building?" This skill fills that seat with method, not opinion.
 
 Persisted artifacts stay normal English. Chat may be terse. Do not vendor
-a voice skill here.
+a voice skill here. Lookup table: `INDEX.md`; read it instead of opening
+references blindly.
 
 ---
 

@@ -6030,6 +6030,30 @@
       ]
     },
     {
+      "id": "merge-train-parks-each-conflicting-member-and-rebuilds-the-union-at-once",
+      "prompt": "An unattended merge daemon builds a union of five green PRs every cycle (a cycle is 20 minutes). Three of them conflict with the others. Each cycle it finds the first conflict, parks that PR, and sleeps until the next cycle before rebuilding the union. The two clean PRs have now waited an hour and have not landed. The daemon reports 'working as designed: conflicts are isolated one per cycle'. Is it?",
+      "expected_output": "No. Parking a member is not a reason to wait: after removing a conflicting member, the daemon should rebuild the union immediately, without sleeping, so all N conflicting members are found, parked with their conflicting files, and excluded within one cycle rather than N cycles (issue #1134). Sleeping a cycle per conflict multiplies latency linearly with the conflict count and leaves mergeable PRs idle. Here the three conflicting PRs should have been parked in the first cycle and the two clean PRs verified as a union and landed in that same cycle. A parked member stays excluded until its head changes (a new push is new information), so it does not rejoin and re-break the next union. Backoff belongs only to a flaky re-run of a verification or merge step, bounded and capped, never to parking. `merge_train.py verify` in agentic-delivery's scripts does this: a conflict parks the member and rebuilds the union at once, and its selftest pins that three conflicting members are parked in one invocation with zero sleeps.",
+      "expectations": [
+        "Says the daemon is wrong to sleep a cycle after parking one conflicting member",
+        "Requires rebuilding the union immediately after a park so all conflicting members are isolated in one cycle, not one per cycle",
+        "Keeps a parked member excluded until its head changes so it does not re-break the next union",
+        "Limits backoff to bounded retries of a flaky step, never to parking",
+        "Points at merge_train.py verify (or an equivalent mechanism) rather than a prose-only fix"
+      ]
+    },
+    {
+      "id": "merge-train-halts-when-the-base-moved-or-was-rewritten-after-verify",
+      "prompt": "A merge train proved a union of three PRs green on main at commit A and is about to merge them. Before merging it fetches main and finds main is now at B. The automation's plan is: 'base changed, so re-run the union verify on B, and if that is green, merge the three PRs'. In this case B's history does not contain A, because another operator force-pushed main to purge a leaked secret. What should happen, and would the plan be right if B did contain A?",
+      "expected_output": "Halt, in both cases, without merging and without silently re-verifying. When B does not contain A, main was rewritten (a non-fast-forward move). The three PRs were branched from the old history, so re-verifying and merging them would bring back the history the operator deliberately removed, including the leaked secret (issue #1137). The automation must stop and alert a human that a possible history rewrite happened. When B does contain A (someone else merged in the meantime), the union's proof no longer applies to the base, so the right move is to stop and re-plan from scratch rather than quietly re-verifying and merging in the same run. The rule is to merge only onto the exact base SHA the union was proved on. The check is: fetch the target, compare its head with the proved SHA, and use a fast-forward ancestry test (`git merge-base --is-ancestor A B`) to tell 'moved' from 'rewritten'. The same automation must never force-push the shared branch itself. `merge_train.py merge` in agentic-delivery's scripts is dry-run by default and HALTs on either condition; `--apply` still requires the integration owner or a recorded standing grant.",
+      "expectations": [
+        "Refuses to merge the three PRs onto B",
+        "Rejects silently re-verifying the union on the changed base inside the same run",
+        "Identifies B not containing A as a possible history rewrite that needs a human, and explains that merging would restore the removed history",
+        "Uses a fast-forward or ancestry check against the proved base SHA to tell a moved base from a rewritten one",
+        "Keeps merging gated on the integration owner or a recorded standing grant, and never force-pushes the shared branch"
+      ]
+    },
+    {
       "id": "reaper-lint-flags-live-reaper-in-git-hook",
       "prompt": "A repo's `.husky/pre-commit` hook runs `python3 scripts/reaper.py --apply` on every commit, with no dry-run flag. Every agent's commit on the shared host now kills sibling lanes' dev servers and headless browsers. Is `reaper_lint.py` expected to catch this, and what should the hook do instead?",
       "expected_output": "Yes -- reaper_lint.py's HOOK_LIVE_REAPER rule flags a reaper-named invocation (basename containing \"reap\", excluding a *lint* variant like reaper_lint.py itself) found inside a git-hook-family path (.githooks/*, .husky/*, .git/hooks/*, lefthook.yml, a *pre-commit-config.y*ml) that carries no --dry-run/--stub/--noop/--check-only/--simulate flag. The fix is doctrine, not just the lint: a commit/push hook must never invoke a live reaper at all -- tests of a destructive reaper/cleanup script run it stubbed or --dry-run by default (concurrency-shared-state.md), and any keep-list the reaper resolves exclusions from must always include the shared/preview serving port by name.",
@@ -6072,6 +6096,71 @@
         "Identifies the implausibly low pair count as a sign the harness compared an empty or wrong page",
         "Has the orchestrator check the harness's pair count or raw output itself instead of trusting the lane's reported score",
         "Uses a caller-supplied `--min-pairs` floor (not a guessed default) so a low count yields COULD_NOT_CHECK, never MATCH"
+      ]
+    },
+    {
+      "id": "parity-owner-approved-style-deviation-reads-accepted",
+      "prompt": "The owner has decided the app keeps 24px line-height where the design uses 20px, and that no text renders below 12px even where the design uses 11px. parity_differ.py --style still prints STYLE_DIFF and a FOUNDATION line-height row on every run, so lanes keep 'fixing' it. How should this be recorded so the gate stops re-opening it?",
+      "expected_output": "Record the decisions as style approvals in the owner-authored accept file that parity_differ.py already trusts (committed by the owner, read at --accept-rev, no Co-authored-by): a value-pair row `style<TAB>global<TAB>line-height<TAB>20px<TAB>24px<TAB>reason<TAB>owner` and a rule row `rule<TAB>min-font-size<TAB>12px<TAB>reason<TAB>owner`. Covered differences then print as ACCEPTED, not STYLE_DIFF, and no longer count toward FOUNDATION; a fully covered style verdict is STYLE_MATCH_WITH_ACCEPTED, never a plain STYLE_MATCH. The row pins the exact app value, so a different app value stays an open difference, and an unused row prints as stale. The agent drafts rows but never commits them itself.",
+      "expectations": [
+        "Uses the owner-authored, committed accept file (existing trust model), not an agent-written exception or a code comment",
+        "Uses a per-property value-pair `style` row for the line-height decision and a `rule min-font-size 12px` row for the floor",
+        "States that approved diffs are reported as ACCEPTED and stop counting as STYLE_DIFF or FOUNDATION, and that the result is not a plain STYLE_MATCH",
+        "Notes that a row pins the exact app value, so a different value stays open"
+      ]
+    },
+    {
+      "id": "parity-progress-is-sections-passed-k-of-n",
+      "prompt": "A restyle has 12 sections. Three carry owner-approved deviations, and the overall parity verdict has been MISMATCH/STYLE_DIFF for days, so the orchestrator cannot tell whether lanes are converging. What should the progress report be?",
+      "expected_output": "Report per section and count passes: parity_differ.py prints `sections passed k/n` plus a per-section table. A section is PASS only if its inventory is MATCH or MATCH_WITH_ACCEPTED and it has no un-accepted style difference. It is FAIL on a missing or empty section or on any open row, and UNVERIFIED when inventory or style could not be checked (for example a section with no style pair), and UNVERIFIED never counts as a pass. Sections with owner-approved deviations can PASS, so 9/12 is measurable progress while the overall verdict is still failing. Without --style the table is labelled inventory-only and is not a styling pass.",
+      "expectations": [
+        "Uses a per-section PASS rule: inventory MATCH or MATCH_WITH_ACCEPTED and no un-accepted style difference",
+        "Reports progress as sections passed k/n, not as a single overall verdict or a percentage of pixels",
+        "Counts sections with owner-approved deviations as passable",
+        "Treats an unverifiable section as not passed and labels an inventory-only table as not a styling pass"
+      ]
+    },
+    {
+      "id": "parity-workflow-foundation-blocks-sections",
+      "prompt": "Five page lanes each report the same fix: 'heading font-size 14px -> 16px in my section' and 'brand colour token differs'. Each lane patches its own section and the next parity run shows the same rows again. What should the orchestrator run and do?",
+      "expected_output": "Run the single foundation-first gate: `parity_differ.py --workflow --design-tokens <f> --app-tokens <f>`. It runs tokens (token_differ.py) first, then primitives (open FOUNDATION properties and PRIMITIVE rows, meaning a property or type role that is off in 2 or more sections), then the per-section inventory and styles. While a token mismatches or a primitive is un-accepted, every section reads BLOCKED_BY_FOUNDATION (exit 7), so the per-section lanes stop. One foundation lane fixes the token and the h2 type role once, globally, or the owner approves the deviation. Then the section stage runs. Inventory COULD_NOT_CHECK or CANNOT_COMPARE still outranks the block.",
+      "expectations": [
+        "Runs `parity_differ.py --workflow` with both token exports, with tokens then primitives then sections as the order",
+        "Recognizes the repeated per-section rows as a foundation/primitive failure spanning 2 or more sections",
+        "States that section verdicts are BLOCKED_BY_FOUNDATION (exit 7) until the foundation is fixed once or owner-accepted",
+        "Does not keep patching the same property per section"
+      ]
+    },
+    {
+      "id": "parity-report-html-is-evidence-before-ready",
+      "prompt": "A lane says the dashboard parity gate is green and asks the orchestrator to mark it ready. The orchestrator has only the lane's text summary. What should the orchestrator look at before saying ready?",
+      "expected_output": "Look at the visual evidence yourself before 'ready'. Re-run with `--report out.html`, and add `--design-shots`/`--app-shots` folders keyed by section id when screenshots exist. That writes a self-contained HTML report per section with design and app side by side (embedded screenshots, or sandboxed iframes of each render showing only that section), plus that section's open inventory rows, style rows, and owner-accepted rows. Open it and compare. The report is evidence for a human and never a verdict by itself, and the lane's text summary is self-report.",
+      "expectations": [
+        "Asks for the `--report` HTML (with section-keyed screenshots when available) instead of trusting the lane's summary",
+        "Describes a per-section side-by-side of design and app with inventory, style, and accepted rows",
+        "Treats the report as evidence the orchestrator views before ready, not as a verdict"
+      ]
+    },
+    {
+      "id": "parity-capture-seeded-persona-same-state",
+      "prompt": "The app's parity export was captured signed out, the design export shows populated dashboards, and the differ reports half the sections 'missing'. How should both sides be captured so the comparison is meaningful?",
+      "expected_output": "Follow the capture contract in `templates/parity-capture.md`. Capture both sides in the same state. The app side is signed in as a fictional seeded persona, with the identity from DEV_IDENTITY and the dev session cookie from an env var such as AUTH_COOKIE (never committed). An idempotent, dev-only SEED_CMD runs before each app capture, and both sides use the same fixed viewport list. Each DOM snapshot carries data-section, data-item, data-cs computed styles from getComputedStyle, and data-visible markers for class-hidden elements. The 'missing' list from a signed-out capture is an auth gap, not a build order. The signed-out default surface stays its own separate check.",
+      "expectations": [
+        "Captures both sides in the same auth and data state with a fictional seeded persona and a seed hook",
+        "Keeps identity and cookie in env and never commits them",
+        "Requires data-cs computed styles and data-visible markers in both DOM snapshots at a fixed viewport list",
+        "Does not treat the signed-out 'missing' sections as work to build, and keeps the default-surface check separate"
+      ]
+    },
+    {
+      "id": "pre-push-hold-file-refuses-every-push",
+      "prompt": "An operator needs every lane to stop pushing while the owner reviews a release, but lanes keep 'self-healing' core.hooksPath and pushing. How should the freeze be enforced with the pre-push-verify.sh template?",
+      "expected_output": "Create a hold file. Write the reason as the first line of `$(git rev-parse --git-common-dir)/DCR_HOLD` (shared by every linked worktree and not a tracked file), or of a repo-root `.dcr-hold`. While either exists, pre-push-verify.sh refuses every push, including deletes, and prints that reason line. Delete the file to lift the hold. A lane that repoints core.hooksPath to the template cannot escape it, because the check is in the hook and the file is in the common dir. It is still self-report: `git push --no-verify` or a hooksPath without this hook skips it, so server-side protection and CI remain the control.",
+      "expectations": [
+        "Uses the DCR_HOLD file in the git common dir (or a repo-root .dcr-hold) with a reason line",
+        "States that every push is refused while it exists and the reason is printed; deleting it lifts the hold",
+        "Explains why a core.hooksPath self-heal does not bypass it",
+        "Admits that --no-verify still bypasses a client hook, so it is not the only control"
       ]
     }
   ]

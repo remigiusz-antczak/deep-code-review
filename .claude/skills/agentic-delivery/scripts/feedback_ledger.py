@@ -101,6 +101,18 @@ COMMANDS
       Records the OWNER's answer verbatim. The agent asks; it never decides.
       `design` declines the item; `other` closes it (ingest the owner's
       instruction as a new item).
+  capture (--text T | --image PATH | --rule R) --target section[/element]
+          --source chat|screenshot|meeting --date D
+      One command appends one normalized raw capture to the ledger's
+      `captures` list (not yet a checkable item: turn it into an ingest row
+      with kind + expect when it is one): `{id, kind: text|image|rule,
+      source, date, target, text | path + sha256}`. Text and rules are
+      redacted like ingest; an image is stored by its path relative to the
+      ledger's git top level (else the ledger's directory) plus its sha256
+      and size — never copied, so it never enters repo history unless you
+      commit it yourself; an image outside that root is refused (exit 2) so
+      no absolute home path reaches the ledger. Re-capturing the same content on the
+      same target is a no-op.
   accept-file --design D --app A [--out F]
       Drafts parity_differ's 7-field accepted-deviations TSV
       (`section status item app-value count reason owner-quote-or-commit`)
@@ -192,6 +204,8 @@ DEFAULT_LEDGER = ".claude/feedback-ledger.json"
 PARITY_DIFFER = Path(__file__).resolve().parents[2] / "deep-code-review" / "scripts" / "parity_differ.py"
 SCHEMA = 1
 SOURCES = ("csv", "doc", "transcript", "design")
+CAPTURE_SOURCES = ("chat", "screenshot", "meeting")
+_CAPTURE_KEYS = ("id", "kind", "source", "date", "target")
 KINDS = ("add", "change", "remove", "keep")
 CHOICES = ("feedback", "design", "other")
 FIELDS = ("text", "target", "kind", "expect", "was", "attribute", "value", "date", "role", "source_ref")
@@ -523,6 +537,10 @@ def load_ledger(path: str, create: bool = False) -> dict:
     for item in data["items"]:
         if not isinstance(item, dict) or not all(k in item for k in _ITEM_KEYS):
             raise InputError(f"ledger {path} has a malformed item")
+    caps = data.get("captures", [])
+    if not isinstance(caps, list) or not all(isinstance(c, dict) and all(k in c for k in _CAPTURE_KEYS)
+                                             for c in caps):
+        raise InputError(f"ledger {path} has a malformed capture")
     return data
 
 
@@ -882,6 +900,75 @@ def cmd_ingest(ledger_path: str, source: str, file: str, map_path: str | None, r
     return CLEAN
 
 
+def repo_root(ledger_path: str) -> str:
+    """The real path of the git top level holding `ledger_path`, else the ledger's own directory.
+
+    The ledger (and its directory) may not exist yet: git is asked from the
+    nearest existing ancestor. No git, or no repository, falls back to the
+    ledger's directory. Runs one read-only `git rev-parse`.
+    """
+    led = os.path.dirname(os.path.realpath(ledger_path))
+    probe = led
+    while not os.path.isdir(probe):
+        probe = os.path.dirname(probe)
+    try:
+        top = subprocess.run(["git", "-C", probe, "rev-parse", "--show-toplevel"],
+                             capture_output=True, text=True, check=False)
+    except OSError:
+        return led
+    return os.path.realpath(top.stdout.strip()) if top.returncode == 0 and top.stdout.strip() else led
+
+
+def cmd_capture(ledger_path: str, text: str | None, image: str | None, rule: str | None,
+                target: str, source: str, when: str) -> int:
+    """Append one normalized raw capture (text, image, or rule) to `captures`; idempotent.
+
+    Exactly one of `text` / `image` / `rule`. The target is validated like an
+    ingest target, the date normalized to UTC, text and rules redacted (emails,
+    @mentions). An image is recorded as its path relative to `repo_root` +
+    its sha256 + size and is never copied; one outside that root raises
+    InputError (an absolute path would leak into the ledger). The id hashes kind, normalized content (the image's
+    sha256), and normalized target, so the same capture twice is a no-op.
+    Side effect: rewrites the ledger and its markdown companion.
+    """
+    given = [(k, v) for k, v in (("text", text), ("image", image), ("rule", rule)) if v is not None]
+    if len(given) != 1:
+        raise InputError("capture needs exactly one of --text, --image, --rule")
+    kind, value = given[0]
+    target = " ".join(target.split())
+    entry = {"kind": kind, "source": source, "date": parse_date(when, "capture"),
+             "target": target, "norm": norm_target(target)}
+    if kind == "image":
+        try:
+            with open(value, "rb") as fh:
+                blob = fh.read()
+        except OSError as exc:
+            raise InputError(f"capture image not readable: {value} ({exc.strerror})") from exc
+        root = repo_root(ledger_path)
+        real = os.path.realpath(value)
+        if os.path.commonpath([root, real]) != root:
+            raise InputError(f"capture image is outside the repository ({root}): {value} — copy it into the "
+                             "repository first; an absolute path would leak into the committed ledger")
+        entry.update(path=Path(os.path.relpath(real, root)).as_posix(),
+                     sha256=hashlib.sha256(blob).hexdigest(), bytes=len(blob))
+        content = entry["sha256"]
+    else:
+        entry["text"] = redact(one_line(value))
+        content = norm_text(entry["text"])
+        if not content:
+            raise InputError(f"capture --{kind} is empty")
+    entry["id"] = hashlib.sha256(f"{kind}|{content}|{entry.pop('norm')}".encode()).hexdigest()[:12]
+    ledger = load_ledger(ledger_path, create=True)
+    caps = ledger.setdefault("captures", [])
+    if any(c["id"] == entry["id"] for c in caps):
+        print(f"capture {entry['id']} already recorded.")
+        return CLEAN
+    caps.append(entry)
+    save_ledger(ledger_path, ledger)
+    print(f"captured {entry['id']}: {kind} from {source} on {entry['target']} ({entry['date']}).")
+    return CLEAN
+
+
 def cmd_delta(ledger_path: str, design: str, design_date: str | None) -> int:
     """Classify every item against the latest design inventory."""
     ledger = load_ledger(ledger_path)
@@ -1205,6 +1292,13 @@ def render_markdown(ledger: dict) -> str:
             item["id"], item["target"], item["kind"], item["text"], sources, item["date"],
             item.get("design_state") or "-", item.get("app_state") or "-",
             (life[item["id"]]["state"] + _life_note(item, life)).strip())) + " |")
+    caps = ledger.get("captures") or []
+    if caps:
+        out += ["", "## Captured feedback (not yet a checkable item)", "",
+                "| ID | Target | Kind | Source | Date | Content |", "|---|---|---|---|---|---|"]
+        out += ["| " + " | ".join(_cell(v) for v in (
+            c["id"], c["target"], c["kind"], c["source"], c["date"],
+            c.get("text") or f"{c.get('path')} (sha256 {str(c.get('sha256'))[:12]})")) + " |" for c in caps]
     return "\n".join(out) + "\n"
 
 
@@ -1470,6 +1564,72 @@ def _selftest_owner_rules(tmp: str, expect) -> None:
         expect(f"utc-date {raw}", got == want, got)
 
 
+def _selftest_capture(tmp: str, expect) -> None:
+    """`capture`: text/image/rule append normalized, redacted, idempotent; an image is hashed, never copied."""
+    ledger = os.path.join(tmp, "capture", "ledger.json")
+    os.makedirs(os.path.join(tmp, "capture", "shots"))
+    shot, outside = os.path.join(tmp, "capture", "shots", "shot.png"), os.path.join(tmp, "outside.png")
+    for img in (shot, outside):
+        with open(img, "wb") as fh:
+            fh.write(b"\x89PNG\r\n\x1a\nfixture")
+    os.environ["GIT_CEILING_DIRECTORIES"] = tmp   # no repo above tmp: the ledger's own dir is the root
+
+    def run(*args: str) -> tuple[int, str]:
+        """Run the CLI in-process against the capture ledger."""
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
+            try:
+                code = main(["--ledger", ledger, "capture", *args])
+            except SystemExit as exc:   # argparse usage error
+                code = exc.code
+        return code, buf.getvalue()
+
+    base = ("--target", "Reports/Export-Button", "--source", "chat", "--date", "2026-09-10T23:30:00-05:00")
+    code, out = run("--text", "Make it green, ask jane@example.com @bruce", *base)
+    expect("capture-text", code == CLEAN and "captured" in out, out)
+    code, out = run("--text", "make it GREEN, ask jane@example.com @bruce", *base)
+    expect("capture-idempotent", code == CLEAN and "already recorded" in out, out)
+    code, out = run("--image", shot, "--target", "reports", "--source", "screenshot", "--date", "2026-09-11")
+    expect("capture-image", code == CLEAN, out)
+    code, out = run("--rule", "no text under 12px", "--target", "reports", "--source", "meeting", "--date", "2026-09-12")
+    expect("capture-rule", code == CLEAN, out)
+    with open(ledger, encoding="utf-8") as fh:
+        caps = json.load(fh).get("captures", [])
+    text, image, rule = (caps + [{}, {}, {}])[:3]
+    expect("capture-normalized", len(caps) == 3 and text.get("date") == "2026-09-11"
+           and text.get("text") == "Make it green, ask [email]" and text.get("kind") == "text", str(caps))
+    expect("capture-image-hashed-not-copied", image.get("sha256") == hashlib.sha256(b"\x89PNG\r\n\x1a\nfixture").hexdigest()
+           and image.get("path") == "shots/shot.png" and image.get("bytes") == 15
+           and sorted(os.listdir(os.path.dirname(ledger))) == ["ledger.json", "ledger.json.lock", "ledger.md", "shots"],
+           str(image))
+    expect("capture-rule-kind", rule.get("kind") == "rule" and rule.get("source") == "meeting", str(rule))
+    with open(companion_path(ledger), encoding="utf-8") as fh:
+        expect("capture-companion", "## Captured feedback" in fh.read())
+    for label, args in (("capture-two-kinds", ("--text", "x", "--rule", "y", *base)),
+                        ("capture-bad-source", ("--text", "x", "--target", "r", "--source", "csv", "--date", "2026-09-10")),
+                        ("capture-bad-target", ("--text", "x", "--target", "r//x", "--source", "chat", "--date", "2026-09-10")),
+                        ("capture-bad-date", ("--text", "x", "--target", "r", "--source", "chat", "--date", "10/09/2026")),
+                        ("capture-empty-text", ("--text", "  ", *base)),
+                        ("capture-missing-image", ("--image", os.path.join(tmp, "nope.png"), *base)),
+                        ("capture-image-outside-repo", ("--image", outside, *base))):
+        code, out = run(*args)
+        expect(label, code == INPUT_ERROR, f"{code} {out}")
+    expect("capture-image-outside-message", "outside the repository" in run("--image", outside, *base)[1])
+    with open(ledger, encoding="utf-8") as fh:
+        expect("capture-refusals-write-nothing", len(json.load(fh)["captures"]) == 3)
+    repo = os.path.join(tmp, "caprepo")   # inside a git repo the path is relative to its top level
+    os.makedirs(os.path.join(repo, "docs"))
+    subprocess.run(["git", "init", "-q", repo], check=True, capture_output=True)
+    with open(os.path.join(repo, "a.png"), "wb") as fh:
+        fh.write(b"repo image")
+    ledger = os.path.join(repo, "docs", "ledger.json")
+    code, out = run("--image", os.path.join(repo, "a.png"), *base)
+    with open(ledger, encoding="utf-8") as fh:
+        got = json.load(fh)["captures"][0].get("path")
+    expect("capture-image-repo-relative", code == CLEAN and got == "a.png", f"{code} {got} {out}")
+    os.environ.pop("GIT_CEILING_DIRECTORIES")
+
+
 def _selftest() -> int:
     """Prove each rule FIRES on neutral offline fixtures; exit 0 only if all hold.
 
@@ -1486,7 +1646,8 @@ def _selftest() -> int:
     again; malformed input → 2 with the ledger left untouched; email
     redaction; HTML inventory path; and `_selftest_owner_rules` (linking,
     contradictions, same-source-only superseding, target normalization,
-    role/mention/source_ref privacy, UNMEASURED, lock, UTC dates). An
+    role/mention/source_ref privacy, UNMEASURED, lock, UTC dates), and
+    `_selftest_capture` (one-command text/image/rule capture). An
     undecided implemented deviation is an owner question, not an accept row.
     """
     failures: list[str] = []
@@ -1857,6 +2018,9 @@ def _selftest() -> int:
         # 8. the ledger never decides a requirement; only the owner does.
         _selftest_owner_rules(tmp, expect)
 
+        # 9. one-command capture of chat text, a screenshot, or a rule.
+        _selftest_capture(tmp, expect)
+
     if failures:
         print("SELFTEST FAILED:")
         for failure in failures:
@@ -1865,7 +2029,8 @@ def _selftest() -> int:
     print("SELFTEST OK: dedupe=linked(3 sources) idempotent=ok superseded=by-date peer-conflict=ok "
           "design-lag=CONFLICTS/NOT_IN_DESIGN decide->accept-file(7-field,exact)=ok "
           "owner-commit(MISMATCH->MATCH_WITH_ACCEPTED)=ok regression=1 malformed=2 "
-          "owner-rules(link/conflict/supersede/privacy/unmeasured/lock/utc)=ok")
+          "owner-rules(link/conflict/supersede/privacy/unmeasured/lock/utc)=ok "
+          "capture(text,image-hashed,image-repo-relative,rule,idempotent,refusals,outside-repo)=ok")
     return 0
 
 
@@ -1894,6 +2059,14 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--choose", required=True, choices=CHOICES)
     p.add_argument("--quote", required=True)
     p.add_argument("--date", required=True)
+    p = sub.add_parser("capture", help="append one raw capture (text, image, or rule) to the ledger")
+    what = p.add_mutually_exclusive_group(required=True)
+    what.add_argument("--text")
+    what.add_argument("--image", help="image path inside the repo; stored repo-relative + sha256, never copied")
+    what.add_argument("--rule")
+    p.add_argument("--target", required=True, help="section or section/element")
+    p.add_argument("--source", required=True, choices=CAPTURE_SOURCES)
+    p.add_argument("--date", required=True)
     p = sub.add_parser("accept-file", help="draft parity_differ's accepted-deviations TSV (owner commits it)")
     p.add_argument("--design", required=True, help="the HTML design render delta last read")
     p.add_argument("--app", required=True, help="the HTML app render status last read")
@@ -1907,10 +2080,12 @@ def main(argv: list[str] | None = None) -> int:
         "delta": lambda: cmd_delta(args.ledger, args.design, args.design_date),
         "status": lambda: cmd_status(args.ledger, args.app, args.date),
         "decide": lambda: cmd_decide(args.ledger, args.id, args.choose, args.quote, args.date),
+        "capture": lambda: cmd_capture(args.ledger, args.text, args.image, args.rule, args.target,
+                                       args.source, args.date),
     }
     try:
         if args.cmd in writers:
-            with ledger_lock(args.ledger, create=args.cmd == "ingest"):
+            with ledger_lock(args.ledger, create=args.cmd in ("ingest", "capture")):
                 return writers[args.cmd]()
         if args.cmd == "conflicts":
             return cmd_conflicts(args.ledger)

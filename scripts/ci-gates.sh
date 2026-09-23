@@ -127,11 +127,12 @@ cmd_privacy() {
 
   local hit=0 files status
   for pat in "${patterns[@]}"; do
-    # -l: report file names only. -I: skip binaries. `--` guards dash-leading
+    # -l: report file names only. -I: skip binaries. -D skip: never open a
+    # FIFO/device (a stray named pipe blocks the scan forever). `--` guards dash-leading
     # target paths from being read as options. Capture grep's exit status
     # explicitly: 0 = matches, 1 = clean, anything else = gate error (no
     # always-success fallback, so a broken scan fails closed).
-    files="$(grep -rIlE --exclude-dir=.git "${exclude_args[@]}" -e "$pat" -- "${targets[@]}" 2>/dev/null)" \
+    files="$(grep -rIlE -D skip --exclude-dir=.git "${exclude_args[@]}" -e "$pat" -- "${targets[@]}" 2>/dev/null)" \
       && status=0 || status=$?
     case "$status" in
       0)

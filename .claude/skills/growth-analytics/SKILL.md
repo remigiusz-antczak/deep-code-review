@@ -26,7 +26,8 @@ while the business does not: vanity metrics, instrument-everything noise, and
 invented "good" thresholds. Measure the user's own data against the user's own
 baseline; never assert a benchmark the model cannot source.
 
-Persisted artifacts stay normal English. Chat may be terse.
+Persisted artifacts stay normal English. Chat may be terse. Lookup table:
+`INDEX.md`; read it instead of opening references blindly.
 
 ---
 

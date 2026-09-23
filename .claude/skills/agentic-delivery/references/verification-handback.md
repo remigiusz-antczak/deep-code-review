@@ -355,6 +355,16 @@ Two activities run the same commands but are different contracts — do not conf
   return on the most expensive task (the swap-trend and WIP-cap gates above size that quiescence).
 - **Split the long run so partial progress survives.** unit/type/lint → browser → audit → deploy-preflight, each
   reporting independently; a stall in one phase must not destroy the earlier phases' results.
+- **Bound verification debt explicitly — don't defer it every tick.** Track it as the count of
+  merged-but-unverified changes and the age of the oldest (e.g. at most 3 / 30min, not a fixed repo constant).
+  When CPU-saturated build lanes make the machine look too busy to verify, deferring the re-verify every tick
+  while still admitting new build work lets debt grow **without bound** while capacity never frees (#1129):
+  when the bound trips, shed or pause build-lane admission until debt clears — verification outranks new
+  building. Under load, run a **cheap tier** (the committed evidence at the merged SHA, one targeted probe of
+  the changed surface) instead of skipping outright, but it MUST report **reduced confidence** — "spot-checked,
+  not full verification" — never upgraded to a plain "verified": the same *worse than no verdict* asymmetry
+  above applies to a narrow check silently presented as a full one. Report debt every tick, so a stakeholder
+  reading the log sees "merged" is not yet "verified."
 - **Discovery findings are durable as leads; a discovery verdict is disposable.** Harvest the defects a
   discovery pass surfaces, but **re-confirm each at the new head before acting on it** — a finding carried
   forward without a re-run is `unverified`, not still-open (`deep-code-review` `method.md`) — and
