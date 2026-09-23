@@ -16,13 +16,13 @@ capped, at any length) iff its `agent_type` is listed in the comma-separated
 HANDBACK_EXEMPT_TYPES env var. The default list is four built-in agent types
 whose chat answer is itself the deliverable: `Explore`, `Plan`,
 `claude-code-guide`, `statusline-setup`. This hook does NOT inspect an
-agent's tools — it cannot tell whether a type has a Write tool, so a custom
-read-only review lane (whose findings ARE its chat answer) is capped unless
-you add its type name, e.g.
-    HANDBACK_EXEMPT_TYPES="Explore,Plan,claude-code-guide,statusline-setup,security-reviewer"
-Setting the variable REPLACES the default list, so repeat the defaults you
-still want. Alternatively scope the hook with a SubagentStop `matcher` so it
-never runs for those types at all.
+agent's tools — it cannot tell whether a type has a Write tool. Do NOT add a
+custom read-only review lane's type here: exempt means uncapped, which
+reopens the cost problem on a harness with no report file. Instead raise
+MAX_CHARS/MAX_LINES for that type only via a second, matcher-scoped
+SubagentStop entry with env overrides (agentic-delivery/references/
+host-enforcement.md). Setting HANDBACK_EXEMPT_TYPES REPLACES the default
+list, so repeat the defaults you still want.
 
 After MAX_BLOCKS blocks for one agent_id, this hook lets the stop through
 unconditionally, so a subagent that cannot comply never loops forever. Block
@@ -174,6 +174,37 @@ def _selftest():
             os.environ.pop("HANDBACK_EXEMPT_TYPES", None)
         else:
             os.environ["HANDBACK_EXEMPT_TYPES"] = saved
+
+    # matcher-scoped env override raises the cap for one agent type (the
+    # host-enforcement.md fix for a report-file-less review lane) — must be a
+    # real subprocess: MAX_LINES/MAX_CHARS are read from os.environ at import,
+    # so an in-process check() call can never see a per-invocation override.
+    import subprocess
+
+    twenty_lines = "\n".join(["ok"] * 20)  # 20 lines, well under 800 chars
+
+    def run_subproc(agent_id, extra_env):
+        env = dict(os.environ, HANDBACK_STATE_DIR=tmp)
+        if "HANDBACK_MAX_LINES" not in extra_env:
+            env.pop("HANDBACK_MAX_LINES", None)
+        env.update(extra_env)
+        payload = json.dumps({"agent_id": agent_id, "last_assistant_message": twenty_lines})
+        proc = subprocess.run(
+            [sys.executable, os.path.abspath(__file__)],
+            input=payload, capture_output=True, text=True, env=env,
+        )
+        return proc.returncode
+
+    case(
+        "env-override-raises-cap-for-type",
+        run_subproc("sub1", {"HANDBACK_MAX_LINES": "25"}),
+        0,
+    )
+    case(
+        "same-message-default-cap-blocks",
+        run_subproc("sub2", {}),
+        2,
+    )
 
     shutil.rmtree(tmp, ignore_errors=True)
     print(f"\nselftest: {passed}/{passed + failed} passed")

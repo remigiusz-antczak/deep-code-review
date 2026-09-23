@@ -32,7 +32,7 @@
 .claude/skills/agentic-delivery/references/dev-env-ownership.md	25648
 .claude/skills/agentic-delivery/references/fanout-host-sizing.md	36025
 .claude/skills/agentic-delivery/references/fast-agentic-delivery.md	6293
-.claude/skills/agentic-delivery/references/host-enforcement.md	9683
+.claude/skills/agentic-delivery/references/host-enforcement.md	10189
 .claude/skills/agentic-delivery/references/incident-response.md	7665
 .claude/skills/agentic-delivery/references/merge-queue-worktrees.md	55535
 .claude/skills/agentic-delivery/references/multi-session-coordination.md	54707
@@ -93,7 +93,7 @@
 .claude/skills/deep-code-review/references/lang-jvm.md	1708
 .claude/skills/deep-code-review/references/lang-python.md	1556
 .claude/skills/deep-code-review/references/lang-ruby-php.md	751
-.claude/skills/deep-code-review/references/lang-shell.md	4496
+.claude/skills/deep-code-review/references/lang-shell.md	5297
 .claude/skills/deep-code-review/references/lang-sql.md	755
 .claude/skills/deep-code-review/references/language-stack-redflags.md	22791
 .claude/skills/deep-code-review/references/machine-report.md	10061

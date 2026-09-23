@@ -53,3 +53,14 @@ Read this when the target runs any shell — CI `run:` steps, hooks, Dockerfile 
   gate sees, not on how one input is interpreted), and from the application-text collation
   rules in `i18n-l10n.md` (sorting / case-folding *user data* for display — this is
   collation inside a *gate's control flow*).
+- **A script that gates on another tool's log, not its exit status.** Gate on
+  the tool's exit status, captured to a file — never a pipe (pipe-hides-exit-code
+  hazard: `language-stack-redflags.md`'s verification-shell section); the
+  mechanized form is `templates/pre-push-verify.sh`, which decides only on the
+  captured command's exit code and never greps a log. If a log must still be
+  parsed, anchor on the runner's own summary line, copied from a **real passing
+  run** — never written from memory: a bare `PASSED`/`FAILED` word also matches
+  test *names*, so a failing run can quote a green test's name as its evidence.
+  Dry-run the check against one known-green and one known-red log before it
+  runs unattended. The last line is an explicit positive result; its absence is
+  failure.
