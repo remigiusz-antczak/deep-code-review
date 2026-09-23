@@ -870,41 +870,58 @@ rate), validity (schema/format/range). For each:
 
 ---
 
-**🚩 red flags**: unconditional `UPDATE`/upsert that ignores existing
-confidence; `merge` on a single fuzzy field; dedup on non-normalized keys; a dedup/idempotency
-key hashed over a truncated display slug;
-"latest wins" clobbering verified data; a metric scored `0` where it doesn't
-apply; failure types excluded from the denominator; absent/empty/false/list
-collapsed in completeness or CAS; freshness derived from `fetched_at`; a model
-call that returns a score or a boolean gate; weights inlined in code with no
-snapshot; a consumer/export that re-queries raw instead of the filtered set;
-written artifact with no reader; an edit written to a store the read path does not
-read for that field; mass status-change on an upstream error; a read / JOIN / COUNT on a soft-delete table with no `deleted_at IS NULL`
-filter (deleted rows leak into results); a `UNIQUE` column on a soft-delete table with no
-partial-index carve-out (cannot re-create a soft-deleted value); a hard delete leaving dangling
-foreign keys on an unenforced/`SET NULL` FK, or an `ON DELETE CASCADE` that over-deletes
-shared/audit rows; live
-counts hard-coded into docs; a coverage threshold lowered in the same diff that
-would otherwise fail it; a composite score that **sums** heterogeneous
-constructs; a ranker validated with **MAE** instead of concordance, or a "±N"
-band wider than the decision range; a config/enum map never tested against a
-`SELECT DISTINCT` of real source values; a fanout/uniqueness gate that
-blanket-blocks a newly-shared standing value; new enrichment scoped before
-existing-source coverage was measured; a per-row score with no coverage/provenance
-flag or no recoverable derivation; a time/activity score that reads an unobserved
-window as a decline; an entity's structurally-low-observability class read as
-inactive rather than not-observed; a non-monotone recency curve; a boolean parser that recognises
-only `"true"`, or an exclusion gate defaulting an unrecognised value to `false`; a
-substring `includes`/`indexOf` driving a categorical status / suppression decision;
-an external-source feasibility sign-off with no max-timestamp freshness check; a
-producer schema/semantic change with no declared consumer data contract (breaks a
-consumer even though the row still parses); an ML feature transformed differently
-for training vs serving, or a training join with no as-of/point-in-time bound; a
-derived field named for a conclusion it did not measure (a co-occurrence count
-called a "strength"/"relationship" score); a ranking/leaderboard with no
-observed-liveness gate (a missing liveness field ranked as live); a data provider
-that ships raw events where the consumer scores on aggregates, or a claimed
-provider-input never reconciled against the provider's live output before it feeds a
-downstream score; a deserializer that trusts a serialized computed field (a count
-read verbatim, not re-derived from the validated collection) or checks only a
-primitive type, not element shape — weaker than its own builder; a corroboration / fusion step that raises a fused confidence past its **entity-attribution** component on agreement that only evidences occurrence; a hand-rolled composite / score / tiering where a citable external standard exists and wasn't used, or per-metric spec URLs over a **tool-chosen metric set** (the invented index one level up); a non-empty value-A→value-B overwrite with no source-grade arbitration; a join / corroboration key not weighted by value-commonness (a value shared by dozens treated as a confirming match); a corroboration count that collapses same-domain duplicates but not derivation; a per-dimension volume-floor drop acked or blocked with no fold investigation after an identity/roster/entity-resolution change (a correction and a regression are identical from the count); an identity cluster built from raw connected components with no bridge / centrality check (transitive over-merge); a fabricated freshness decay curve (`0.5^(days/half_life)`) or an adopted vendor half-life in place of an observable in-window gate; a diff / index keyed on a **bare `id`** over a list mixing multiple entity **kinds** (a `(kind, id)` collision that silently merges two entities into one delta); a vector index mixing embeddings from two model versions, queried with a different model than it was built with, not re-embedded after its source docs changed, or built for one distance metric / normalization and queried under another; a per-group ratio whose numerator fans a shared/ownerless entity out to every group while its denominator credits it to a single owner (inflated, or undefined, for every group that shares it); a percent-unit guard with a lower bound only, so a value above 1 (legitimate over-100% semantics, or a double conversion) renders wrong with no error; a `scopeKeys`/`tags`/`labels`-style per-type accessor with a constant `[]` return (or a `// not scoped by X` comment) feeding a shared `.includes()`/`.some()` filter with no whole-type bypass, silently dropping that type from every scoped result; a stated precedence (`A` outranks `B`) whose override writes an adjacent `notes`/`read` column while the `status` / decision field is computed only from `B` and never consults it (worse if that caveat-bearing field is then truncated to a length that cuts the disqualifying clause); a dataset join by unguarded substring containment (`a in b or b in a`) that inherits an unrelated entity's confidential row, or a bare exact-match overlay that silently drops rows differing only by a legal suffix / case / punctuation; a graph / diagram authored as data whose closure / topology validity gate stays green while a separate `anchor` / `startNode` field disagrees with the declared entry (the node-list first element / the narrative's first clause), rendering the cycle rotated to the wrong start — and batch-inherited across every sibling from the same authoring pass.
+**🚩 red flags**:
+unconditional `UPDATE`/upsert that ignores existing confidence;
+`merge` on a single fuzzy field;
+dedup on non-normalized keys;
+a dedup/idempotency key hashed over a truncated display slug;
+"latest wins" clobbering verified data;
+a metric scored `0` where it doesn't apply;
+failure types excluded from the denominator;
+absent/empty/false/list collapsed in completeness or CAS;
+freshness derived from `fetched_at`;
+a model call that returns a score or a boolean gate;
+weights inlined in code with no snapshot;
+a consumer/export that re-queries raw instead of the filtered set;
+written artifact with no reader;
+an edit written to a store the read path does not read for that field;
+mass status-change on an upstream error;
+a read / JOIN / COUNT on a soft-delete table with no `deleted_at IS NULL` filter (deleted rows leak into results);
+a `UNIQUE` column on a soft-delete table with no partial-index carve-out (cannot re-create a soft-deleted value);
+a hard delete leaving dangling foreign keys on an unenforced/`SET NULL` FK, or an `ON DELETE CASCADE` that over-deletes shared/audit rows;
+live counts hard-coded into docs;
+a coverage threshold lowered in the same diff that would otherwise fail it;
+a composite score that **sums** heterogeneous constructs;
+a ranker validated with **MAE** instead of concordance, or a "±N" band wider than the decision range;
+a config/enum map never tested against a `SELECT DISTINCT` of real source values;
+a fanout/uniqueness gate that blanket-blocks a newly-shared standing value;
+new enrichment scoped before existing-source coverage was measured;
+a per-row score with no coverage/provenance flag or no recoverable derivation;
+a time/activity score that reads an unobserved window as a decline;
+an entity's structurally-low-observability class read as inactive rather than not-observed;
+a non-monotone recency curve;
+a boolean parser that recognises only `"true"`, or an exclusion gate defaulting an unrecognised value to `false`;
+a substring `includes`/`indexOf` driving a categorical status / suppression decision;
+an external-source feasibility sign-off with no max-timestamp freshness check;
+a producer schema/semantic change with no declared consumer data contract (breaks a consumer even though the row still parses);
+an ML feature transformed differently for training vs serving, or a training join with no as-of/point-in-time bound;
+a derived field named for a conclusion it did not measure (a co-occurrence count called a "strength"/"relationship" score);
+a ranking/leaderboard with no observed-liveness gate (a missing liveness field ranked as live);
+a data provider that ships raw events where the consumer scores on aggregates, or a claimed provider-input never reconciled against the provider's live output before it feeds a downstream score;
+a deserializer that trusts a serialized computed field (a count read verbatim, not re-derived from the validated collection) or checks only a primitive type, not element shape — weaker than its own builder;
+a corroboration / fusion step that raises a fused confidence past its **entity-attribution** component on agreement that only evidences occurrence;
+a hand-rolled composite / score / tiering where a citable external standard exists and wasn't used, or per-metric spec URLs over a **tool-chosen metric set** (the invented index one level up);
+a non-empty value-A→value-B overwrite with no source-grade arbitration;
+a join / corroboration key not weighted by value-commonness (a value shared by dozens treated as a confirming match);
+a corroboration count that collapses same-domain duplicates but not derivation;
+a per-dimension volume-floor drop acked or blocked with no fold investigation after an identity/roster/entity-resolution change (a correction and a regression are identical from the count);
+an identity cluster built from raw connected components with no bridge / centrality check (transitive over-merge);
+a fabricated freshness decay curve (`0.5^(days/half_life)`) or an adopted vendor half-life in place of an observable in-window gate;
+a diff / index keyed on a **bare `id`** over a list mixing multiple entity **kinds** (a `(kind, id)` collision that silently merges two entities into one delta);
+a vector index mixing embeddings from two model versions, queried with a different model than it was built with, not re-embedded after its source docs changed, or built for one distance metric / normalization and queried under another;
+a per-group ratio whose numerator fans a shared/ownerless entity out to every group while its denominator credits it to a single owner (inflated, or undefined, for every group that shares it);
+a percent-unit guard with a lower bound only, so a value above 1 (legitimate over-100% semantics, or a double conversion) renders wrong with no error;
+a `scopeKeys`/`tags`/`labels`-style per-type accessor with a constant `[]` return (or a `// not scoped by X` comment) feeding a shared `.includes()`/`.some()` filter with no whole-type bypass, silently dropping that type from every scoped result;
+a stated precedence (`A` outranks `B`) whose override writes an adjacent `notes`/`read` column while the `status` / decision field is computed only from `B` and never consults it (worse if that caveat-bearing field is then truncated to a length that cuts the disqualifying clause);
+a dataset join by unguarded substring containment (`a in b or b in a`) that inherits an unrelated entity's confidential row, or a bare exact-match overlay that silently drops rows differing only by a legal suffix / case / punctuation;
+a graph / diagram authored as data whose closure / topology validity gate stays green while a separate `anchor` / `startNode` field disagrees with the declared entry (the node-list first element / the narrative's first clause), rendering the cycle rotated to the wrong start — and batch-inherited across every sibling from the same authoring pass.
