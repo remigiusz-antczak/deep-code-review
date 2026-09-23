@@ -210,11 +210,17 @@ presumption): confirm the agent is genuinely idle by a *positive* signal before 
 transcript is observable, the honest state is **`UNVERIFIED`**, not "dead." **`scripts/lane_liveness.py
 --worktree <path> [--pid N]`** computes this positive-signal read offline — ALIVE/QUIET/UNVERIFIED/DEAD from a
 live process, file/git-state mtimes, and a CPU-time sample, never a kill verdict — so "slow, not stuck" is a
-checkable report instead of prose alone (#1070). Distinct from the Conductor's
+checkable report instead of prose alone (#1070). The same asymmetry governs *reuse*, not just kill: resuming or
+re-assigning a lane into a worktree its previous agent may still hold requires this verdict to be **DEAD**,
+never QUIET or UNVERIFIED (#1116) — `scripts/lane_guard.py`'s lane-start check enforces that by import. Distinct
+from the Conductor's
 context-isolation rule ("read status, not the raw transcript" — do not consume the transcript as *context*):
 this is not reading its **file stat** as *liveness*. And distinct from the idle-before-duplicate section above:
 that is a false-**positive** "completed" leading to a duplicate dispatch; this is a false-**negative** liveness
-read leading to a destructive **kill**.
+read leading to a destructive **kill**. A **served UI's** freshness is a different axis again — not *is the
+process alive* but *does what it serves match the merge* — `dev-env-ownership.md`'s *"Latest" means the process
+restarted and a fetched page proves it* section covers that case; a serving tree's git HEAD is not evidence there
+either.
 
 ## A plugin's host hook auto-spawns forks you did not — judge them by external effect, not by unexpected provenance
 
@@ -444,7 +450,9 @@ makes the claim checkable, it does not replace the forge run.
   rests on a served app or a remote branch. `served --url U --expect-sha S --probe header:NAME` passes only on the
   serving process's own build id — none found, a payload timestamp, a redirect, or a non-200 exits 2;
   `ref --branch B --expect-sha S` fetches and checks reachability on the branch the reviewer uses, never a stale
-  local tree. Its `--json` is the `Verify:` evidence; it proves that build is served, not that the feature works.
+  local tree (`--require-clean`: an edit a rejected hook left uncommitted fails); `checks` reads each check's own
+  latest run, never a rollup (#1066). Its `--json` is the `Verify:` evidence, bounded by its `proves` field
+  (never "the feature works").
 
 ## A fan-out review is not complete until every worker has joined — a partial aggregate can drop the tail's top-severity finding
 

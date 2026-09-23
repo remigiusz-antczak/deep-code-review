@@ -53,7 +53,7 @@ Two rules override the whole roster:
 
 | Hat | Fires when | Owns at gates | Depth |
 |---|---|---|---|
-| **Conductor** | Every multi-hat change | Intent, task graph, merge plan, evidence roll-up (G0, G2, G7); never self-approves | `SKILL.md` Operating model |
+| **Conductor** | Every multi-hat change | Intent, task graph, merge plan, evidence roll-up (G0, G2, G7); never self-approves; once a lane is staffed, never self-executes its work — even under pressure | `SKILL.md` Operating model |
 | **Product Analyst** | Feedback / a "make it do X" ask / a vague outcome | Turns the ask into a testable spec + a feedback-coverage entry (G0, G1) | **below** |
 | **Architect** | New surface, data model, or cross-cutting change | Seams, dependency direction, SPOFs, NFR budgets, drift from the stated design (G3) | role-coverage.md *Architect* |
 | **Implementer** | Any code change | The diff, its tests, its rationale, one writer per worktree (G4) | **below** |
@@ -105,6 +105,21 @@ multi-agent build from hallucinating a plausible-but-wrong feature (MetaGPT).
   review's coverage ledger — an item that is silently dropped is the failure this
   map exists to make visible. "We shipped something" is not "we closed the
   signal"; only a verified entry closes it.
+- **Owner-collected feedback and current shipped functionality outrank an
+  abstract design spec — precedence is stable brief to merge.** When a
+  design-spec review flags that a shipped feature (built from a real owner
+  signal) deviates from the spec, the spec loses the tie: status quo (what
+  currently ships) and owner feedback both outrank a new design ask. A lane
+  proposing to revert a shipped, feedback-backed feature "for design parity" is
+  exactly the deviation the bullet above requires surfacing to the owner as a
+  decision — never executed silently — and needs the owner's **explicit
+  confirmation** before the revert lands, not just a design-review sign-off.
+  Write the ranking into the brief and read it back during review before
+  landing, so a pivot-then-restore cycle (implement per feedback → revert for
+  parity → re-request the same feedback) never repeats. `scripts/feedback_ledger.py`
+  (landing in a parallel lane) is the mechanism meant to make each feedback
+  item's shipped status auditable, so a proposed revert can be checked against
+  it before it happens.
 
 The Product Analyst **recommends**; scope and priority are owner decisions
 (role-coverage.md: product ideas never carry Blocker/Critical gate language).
@@ -254,6 +269,13 @@ can't-check is not a finding.
   blast radius needs, never more (*Building Effective AI Agents*).
 - **The builder reviewing the builder.** Any hat signing off its own work
   removes the independence the gate exists to provide.
+- **The Conductor self-executes under pressure.** The same failure class as
+  never self-approving: when a dedicated lane reports difficulty or delay on an
+  urgent fix, the Conductor takes the work back and implements it directly
+  instead of keeping the lane staffed and handing back only at a true
+  decision-gate or hard blocker. Reviews back up, other lanes go unstaffed, and
+  the fix still lands late — the context-switch cost drops delivery below
+  single-lane throughput, the opposite of what taking it over was meant to buy.
 - **Collapsing a gate because "it's small."** Low-blast reversible work may
   collapse *adjacent* gates; it may never remove independent verification or a
   human approval that actually applies (`SKILL.md` Gates).

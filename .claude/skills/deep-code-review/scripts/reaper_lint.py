@@ -32,7 +32,22 @@ caller explicitly chose it) or a directory, walked recursively (`.git` and
   * files named `Makefile`, `makefile`, `GNUmakefile`, `justfile`,
     `.justfile` (any case), or `package.json`;
   * extensionless files whose first line is a `#!` shebang naming a shell
-    (`sh`, `bash`, `zsh`, `dash`, `ksh`, `ash`) or `make`.
+    (`sh`, `bash`, `zsh`, `dash`, `ksh`, `ash`) or `make`;
+  * extensionless files inside a known hook directory (`.husky/`,
+    `.githooks/`, a `.git/hooks/` directory), with or without a shebang --
+    git and husky run a hook file whatever its first line says.
+Despite the `.git` skip, a walked directory that contains a `.git` entry
+also has that repository's hooks directory scanned explicitly: `.git/hooks/`
+for a `.git` directory, or the hooks directory of the common git dir a
+`.git` gitfile (linked worktree) points at. Inactive `*.sample` hooks are
+skipped. A `core.hooksPath` setting is not read; pass that directory
+explicitly.
+
+SCOPE: reaper-named scripts and explicit paths; a hook that runs a test
+which calls a reaper is not detected. HOOK_LIVE_REAPER sees only a reaper
+named on the hook's own lines (or in a hook config); a reaper reached
+indirectly (a hook runs `npm test`, the test calls a reaper) needs its own
+review, or its script passed here explicitly.
 
 Before matching, each file is preprocessed: in a `*.json` file, a
 `"key": "value"` line is replaced by its decoded string value (a
@@ -83,6 +98,20 @@ RULES (fail on any match not carrying the allow marker)
                   `NAME=(` ... `)` array, in a file that also kills. An
                   operator-owned exclusion list living as a script literal
                   goes stale the moment a new backend is added.
+  HOOK_LIVE_REAPER a scanned path identified as a git hook (a file under a
+                  `.githooks/`, `.husky/`, or `.git/hooks/` directory; named
+                  `lefthook.yml`; or named `*pre-commit-config.y*ml`) that
+                  invokes something reaper-named (a command/script token whose
+                  basename contains "reap", `reaper_lint`/other `*lint*`
+                  invocations excluded) with no `--dry-run`, `--dry_run`,
+                  `--stub`, `--noop`, `--check-only`, or `--simulate` flag on
+                  the same logical line or, in a YAML hook config, on a
+                  sibling `args:` key of the same hook item (`args:
+                  [--dry-run]` on its own line, flow or block list). A
+                  commit/push hook running a live
+                  reaper on every commit kills every sibling lane's dev server
+                  and headless browser (issue #1113); this is a path-scoped
+                  rule, distinct from the shape-based rules above.
 
 ALLOW MARKER
 -------------
@@ -169,6 +198,16 @@ _PROTECT_NAME_RE = re.compile(
 )
 _NUMBER_RE = re.compile(r"(?<![\w.])(\d{4,5})(?![\w.])")
 
+# Git-hook path shapes (rule HOOK_LIVE_REAPER).
+_HOOK_DIR_NAMES = {".githooks", ".husky"}
+_PRECOMMIT_CONFIG_RE = re.compile(r"pre-commit-config\.ya?ml$", re.IGNORECASE)
+_REAPER_NAME_RE = re.compile(r"(?i)reap")
+_SCRIPT_EXT_RE = re.compile(r"\.(?:py|sh|bash|zsh|js|ts|rb|mjs|cjs)$", re.IGNORECASE)
+_REAPER_SAFE_FLAG_RE = re.compile(
+    r"--dry[-_]run|--stub|--noop|--check-only|--simulate", re.IGNORECASE
+)
+_YAML_ARGS_KEY_RE = re.compile(r"^\s*(?:-\s+)?args\s*:(.*)$")
+
 # lsof short options that take a required / optional argument (the rest of the
 # cluster, or for a required one the next token when the cluster ends there).
 _LSOF_REQ_ARG = set("AcdDekmpu")
@@ -213,6 +252,11 @@ _MSG = {
         "moment an operator adds a real serving port; source exclusions from "
         "operator config instead"
     ),
+    "HOOK_LIVE_REAPER": (
+        "a reaper invoked from a git hook with no --dry-run/--stub flag -- a "
+        "commit/push hook must never run a live reaper (every agent's commit "
+        "would kill sibling lanes' dev servers and browsers)"
+    ),
 }
 
 
@@ -235,14 +279,56 @@ def _has_shell_shebang(path: str) -> bool:
     return bool(_SHEBANG_RE.search(first))
 
 
+def _in_hook_dir(dirpath: str) -> bool:
+    """True when `dirpath` is (inside) a `.husky`/`.githooks` dir or a `.git/hooks` dir."""
+    parts = dirpath.replace(os.sep, "/").split("/")
+    if any(p in _HOOK_DIR_NAMES for p in parts):
+        return True
+    return any(parts[k] == ".git" and parts[k + 1] == "hooks" for k in range(len(parts) - 1))
+
+
 def _matches_scan_filter(dirpath: str, name: str) -> bool:
-    """True when a file found by a directory walk should be scanned."""
+    """True when a file found by a directory walk should be scanned.
+
+    Extensionless files in a known hook directory are scanned without a
+    shebang sniff (a hook runs whatever its first line says); `*.sample`
+    hooks are never scanned (git does not run them).
+    """
     lower = name.lower()
+    if lower.endswith(".sample"):
+        return False
     if lower.endswith(_SCAN_EXTS) or lower in _SCAN_NAMES:
         return True
     if "." not in name:
-        return _has_shell_shebang(os.path.join(dirpath, name))
+        return _in_hook_dir(dirpath) or _has_shell_shebang(os.path.join(dirpath, name))
     return False
+
+
+def _hooks_dir_for(git_entry: str) -> str:
+    """The hooks directory a `.git` entry points at.
+
+    A `.git` directory -> `<.git>/hooks`. A `.git` gitfile (`gitdir: <path>`,
+    as in a linked worktree) -> `<commondir>/hooks` when the linked git dir
+    names a `commondir`, else `<gitdir>/hooks`. Raises OSError/ValueError on an
+    unreadable or malformed gitfile so the caller fails closed. The returned
+    directory may not exist (a repository with no hooks).
+    """
+    if os.path.isdir(git_entry):
+        return os.path.join(git_entry, "hooks")
+    with open(git_entry, encoding="utf-8") as fh:
+        first = fh.readline().strip()
+    if not first.startswith("gitdir:"):
+        raise ValueError("not a gitfile (no 'gitdir:' line)")
+    gitdir = first[len("gitdir:"):].strip()
+    if not os.path.isabs(gitdir):
+        gitdir = os.path.join(os.path.dirname(git_entry), gitdir)
+    common_file = os.path.join(gitdir, "commondir")
+    if os.path.isfile(common_file):
+        with open(common_file, encoding="utf-8") as fh:
+            common = fh.read().strip()
+        base = common if os.path.isabs(common) else os.path.join(gitdir, common)
+        return os.path.normpath(os.path.join(base, "hooks"))
+    return os.path.join(gitdir, "hooks")
 
 
 def _iter_targets(paths: list[str]) -> tuple[list[str], list[str]]:
@@ -260,14 +346,41 @@ def _iter_targets(paths: list[str]) -> tuple[list[str], list[str]]:
             f"(fail closed): {exc.strerror or exc}"
         )
 
+    seen_hook_dirs: set[str] = set()
+
+    def add_git_hooks(dirpath: str) -> None:
+        # The walk skips `.git`, but its hooks run on every commit: scan the
+        # (flat) hooks directory explicitly, `*.sample` excluded.
+        git_entry = os.path.join(dirpath, ".git")
+        try:
+            hooks = _hooks_dir_for(git_entry)
+        except (OSError, ValueError) as exc:
+            errors.append(f"reaper_lint: cannot resolve hooks for {git_entry} (fail closed): {exc}")
+            return
+        real = os.path.realpath(hooks)
+        if real in seen_hook_dirs or not os.path.isdir(hooks):
+            return
+        seen_hook_dirs.add(real)
+        try:
+            names = sorted(os.listdir(hooks))
+        except OSError as exc:
+            errors.append(f"reaper_lint: cannot list {hooks} (fail closed): {exc.strerror or exc}")
+            return
+        for fn in names:
+            full = os.path.join(hooks, fn)
+            if os.path.isfile(full) and not fn.lower().endswith(".sample"):
+                files.append(full)
+
     for p in paths:
         if os.path.isfile(p):
             files.append(p)
         elif os.path.isdir(p):
             for dirpath, dirnames, filenames in os.walk(p, onerror=on_walk_error):
+                if ".git" in dirnames or ".git" in filenames:
+                    add_git_hooks(dirpath)
                 dirnames[:] = sorted(d for d in dirnames if d not in _SKIP_DIRS)
                 for fn in sorted(filenames):
-                    if _matches_scan_filter(dirpath, fn):
+                    if fn != ".git" and _matches_scan_filter(dirpath, fn):
                         files.append(os.path.join(dirpath, fn))
         else:
             errors.append(f"reaper_lint: path not found: {p} (fail closed)")
@@ -610,16 +723,102 @@ def _portlike_count(value: str) -> int:
     return sum(1 for m in _NUMBER_RE.finditer(value) if 1024 <= int(m.group(1)) <= 65535)
 
 
+def _is_hook_path(path: str) -> bool:
+    """True when `path` is a git-hook-family file (rule HOOK_LIVE_REAPER)."""
+    parts = path.replace(os.sep, "/").split("/")
+    basename = parts[-1]
+    if any(p in _HOOK_DIR_NAMES for p in parts):
+        return True
+    if ".git" in parts and "hooks" in parts:
+        return True
+    if basename.lower() == "lefthook.yml":
+        return True
+    if _PRECOMMIT_CONFIG_RE.search(basename):
+        return True
+    return False
+
+
+def _reaper_invocation(text: str) -> bool:
+    """True when a logical line's tokens name a reaper-ish command/script
+    (basename contains "reap"), excluding a `*lint*` variant such as
+    `reaper_lint.py` itself (a read-only check, safe in a hook)."""
+    for seg in _segments(text):
+        for tok in _tokens(seg):
+            base = tok.rsplit("/", 1)[-1]
+            stem = _SCRIPT_EXT_RE.sub("", base)
+            if _REAPER_NAME_RE.search(stem) and "lint" not in stem.lower():
+                return True
+    return False
+
+
+def _indent(line: str) -> int:
+    return len(line) - len(line.lstrip(" "))
+
+
+def _yaml_key_col(line: str) -> tuple[int, bool]:
+    """(column where the mapping key starts, True if the line opens a `- ` list item)."""
+    m = re.match(r"^( *)(-\s+)?", line)
+    return len(m.group(0)), bool(m.group(2))
+
+
+def _yaml_sibling_dry_run(raw: list[str], idx: int) -> bool:
+    """True when the YAML hook item holding raw line `idx` has an `args:` key
+    (a sibling at the same key column; a flow list such as `[--dry-run]` or a
+    block list nested under it) carrying a dry-run/stub flag. A flag on a
+    different list item does not count.
+    """
+    col, opens_item = _yaml_key_col(raw[idx])
+
+    def meaningful(k: int) -> bool:
+        return bool(raw[k].strip()) and not raw[k].lstrip().startswith("#")
+
+    lo = idx
+    if not opens_item:
+        for k in range(idx - 1, -1, -1):
+            if not meaningful(k):
+                continue
+            kc, item = _yaml_key_col(raw[k])
+            if item and kc == col:
+                lo = k
+                break
+            if _indent(raw[k]) < col:
+                break
+            lo = k
+    hi = idx
+    for k in range(idx + 1, len(raw)):
+        if not meaningful(k):
+            continue
+        if _indent(raw[k]) < col or (_yaml_key_col(raw[k])[1] and _indent(raw[k]) <= col):
+            break
+        hi = k
+    for k in range(lo, hi + 1):
+        m = _YAML_ARGS_KEY_RE.match(raw[k])
+        if not m or _yaml_key_col(raw[k])[0] != col:
+            continue
+        text = m.group(1)
+        j = k + 1
+        while j <= hi and (not raw[j].strip() or _indent(raw[j]) > col):
+            text += " " + raw[j]
+            j += 1
+        if _REAPER_SAFE_FLAG_RE.search(text):
+            return True
+    return False
+
+
 # ---------------------------------------------------------------------------
 # Scan.
 # ---------------------------------------------------------------------------
 
-def _scan_text(raw: list[str], is_json: bool = False) -> list[tuple[int, str, str]]:
+def _scan_text(
+    raw: list[str], is_json: bool = False, path: str | None = None
+) -> list[tuple[int, str, str]]:
     """Return [(1-based line, RULE, message), ...] for one file's lines,
     excluding findings whose logical line carries the allow marker."""
     logical = _logical_lines(raw, is_json)
     texts = [t for _, _, t in logical]
     file_kills = any(_FILE_KILLS_RE.search(t) for t in texts)
+    is_hook = path is not None and _is_hook_path(path)
+    is_yaml = path is not None and path.lower().endswith((".yml", ".yaml"))
     hits: dict[tuple[int, str], None] = {}
 
     def add(li: int, rule: str) -> None:
@@ -648,6 +847,10 @@ def _scan_text(raw: list[str], is_json: bool = False) -> list[tuple[int, str, st
 
         if _range_is_portlike(text) and any(_KILL_WORD_RE.search(t) for t in texts[li:li + 6]):
             add(li, "RANGE_KILL")
+
+        if (is_hook and _reaper_invocation(text) and not _REAPER_SAFE_FLAG_RE.search(text)
+                and not (is_yaml and _yaml_sibling_dry_run(raw, logical[li][0]))):
+            add(li, "HOOK_LIVE_REAPER")
 
         if file_kills:
             m = _PROTECT_ASSIGN_RE.match(text)
@@ -683,7 +886,7 @@ def run_gate(paths: list[str]) -> tuple[int, list[str]]:
             errors.append(f"reaper_lint: cannot decode {f} (fail closed): {exc}")
             continue
         is_json = f.lower().endswith(".json")
-        for lineno, rule, message in _scan_text(text.splitlines(), is_json):
+        for lineno, rule, message in _scan_text(text.splitlines(), is_json, path=f):
             all_findings.append((f, lineno, rule, message))
 
     out = [f"{f}:{lineno}: [{rule}] {message}" for f, lineno, rule, message in all_findings]
@@ -782,6 +985,41 @@ _CASES: tuple[tuple[str, str, str, int, str], ...] = (
      FAIL, "HARDCODED_PORTS"),
     ("hardcoded-comment-ok", "a.sh", "# keep ports 3000 8080 in sync with docs\nkill $PID\n", OK, ""),
     ("hardcoded-small-numbers-ok", "a.sh", "SKIP_TESTS=\"unit 10 20\"\nkill $PID\n", OK, ""),
+    # HOOK_LIVE_REAPER: a reaper invoked from a git-hook-family path with no
+    # dry-run/stub flag; excluded for non-hook paths and for *lint* variants.
+    ("hook-husky-live-fires", ".husky/pre-commit",
+     _SH + "python3 scripts/reaper.py --apply\n", FAIL, "HOOK_LIVE_REAPER"),
+    ("hook-husky-dry-run-ok", ".husky/pre-commit",
+     _SH + "python3 scripts/reaper.py --dry-run\n", OK, ""),
+    ("hook-githooks-live-fires", ".githooks/pre-push",
+     "#!/bin/sh\n./scripts/reaper.sh\n", FAIL, "HOOK_LIVE_REAPER"),
+    ("hook-git-hooks-dir-live-fires", ".git/hooks/pre-commit",
+     "#!/bin/sh\nbash reaper_cleanup.sh\n", FAIL, "HOOK_LIVE_REAPER"),
+    ("hook-lefthook-yml-live-fires", "lefthook.yml",
+     "pre-commit:\n  commands:\n    reap:\n      run: python3 scripts/reaper.py\n",
+     FAIL, "HOOK_LIVE_REAPER"),
+    ("hook-precommit-config-live-fires", ".pre-commit-config.yaml",
+     "repos:\n  - hooks:\n      - id: reaper\n        entry: scripts/reaper.py\n",
+     FAIL, "HOOK_LIVE_REAPER"),
+    ("hook-reaper-lint-excluded-ok", ".husky/pre-commit",
+     _SH + "python3 scripts/reaper_lint.py .\n", OK, ""),
+    ("non-hook-live-reaper-ok", "scripts/nightly.sh",
+     _SH + "python3 scripts/reaper.py --apply\n", OK, ""),
+    # A dry-run flag on a sibling `args:` key of the same YAML hook item counts;
+    # one on a different hook item does not.
+    ("hook-precommit-args-flow-dry-run-ok", ".pre-commit-config.yaml",
+     "repos:\n  - repo: local\n    hooks:\n      - id: reaper\n        entry: scripts/reaper.py\n"
+     "        args: [--dry-run]\n        language: system\n", OK, ""),
+    ("hook-precommit-args-block-dry-run-ok", ".pre-commit-config.yaml",
+     "repos:\n  - repo: local\n    hooks:\n      - id: reaper\n        entry: scripts/reaper.py\n"
+     "        args:\n          - --dry-run\n", OK, ""),
+    ("hook-precommit-args-other-item-fires", ".pre-commit-config.yaml",
+     "repos:\n  - repo: local\n    hooks:\n      - id: reaper\n        entry: scripts/reaper.py\n"
+     "        language: system\n      - id: other\n        entry: scripts/other.py\n"
+     "        args: [--dry-run]\n", FAIL, "HOOK_LIVE_REAPER"),
+    ("hook-precommit-args-live-flag-fires", ".pre-commit-config.yaml",
+     "repos:\n  - hooks:\n      - id: reaper\n        entry: scripts/reaper.py\n"
+     "        args: [--apply]\n", FAIL, "HOOK_LIVE_REAPER"),
     # Allow marker: exact token, non-empty reason, same line only.
     ("allow-same-line-suppresses", "a.sh",
      "kill -9 $(lsof -ti :$port)  # reaper-lint: allow lane-owned port, verified by caller\n", OK, ""),
@@ -848,6 +1086,43 @@ def _selftest() -> int:
                        os.path.join("bin", "cleanup"), os.path.join("bin", "envcleanup")),
             must_not_have=("notes.txt", "README"),
         )
+
+        # Hook directories: `.git/hooks/*` is scanned despite the `.git` skip
+        # (`*.sample` excluded), and extensionless hooks with no shebang in
+        # `.husky/` / `.githooks/` are scanned without a shebang sniff.
+        hookrepo = os.path.join(tmp, "hookrepo")
+        live = "bash scripts/reaper.sh\n"
+        _write(os.path.join(hookrepo, ".git", "hooks", "pre-commit"), "#!/bin/sh\n" + live)
+        _write(os.path.join(hookrepo, ".git", "hooks", "pre-push.sample"), "#!/bin/sh\n" + live)
+        _write(os.path.join(hookrepo, ".git", "config"), "[core]\n")
+        _write(os.path.join(hookrepo, ".husky", "pre-push"), live)
+        _write(os.path.join(hookrepo, ".githooks", "commit-msg"), live)
+        _write(os.path.join(hookrepo, "docs", "NOTES"), live)
+        rc, lines = run_gate([hookrepo])
+        check(
+            "dir-scan-walks-git-hooks-and-shebangless-hooks", rc, lines, FAIL,
+            must_have=(os.path.join(".git", "hooks", "pre-commit") + ":",
+                       os.path.join(".husky", "pre-push") + ":",
+                       os.path.join(".githooks", "commit-msg") + ":"),
+            must_not_have=("pre-push.sample", "NOTES", "config"),
+        )
+
+        # A linked worktree's `.git` gitfile resolves to the common dir's hooks.
+        common = os.path.join(tmp, "commonrepo", ".git")
+        _write(os.path.join(common, "hooks", "pre-commit"), live)
+        _write(os.path.join(common, "worktrees", "wt", "commondir"), "../..\n")
+        wt = os.path.join(tmp, "wt")
+        _write(os.path.join(wt, ".git"), "gitdir: " + os.path.join(common, "worktrees", "wt") + "\n")
+        rc, lines = run_gate([wt])
+        check("dir-scan-gitfile-resolves-common-hooks", rc, lines, FAIL,
+              must_have=(os.path.join("commonrepo", ".git", "hooks", "pre-commit") + ":",
+                         "HOOK_LIVE_REAPER"))
+
+        # A `.git` gitfile that does not parse -> ERROR (fail closed).
+        badwt = os.path.join(tmp, "badwt")
+        _write(os.path.join(badwt, ".git"), "not a gitfile\n")
+        rc, lines = run_gate([badwt])
+        check("dir-scan-bad-gitfile-errors", rc, lines, ERROR, must_have=("cannot resolve hooks",))
 
         # A named path that does not exist -> ERROR (fail closed).
         rc, lines = run_gate([os.path.join(tmp, "does-not-exist.sh")])

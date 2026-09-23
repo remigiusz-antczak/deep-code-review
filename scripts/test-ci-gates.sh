@@ -2047,8 +2047,8 @@ else
 fi
 
 # ===========================================================================
-# dcr-gates opt-in delivery gates — refix_gate.py and priority_gate.py (own
-# lane; APPENDED AT THE END by convention). Both are OFF by default; a set
+# dcr-gates opt-in delivery gates — refix_gate.py, priority_gate.py, and focus_gate.py (own
+# lane; APPENDED AT THE END by convention). All are OFF by default; a set
 # flag with agentic-delivery missing, a bad flag value, or a missing input
 # fails closed; each gate FIRES on a planted violation through the runner.
 # ===========================================================================
@@ -2093,10 +2093,10 @@ git -C "$og" commit -q -m 'style(a): reformat'
 
 # 2) Default run (no flags): neither opt-in gate runs.
 og_run "$WORK/og-default.log"
-if [ "$OG_RC" -eq 0 ] && ! grep -qE 'refix_gate|priority_gate' "$WORK/og-default.log"; then
-  record 0 "dcr-gates opt-in: both gates are off by default"
+if [ "$OG_RC" -eq 0 ] && ! grep -qE 'refix_gate|priority_gate|focus_gate' "$WORK/og-default.log"; then
+  record 0 "dcr-gates opt-in: all three gates are off by default"
 else
-  record 1 "dcr-gates opt-in: both gates are off by default"
+  record 1 "dcr-gates opt-in: all three gates are off by default"
 fi
 
 # 3) Planted RED: re-touching a just-fixed file with no test/eval change FIRES.
@@ -2150,6 +2150,45 @@ if [ "$og_red_rc" -ne 0 ] && grep -q 'BLOCKING #3' "$WORK/og-prio-red.log" \
   record 0 "dcr-gates opt-in: priority_gate fires on an inversion, passes once cited (planted RED)"
 else
   record 1 "dcr-gates opt-in: priority_gate fires on an inversion, passes once cited (planted RED)"
+fi
+
+# 8) DCR_FOCUS_GATE=1: when no priority record ever existed the run passes
+#    with a notice; an owner-committed OPEN record FIRES on a change outside
+#    its scope; a trivially-true acceptance (`true`) never counts as DONE; the
+#    gate passes once the owner's real acceptance command exits 0 (DONE).
+og_run "$WORK/og-focus-norecord.log" DCR_FOCUS_GATE=1 DCR_OWNER_EMAIL=jane@example.com
+if [ "$OG_RC" -eq 0 ] && grep -q 'no priority record ever existed' "$WORK/og-focus-norecord.log" \
+  && grep -q 'dcr-gates: focus_gate PASS' "$WORK/og-focus-norecord.log"; then
+  record 0 "dcr-gates opt-in: focus_gate with no priority record ever passes with a notice"
+else
+  record 1 "dcr-gates opt-in: focus_gate with no priority record ever passes with a notice"
+fi
+og_focus_record() {  # <acceptance-command> <subject>
+  printf 'priority: design-alignment\nscope: src/**\nacceptance: %s\n' "$1" >"$og/.claude/PRIORITY.md"
+  git -C "$og" add .claude/PRIORITY.md >/dev/null 2>&1
+  git -C "$og" commit -q -m "$2"
+}
+og_focus_record false 'chore: record owner priority'
+mkdir -p "$og/web"
+printf 'a { color: red; }\n' >"$og/web/app.css"
+git -C "$og" add web/app.css >/dev/null 2>&1
+git -C "$og" commit -q -m 'style(web): recolor links'
+og_run "$WORK/og-focus-red.log" DCR_FOCUS_GATE=1 DCR_OWNER_EMAIL=jane@example.com
+og_red_rc="$OG_RC"
+og_run "$WORK/og-focus-agent.log" DCR_FOCUS_GATE=1 DCR_OWNER_EMAIL=owner@example.com
+og_agent_rc="$OG_RC"
+og_focus_record true 'chore: owner records a trivial acceptance'
+og_run "$WORK/og-focus-trivial.log" DCR_FOCUS_GATE=1 DCR_OWNER_EMAIL=jane@example.com
+og_trivial_rc="$OG_RC"
+og_focus_record 'grep -q 2 src/a.txt' 'chore: owner accepts design alignment'
+og_run "$WORK/og-focus-ok.log" DCR_FOCUS_GATE=1 DCR_OWNER_EMAIL=jane@example.com
+if [ "$og_red_rc" -ne 0 ] && grep -q 'outside scope: web/app.css' "$WORK/og-focus-red.log" \
+  && [ "$og_agent_rc" -ne 0 ] && grep -q 'is not the owner' "$WORK/og-focus-agent.log" \
+  && [ "$og_trivial_rc" -ne 0 ] && grep -q 'trivially-true acceptance rejected' "$WORK/og-focus-trivial.log" \
+  && [ "$OG_RC" -eq 0 ] && grep -q 'dcr-gates: focus_gate PASS' "$WORK/og-focus-ok.log"; then
+  record 0 "dcr-gates opt-in: focus_gate fires outside an OPEN priority, rejects a non-owner record, passes once DONE (planted RED)"
+else
+  record 1 "dcr-gates opt-in: focus_gate fires outside an OPEN priority, rejects a non-owner record, passes once DONE (planted RED)"
 fi
 
 # ===========================================================================
@@ -2909,6 +2948,41 @@ else
   record 1 "dcr-gates opt-in: whitespace-only DCR_SOURCE_SCAN_LINT_PATHS fails closed"
 fi
 rm -rf "$og/uitests"
+
+# ---------------------------------------------------------------------------
+# Doctrine pins: prose that must agree with the shipped mechanism it routes to
+# (task_ledger.py, surface_check.py) and with agentic-ceo's small-project
+# one-agent mode. Whitespace is collapsed so a re-wrap never trips a pin; a
+# pinned phrase changing is a deliberate doctrine edit that updates this block.
+flat() { tr '\n' ' ' <"$1" | tr -s ' '; }
+ceo_flat="$(flat "$ROOT/.claude/skills/agentic-ceo/SKILL.md")"
+pin_ok=1
+for phrase in 'Split a multi-ask message into one `add --ask` per ask' \
+  'TodoWrite may be a per-session view of the ledger, never a second source' \
+  'exit 1 = open asks exist, informational' \
+  '`next` returns `doing` first, then `.claude/PRIORITY.md`, then the oldest open' \
+  'answer `--same T-###` or `--new`'; do
+  case "$ceo_flat" in *"$phrase"*) ;; *) printf 'PIN: agentic-ceo SKILL.md lacks: %s\n' "$phrase" >&2; pin_ok=0 ;; esac
+done
+case "$ceo_flat" in *'near-duplicate ask is refused'*)
+  printf 'PIN: agentic-ceo SKILL.md still says a near-duplicate is refused (task_ledger.py asks --same/--new)\n' >&2; pin_ok=0 ;;
+esac
+if [ "$pin_ok" -eq 1 ]; then
+  record 0 "doctrine pin: agentic-ceo ledger doctrine matches task_ledger.py (split asks, TodoWrite view, status exit 1, next order, --same/--new)"
+else
+  record 1 "doctrine pin: agentic-ceo ledger doctrine matches task_ledger.py (split asks, TodoWrite view, status exit 1, next order, --same/--new)"
+fi
+case "$(flat "$ROOT/.claude/skills/agentic-delivery/references/roles.md")" in
+  *'once a lane is staffed, never self-executes its work'*)
+    record 0 "doctrine pin: roles.md Conductor self-execution ban is scoped to a staffed lane (agentic-ceo one-agent mode)" ;;
+  *) record 1 "doctrine pin: roles.md Conductor self-execution ban is scoped to a staffed lane (agentic-ceo one-agent mode)" ;;
+esac
+dev_flat="$(flat "$ROOT/.claude/skills/agentic-delivery/references/dev-env-ownership.md")"
+case "$dev_flat" in
+  *'it cannot know how a `/version` endpoint derives that id'*'baked in at build time'*)
+    record 0 "doctrine pin: dev-env-ownership.md does not over-claim what surface_check can know about a /version id" ;;
+  *) record 1 "doctrine pin: dev-env-ownership.md does not over-claim what surface_check can know about a /version id" ;;
+esac
 
 # ---------------------------------------------------------------------------
 

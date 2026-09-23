@@ -3,6 +3,26 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.442.0] — 2026-09-23
+
+### Added — design completeness by element; owner priority; requirement ledger; CEO task ledger
+- `parity_differ.py` element-inventory mode (owner P0): per section, compares headings, visible text, controls by role + visible text + accessible name, images/icons, media, select options, list/table rows, and data states between the design render and the app render → MISSING_IN_APP / EXTRA_IN_APP / CHANGED, with completeness counted in elements (floored; "<100%" whenever anything is missing). Size, height, width, and bounding boxes are never inputs. Hidden elements (closed dialog/details, opacity 0, unresolved hiding classes) never count as present. Deviations pass only via an owner-authored accept file (committed by the owner; rows keyed with exact app value and count) → MATCH_WITH_ACCEPTED. Doctrine that taught "start with a gross-dimension diff" is corrected: inventory → tokens → structure/visual.
+- `agentic-delivery/scripts/focus_gate.py` (owner P0): an owner-committed `.claude/PRIORITY.md` (scope, acceptance command, owner-accepted blockers) blocks work outside the priority until its acceptance command passes on a clean checkout of the tested sha, or it is blocked on another party with evidence. Records written or widened by an agent, over-broad scopes, and trivially-true acceptance commands are rejected. Opt-in `DCR_FOCUS_GATE=1` in `templates/dcr-gates.sh`; `unattended-operating-mode.md` makes an open owner priority outrank every other item.
+- `agentic-delivery/scripts/feedback_ledger.py`: one durable ledger for requirements arriving from several sources (feedback CSV, doc comments, meeting transcripts, design exports). Dedupes only near-identical asks on the same target, reports delta vs the latest design and status vs the app, and turns every cross-source disagreement into a short owner question; it never decides. It emits accept rows only for owner-decided items, so re-aligning to a lagging design cannot override decided feedback. Names are never stored.
+- `agentic-ceo/scripts/task_ledger.py`: one durable todo list per project (`.claude/TASKS.md`): every owner ask verbatim, near-duplicates need explicit `--same`/`--new` (reversals and number changes are never merged), done needs real evidence (sha, URL, #N, or test id), `next` returns one item, `reconcile` finds asks lost to context compaction.
+- Board: AUDIT posts + `board_state.py --backlog` (dispatch from a shared audit; stale verdicts re-verify); `serial_gate.py run --singleton` for long-lived helpers (supervisor-held lock; orphan or stale holders refused with a marker line); `surface_check.py checks` (per-check-run status) and `ref --require-clean` (#1066, #1071, #1078). `lane_guard.py` refuses a worktree another live agent still holds (#1116). `reaper_lint.py` flags live reapers in git hooks (#1113). Doctrine: serving-latest evidence (#1109), conductor never self-executes once lanes are staffed (#1114), owner feedback outranks the design (#1115).
+- size-budget-raise: .claude/skills/agentic-ceo/SKILL.md 11611→13257 task ledger doctrine + focus_gate pointer
+- size-budget-raise: .claude/skills/agentic-delivery/SKILL.md 23804→23862 growth from merged lanes
+- size-budget-raise: .claude/skills/agentic-delivery/references/dev-env-ownership.md 26676→28376 serving-latest evidence rule (#1109)
+- size-budget-raise: .claude/skills/agentic-delivery/references/multi-session-coordination.md 56102→56462 AUDIT backlog route + claim_probe
+- size-budget-raise: .claude/skills/agentic-delivery/references/project-state.md 6404→7452 requirement-sources ledger section
+- size-budget-raise: .claude/skills/agentic-delivery/references/roles.md 17065→18783 conductor anti-patterns + owner feedback outranks design (#1114 #1115)
+- size-budget-raise: .claude/skills/agentic-delivery/references/unattended-operating-mode.md 17653→19535 owner-priority-outranks section (focus_gate)
+- size-budget-raise: .claude/skills/agentic-delivery/references/unattended-trackers.md 43395→43567 focus_gate pointer
+- size-budget-raise: .claude/skills/agentic-delivery/references/verification-handback.md 49536→50258 lane_liveness/review_digest/surface_check/worktree-reuse routes
+- size-budget-raise: .claude/skills/deep-code-review/references/concurrency-shared-state.md 30933→31964 reaper tests dry-run in hooks (#1113)
+- size-budget-raise: .claude/skills/deep-code-review/references/migration-parity.md 25466→26130 inventory-first check order + ledger accept-file paragraph
+
 ## [1.441.0] — 2026-09-23
 
 ### Changed — AppSec load cut; delivery map under its cap

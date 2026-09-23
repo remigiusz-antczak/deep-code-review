@@ -1521,6 +1521,109 @@
         "States that unlisted files are implicitly unchanged since the last approved pass",
         "Notes the full-re-read risk: missed real changes and re-flagged already-resolved issues"
       ]
+    },
+    {
+      "id": "open-owner-priority-blocks-cosmetic-drift",
+      "prompt": "An unattended lane is working the owner's priority: `.claude/PRIORITY.md`, committed by the owner, reads `priority: design-alignment`, `scope: app/screens/** #40`, `acceptance: python3 tools/parity_differ.py design.html app/screens/home.html`. The differ still reports MISMATCH with two missing sections. The lane says: 'The screens look right at a glance and the page heights are close, so design alignment is basically done. The backlog has three cheap cosmetic items -- button padding in web/theme.css (#52), an icon swap, a footer color -- so I will pick up the next item and keep producing.' Should it?",
+      "expected_output": "No -- NO-GO. An OPEN owner priority outranks every other backlog item, and this one is still OPEN: its acceptance command exits non-zero (MISMATCH, two missing sections). Design alignment is done only when the parity differ reports inventory MATCH for every in-scope screen, never on a looks-right, page-height, or screenshot judgement. The cosmetic items are outside the scope (web/theme.css, #52), so they wait until the priority is DONE (acceptance exits 0) or BLOCKED on another party with an evidence link; a hard sub-problem is not a blocker. `focus_gate.py check --item '#52' --paths web/theme.css` returns NO-GO. Finish the priority: build the two missing sections the differ lists, re-run the acceptance command, and report OPEN with its output until it passes. The lane may not edit the record to widen scope or mark it done -- only the owner authors it.",
+      "expectations": [
+        "Says NO-GO: the cosmetic items are outside the scope of an OPEN owner priority and must wait",
+        "States the priority is DONE only when the acceptance command exits 0 (parity differ inventory MATCH), rejecting the looks-right / page-height / screenshot judgement",
+        "States the only other exit is BLOCKED on another party with an evidence link, not the lane's own difficulty",
+        "Directs the lane to finish the priority (build the missing sections the differ lists) rather than move on",
+        "Names `focus_gate.py` or the owner-priority focus gate",
+        "Says the lane cannot widen, close, or mark done the owner-authored priority record"
+      ]
+    },
+    {
+      "id": "peer-audit-is-the-backlog-not-a-remeasure",
+      "prompt": "Two agent sessions share one coordination board for a UI migration. Session A posted a measured audit an hour ago classifying every module as done, not-applicable, or a real gap, at mainline commit `4f1c2ab`. Three merges have landed since. Session B, just starting, plans to boot the dev server, screenshot every module itself, and spawn one worker per module that looks off. Good plan?",
+      "expected_output": "No. Session A's audit is the shared backlog: one agent measures, every agent consumes. Session B should run `board_state.py --backlog --head <current mainline sha>`, which lists each audited module as DISPATCH (a gap measured at head, unclaimed), REVERIFY (any verdict measured at an older commit, here `4f1c2ab`), CLAIMED, or SKIP (done or not-applicable at head). It dispatches only DISPATCH rows. For REVERIFY rows it spot-checks at the current head that the verdict still holds, without re-measuring from scratch, because three merges may have shipped a gap or reopened a done module. It never spawns a worker for a module still done or not-applicable. `claim_probe.py` also returns NO-GO for a module the audit marked done or not-applicable. If a re-check shows the audit is wrong, the fix is to post a fresh AUDIT, not to silently re-measure.",
+      "expectations": [
+        "Says the peer's audit is consumed as the backlog, not independently re-measured",
+        "Names `board_state.py --backlog` (or the audit dispatch list) as the mechanism",
+        "Says gap rows measured at an older commit are spot-checked at the current head before dispatch",
+        "Says done / not-applicable modules get no worker, and `claim_probe.py` returns NO-GO on them"
+      ]
+    },
+    {
+      "id": "second-session-adopts-live-helper-not-a-second-watchdog",
+      "prompt": "An owner backgrounds one agent session and starts a second one with the same brief. Each session's startup launches its own app watchdog that restarts the served app whenever upstream changes. Since then the preview flaps: it restarts twice per change and sometimes never settles. The second session proposes debugging the app's startup code for flakiness. Right call?",
+      "expected_output": "No. The flapping comes from the tooling, not the app: two independent watchdogs both react to every change and each restarts the app, so each restart can re-trigger the other. Make the helper a singleton across sessions. Start it through `serial_gate.py run --singleton --lock-dir <dir> --build-id <current sha> -- <watchdog>`. The first caller takes a kernel lock, held by a small supervisor for exactly the helper's lifetime (the helper never receives the lock, so a process it backgrounds cannot keep it). A later caller never waits and never starts a twin: it adopts the live holder and exits 0, or refuses with exit 75 and a `SERIAL_GATE: STALE_HOLDER` line when the holder records a different build id, because a live holder can still be serving stale code. If the lock is held but its record names no live process with the recorded start time, it refuses with `SERIAL_GATE: ORPHAN_HOLDER` instead of adopting. Avoid a pidfile check-then-write, which races, and avoid `pgrep -f <script>`, which can match the caller's own shell and leave zero instances running.",
+      "expectations": [
+        "Diagnoses two per-session watchdogs, not app flakiness, as the cause",
+        "Names a cross-session singleton (such as `serial_gate.py run --singleton` or an exclusive lock) as the fix",
+        "Says a second start adopts the live holder instead of spawning another",
+        "Flags that a live holder on a different build or commit must not be adopted silently"
+      ]
+    },
+    {
+      "id": "rollup-undercount-and-staged-not-committed-stall-throughput",
+      "prompt": "A multi-agent run's merge gate reads the combined status rollup and keeps reporting PRs as not green, even though every re-run passed. Separately, a lane reports 'edits done' but its branch on the remote never changed. The coordinator plans to wait for both to sort themselves out. Right call?",
+      "expected_output": "No. Both are known pipeline stalls with checks that catch them. For the gate, judge each check name by its own latest run at the exact head sha, never by the rollup, which can carry stale or empty entries and undercount a green head. `surface_check.py checks --gh-repo R --sha S` does this: a cancelled or in-progress latest run is pending, not failed. For the lane, a commit a hook rejected (for example a malformed tests line) leaves the edits staged but not committed, so 'edit done' is not committed and not pushed. `surface_check.py ref --require-clean --expect-sha <HEAD>` fails on that dirty tree even though the old HEAD is already on the remote. The coordinator should then commit and push the lane's work itself instead of waiting or looping.",
+      "expectations": [
+        "Says to read the latest check-run per check name at the head sha, not the status rollup",
+        "Names `surface_check.py checks` (or an equivalent per-name check-run read)",
+        "Identifies a hook-rejected commit leaving edits staged-not-committed, so edit done is not pushed",
+        "Names `ref --require-clean` or a dirty-tree check, and says the coordinator recovers the lane's commit and push"
+      ]
+    },
+    {
+      "id": "served-latest-needs-restart-evidence-not-git-head",
+      "prompt": "An orchestrator tells the owner \"the served environment is on the latest commit\" because `git log` inside the serving worktree shows the merge landed. The dev server has been running for hours and was never restarted. Is that claim justified?",
+      "expected_output": "No -- the serving tree's git HEAD is not evidence the running process reflects it. A long-lived dev server that only hot-reloaded (or never restarted) keeps serving the pre-merge build even though its checkout's git state shows the merge. A \"latest\" claim needs both: (1) evidence the serving process restarted after the merge (or proof its hot-reload path actually re-served the changed files), and (2) a fetched page from the running surface showing the newest change -- `surface_check.py served --url ... --expect-sha ... --probe ...` is the mechanism, since it reads the build id the running app reports rather than the tree's git state -- evidence only when the endpoint reports the id baked in at build time, because the script cannot know how a /version handler derives it (a live git-HEAD read in the handler repeats the trap). Absent both, report UNMEASURED/UNVERIFIED, not \"latest.\"",
+      "expectations": [
+        "States that git HEAD of the serving tree/worktree is not evidence of what the running process serves",
+        "Requires evidence the process restarted after the merge (or proof of an effective hot-reload), not just git state",
+        "Requires a fetched page from the running surface, naming surface_check.py served (or an equivalent build-id probe) rather than a git-HEAD read",
+        "Distinguishes this content-freshness claim from process-liveness (the transcript/mtime liveness rule is a different axis)"
+      ]
+    },
+    {
+      "id": "conductor-must-not-self-execute-under-pressure",
+      "prompt": "An urgent fix was delegated to a dedicated lane. The lane reports difficulty and is running behind. The Conductor, worried about the deadline, takes the fix back and starts implementing it directly while still trying to keep the other lanes staffed and reviewed. Good call?",
+      "expected_output": "No -- once a lane is staffed, the Conductor must never self-execute its work, even under pressure (a small project with no lanes is the one-agent mode, where one agent does the work); this is the same failure class as never self-approving. Taking the fix back collapses the roster's independence, backs up review/merge/staffing for every other lane, and the context-switch cost typically drops delivery below single-lane throughput -- the fix often lands later than if the Conductor had left it staffed. Keep the lane staffed with a short, clear brief, keep review/merge/staffing moving, and hand off back to the Conductor's role (re-brief, re-split, or escalate) only at a true decision-gate or hard blocker -- never by the Conductor stepping into the implementation seat itself.",
+      "expectations": [
+        "States the Conductor must never self-execute a staffed lane's work, even under pressure",
+        "Names this as the same failure class as the Conductor never self-approving",
+        "States the consequence: other lanes go unstaffed/reviews back up and total throughput drops below single-lane speed",
+        "States the correct action: keep the lane staffed and dispatched, hand back only at a decision-gate or hard blocker"
+      ]
+    },
+    {
+      "id": "owner-feedback-outranks-design-spec-revert-needs-confirmation",
+      "prompt": "A feature was built earlier per real owner-collected feedback and is live. A design-spec review flags that the feature deviates from the design spec. A parity lane wants to revert it 'for design alignment.' How should this be handled?",
+      "expected_output": "Do not revert silently. Owner-collected feedback and current shipped functionality both outrank an abstract design spec -- status quo (what already ships) wins the tie against a new design ask. The design-spec deviation is a decision to surface to the owner, not an instruction to execute: reverting a shipped, feedback-backed feature for design parity needs the owner's explicit confirmation before it lands. Write the precedence ranking into the brief and read it back at review time so the same feature doesn't get reverted then re-requested in a wasted pivot cycle. `scripts/feedback_ledger.py` is the mechanism meant to make each feedback item's shipped status auditable so a proposed revert can be checked against it first.",
+      "expectations": [
+        "States owner-collected feedback and shipped functionality outrank an abstract design spec",
+        "States status quo (what currently ships) outranks a new design ask on its own",
+        "Requires explicit owner confirmation before reverting a shipped, feedback-backed feature for design parity -- never a silent revert",
+        "References feedback_ledger.py (or an equivalent auditable feedback-status mechanism) as the way to check a revert against shipped feedback status"
+      ]
+    },
+    {
+      "id": "feedback-ledger-not-latest-design-is-the-requirement-set",
+      "prompt": "Requirements for an app come from a survey tool's CSV export, comments in a shared doc, meeting-transcript action items, and a design export labelled \"latest\". A lane already implemented a survey request to rename the Download button to Export CSV. A new lane is now told to re-align the reports screen to the latest design, which still shows Download. Each lane only sees part of the sources. How should the Conductor run this?",
+      "expected_output": "Treat the ledger, not the latest design, as the requirement set: the design is one source and it lags the feedback. Keep one durable ledger with `scripts/feedback_ledger.py` (ingest each source, which links duplicates across sources), so no lane needs every source in context. Run `delta --design` against the latest design inventory: the rename shows as CONFLICTS_WITH_DESIGN (design shows Download, the feedback says Export CSV). Run `conflicts` and put the two-line question, with both options, dates, and source refs, to the owner; record only the owner's answer with `decide --quote`. The Conductor never decides it. Before the re-align lane runs, run `accept-file` and pass it to the parity differ as its accepted-deviations file, so implemented feedback the design never captured, or that the owner kept, cannot be overridden. `status --app` flags any item that was implemented and later went missing as REGRESSED.",
+      "expectations": [
+        "States the ledger (all sources), not the latest design export, is the requirement set",
+        "Names `feedback_ledger.py` or an equivalent single durable ledger read by every lane",
+        "Classifies the rename as a design conflict and routes it to the owner as a question, recording the owner's own words; the agent does not decide",
+        "Runs `accept-file` and passes it to the parity differ before re-aligning, so decided feedback cannot be overridden",
+        "Mentions regression detection (implemented then missing) via the ledger's status check"
+      ]
+    },
+    {
+      "id": "lane-guard-refuses-reuse-into-still-occupied-worktree",
+      "prompt": "After a usage-limit outage, several lanes went silent. The orchestrator wants to relaunch a \"resume\" agent into one of those lanes' worktrees. One of those worktrees turns out to still have its original agent finishing up, unseen by the orchestrator. What must happen at lane start before the new agent writes anything there, and what if the check itself can't tell either way?",
+      "expected_output": "Silence is not termination -- confirm the previous agent is actually gone before handing its worktree to a new writer; two writers in one worktree corrupt each other's state and the collision surfaces only when a hook fails (#1116). `scripts/lane_guard.py` runs as the FIRST step of lane start and now enforces this: it reuses `lane_liveness.py`'s cwd-occupancy scan by import (one implementation, not a second copy) to check whether any OTHER live process -- excluding the calling agent's own process and its ancestor chain, since the invoking shell can itself have its cwd inside the worktree -- has its cwd inside that worktree. If it finds one, lane_guard refuses outright; the new agent never starts writing. If the scan itself is blind (no lsof, no /proc, or a scan that can't even see its own process), that is never read as \"no foreign process\" -- lane_guard refuses as UNVERIFIED unless the owner explicitly passes --allow-unverified, an owner-only escape hatch, never a default. Only a scan that actually ran, succeeded, and found nothing lets lane start proceed. This is the reuse-side mirror of the liveness doctrine: resuming or re-assigning into a lane's worktree requires lane_liveness's verdict to be DEAD, never QUIET or UNVERIFIED.",
+      "expectations": [
+        "States that silence/no-response is not proof of termination, and that two writers in one worktree is the actual failure mode from #1116",
+        "Names `lane_guard.py` running at lane start (not sometime later) as the enforcement point",
+        "Says it reuses `lane_liveness.py`'s cwd-occupancy detection by import rather than a second implementation",
+        "Excludes the calling agent's own process and its ancestor chain from the occupancy check, not just its own pid",
+        "Treats a blind occupancy scan as a refusal (UNVERIFIED), never as silent proof of \"no foreign process\", unless an explicit owner-only --allow-unverified override is passed"
+      ]
     }
   ]
 }

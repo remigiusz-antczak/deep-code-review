@@ -1,0 +1,4 @@
+# parity_differ.py self-test fixture: owner-accepted deviations (tab-separated).
+# The self-test commits this file as the owner in a throwaway git repo.
+section	status	item	app-value	count	reason	owner
+overview	CHANGED	text:Welcome back, Jane Smith	text:Good morning, Jane Smith	1	Greeting copy updated for the new onboarding tone	owner quote: "Use the new greeting."

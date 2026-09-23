@@ -4,10 +4,10 @@ Read this when: an agent or a Conductor is granted a block of **unattended time 
 work a backlog** — an overnight or multi-hour autonomous run — and needs the whole
 run's shape: how the mode composes the other skills, the delivery loop it runs, the
 run-start checklist and run-end self-audit that bound it, what "done" it may claim,
-the default set of recurring loops, and the churn / priority-inversion gates. This
+the default set of recurring loops, and the churn / priority-inversion / owner-focus gates. This
 file **names and wires together** doctrine that already lives in the sections it
 points to; it adds only the connective mode-framing, the run-start/run-end gate,
-the default loop set, and the routing to the two gate scripts. It does **not**
+the default loop set, and the routing to the gate scripts. It does **not**
 restate the depth it routes to — follow the pointer.
 
 This is **not a new runtime or a standing swarm** (`SKILL.md` intro) — it is how
@@ -126,6 +126,36 @@ target's CI behind env flags by `deep-code-review`'s `templates/dcr-gates.sh`):
   paginated `gh api` (`--repo`). It proves a citing PR exists, not that the PR
   advances the issue.
 
+## An open owner priority outranks every other item
+
+Fleets left the owner's main priority before it was done: every move-on rule —
+*pull the next item*, *self-source rather than stop*, refill an idle slot, the
+go-faster tick, *every remaining item blocked* — read as permission to leave it.
+This section is the one binding over all of them (`unattended-trackers.md`
+defers here):
+
+- **An OPEN owner priority outranks every other item** — backlog rank, a
+  self-sourced finding, a cheap cosmetic fix. "The next item" means the next
+  item **inside its scope**.
+- **Work outside it only when it is DONE or BLOCKED.** DONE = the owner's
+  acceptance command exits 0 on a clean checkout, never a lane's "mostly done".
+  BLOCKED = an owner-accepted row naming **another party** plus an evidence
+  link; a hard sub-problem or a red test is not a blocker. Neither → keep at it
+  (split, re-approach, spike) and report OPEN with the acceptance output.
+- **The record is owner-authored** — the owner's own commit to
+  `.claude/PRIORITY.md`, the standing-grant rule (`SKILL.md` **Human gates**).
+  An agent never creates, widens, narrows, closes, or deletes it; a change is an
+  ask.
+- **Design alignment is done** only when `deep-code-review`'s parity differ
+  reports inventory MATCH for every in-scope screen (`rendered-parity.md`) —
+  never a size, height, or screenshot judgement. That is its acceptance command.
+- `scripts/focus_gate.py` — **use this when** picking the next item, dispatching,
+  or reviewing a change. `status` prints state and evidence; `check` (item,
+  paths, or commit range) is NO-GO outside scope while OPEN. Fails closed: a
+  non-owner record or deletion, a `**` scope, or a trivially-true acceptance is
+  never DONE; no record ever → GO with a notice. CI: `DCR_FOCUS_GATE=1`
+  (`dcr-gates.sh`).
+
 ## The run-lifecycle gate: a run-start checklist and a run-end self-audit
 
 This is the genuinely-new normative addition — everything the items reference
@@ -197,7 +227,7 @@ wake/poll cadence is not the work cadence**). A worked default set:
 |---|---|---|
 | PUSH | ~10m | push ready branches / open PRs — **Progress is a durable artifact, not a spawned lane** |
 | MERGE / train-drain | ~15m | single-seat drain of the green queue — **Parallelizing the merge seat backfires**; **A serial queue-drainer must advance past a blocked head** |
-| PRODUCER | ~15m (phase-offset from MERGE) | pull the next backlog wave, verify-first — **An open tracker issue is not proof the fix is absent** |
+| PRODUCER | ~15m (phase-offset from MERGE) | pull the next backlog wave (an OPEN owner priority's scope first), verify-first — **An open tracker issue is not proof the fix is absent** |
 | HYGIENE | ~30m | worktree / process reaping, stale-claim reconcile — **A worktree is a resource with a lifecycle** |
 | QUALITY / UX-VERIFY | ~20m | central browser / UX verification of landed UI — **Draft-gated heavy checks hide a UI-regression wave** |
 | LEARNINGS | ~2/hr | capture standing findings as tracked items — **Research is not delivery**; `SKILL.md` G10 |
