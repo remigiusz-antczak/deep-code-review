@@ -29,7 +29,8 @@ use. It is deliberately shaped so that improvement never becomes a private→pub
 leak or a self-reinforcing loop that games its own tests.
 
 Persisted artifacts (the drafted skill edit, CHANGELOG, PR body) stay normal
-English. Chat may be terse.
+English. Chat may be terse. Lookup table: `INDEX.md`; read it instead of
+opening references blindly.
 
 ---
 

@@ -1,0 +1,472 @@
+#!/usr/bin/env python3
+"""skill_index.py — generate the per-skill and repo-level INDEX.md lookup
+tables so an agent can find which file answers a trigger without opening
+every references/*.md or scripts/*.py blindly.
+
+WHAT IT WRITES
+--------------
+For every `.claude/skills/<name>/` that has a `SKILL.md`:
+  `.claude/skills/<name>/INDEX.md` — one row per `references/*.md` and
+  `scripts/*.py` in that skill: its one-line "Read this when..."/docstring
+  trigger, an estimated token cost (`bytes // 4`, this repo's own
+  chars/4 convention — see mustload gate in scripts/ci-gates.sh), and
+  (for a reference) its top-level (`##`) headings, up to 6; (for a script)
+  its CLI usage line and exit codes, when its docstring documents them.
+
+And one repo-level table:
+  `.claude/skills/INDEX.md` — every skill's purpose (from its SKILL.md
+  frontmatter `description:`, trimmed to <=120 chars), entry file, and its
+  own INDEX.md path.
+
+Output is deterministic: sorted paths, no timestamps, no run-dependent data.
+INDEX.md is a lookup aid, not a reference — it is NOT must-load and carries
+no routing/size-budget obligation (scripts/ci-gates.sh's `routing` and `size`
+subcommands only look at SKILL.md and references/*.md).
+
+USAGE
+  python3 scripts/skill_index.py             generate/overwrite every INDEX.md
+  python3 scripts/skill_index.py --check     verify INDEX.md files match their
+                                              sources; no writes
+  python3 scripts/skill_index.py --selftest  run this script's own self-tests
+
+Exit codes: 0 ok; 1 stale INDEX.md (--check) or a self-test failed
+(--selftest); 2 usage error.
+"""
+from __future__ import annotations
+
+import argparse
+import ast
+import re
+import sys
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+SKILLS_DIRNAME = ".claude/skills"
+
+TRIGGER_MAX = 240
+BLOCK_MAX = 300
+DESC_MAX = 120
+
+_UNDERLINE_RE = re.compile(r"^[-=]{3,}$")
+
+
+def _collapse(text: str) -> str:
+    return " ".join(text.split())
+
+
+def _truncate(text: str, limit: int) -> str:
+    text = _collapse(text)
+    if len(text) <= limit:
+        return text
+    return text[: limit - 1].rstrip() + "…"
+
+
+def _strip_md(text: str) -> str:
+    return text.replace("**", "").replace("`", "")
+
+
+def _table_cell(text: str) -> str:
+    """Escape a value for a Markdown table cell (pipes would break columns)."""
+    return text.replace("|", "\\|") if text else "—"
+
+
+def token_est(path: Path) -> int:
+    """Rough token estimate: bytes // 4 (this repo's chars/4 convention)."""
+    return path.stat().st_size // 4
+
+
+# ---------------------------------------------------------------------------
+# Markdown reference parsing: first paragraph after the H1 title is the
+# "Read this when..." trigger; `##` lines (up to 6) are the jump-to headings.
+# ---------------------------------------------------------------------------
+def parse_reference_md(path: Path) -> tuple[str, list[str]]:
+    lines = path.read_text(encoding="utf-8").splitlines()
+    i = 0
+    while i < len(lines) and not lines[i].strip():
+        i += 1
+    if i < len(lines) and lines[i].lstrip().startswith("#"):
+        i += 1
+    while i < len(lines) and not lines[i].strip():
+        i += 1
+    para: list[str] = []
+    while i < len(lines) and lines[i].strip() and not lines[i].lstrip().startswith("#"):
+        para.append(lines[i].strip())
+        i += 1
+    trigger = _truncate(_strip_md(" ".join(para)), TRIGGER_MAX)
+
+    headings: list[str] = []
+    for line in lines:
+        m = re.match(r"^##\s+(.*)$", line)
+        if m:
+            headings.append(_strip_md(m.group(1).strip()))
+            if len(headings) >= 6:
+                break
+    return trigger, headings
+
+
+# ---------------------------------------------------------------------------
+# Python script parsing: module docstring's first paragraph is the trigger;
+# a "Usage"/"Exit code(s)" section (heading line, optionally with inline
+# content, followed by a block of non-blank lines) supplies the CLI one-liner
+# and exit codes, only when the docstring actually documents them.
+# ---------------------------------------------------------------------------
+def _docstring(path: Path) -> str:
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+    except SyntaxError:
+        return ""
+    return ast.get_docstring(tree) or ""
+
+
+def _first_paragraph(doc: str) -> str:
+    para: list[str] = []
+    for line in doc.splitlines():
+        if not line.strip():
+            if para:
+                break
+            continue
+        para.append(line.strip())
+    return _truncate(_strip_md(" ".join(para)), TRIGGER_MAX)
+
+
+def _extract_section(doc_lines: list[str], header_re: re.Pattern[str]) -> str | None:
+    for idx, line in enumerate(doc_lines):
+        m = header_re.match(line.strip())
+        if not m:
+            continue
+        parts: list[str] = []
+        inline = m.group("inline").strip() if "inline" in m.groupdict() else ""
+        if inline:
+            parts.append(inline)
+        j = idx + 1
+        while j < len(doc_lines) and doc_lines[j].strip():
+            candidate = doc_lines[j].strip()
+            if not _UNDERLINE_RE.match(candidate):
+                parts.append(candidate)
+            j += 1
+        if parts:
+            return _truncate(_strip_md(" ".join(parts)), BLOCK_MAX)
+    return None
+
+
+_USAGE_RE = re.compile(r"^usage\s*:?\s*(?P<inline>.*)$", re.IGNORECASE)
+_EXIT_RE = re.compile(r"^exit codes?\b[^:]*:?\s*(?P<inline>.*)$", re.IGNORECASE)
+
+
+def parse_script_py(path: Path) -> tuple[str, str | None, str | None]:
+    doc = _docstring(path)
+    if not doc:
+        return "(no module docstring)", None, None
+    trigger = _first_paragraph(doc)
+    doc_lines = doc.splitlines()
+    usage = _extract_section(doc_lines, _USAGE_RE)
+    exit_codes = _extract_section(doc_lines, _EXIT_RE)
+    return trigger, usage, exit_codes
+
+
+# ---------------------------------------------------------------------------
+# SKILL.md frontmatter: pull the `description:` block scalar for the
+# repo-level table (trimmed to <=120 chars).
+# ---------------------------------------------------------------------------
+def read_description(skill_md: Path) -> str:
+    lines = skill_md.read_text(encoding="utf-8").splitlines()
+    if not lines or lines[0].strip() != "---":
+        return ""
+    end = None
+    for i in range(1, len(lines)):
+        if lines[i].strip() == "---":
+            end = i
+            break
+    if end is None:
+        return ""
+    desc_lines: list[str] = []
+    capturing = False
+    for line in lines[1:end]:
+        if not capturing:
+            m = re.match(r"^description:\s*(.*)$", line)
+            if not m:
+                continue
+            rest = m.group(1).strip()
+            if rest and rest not in (">-", ">", "|", "|-"):
+                return _truncate(rest, DESC_MAX)
+            capturing = True
+            continue
+        if line.strip() == "" or line.startswith(" "):
+            if line.strip():
+                desc_lines.append(line.strip())
+            continue
+        break
+    return _truncate(" ".join(desc_lines), DESC_MAX)
+
+
+# ---------------------------------------------------------------------------
+# Generation
+# ---------------------------------------------------------------------------
+def find_skill_dirs(root: Path) -> list[Path]:
+    skills_dir = root / SKILLS_DIRNAME
+    if not skills_dir.is_dir():
+        return []
+    return sorted(
+        (d for d in skills_dir.iterdir() if d.is_dir() and (d / "SKILL.md").is_file()),
+        key=lambda d: d.name,
+    )
+
+
+def generate_skill_index(skill_dir: Path) -> str:
+    name = skill_dir.name
+    refs = sorted((skill_dir / "references").glob("*.md")) if (skill_dir / "references").is_dir() else []
+    scripts = sorted((skill_dir / "scripts").glob("*.py")) if (skill_dir / "scripts").is_dir() else []
+
+    out = [
+        f"# INDEX — {name}",
+        "",
+        "Generated by `scripts/skill_index.py`. Do not hand-edit — regenerate after "
+        "adding, removing, or retitling a `references/*.md` or `scripts/*.py` file "
+        "(`python3 scripts/skill_index.py`). Lookup table only: not must-load, and "
+        "carries no routing/size-budget obligation of its own.",
+        "",
+    ]
+
+    out.append("## References")
+    out.append("")
+    if refs:
+        out.append("| File | Read this when... | Tokens (est) | Headings |")
+        out.append("|---|---|---|---|")
+        for ref in refs:
+            trigger, headings = parse_reference_md(ref)
+            heading_cell = "; ".join(headings) if headings else "—"
+            out.append(
+                f"| `references/{ref.name}` | {_table_cell(trigger)} | "
+                f"{token_est(ref)} | {_table_cell(heading_cell)} |"
+            )
+    else:
+        out.append("_No references/*.md in this skill._")
+    out.append("")
+
+    out.append("## Scripts")
+    out.append("")
+    if scripts:
+        out.append("| File | Trigger | Tokens (est) | CLI | Exit codes |")
+        out.append("|---|---|---|---|---|")
+        for scr in scripts:
+            trigger, usage, exit_codes = parse_script_py(scr)
+            out.append(
+                f"| `scripts/{scr.name}` | {_table_cell(trigger)} | "
+                f"{token_est(scr)} | {_table_cell(usage or '')} | "
+                f"{_table_cell(exit_codes or '')} |"
+            )
+    else:
+        out.append("_No scripts/*.py in this skill._")
+    out.append("")
+    return "\n".join(out)
+
+
+def generate_repo_index(root: Path, skill_dirs: list[Path]) -> str:
+    out = [
+        "# Skills index",
+        "",
+        "Generated by `scripts/skill_index.py`. Lookup table: each skill's purpose, "
+        "its entry file, and its own `INDEX.md` (which file answers which trigger). "
+        "Not must-load.",
+        "",
+        "| Skill | Purpose | Entry | Index |",
+        "|---|---|---|---|",
+    ]
+    for skill_dir in skill_dirs:
+        name = skill_dir.name
+        rel = skill_dir.relative_to(root)
+        purpose = read_description(skill_dir / "SKILL.md")
+        out.append(
+            f"| `{name}` | {_table_cell(purpose)} | `{rel.as_posix()}/SKILL.md` | "
+            f"`{rel.as_posix()}/INDEX.md` |"
+        )
+    out.append("")
+    return "\n".join(out)
+
+
+def index_targets(root: Path) -> dict[Path, str]:
+    """Map each INDEX.md path (repo-level + per-skill) to its generated content."""
+    skill_dirs = find_skill_dirs(root)
+    targets = {root / SKILLS_DIRNAME / "INDEX.md": generate_repo_index(root, skill_dirs)}
+    for skill_dir in skill_dirs:
+        targets[skill_dir / "INDEX.md"] = generate_skill_index(skill_dir)
+    return targets
+
+
+def cmd_generate(root: Path) -> int:
+    for path, content in sorted(index_targets(root).items()):
+        path.write_text(content, encoding="utf-8")
+        print(f"wrote {path.relative_to(root)}")
+    return 0
+
+
+def cmd_check(root: Path) -> int:
+    stale = []
+    for path, content in sorted(index_targets(root).items()):
+        rel = path.relative_to(root)
+        if not path.is_file():
+            stale.append(f"MISSING: {rel}")
+            continue
+        if path.read_text(encoding="utf-8") != content:
+            stale.append(f"STALE: {rel} (run: python3 scripts/skill_index.py)")
+    if stale:
+        for line in stale:
+            print(line, file=sys.stderr)
+        print(f"skill_index --check: {len(stale)} stale/missing INDEX.md file(s)", file=sys.stderr)
+        return 1
+    print(f"skill_index --check: ok ({len(index_targets(root))} INDEX.md file(s) current)")
+    return 0
+
+
+# ---------------------------------------------------------------------------
+# Self-tests — synthetic fixture skill tree, never the real repo, so a
+# self-test failure can never come from someone else's content drifting.
+# ---------------------------------------------------------------------------
+def _write(path: Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")
+
+
+def run_selftest() -> int:
+    import shutil
+    import tempfile
+
+    results: list[tuple[bool, str]] = []
+
+    def case(ok: bool, label: str) -> None:
+        results.append((ok, label))
+
+    tmp = Path(tempfile.mkdtemp(prefix="skill-index-selftest-"))
+    try:
+        root = tmp
+        skill = root / SKILLS_DIRNAME / "widget-skill"
+        _write(
+            skill / "SKILL.md",
+            "---\n"
+            "name: widget-skill\n"
+            "description: >-\n"
+            "  Use when the fixture needs a widget. Second line of the\n"
+            "  description block scalar, long enough to be truncated if it "
+            "  ever exceeds the one hundred twenty character budget by a wide "
+            "  and deliberate margin here.\n"
+            "license: MIT\n"
+            "---\n\n# Widget skill\n\nFixture only.\n",
+        )
+        _write(
+            skill / "references" / "one.md",
+            "# One\n\nRead this when the fixture needs reference one. "
+            "Plain paragraph, no bold.\n\n## Alpha\n\nbody\n\n## Beta\n\nbody\n",
+        )
+        _write(
+            skill / "scripts" / "tool.py",
+            '#!/usr/bin/env python3\n'
+            '"""tool.py — fixture script for skill_index selftest.\n\n'
+            "USAGE\n"
+            "  python3 scripts/tool.py <path>\n\n"
+            "Exit codes: 0 ok; 1 bad input.\n"
+            '"""\n'
+            "import sys\n"
+            "print('fixture')\n",
+        )
+
+        # 1) generation produces both INDEX.md files.
+        cmd_generate(root)
+        repo_idx = root / SKILLS_DIRNAME / "INDEX.md"
+        skill_idx = skill / "INDEX.md"
+        case(repo_idx.is_file(), "generate: writes repo-level INDEX.md")
+        case(skill_idx.is_file(), "generate: writes per-skill INDEX.md")
+
+        repo_text = repo_idx.read_text(encoding="utf-8")
+        case("widget-skill" in repo_text, "repo index: lists the skill by name")
+        case("Use when the fixture needs a widget." in repo_text, "repo index: purpose captured")
+        case("…" in repo_text, "repo index: overlong description truncated with an ellipsis")
+
+        skill_text = skill_idx.read_text(encoding="utf-8")
+        case("references/one.md" in skill_text, "skill index: references row present")
+        case(
+            "Read this when the fixture needs reference one." in skill_text,
+            "skill index: reference trigger extracted",
+        )
+        case("Alpha; Beta" in skill_text, "skill index: headings joined, in order")
+        case("scripts/tool.py" in skill_text, "skill index: scripts row present")
+        case("python3 scripts/tool.py <path>" in skill_text, "skill index: CLI usage extracted")
+        case("0 ok; 1 bad input." in skill_text, "skill index: exit codes extracted")
+
+        # 2) --check is green right after generation.
+        case(cmd_check(root) == 0, "check: passes immediately after generate (RED->GREEN proof)")
+
+        # 3) mutate a source file without regenerating -> check must fail.
+        _write(
+            skill / "references" / "one.md",
+            "# One\n\nRead this when the fixture needs a DIFFERENT reference one.\n",
+        )
+        case(cmd_check(root) == 1, "check: fails when a source drifted from its INDEX.md (fail closed)")
+
+        # 4) regenerating restores green.
+        cmd_generate(root)
+        case(cmd_check(root) == 0, "check: green again after regenerating")
+
+        # 5) a skill with no references/ or scripts/ still gets an INDEX.md.
+        bare = root / SKILLS_DIRNAME / "bare-skill"
+        _write(bare / "SKILL.md", "---\nname: bare-skill\ndescription: Bare fixture skill.\nlicense: MIT\n---\n\n# Bare\n")
+        cmd_generate(root)
+        bare_idx_text = (bare / "INDEX.md").read_text(encoding="utf-8")
+        case("No references/*.md" in bare_idx_text, "skill index: handles a skill with no references/")
+        case("No scripts/*.py" in bare_idx_text, "skill index: handles a skill with no scripts/")
+        case(cmd_check(root) == 0, "check: green with the added bare skill")
+
+        # 6) missing INDEX.md entirely is reported as missing, not a crash.
+        (bare / "INDEX.md").unlink()
+        case(cmd_check(root) == 1, "check: reports a missing INDEX.md as stale (fail closed)")
+
+        # 7) determinism: regenerating twice yields byte-identical content.
+        cmd_generate(root)
+        first = skill_idx.read_bytes()
+        cmd_generate(root)
+        second = skill_idx.read_bytes()
+        case(first == second, "generate: deterministic (no timestamps/run-dependent data)")
+
+        # 8) smoke test against the real repo tree (never asserts on its
+        #    prose, only that generation does not crash and stays non-empty).
+        try:
+            real_targets = index_targets(REPO_ROOT)
+            case(
+                len(real_targets) > 1 and all(len(c) > 0 for c in real_targets.values()),
+                "smoke: generation runs clean against the real repo tree",
+            )
+        except Exception as exc:  # pragma: no cover - defensive
+            case(False, f"smoke: generation crashed on the real repo tree: {exc}")
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+    failed = [label for ok, label in results if not ok]
+    for ok, label in results:
+        print(f"{'PASS' if ok else 'FAIL'}  {label}")
+    print(f"{len(results) - len(failed)}/{len(results)} selftest cases passed")
+    return 1 if failed else 0
+
+
+def main(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
+    parser.add_argument("--check", action="store_true", help="verify INDEX.md files are current; no writes")
+    parser.add_argument("--selftest", action="store_true", help="run this script's own self-tests")
+    parser.add_argument("--root", default=str(REPO_ROOT), help="repo root (default: this script's repo)")
+    args = parser.parse_args(argv)
+
+    if args.selftest and args.check:
+        parser.error("--selftest and --check are mutually exclusive")
+
+    if args.selftest:
+        return run_selftest()
+
+    root = Path(args.root).resolve()
+    if not (root / SKILLS_DIRNAME).is_dir():
+        parser.error(f"no {SKILLS_DIRNAME} under root: {root}")
+
+    if args.check:
+        return cmd_check(root)
+    return cmd_generate(root)
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

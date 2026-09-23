@@ -27,8 +27,8 @@
 #   find .claude/skills \( -name 'SKILL.md' -o -path '*/references/*.md' \) \
 #     -type f | LC_ALL=C sort | while IFS= read -r f; do \
 #     printf '%s\t%s\n' "$f" "$(LC_ALL=C wc -c < "$f" | tr -d '[:space:]')"; done
-.claude/skills/agentic-ceo/SKILL.md	13452
-.claude/skills/agentic-delivery/SKILL.md	23862
+.claude/skills/agentic-ceo/SKILL.md	13525
+.claude/skills/agentic-delivery/SKILL.md	23935
 .claude/skills/agentic-delivery/references/dev-env-ownership.md	28376
 .claude/skills/agentic-delivery/references/fanout-host-sizing.md	36927
 .claude/skills/agentic-delivery/references/fast-agentic-delivery.md	6401
@@ -47,12 +47,12 @@
 .claude/skills/agentic-delivery/references/unattended-operating-mode.md	19535
 .claude/skills/agentic-delivery/references/unattended-trackers.md	43567
 .claude/skills/agentic-delivery/references/verification-handback.md	50258
-.claude/skills/business-ops/SKILL.md	10581
+.claude/skills/business-ops/SKILL.md	10654
 .claude/skills/business-ops/references/regulated-domain-triage.md	8045
-.claude/skills/communication-structure/SKILL.md	5196
-.claude/skills/contribution/SKILL.md	11404
+.claude/skills/communication-structure/SKILL.md	5269
+.claude/skills/contribution/SKILL.md	11477
 .claude/skills/contribution/references/contribution-procedure.md	7018
-.claude/skills/deep-code-review/SKILL.md	23889
+.claude/skills/deep-code-review/SKILL.md	23962
 .claude/skills/deep-code-review/references/a11y-aria.md	26603
 .claude/skills/deep-code-review/references/a11y-color-motion.md	8435
 .claude/skills/deep-code-review/references/a11y-focus.md	20838
@@ -152,12 +152,12 @@
 .claude/skills/deep-code-review/references/ux-writes.md	10215
 .claude/skills/deep-code-review/references/web-fetch.md	22040
 .claude/skills/deep-code-review/references/web-render.md	18524
-.claude/skills/growth-analytics/SKILL.md	9884
-.claude/skills/idea-critic/SKILL.md	12642
+.claude/skills/growth-analytics/SKILL.md	9957
+.claude/skills/idea-critic/SKILL.md	12715
 .claude/skills/idea-critic/references/decision-hygiene.md	4549
-.claude/skills/positioning/SKILL.md	7332
-.claude/skills/product-discovery/SKILL.md	10386
-.claude/skills/product-output-safety/SKILL.md	13080
+.claude/skills/positioning/SKILL.md	7405
+.claude/skills/product-discovery/SKILL.md	10459
+.claude/skills/product-output-safety/SKILL.md	13153
 .claude/skills/deep-code-review/references/data-contracts.md	3632
 .claude/skills/deep-code-review/references/data-freshness.md	10123
 .claude/skills/deep-code-review/references/data-graph.md	3506

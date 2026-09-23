@@ -25,7 +25,8 @@ small build is not drowned in subagents; and when the owner is under
 pressure it keeps the work legible instead of freelancing. It **routes and
 decides**; it never re-implements what a specialist skill already does.
 
-Persisted artifacts stay normal English. Chat may be terse.
+Persisted artifacts stay normal English. Chat may be terse. Lookup table:
+`INDEX.md`; read it instead of opening references blindly.
 
 ---
 

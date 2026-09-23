@@ -95,6 +95,19 @@ jobs:
           python3 .claude/skills/agentic-ceo/scripts/task_ledger.py --selftest
           python3 .claude/skills/agentic-delivery/scripts/feedback_ledger.py --selftest
 
+      # scripts/skill_index.py generates the per-skill and repo-level INDEX.md
+      # lookup tables (which file answers which trigger, without opening every
+      # references/*.md or scripts/*.py blindly). Self-test proves the parser
+      # on synthetic fixtures (never the real repo's prose); --check proves the
+      # committed INDEX.md files are byte-identical to what the generator
+      # would write today, so a routed reference added without regenerating
+      # goes stale loudly instead of silently.
+      - name: Skill index (INDEX.md lookup tables) selftest and freshness
+        run: |
+          set -euo pipefail
+          python3 scripts/skill_index.py --selftest
+          python3 scripts/skill_index.py --check
+
       # Every fix(...) commit in the pushed/PR range must touch a test surface
       # or carry a non-empty No-Test-Reason: trailer. Fails closed on an
       # unresolvable range (e.g. the all-zeros before-SHA of a new branch).
