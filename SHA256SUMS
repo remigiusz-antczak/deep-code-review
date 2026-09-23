@@ -44,7 +44,7 @@ cc52f678848b814373757b460383bf61960e4943c203735adde0a350b3e50989  .claude/skills
 bb541f96bd7d0c3bb4adff8dcaac0f50efa2493b8215b6aa671805bfbb89c42b  .claude/skills/contribution/references/contribution-procedure.md
 e392207dd600a8026b05e17df200f32f5e740bbc4c48bdbecc8e4c0c513047b5  .claude/skills/deep-code-review/SKILL.md
 4192f5586528400a787f784821861981ca186f293dfc0f39b73c8bd69af1e0d0  .claude/skills/deep-code-review/VERSION
-36ffc78b7a77a48554307f0894ba9a34c05ebe0023cc3e4e35fb5f5eda42b9d6  .claude/skills/deep-code-review/evals/evals.json
+654b45427a6b35be6b516bd8e4483e60e59b61c425852a6e420b3a4524c4b9c7  .claude/skills/deep-code-review/evals/evals.json
 a24fdb1c8dd47a852c0e02b395a256b0b9b5e188cf0a09cceeaa33ece45ba815  .claude/skills/deep-code-review/references/a11y-aria.md
 5a3e66353bcdabb0289ea926c7f192dbad750edca74ef0f0d8c0f6b71bcbf5ef  .claude/skills/deep-code-review/references/a11y-color-motion.md
 8b7507aecf973b020c10ce00792e296fa8a3585c52dccee5add7d51cb0b553db  .claude/skills/deep-code-review/references/a11y-focus.md
@@ -122,7 +122,7 @@ a0ed7ad061b7e60230601ee9b38a00400841d6ddf3af386edbd4b34a981c9798  .claude/skills
 e1a1a9795bf268b13db9cdef76553e207361342f2000a35ec8f4d34fa2383de9  .claude/skills/deep-code-review/references/testing-ai-evals.md
 a0e0b3e8a29e73d3bcdbfe194d3c5239ebfd57143c3f8eae13e0590105143f55  .claude/skills/deep-code-review/references/testing-and-evals.md
 fbd92c634c1b34242fcda61d56454fb9964077fb18b389104d9792a9766deae8  .claude/skills/deep-code-review/references/testing-ml.md
-5fcdf83886af48717549a4ac272f7b30a9b4bbf7a8bf3113f8df8d281881bb6b  .claude/skills/deep-code-review/references/testing-ui.md
+3cc6ddb8632ad6851758994a05587842f66f8b0f0a921ab832b58fd03dd990d5  .claude/skills/deep-code-review/references/testing-ui.md
 49eb0a76625cd4cdf1e274a61bf9fabd116a02131e6efb5081d863c88fb830c7  .claude/skills/deep-code-review/references/time-date-correctness.md
 fdb4506c27761f3e30b876b64080e0f849fc36da5a1a2780ef72d2185011d5a4  .claude/skills/deep-code-review/references/ux-components.md
 a814d07a583c5d087bb8aff9292a7bead88fa15f6f34d683e477426bc797e8bf  .claude/skills/deep-code-review/references/ux-dataviz.md
@@ -144,9 +144,10 @@ de270db043b761ce236c9c80197c514b89a5db4d2965de76321383927623bd1c  .claude/skills
 97ad0860bb3ee1b0f14f8fb9e55519dc9d0a8f1ece7e5dfc8734420c6475e045  .claude/skills/deep-code-review/scripts/fixtures/tokens/map_match.tsv
 d5606abd5b9ec08d6d4bf98e0e51b1c52d430040bb1a957e4b545bff816ae2cf  .claude/skills/deep-code-review/scripts/parity_differ.py
 417ae1f1b7b7360b48dfe6b97acf7326e85296434330caeec0bc173941c6de8a  .claude/skills/deep-code-review/scripts/reaper_lint.py
+0fcb48ccc6be130a9833c2f97b65dd03cfaf62c8f0d63b0d685f2c5a6ca17d93  .claude/skills/deep-code-review/scripts/source_scan_tests.py
 3f8ef47cb8b458a0b6709d5594ff541287dfca295be07996214fe71832088817  .claude/skills/deep-code-review/scripts/token_differ.py
 317acae212ed73279df66eb7b419b8426733bb1be05345b0e1c8b2c6790ad8a1  .claude/skills/deep-code-review/scripts/validate_status_claims.py
-1171e3662095cb40b5712582f56881292ae26fa3a6a1406a48473dcea8655aa2  .claude/skills/deep-code-review/templates/dcr-gates.sh
+2a8d8e8c60c2ed6e1698b4ef31eebbd9bf8719ff07f04c2e53e62f9dae2a54a3  .claude/skills/deep-code-review/templates/dcr-gates.sh
 e9df3483336d6470072f8b7d7bfd5e93e281da2b5a892590101b4cb3ed89e419  .claude/skills/deep-code-review/templates/dcr-gates.yml
 ada343e2d9fd79411b10007911243184cdd8c46cef858343ea56405302166700  .claude/skills/deep-code-review/templates/pre-push-verify.sh
 5068e60f9615684c8d8bf8fbd7896748267cf6688895a701bdd25cd945181cb8  .claude/skills/growth-analytics/SKILL.md

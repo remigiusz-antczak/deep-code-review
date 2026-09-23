@@ -54,6 +54,23 @@
 #                           a PASS means no known shape matched, not that
 #                           every kill is scoped. Needs no other skill
 #                           installed.
+#   DCR_SOURCE_SCAN_LINT=1  run deep-code-review's source_scan_tests.py over
+#                           DCR_SOURCE_SCAN_LINT_PATHS (space-separated
+#                           files/dirs, literal — never glob-expanded;
+#                           relative entries resolve against the repo root;
+#                           default: the whole repo root; set but
+#                           whitespace-only fails): flags a test file that
+#                           reads a UI source file (.tsx/.jsx/.vue/.svelte) as
+#                           TEXT and regex/includes it, with no render/mount/
+#                           screen call in the same file — a source scan
+#                           proves the author typed certain characters, never
+#                           that conditional rendering works (issue #1105;
+#                           doctrine: testing-ui.md, "A conditional-render
+#                           behaviour needs a rendered-DOM assertion, not a
+#                           source scan"). A heuristic lint: a PASS means no
+#                           known shape matched, not that every conditional
+#                           path has rendered-DOM coverage. Needs no other
+#                           skill installed.
 # The next two need the agentic-delivery skill installed; a set flag with
 # that skill or its script missing is a failure, never a skip.
 #   DCR_REFIX_GATE=1        run agentic-delivery's refix_gate.py over the same
@@ -297,7 +314,46 @@ if opt_in DCR_REAPER_LINT; then
 fi
 
 # ---------------------------------------------------------------------------
-# 5-6) OPT-IN delivery gates. Each runs its own --selftest first (a gate that
+# 5) OPT-IN source_scan_tests — flags a test file that reads a UI source file
+#    (.tsx/.jsx/.vue/.svelte) as TEXT and regex/includes it, with no render/
+#    mount/screen call in the same file: a source scan proves the author
+#    typed certain characters, never that conditional rendering works (issue
+#    #1105; doctrine: testing-ui.md). Runs its own --selftest first (a gate
+#    that cannot prove it fires is not trusted).
+# ---------------------------------------------------------------------------
+if opt_in DCR_SOURCE_SCAN_LINT; then
+  SOURCE_SCAN_LINT="${REVIEW_ROOT}/scripts/source_scan_tests.py"
+  if [ ! -f "${SOURCE_SCAN_LINT}" ]; then
+    printf 'dcr-gates: source_scan_tests.py not found at %s (FAIL, fail closed)\n' "${SOURCE_SCAN_LINT}" >&2
+    FAIL=1
+  elif ! python3 "${SOURCE_SCAN_LINT}" --selftest; then
+    printf 'dcr-gates: selftest FAILED for %s\n' "${SOURCE_SCAN_LINT}" >&2
+    FAIL=1
+  else
+    # Relative DCR_SOURCE_SCAN_LINT_PATHS entries resolve against REPO_ROOT
+    # (the scan runs with cwd == REPO_ROOT), never against the caller's cwd.
+    scan_paths=()
+    if [ -n "${DCR_SOURCE_SCAN_LINT_PATHS:-}" ]; then
+      read -r -a scan_paths <<<"${DCR_SOURCE_SCAN_LINT_PATHS}"
+    else
+      scan_paths=(.)
+    fi
+    if [ "${#scan_paths[@]}" -eq 0 ]; then
+      printf 'dcr-gates: FAIL source_scan_tests (DCR_SOURCE_SCAN_LINT_PATHS names no path)\n' >&2
+      FAIL=1
+    # "${arr[@]+"${arr[@]}"}": bash 3.2 treats an empty array as unset
+    # under `set -u`; this form expands to nothing instead of aborting.
+    elif (cd "${REPO_ROOT}" && python3 "${SOURCE_SCAN_LINT}" "${scan_paths[@]+"${scan_paths[@]}"}"); then
+      printf 'dcr-gates: source_scan_tests PASS\n'
+    else
+      printf 'dcr-gates: source_scan_tests FAIL\n' >&2
+      FAIL=1
+    fi
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# 6-7) OPT-IN delivery gates. Each runs its own --selftest first (a gate that
 #      cannot prove it fires is not trusted), then the real check.
 # ---------------------------------------------------------------------------
 
