@@ -6050,6 +6050,29 @@
         "Requires running the ledger's `accept-file` and passing it to the parity differ via `--accept` before re-aligning",
         "Routes design-vs-feedback conflicts to the owner rather than resolving them by re-aligning"
       ]
+    },
+    {
+      "id": "parity-global-style-foundation-before-per-section-work",
+      "prompt": "A design-parity effort has merged dozens of per-section 'aligned' changes. parity_differ.py reports MATCH on every screen (inventory 100%), yet a whole-screen pixel score has stayed flat for days. The plan is to keep spawning one lane per section to tweak spacing until the score moves. Anything wrong with the plan?",
+      "expected_output": "Yes. An inventory MATCH proves completeness only; it says nothing about styling, and a flat pixel score after many per-section fixes is the signature of a global foundation mismatch (base line-height, letter-spacing, size scale, padding, radius, shadow) that no per-section tweak can fix. Stop spawning section lanes and run `parity_differ.py --style` on DOM snapshots that carry computed styles (`data-cs` JSON per element, exported from `getComputedStyle` in the same browser for both sides). It pairs design and app elements by section, role and identical visible text, and reports STYLE_DIFF rows grouped by property. Any FOUNDATION row, meaning one property differs on most pairs, gets fixed once in the shared type/box foundation before any per-section work resumes. Style rows never change the inventory completeness verdict, and sizes are never used as parity evidence.",
+      "expectations": [
+        "States that an inventory MATCH proves completeness, not styling parity",
+        "Diagnoses a flat score after many per-section fixes as a likely global type/box foundation mismatch",
+        "Prescribes a text-matched computed-style diff (`parity_differ.py --style` with `data-cs` computed styles) before more per-section lanes",
+        "Requires fixing a FOUNDATION property (off on most pairs) globally before any per-section work",
+        "Keeps style separate from the completeness verdict and does not use element sizes as evidence"
+      ]
+    },
+    {
+      "id": "parity-harness-low-pair-count-is-could-not-check",
+      "prompt": "A lane reports: 'Parity harness green on the settings screen, 0 open differences.' Its raw output shows the harness matched 2 design/app element pairs; the design's settings screen has about 60 visible elements. The lane wants to mark the screen done. Accept the verdict?",
+      "expected_output": "No. Two pairs against a roughly 60-element design means the harness almost certainly compared an empty or wrong page (a wrong screen label, a too-narrow filter), so '0 open differences' is not evidence of anything. The orchestrator spot-checks a harness's pair count itself before trusting its verdict, rather than trusting the lane's reported score. Re-run with a caller-supplied floor, for example `parity_differ.py --min-pairs N` (and `token_differ.py --min-pairs N` for tokens), where N comes from the design's own element count and is never a guessed default. Fewer pairs than N returns COULD_NOT_CHECK (never MATCH), and zero pairs never passes at all. Fix the harness input, re-run, and only then judge the screen.",
+      "expectations": [
+        "Refuses to accept the green verdict on 2 matched pairs",
+        "Identifies the implausibly low pair count as a sign the harness compared an empty or wrong page",
+        "Has the orchestrator check the harness's pair count or raw output itself instead of trusting the lane's reported score",
+        "Uses a caller-supplied `--min-pairs` floor (not a guessed default) so a low count yields COULD_NOT_CHECK, never MATCH"
+      ]
     }
   ]
 }

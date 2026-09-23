@@ -132,7 +132,8 @@ conflict to the owner; never settle it by re-aligning.
 
 **Check order: cheap and deterministic first — an earlier mismatch stops the rest.** Inventory
 (`parity_differ.py`; completeness = items matched, never pixels), then token **values**
-(`scripts/token_differ.py --design <f> --app <f>`, 0 = all MATCH), then structure/visual
+(`scripts/token_differ.py --design <f> --app <f>`, 0 = all MATCH), then computed styles
+(`parity_differ.py --style`), then structure/visual
 screenshots: an earlier verdict often explains a later pixel diff — fix, re-run first.
 
 ## Scope a parity claim to the correspondence table — one screen verified is not the product
