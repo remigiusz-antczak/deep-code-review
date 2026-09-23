@@ -3162,5 +3162,41 @@ fi
 
 # ---------------------------------------------------------------------------
 
+# ===========================================================================
+# lane-preamble template: shipped, size-bounded, and every script command it
+# names actually exists — so a paste-ready command block can't silently rot
+# once the script it names moves or is deleted.
+# ===========================================================================
+
+lp="$ROOT/.claude/skills/agentic-delivery/templates/lane-preamble.md"
+if [ -f "$lp" ]; then
+  record 0 "lane-preamble: templates/lane-preamble.md exists"
+
+  lp_lines="$(wc -l <"$lp" | tr -d '[:space:]')"
+  if [ "$lp_lines" -le 60 ]; then
+    record 0 "lane-preamble: stays within 60 lines ($lp_lines)"
+  else
+    record 1 "lane-preamble: stays within 60 lines ($lp_lines)"
+  fi
+
+  lp_missing=0
+  while IFS= read -r lp_script; do
+    [ -n "$lp_script" ] || continue
+    if [ ! -f "$ROOT/$lp_script" ]; then
+      printf 'LANE PREAMBLE SCRIPT MISSING: %s\n' "$lp_script" >&2
+      lp_missing=1
+    fi
+  done < <(grep -oE '\.claude/skills/[A-Za-z0-9_-]+/scripts/[A-Za-z0-9_]+\.py' "$lp" | LC_ALL=C sort -u)
+  if [ "$lp_missing" -eq 0 ]; then
+    record 0 "lane-preamble: every named script exists under .claude/skills/*/scripts/"
+  else
+    record 1 "lane-preamble: every named script exists under .claude/skills/*/scripts/"
+  fi
+else
+  record 1 "lane-preamble: templates/lane-preamble.md exists"
+fi
+
+# ---------------------------------------------------------------------------
+
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

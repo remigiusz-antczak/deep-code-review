@@ -95,7 +95,9 @@ uncapped — a compliant handback names the file path instead of pasting its
 content into chat. **The default handback is one line:** `status | evidence |
 next` (verdict; branch/SHA, gate results, or file paths as the checkable
 evidence; the next action or open issue) — key=value or short fields, never
-prose. The 800-char/10-line hook below is the **backstop** that catches a
+prose. **No polling.** Never sleep/loop waiting on background work in a
+subagent turn — end the turn and let the notification resume it; a poll loop
+bills chat narration nobody reads, the same waste this cap targets. The 800-char/10-line hook below is the **backstop** that catches a
 drift back to narration; it is not itself the target shape, and passing it
 is not a substitute for actually being one line. The orchestrator never
 relays a subagent's prose; it reads the fields and the named files.

@@ -102,8 +102,8 @@ gate is preferred.
 
 **Empirical check:** Cemri et al. (2025), 1600+ multi-agent traces: failures
 cluster into system design (→ G0/G1), inter-agent misalignment (→ G2, worktree
-preflight), and task verification (→ G5/G6) — the gate shape already covers
-them; not a reason for an eleventh gate.
+preflight), and task verification (→ G5/G6) — already covered, not an
+eleventh gate.
 
 **Sweeping the whole ready queue on every trigger** — a completeness fix to
 this event-driven model, not a change to it: `references/merge-queue-worktrees.md`.
@@ -114,7 +114,7 @@ when verifying, finalizing, or relaying a lane's result (liveness, `Verify:`
 lines, fan-out joins); `references/dev-env-ownership.md` when a lane serves a
 dev server, re-runs a generator or ratchet, or shares files under an ownership
 map; `references/unattended-trackers.md` when closing tracker issues or running
-a multi-hour work loop.
+a multi-hour work loop. Paste `templates/lane-preamble.md` into every lane brief.
 
 **Catch and reverse your own drift into a lane's work** — the completeness
 fix applied to *action*, not only attention. Scope: only while the Conductor
@@ -142,7 +142,7 @@ independent verification or a human approval that actually applies.
 | G3 Design | Graph | ADRs / contracts | Interfaces, NFR budgets, data/security decisions explicit. Shape: `references/template-adr.md` |
 | G4 Implement | Work packets | Patch/commit per lane | Tests before or with the change; packet names review skill + immutable base SHA |
 | G5 Verify | Exact revision | Test receipts | **Local stack up** (project's one-command / compose / devcontainer) then build, lint, type, unit, and applicable integration/E2E **green at that SHA**. A gate that never started the app is `UNVERIFIED`, not pass. **UI change (domain P):** headed-browser evidence on the exact route after the action (screenshot or equivalent). Unit tests alone are not a UI gate |
-| G6 Review | Exact revision + receipts | `deep-code-review` + QA + security verdicts | Independent of the builder; applies the `deep-code-review` severity rubric — Blocker/Critical block, High needs a named owner's acceptance, Medium is tracked and non-blocking (do not silently block on Medium) |
+| G6 Review | Exact revision + receipts | `deep-code-review` + QA + security verdicts | Independent of the builder; applies the `deep-code-review` severity rubric — Blocker/Critical block, High needs a named owner's acceptance, Medium is tracked and non-blocking |
 | G7 Integrate | Accepted lanes | Integration receipt + `deep-code-review DIFF` | One integration owner; rerun affected gates on the exact final SHA |
 | G8 Release | Exact integrated SHA | Release manifest | Rollback proven; **owner approves** outward/production action |
 | G9 Production verify | Deployed SHA | Verification receipt | Served behaviour and SLOs; rollback on breach |

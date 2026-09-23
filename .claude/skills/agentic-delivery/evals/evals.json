@@ -1697,6 +1697,17 @@
         "States the orchestrator's unattended-run chat default is 'one line per material landing' from unattended-operating-mode.md, referenced (not restated) from agentic-ceo's output-discipline section",
         "Notes that no new hook was needed for the peer-post or chat-reply cases -- only documentation plus the caps/routing that already exist"
       ]
+    },
+    {
+      "id": "lane-preamble-paste-and-no-poll",
+      "prompt": "A conductor dispatches a build lane with a brief that names only the work item and acceptance check -- no isolation, scope, or communication rules restated. The lane kicks off a background build, then spends the next forty minutes in a loop: 'still waiting on the build', sleep, check, repeat, dozens of times, before it finally reports. Two questions: (1) what should the conductor have pasted into the brief to avoid re-deriving these rules per lane, and (2) what rule was the lane itself missing that caused the poll loop, and where does that rule live?",
+      "expected_output": "(1) The conductor should have pasted `templates/lane-preamble.md` into the lane brief -- SKILL.md routes it from the worked-lesson-ledger paragraph ('Paste `templates/lane-preamble.md` into every lane brief') and agentic-ceo's SKILL.md repeats the same instruction at its own dispatch point, so this isn't something each lane brief re-derives from scratch. (2) The lane was missing the NO POLLING rule: never sleep/loop waiting on background work in a subagent turn -- end the turn and let the notification resume it instead. That rule lives in the lane-preamble template itself (Communication section) and in host-enforcement.md's handback section, next to the one-line `status | evidence | next` default it sits beside. A poll loop is exactly the billed-narration-nobody-reads waste that section's handback cap already targets, just spent on 'still waiting' lines instead of debugging narrative.",
+      "expectations": [
+        "Names `templates/lane-preamble.md` as the paste-ready fix, routed from both agentic-delivery's SKILL.md and agentic-ceo's SKILL.md",
+        "States the missing rule was NO POLLING: never sleep/loop waiting on background work, end the turn and wait for the notification",
+        "Locates the no-poll rule in both the lane-preamble template and host-enforcement.md's handback section, not as a new hook",
+        "Connects the poll loop to the same billed-narration waste the handback cap already targets, rather than treating it as an unrelated inefficiency"
+      ]
     }
   ]
 }
