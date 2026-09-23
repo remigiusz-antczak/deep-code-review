@@ -32,6 +32,22 @@ schema change needs an explicit migration; an unknown schema is not silently
 interpreted. If the host cannot give atomic, durable writes, say so and verify
 read-back — do not claim crash-safe persistence from a text instruction.
 
+## Requirement sources — one ledger, not the latest source
+
+When requirements arrive from several sources (survey-tool CSV rows, doc
+comments, meeting-transcript action items, a design export labelled "latest"),
+**the ledger is the requirement set; no single source is**, and the design is
+one source that often lags the feedback. `scripts/feedback_ledger.py` keeps one
+durable file (default `.claude/feedback-ledger.json` plus a readable `.md`), so no
+lane needs every source in context: `ingest` normalizes and links duplicates
+across sources, `delta --design` marks each item `IN_DESIGN` / `NOT_IN_DESIGN` /
+`CONFLICTS_WITH_DESIGN` / `SUPERSEDED`, and `status --app` marks it `IMPLEMENTED` /
+`PENDING` / `REGRESSED`. `conflicts` prints each owner decision as a two-line
+question; record only the owner's answer with `decide --quote`. The Conductor
+asks and never decides. Before any lane re-aligns to a design, run `accept-file`
+and pass its output to the parity differ, so implemented feedback the design never
+captured cannot be overridden.
+
 ## Receipt contract (extends the SKILL.md Output contract)
 
 The worker Output contract in `SKILL.md` (role, exact revision, artifacts,

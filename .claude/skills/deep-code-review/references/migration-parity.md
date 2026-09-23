@@ -123,6 +123,11 @@ Only on matched states is a gross-dimension delta parity evidence, not a volume 
 grep each for distinctive UI strings from the newest change-log entries; the one holding all is
 the target (record it where every lane reads it), never the largest or best-named. None matches →
 ask the design owner (`method-situational.md`'s stale-input rule).
+Even the pinned export is **one requirement source, not the requirement set**: feedback from
+other sources that it never captured is kept in the delivery ledger
+(`agentic-delivery/scripts/feedback_ledger.py`). Before re-aligning to the design, run its
+`accept-file` and pass the output as the differ's `--accept` file. Send a design-vs-feedback
+conflict to the owner; never settle it by re-aligning.
 
 **Check order: cheap and deterministic first — an earlier mismatch stops the rest.** Token
 **values**: `scripts/token_differ.py --design <f> --app <f>` (0 = all MATCH), then the

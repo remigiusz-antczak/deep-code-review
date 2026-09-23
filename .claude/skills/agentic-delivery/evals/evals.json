@@ -1521,6 +1521,18 @@
         "States that unlisted files are implicitly unchanged since the last approved pass",
         "Notes the full-re-read risk: missed real changes and re-flagged already-resolved issues"
       ]
+    },
+    {
+      "id": "feedback-ledger-not-latest-design-is-the-requirement-set",
+      "prompt": "Requirements for an app come from a survey tool's CSV export, comments in a shared doc, meeting-transcript action items, and a design export labelled \"latest\". A lane already implemented a survey request to rename the Download button to Export CSV. A new lane is now told to re-align the reports screen to the latest design, which still shows Download. Each lane only sees part of the sources. How should the Conductor run this?",
+      "expected_output": "Treat the ledger, not the latest design, as the requirement set: the design is one source and it lags the feedback. Keep one durable ledger with `scripts/feedback_ledger.py` (ingest each source, which links duplicates across sources), so no lane needs every source in context. Run `delta --design` against the latest design inventory: the rename shows as CONFLICTS_WITH_DESIGN (design shows Download, the feedback says Export CSV). Run `conflicts` and put the two-line question, with both options, dates, and source refs, to the owner; record only the owner's answer with `decide --quote`. The Conductor never decides it. Before the re-align lane runs, run `accept-file` and pass it to the parity differ as its accepted-deviations file, so implemented feedback the design never captured, or that the owner kept, cannot be overridden. `status --app` flags any item that was implemented and later went missing as REGRESSED.",
+      "expectations": [
+        "States the ledger (all sources), not the latest design export, is the requirement set",
+        "Names `feedback_ledger.py` or an equivalent single durable ledger read by every lane",
+        "Classifies the rename as a design conflict and routes it to the owner as a question, recording the owner's own words; the agent does not decide",
+        "Runs `accept-file` and passes it to the parity differ before re-aligning, so decided feedback cannot be overridden",
+        "Mentions regression detection (implemented then missing) via the ledger's status check"
+      ]
     }
   ]
 }

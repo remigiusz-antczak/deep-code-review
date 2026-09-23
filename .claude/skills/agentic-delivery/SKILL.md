@@ -165,7 +165,8 @@ record with a single writer, the resume / crash-after-effect reconciliation
 procedure, and the artifact-receipt contract for design/data/published
 deliverables: `references/project-state.md` — **read it when** beginning
 multi-step work, changing objectives, checkpointing, recovering after a
-reset, or deciding what keeps an unattended run alive.
+reset, merging several requirement sources (feedback vs design), or deciding
+what keeps an unattended run alive.
 
 **Claimed vs enforced** — before asserting state, permission, or spend is
 *enforced* rather than merely followed (or when designing a host adapter), grade
