@@ -1,6 +1,6 @@
 # SQL / migrations red flags
 
-Read this when the target contains SQL or schema/data migrations. Split from `language-stack-redflags.md`; its fast first pass and cross-language sections apply to every review, and each hit here is a signal, not a verdict.
+Read this when the target contains any SQL string, ORM query, or schema/data migration. Split from `language-stack-redflags.md`; its fast first pass and cross-language sections apply to every review, and each hit here is a signal, not a verdict.
 
 ## SQL / migrations
 

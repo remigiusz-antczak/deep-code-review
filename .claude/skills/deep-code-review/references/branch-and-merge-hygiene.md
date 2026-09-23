@@ -212,11 +212,11 @@ and **execute only on explicit approval** — the same opt-in bar as the Phase 6
   green re-conflicts before it can merge, and under steady merge volume it re-stales faster than any
   human/agent can rebase — an unwinnable loop that reads as a perpetually "almost-ready" PR while compute
   burns on re-rebasing. Distinct from the silent-drop case above, which fires on *no* conflict (last writer
-  wins); this fires on a conflict that **never clears**. Distinct, too, from §5's sweep-while-resolving
+  wins); this fires on a conflict that **never clears**. Distinct, too, from `merge-operations.md`'s sweep-while-resolving
   treadmill (a *coordinator* re-dirties a cluster with a concurrent merge sweep): this needs no coordinator —
   ambient merge cadence alone drives it. **After the second re-conflict whose only path is a generated
   artifact, stop rebasing** and change strategy: get the PR green + mergeable **once** and land it inside a
-  window where no same-class PR merges (§5's freeze-the-merge-step / a single merge-seat holding the class's
+  window where no same-class PR merges (`merge-operations.md`'s freeze-the-merge-step / a single merge-seat holding the class's
   other merges for the brief handoff), always **taking trunk's copy and re-running the generator** rather than
   hand-splicing (the regenerate-from-merged-inputs rule above). **Durable fix — stop conflicting at all:**
   regenerate the artifact as a **post-merge / CI step** (or stop committing it and build it in CI), or
@@ -233,7 +233,7 @@ and **execute only on explicit approval** — the same opt-in bar as the Phase 6
   servers** has no reason to run your repo's local resolver and treats the artifact as an ordinary conflict.
   On **GitHub** this is observable: the "Merge" button / merge API / auto-merge / merge queue and its
   mergeability computation **ignore custom `.gitattributes merge=` drivers** (should generalize to other
-  forges but is **not independently verified** here, per the async-mergeability note in §5) — so a PR whose
+  forges but is **not independently verified** here, per the async-mergeability note in `merge-operations.md`) — so a PR whose
   only conflict is the driver-handled artifact still displays **CONFLICTING indefinitely**, the host merge
   button stays disabled, and auto-merge never fires, even though the conflict is trivially auto-resolvable on
   any driver-registered clone. Teams then waste effort "rebasing to fix it" through the host UI (which can't),
@@ -277,7 +277,7 @@ and **execute only on explicit approval** — the same opt-in bar as the Phase 6
   (`git diff --name-only $(git merge-base <base> <branch>) <branch>`), ask whether the base landed commits on
   any of them since the fork (`git log $(git merge-base <base> <branch>)..<base> -- <those paths>` — non-empty
   means the PR's tree predates real work there), and prove the actual effect by **trial-merging onto current
-  HEAD** — the throwaway integration branch of §5, cut off HEAD — and diffing that result against HEAD.
+  HEAD** — the throwaway integration branch of `merge-operations.md`'s merge trains, cut off HEAD — and diffing that result against HEAD.
   **Notation follows the question:** merge-base-relative (three-dot) is right for *what did this branch write*
   and correctly suppresses the two-dot phantom reversions (the duplicate-close bullet below picks notation the
   same way), but it **cannot** answer *would merging undo shipped work* — that needs the base's post-fork
@@ -460,7 +460,7 @@ gate:
 - A merge-train batch landing a gate-adding PR before the PRs it would force to retrofit that gate.
 - A new PR-body / commit-trailer / committed-artifact gate landed with **no update to its standing producers**
   (PR template, Dependabot/Renovate, release/agent bots) — every automated PR is refused (green on its real
-  work, red on the new gate) until noticed (§5 covers only in-batch ordering).
+  work, red on the new gate) until noticed (`merge-operations.md`'s merge trains cover only in-batch ordering).
 - A union/integration branch merged or squashed in place of its member PRs, or already-green members held
   waiting on the union's aggregate CI.
 - An `--admin`/force-merge used to escape a red base, instead of discharging it with a verified merge train.

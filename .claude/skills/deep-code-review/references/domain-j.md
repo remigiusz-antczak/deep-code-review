@@ -4,7 +4,10 @@ Read this when domain J (Testing & evaluation) is applicable in Phase 2 — the 
 
 ### J. Testing & evaluation → `references/testing-and-evals.md`
 Match coverage to what the project does; skip inapplicable types rather than
-writing theater.
+writing theater. Conditional depth: `references/testing-ui.md` when the target
+ships rendered UI or browser / E2E specs; `references/testing-ai-evals.md` when
+it has model-dependent output; `references/testing-ml.md` when it trains or
+serves a model or commits notebooks.
 - **Unit / integration / e2e / regression / security / property-fuzz /
   snapshot-weight-pin / AI-evals / non-functional** — apply what fits.
 - **Test the failure, not just the feature** (every guard/refusal path);

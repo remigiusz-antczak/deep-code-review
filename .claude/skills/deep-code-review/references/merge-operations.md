@@ -267,7 +267,7 @@ merge-blocker in its own right — name it a config gap (unsatisfiable as wired)
 
 Adding a gate that requires a convention in the PR **body** or a committed **artifact** — a `Verify:` line, a
 changelog fragment, an evidence image, a commit trailer — silently fails **every producer that doesn't yet
-emit it**. Sequencing the gate last in one landing batch (§5, *merge trains*) handles the PRs already *in
+emit it**. Sequencing the gate last in one landing batch (*Merge trains*, above) handles the PRs already *in
 flight*; it does nothing for **standing** producers — the PR template, Dependabot / Renovate, a
 release-drafter bot, an agent delivery swarm — which keep emitting the old shape on **every future run** until
 their **definition** is updated. A human author adapts on their next PR; automation can't, and piles up
@@ -288,7 +288,7 @@ A gate is a contract with its producers: change the contract without moving them
 and an **automated** producer can't "just adapt" the way a human reviewer does. **In review**, a diff that
 adds or tightens a PR-body / commit-trailer / committed-artifact requirement is incomplete unless the same
 change updates that artifact's producers (or ramps the gate) — the standing-producer generalization of the
-merge-train ordering rule (§5). The message-payload sibling — a new **required field** breaking old producers
+merge-train ordering rule (*Merge trains*, above). The message-payload sibling — a new **required field** breaking old producers
 and in-flight messages — is `api-contracts.md`.
 
 ### The merge gate verifies WHERE a PR merges, not only that it is green — check the base branch
@@ -330,7 +330,7 @@ graded, `method.md`). Anything an author can produce or skip locally is **adviso
   misconfiguration required; the hook the repo relies on was simply never wired to that codepath (distinct
   from both the bypass and the drift bullets above and below — nothing was skipped or stale, the codepath
   never called it). **Compounds** with a custom merge driver that resolves a generated/compiled-file conflict
-  by taking one side outright (the merge-driver mechanics are in §6 below, not restated here): a clean
+  by taking one side outright (the merge-driver mechanics are in `branch-and-merge-hygiene.md` §6, not restated here): a clean
   auto-merge can silently leave that generated file **stale** (missing the other side's regenerated
   contribution), and with no `pre-merge-commit` hook, nothing re-checks freshness before the merge commit
   lands. **Detect:** `git config --get-regexp '^merge\.'` for a take-one-side driver on a generated path, and
@@ -360,8 +360,8 @@ graded, `method.md`). Anything an author can produce or skip locally is **adviso
   (a branch-protection rule, a required review, a status check the author can't toggle), never mutable body
   text alone; make body-editing automation **append/insert-only** with a before/after diff; and treat a
   hold-marker *disappearance with no corresponding approving review* as **STILL HELD** (fail closed).
-- **Hooks under a worktree gate the wrong thing.** In a linked worktree (the multi-lane setup this file's red
-  flags cover), a hook wired for the primary checkout misfires: an **absolute `core.hooksPath`** is shared by
+- **Hooks under a worktree gate the wrong thing.** In a linked worktree (the multi-lane setup the red
+  flags in `branch-and-merge-hygiene.md` cover), a hook wired for the primary checkout misfires: an **absolute `core.hooksPath`** is shared by
   every worktree, so a hook authored for the primary checkout also fires in every sibling — one resolving
   paths from a hardcoded location rather than the invocation then examines the wrong tree; and a pre-push hook
   diffing a **hardcoded default branch** gates the wrong range. A pre-push hook's real range is the pushed

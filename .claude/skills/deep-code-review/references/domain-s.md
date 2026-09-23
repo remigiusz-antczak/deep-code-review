@@ -11,6 +11,8 @@ recommendation + the exact command per branch) are owned by
 `references/branch-and-merge-hygiene.md`. Distinct from section O, which owns whether
 branch *protection* is configured — this owns *what open work exists and what to
 do with it*; the one seam ("must this merge go through a PR?") reads O's posture.
+Landing and merge-gate mechanics (merge trains, stale greens, stuck required
+checks): `references/merge-operations.md` — read it when landing or sequencing PRs.
 - **Ground the branch set before judging it** — `git fetch --all --prune` first;
   an un-refreshed/shallow clone hides open branches and a "nothing to clean up" is
   then a false all-clear (principle 2). **Open-PR / merged-PR state is forge state,

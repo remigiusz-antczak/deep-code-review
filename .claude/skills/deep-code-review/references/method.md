@@ -243,7 +243,7 @@ and any wired security/dependency scanners. Then, before trusting "green":
   before reading its pass as a clearance — SKILL.md principle 2 (*an absence is
   evidence only after a positive control fires*) at gate-coverage scope. This is
   the **unvisited** surface: distinct from a gate that cannot fail (above) and
-  from a probe that observed the wrong thing (detector fidelity, above) — here
+  from a probe that observed the wrong thing (detector fidelity, `method-situational.md`) — here
   the gate fails correctly, it was simply never pointed here.
 - **Lanes that pass in isolation do not clear their union.** Per-module,
   per-lane, or per-flag gates each green on their own say nothing about the
@@ -258,6 +258,7 @@ and any wired security/dependency scanners. Then, before trusting "green":
   binaries, gate set). A red, unexplained base is `unverified` ground truth — say
   whether it is a flake, pre-existing and unrelated, or caused by this work — and
   you cannot show a change "regresses no axis" against a baseline already failing.
+- **Before trusting a gate, or fixing code to satisfy one:** check the gate against its cited standard, and run it twice (idempotence). Depth for both: `method-situational.md`.
 - **Situational Phase 1 checks — `method-situational.md`.** Load it when a firing gate may be stricter than its standard, a gate-aimed fix or a production-build finding must be reproduced, a no-regressions gate keys on labels or positions, a verify gate writes artifacts a later step reads, local and CI disagree or a failure appears only under a reduced worker config, the target is containerized or serverless (deploy-contract preflight), the task builds against an exported reference, or the target has native C/C++ or `unsafe` Rust.
 
 **How much ground truth the scope owes** (don't run a `FULL` gate ritual to

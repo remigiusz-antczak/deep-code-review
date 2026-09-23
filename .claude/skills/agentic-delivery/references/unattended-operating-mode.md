@@ -72,8 +72,8 @@ Each rung is a name and a pointer; the mechanism lives at the pointer.
 3. **Turn red / conflicting PRs green by conflict TYPE, not file count** —
    already-applied vs diverged vs regenerable-artifact vs true textual conflict,
    each resolved by its type. `deep-code-review` `branch-and-merge-hygiene.md` §4
-   decision tree, §5 Merge trains, §6 **Never hand-resolve a conflict inside a
-   generated file**; the zero-checks / `mergeable_state` re-fire case is
+   decision tree, §6 **Never hand-resolve a conflict inside a generated file**;
+   `merge-operations.md` **Merge trains**; the zero-checks / `mergeable_state` re-fire case is
    `merge-queue-worktrees.md` **Absent checks are a third state**.
 4. **Deliver open issues in verify-first waves** — the fix may already be on the
    base. `unattended-trackers.md` **An open tracker issue is not proof the fix is

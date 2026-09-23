@@ -20,7 +20,8 @@
 # further, and a P1b split has a concrete number to reduce.
 #
 # FORMAT: one row per archetype, `<archetype, exactly as SKILL.md's load-map
-# table names it>\t<max tokens>`. Blank lines and lines starting with '#' are
+# table names it>\t<max tokens>`, plus `phase-conditional\t<ref>.md` rows
+# (see PHASE-FLOOR FOLLOW-UP below). Blank lines and lines starting with '#' are
 # ignored. Every archetype row in SKILL.md's load map must have exactly one
 # row here (fail closed: an archetype on disk with no row, or a row whose
 # archetype no longer exists in the load map, is a gate failure — see
@@ -74,12 +75,32 @@
 # agent / LLM / MCP 33716->33705, IaC / platform 4342->4339, lib / SDK
 # 10913->10909.
 #
-web	86823
-mobile	28775
-api / service	33566
+# PHASE-FLOOR FOLLOW-UP (review fixes on the split): the floor pins are now an
+# EXACT-EQUALITY ratchet -- cmd_mustload fails when a floor total is above its
+# pin (shrink the refs) AND when it is below it (re-pin the row down), so a cut
+# is locked in by the commit that makes it. The Phase 0-2 refs allowed to
+# carry the " when " qualifier are pinned explicitly as `phase-conditional
+# <TAB><ref>.md` rows (the only non-numeric rows): a " when " ref with no pin,
+# a pinned ref the phase table also names unconditionally, and a pin the
+# table no longer names each fail closed, so re-qualifying a floor ref as
+# conditional can never drop it from the floor silently. Deliberate floor
+# rise: phase-floor-light 35786->35858 (+72), phase-floor-full 47350->47452
+# (+102). It comes from one restored always-on method.md line (check a gate
+# against its cited standard and run it twice), the widened shell and SQL
+# load triggers in language-stack-redflags.md, and cross-file pointers that
+# replaced bare "above" or section-5 references to content moved to
+# lang-*.md, method-situational.md, and merge-operations.md. Archetype rows
+# re-pinned down to their current totals: web 86823->86820, mobile
+# 28775->28772, api / service 33566->33563, agent / LLM / MCP
+# 33705->33702.
+#
+web	86820
+mobile	28772
+api / service	33563
 data / ETL	29577
-agent / LLM / MCP	33705
+agent / LLM / MCP	33702
 IaC / platform	4339
 lib / SDK	10909
-phase-floor-light	35786
-phase-floor-full	47350
+phase-floor-light	35858
+phase-floor-full	47452
+phase-conditional	method-situational.md

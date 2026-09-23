@@ -19,7 +19,7 @@
 #   size-ratchet --base <ref> --config <file> <root>
 #                                        no size-budgets.tsv row may increase vs <ref> without a `size-budget-raise:` marker (fail closed on unresolvable base)
 #   binaries <root>                      no git-tracked file at a banned image/media/archive/build-output extension (allowlist: scripts/binaries-allowlist.tsv)
-#   mustload --config <file> <root>      every SKILL.md load-map archetype's MUST-LOAD token-est total, plus the Phase 0-2 mandatory-floor total, is within its frozen mustload-budgets.tsv ceiling
+#   mustload --config <file> <root>      every SKILL.md load-map archetype's MUST-LOAD token-est total is within its frozen mustload-budgets.tsv ceiling; the Phase 0-2 floor equals its pin exactly, and every " when " ref is a pinned phase-conditional row
 #
 set -euo pipefail
 
@@ -862,12 +862,19 @@ cmd_binaries() {
 # literally with " when " (e.g. "`method-situational.md` when a gate verdict is
 # disputed") is CONDITIONAL: a routed sub-file loaded only on its stated
 # trigger, so it is excluded from both floors but must still exist on disk
-# (fail closed). Placeholders such as `lang-*.md` name no concrete file and are
-# not parsed at all. SKILL.md's own byte count is always included (it is read
-# to reach the table at all).
+# (fail closed). Each OCCURRENCE is classified by the text right after it, so
+# a cell naming a ref both plain and "when"-qualified counts it. The set of
+# refs allowed to be conditional is pinned explicitly (`phase-conditional
+# <TAB><ref>` rows in the config): a " when " ref with no pin, a pinned ref
+# the table also names unconditionally, and a pin the table no longer names
+# all fail closed. Placeholders such as `lang-*.md` name no concrete file and
+# are not parsed at all. SKILL.md's own byte count is always included (it is
+# read to reach the table at all).
 # Enforced against `phase-floor-light` / `phase-floor-full` rows in the same
-# config, same freeze-ratchet direction. Fails closed if the phase table
-# can't be found/parsed, or if a named ref isn't on disk.
+# config as an EXACT-EQUALITY ratchet: a floor above its pin fails (shrink the
+# refs), and a floor below its pin fails too (re-pin the row down), so every
+# cut is locked in by the same commit that makes it. Fails closed if the
+# phase table can't be found/parsed, or if a named ref isn't on disk.
 # ---------------------------------------------------------------------------
 cmd_mustload() {
   local config="" root=""
@@ -890,8 +897,11 @@ cmd_mustload() {
 
   # Parse actionable config rows (archetype<TAB>ceiling-tokens); blank/comment
   # lines are skipped. Plain parallel arrays, aligned by index.
-  local -a cfg_archetypes=() cfg_ceilings=()
-  local _line _trimmed _a _c
+  # `phase-conditional<TAB><ref>.md` rows are a third namespace: the explicit
+  # allow-list of Phase 0-2 refs permitted to carry the " when " qualifier
+  # (kept out of both arrays below so the archetype checks never see them).
+  local -a cfg_archetypes=() cfg_ceilings=() cfg_conditional=()
+  local _line _trimmed _a _c _k
   while IFS= read -r _line || [ -n "$_line" ]; do
     _trimmed="${_line#"${_line%%[![:space:]]*}"}"
     case "$_trimmed" in
@@ -901,6 +911,17 @@ cmd_mustload() {
     [ "$_a" != "$_trimmed" ] \
       || die "mustload: malformed row (no TAB separator) in $config: $_trimmed"
     _c="${_trimmed#*$'\t'}"
+    if [ "$_a" = "phase-conditional" ]; then
+      printf '%s' "$_c" | grep -qE '^[A-Za-z0-9._-]+\.md$' \
+        || die "mustload: malformed phase-conditional ref \"$_c\" in $config (fail closed)"
+      if [ "${#cfg_conditional[@]}" -gt 0 ]; then
+        for _k in "${cfg_conditional[@]}"; do
+          [ "$_k" != "$_c" ] || die "mustload: duplicate phase-conditional row for $_c in $config (fail closed)"
+        done
+      fi
+      cfg_conditional+=("$_c")
+      continue
+    fi
     case "$_c" in
       ''|*[!0-9]*) die "mustload: malformed ceiling \"$_c\" for $_a in $config (fail closed)" ;;
     esac
@@ -964,9 +985,9 @@ cmd_mustload() {
   # trigger: existence-checked, never counted); every other backtick-quoted
   # ref in those rows is LIGHT (loaded on every scope).
   # ---------------------------------------------------------------------------
-  local -a floor_light_refs=() floor_full_only_refs=()
+  local -a floor_light_refs=() floor_full_only_refs=() floor_cond_refs=()
   local phrow inphase=0 phase_field load_field floor_reflist frf btick
-  local fi fj in_light in_full ff already
+  local fi fj in_light in_full in_cond ff already floor_occ occ_kind
   # Which of the mandatory phase rows 0, 1, 2 were actually parsed. A row
   # renamed out of the "<digit> <name>" shape (e.g. "1. Ground truth" or
   # "Phase 2 ...") would otherwise be skipped silently and shrink the floor
@@ -994,30 +1015,54 @@ cmd_mustload() {
           | grep -oE '`[A-Za-z0-9._-]+\.md`' | tr -d '`')"
         [ -n "$floor_reflist" ] \
           || die "mustload: phase \"$phase_field\" has no backtick-quoted refs in $skill_md (fail closed)"
-        for frf in $floor_reflist; do
-          if printf '%s' "$load_field" | grep -qF "${btick}${frf}${btick} when "; then
-            # CONDITIONAL: never part of the floor, but a trigger that names a
-            # file which does not exist is a dangling route -- fail closed.
-            if [ ! -f "$refs_dir/$frf" ]; then
-              printf 'MUSTLOAD FLOOR MISSING REF: Phase 0-2 conditional ref references/%s, not on disk (fail closed)\n' \
-                "$frf" >&2
-              fail=1
-            fi
-            continue
-          elif printf '%s' "$load_field" | grep -qF "${btick}${frf}${btick} on FULL"; then
-            in_full=0
-            for fi in "${!floor_full_only_refs[@]}"; do
-              [ "${floor_full_only_refs[$fi]}" = "$frf" ] && in_full=1 && break
-            done
-            [ "$in_full" -eq 1 ] || floor_full_only_refs+=("$frf")
-          else
-            in_light=0
-            for fi in "${!floor_light_refs[@]}"; do
-              [ "${floor_light_refs[$fi]}" = "$frf" ] && in_light=1 && break
-            done
-            [ "$in_light" -eq 1 ] || floor_light_refs+=("$frf")
-          fi
-        done
+        # Classify each OCCURRENCE by the text that immediately follows it,
+        # never the cell as a whole: a cell naming the same ref both plain and
+        # "when"-qualified must count the plain occurrence (a whole-cell grep
+        # for "`x` when " would drop it from the floor -- fail-open).
+        floor_occ="$(printf '%s' "$load_field" | awk '{
+          cell = $0
+          while (match(cell, /`[A-Za-z0-9._-]+\.md`/)) {
+            ref = substr(cell, RSTART + 1, RLENGTH - 2)
+            cell = substr(cell, RSTART + RLENGTH)
+            if (cell ~ /^ when /) print "cond " ref
+            else if (cell ~ /^ on FULL/) print "full " ref
+            else print "light " ref
+          }
+        }')"
+        while IFS=' ' read -r occ_kind frf; do
+          [ -n "$frf" ] || continue
+          case "$occ_kind" in
+            cond)
+              # CONDITIONAL: never part of the floor on its own; resolved
+              # against the pinned allow-list after every row is parsed.
+              in_cond=0
+              if [ "${#floor_cond_refs[@]}" -gt 0 ]; then
+                for fi in "${!floor_cond_refs[@]}"; do
+                  [ "${floor_cond_refs[$fi]}" = "$frf" ] && in_cond=1 && break
+                done
+              fi
+              [ "$in_cond" -eq 1 ] || floor_cond_refs+=("$frf")
+              ;;
+            full)
+              in_full=0
+              if [ "${#floor_full_only_refs[@]}" -gt 0 ]; then
+                for fi in "${!floor_full_only_refs[@]}"; do
+                  [ "${floor_full_only_refs[$fi]}" = "$frf" ] && in_full=1 && break
+                done
+              fi
+              [ "$in_full" -eq 1 ] || floor_full_only_refs+=("$frf")
+              ;;
+            *)
+              in_light=0
+              if [ "${#floor_light_refs[@]}" -gt 0 ]; then
+                for fi in "${!floor_light_refs[@]}"; do
+                  [ "${floor_light_refs[$fi]}" = "$frf" ] && in_light=1 && break
+                done
+              fi
+              [ "$in_light" -eq 1 ] || floor_light_refs+=("$frf")
+              ;;
+          esac
+        done <<<"$floor_occ"
         ;;
       *) inphase=0 ;;
     esac
@@ -1030,6 +1075,83 @@ cmd_mustload() {
   [ "$seen_p2" -eq 1 ] || missing_phases="$missing_phases 2"
   [ -z "$missing_phases" ] \
     || die "mustload: Phase table in $skill_md is missing mandatory phase row(s):$missing_phases (expected rows starting \"0 \", \"1 \", \"2 \"; fail closed)"
+
+  # Conditional refs are an explicit, pinned allow-list (`phase-conditional`
+  # rows), never whatever the table happens to mark " when " -- otherwise
+  # re-qualifying a floor ref as conditional would drop it from the floor
+  # with the gate still green. Four fail-closed checks:
+  #   - a ref marked conditional but not pinned (an unreviewed floor exit);
+  #   - a pinned ref that the table also names unconditionally (plain or
+  #     "on FULL") -- it is counted into the floor, so the pin is stale;
+  #   - a pinned ref the table no longer names at all (a dangling pin);
+  #   - a purely conditional ref missing on disk (a dangling route).
+  local pinned named_uncond named_cond
+  if [ "${#floor_cond_refs[@]}" -gt 0 ]; then
+    for fi in "${!floor_cond_refs[@]}"; do
+      frf="${floor_cond_refs[$fi]}"
+      named_uncond=0
+      if [ "${#floor_light_refs[@]}" -gt 0 ]; then
+        for fj in "${!floor_light_refs[@]}"; do
+          [ "${floor_light_refs[$fj]}" = "$frf" ] && named_uncond=1 && break
+        done
+      fi
+      if [ "${#floor_full_only_refs[@]}" -gt 0 ]; then
+        for fj in "${!floor_full_only_refs[@]}"; do
+          [ "${floor_full_only_refs[$fj]}" = "$frf" ] && named_uncond=1 && break
+        done
+      fi
+      # Named unconditionally elsewhere: it is counted into the floor like
+      # any other ref, and the pin check below reports a stale pin if one exists.
+      [ "$named_uncond" -eq 0 ] || continue
+      if [ ! -f "$refs_dir/$frf" ]; then
+        printf 'MUSTLOAD FLOOR MISSING REF: Phase 0-2 conditional ref references/%s, not on disk (fail closed)\n' \
+          "$frf" >&2
+        fail=1
+      fi
+      pinned=0
+      if [ "${#cfg_conditional[@]}" -gt 0 ]; then
+        for fj in "${!cfg_conditional[@]}"; do
+          [ "${cfg_conditional[$fj]}" = "$frf" ] && pinned=1 && break
+        done
+      fi
+      if [ "$pinned" -eq 0 ]; then
+        printf 'MUSTLOAD CONDITIONAL UNPINNED: Phase 0-2 ref references/%s is marked " when " but has no "phase-conditional" row in %s -- pin it, or load it unconditionally (fail closed)\n' \
+          "$frf" "$config" >&2
+        fail=1
+      fi
+    done
+  fi
+  if [ "${#cfg_conditional[@]}" -gt 0 ]; then
+    for fj in "${!cfg_conditional[@]}"; do
+      frf="${cfg_conditional[$fj]}"
+      named_uncond=0
+      named_cond=0
+      if [ "${#floor_light_refs[@]}" -gt 0 ]; then
+        for fi in "${!floor_light_refs[@]}"; do
+          [ "${floor_light_refs[$fi]}" = "$frf" ] && named_uncond=1 && break
+        done
+      fi
+      if [ "${#floor_full_only_refs[@]}" -gt 0 ]; then
+        for fi in "${!floor_full_only_refs[@]}"; do
+          [ "${floor_full_only_refs[$fi]}" = "$frf" ] && named_uncond=1 && break
+        done
+      fi
+      if [ "${#floor_cond_refs[@]}" -gt 0 ]; then
+        for fi in "${!floor_cond_refs[@]}"; do
+          [ "${floor_cond_refs[$fi]}" = "$frf" ] && named_cond=1 && break
+        done
+      fi
+      if [ "$named_uncond" -eq 1 ]; then
+        printf 'MUSTLOAD CONDITIONAL NOW UNCONDITIONAL: pinned conditional ref references/%s is named without " when " in the Phase 0-2 table (counted into the floor) -- drop its "phase-conditional" row or re-qualify every occurrence (fail closed)\n' \
+          "$frf" >&2
+        fail=1
+      elif [ "$named_cond" -eq 0 ]; then
+        printf 'MUSTLOAD CONDITIONAL DANGLING: "phase-conditional" row for references/%s in %s, but the Phase 0-2 table does not name it (fail closed)\n' \
+          "$frf" "$config" >&2
+        fail=1
+      fi
+    done
+  fi
 
   # Drop any FULL-only ref that's also LIGHT (already counted once in the
   # LIGHT total; never double-count it in the FULL delta).
@@ -1137,6 +1259,10 @@ cmd_mustload() {
     printf 'MUSTLOAD FLOOR FAIL: phase-floor-light totals %s tokens (ceiling %s) -- ratchet violated; shrink Phase 0-2 mandatory refs\n' \
       "$floor_light_total" "$floor_light_ceiling" >&2
     fail=1
+  elif [ "$floor_light_total" -lt "$floor_light_ceiling" ]; then
+    printf 'MUSTLOAD FLOOR BELOW PIN: phase-floor-light totals %s tokens (pin %s) -- exact-equality ratchet; re-pin the row down to %s\n' \
+      "$floor_light_total" "$floor_light_ceiling" "$floor_light_total" >&2
+    fail=1
   fi
   if [ -z "$floor_full_ceiling" ]; then
     printf 'MUSTLOAD FLOOR MISSING BUDGET: no "phase-floor-full" row in %s (fail closed)\n' \
@@ -1146,13 +1272,17 @@ cmd_mustload() {
     printf 'MUSTLOAD FLOOR FAIL: phase-floor-full totals %s tokens (ceiling %s) -- ratchet violated; shrink Phase 0-2 mandatory refs\n' \
       "$floor_full_total" "$floor_full_ceiling" >&2
     fail=1
+  elif [ "$floor_full_total" -lt "$floor_full_ceiling" ]; then
+    printf 'MUSTLOAD FLOOR BELOW PIN: phase-floor-full totals %s tokens (pin %s) -- exact-equality ratchet; re-pin the row down to %s\n' \
+      "$floor_full_total" "$floor_full_ceiling" "$floor_full_total" >&2
+    fail=1
   fi
 
   [ "$fail" -eq 0 ] \
-    || die "mustload: one or more archetypes/floors exceed their frozen ceiling, or are un-budgeted/dangling"
-  printf 'mustload: ok (%d archetype(s) within ceiling; phase floor LIGHT %s/%s, FULL %s/%s)\n' \
+    || die "mustload: one or more archetypes/floors exceed their frozen ceiling, a floor is off its exact pin, a conditional ref is unpinned/stale, or a row is un-budgeted/dangling"
+  printf 'mustload: ok (%d archetype(s) within ceiling; phase floor LIGHT %s/%s, FULL %s/%s; %d pinned conditional ref(s))\n' \
     "$(( ${#cfg_archetypes[@]} - 2 ))" "$floor_light_total" "$floor_light_ceiling" \
-    "$floor_full_total" "$floor_full_ceiling"
+    "$floor_full_total" "$floor_full_ceiling" "${#cfg_conditional[@]}"
 }
 
 [ "$#" -gt 0 ] || { usage; exit 2; }

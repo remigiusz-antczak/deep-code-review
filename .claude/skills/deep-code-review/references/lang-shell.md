@@ -1,6 +1,6 @@
 # Shell / Bash red flags
 
-Read this when the target ships shell scripts (reviewed code — the reviewer's own verification-shell hazards stay in the parent). Split from `language-stack-redflags.md`; its fast first pass and cross-language sections apply to every review, and each hit here is a signal, not a verdict.
+Read this when the target runs any shell — CI `run:` steps, hooks, Dockerfile `RUN` lines, Makefile recipes, or shell scripts (reviewed code — the reviewer's own verification-shell hazards stay in the parent). Split from `language-stack-redflags.md`; its fast first pass and cross-language sections apply to every review, and each hit here is a signal, not a verdict.
 
 
 - Unquoted expansions (`rm -rf $DIR`), `eval`, `curl … | bash`, parsing `ls`,

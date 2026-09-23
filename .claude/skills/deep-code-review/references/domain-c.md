@@ -6,7 +6,10 @@ Read this when domain C (Security — AI / LLM / agents) is applicable in Phase 
 Apply if the code calls an LLM, embeds/retrieves, or runs an agent. Maps to
 OWASP Top 10 for LLM Applications **2026** (LLM01–LLM10:2026) and the OWASP
 Top 10 for Agentic Applications 2026. When the target **is or installs a
-skill**, also walk AST01–AST10 in `references/security-agent-skills.md`.
+skill**, also walk AST01–AST10 in `references/security-agent-skills.md`. Eval
+depth (golden sets, judge calibration, the context-assembly seam):
+`references/testing-ai-evals.md` — read it when model-dependent output needs a
+test or eval gate.
 - **Untrusted-in / untrusted-out**: everything the model reads that isn't your
   trusted prompt is data that may contain instructions; everything it emits is
   untrusted input to the next stage. Fence/delimit untrusted content; **strip
@@ -37,7 +40,7 @@ skill**, also walk AST01–AST10 in `references/security-agent-skills.md`.
   the **system instructions**, so the model stops following its own rules with no error.
   This is **per-call** assembly, distinct from the long-running-agent compaction/memory
   case (🚩 below) — the budget + drop-priority + placement seam check is
-  `references/testing-and-evals.md` (context-assembly seam).
+  `references/testing-ai-evals.md` (context-assembly seam).
 - **A safety param set at a call site is a claim, not a guarantee** — confirm the
   layer below actually applies it. A `temperature`, `verify=`, `timeout`, `signal`,
   dry-run flag, allowlist, or `readOnly` can be silently dropped/overridden by a

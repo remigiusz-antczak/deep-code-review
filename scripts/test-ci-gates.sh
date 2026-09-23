@@ -699,7 +699,7 @@ head -c 4000 </dev/zero | tr '\0' 'h' >"$cond_root/.claude/skills/deep-code-revi
 cond_skill_tok=$(( $(wc -c <"$cond_root/.claude/skills/deep-code-review/SKILL.md" | tr -d '[:space:]') / 4 ))
 cond_light=$(( cond_skill_tok + 10 + 5 + 10 ))
 cond_full=$(( cond_light + 20 ))
-printf 'demo\t15\ndemo2\t10\nphase-floor-light\t%d\nphase-floor-full\t%d\n' \
+printf 'demo\t15\ndemo2\t10\nphase-floor-light\t%d\nphase-floor-full\t%d\nphase-conditional\tref-p5.md\n' \
   "$cond_light" "$cond_full" >"$WORK/mustload-cond.tsv"
 gate "$GATES" mustload --config "$WORK/mustload-cond.tsv" "$cond_root"
 if [ "$GATE_RC" -eq 0 ] \
@@ -729,14 +729,84 @@ else
   record 1 "mustload: a \"when\"-qualified ref missing on disk fails closed (planted RED)"
 fi
 
+# Pinned conditional set: the refs allowed to carry " when " are pinned as
+# `phase-conditional<TAB><ref>` rows. Each case below restores the pinned
+# cond_root fixture (ref-p5.md on disk, "when"-qualified in phase 1) first.
+cond_skill_ok="$WORK/cond-skill-ok.md"
+sed 's/^| 1 Ground truth | fixture phase 1 | `ref-p1.md`, `ref-p2.md` |$/| 1 Ground truth | fixture phase 1 | `ref-p1.md`, `ref-p2.md`; `ref-p5.md` when a gate verdict is disputed |/' \
+  "$mlroot/.claude/skills/deep-code-review/SKILL.md" >"$cond_skill_ok"
+head -c 4000 </dev/zero | tr '\0' 'h' >"$cond_root/.claude/skills/deep-code-review/references/ref-p5.md"
+
+# (d) A "when"-qualified ref with no `phase-conditional` row fails closed and
+# names the ref -- marking a floor ref conditional is not self-certifying.
+cp "$cond_skill_ok" "$cond_root/.claude/skills/deep-code-review/SKILL.md"
+grep -v '^phase-conditional' "$WORK/mustload-cond.tsv" >"$WORK/mustload-cond-unpinned.tsv"
+gate "$GATES" mustload --config "$WORK/mustload-cond-unpinned.tsv" "$cond_root"
+if [ "$GATE_RC" -ne 0 ] \
+  && grep -q 'MUSTLOAD CONDITIONAL UNPINNED: Phase 0-2 ref references/ref-p5.md' "$WORK/last.log"; then
+  record 0 "mustload: a \"when\"-qualified ref with no phase-conditional pin fails closed (planted RED)"
+else
+  record 1 "mustload: a \"when\"-qualified ref with no phase-conditional pin fails closed (planted RED)"
+fi
+
+# (e) One cell naming the pinned ref BOTH plain and "when"-qualified: the
+# plain occurrence is counted into the floor (FLOOR FAIL -- the 1000-token ref
+# blows the pin) and the pin is reported stale. A whole-cell grep for
+# "`ref-p5.md` when " used to classify the ref conditional and pass here.
+sed 's/`ref-p2.md`; `ref-p5.md` when/`ref-p2.md`, `ref-p5.md`; `ref-p5.md` when/' \
+  "$cond_skill_ok" >"$cond_root/.claude/skills/deep-code-review/SKILL.md"
+gate "$GATES" mustload --config "$WORK/mustload-cond.tsv" "$cond_root"
+if [ "$GATE_RC" -ne 0 ] \
+  && grep -q 'MUSTLOAD FLOOR FAIL: phase-floor-light' "$WORK/last.log" \
+  && grep -q 'MUSTLOAD CONDITIONAL NOW UNCONDITIONAL: pinned conditional ref references/ref-p5.md' "$WORK/last.log"; then
+  record 0 "mustload: a cell naming a pinned ref plain AND \"when\" counts it and flags the stale pin (planted RED)"
+else
+  record 1 "mustload: a cell naming a pinned ref plain AND \"when\" counts it and flags the stale pin (planted RED)"
+fi
+
+# (f) A pinned ref the phase table no longer names at all is a dangling pin.
+cp "$mlroot/.claude/skills/deep-code-review/SKILL.md" "$cond_root/.claude/skills/deep-code-review/SKILL.md"
+printf 'demo\t15\ndemo2\t10\nphase-floor-light\t%d\nphase-floor-full\t%d\nphase-conditional\tref-p5.md\n' \
+  "$ml_floor_light" "$ml_floor_full" >"$WORK/mustload-cond-dangling.tsv"
+gate "$GATES" mustload --config "$WORK/mustload-cond-dangling.tsv" "$cond_root"
+if [ "$GATE_RC" -ne 0 ] \
+  && grep -q 'MUSTLOAD CONDITIONAL DANGLING: "phase-conditional" row for references/ref-p5.md' "$WORK/last.log"; then
+  record 0 "mustload: a phase-conditional pin the phase table no longer names fails closed (planted RED)"
+else
+  record 1 "mustload: a phase-conditional pin the phase table no longer names fails closed (planted RED)"
+fi
+
+# (g) A malformed phase-conditional value (not a <name>.md ref) fails closed.
+printf 'demo\t15\ndemo2\t10\nphase-floor-light\t%d\nphase-floor-full\t%d\nphase-conditional\t12\n' \
+  "$ml_floor_light" "$ml_floor_full" >"$WORK/mustload-cond-malformed.tsv"
+gate "$GATES" mustload --config "$WORK/mustload-cond-malformed.tsv" "$mlroot"
+if [ "$GATE_RC" -ne 0 ] && grep -q 'malformed phase-conditional ref "12"' "$WORK/last.log"; then
+  record 0 "mustload: a malformed phase-conditional row fails closed (planted RED)"
+else
+  record 1 "mustload: a malformed phase-conditional row fails closed (planted RED)"
+fi
+
+# (h) Exact-equality floor ratchet: a floor BELOW its pin fails and names the
+# new total to re-pin to, so a cut cannot leave slack for later regrowth.
+head -c 4 </dev/zero | tr '\0' 'e' >"$mlroot/.claude/skills/deep-code-review/references/ref-p2.md"
+gate "$GATES" mustload --config "$WORK/mustload-clean.tsv" "$mlroot"
+if [ "$GATE_RC" -ne 0 ] \
+  && grep -qF "MUSTLOAD FLOOR BELOW PIN: phase-floor-light totals $(( ml_floor_light - 4 )) tokens (pin $ml_floor_light)" "$WORK/last.log" \
+  && grep -qF "MUSTLOAD FLOOR BELOW PIN: phase-floor-full totals $(( ml_floor_full - 4 )) tokens (pin $ml_floor_full)" "$WORK/last.log"; then
+  record 0 "mustload: a floor below its pin fails (exact-equality ratchet; planted RED)"
+else
+  record 1 "mustload: a floor below its pin fails (exact-equality ratchet; planted RED)"
+fi
+head -c 20 </dev/zero | tr '\0' 'e' >"$mlroot/.claude/skills/deep-code-review/references/ref-p2.md"
+
 # The real repo's Phase 0-2 mandatory floor is within its frozen ceiling too
 # -- confirms the new mechanism actually engaged against real data, not just
 # the fixture.
 gate "$GATES" mustload --config "$ROOT/scripts/mustload-budgets.tsv" "$ROOT"
 if [ "$GATE_RC" -eq 0 ] && grep -q 'phase floor LIGHT' "$WORK/last.log"; then
-  record 0 "mustload: the real repo's Phase 0-2 mandatory floor is within its frozen ceiling"
+  record 0 "mustload: the real repo's Phase 0-2 mandatory floor equals its pin"
 else
-  record 1 "mustload: the real repo's Phase 0-2 mandatory floor is within its frozen ceiling"
+  record 1 "mustload: the real repo's Phase 0-2 mandatory floor equals its pin"
 fi
 
 # ---------------------------------------------------------------------------
@@ -2076,11 +2146,13 @@ fi
 # Language-family load isolation (own lane; APPENDED AT THE END by
 # convention). The Phase 0-2 floor carries only the cross-language core of
 # language-stack-redflags.md; each language family lives in its own routed
-# lang-*.md. Pin, structurally, that a Python-only review -- the LIGHT floor
-# parsed live from SKILL.md's phase table, plus lang-python.md -- reads no
-# other family: no other lang-*.md is in that load set, and no content line
-# of any other family file appears verbatim in it. Planted RED: pasting one
-# JavaScript bullet back into the parent must FIRE.
+# lang-*.md. Pin, structurally, that a Python repo -- the LIGHT floor parsed
+# live from SKILL.md's phase table, plus lang-python.md, plus lang-shell.md
+# because its CI runs shell in `run:` steps (the Shell row's trigger) --
+# reads no other family: no other lang-*.md is in that load set, and no
+# content line of any other family file appears verbatim in it. Planted RED:
+# pasting one JavaScript bullet back into the parent must FIRE, and a Shell
+# row that no longer names CI `run:` steps must FIRE.
 # ===========================================================================
 
 # floor_light_refs <skill_dir> — print the LIGHT Phase 0-2 refs (one per
@@ -2107,10 +2179,10 @@ floor_light_refs() {
   ' "$1/SKILL.md" | sort -u
 }
 
-# py_only_leaks <skill_dir> — print every line of a non-Python family file
-# (content lines >= 25 chars after its 3-line title/trigger header) found
-# verbatim in the Python-only load set, plus any other lang-*.md named in the
-# floor. Empty output == isolated.
+# py_only_leaks <skill_dir> — print every line of a family file other than
+# Python and shell (content lines >= 25 chars after its 3-line title/trigger
+# header) found verbatim in the Python-with-CI-shell load set, plus any other
+# lang-*.md named in the floor. Empty output == isolated.
 py_only_leaks() {
   local sd="$1" f
   local set_list="$WORK/py-only-set.txt" pats="$WORK/py-only-pats.txt"
@@ -2122,9 +2194,11 @@ py_only_leaks() {
     esac
     printf '%s\n' "$sd/references/$f" >>"$set_list"
   done < <(floor_light_refs "$sd")
-  printf '%s\n' "$sd/SKILL.md" "$sd/references/lang-python.md" >>"$set_list"
+  printf '%s\n' "$sd/SKILL.md" "$sd/references/lang-python.md" "$sd/references/lang-shell.md" >>"$set_list"
   for f in "$sd"/references/lang-*.md; do
-    [ "$(basename "$f")" = "lang-python.md" ] && continue
+    case "$(basename "$f")" in
+      lang-python.md|lang-shell.md) continue ;;
+    esac
     awk 'NR > 3 && length($0) >= 25' "$f" >>"$pats"
   done
   [ -s "$pats" ] || { printf 'NO FAMILY PATTERNS (fail closed)\n'; return 0; }
@@ -2133,17 +2207,31 @@ py_only_leaks() {
   done <"$set_list"
 }
 
+# shell_row_covers_ci <skill_dir> — succeed only when the parent's Shell row
+# routes CI `run:` shell (plus hooks, Dockerfile RUN, Makefile recipes) to
+# lang-shell.md, and lang-shell.md's own trigger line names CI `run:` steps.
+shell_row_covers_ci() {
+  local row
+  row="$(grep -F '`lang-shell.md` |' "$1/references/language-stack-redflags.md" || true)"
+  printf '%s' "$row" | grep -qF 'CI (`run:`)' \
+    && printf '%s' "$row" | grep -qF 'hooks' \
+    && printf '%s' "$row" | grep -qF 'Dockerfile `RUN`' \
+    && printf '%s' "$row" | grep -qF 'Makefile' \
+    && sed -n 3p "$1/references/lang-shell.md" | grep -qF 'CI `run:` steps'
+}
+
 dcr_sd="$ROOT/.claude/skills/deep-code-review"
 py_floor="$(floor_light_refs "$dcr_sd" | tr '\n' ' ')"
 py_leaks="$(py_only_leaks "$dcr_sd")"
 if [ -n "$py_floor" ] && [ -z "$py_leaks" ] \
   && grep -qxF '| Python | `lang-python.md` |' "$dcr_sd/references/language-stack-redflags.md" \
   && grep -qxF '## Python' "$dcr_sd/references/lang-python.md" \
+  && shell_row_covers_ci "$dcr_sd" \
   && ! grep -qE '^## (Python|JavaScript|Go|Java|Ruby|PHP|C / C\+\+|Rust|SQL)' "$dcr_sd/references/language-stack-redflags.md"; then
-  record 0 "language isolation: a Python-only review (floor: ${py_floor}+ lang-python.md) loads no other language family"
+  record 0 "language isolation: a Python repo with CI run: shell (floor: ${py_floor}+ lang-python.md + lang-shell.md) loads no other language family"
 else
   printf '%s\n' "$py_leaks" | head -5
-  record 1 "language isolation: a Python-only review (floor: ${py_floor}+ lang-python.md) loads no other language family"
+  record 1 "language isolation: a Python repo with CI run: shell (floor: ${py_floor}+ lang-python.md + lang-shell.md) loads no other language family"
 fi
 
 # Every language file on disk is routed from the parent index AND SKILL.md,
@@ -2172,6 +2260,17 @@ if py_only_leaks "$iso_sd" | grep -q '^LEAK language-stack-redflags.md: '; then
   record 0 "language isolation: FIRES when another family's content leaks into the Python-only load set (planted RED)"
 else
   record 1 "language isolation: FIRES when another family's content leaks into the Python-only load set (planted RED)"
+fi
+
+# Planted RED: a Shell row narrowed back to "shell scripts" no longer routes a
+# Python repo's CI `run:` shell to lang-shell.md -- the trigger check must FIRE.
+sed 's/^| Shell .*| `lang-shell.md` |$/| Shell \/ Bash scripts | `lang-shell.md` |/' \
+  "$dcr_sd/references/language-stack-redflags.md" >"$iso_sd/references/language-stack-redflags.md"
+if ! shell_row_covers_ci "$iso_sd" \
+  && grep -qxF '| Shell / Bash scripts | `lang-shell.md` |' "$iso_sd/references/language-stack-redflags.md"; then
+  record 0 "language isolation: FIRES when the Shell row stops routing CI run: shell to lang-shell.md (planted RED)"
+else
+  record 1 "language isolation: FIRES when the Shell row stops routing CI run: shell to lang-shell.md (planted RED)"
 fi
 
 # ---------------------------------------------------------------------------

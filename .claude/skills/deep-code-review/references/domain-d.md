@@ -4,7 +4,9 @@ Read this when domain D (Data integrity & data quality) is applicable in Phase 2
 
 ### D. Data integrity & data quality → `references/data-quality.md`
 Apply to any pipeline, ETL, enrichment, scraping, or dataset producer. Judge the
-**output**, not just the code.
+**output**, not just the code. When the producer trains or serves a model or
+commits notebooks, read `references/testing-ml.md` (leakage, reproducibility,
+drift, fairness, notebook hidden state).
 - **Monotonic quality (hard invariant)**: a write/merge never replaces a
   populated, higher-confidence value with an empty/lower/duplicate one — upserts
   **field-merge with preserve-if-absent**, and a degraded/fallback surfaced by a

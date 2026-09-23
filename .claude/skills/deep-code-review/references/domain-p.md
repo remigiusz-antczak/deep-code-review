@@ -10,6 +10,8 @@ Apply if the code produces UI. Target **WCAG 2.2 AA**. Four references:
 on a port / restyle / design-parity task);
 `migration-parity.md` owns the **port / prototype-reference half** (read it when the
 reference is a prototype/mockup or the task is a migration to a reference design).
+Test depth for rendered UI: `testing-ui.md` (read it when the target ships
+browser / E2E specs, or a rendered-layout claim needs a test).
 - **Respect the existing design** (principle 5): fix accessibility/usability
   **defects** in place (contrast, labels, keyboard traps, focus, target size);
   treat a change that alters layout/typography/brand as an **owner decision** and

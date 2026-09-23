@@ -30,8 +30,8 @@ Each language family has its own file. Load the file for every language the targ
 | Java / Kotlin | `lang-jvm.md` |
 | Ruby, PHP | `lang-ruby-php.md` |
 | C / C++, Rust | `lang-c-cpp-rust.md` |
-| Shell / Bash scripts | `lang-shell.md` |
-| SQL / migrations | `lang-sql.md` |
+| Shell — any shell run by CI (`run:`), hooks, Dockerfile `RUN`, Makefile recipes, or scripts | `lang-shell.md` |
+| SQL — any SQL string, ORM query, or migration | `lang-sql.md` |
 
 The cross-language sections below (switch/case, delimiter scanning, composed numeric bounds, partition gates, denial of service, the reviewer's own verification shell) apply to every review.
 
@@ -266,7 +266,7 @@ finding.
   Distinct from the wire-level upload-size cap and the API10 "bound size" clause in
   `security-api.md` — both bound bytes actually *transferred*/received, not a
   size *claimed inside* a payload before those bytes arrive. Distinct too from the
-  C/C++ section's (`lang-c-cpp-rust.md`) "integer overflow before `malloc`" above — that's an *undersized*
+  C/C++ "integer overflow before `malloc`" bullet in `lang-c-cpp-rust.md` — that's an *undersized*
   allocation from an overflowed calculation, leading to a buffer overflow (memory
   corruption); this is an *oversized* allocation from a value trusted as-is,
   leading to memory exhaustion (availability) — different consequence, different
@@ -275,11 +275,11 @@ finding.
 
 ## Shell / Bash
 
-Reviewed-code shell footguns (unquoted expansions, `set -u` on empty arrays, locale-dependent bracket ranges) live in `lang-shell.md` — load it when the target ships shell scripts.
+Reviewed-code shell footguns (unquoted expansions, `set -u` on empty arrays, locale-dependent bracket ranges) live in `lang-shell.md` — load it per the Shell row of the table above.
 
 ### The reviewer's own verification shell (measuring, not reviewing)
 
-The rule above hunts `pipefail` in *reviewed* code; these hazards apply to the
+`lang-shell.md` hunts `pipefail` in *reviewed* code; these hazards apply to the
 commands **you** run to establish ground truth, where an empty or wrong exit is
 read as a pass (SKILL.md Phase 1). All measured, not asserted:
 
