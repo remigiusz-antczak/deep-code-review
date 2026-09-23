@@ -7,7 +7,7 @@ cc52f678848b814373757b460383bf61960e4943c203735adde0a350b3e50989  .claude/skills
 6194c833483d1a669843f8a59361d15cd0ab2e97265b5ec0e85686247e2add66  .claude/skills/agentic-delivery/references/dev-env-ownership.md
 a59025eff758bb09c4c86a6b46835e8538401363f0af49e27ad22f24a0f9cc0c  .claude/skills/agentic-delivery/references/fanout-host-sizing.md
 0d4d35995fd50fb99cc0daab02edaae596961b0a49f6bf367ba60611fe8065fd  .claude/skills/agentic-delivery/references/fast-agentic-delivery.md
-3943aca5c3fd0d89696d80d26d3dff85f619d4bd45b6340d3cf65a3586213c03  .claude/skills/agentic-delivery/references/host-enforcement.md
+993d186aa1195fa3469f60ad3d2fd721d10c8894c48346ee017bb3058317c4d0  .claude/skills/agentic-delivery/references/host-enforcement.md
 1b8d16e76c453aef8ac31e1c096935268d2cea9347ee78e643f7da7c77815e2c  .claude/skills/agentic-delivery/references/incident-response.md
 a05d6dc66b07e62daf0d624791f9daac61e086981dbef05af24315119a34c985  .claude/skills/agentic-delivery/references/merge-queue-worktrees.md
 8535747afc03e9d16fddc205db71727d2ee6676cd66ffc03a8d8f501d235b653  .claude/skills/agentic-delivery/references/multi-session-coordination.md
@@ -25,7 +25,7 @@ f85098c6e97f170e76524e3dc02c54bbe28935305fa079d917a2f63ddf789f87  .claude/skills
 8206f518977e6aef7d932cdfe73ad90eac663c3a4b44e88ddccfe8da3cd360b9  .claude/skills/agentic-delivery/scripts/board_post.py
 17c1864b09b4ebcf8d535d272ca8458830d2f1aea98ba10a40fac15881f2a711  .claude/skills/agentic-delivery/scripts/board_state.py
 a6fc31cf16e20c1b3107b832c1c65b766984199fd64d5cc0937df88951183e69  .claude/skills/agentic-delivery/scripts/board_sync.py
-2c3073e60df613a664060cc1a3e6d9dce36400d58549e6bbcf1b2b36a33964e8  .claude/skills/agentic-delivery/scripts/handback_cap.py
+82a3950180aa0d2d9394b27e3e4ece027ba88d6d414a506bb6706f38dfdf9d79  .claude/skills/agentic-delivery/scripts/handback_cap.py
 8d82d5d6dac791d12a740989ccbbce51c6c89f3ab4921cdf280e853505c1fd18  .claude/skills/agentic-delivery/scripts/lane_guard.py
 777e056d8eff133920942aba3923edd84049cb58ee260552bdb0bd40a83063c4  .claude/skills/agentic-delivery/scripts/priority_gate.py
 a93ac9578390ca3bc5cf670c3c88c20e2e9e298cbe65e754a65f08c256aead76  .claude/skills/agentic-delivery/scripts/refix_gate.py
@@ -44,7 +44,7 @@ cc52f678848b814373757b460383bf61960e4943c203735adde0a350b3e50989  .claude/skills
 bb541f96bd7d0c3bb4adff8dcaac0f50efa2493b8215b6aa671805bfbb89c42b  .claude/skills/contribution/references/contribution-procedure.md
 58195912db07becd97a96ef72dc4152cf75bf7d0e524ef8193dce29531f8e4b9  .claude/skills/deep-code-review/SKILL.md
 743d45db5347993f6fedec320ab49e51992904e68cc69af5f1179b0460c043f8  .claude/skills/deep-code-review/VERSION
-d062ff7a9e9b2cbe762ff12d5c2255e06a0214c594883109fc99e476529086f0  .claude/skills/deep-code-review/evals/evals.json
+1513788f42bd49272d3fd7ba5c3f5313ff4c6a796f12dcf555b173e7f219a8cc  .claude/skills/deep-code-review/evals/evals.json
 a24fdb1c8dd47a852c0e02b395a256b0b9b5e188cf0a09cceeaa33ece45ba815  .claude/skills/deep-code-review/references/a11y-aria.md
 5a3e66353bcdabb0289ea926c7f192dbad750edca74ef0f0d8c0f6b71bcbf5ef  .claude/skills/deep-code-review/references/a11y-color-motion.md
 9e256565feb3d29e61557e49b3f6be2fe552eb4eee411106e5ffa3eb3d974add  .claude/skills/deep-code-review/references/a11y-focus.md
@@ -91,7 +91,7 @@ c975cb8db3c12febde56a5b348de861703760e871aa4869138bbc0854c4ccc97  .claude/skills
 051ed3e65f4af3a020f863b046e80a5663f7a2162ccd050e1c58b1cce080c2b3  .claude/skills/deep-code-review/references/lang-jvm.md
 ba03d850119e84e0abfd6875ab482b827d47edba1bec2bc0be0eb26806235f4d  .claude/skills/deep-code-review/references/lang-python.md
 42ebe7339583059eb7a3b1b280be76898e3d1263d100682d5971d4c40a2bdd8b  .claude/skills/deep-code-review/references/lang-ruby-php.md
-35721f65a0c107b4135f185f039936686bae2aa66636a3d16d05f3099fe6d705  .claude/skills/deep-code-review/references/lang-shell.md
+14475316f4a8c5caf5efbf27bce8ad731cbcd352ece6994e855394d1af807595  .claude/skills/deep-code-review/references/lang-shell.md
 f2374ef94de331d8a965a4647c6039bf43dc9b198f697b365825ccc744d30175  .claude/skills/deep-code-review/references/lang-sql.md
 be322c1ce89821b4582ce742dd9e6b8fdac1778693eb5f4882663f85e603e52f  .claude/skills/deep-code-review/references/language-stack-redflags.md
 d82ccb09e1cf77bff20b5485ec85f826453c6cfc381541b6ff16133d662eeadf  .claude/skills/deep-code-review/references/machine-report.md

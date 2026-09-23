@@ -5946,6 +5946,18 @@
         "States the fail-closed contract: exit 0 only when every compared token matches; a missing or unreadable side is COULD_NOT_CHECK (exit 2), never a pass",
         "States that a token MATCH verifies values only, not that components use the tokens, so it cannot by itself support an 'aligned' claim"
       ]
+    },
+    {
+      "id": "gate-script-bare-word-log-grep",
+      "prompt": "A ship script runs `./run-checks.sh | tail -4`, then greps the tail for `QA OK` (its own guessed pass marker, never seen in a real run) and separately greps the full log for `FAILED` to catch failures. One of the tests that actually passed is named `LOAD FAILED gracefully`. The script reports 'exit 0, QA OK found'. Should this ship unattended?",
+      "expected_output": "No. The pipe (`| tail`) reports `tail`'s exit status, not the checks' -- capture the runner's own exit code to a variable or file instead (`templates/pre-push-verify.sh` is the mechanized form: decide on the captured command's exit code, never grep a log). The `QA OK` marker was invented, not copied from a real passing run's summary line, so nothing confirms it ever appears on success. The bare `FAILED` grep also matches the passing test name `LOAD FAILED gracefully`, so a truly failing run could quote that green test as false evidence, and a truly passing run's report proves nothing since the marker is unanchored. Before running unattended, dry-run the check against one known-green and one known-red log and require an explicit positive last line (its absence is failure).",
+      "expectations": [
+        "Identifies the `| tail` pipe as reporting tail's exit status, not the checks'",
+        "Names capturing the exit code to a file/variable (not a pipe) as the fix, citing exit-status gating as the mechanized pattern",
+        "Flags the `QA OK` marker as guessed/invented rather than copied from a real passing run's summary line",
+        "Flags that the bare `FAILED` grep also matches the passing test name `LOAD FAILED gracefully`, so a failure grep can quote a green test as evidence",
+        "Requires a dry run against one known-green and one known-red log, and an explicit positive last line whose absence means failure, before the gate runs unattended"
+      ]
     }
   ]
 }
