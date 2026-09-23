@@ -5970,6 +5970,18 @@
         "Names `pkill -f` on a browser pattern as reaping every lane's test browser, not only orphans",
         "Names the hard-coded protected-port list as going stale and states the fix: reap only PID-1/own-worktree/PID-file-provable processes, filter to the listener, source exclusions from operator config, and default to dry-run with an explicit apply flag"
       ]
+    },
+    {
+      "id": "merge-train-ratchet-cap-failure-attributes-per-member-not-a-fragment-remedy",
+      "prompt": "Three PRs merged clean in a merge-train union, but the union fails a repo-wide numeric ratchet (max count of a disallowed pattern). Bisecting which PR caused it would take a while. A teammate suggests giving each PR its own small fragment file that pre-declares its increase, so the union check just sums the fragments. How should we actually attribute and fix this?",
+      "expected_output": "Reject the per-change fragment-file remedy -- it pre-splits the cap to dodge a merge conflict, the same shape as dev-env-ownership.md's rejected 'raise the ceiling to pass' pattern. Instead attribute the union's ratchet failure per member: for each member PR compute delta = count(member's head) minus count(member's own merge-base with the target), and print '#N +D marker=[present|none]', where marker=present means that member's own commit range carries an explicit '<ratchet>-raise: <path> <old>-><new> <reason>' annotation (the size-budget-raise convention), not a pre-authorizing fragment file. Route the fix to every member with a positive delta and no marker. State the scanner's counting rule explicitly (whether an occurrence inside a comment/string counts) so the per-member counts are comparable. This is attribution/diagnosis only -- it never licenses a member merging because it carries a marker; the union still must pass the ratchet/cap gate to merge.",
+      "expectations": [
+        "Rejects the per-change fragment-file remedy as a ceiling-raise-to-pass violation, citing the existing dev-env-ownership.md rule",
+        "Computes each member's delta against its OWN merge-base with the target, not the union's total count alone",
+        "Produces the '#N +D marker=[present|none]' per-member attribution line and routes the fix to members with positive delta and no marker",
+        "States that the scanner's counting rule (comment/string occurrences count or not) must be explicit so deltas are comparable",
+        "Treats attribution as diagnosis only -- a marker never licenses merging, the union still must pass the gate"
+      ]
     }
   ]
 }
