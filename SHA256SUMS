@@ -1,6 +1,7 @@
-c37e2711500f4a430d99e4d6d8cd7f7966c42706793464e0c3bcaa835eb1f7e6  .claude/skills/agentic-ceo/SKILL.md
+b383aed4c67568d44b0579649fc32606011a7dbea906a29c305a79ed70d5d705  .claude/skills/agentic-ceo/SKILL.md
 cc52f678848b814373757b460383bf61960e4943c203735adde0a350b3e50989  .claude/skills/agentic-ceo/VERSION
-3122784e8b188babadd7ceb0dddf69cfb308e7a02bbf67ed82cf3527a81f5eb1  .claude/skills/agentic-ceo/evals/evals.json
+963c913c0d61a161634c2f7edac120f4b0701db2938322c81ffd532d2b562669  .claude/skills/agentic-ceo/evals/evals.json
+d852c122f76103d558eba447c106e38f23627b8f613143e6ea1022bc28593618  .claude/skills/agentic-ceo/scripts/task_ledger.py
 55338e96af9a2e72124dc7c5e8da8370cc8858a78c89c6f3136f1938b887366e  .claude/skills/agentic-delivery/SKILL.md
 f50a6cbdff96a1012b615805c04d7f1d0b640358087470dddd79586203b9b63a  .claude/skills/agentic-delivery/VERSION
 c19e3a24cecdf684ee632f34965a420550fa88ff438b11b45724a32aad4d9810  .claude/skills/agentic-delivery/evals/evals.json
