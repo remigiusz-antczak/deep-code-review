@@ -26,6 +26,12 @@
 #                           never expanded against this directory). Unset ->
 #                           the script's own defaults (tests/** etc; see its
 #                           --help).
+#   DCR_TRIGGER_GLOBS      space-separated globs (literal patterns, as
+#                           above). Set -> fix_class_gate.py runs a second
+#                           time in trigger mode on the same range: a commit
+#                           touching a matching path must also touch a
+#                           DCR_TEST_GLOBS path or carry a non-empty
+#                           No-Mechanism-Reason: trailer. Unset -> skipped.
 #   DCR_BINARIES_ALLOWLIST path to the binaries-gate allowlist file. Unset ->
 #                           <repo-root>/scripts/binaries-allowlist.tsv if it
 #                           exists, else no exemptions.
@@ -118,6 +124,25 @@ if [ -f "${FIX_CLASS_GATE}" ]; then
     else
       printf 'dcr-gates: fix_class_gate FAIL\n' >&2
       FAIL=1
+    fi
+    # Optional trigger mode (lesson -> mechanism): same script, same range,
+    # same test globs; any failure (including a script error) fails closed.
+    if [ -n "${DCR_TRIGGER_GLOBS:-}" ]; then
+      trig_args=()
+      read -r -a trigger_globs <<<"${DCR_TRIGGER_GLOBS}"
+      for g in "${trigger_globs[@]+"${trigger_globs[@]}"}"; do
+        trig_args+=(--trigger-glob "$g")
+      done
+      if [ "${#trig_args[@]}" -eq 0 ]; then
+        # Whitespace-only value: set but names no glob — a misconfiguration.
+        printf 'dcr-gates: FAIL fix_class_gate trigger mode (DCR_TRIGGER_GLOBS names no glob)\n' >&2
+        FAIL=1
+      elif (cd "${REPO_ROOT}" && python3 "${FIX_CLASS_GATE}" --base "${BASE_SHA}" --head "${HEAD_SHA}" "${glob_args[@]+"${glob_args[@]}"}" "${trig_args[@]}"); then
+        printf 'dcr-gates: fix_class_gate trigger mode PASS\n'
+      else
+        printf 'dcr-gates: fix_class_gate trigger mode FAIL\n' >&2
+        FAIL=1
+      fi
     fi
   fi
 else
