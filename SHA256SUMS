@@ -79,7 +79,7 @@ b41320aab9d3540398d065a470b3abb05241e2928fd02682a9264c7922dc39b7  .claude/skills
 424f89b0865cdd430c04dc27e24df004aff0515592a4aff07ea478a5e6339f63  .claude/skills/deep-code-review/scripts/fixtures/parity/design.html
 378dcf26ad5bed5fc680e0c3ca58a337ad6e0b81784a27d36e59b5551a70154e  .claude/skills/deep-code-review/scripts/parity_differ.py
 317acae212ed73279df66eb7b419b8426733bb1be05345b0e1c8b2c6790ad8a1  .claude/skills/deep-code-review/scripts/validate_status_claims.py
-e5e75c9fddff8ff585a147d11f32f2dd5cf01c7c9ccfea6c0b7c5c4c70ce13c3  .claude/skills/deep-code-review/templates/dcr-gates.sh
+e72958e7b6044eb0d5be68e7df4c9891278fbc7f26e02b2504d27cbe8acc7c4d  .claude/skills/deep-code-review/templates/dcr-gates.sh
 e9df3483336d6470072f8b7d7bfd5e93e281da2b5a892590101b4cb3ed89e419  .claude/skills/deep-code-review/templates/dcr-gates.yml
 5068e60f9615684c8d8bf8fbd7896748267cf6688895a701bdd25cd945181cb8  .claude/skills/growth-analytics/SKILL.md
 cc52f678848b814373757b460383bf61960e4943c203735adde0a350b3e50989  .claude/skills/growth-analytics/VERSION

@@ -90,7 +90,14 @@ if [ -f "${FIX_CLASS_GATE}" ]; then
     BASE_SHA="$(git -C "${REPO_ROOT}" rev-parse --verify -q 'HEAD~1' 2>/dev/null || true)"
   fi
   if [ -z "${BASE_SHA}" ] || [ -z "${HEAD_SHA}" ]; then
-    printf 'dcr-gates: fix_class_gate skipped (BASE_SHA/HEAD_SHA unresolvable; single-commit repo?)\n'
+    if [ -n "${CI:-}" ]; then
+      # In CI the workflow must supply a resolvable range; a missing one is a
+      # misconfiguration, never a pass.
+      printf 'dcr-gates: FAIL fix_class_gate (BASE_SHA/HEAD_SHA unresolvable in CI)\n'
+      FAIL=1
+    else
+      printf 'dcr-gates: fix_class_gate skipped (local run, no range: single-commit repo?)\n'
+    fi
   else
     glob_args=()
     if [ -n "${DCR_TEST_GLOBS:-}" ]; then
