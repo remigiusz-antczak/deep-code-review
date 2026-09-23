@@ -80,6 +80,7 @@ FIX_CLASS_GATE="${REVIEW_ROOT}/scripts/fix_class_gate.py"
 if [ -f "${FIX_CLASS_GATE}" ]; then
   BASE_SHA="${BASE_SHA:-}"
   HEAD_SHA="${HEAD_SHA:-}"
+  CALLER_RANGE="${BASE_SHA}${HEAD_SHA}"
   if [ -z "${BASE_SHA}" ] && [ -z "${HEAD_SHA}" ]; then
     # `--verify` (not a bare `rev-parse <ref>`): on an unresolvable ref, plain
     # `git rev-parse HEAD~1` still prints the literal ref text to STDOUT
@@ -90,13 +91,13 @@ if [ -f "${FIX_CLASS_GATE}" ]; then
     BASE_SHA="$(git -C "${REPO_ROOT}" rev-parse --verify -q 'HEAD~1' 2>/dev/null || true)"
   fi
   if [ -z "${BASE_SHA}" ] || [ -z "${HEAD_SHA}" ]; then
-    if [ -n "${CI:-}" ]; then
-      # In CI the workflow must supply a resolvable range; a missing one is a
-      # misconfiguration, never a pass.
-      printf 'dcr-gates: FAIL fix_class_gate (BASE_SHA/HEAD_SHA unresolvable in CI)\n'
+    if [ -n "${CALLER_RANGE}" ]; then
+      # The caller (the CI workflow) supplied half a range: a misconfiguration,
+      # never a pass.
+      printf 'dcr-gates: FAIL fix_class_gate (caller supplied an incomplete BASE_SHA/HEAD_SHA range)\n'
       FAIL=1
     else
-      printf 'dcr-gates: fix_class_gate skipped (local run, no range: single-commit repo?)\n'
+      printf 'dcr-gates: fix_class_gate skipped (no range supplied and HEAD~1 unresolvable: single-commit repo?)\n'
     fi
   else
     glob_args=()
