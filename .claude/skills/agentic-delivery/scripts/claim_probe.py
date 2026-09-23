@@ -26,11 +26,16 @@ MATCHING
 --paths takes files, directories, or fnmatch globs (`*` also crosses `/`;
 `**/` may match zero directories). Two literal paths collide when equal or
 when one is a directory prefix of the other. A glob and a literal collide when
-the glob matches the literal or the literal is an ancestor of the glob's fixed
-prefix. Two globs collide when their fixed prefixes nest — conservative, so it
-can say NO-GO for two disjoint globs under one directory, never GO for
+the glob matches the literal, or the literal and the glob's fixed prefix nest
+either way (`src/lib` vs `src/**/*.py`, `docs` vs `*.md`: a literal may be a
+directory). A PR or branch file is known to be a file, so for it only a direct
+match counts. Two globs collide when their fixed prefixes nest — conservative,
+so it can say NO-GO for two disjoint globs under one directory, never GO for
 overlapping ones. A claim ref collides when it equals a --ref token (an issue
-`#<n>`, or a label such as an exclusive-role seat) or overlaps a --paths entry.
+`#<n>` or bare `<n>`, or a label such as an exclusive-role seat), when an item
+claim `#<n>` equals a --keyword `<n>` or `#<n>`, or when it overlaps a --paths
+entry. With no --ref at all, every live item claim `#<n>` is NO-GO evidence:
+paths and keywords cannot say which item you are starting, so name it.
 
 FAIL CLOSED
 -----------
@@ -46,8 +51,8 @@ snippet sanitiser, so it cannot inject terminal escapes.
 
 USAGE
 -----
-  claim_probe.py --repo OWNER/NAME --issue N --paths web/** [--paths api/x.py]
-                 [--ref '#123'] [--keyword theme] [--agent my-id]
+  claim_probe.py --repo OWNER/NAME --issue N --ref '#123' --paths web/** [--paths api/x.py]
+                 [--keyword theme] [--agent my-id]
                  [--ignore-pr 7] [--ignore-branch my-branch] [--max-branches 50]
   claim_probe.py --selftest
 
@@ -102,8 +107,14 @@ def _under(path: str, root: str) -> bool:
     return root == "" or path == root or path.startswith(root + "/")
 
 
-def overlaps(a: str, b: str) -> bool:
-    """True iff paths/globs `a` and `b` can name a common file (see MATCHING). Pure."""
+def overlaps(a: str, b: str, a_is_file: bool = False) -> bool:
+    """True iff paths/globs `a` and `b` can name a common file (see MATCHING). Pure.
+
+    A literal of unknown kind may be a directory, so it also collides with a
+    glob whose fixed root contains it (`src/lib` vs `src/**/*.py`, `docs` vs
+    `*.md`). Pass `a_is_file=True` when `a` is known to be a file (a PR or
+    compare entry): nothing sits beneath a file, so only a direct match counts.
+    """
     a, b = norm(a), norm(b)
     if not a or not b:
         return False
@@ -115,12 +126,25 @@ def overlaps(a: str, b: str) -> bool:
         return _under(ra, rb) or _under(rb, ra)
     glob, lit = (a, b) if ga else (b, a)
     zero_dir = glob.replace("/**/", "/").removeprefix("**/")
-    return fnmatchcase(lit, glob) or fnmatchcase(lit, zero_dir) or _under(fixed_root(glob), lit)
+    if fnmatchcase(lit, glob) or fnmatchcase(lit, zero_dir):
+        return True
+    may_be_dir = not (a_is_file and lit == a)
+    return may_be_dir and (_under(fixed_root(glob), lit) or _under(lit, fixed_root(glob)))
 
 
 def _cites(text: str, ref: str) -> bool:
     """True iff `text` cites issue ref `#<n>` as a whole token (so #11 never matches #110). Pure."""
     return bool(re.search(rf"(?<![0-9A-Za-z_]){re.escape(ref)}(?![0-9])", text or ""))
+
+
+def _item_ref(token: str):
+    """`#<n>` for an issue ref written `#<n>` or bare `<n>`, else None. Pure.
+
+    So `--ref 1102`, `--keyword 1102`, and a claim `#1102` all name one item;
+    a leading zero is dropped (`#01102` is `#1102`).
+    """
+    m = re.fullmatch(r"#?([0-9]+)", (token or "").strip())
+    return f"#{int(m.group(1))}" if m else None
 
 
 def _kw_hits(text: str, keywords) -> list:
@@ -143,13 +167,22 @@ def probe(repo: str, issue: int, paths, refs, keywords, agent: str, ignore_prs, 
     """
     evidence, counts = [], {"claims": 0, "prs": 0, "branches": 0}
     _, comments = bs.read_board(repo, issue, runner)
+    kw_items = {_item_ref(k) for k in keywords} - {None}
     for ref, cl in sorted(bs.fold(comments, now)["claims"].items()):
         if cl["expired"] or cl["agent"] == agent:
             continue
         counts["claims"] += 1
-        if ref in refs or (not ref.startswith("#") and any(overlaps(ref, p) for p in paths)):
-            evidence.append(f"claim  {ref} held by agent:{cl['agent']} until {bc.format_ts(cl['expires'])} "
-                            f"(board comment {cl['id']})")
+        held = (f"claim  {_show(ref)} held by agent:{cl['agent']} until {bc.format_ts(cl['expires'])} "
+                f"(board comment {cl['id']})")
+        item = _item_ref(ref) if ref.startswith("#") else None
+        named = ref in refs or (item and (item in refs or item in kw_items))
+        if named or (not ref.startswith("#") and any(overlaps(ref, p) for p in paths)):
+            evidence.append(held)
+        elif item and not refs:
+            # Paths and keywords cannot say which item you are starting; an item
+            # claim is only ruled out by naming your own item with --ref.
+            evidence.append(f"{held}: no --ref names your item, so it cannot be ruled out "
+                            f"(re-run with --ref '#<n>')")
 
     base = f"repos/{repo}"
     default = bc.gh_object(runner, base).get("default_branch")
@@ -171,7 +204,7 @@ def probe(repo: str, issue: int, paths, refs, keywords, agent: str, ignore_prs, 
             files = [f.get("filename", "") for f in bc.gh_list(runner, f"{base}/pulls/{num}/files?per_page=100")]
             if len(files) >= MAX_PR_FILES:
                 raise bc.ForgeError(f"PR #{num} lists {len(files)} files (GitHub cap {MAX_PR_FILES}): cannot rule it out")
-            why += [_show(f) for f in files if any(overlaps(f, p) for p in paths)][:3]
+            why += [_show(f) for f in files if any(overlaps(f, p, a_is_file=True) for p in paths)][:3]
         if why:
             evidence.append(f"pr     {tag}: {', '.join(why)}")
 
@@ -188,7 +221,7 @@ def probe(repo: str, issue: int, paths, refs, keywords, agent: str, ignore_prs, 
             files = [f.get("filename", "") for f in bc.gh_object(runner, cmp_path).get("files") or []]
             if len(files) >= MAX_COMPARE_FILES:
                 raise bc.ForgeError(f"branch {_show(name)} compare lists {len(files)} files (cap {MAX_COMPARE_FILES})")
-            why += [_show(f) for f in files if any(overlaps(f, p) for p in paths)][:3]
+            why += [_show(f) for f in files if any(overlaps(f, p, a_is_file=True) for p in paths)][:3]
         if why:
             evidence.append(f"branch {_show(name)} (no PR): {', '.join(why)}")
     return evidence, counts
@@ -197,7 +230,7 @@ def probe(repo: str, issue: int, paths, refs, keywords, agent: str, ignore_prs, 
 def run(args, runner, out, err) -> int:
     """Validate inputs, run the probe, print the verdict. Returns the exit code."""
     paths = [norm(p) for p in args.paths if norm(p)]
-    refs = {r.strip() for r in args.ref if r.strip()}
+    refs = {_item_ref(r) or r.strip() for r in args.ref if r.strip()}  # `1102` and `#1102` name one item
     keywords = [k.strip() for k in args.keyword if k.strip()]  # an empty keyword would match everything
     if not (args.repo and bc.validate_repo(args.repo) and args.issue and args.issue > 0):
         err.write("claim_probe: --repo OWNER/NAME and --issue N (>0, the board) are required\n")
@@ -231,7 +264,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--repo")
     p.add_argument("--issue", type=int, help="the coordination board issue")
     p.add_argument("--paths", action="append", default=[], help="planned file, directory, or glob (repeatable)")
-    p.add_argument("--ref", action="append", default=[], help="item or role ref, e.g. '#123' or a label (repeatable)")
+    p.add_argument("--ref", action="append", default=[],
+                   help="your item or role ref, e.g. '#123' or a label (repeatable); "
+                        "without one, any live item claim is NO-GO")
     p.add_argument("--keyword", action="append", default=[], help="case-insensitive match on PR titles/branches")
     p.add_argument("--agent", help="your board agent id; your own claims are skipped")
     p.add_argument("--ignore-pr", action="append", type=int, default=[], help="your own PR number (repeatable)")
@@ -407,11 +442,33 @@ def _selftest() -> int:
     def overlap_matrix():
         table = [("web", "web/a.ts", True), ("web/a.ts", "web", True), ("web/", "web", True),
                  ("web/a.ts", "web/b.ts", False), ("webx/a", "web", False), ("web/**", "web/a/b.ts", True),
-                 ("src/**/*.py", "src/x.py", True), ("src/*.py", "src/x.md", False), ("web/*.ts", "web", True),
+                 ("src/**/*.py", "src/x.py", True), ("src/*.py", "src/x.md", True), ("web/*.ts", "web", True),
                  ("web/*.ts", "api/*.py", False), ("*.md", "docs/y.md", True), ("./api/x.py", "api/x.py", True),
-                 (".", "any/deep/file.py", True)]
+                 (".", "any/deep/file.py", True),
+                 # A literal directory under the glob's fixed root (either order) can hold a match.
+                 ("src/**/*.py", "src/lib", True), ("src/lib", "src/**/*.py", True), ("*.md", "docs", True),
+                 ("docs", "*.md", True), ("web/*.ts", "api", False), ("src/*.py", "srcx", False)]
         bad = [(a, b, want) for a, b, want in table if overlaps(a, b) != want]
+        # A known file (a PR or compare entry) holds nothing beneath it: only a direct match counts.
+        files = [("src/x.md", "src/*.py", False), ("src/x.py", "src/*.py", True), ("docs", "*.md", False)]
+        bad += [(a, b, want, "file") for a, b, want in files if overlaps(a, b, a_is_file=True) != want]
         return not bad, bad
+
+    def claim_item_ref_matches_keyword_and_ref():
+        comments = [_c(1, 0, "[agent:beta] CLAIM refs:#1102 ttl:60\ntaking the item")]
+        runs = {flag: _probe(_forge(comments=comments, prs=[]), *flag)
+                for flag in (("--keyword", "1102"), ("--ref", "#1102"), ("--ref", "1102"), ("--keyword", "#1102"))}
+        miss = {f: r for f, r in runs.items() if not (r[0] == NOGO and "claim  #1102 held by agent:beta" in r[1])}
+        rc, out, err = _probe(_forge(comments=comments, prs=[]), "--ref", "#110", "--keyword", "110")
+        return not miss and rc == GO, (miss, rc, out, err)
+
+    def live_item_claim_without_ref_no_go():
+        comments = [_c(1, 0, "[agent:beta] CLAIM refs:#77 ttl:60\nx"), _c(2, 1, "[agent:beta] CLAIM refs:#78 ttl:5\nx")]
+        rc, out, err = _probe(_forge(comments=comments, prs=[]), "--paths", "docs/y.md")
+        own = _probe(_forge(comments=comments, prs=[]), "--paths", "docs/y.md", "--agent", "beta")
+        named = _probe(_forge(comments=comments, prs=[]), "--paths", "docs/y.md", "--ref", "#5")
+        return (rc == NOGO and "claim  #77" in out and "no --ref" in out and "#78" not in out
+                and own[0] == GO and named[0] == GO), (rc, out, err, own, named)
 
     cases = [
         ("live-claim-no-go", live_claim_no_go),
@@ -433,6 +490,8 @@ def _selftest() -> int:
         ("nothing-to-probe-exits-2", nothing_to_probe_exits_2),
         ("peer-title-sanitised", peer_title_sanitised),
         ("overlap-matrix", overlap_matrix),
+        ("claim-item-ref-matches-keyword-and-ref", claim_item_ref_matches_keyword_and_ref),
+        ("live-item-claim-without-ref-no-go", live_item_claim_without_ref_no_go),
     ]
     return bc.run_checks("claim_probe", cases)
 

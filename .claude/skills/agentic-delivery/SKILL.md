@@ -17,8 +17,7 @@ metadata:
 
 Public-safe delivery overlay for any coding agent — a **pattern**, not a
 runtime or a standing swarm. Not installed by default; add it with
-`./install.sh --with-delivery` or `--full` after the owner says yes (or after
-`./install.sh --recommend` names it).
+`./install.sh --with-delivery` or `--full` after the owner says yes.
 
 It does **not** replace `deep-code-review` — review is the bar, this is how work
 reaches it. Do not run a second delivery OS (Superpowers, gstack `/ship`, a
@@ -172,12 +171,11 @@ reset, or deciding what keeps an unattended run alive.
 *enforced* rather than merely followed (or when designing a host adapter), grade
 the claim against `references/host-enforcement.md` — **read it when** you would
 otherwise write "the gate / budget / permission is enforced," or brief a
-write-lane. Model-tier selection: `deep-code-review`'s `model-tiering.md`.
+write-lane.
 
 **A subagent's handback narration is capped by a host hook, not only asked to
-be short** — `references/host-enforcement.md` routes `scripts/handback_cap.py`,
-the `SubagentStop` hook that mechanically enforces the Output contract's
-fields-only shape below.
+be short** — `scripts/handback_cap.py` (`SubagentStop`) enforces the Output
+contract's fields-only shape; `references/host-enforcement.md`.
 
 **Operational readiness — incidents and continuity (bus factor = 1).** The
 binder that must exist *before* the system is on fire or the solo operator is
@@ -200,7 +198,9 @@ conductor).** Two or more agent sessions coordinating over a shared async
 channel instead of one orchestrator's own lanes:
 `references/multi-session-coordination.md` — **read it when** designing a
 claim/lock registry, a pre-write collision probe, a peer-liveness check, a
-shared-board reader, or any peer trigger in that file's **Routed triggers** (broadcast asks, crossed splits, merge-holds, shared budgets).
+shared-board reader, pushing a house comms/review default down to spawned
+subagents, retracting your own in-flight lane, or any peer trigger in that
+file's **Routed triggers** (broadcast asks, crossed splits, merge-holds, shared budgets).
 
 **Unattended / autonomous operating mode (an overnight or multi-hour autonomous
 run).** When this skill runs as a **continuous loop over a backlog** rather than
@@ -215,7 +215,7 @@ offset recurring loops runs it. A **loop, not a standing swarm**.
 integrated (G7), the work item it closes is done; G8 Release is a separate,
 later, **owner-gated** action on a different clock, often batched across many
 G7s. Never park a G7-complete item as "blocked on deploy" — land it, close it,
-and name G8 as downstream and pending, not as a reason the item isn't done.
+and name G8 as downstream and pending.
 
 ---
 
@@ -328,7 +328,7 @@ Copied as principles, not as anyone's private playbook:
 2. **Banlist split.** Committed `.banlist.txt` = generic secret shapes.
    Gitignored local file = real identifiers. Fail closed if the committed
    list is missing or malformed. Report `file:line`, never echo the match.
-3. **A gate can be wrong about why.** Real defect fails closed; a check that could not run is `UNVERIFIED`, and a required one still blocks; find the failing step before reverting; re-fetch state when a result surprises you.
+3. **A gate can be wrong about why.** Real defect fails closed; a check that could not run is `UNVERIFIED`, and a required one still blocks even when authorization exists (evidence and permission are separate decisions); on a red pipeline find the failing step, rerun a known-flaky check; revert only once the failure reproduces and is tied to the change; re-fetch state when a result surprises you.
 4. **Prove the gate can fail.** Plant, watch red, revert. Required for
    every new gate this project adds.
 5. **Skip loudly over absent input.** Missing fixture ≠ pass.
@@ -339,12 +339,11 @@ Copied as principles, not as anyone's private playbook:
 9. **Closing or deleting shared state needs evidence, not presumption** — a reproducible reason, unique context migrated first.
 10. **A fleet-wide external advisory is a third case for principle 3, and an
     independent-queue merge cascade is a cadence choice subordinate to
-    principle 6** — neither restated here; depth and the honest limits of
-    each: `references/merge-queue-worktrees.md`.
+    principle 6** — depth and honest limits: `references/merge-queue-worktrees.md`.
 11. **"Visible/done" is measured on the owner's own surface, never a proxy** — wired ≠ rendered ≠ has a real value.
 12. **A fork a ratified invariant already decides is not an owner gate**; a change that would reverse one is queued to the owner, never applied silently.
 
-Principles 3, 9, 11, and 12 are one-line rules here; full statements: `references/gate-epistemology.md` — **read it when** a result surprises you or a check could not run (3), closing or deleting shared state (9), reporting visible/done (11), or raising a fork an invariant may decide (12).
+Full statements of 3, 9, 11, 12: `references/gate-epistemology.md` — **read it when** a result surprises you, a check could not run, or on a red pipeline / about to revert (3), closing or deleting shared state (9), reporting visible/done (11), or raising a fork an invariant may decide (12).
 
 ---
 
@@ -400,8 +399,6 @@ repo that already has another delivery pack without saying so.
 
 - Default `./install.sh` does not copy this skill; `--with-delivery` / `--full`
   copies it next to `deep-code-review`.
-- `references/roles.md` ships with the skill (whole-directory copy), routed from
-  this file.
 - A planted defect makes G5/G6 fail; a denied outward action remains blocked.
 - `evals/evals.json` names `recommend-must-not-write` and
   `default-install-omits-delivery`.

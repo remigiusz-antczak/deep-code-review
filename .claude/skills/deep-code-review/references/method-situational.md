@@ -43,7 +43,11 @@ Read this when `method.md` routes here: a gate verdict is disputed, a finding mu
   scored (build it, or hit the deployed/preview URL), per the local≠CI rule (below).
   Converse: a dev-only symptom (hot-reload remount, dev-mode double-invoked effects, a
   dev overlay) is not a finding until a scripted path reproduces it on a production
-  build.
+  build. Exception: if the symptom traces in the code to a missing cleanup (an
+  effect that subscribes, listens, or schedules and never tears down) or a
+  non-idempotent effect (it posts, charges, or appends on every run), that code
+  defect **is** the finding, cited at its `file:line` — dev double-invocation
+  exists to surface exactly that, and a remount or re-run in production hits it too.
 - **A no-regressions gate keys on *reachability*, not surface-position stability.**
   A destructive-change gate that watches a surface label or slot (a top-level nav
   entry, a route path, a menu position) false-fires on a legitimate reorganisation —

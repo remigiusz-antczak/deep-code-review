@@ -25,21 +25,28 @@ Modes (stdlib only, no third-party dependency):
       semver, a JSON number — is NOT a build id: a payload's "data as of"
       stamp dates the artifact, not the running code. Redirects are NOT
       followed (a redirect means U is not the surface that serves the build;
-      re-run with the Location URL if that is the real surface).
+      re-run with the Location URL if that is the real surface). --timeout
+      bounds each socket read and, as a wall-clock cap, the body read.
 
-  ref --repo DIR --branch B --expect-sha S [--remote origin]
+  ref --repo DIR --branch B --expect-sha S [--remote origin] [--timeout 120]
       Fetch B from the remote the reviewer uses, then PASS only when S is an
       ancestor of (reachable from) that fetched remote head. A local branch or
       a stale local tree is never consulted. Fetch writes the remote-tracking
       ref refs/remotes/<remote>/<B>, exactly as a plain `git fetch` would.
+      Git runs with GIT_TERMINAL_PROMPT=0 and no terminal; a call past
+      --timeout seconds is killed and reported as COULD_NOT_CHECK.
 
   --json  print one JSON object (verdict, observed id, surface, reason, UTC
           observation time) for a board post or a handback `Verify:` line.
 
+Leakage: a rejected build-id value is reported by type and length only, and
+every printed URL (the surface, a redirect Location, a URL remote) drops its
+userinfo, query, and fragment. A --url carrying userinfo is refused.
+
 Exit codes: 0 PASS; 1 FAIL (the surface serves / the branch holds something
 else); 2 COULD_NOT_CHECK (no build id, non-200, redirect, network or git
-error, a shallow clone, an ambiguous or too-short sha, or bad usage). Exit 2
-is never a pass: an unverifiable claim stays unverified.
+error, a timeout, a shallow clone, an ambiguous or too-short sha, or bad
+usage). Exit 2 is never a pass: an unverifiable claim stays unverified.
 
 Side effects: `served` performs HTTP GETs (proxy env vars are honoured);
 `ref` runs `git fetch` against the named remote. Nothing else is written.
@@ -51,8 +58,10 @@ import io
 import json
 import os
 import re
+import signal
 import subprocess
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -62,6 +71,7 @@ PASS, FAIL, COULD_NOT_CHECK = 0, 1, 2
 VERDICT = {PASS: "PASS", FAIL: "FAIL", COULD_NOT_CHECK: "COULD_NOT_CHECK"}
 MIN_SHA = 7
 MAX_BODY = 2 * 1024 * 1024
+DEFAULT_GIT_TIMEOUT = 120.0  # seconds per git call in `ref` mode
 HEX_RE = re.compile(r"^[0-9a-f]+$")
 PROVES = "the surface serves this build; not that the feature works"
 PROVES_REF = "the remote branch contains this commit; not that it is deployed or works"
@@ -111,28 +121,70 @@ class _MetaParser(HTMLParser):
             self.found = a.get("content", "")
 
 
+def redact_url(url):
+    """Return `url` safe to print: userinfo, query, and fragment dropped, control chars removed.
+
+    A surface URL or a peer's redirect target can carry a password or a token
+    (`https://user:pw@host/p?token=...`); only scheme, host, port, and path are
+    kept. Non-URL text is returned with control characters stripped. Pure.
+    """
+    text = "".join(ch for ch in str(url) if ch.isprintable())[:300]
+    try:
+        parts = urllib.parse.urlsplit(text)
+        host = parts.hostname or ""
+        port = f":{parts.port}" if parts.port else ""
+    except ValueError:
+        return "<unparseable URL>"
+    if not parts.scheme or not parts.netloc:
+        return text.split("?", 1)[0].split("#", 1)[0]
+    if ":" in host:  # IPv6 literal
+        host = f"[{host}]"
+    return urllib.parse.urlunsplit((parts.scheme, host + port, parts.path, "", ""))
+
+
+def _describe(raw):
+    """Type and length of a value that is not a build id — never the value (it may be a secret). Pure."""
+    return f"{type(raw).__name__} of length {len(str(raw))}"
+
+
 def _fetch(url, timeout):
-    """GET url without following redirects; return (headers, body text)."""
+    """GET url without following redirects; return (headers, body text).
+
+    `timeout` bounds each socket operation AND the whole body read (wall-clock),
+    so a server that trickles bytes cannot hold the check open.
+    """
     handlers = [_NoRedirect()]
     if _PROXIES is not None:
         handlers.append(urllib.request.ProxyHandler(_PROXIES))
     opener = urllib.request.build_opener(*handlers)
     req = urllib.request.Request(url, headers={"User-Agent": "surface_check/1"})
+    shown = redact_url(url)
     try:
         with opener.open(req, timeout=timeout) as resp:
             status = resp.status
             headers = resp.headers
-            body = resp.read(MAX_BODY).decode("utf-8", errors="replace")
+            deadline = time.monotonic() + timeout
+            chunks, size = [], 0
+            while size < MAX_BODY:
+                if time.monotonic() > deadline:
+                    raise CheckError(f"{shown} body not read within the {timeout:g}s wall-clock cap")
+                chunk = resp.read1(min(65536, MAX_BODY - size))
+                if not chunk:
+                    break
+                chunks.append(chunk)
+                size += len(chunk)
+            body = b"".join(chunks).decode("utf-8", errors="replace")
     except urllib.error.HTTPError as exc:
         if 300 <= exc.code < 400:
-            loc = exc.headers.get("Location", "?")
-            raise CheckError(f"{url} redirected ({exc.code}) to {loc}; not followed — "
+            loc = redact_url(exc.headers.get("Location", "?"))
+            raise CheckError(f"{shown} redirected ({exc.code}) to {loc}; not followed — "
                              "re-run with that URL if it is the surface the reviewer opens")
-        raise CheckError(f"{url} returned HTTP {exc.code}, not 200")
+        raise CheckError(f"{shown} returned HTTP {exc.code}, not 200")
     except (urllib.error.URLError, OSError, ValueError) as exc:
-        raise CheckError(f"{url} could not be fetched: {exc}")
+        detail = exc.reason if isinstance(exc, urllib.error.URLError) else exc
+        raise CheckError(f"{shown} could not be fetched: {str(detail).replace(url, shown)[:200]}")
     if status != 200:
-        raise CheckError(f"{url} returned HTTP {status}, not 200")
+        raise CheckError(f"{shown} returned HTTP {status}, not 200")
     return headers, body
 
 
@@ -158,25 +210,38 @@ def _json_key(doc, key):
 
 
 def _as_build_id(raw):
-    """Return (sha, None) for a usable build id, else (None, why-not)."""
+    """Return (sha, None) for a usable build id, else (None, why-not).
+
+    A rejected value is described by type and length only, never echoed: a
+    header or JSON key named like a build id can hold a token or a secret.
+    """
     if raw is None or raw == "":
         return None, "absent"
     if not isinstance(raw, str):
-        return None, f"{type(raw).__name__} {raw!r} is not a commit sha (a timestamp/number is not a build id)"
+        return None, f"{_describe(raw)} is not a commit sha (a timestamp/number is not a build id)"
     v = raw.strip().lower()
     if not HEX_RE.match(v):
-        return None, f"{raw!r} is not a commit sha (a data timestamp or version is not a build id)"
+        return None, f"{_describe(raw)} is not a commit sha (a data timestamp or version is not a build id)"
     if len(v) < MIN_SHA:
-        return None, f"{raw!r} is shorter than {MIN_SHA} hex chars; too ambiguous"
+        return None, f"{_describe(raw)} is shorter than {MIN_SHA} hex chars; too ambiguous"
     return v, None
 
 
 def check_served(url, expect, probes, timeout):
     """Return (code, observed, reason) for the served-build check."""
     expected = _sha(expect, "--expect-sha")
-    scheme = urllib.parse.urlsplit(url).scheme.lower()
+    try:
+        parts = urllib.parse.urlsplit(url)
+        userinfo = parts.username is not None or parts.password is not None
+    except ValueError:
+        raise CheckError("--url is not a parseable URL")
+    scheme = parts.scheme.lower()
     if scheme not in ("http", "https"):
         raise CheckError(f"--url scheme {scheme or '(none)'!r} unsupported; want http or https")
+    if userinfo:
+        # urllib would resolve "user:pw@host" as a hostname, leaking it to DNS.
+        raise CheckError("--url carries userinfo credentials, which are not sent and would leak "
+                         "(argv is visible to local users); give the bare URL")
     if not probes:
         raise CheckError("at least one --probe is required; the build id must come from a named signal")
     parsed = [(spec, *_parse_probe(spec)) for spec in probes]
@@ -218,40 +283,68 @@ def check_served(url, expect, probes, timeout):
 # --------------------------------------------------------------------------
 # ref
 # --------------------------------------------------------------------------
-def _git(repo, *args):
-    return subprocess.run(["git", "-C", repo, *args], capture_output=True, text=True)
+def _git(repo, *args, timeout=DEFAULT_GIT_TIMEOUT):
+    """Run one git command non-interactively; a hang past `timeout` s raises CheckError.
+
+    GIT_TERMINAL_PROMPT=0, a closed stdin, and a new session (no controlling
+    terminal) stop git and its ssh child from waiting on a credential prompt;
+    on timeout the whole process group is killed so a grandchild holding the
+    pipes cannot keep the check open.
+    """
+    env = {**os.environ, "GIT_TERMINAL_PROMPT": "0"}
+    try:
+        proc = subprocess.Popen(["git", "-C", repo, *args], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE, text=True, env=env, start_new_session=True)
+    except OSError as exc:
+        raise CheckError(f"git could not be started: {exc}")
+    try:
+        out, err = proc.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        with contextlib.suppress(OSError):
+            if hasattr(os, "killpg"):
+                os.killpg(proc.pid, signal.SIGKILL)
+            else:
+                proc.kill()
+        proc.communicate()
+        raise CheckError(f"git {args[0]} timed out after {timeout:g}s (a hung remote or credential prompt)")
+    return subprocess.CompletedProcess(proc.args, proc.returncode, out, err)
 
 
-def check_ref(repo, remote, branch, expect):
-    """Return (code, observed-remote-head, reason) for the reachability check."""
+def check_ref(repo, remote, branch, expect, timeout=DEFAULT_GIT_TIMEOUT):
+    """Return (code, observed-remote-head, reason) for the reachability check.
+
+    Every git call is bounded by `timeout` seconds; a timeout raises CheckError (exit 2).
+    """
+    git = lambda *a: _git(repo, *a, timeout=timeout)  # noqa: E731  (one bound runner for this check)
     expected = _sha(expect, "--expect-sha")
+    shown = redact_url(remote)  # a URL remote can carry credentials
     if remote.startswith("-") or not remote:
-        raise CheckError(f"bad --remote {remote!r}")
-    if branch.startswith("-") or _git(repo, "check-ref-format", "--branch", branch).returncode != 0:
+        raise CheckError(f"bad --remote {shown!r}")
+    if branch.startswith("-") or git("check-ref-format", "--branch", branch).returncode != 0:
         raise CheckError(f"bad --branch {branch!r}")
-    if _git(repo, "rev-parse", "--is-shallow-repository").stdout.strip() == "true":
+    if git("rev-parse", "--is-shallow-repository").stdout.strip() == "true":
         raise CheckError("shallow clone: ancestry is incomplete, reachability cannot be decided")
     tracking = f"refs/remotes/{remote}/{branch}"
-    fetch = _git(repo, "fetch", "--quiet", "--no-tags", remote, f"+refs/heads/{branch}:{tracking}")
+    fetch = git("fetch", "--quiet", "--no-tags", remote, f"+refs/heads/{branch}:{tracking}")
     if fetch.returncode != 0:
-        raise CheckError(f"git fetch {remote} {branch} failed: {fetch.stderr.strip()[:300]}")
-    head = _git(repo, "rev-parse", "--verify", "--quiet", tracking + "^{commit}").stdout.strip()
+        raise CheckError(f"git fetch {shown} {branch} failed: {fetch.stderr.replace(remote, shown).strip()[:300]}")
+    head = git("rev-parse", "--verify", "--quiet", tracking + "^{commit}").stdout.strip()
     if not head:
         raise CheckError(f"{tracking} did not resolve after fetch")
-    res = _git(repo, "rev-parse", "--verify", "--quiet", expected + "^{commit}")
+    res = git("rev-parse", "--verify", "--quiet", expected + "^{commit}")
     if res.returncode != 0:
         # After a full fetch every ancestor of the remote head is local, so an
         # unknown object is not on the branch; an ambiguous prefix is refused.
-        amb = _git(repo, "rev-parse", "--disambiguate=" + expected).stdout.split()
+        amb = git("rev-parse", "--disambiguate=" + expected).stdout.split()
         if len(amb) > 1:
             raise CheckError(f"--expect-sha {expected} is ambiguous in {repo}; give more chars")
-        return FAIL, head, f"{expected} is not in {repo} after fetching {remote}/{branch} (head {head[:12]})"
+        return FAIL, head, f"{expected} is not in {repo} after fetching {shown}/{branch} (head {head[:12]})"
     full = res.stdout.strip()
-    anc = _git(repo, "merge-base", "--is-ancestor", full, head)
+    anc = git("merge-base", "--is-ancestor", full, head)
     if anc.returncode == 0:
-        return PASS, head, f"{full[:12]} is reachable from {remote}/{branch} (head {head[:12]})"
+        return PASS, head, f"{full[:12]} is reachable from {shown}/{branch} (head {head[:12]})"
     if anc.returncode == 1:
-        return FAIL, head, f"{full[:12]} is NOT reachable from {remote}/{branch} (head {head[:12]})"
+        return FAIL, head, f"{full[:12]} is NOT reachable from {shown}/{branch} (head {head[:12]})"
     raise CheckError(f"git merge-base failed: {anc.stderr.strip()[:300]}")
 
 
@@ -277,6 +370,7 @@ def _parser():
     r.add_argument("--remote", default="origin")
     r.add_argument("--branch", required=True)
     r.add_argument("--expect-sha", required=True)
+    r.add_argument("--timeout", type=float, default=DEFAULT_GIT_TIMEOUT, help="seconds per git call")
     return p
 
 
@@ -288,13 +382,15 @@ def main(argv=None):
     if not args.mode:
         _parser().print_usage(sys.stderr)
         return COULD_NOT_CHECK
-    surface = args.url if args.mode == "served" else f"{args.remote}/{args.branch} in {args.repo}"
+    # Printed and JSON surfaces never carry userinfo, a query, or a fragment (tokens live there).
+    surface = (redact_url(args.url) if args.mode == "served"
+               else f"{redact_url(args.remote)}/{args.branch} in {args.repo}")
     proves = PROVES if args.mode == "served" else PROVES_REF
     try:
         if args.mode == "served":
             code, observed, reason = check_served(args.url, args.expect_sha, args.probe, args.timeout)
         else:
-            code, observed, reason = check_ref(args.repo, args.remote, args.branch, args.expect_sha)
+            code, observed, reason = check_ref(args.repo, args.remote, args.branch, args.expect_sha, args.timeout)
     except CheckError as exc:
         code, observed, reason = COULD_NOT_CHECK, None, str(exc)
     if getattr(args, "json", False):
@@ -339,11 +435,24 @@ def _selftest():
         "/redir": (302, {"Location": "/hdr"}, ""),
         "/boom": (500, {"X-Build-Sha": good}, ""),
         "/proxied": (203, {"X-Build-Sha": good}, ""),
+        "/hdr-secret": (200, {"X-Build-Sha": "Bearer s3cr3t-t0ken-value"}, ""),
+        "/redir-cred": (302, {"Location": "https://jane:hunter2@evil.example/next?token=abc#frag"}, ""),
     }
 
     class H(http.server.BaseHTTPRequestHandler):
         def do_GET(self):
-            code, hdrs, body = routes.get(self.path, (404, {}, "missing"))
+            path = self.path.split("?", 1)[0]
+            if path == "/drip":  # a body that trickles in under the per-read timeout forever
+                self.send_response(200)
+                self.send_header("Content-Length", "100000")
+                self.end_headers()
+                with contextlib.suppress(OSError):
+                    for _ in range(200):
+                        self.wfile.write(b"<")
+                        self.wfile.flush()
+                        time.sleep(0.1)
+                return
+            code, hdrs, body = routes.get(path, (404, {}, "missing"))
             data = body.encode()
             self.send_response(code)
             for k, v in hdrs.items():
@@ -422,11 +531,38 @@ def _selftest():
     passed += ok
     failed += not ok
     print(f"{'PASS' if ok else 'FAIL'}  served --json: machine verdict carries observed id + proves")
+
+    def no_leak(name, argv, want, secrets, must):
+        nonlocal passed, failed
+        rc, out = run(argv)
+        ok = rc == want and must in out and not any(s in out for s in secrets)
+        passed += ok
+        failed += not ok
+        print(f"{'PASS' if ok else 'FAIL'}  {name} (rc={rc}, want {want})" + ("" if ok else f"\n      {out.strip()}"))
+
+    no_leak("served: non-sha value reported as type+length, never echoed", served("/hdr-secret", good, H_),
+            COULD_NOT_CHECK, ("s3cr3t", "Bearer"), "str of length 25")
+    no_leak("served: redirect Location stripped of userinfo/query/fragment", served("/redir-cred", good, H_),
+            COULD_NOT_CHECK, ("hunter2", "jane", "token=abc", "frag"), "https://evil.example/next")
+    no_leak("served: surface drops query in text output", served("/hdr?token=abc", good, H_), PASS,
+            ("token=abc",), f"surface: {base}/hdr;")
+    cred = base.replace("http://", "http://jane:hunter2@") + "/hdr?token=abc"
+    no_leak("served --json: userinfo URL refused; surface and reason drop userinfo and query",
+            ["served", "--json", "--url", cred, "--expect-sha", good, "--probe", H_, "--timeout", "5"],
+            COULD_NOT_CHECK, ("hunter2", "jane", "token=abc"), f'"surface": "{base}/hdr"')
+    t0 = time.monotonic()
+    rc, out = run(["served", "--url", base + "/drip", "--expect-sha", good, "--probe", "meta:build-sha",
+                   "--timeout", "1"])
+    ok = rc == COULD_NOT_CHECK and "wall-clock" in out and time.monotonic() - t0 < 10
+    passed += ok
+    failed += not ok
+    print(f"{'PASS' if ok else 'FAIL'}  served: trickling body hits the wall-clock cap (rc={rc})"
+          + ("" if ok else f"\n      {out.strip()}"))
     srv.shutdown()
 
     tmp = tempfile.mkdtemp(prefix="surface-check-selftest-")
     env_keys = ("GIT_CONFIG_GLOBAL", "GIT_CONFIG_NOSYSTEM", "GIT_AUTHOR_NAME", "GIT_AUTHOR_EMAIL",
-                "GIT_COMMITTER_NAME", "GIT_COMMITTER_EMAIL")
+                "GIT_COMMITTER_NAME", "GIT_COMMITTER_EMAIL", "GIT_SSH_COMMAND")
     saved = {k: os.environ.get(k) for k in env_keys}
     os.environ.update(GIT_CONFIG_GLOBAL=os.devnull, GIT_CONFIG_NOSYSTEM="1",
                       GIT_AUTHOR_NAME="Jane Smith", GIT_AUTHOR_EMAIL="jane@example.com",
@@ -455,6 +591,37 @@ def _selftest():
         case("ref: sha < 7 chars refused", ref(pushed[:6]), COULD_NOT_CHECK, "shorter than 7")
         case("ref: missing remote branch refused", ref(pushed, "nope"), COULD_NOT_CHECK, "git fetch")
         case("ref: option-like branch refused", ref(pushed, "--upload-pack=x"), COULD_NOT_CHECK, "bad --branch")
+
+        # Two blobs whose ids share a 7-hex prefix (found by a birthday search
+        # over this content template): a 7-char --expect-sha naming either is
+        # ambiguous and must be refused, never read as "not on the branch".
+        blob = lambda i: subprocess.run(["git", "-C", work, "hash-object", "-w", "--stdin"], check=True,
+                                        input=f"surface-check ambiguity fixture {i}\n", capture_output=True,
+                                        text=True).stdout.strip()
+        b1, b2 = blob(1365), blob(3820)
+        if b1[:MIN_SHA] == b2[:MIN_SHA]:
+            case("ref: ambiguous 7-char sha refused", ref(b1[:MIN_SHA]), COULD_NOT_CHECK, "ambiguous")
+        else:
+            failed += 1
+            print(f"FAIL  ref: ambiguity fixture no longer collides ({b1[:MIN_SHA]} vs {b2[:MIN_SHA]})")
+
+        g("-C", work, "push", "--quiet", "origin", "HEAD:refs/heads/dev")
+        shallow = os.path.join(tmp, "shallow")
+        g("clone", "--quiet", "--depth", "1", "--branch", "dev", "file://" + remote, shallow)
+        case("ref: shallow clone refused", ["ref", "--repo", shallow, "--branch=dev", "--expect-sha", pushed],
+             COULD_NOT_CHECK, "shallow clone")
+
+        # A remote whose transport hangs (a stand-in ssh that only sleeps) must
+        # hit the timeout and exit 2, not block the caller.
+        g("-C", work, "remote", "add", "slow", "ssh://git@hang.example.invalid/x.git")
+        os.environ["GIT_SSH_COMMAND"] = "sleep 30 #"
+        t0 = time.monotonic()
+        case("ref: hung fetch times out -> could not check",
+             ["ref", "--repo", work, "--remote", "slow", "--branch=main", "--expect-sha", pushed, "--timeout", "1"],
+             COULD_NOT_CHECK, "timed out")
+        if time.monotonic() - t0 > 10:
+            failed += 1
+            print("FAIL  ref: hung fetch was not killed promptly")
     finally:
         for k, v in saved.items():
             if v is None:

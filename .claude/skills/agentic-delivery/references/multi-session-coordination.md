@@ -164,10 +164,12 @@ the *one-writer-per-file / never-rewrite-another-agent's-WIP* violation this pre
 Hand-reading the thread and open PRs before a claim or an exclusive step (a
 merge only one side should run) is skipped under volume, and a claim can lag
 its PR (#597, #1102). Before any write-lane or exclusive step run
-`scripts/claim_probe.py --repo R --issue <board> --paths <globs> [--ref
-<item-or-role>]`: it matches live, unexpired CLAIMs (an exclusive-role ref
+`scripts/claim_probe.py --repo R --issue <board> --ref <item-or-role>
+--paths <globs>`: it matches live, unexpired CLAIMs (an exclusive-role ref
 included), open and draft PR file lists, and un-PR'd branches, and prints GO
-or NO-GO with the colliding claim, PR, or file. Exit 2 is not GO.
+or NO-GO with the colliding claim, PR, or file. `--ref` is required in
+practice: without it every live item claim is NO-GO, because paths cannot say
+which item you are starting. Exit 2 is not GO.
 
 ## An agent-set merge-hold does not bind the human owner — classify a held-PR merge by who merged before calling it a breach
 

@@ -275,7 +275,7 @@ drained runner pool.
 
 ## A load-flaky required gate is not a confirmed red — bounded-rerun the same commit to reclassify it before concluding a regression
 
-This expands `SKILL.md` gate-epistemology principle 3 ("if the shape matches a known-flaky
+This expands `gate-epistemology.md` principle 3 ("if the shape matches a known-flaky
 browser/probe/hydration check, rerun and recheck **before** reverting") to the verdict an
 **autonomous merge-drainer** draws from a required check's pass/fail bit after each merge. Principle 3 carries
 the discriminator — identify the failing job **and step**, match it against a known-flaky signature, revert only
