@@ -116,7 +116,21 @@
 # every other archetype row unchanged at its exact total. Floors:
 # phase-floor-light 35858->35846, phase-floor-full 47452->47440.
 #
-web	38039
+# WEB NOTE (38K is a floor, not a typical load): 38,083 is the web
+# archetype's MUST-LOAD total only -- a review that never renders a
+# loading/skeleton/async-message region and never touches a client-side
+# fetch. Both are common on a dashboard and each is a separate
+# triggered ref, not part of the floor: `web-fetch.md` (22040 bytes / 4 =
+# 5510 tokens) and `a11y-live.md` (6889 bytes / 4 = 1722 tokens, truncated
+# per cmd_mustload's integer chars/4). A typical dashboard review's real
+# load is 38083 + 5510 + 1722 = 45315 estimated tokens.
+#
+# fix11/web re-pin: frontend-a11y.md and a11y-focus.md both now name an
+# off-canvas/collapsed/visually-hidden focusable region, and
+# product-ux-quality.md's pre-ship checklist box points to its
+# ux-components.md procedure; re-pinned web 38039->38083.
+#
+web	38083
 mobile	28772
 api / service	33563
 data / ETL	29571

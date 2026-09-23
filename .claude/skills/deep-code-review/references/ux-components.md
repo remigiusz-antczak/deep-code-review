@@ -146,9 +146,9 @@ consequence, so it is ruled on here too.
   comment's word:** grep comments and commit messages for promise phrasing (`tracked follow-up`,
   `migrate … later`, `should become a thin call of`, `consolidation deferred`), and confirm a real open
   issue names the specific two components. A structurally-confirmed duplicate with no tracking issue
-  means the claim is false — file the follow-up. Distinct from `frontend-a11y.md`'s "grep for *we
-  avoided the shared component because…*" (mines a comment stating a **reason not to use** a primitive,
-  a pre-verified bug already worked around) — this mines a comment **promising to finish** a migration,
+  means the claim is false — file the follow-up. Distinct from mining an *avoidance* comment ("we
+  avoided the shared component because…" — a stated reason not to use a primitive, a bug already
+  worked around) — this mines a comment **promising to finish** a migration,
   and the action is to *verify the promise was kept*, not treat the deviation as the bug. **(2) The one
   relevant leftover is buried in a multi-branch empty-state conditional, masked by legitimately-distinct
   siblings.** A search-like view chains several empty states — *no query yet* / *query too short* / *no

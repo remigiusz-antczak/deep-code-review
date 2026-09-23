@@ -60,7 +60,7 @@ Two rules override the whole roster:
 | **Evil Twin** | Any plan / approach / agent-originated "we should" | Attacks the claim before the owner sees it (G0/G1); pre-owner gate on every recommendation | **below** + `idea-critic` |
 | **QA** | Behaviour, data, or UI changed | Independent functional / regression / a11y / state-coverage verification at the exact SHA (G5, G6) | role-coverage.md *QA* |
 | **Security** | Authn/authz/egress/secret/supply-chain surface touched | Independent AppSec / privacy / supply-chain; red on paper + authorized testbed only (G6) | role-coverage.md *Data & AI*, *Backend*; `security-*.md` |
-| **UX & Design** | A rendered surface changed | At-home bar, five data states, encoding hygiene, interaction-completeness (G4, G6) | role-coverage.md *UX & UI*; `product-ux-quality.md` |
+| **UX & Design** | A rendered surface changed | At-home bar, five data states, encoding hygiene, interaction-completeness (G4, G6) | role-coverage.md *UX & UI*; `product-ux-quality.md`, `ux-interaction.md` |
 | **Release** | A change is ready to ship, or a feature flag is added | Named-owner sign-off, rollback proven, human approval on the outward action (G8, G9) | role-coverage.md *Release & docs* + **below** |
 | **Docs** | Behaviour, API, or nav a reader sees changed | The docs move in the **same change** as their subject; no stale pointer left behind (G4, G10) | role-coverage.md *Release & docs*; `docs-and-dx.md` |
 

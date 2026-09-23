@@ -2606,6 +2606,18 @@ else
   record 1 "web isolation: every a11y-*/web-*/ux-* sub-file ($web_subs) is routed from its parent's index and SKILL.md; form/chart rows name their trigger"
 fi
 
+# a11y-focus.md's own trigger and frontend-a11y.md's index row for it must
+# both name an off-canvas/collapsed/visually-hidden focusable region (fix11/
+# web): such a region still holds focusable content and must not silently
+# drop out of either route.
+if grep -qi 'off-canvas, collapsed, or visually hidden' "$dcr_sd/references/a11y-focus.md" \
+  && grep -E '^\| `a11y-focus\.md` \|' "$dcr_sd/references/frontend-a11y.md" \
+     | grep -qi 'off-canvas, collapsed, or visually hidden'; then
+  record 0 "web isolation: a11y-focus.md trigger and its frontend-a11y.md index row both name an off-canvas/collapsed/visually-hidden focusable region"
+else
+  record 1 "web isolation: a11y-focus.md trigger and its frontend-a11y.md index row both name an off-canvas/collapsed/visually-hidden focusable region"
+fi
+
 # Planted RED: a copy of the skill whose a11y parent re-absorbs one forms
 # bullet must be flagged as a leak into the non-form web load set.
 wiso_sd="$WORK/web-iso/deep-code-review"

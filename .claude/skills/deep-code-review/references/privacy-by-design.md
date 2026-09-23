@@ -57,8 +57,9 @@ withdrawal control as prominent as the consent control, no pre-ticked boxes, no
 dark patterns, a clear notice version surfaced to the user. This is the *design*
 spec; the *recording and enforcement* of consent as code (per-purpose record,
 load order before tags fire, withdrawal taking effect on the next read) is the
-code layer in `privacy-compliance.md`. Cross-ref `product-ux-quality.md` for the
-dark-pattern lens.
+code layer in `privacy-compliance.md`. Cross-ref the `product-output-safety`
+sibling's *Deceptive patterns* harm class (hidden defaults, manufactured
+urgency, hard-to-reverse consent) for the dark-pattern lens.
 
 ### 4. Subprocessor list + data-flow notes
 

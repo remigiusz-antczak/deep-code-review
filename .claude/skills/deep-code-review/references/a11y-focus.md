@@ -1,6 +1,6 @@
 # Accessibility depth — keyboard & focus (custom widgets, overlays, focus management)
 
-Read this when the target or diff builds a custom interactive widget (dialog, tablist, combobox, listbox, menu, disclosure, slider, tree), a popover / dropdown / flyout / hand-rolled modal overlay, a control that disables itself while an action is pending, a keyboard-scrollable container, a styled focus indicator, or a document-level focus / scroll-into-view correction handler (WCAG 2.1.1, 2.4.3, 2.4.7, 2.4.11, 2.4.13, 1.4.11). Split from `frontend-a11y.md`, whose base WCAG 2.2 AA checklist applies to every UI review.
+Read this when the target or diff builds a custom interactive widget (dialog, tablist, combobox, listbox, menu, disclosure, slider, tree), a popover / dropdown / flyout / hand-rolled modal overlay, a control that disables itself while an action is pending, a keyboard-scrollable container, a styled focus indicator, a document-level focus / scroll-into-view correction handler, or an off-canvas, collapsed, or visually hidden region that holds focusable content (WCAG 2.1.1, 2.4.3, 2.4.7, 2.4.11, 2.4.13, 1.4.11). Split from `frontend-a11y.md`, whose base WCAG 2.2 AA checklist applies to every UI review.
 
 ## Keyboard & focus — depth
 
