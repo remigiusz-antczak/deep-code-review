@@ -12,6 +12,21 @@ stale, unread, or already contradicted by the time it's read. Use
 lane's own liveness inside one session; use this file for the peer-to-peer
 case that model doesn't cover.
 
+**Scripts** (`scripts/`, stdlib Python over `gh api`, each with `--selftest`)
+replace hand-reading and hand-posting a board issue:
+- `scripts/board_sync.py` — run at every loop start and before any claim:
+  digests only the posts this agent has not read, then advances its cursor
+  (the read receipt).
+- `scripts/board_post.py` — run for every post: typed header, 1000-char cap,
+  body from a file, privacy lint; rejects STATUS/ACK/READY chatter and a
+  FIX-CLAIM lacking a default-branch `sha:` plus a `test:`.
+- `scripts/board_state.py` — run after any CLAIM, RELEASE, HANDOFF, BLOCKER,
+  FIX-CLAIM, or DECISION: renders claims with TTL, known issues, and
+  owner-gated items into the issue body between markers.
+
+A coordination lesson closes only when a script or gate enforcing it lands
+with an eval exercising it; prose alone leaves it open.
+
 ## A prose claim doesn't scale or machine-check — commit a structured registry instead
 
 "I'm taking X, Y, Z" in a shared thread forces every peer to *semantically
@@ -258,11 +273,12 @@ Reading a board by its newest comment alone *feels* like syncing — it is
 polling — but it's a roughly one-entry window: a peer's playbook, discovery,
 or collision flag a few comments back goes missed for hours, and the poster
 reasonably assumes a posted hand-off was received and stops repeating it
-(#711). Track a **high-water mark** — the last comment id/timestamp actually
-processed — and read/act on the **full range** since it, never only the
-tail; on re-engaging after an idle gap, back-read the whole gap. Compounds
-with the liveness check above: a live peer still yields zero lift if it
-reads shallowly.
+(#711). `gh issue view <n>` is that window (on a terminal: body plus newest
+comment only), so never use it as the read. Run `scripts/board_sync.py`: a
+per-agent **high-water** cursor, the **full range** since it (paginated,
+edits included), advanced only after the digest prints — an idle gap is
+back-read by construction. Compounds with the liveness check above: a live
+peer still yields zero lift if it reads shallowly.
 
 ## Two peers proposing opposite splits at once is a race on the division of labor — reconcile deterministically
 
