@@ -30,7 +30,7 @@ of work earn its keep?**
   scales with request input, dataset size, or an attacker-controlled count → a
   real finding (and, when the count is attacker-controlled, also a DoS lever —
   cross-ref *Bound the work* above and the API4 response-size axis in
-  `security-appsec.md`). Only the unbounded case earns the set/map rewrite.
+  `security-api.md`). Only the unbounded case earns the set/map rewrite.
 
 ## Database
 

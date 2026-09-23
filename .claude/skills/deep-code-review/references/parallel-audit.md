@@ -140,7 +140,7 @@ only to sampling inside a unit.
   to prevent. Read owned/changed paths from the paginated REST endpoint:
   `gh api repos/:owner/:repo/pulls/<n>/files --paginate --jq '.[].filename'`. Same failure class as a
   bare `gh pr/issue list` truncating to its default page (the *mind pagination* rule,
-  `agentic-delivery/references/fast-agentic-delivery.md`) and a forge-only absence check missing a
+  `agentic-delivery/references/unattended-trackers.md`) and a forge-only absence check missing a
   local worktree (#413): a `gh` read returns a truncated view **without erroring**, and a partial
   read yields a wrong "safe" / "absent" conclusion — treat every `gh` read as
   **paginated-until-proven-complete** before a collision or absence verdict.

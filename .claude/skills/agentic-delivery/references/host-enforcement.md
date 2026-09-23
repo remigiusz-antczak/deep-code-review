@@ -71,7 +71,7 @@ never assert a cross-host conformance result you did not observe.
 ## Subagent handback: fields-only, mechanically capped (a Host-enforced instance)
 
 Chat narration a subagent hands back to its caller is billed output nobody
-re-reads — `fast-agentic-delivery.md`'s cost argument, made a **hook** here
+re-reads — `fanout-host-sizing.md`'s cost argument, made a **hook** here
 instead of a prompt instruction alone (a prompt-level "keep it short" stays
 Protocol above, never Host-enforced). The cap is on **chat narration only**:
 deliverables (code, reports, long findings) go in files, which are

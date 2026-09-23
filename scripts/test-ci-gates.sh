@@ -1694,7 +1694,7 @@ autonomy_doctrine() {  # <root>: 0 when every assertion holds, 1 otherwise
   grep -qi 'never creates, widens, extends, or re-dates' <<<"$sec" || return 1
   grep -qi 'triggers deploy or publish' <<<"$sec" || return 1
   sec="$(awk '/^- \*\*Name the termination conditions/{f=1;print;next} /^- \*\*/{f=0} f' \
-    "$ad/references/fast-agentic-delivery.md")"
+    "$ad/references/unattended-trackers.md")"
   grep -qi 'standing grant' <<<"$sec" || return 1
   grep -qi 'owner-authored' <<<"$sec" || return 1
   grep -qi 'never silently drop' "$ad/references/unattended-operating-mode.md" || return 1
