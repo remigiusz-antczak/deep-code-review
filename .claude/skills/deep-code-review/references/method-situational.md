@@ -162,5 +162,5 @@ fuzzy/approximate matching or counting non-independent sources, inflating the nu
 `SKILL.md` principle 3, *No fabrication*). The honest deliverable is to make the count **provable** —
 retain the distinct corroborating evidence, add a gate that fails if a count ever
 outruns its evidence — not larger. (The scored / shown cousins live in
-`data-quality.md` scoring discipline and the confidence-tier false-precision rule in
+`data-scoring.md` and the confidence-tier false-precision rule in
 `ux-dataviz.md`.)

@@ -7,7 +7,7 @@ Read this when the target trains or serves a classical ML model, makes consequen
 Distinct from AI evals (`testing-ai-evals.md`, which score a model's *output*): these are the
 *pipeline* defects that make a reported metric **false** — the classical-ML sibling
 of the LLM golden-set contamination rule. (Temporal / as-of *feature* leakage in a
-train/serve pipeline is in `data-quality.md` §12; this is the train/test
+train/serve pipeline is in `data-ml.md`; this is the train/test
 split-hygiene and reproducibility half.)
 - **Split first; never fit on test.** Data leakage is "information that would not be
   available at prediction time is used when building the model," giving "overly
@@ -18,7 +18,7 @@ split-hygiene and reproducibility half.)
   feature derived from the label or from the future); and **no duplicate rows across
   splits**. A leaked split doesn't fail — it *passes too well*, so the tell is an
   implausibly high score, not an error.
-- **The split must respect group and time structure, and resampling happens inside the split.** Beyond fit-on-train, the *split strategy itself* leaks when rows aren't i.i.d.: a plain `KFold` scatters **correlated rows that share a group** (many samples per patient / user / device) across train and test, so the model memorizes the group and the score doesn't predict a genuinely new group — "the i.i.d. assumption is broken if the underlying generative process yields groups of dependent samples"; use `GroupKFold`, which "ensures that the same group is not represented in both testing and training sets" (scikit-learn). For **time-ordered** data a shuffled `KFold`/`ShuffleSplit` trains on the future to predict the past — the same source warns these "would result in unreasonable correlation between training and testing instances ... on time series data"; use a forward-chaining `TimeSeriesSplit`. And **class-imbalance resampling (SMOTE / over- / under-sampling) belongs inside the fold, on train only**: resampling the whole dataset before the split both leaks and makes the *test set artificially balanced* — the model then "will not be tested on a dataset with class distribution similar to the real use-case" (imbalanced-learn) — so the metric describes a distribution production never sees. All three **pass too well** rather than erroring, the same tell as the leaked-split rule above. (Distinct from the as-of *feature* leakage in `data-quality.md` §12 — this is split *structure*.)
+- **The split must respect group and time structure, and resampling happens inside the split.** Beyond fit-on-train, the *split strategy itself* leaks when rows aren't i.i.d.: a plain `KFold` scatters **correlated rows that share a group** (many samples per patient / user / device) across train and test, so the model memorizes the group and the score doesn't predict a genuinely new group — "the i.i.d. assumption is broken if the underlying generative process yields groups of dependent samples"; use `GroupKFold`, which "ensures that the same group is not represented in both testing and training sets" (scikit-learn). For **time-ordered** data a shuffled `KFold`/`ShuffleSplit` trains on the future to predict the past — the same source warns these "would result in unreasonable correlation between training and testing instances ... on time series data"; use a forward-chaining `TimeSeriesSplit`. And **class-imbalance resampling (SMOTE / over- / under-sampling) belongs inside the fold, on train only**: resampling the whole dataset before the split both leaks and makes the *test set artificially balanced* — the model then "will not be tested on a dataset with class distribution similar to the real use-case" (imbalanced-learn) — so the metric describes a distribution production never sees. All three **pass too well** rather than erroring, the same tell as the leaked-split rule above. (Distinct from the as-of *feature* leakage in `data-ml.md` — this is split *structure*.)
 - **Training is reproducible, so a metric delta is attributable.** Retraining on the
   same data should yield the same model; unseeded RNG and unpinned data / model / code
   versions make a score change unattributable — you can't tell a real regression from
@@ -28,13 +28,13 @@ split-hygiene and reproducibility half.)
 ## ML in production — drift monitoring & safe model rollout
 
 The lifecycle sibling of the two sections above: §"ML pipeline correctness" verifies the model
-was **trained** honestly and `data-quality.md` §12 verifies a feature is **computed the same**
+was **trained** honestly and `data-ml.md` verifies a feature is **computed the same**
 for training and serving — this is the **post-deployment** half, where a model that was correct
 at ship time silently decays, or a swap ships a quietly worse one. Both are invisible to the
 checks that guard training.
 - **Monitor drift, not just uptime.** A served model **silently loses accuracy** (no error is
   thrown) as the live input distribution drifts from the training distribution **over time** —
-  distinct from `data-quality.md` §12's train/serve *parity* check (two computation paths at one
+  distinct from `data-ml.md`'s train/serve *parity* check (two computation paths at one
   instant); this compares live inputs to the training baseline as time passes. Monitor the **input-feature
   distribution** and the **prediction distribution** (a sudden shift in either is the early
   signal), plus realized **performance against ground truth** — but **ground truth often lags** (the
