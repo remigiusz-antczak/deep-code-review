@@ -1,0 +1,28 @@
+/*
+  token_differ.py self-test fixture: the APP side (CSS custom properties).
+  Fictional values only. Each line plants one comparison case.
+*/
+:root {
+  --color-brand-primary: rgb(255 0 0);           /* hex vs rgb: MATCH */
+  --color-brand-accent: #0066cc;                 /* srgb object vs hex: MATCH */
+  --color-surface: rgba(255, 255, 255, 1);       /* hex3 vs rgba: MATCH */
+  --color-overlay: rgba(0, 0, 0, 0.5);           /* hex8 vs rgba: MATCH */
+  --color-link: var(--color-brand-accent);       /* alias vs var(): MATCH */
+  --color-info: #0066cc;                         /* hsl vs hex: MATCH */
+  --color-focus: #f00;                           /* $ref pointer vs hex3: MATCH */
+  --color-text: #111111;
+  --space-base: 16px;
+  --spacing-md: var(--space-base);               /* rem vs px: MATCH */
+  --spacing-sm: 8px;                             /* rem string vs px: MATCH */
+  --radius-lg: 10px;                             /* 12px vs 10px: MISMATCH */
+  --radius-sm: var(--radius-xs);                 /* app-side var() cycle: UNRESOLVED */
+  --radius-xs: var(--radius-sm);
+  --font-weight-bold: 700;                       /* keyword vs number: MATCH */
+  --font-family-body: "Inter", sans-serif;       /* list vs quoted string: MATCH */
+  --motion-fast: var(--motion-unset, 200ms);     /* var() fallback, s vs ms: MATCH */
+  --app-only-shadow: 0 1px 2px #000;             /* app-only: reported, never failed */
+}
+
+[data-theme="dark"] {
+  --color-text: #eeeeee;                         /* conflicting redefinition: UNRESOLVED */
+}

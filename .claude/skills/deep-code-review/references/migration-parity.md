@@ -124,10 +124,10 @@ grep each for distinctive UI strings from the newest change-log entries; the one
 the target (record it where every lane reads it), never the largest or best-named. None matches →
 ask the design owner (`method.md`'s stale-input rule).
 
-**Check order: cheap and deterministic first — an earlier mismatch stops the rest.** Diff
-design-token **values** (below) before the structural differ, and run the differ before any
-screenshot pass: a token mismatch or a `MISMATCH`/`CANNOT_COMPARE` verdict usually explains a
-later pixel diff — fix and re-run first.
+**Check order: cheap and deterministic first — an earlier mismatch stops the rest.** Token
+**values**: `scripts/token_differ.py --design <f> --app <f>` (0 = all MATCH), then the
+structural differ, then screenshots: a token or `MISMATCH`/`CANNOT_COMPARE` verdict often
+explains a later pixel diff — fix, re-run first.
 
 ## Scope a parity claim to the correspondence table — one screen verified is not the product
 
