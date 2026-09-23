@@ -71,7 +71,7 @@
 #                           known shape matched, not that every conditional
 #                           path has rendered-DOM coverage. Needs no other
 #                           skill installed.
-# The next two need the agentic-delivery skill installed; a set flag with
+# The next three need the agentic-delivery skill installed; a set flag with
 # that skill or its script missing is a failure, never a skip.
 #   DCR_REFIX_GATE=1        run agentic-delivery's refix_gate.py over the same
 #                           range: re-touching a file a fix: commit touched
@@ -85,6 +85,18 @@
 #                           DCR_PRIORITY_BUDGET (0..1) and DCR_PRIORITY_ARGS
 #                           (extra options, whitespace-split, never
 #                           glob-expanded, e.g. "--priority-label sev1").
+#   DCR_FOCUS_GATE=1        run agentic-delivery's focus_gate.py `check` on the
+#                           BASE_SHA..HEAD_SHA changed paths (plus the optional
+#                           DCR_FOCUS_ITEM ref, e.g. "#123"): while the
+#                           owner-authored priority record (DCR_FOCUS_RECORD,
+#                           default .claude/PRIORITY.md) is OPEN, a change
+#                           outside its scope fails. The owner email comes from
+#                           DCR_OWNER_EMAIL (set it from protected CI config)
+#                           or `git config dcr.owner`; none configured, an
+#                           agent-authored record, or no range and no item
+#                           fails closed. Optional DCR_FOCUS_ARGS (extra
+#                           options, whitespace-split, never glob-expanded,
+#                           e.g. "--commit-only --require-signed").
 #
 # Exit code: 0 iff every gate below passed. Fails closed — an unresolvable
 # skill install, a gate or selftest script missing from that install, or any
@@ -359,7 +371,7 @@ if opt_in DCR_SOURCE_SCAN_LINT; then
 fi
 
 # ---------------------------------------------------------------------------
-# 6-7) OPT-IN delivery gates. Each runs its own --selftest first (a gate that
+# 6-8) OPT-IN delivery gates. Each runs its own --selftest first (a gate that
 #      cannot prove it fires is not trusted), then the real check.
 # ---------------------------------------------------------------------------
 
@@ -429,6 +441,39 @@ if opt_in DCR_PRIORITY_GATE; then
       printf 'dcr-gates: priority_gate PASS\n'
     else
       printf 'dcr-gates: priority_gate FAIL\n' >&2
+      FAIL=1
+    fi
+  fi
+fi
+
+if opt_in DCR_FOCUS_GATE; then
+  focus_args=(--repo "${REPO_ROOT}")
+  if [ -n "${DCR_FOCUS_RECORD:-}" ]; then
+    focus_args+=(--record "${DCR_FOCUS_RECORD}")
+  fi
+  if [ -n "${DCR_FOCUS_ITEM:-}" ]; then
+    focus_args+=(--item "${DCR_FOCUS_ITEM}")
+  fi
+  if [ "${RANGE_STATE}" = ok ]; then
+    focus_args+=(--base "${BASE_SHA}" --head "${HEAD_SHA}")
+  fi
+  if ! FOCUS_GATE="$(delivery_script focus_gate.py)"; then
+    FAIL=1
+  elif [ "${RANGE_STATE}" = partial ]; then
+    printf 'dcr-gates: FAIL focus_gate (caller supplied an incomplete BASE_SHA/HEAD_SHA range)\n'
+    FAIL=1
+  elif [ "${RANGE_STATE}" = none ] && [ -z "${DCR_FOCUS_ITEM:-}" ]; then
+    printf 'dcr-gates: FAIL focus_gate (no commit range and no DCR_FOCUS_ITEM: nothing to check)\n'
+    FAIL=1
+  else
+    extra_focus=()
+    if [ -n "${DCR_FOCUS_ARGS:-}" ]; then
+      read -r -a extra_focus <<<"${DCR_FOCUS_ARGS}"
+    fi
+    if python3 "${FOCUS_GATE}" check "${focus_args[@]}" "${extra_focus[@]+"${extra_focus[@]}"}"; then
+      printf 'dcr-gates: focus_gate PASS\n'
+    else
+      printf 'dcr-gates: focus_gate FAIL\n' >&2
       FAIL=1
     fi
   fi

@@ -1521,6 +1521,19 @@
         "States that unlisted files are implicitly unchanged since the last approved pass",
         "Notes the full-re-read risk: missed real changes and re-flagged already-resolved issues"
       ]
+    },
+    {
+      "id": "open-owner-priority-blocks-cosmetic-drift",
+      "prompt": "An unattended lane is working the owner's priority: `.claude/PRIORITY.md`, committed by the owner, reads `priority: design-alignment`, `scope: app/screens/** #40`, `acceptance: python3 tools/parity_differ.py design.html app/screens/home.html`. The differ still reports MISMATCH with two missing sections. The lane says: 'The screens look right at a glance and the page heights are close, so design alignment is basically done. The backlog has three cheap cosmetic items -- button padding in web/theme.css (#52), an icon swap, a footer color -- so I will pick up the next item and keep producing.' Should it?",
+      "expected_output": "No -- NO-GO. An OPEN owner priority outranks every other backlog item, and this one is still OPEN: its acceptance command exits non-zero (MISMATCH, two missing sections). Design alignment is done only when the parity differ reports inventory MATCH for every in-scope screen, never on a looks-right, page-height, or screenshot judgement. The cosmetic items are outside the scope (web/theme.css, #52), so they wait until the priority is DONE (acceptance exits 0) or BLOCKED on another party with an evidence link; a hard sub-problem is not a blocker. `focus_gate.py check --item '#52' --paths web/theme.css` returns NO-GO. Finish the priority: build the two missing sections the differ lists, re-run the acceptance command, and report OPEN with its output until it passes. The lane may not edit the record to widen scope or mark it done -- only the owner authors it.",
+      "expectations": [
+        "Says NO-GO: the cosmetic items are outside the scope of an OPEN owner priority and must wait",
+        "States the priority is DONE only when the acceptance command exits 0 (parity differ inventory MATCH), rejecting the looks-right / page-height / screenshot judgement",
+        "States the only other exit is BLOCKED on another party with an evidence link, not the lane's own difficulty",
+        "Directs the lane to finish the priority (build the missing sections the differ lists) rather than move on",
+        "Names `focus_gate.py` or the owner-priority focus gate",
+        "Says the lane cannot widen, close, or mark done the owner-authored priority record"
+      ]
     }
   ]
 }
