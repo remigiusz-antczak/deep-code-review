@@ -3,13 +3,13 @@ cc52f678848b814373757b460383bf61960e4943c203735adde0a350b3e50989  .claude/skills
 3122784e8b188babadd7ceb0dddf69cfb308e7a02bbf67ed82cf3527a81f5eb1  .claude/skills/agentic-ceo/evals/evals.json
 7a8612a4eb94addaaf89df95f8ab2bbd8e162484832b1a4a1118abd95eb95b0c  .claude/skills/agentic-delivery/SKILL.md
 acd700e5529cb4ec992751e22cf03b82605fe5da6690e665dbf3d4ffe0546cc0  .claude/skills/agentic-delivery/VERSION
-3b5d0f6d48f2e96c94a123771be5d7fa108c36d86cbd1f178c4fecb626227d70  .claude/skills/agentic-delivery/evals/evals.json
+0db85058ab4c627c116e8a255ade4e798a3701cffbe6b0b4a1349230832d8742  .claude/skills/agentic-delivery/evals/evals.json
 c20956be4670049f8b6591aaf5424117920355aec5c18569ddcc0f3cdbaabcb9  .claude/skills/agentic-delivery/references/dev-env-ownership.md
 12f6c329e23769c0e5ebbfba703cee5eb3b92c7faedd46c7aac67a4a30c36518  .claude/skills/agentic-delivery/references/fanout-host-sizing.md
 65a4f37308dedfee001b871e6925538f8dd53c1a01507c4319aafedb6d30bdd3  .claude/skills/agentic-delivery/references/fast-agentic-delivery.md
 3943aca5c3fd0d89696d80d26d3dff85f619d4bd45b6340d3cf65a3586213c03  .claude/skills/agentic-delivery/references/host-enforcement.md
 1b8d16e76c453aef8ac31e1c096935268d2cea9347ee78e643f7da7c77815e2c  .claude/skills/agentic-delivery/references/incident-response.md
-1e2afb1f0ae50dabedbb56763e21f7ef9fb93f4d3ea48ae7be6ab5d579e68492  .claude/skills/agentic-delivery/references/merge-queue-worktrees.md
+2425f57393eb3ab0e06a2fe8bce03f9be3d6eb415283b5bbed0379771f984e36  .claude/skills/agentic-delivery/references/merge-queue-worktrees.md
 8535747afc03e9d16fddc205db71727d2ee6676cd66ffc03a8d8f501d235b653  .claude/skills/agentic-delivery/references/multi-session-coordination.md
 1febf84fd4545d6a554f465c774ecefb3e8221f6840310d44d01c50a2dba2dfa  .claude/skills/agentic-delivery/references/production-grade-product-playbook.md
 43f591470428a89fa1a6c88da0e4ac1e6b514c6d41d892249740c45e6444b1d5  .claude/skills/agentic-delivery/references/project-state.md
@@ -99,6 +99,7 @@ d5606abd5b9ec08d6d4bf98e0e51b1c52d430040bb1a957e4b545bff816ae2cf  .claude/skills
 317acae212ed73279df66eb7b419b8426733bb1be05345b0e1c8b2c6790ad8a1  .claude/skills/deep-code-review/scripts/validate_status_claims.py
 20c9c131848f08fbf7bdfcd9a84224da7fe69e7e68ad65c2228911380c7b77a3  .claude/skills/deep-code-review/templates/dcr-gates.sh
 e9df3483336d6470072f8b7d7bfd5e93e281da2b5a892590101b4cb3ed89e419  .claude/skills/deep-code-review/templates/dcr-gates.yml
+76dbc8b83b553fbe09abb4cf020c1fc13490e190ddb8489e1fa844bac23cb9de  .claude/skills/deep-code-review/templates/pre-push-verify.sh
 5068e60f9615684c8d8bf8fbd7896748267cf6688895a701bdd25cd945181cb8  .claude/skills/growth-analytics/SKILL.md
 cc52f678848b814373757b460383bf61960e4943c203735adde0a350b3e50989  .claude/skills/growth-analytics/VERSION
 4c8047eeb8b174b520c736e7b189d5a49e4a755aad738e9c44c8af4e25fe1067  .claude/skills/growth-analytics/evals/evals.json

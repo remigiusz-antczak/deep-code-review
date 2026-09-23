@@ -354,6 +354,11 @@ delivery gate's own verdict.
   load (free RAM + the swap trend, *Gate on free RAM and the swap trend* above; the peer-aggregate form is
   `multi-session-coordination.md`'s shared heavy-lane reservation), and run locally only the gate CI actually
   enforces (*CI-offload the heavy gate* above) — so fewer contention-flakes reach the verdict step at all.
+- **A rebase or merge-conflict resolution is unverified code, not a confirmed pass.** `git rebase --continue`
+  never re-invokes `pre-commit` on the replayed commits, so re-run the lint+unit tier explicitly right after
+  conflict resolution and before `git push`; `templates/pre-push-verify.sh` (`deep-code-review`) can enforce this
+  mechanically, but a hook is self-report, not the control — `branch-and-merge-hygiene.md`'s "Self-report ≠
+  control" is the trusted-evidence rule (not restated here).
 
 Distinct from *Gate on free RAM and the swap trend* and *CI-offload the heavy gate* (#935): those decide
 **whether and how heavily** to run the local gate (sizing) — prevention; this decides
