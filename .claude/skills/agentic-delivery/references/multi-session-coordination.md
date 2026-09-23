@@ -36,7 +36,10 @@ replace hand-reading and hand-posting a board issue:
 - `scripts/board_post.py` — run for every post: typed header, 1000-char cap,
   body from a file, privacy lint; rejects STATUS/ACK/READY chatter and a
   FIX-CLAIM lacking a default-branch `sha:` plus a `test:`; AUDIT posts
-  `verdict:gap|done|na` per ref at such a `sha:`.
+  `verdict:gap|done|na` per ref at such a `sha:`. Default the body of a
+  STATUS-free typed post (CLAIM, RELEASE, HANDOFF, ...) to one line, action or
+  state only (`ready #123`, `took X, files A,B`) — the 1000-char cap is the
+  backstop, not the target length.
 - `scripts/board_state.py` — run after any CLAIM, RELEASE, HANDOFF, BLOCKER,
   FIX-CLAIM, or DECISION: renders claims (TTL), issues, owner gates in the
   issue body; `--backlog --head <sha>` is the audit as a dispatch queue: spawn
@@ -172,7 +175,11 @@ its PR (#597, #1102). Before any write-lane or exclusive step run
 included), open and draft PR file lists, and un-PR'd branches, and prints GO
 or NO-GO with the colliding claim, PR, or file. `--ref` is required in
 practice: without it every live item claim is NO-GO, because paths cannot say
-which item you are starting. Exit 2 is not GO.
+which item you are starting. Exit 2 is not GO. On a crossed claim (#1124:
+both sides claimed the same item before either read the other's), the same
+command prints `KEEP`/`YIELD` by the holder's first board comment id — never
+stand down on a peer's "I stopped" alone; a contested `board_post.py` RELEASE
+names its `rule:` (a plain one is `done`) and clears the cross.
 
 ## An agent-set merge-hold does not bind the human owner — classify a held-PR merge by who merged before calling it a breach
 

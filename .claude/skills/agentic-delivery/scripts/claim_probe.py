@@ -24,6 +24,25 @@ exclusive step, it compares what you plan to touch against:
 It prints GO, or NO-GO with one evidence line per collision (the claim and
 holder, the PR number and file, or the branch and file).
 
+CROSSED-CLAIM TIE-BREAK (KEEP / YIELD)
+---------------------------------------
+Two orchestrators can each post a CLAIM on the same item before either reads
+the other's (#1124's crossed-message case). `board_state.fold` already
+resolves that deterministically — the earliest board comment id is the
+elected holder, a later one on the same ref is recorded `contested` — this
+script just surfaces the verdict instead of leaving it buried in raw
+comments: a named item (--ref/--paths/--keyword) with a crossed claim prints
+`KEEP <ref>: you claimed first ...` when your own claim is the elected
+holder, or `YIELD <ref>: agent:X claimed first ...; rule: earliest-claim`
+when a peer's earlier claim is. Both cite the holder's FIRST claim (a
+renewal keeps it) and the board comment ids, so the verdict is checkable,
+never asserted. Only a live cross speaks (`board_state.live_contests`): a
+contest from a holder's earlier, since-ended tenure, or one its loser
+already stood down from with a RELEASE, prints nothing. This is a
+**readout**, not a second decision: it never overrides GO/NO-GO, and it
+never treats a peer's own "I stopped" message as authority — only the board
+state `fold` already resolved counts (multi-session-coordination.md).
+
 MATCHING
 --------
 --paths takes files, directories, or fnmatch globs (`*` also crosses `/`;
@@ -161,17 +180,34 @@ def _show(text: str, limit: int = 80) -> str:
 
 def probe(repo: str, issue: int, paths, refs, keywords, agent: str, ignore_prs, ignore_branches,
           max_branches: int, now: datetime, runner) -> tuple:
-    """Run every check; return `(evidence_lines, counts)`. NO-GO iff evidence is non-empty.
+    """Run every check; return `(evidence_lines, counts, notes)`. NO-GO iff evidence is non-empty.
+
+    `notes` never changes the verdict — it is the crossed-claim tie-break
+    readout (see `named()` and the claims loop below): KEEP when your own
+    live claim on a named item is the one `board_state.fold` elected as
+    holder despite a later peer CLAIM on the same ref, YIELD when a peer's
+    earlier CLAIM is the elected holder and your own later CLAIM is the one
+    `fold` recorded as contested. Both read `board_state.live_contests` —
+    the same earliest-by-board-comment-id resolution `fold` already applies,
+    limited to the holder's current tenure, never a second implementation of
+    the tie-break, and never a peer's own "I stopped" chat message
+    (multi-session-coordination.md).
 
     Side-effects: `gh api` reads only, through `runner` (the board issue and
     its comments, the repo, open PRs and their file lists, branches, and one
     compare per un-PR'd branch when --paths is set). Raises bc.ForgeError on
     any failed, malformed, or capped read — the caller exits 2.
     """
-    evidence, counts = [], {"claims": 0, "prs": 0, "branches": 0}
+    evidence, notes, counts = [], [], {"claims": 0, "prs": 0, "branches": 0}
     _, comments = bs.read_board(repo, issue, runner)
     kw_items = {_item_ref(k) for k in keywords} - {None}
     state = bs.fold(comments, now)
+
+    def named(ref):
+        item = _item_ref(ref) if ref.startswith("#") else None
+        return bool(ref in refs or (item and (item in refs or item in kw_items))
+                    or (not ref.startswith("#") and any(overlaps(ref, p) for p in paths)))
+
     for ref, au in sorted(state["audits"].items()):
         item = _item_ref(ref) if ref.startswith("#") else None
         if au["verdict"] != "gap" and (ref in refs or (item and (item in refs or item in kw_items))):
@@ -179,20 +215,41 @@ def probe(repo: str, issue: int, paths, refs, keywords, agent: str, ignore_prs, 
                             f"(board comment {au['id']}): a peer measured nothing to build; if that is stale, "
                             "re-measure and post AUDIT verdict:gap before starting")
     for ref, cl in sorted(state["claims"].items()):
-        if cl["expired"] or cl["agent"] == agent:
+        if cl["expired"]:
+            continue
+        # (ref, contesting_agent, comment_id, holder) rows against THIS holder's
+        # tenure only: a stale row from a released/expired/handed-off tenure,
+        # or one its contester already stood down from, yields no verdict.
+        crossers = bs.live_contests(state, ref)
+        first = f"claimed first at {bc.format_ts(cl['first_since'])} (board comment {cl['first_id']})"
+        if cl["agent"] == agent:
+            # You are the elected holder. A peer that claimed the same ref
+            # later lost the tie-break to you — say so explicitly, so a
+            # human or peer never has to re-derive it from raw comments.
+            if named(ref):
+                for _, peer, cid, _holder in crossers:
+                    notes.append(f"KEEP   {_show(ref)}: you {first}; agent:{peer} claimed later "
+                                 f"(board comment {cid}); rule: earliest-claim")
             continue
         counts["claims"] += 1
         held = (f"claim  {_show(ref)} held by agent:{cl['agent']} until {bc.format_ts(cl['expires'])} "
                 f"(board comment {cl['id']})")
-        item = _item_ref(ref) if ref.startswith("#") else None
-        named = ref in refs or (item and (item in refs or item in kw_items))
-        if named or (not ref.startswith("#") and any(overlaps(ref, p) for p in paths)):
+        if named(ref):
             evidence.append(held)
-        elif item and not refs:
-            # Paths and keywords cannot say which item you are starting; an item
-            # claim is only ruled out by naming your own item with --ref.
-            evidence.append(f"{held}: no --ref names your item, so it cannot be ruled out "
-                            f"(re-run with --ref '#<n>')")
+            # Your own CLAIM on this ref lost to an earlier one: name the
+            # rule so a stand-down (board_post.py RELEASE --rule) is never
+            # posted on a peer's say-so alone.
+            mine = next((c for c in crossers if c[1] == agent), None)
+            if mine:
+                notes.append(f"YIELD  {_show(ref)}: agent:{cl['agent']} {first}; your claim "
+                             f"(board comment {mine[2]}) is later; rule: earliest-claim")
+        else:
+            item = _item_ref(ref) if ref.startswith("#") else None
+            if item and not refs:
+                # Paths and keywords cannot say which item you are starting; an item
+                # claim is only ruled out by naming your own item with --ref.
+                evidence.append(f"{held}: no --ref names your item, so it cannot be ruled out "
+                                f"(re-run with --ref '#<n>')")
 
     base = f"repos/{repo}"
     default = bc.gh_object(runner, base).get("default_branch")
@@ -234,7 +291,7 @@ def probe(repo: str, issue: int, paths, refs, keywords, agent: str, ignore_prs, 
             why += [_show(f) for f in files if any(overlaps(f, p, a_is_file=True) for p in paths)][:3]
         if why:
             evidence.append(f"branch {_show(name)} (no PR): {', '.join(why)}")
-    return evidence, counts
+    return evidence, counts, notes
 
 
 def run(args, runner, out, err) -> int:
@@ -254,8 +311,8 @@ def run(args, runner, out, err) -> int:
         err.write("claim_probe: --now must be YYYY-MM-DDTHH:MM:SSZ\n")
         return ERROR
     try:
-        evidence, counts = probe(args.repo, args.issue, paths, refs, keywords, args.agent or "",
-                                 set(args.ignore_pr), set(args.ignore_branch), args.max_branches, now, runner)
+        evidence, counts, notes = probe(args.repo, args.issue, paths, refs, keywords, args.agent or "",
+                                        set(args.ignore_pr), set(args.ignore_branch), args.max_branches, now, runner)
     except (bc.ForgeError, KeyError, TypeError, ValueError, AttributeError) as exc:
         err.write(f"claim_probe: {exc}; NOT VERIFIED (exit 2, do not start)\n")
         return ERROR
@@ -263,8 +320,10 @@ def run(args, runner, out, err) -> int:
     if evidence:
         out.write(f"claim_probe: NO-GO — {len(evidence)} collision(s) ({seen})\n")
         out.write("".join(f"  {line}\n" for line in evidence))
+        out.write("".join(f"  {line}\n" for line in notes))
         return NOGO
     out.write(f"claim_probe: GO — nothing collides ({seen})\n")
+    out.write("".join(f"  {line}\n" for line in notes))
     return GO
 
 
@@ -480,6 +539,71 @@ def _selftest() -> int:
         return (rc == NOGO and "claim  #77" in out and "no --ref" in out and "#78" not in out
                 and own[0] == GO and named[0] == GO), (rc, out, err, own, named)
 
+    def crossed_claim_keep_and_yield_consistent():
+        # alpha's CLAIM lands first (comment 1); beta's crossed CLAIM on the
+        # same item lands a minute later, neither having seen the other's —
+        # exactly #1124's crossed-message scenario. `fold` elects alpha
+        # (earliest comment id) and records beta's as contested.
+        comments = [_c(1, 0, "[agent:alpha] CLAIM refs:#55 ttl:60\ntaking it"),
+                    _c(2, 1, "[agent:beta] CLAIM refs:#55 ttl:60\ntaking it too")]
+        forge = _forge(comments=comments, prs=[])
+        keep_rc, keep_out, _ = _probe(forge, "--ref", "#55", "--agent", "alpha")
+        yield_rc, yield_out, _ = _probe(forge, "--ref", "#55", "--agent", "beta")
+        return (
+            keep_rc == GO and "KEEP" in keep_out and "you claimed first" in keep_out
+            and "agent:beta claimed later (board comment 2)" in keep_out and "rule: earliest-claim" in keep_out
+            and yield_rc == NOGO and "YIELD" in yield_out and "agent:alpha claimed first" in yield_out
+            and "your claim (board comment 2) is later" in yield_out and "rule: earliest-claim" in yield_out
+        ), (keep_rc, keep_out, yield_rc, yield_out)
+
+    def crossed_claim_note_needs_named_item():
+        # No --ref/--paths/--keyword names the item: the generic "no --ref
+        # names your item" evidence still fires, but the KEEP/YIELD readout
+        # stays silent — it only speaks to an item you actually named.
+        comments = [_c(1, 0, "[agent:alpha] CLAIM refs:#56 ttl:60\ntaking it"),
+                    _c(2, 1, "[agent:beta] CLAIM refs:#56 ttl:60\ntaking it too")]
+        forge = _forge(comments=comments, prs=[])
+        rc, out, _ = _probe(forge, "--paths", "docs/y.md", "--agent", "alpha")
+        return "KEEP" not in out and "YIELD" not in out, (rc, out)
+
+    def renewal_keeps_first_claim_in_verdict():
+        # alpha renews after beta's crossed claim: both verdicts still cite
+        # alpha's FIRST claim (comment 1), so KEEP never says "you claimed
+        # first at comment 3" while beta's comment 2 is "later".
+        comments = [_c(1, 0, "[agent:alpha] CLAIM refs:#57 ttl:60\ntaking it"),
+                    _c(2, 1, "[agent:beta] CLAIM refs:#57 ttl:60\ntaking it too"),
+                    _c(3, 5, "[agent:alpha] CLAIM refs:#57 ttl:60\nheartbeat")]
+        forge = _forge(comments=comments, prs=[])
+        keep = _probe(forge, "--ref", "#57", "--agent", "alpha")
+        yld = _probe(forge, "--ref", "#57", "--agent", "beta")
+        first = "claimed first at 2026-01-05T10:00:00Z (board comment 1)"
+        verdicts = [ln for ln in (keep[1] + yld[1]).splitlines() if ln.strip().startswith(("KEEP", "YIELD"))]
+        return (keep[0] == GO and f"you {first}" in keep[1] and "(board comment 2)" in keep[1]
+                and yld[0] == NOGO and f"agent:alpha {first}" in yld[1] and "your claim (board comment 2) is later" in yld[1]
+                and len(verdicts) == 2 and not any("comment 3" in ln for ln in verdicts)), (keep, yld)
+
+    def release_then_new_claimer_no_stale_verdict():
+        # beta lost to alpha, alpha finished and released, then a new tenure
+        # began (gamma, or alpha again): beta's old contest is history, so no
+        # side gets a KEEP/YIELD from it.
+        base = [_c(1, 0, "[agent:alpha] CLAIM refs:#58 ttl:60\ntaking it"),
+                _c(2, 1, "[agent:beta] CLAIM refs:#58 ttl:60\ntaking it too"),
+                _c(3, 2, "[agent:alpha] RELEASE refs:#58 rule:done\nshipped")]
+        outs = []
+        for new in ("gamma", "alpha"):
+            forge = _forge(comments=base + [_c(4, 3, f"[agent:{new}] CLAIM refs:#58 ttl:60\nnext")], prs=[])
+            outs += [_probe(forge, "--ref", "#58", "--agent", who) for who in (new, "beta")]
+        return all("KEEP" not in o[1] and "YIELD" not in o[1] for o in outs) and outs[1][0] == NOGO, outs
+
+    def loser_release_clears_both_verdicts():
+        comments = [_c(1, 0, "[agent:alpha] CLAIM refs:#59 ttl:60\ntaking it"),
+                    _c(2, 1, "[agent:beta] CLAIM refs:#59 ttl:60\ntaking it too"),
+                    _c(3, 2, "[agent:beta] RELEASE refs:#59 rule:earliest-claim\nalpha claimed first")]
+        forge = _forge(comments=comments, prs=[])
+        keep = _probe(forge, "--ref", "#59", "--agent", "alpha")
+        yld = _probe(forge, "--ref", "#59", "--agent", "beta")
+        return (keep[0] == GO and "KEEP" not in keep[1] and yld[0] == NOGO and "YIELD" not in yld[1]), (keep, yld)
+
     def audited_done_or_na_no_go():
         comments = [_c(1, 0, "[agent:alpha] AUDIT refs:#3,#4 sha:abc1234 verdict:done\nalready shipped"),
                     _c(2, 1, "[agent:alpha] AUDIT refs:#5 sha:abc1234 verdict:gap\nreal gap"),
@@ -495,6 +619,11 @@ def _selftest() -> int:
 
     cases = [
         ("audited-done-or-na-no-go", audited_done_or_na_no_go),
+        ("crossed-claim-keep-and-yield-consistent", crossed_claim_keep_and_yield_consistent),
+        ("crossed-claim-note-needs-named-item", crossed_claim_note_needs_named_item),
+        ("renewal-keeps-first-claim-in-verdict", renewal_keeps_first_claim_in_verdict),
+        ("release-then-new-claimer-no-stale-verdict", release_then_new_claimer_no_stale_verdict),
+        ("loser-release-clears-both-verdicts", loser_release_clears_both_verdicts),
         ("live-claim-no-go", live_claim_no_go),
         ("lagging-pr-same-paths-no-go", lagging_pr_same_paths_no_go),
         ("disjoint-go-and-really-read", disjoint_go_and_really_read),

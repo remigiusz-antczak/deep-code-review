@@ -92,10 +92,13 @@ instead of a prompt instruction alone (a prompt-level "keep it short" stays
 Protocol above, never Host-enforced). The cap is on **chat narration only**:
 deliverables (code, reports, long findings) go in files, which are
 uncapped — a compliant handback names the file path instead of pasting its
-content into chat. A handback is **fields-only**: verdict, branch/SHA, file
-paths, gate results, open issues, as key=value or short lines. The
-orchestrator never relays a subagent's prose; it reads the fields and the
-named files.
+content into chat. **The default handback is one line:** `status | evidence |
+next` (verdict; branch/SHA, gate results, or file paths as the checkable
+evidence; the next action or open issue) — key=value or short fields, never
+prose. The 800-char/10-line hook below is the **backstop** that catches a
+drift back to narration; it is not itself the target shape, and passing it
+is not a substitute for actually being one line. The orchestrator never
+relays a subagent's prose; it reads the fields and the named files.
 
 Install (`SubagentStop`; no `matcher` runs on every agent, a `matcher` scopes
 it to named agent types):

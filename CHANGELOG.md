@@ -3,6 +3,16 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.444.0] — 2026-09-23
+
+### Added
+- `claim_probe.py` deterministic tie-break for crossed claims: the earliest claim on the board keeps the work (`KEEP` / `YIELD` citing the first-claim id and time, stable across renewals); never yield on a peer's "I stopped" message — only board state counts. A stand-down by the losing side clears the contest; `board_post.py` RELEASE carries `rule:` from a closed set (`earliest-claim|done|superseded|handoff`) only when a contest exists, and legacy rule-less releases stay valid (#1124).
+- One-line reporting is the explicit default for subagent hand-backs (`status | evidence | next`, the hook cap stays the backstop), typed peer posts, and orchestrator updates in unattended runs (#1123).
+- README: pointer to the ponytail plugin for a minimal-code bias on plumbing/bug-fix/QA work, with design-port work exempt.
+- size-budget-raise: .claude/skills/agentic-ceo/SKILL.md 13257→13452 one-line update default for orchestrators (#1123)
+- size-budget-raise: .claude/skills/agentic-delivery/references/host-enforcement.md 12517→12805 one-line handback default (#1123)
+- size-budget-raise: .claude/skills/agentic-delivery/references/multi-session-coordination.md 56462→57001 tie-break rule and stand-down semantics (#1124)
+
 ## [1.443.0] — 2026-09-23
 
 ### Changed — data review load cut; token levers documented
