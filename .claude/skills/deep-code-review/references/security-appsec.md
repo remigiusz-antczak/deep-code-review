@@ -23,7 +23,7 @@ sub-files; load one when the target or diff matches its trigger.
 | `appsec-scan-tests.md` | ships a regression or inventory test that scans every route, handler, or migration and asserts a security property |
 | `appsec-links.md` | reflects a `next` / `returnTo` / `redirect` parameter into a redirect, or turns text into HTML or links (markdown, autolinker, linkify, a hand-built `href`) |
 | `appsec-approvals.md` | performs a consequential or high-value action: payout, wire transfer, credential issue, privilege grant, protected-surface merge |
-| `appsec-supply.md` | adds or bumps a dependency, touches a lockfile or `postinstall`, edits a CI workflow or a file a privileged pipeline executes, or ships a signed / attested / SBOM-bearing artifact (A03) |
+| `appsec-supply.md` | adds or bumps a dependency, touches a lockfile or `postinstall`, edits a CI workflow or a file a privileged pipeline executes, ships a signed / attested / SBOM-bearing artifact, or the target has a dependency manifest, lockfile, or CI workflow (A03) |
 | `appsec-crypto.md` | encrypts or decrypts (mode, IV, nonce), compares a signature / token / API key / OTP against caller input, hashes passwords, wraps keys, or holds long-lived confidential data (A04) |
 | `appsec-ssti.md` | compiles a server-side template from anything but a static file (`render_template_string`, `env.from_string`, a user-customizable template) |
 | `appsec-files.md` | accepts uploads, issues presigned / signed URLs, extracts archives, serves a file by a user-supplied path, parses XML, or exports CSV / spreadsheet files |
@@ -172,6 +172,8 @@ input; safe deserialization only.
 - Command: `os.system`, `subprocess.*(shell=True)`, `child_process.exec(`, `Runtime.exec(` with a concatenated string,
   backticks.
 - Code: `eval(`, `exec(`, `Function(`, `pickle.loads`, `yaml.load` (unsafe).
+- Path traversal (CWE-22) sink: `sendFile`/`send_file`/`send_from_directory`, `open(<dir> + <input>)`,
+  `path.join(<root>, <input>)` — depth: `appsec-files.md`.
 
 **Fix**: parameterize; use the ORM's bound parameters; contextual output encoding + a strict CSP; argument-vector
 subprocess calls; never deserialize untrusted data with an unsafe loader. Per-language sinks: the `lang-*.md` files.

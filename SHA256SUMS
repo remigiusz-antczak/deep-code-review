@@ -73,7 +73,7 @@ bd2fedb532b7713845d0346533b4331b6a9fdfd5cf7463c897aa17469af87870  .claude/skills
 c4d8f304363d1ec328a672743352def4ece20047d9073cd2e9e42a4dae295007  .claude/skills/deep-code-review/references/docs-and-dx.md
 b0bbec43934a3da9e666183dc157c97ef7e587670efe26209d12a0e0f7f01900  .claude/skills/deep-code-review/references/docs-evolution-by-stage.md
 1ca5eb5e29b534e019b3431126e14c2df4bdc5dea84f1eb79984ade4c31eca92  .claude/skills/deep-code-review/references/domain-a.md
-8b2c25361e3b97ff6dc7a13cf7193a7289526377e62b2b4220abc6a34f5860b1  .claude/skills/deep-code-review/references/domain-b.md
+4264f85fa2376bfb5430072c63b88128282508dc78d625cfbedeace4077a7238  .claude/skills/deep-code-review/references/domain-b.md
 7533f6db758788c90769c144c403d807e2731300123aff36caf882ba7a56c324  .claude/skills/deep-code-review/references/domain-c.md
 5c28ebaf37b95709964ef6cc9d0ecae9dd81d2e73256cd28d8f980aaf79c68f0  .claude/skills/deep-code-review/references/domain-checklists.md
 bac2f7867a337e6e486fd94dd667e8d757d7d3526bf93ee6e89ce811eb4bcf7d  .claude/skills/deep-code-review/references/domain-d.md
@@ -98,7 +98,7 @@ ed10ed59f4ec9fcfb337ce474a8971b6a4a17f78bd0980db9a6bed08a308166f  .claude/skills
 fe4b3d2eba5094ca64d68b54af1c776e9d16b360aa3d3684bdf7478132ff729f  .claude/skills/deep-code-review/references/frontend-a11y.md
 f9c9e8626408258f95ff0174456425dfd7cd807c9757bdf12219ac2cbdc84e80  .claude/skills/deep-code-review/references/i18n-l10n.md
 d08c079af97d48bb9dc4593ee116a01b848a995ba2845c08d0e5dd23b60e509b  .claude/skills/deep-code-review/references/infra-evolution-by-stage.md
-adc4970da9b875718d950aaa3187708a668ae38754db7099e76f804cb0b1a52b  .claude/skills/deep-code-review/references/infra-iac-containers.md
+9c2ad65f31c1cad2405b85ea6ee3a0bb7e52dc9a636f5b855187da320c0189b8  .claude/skills/deep-code-review/references/infra-iac-containers.md
 c27a828dc2ab2403c0ce1442c78c517bea465e4c30824bcec14c421149d37b3f  .claude/skills/deep-code-review/references/lang-c-cpp-rust.md
 c975cb8db3c12febde56a5b348de861703760e871aa4869138bbc0854c4ccc97  .claude/skills/deep-code-review/references/lang-go.md
 75359c647c21a96c2b9f00bfac3f38c07def62c8537c8112a41e16e5f53cebcf  .claude/skills/deep-code-review/references/lang-js-ts.md
@@ -111,9 +111,9 @@ be322c1ce89821b4582ce742dd9e6b8fdac1778693eb5f4882663f85e603e52f  .claude/skills
 d82ccb09e1cf77bff20b5485ec85f826453c6cfc381541b6ff16133d662eeadf  .claude/skills/deep-code-review/references/machine-report.md
 384f7cf982523ceeb6e927350f4d7eafe8ba8378b9e04e4ad4778350d4ae082c  .claude/skills/deep-code-review/references/merge-operations.md
 e1a649f296e7afa036e5d0f8bfe45c3cf389b1a77c3f539a170c490698b53926  .claude/skills/deep-code-review/references/method-situational.md
-93aefbb0fd3523f8f28b163880a3ff6649777d67f25ca86201cbddd6c2d4cdeb  .claude/skills/deep-code-review/references/method.md
+8ee8f226b643c81ce4e97d3a5e27ea6b7aeb86ff1f35b100a418eeb27143b904  .claude/skills/deep-code-review/references/method.md
 b365b87e6f514422d5ef9bc10142f0f1d07a9e3deead2c93f6125a1bc8d25548  .claude/skills/deep-code-review/references/migration-parity.md
-21c57842ad2fbc53b588bbf5cdad404af878b7a0633e2e8d6557f246dd9393b4  .claude/skills/deep-code-review/references/mobile-appsec.md
+503c7a02eec45805f445e1b0c04b4c754227a6b6f4e3e67df0d5cebc3bfc2271  .claude/skills/deep-code-review/references/mobile-appsec.md
 c84d772b202758ea85aa3abe1eb4afe1bc60b4f862d1e3aa9e74ff823ad6537d  .claude/skills/deep-code-review/references/model-tiering.md
 534213ac8732fc959a8214468e12c7ccdc6d6b70b61894855ba00ddca3ab6d55  .claude/skills/deep-code-review/references/observability.md
 2e304245ebd776cd6475659f8515ad3e87297a3fd5a5e98c3c5dec028927c369  .claude/skills/deep-code-review/references/parallel-audit.md
@@ -128,9 +128,9 @@ b1fa57ead98530633969065aa8d1438b8c6cadb9afa3053341515c5a940da60c  .claude/skills
 7970a7f27238f0f5062c4a009cc9deb7ee52f2837841579dffa47382c522b9d7  .claude/skills/deep-code-review/references/report-format.md
 3d79b2176667193b91f0e1bf9ba73e55e1e628b6936f082ef0a9e5326fe23b41  .claude/skills/deep-code-review/references/role-coverage.md
 9aa91ea0e701c629d68345b8d408223c1ab6ab4d486e79302e1b3db8f603be5f  .claude/skills/deep-code-review/references/security-agent-skills.md
-679a7ebfa3cb3fce1f3551dce19c0db9830766382c12edd974cf99f4a40ec892  .claude/skills/deep-code-review/references/security-ai-agents.md
+7b8e6447fd2d804bdeed3b08dcf64be069c14deac6a26836cc8fa88705c272f2  .claude/skills/deep-code-review/references/security-ai-agents.md
 28f1d98a261743d86b96700b97ad01160ef64d5ee37a1f16445d811858580fb6  .claude/skills/deep-code-review/references/security-api.md
-6ae828794fd2afbd5e3bb9914b4731bd3a1355a54467ae7c2bca210076fe183b  .claude/skills/deep-code-review/references/security-appsec.md
+9de0e2c203a07544960601ef4c9be3f8d81d00485f6edd3977a9f4247a954cb4  .claude/skills/deep-code-review/references/security-appsec.md
 db531493cde2dbb62efaab3890b8187ed39d30926c4ec956fa8319bee9f504af  .claude/skills/deep-code-review/references/skill-authoring-and-size.md
 a0ed7ad061b7e60230601ee9b38a00400841d6ddf3af386edbd4b34a981c9798  .claude/skills/deep-code-review/references/standards-index.md
 e1a1a9795bf268b13db9cdef76553e207361342f2000a35ec8f4d34fa2383de9  .claude/skills/deep-code-review/references/testing-ai-evals.md

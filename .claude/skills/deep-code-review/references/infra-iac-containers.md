@@ -243,6 +243,6 @@ hard-coded `access_key`/`secret`/`password` in `.tf`.
 
 ---
 
-Cross-references: A02/A03 detail in `security-appsec.md`; secret handling in
+Cross-references: A02 in `security-appsec.md`, A03 in `appsec-supply.md`; secret handling in
 section N of `SKILL.md` (and M for log-leakage); spend/egress control in
 `performance-db-cost.md`.

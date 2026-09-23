@@ -2825,5 +2825,50 @@ fi
 
 # ---------------------------------------------------------------------------
 
+# ===========================================================================
+# AppSec supply/traversal pointer pins (own lane; APPENDED AT THE END by
+# convention). A FULL review of an app that ships a dependency manifest,
+# lockfile, or CI workflow -- even absent a diff touching any of them -- must
+# still load appsec-supply.md (A03): pin that the trigger row names that
+# presence-based condition, and structurally pin it against a fixture app
+# that carries only a `.github/workflows/` directory (no manifest, no
+# lockfile). Also pin that the A05 grep block names a path-traversal (CWE-22)
+# sink line pointing at appsec-files.md, so a traversal sink is not left as
+# an A05 finding with no routed depth.
+# ===========================================================================
+
+supply_trigger_row="$(grep -E '^\| `appsec-supply\.md` \|' "$dcr_sd/references/security-appsec.md")"
+if printf '%s' "$supply_trigger_row" | grep -qi 'dependency manifest, lockfile, or CI workflow'; then
+  record 0 "appsec pointer: appsec-supply.md's trigger row fires on target-has-manifest/lockfile/CI-workflow, not diff-touch alone"
+else
+  record 1 "appsec pointer: appsec-supply.md's trigger row fires on target-has-manifest/lockfile/CI-workflow, not diff-touch alone"
+fi
+
+# Fixture: an app with only a CI workflow (no lockfile, no dependency
+# manifest) -- structurally confirm the trigger's file-presence language
+# covers a CI-workflow-only target so a FULL review still loads
+# appsec-supply.md.
+supply_fixture="$WORK/appsec-supply-fixture"
+rm -rf "$supply_fixture"
+mkdir -p "$supply_fixture/.github/workflows"
+printf 'name: ci\n' >"$supply_fixture/.github/workflows/ci.yml"
+if [ -f "$supply_fixture/.github/workflows/ci.yml" ] \
+  && printf '%s' "$supply_trigger_row" | grep -qi 'CI workflow'; then
+  record 0 "appsec pointer: a CI-workflow-only app fixture matches the appsec-supply.md trigger's CI-workflow clause"
+else
+  record 1 "appsec pointer: a CI-workflow-only app fixture matches the appsec-supply.md trigger's CI-workflow clause"
+fi
+
+traversal_block="$(sed -n '/^## A05:2025/,/^## A06:2025/p' "$dcr_sd/references/security-appsec.md")"
+if printf '%s' "$traversal_block" | grep -qi 'path traversal' \
+  && printf '%s' "$traversal_block" | grep -qF 'appsec-files.md' \
+  && printf '%s' "$traversal_block" | grep -qi 'CWE-22'; then
+  record 0 "appsec pointer: A05 grep block names a path-traversal (CWE-22) sink line pointing to appsec-files.md"
+else
+  record 1 "appsec pointer: A05 grep block names a path-traversal (CWE-22) sink line pointing to appsec-files.md"
+fi
+
+# ---------------------------------------------------------------------------
+
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

@@ -210,7 +210,8 @@ be **claimed by any app** (scheme hijacking), so it must never carry a secret
 `apple-app-site-association`), which are domain-verified. A deeplink that lands on
 an authenticated action must still require the **session** — the link is not the
 credential. (Where a deeplink reflects a `next` / `returnTo`-style parameter, the
-open-redirect class is `appsec-links.md` A01 CWE-601 — link it.)
+open-redirect class is `appsec-links.md` A01 CWE-601 — link it. OAuth/PKCE:
+`appsec-tokens.md`.)
 
 **Fix.** `exported="false"` unless the component is deliberately cross-app;
 require a **signature-level** permission for cross-app entry points you own;

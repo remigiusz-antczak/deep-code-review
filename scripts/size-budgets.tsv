@@ -78,7 +78,7 @@
 .claude/skills/deep-code-review/references/docs-and-dx.md	22511
 .claude/skills/deep-code-review/references/docs-evolution-by-stage.md	4820
 .claude/skills/deep-code-review/references/domain-a.md	7018
-.claude/skills/deep-code-review/references/domain-b.md	6178
+.claude/skills/deep-code-review/references/domain-b.md	6293
 .claude/skills/deep-code-review/references/domain-c.md	4376
 .claude/skills/deep-code-review/references/domain-checklists.md	1997
 .claude/skills/deep-code-review/references/domain-d.md	2348
@@ -103,7 +103,7 @@
 .claude/skills/deep-code-review/references/frontend-a11y.md	24316
 .claude/skills/deep-code-review/references/i18n-l10n.md	10160
 .claude/skills/deep-code-review/references/infra-evolution-by-stage.md	6889
-.claude/skills/deep-code-review/references/infra-iac-containers.md	17353
+.claude/skills/deep-code-review/references/infra-iac-containers.md	17369
 .claude/skills/deep-code-review/references/lang-c-cpp-rust.md	2478
 .claude/skills/deep-code-review/references/lang-go.md	2202
 .claude/skills/deep-code-review/references/lang-js-ts.md	9979
@@ -116,9 +116,9 @@
 .claude/skills/deep-code-review/references/machine-report.md	10061
 .claude/skills/deep-code-review/references/merge-operations.md	39469
 .claude/skills/deep-code-review/references/method-situational.md	12451
-.claude/skills/deep-code-review/references/method.md	56403
+.claude/skills/deep-code-review/references/method.md	56467
 .claude/skills/deep-code-review/references/migration-parity.md	25466
-.claude/skills/deep-code-review/references/mobile-appsec.md	25882
+.claude/skills/deep-code-review/references/mobile-appsec.md	25914
 .claude/skills/deep-code-review/references/model-tiering.md	12968
 .claude/skills/deep-code-review/references/observability.md	17988
 .claude/skills/deep-code-review/references/parallel-audit.md	37142
@@ -133,9 +133,9 @@
 .claude/skills/deep-code-review/references/report-format.md	20158
 .claude/skills/deep-code-review/references/role-coverage.md	19668
 .claude/skills/deep-code-review/references/security-agent-skills.md	6509
-.claude/skills/deep-code-review/references/security-ai-agents.md	39095
+.claude/skills/deep-code-review/references/security-ai-agents.md	39145
 .claude/skills/deep-code-review/references/security-api.md	17447
-.claude/skills/deep-code-review/references/security-appsec.md	30044
+.claude/skills/deep-code-review/references/security-appsec.md	30272
 .claude/skills/deep-code-review/references/skill-authoring-and-size.md	3677
 .claude/skills/deep-code-review/references/standards-index.md	470
 .claude/skills/deep-code-review/references/testing-ai-evals.md	6906

@@ -196,16 +196,16 @@ controls below are from the official MCP security spec
 (`modelcontextprotocol.io/docs/tutorials/security/security_best_practices`, fetched
 2026-09-19).
 
-**1 — Authorization in the proxy topology** (specializes A01/A07 `security-appsec.md`;
-ASI03 confused deputy).
+**1 — Authorization in the proxy topology** (specializes A01/A07 `security-appsec.md` →
+`appsec-tokens.md`; ASI03 confused deputy).
 - **OAuth-proxy confused deputy.** An MCP proxy that uses **one static client-id** to a
   third-party authorization server, **allows dynamic client registration**, and rides a
   third-party **consent cookie** lets an attacker skip consent: register a malicious
   `redirect_uri`, reuse the victim's cookie, steal the MCP authorization code. The proxy **MUST** run its
   own **per-client consent before** the third-party flow, exact-match the `redirect_uri`,
   and set the `state` cookie only **after** consent. The general confused deputy (ASI03)
-  and exact-`redirect_uri`/`aud` checks (A07) apply; the delta is the shared static
-  client-id across all MCP clients.
+  and exact-`redirect_uri`/`aud` checks (A07, depth: `appsec-tokens.md`) apply; the delta
+  is the shared static client-id across all MCP clients.
 - **Token passthrough is forbidden.** An MCP server **MUST NOT** accept a token whose
   `aud` is not itself, nor forward an upstream token to a downstream API — that recreates
   the confused deputy and bypasses the downstream's rate/audit controls. (A07 already

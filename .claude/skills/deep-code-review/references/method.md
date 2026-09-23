@@ -424,7 +424,8 @@ creative attacks — they are ordered by yield, and each one narrows the next:
 3. **Dual-surface every caller of the same loader** — the API handler *and* every
    RSC/SSR page/route that calls it; one redacting while another does not is the
    common shape.
-4. **Then** injection, SSRF, traversal, prompt injection, exhaustion, races.
+4. **Then** injection, SSRF, traversal (path-serving/archive sink — `references/appsec-files.md`), prompt
+   injection, exhaustion, races.
 
 Procedures for all four are in `references/security-appsec.md`. Then actively try
 to break auth, inject, exfiltrate, exhaust, poison, and to find useless/costly
