@@ -36,7 +36,7 @@ chart:
   fabricates data: the viewer reads "quiet" where the truth is "unknown / not yet observed." Give the
   not-collected cell a distinct, non-scale encoding (hatch / blank / explicit "no data"), never the low
   end of the activity ramp — the grid form of *Every data state*'s honest-empty rule in `product-ux-quality.md` and of
-  *observed-low vs unobserved* (`data-quality.md` §8).
+  *observed-low vs unobserved* (`data-freshness.md`).
 - **Non-visual access to the numbers.** The chart is *additive* to a table or an `aria` summary, never
   the only path to the data; series are distinguished by pattern/label, not colour alone (*Never colour
   alone*, `product-ux-quality.md`).

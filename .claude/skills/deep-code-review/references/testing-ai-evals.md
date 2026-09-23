@@ -44,7 +44,7 @@ needs its own harness:
   frozen-cohort check must clear — strong judges reach roughly **≥80%** agreement with
   human preference (Zheng et al., 2023) — and **re-check it when the judge model version
   changes**: an unpinned judge is the same latent-bug class as an unpinned embedding
-  model (`data-quality.md`).
+  model (`data-ml.md`).
 - **A retrieval-augmented (RAG) app is evaluated at the retrieval seam, not only
   end-to-end.** The generation-grounding check above is necessary but not
   sufficient: a faithful answer over the *wrong* retrieved context is still wrong,

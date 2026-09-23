@@ -257,7 +257,7 @@ design-quality checklist in `references/migration-parity.md` (#124).
 
 ## Referenced by name (not fetched this session — verify before citing a URL)
 
-- **Published metric/measurement standards** — cited in `data-quality.md` §7 (#396) as the
+- **Published metric/measurement standards** — cited in `data-scoring.md` (#396) as the
   constructive escape from an invented score: **CHAOSS** (community activity/health metrics +
   metric-models), **Fellegi-Sunter** (probabilistic record-linkage match tiers, incl. a
   possible-match "skip" band), **W3C PROV** (provenance/lineage), **rel=me / ORCID / schema.org
@@ -481,7 +481,7 @@ encoded (business-ops routes applicability to counsel).
 
 Verification date for the rows below: **2026-09-19**. Added for the deep-code-review
 `testing-ml.md` ML-pipeline-correctness lens (leakage + reproducibility) and
-`data-quality.md` label-quality bullet.
+`data-metrics.md` label-quality bullet.
 
 | Standard / tool | URL | What was confirmed |
 |---|---|---|

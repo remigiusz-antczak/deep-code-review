@@ -148,7 +148,7 @@ source may never have been queried. The empty state must distinguish *no data co
 covered* from *collected, and genuinely none* — SKILL.md principle 2 (*an absence is evidence
 only after a positive control fires*) at the UI layer. Name the coverage, not only the remedy: a
 bare "Nothing here" over an unprobed source is a false all-clear, not an honest empty.
-(`data-quality.md` §8: same rule where the number is *scored* rather than *shown*.)
+(`data-freshness.md`: same rule where the number is *scored* rather than *shown*.)
 
 **A hardcoded empty-state message that asserts a cause is a fabricated cause the moment more
 than one path reaches it.** "No results — try changing filters" names one cause (an over-narrow
@@ -175,7 +175,7 @@ statement about history or state** — an audit log ("this never happened"), a s
 list, a balance or count a decision rests on — carries no such exemption: it **must surface a
 distinct, retryable error state**, never the same branch as a genuine zero, because here "empty"
 *reads* as "confirmed none," and a swallowed fetch error becomes a false all-clear no copy can
-fix — the defect is architectural, not lexical. Distinct from `data-quality.md` §8's
+fix — the defect is architectural, not lexical. Distinct from `data-freshness.md`'s
 observed-low-vs-unobserved rule (a *scored* value, measured wrong) and from the silent-swallow 🚩
 in `domain-f.md` / `reliability-error-handling.md` (an error *discarded* at the code
 layer, with no log or signal): here the fetch error is caught correctly, and the defect is which
