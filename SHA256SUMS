@@ -7,7 +7,7 @@ dbd4d38bf76b786e73c72aca1675dc11dfd04e873963ecbd153d497df91e4a67  .claude/skills
 13bab5c4ec46d1fcc4c0b806a4a3f5d59e167aea49cdc9423597903c748623a0  .claude/skills/agentic-delivery/references/dev-env-ownership.md
 dd0b6835bcfb85c690c7f8781feb9c7c4b19fd7f8235f4b8e52560250a04ff2c  .claude/skills/agentic-delivery/references/fanout-host-sizing.md
 65a4f37308dedfee001b871e6925538f8dd53c1a01507c4319aafedb6d30bdd3  .claude/skills/agentic-delivery/references/fast-agentic-delivery.md
-9198ac6e6f3c9596bb52e69d500a31ebf893ad8f2b9e5bc831c300f0d9ca2a85  .claude/skills/agentic-delivery/references/host-enforcement.md
+7e52c57640585e96711cb0ac2acb32bf8929ae431c3779beec478fb8aa5d8e07  .claude/skills/agentic-delivery/references/host-enforcement.md
 1b8d16e76c453aef8ac31e1c096935268d2cea9347ee78e643f7da7c77815e2c  .claude/skills/agentic-delivery/references/incident-response.md
 1e2afb1f0ae50dabedbb56763e21f7ef9fb93f4d3ea48ae7be6ab5d579e68492  .claude/skills/agentic-delivery/references/merge-queue-worktrees.md
 4135ad463774ddef3538b18f35344ad5125a025db9ed239c80b407a35aa49ac2  .claude/skills/agentic-delivery/references/multi-session-coordination.md
@@ -41,7 +41,7 @@ cc52f678848b814373757b460383bf61960e4943c203735adde0a350b3e50989  .claude/skills
 bb541f96bd7d0c3bb4adff8dcaac0f50efa2493b8215b6aa671805bfbb89c42b  .claude/skills/contribution/references/contribution-procedure.md
 e0fb06f8c1ea1a8993c1aa586d05702ee5a0e8881a03aaa3794e915f44d17b36  .claude/skills/deep-code-review/SKILL.md
 9a3ac2717c98eee0c1e59428004cd5df9f335e3ff729d984f66a22a48262ffae  .claude/skills/deep-code-review/VERSION
-55e699565aa0cac768857d357460f37bea533ce1b2ee8afa9faad15c9f31cba9  .claude/skills/deep-code-review/evals/evals.json
+efb2472322d360c7be54333407ef72444c443d52e42ecd37bb2563be92991d72  .claude/skills/deep-code-review/evals/evals.json
 b4c3c73d7240e286ab084e55e9ce8e5f65ee815b55371e3846737ecddd573c6c  .claude/skills/deep-code-review/references/api-contracts.md
 cb8988398c43112a115f52fa1e602a58267beb29fa662c20ba62a309c5d95852  .claude/skills/deep-code-review/references/billing-correctness.md
 289f0ea328b44fe0e8cc44720a0e44a2a412ba4f616368e4c5af0234b72bdd81  .claude/skills/deep-code-review/references/branch-and-merge-hygiene.md
@@ -61,7 +61,7 @@ d82ccb09e1cf77bff20b5485ec85f826453c6cfc381541b6ff16133d662eeadf  .claude/skills
 052c01a925570ab44188cd803c4bdd807e8c0f73b290bb3f5512c14b741ee035  .claude/skills/deep-code-review/references/method.md
 06625dff1c9f46d56555186e39c06f13ad3023f1e0f1111eee8712b70e168737  .claude/skills/deep-code-review/references/migration-parity.md
 ab5c251fec6d4ecc95a9bb41674003fc5e450d9ee039aa54bbb2a460dbec708c  .claude/skills/deep-code-review/references/mobile-appsec.md
-93efda1446489db75b21d3c2ba45dc034f92358b660ecb68f2e020ab351a2dd2  .claude/skills/deep-code-review/references/model-tiering.md
+6b97dbb93c5847b1a6bd03d28b565defd0de04d1d3f517d916c0a6ea08b62856  .claude/skills/deep-code-review/references/model-tiering.md
 b710bb9c37a224b25081a4c71fbe20f0967b3c94ff7cc8e2c73d11f38310e937  .claude/skills/deep-code-review/references/observability.md
 3940577be3ec3c10ceb368ed0ea91544fd253e5d57d106d3421244426241cffc  .claude/skills/deep-code-review/references/parallel-audit.md
 938fa9a204a0027d778248d5c7f876549c7ad7fdb833db4fbe47cbf2bedde05e  .claude/skills/deep-code-review/references/performance-db-cost.md
