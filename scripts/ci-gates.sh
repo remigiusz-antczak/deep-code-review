@@ -960,6 +960,11 @@ cmd_mustload() {
   local -a floor_light_refs=() floor_full_only_refs=()
   local phrow inphase=0 phase_field load_field floor_reflist frf btick
   local fi fj in_light in_full ff already
+  # Which of the mandatory phase rows 0, 1, 2 were actually parsed. A row
+  # renamed out of the "<digit> <name>" shape (e.g. "1. Ground truth" or
+  # "Phase 2 ...") would otherwise be skipped silently and shrink the floor
+  # while the gate stays green -- so every one of the three must be seen.
+  local seen_p0=0 seen_p1=0 seen_p2=0
   btick='`'
   while IFS= read -r phrow; do
     case "$phrow" in
@@ -972,7 +977,9 @@ cmd_mustload() {
         phase_field="$(printf '%s' "$phrow" | awk -F'|' '{print $2}' \
           | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')"
         case "$phase_field" in
-          '0 '*|'1 '*|'2 '*) : ;;
+          '0 '*) seen_p0=1 ;;
+          '1 '*) seen_p1=1 ;;
+          '2 '*) seen_p2=1 ;;
           *) continue ;;
         esac
         load_field="$(printf '%s' "$phrow" | awk -F'|' '{print $4}')"
@@ -1001,6 +1008,12 @@ cmd_mustload() {
   done < "$skill_md"
   [ "${#floor_light_refs[@]}" -gt 0 ] \
     || die "mustload: no Phase 0-2 mandatory refs parsed from $skill_md's Load column (fail closed)"
+  local missing_phases=""
+  [ "$seen_p0" -eq 1 ] || missing_phases="$missing_phases 0"
+  [ "$seen_p1" -eq 1 ] || missing_phases="$missing_phases 1"
+  [ "$seen_p2" -eq 1 ] || missing_phases="$missing_phases 2"
+  [ -z "$missing_phases" ] \
+    || die "mustload: Phase table in $skill_md is missing mandatory phase row(s):$missing_phases (expected rows starting \"0 \", \"1 \", \"2 \"; fail closed)"
 
   # Drop any FULL-only ref that's also LIGHT (already counted once in the
   # LIGHT total; never double-count it in the FULL delta).

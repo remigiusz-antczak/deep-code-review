@@ -655,6 +655,32 @@ else
   record 1 "mustload: fails closed when SKILL.md has no parseable Phase 0-2 table (planted RED)"
 fi
 
+# Fail closed: a mandatory phase row renamed out of the "<digit> <name>"
+# shape used to be skipped silently, shrinking the floor while the gate
+# stayed green. Each variant copies the clean mlroot fixture, rewrites one
+# row, and gives every ceiling generous headroom so ONLY the missing-phase
+# check can fail.
+printf 'demo\t999\ndemo2\t999\nphase-floor-light\t9999\nphase-floor-full\t9999\n' \
+  >"$WORK/mustload-phren.tsv"
+for phren in '1 Ground truth|1. Ground truth|1' '2 Domain audits|Phase 2 Domain audits|2'; do
+  phren_from="${phren%%|*}"
+  phren_rest="${phren#*|}"
+  phren_to="${phren_rest%%|*}"
+  phren_num="${phren_rest#*|}"
+  phren_root="$WORK/mustload-fixture/phren-$phren_num"
+  rm -rf "$phren_root"
+  cp -R "$mlroot" "$phren_root"
+  sed "s/^| $phren_from |/| $phren_to |/" "$mlroot/.claude/skills/deep-code-review/SKILL.md" \
+    >"$phren_root/.claude/skills/deep-code-review/SKILL.md"
+  gate "$GATES" mustload --config "$WORK/mustload-phren.tsv" "$phren_root"
+  if [ "$GATE_RC" -ne 0 ] \
+    && grep -q "missing mandatory phase row(s): $phren_num " "$WORK/last.log"; then
+    record 0 "mustload: fails closed when phase row $phren_num is renamed to \"$phren_to\" (planted RED)"
+  else
+    record 1 "mustload: fails closed when phase row $phren_num is renamed to \"$phren_to\" (planted RED)"
+  fi
+done
+
 # The real repo's Phase 0-2 mandatory floor is within its frozen ceiling too
 # -- confirms the new mechanism actually engaged against real data, not just
 # the fixture.

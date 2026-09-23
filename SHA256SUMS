@@ -95,7 +95,7 @@ de270db043b761ce236c9c80197c514b89a5db4d2965de76321383927623bd1c  .claude/skills
 5a8cc3aadf5a95f7872572f223a5f5eeb5537192be25c7ec988330e8422cea7c  .claude/skills/deep-code-review/scripts/fixtures/tokens/design.tokens.json
 97ad0860bb3ee1b0f14f8fb9e55519dc9d0a8f1ece7e5dfc8734420c6475e045  .claude/skills/deep-code-review/scripts/fixtures/tokens/map_match.tsv
 d5606abd5b9ec08d6d4bf98e0e51b1c52d430040bb1a957e4b545bff816ae2cf  .claude/skills/deep-code-review/scripts/parity_differ.py
-3e88254f432b443b0000ea61002c9a24058ce4a3ad52ee5dcf9f17b29c19d65f  .claude/skills/deep-code-review/scripts/token_differ.py
+3f8ef47cb8b458a0b6709d5594ff541287dfca295be07996214fe71832088817  .claude/skills/deep-code-review/scripts/token_differ.py
 317acae212ed73279df66eb7b419b8426733bb1be05345b0e1c8b2c6790ad8a1  .claude/skills/deep-code-review/scripts/validate_status_claims.py
 20c9c131848f08fbf7bdfcd9a84224da7fe69e7e68ad65c2228911380c7b77a3  .claude/skills/deep-code-review/templates/dcr-gates.sh
 e9df3483336d6470072f8b7d7bfd5e93e281da2b5a892590101b4cb3ed89e419  .claude/skills/deep-code-review/templates/dcr-gates.yml

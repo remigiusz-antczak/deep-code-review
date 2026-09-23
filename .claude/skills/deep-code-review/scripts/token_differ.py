@@ -25,16 +25,19 @@ CONTRACT (fail-closed; only one passing exit)
 * 1 MISMATCH — at least one compared token is MISMATCH, MISSING_IN_APP, or
   UNRESOLVED. The per-token list is the work queue.
 * 2 COULD_NOT_CHECK — either side (or a given --map) is missing, unreadable,
-  empty, invalid, or yields zero tokens. Never a pass. (argparse usage errors
-  also exit 2 — equally non-passing.)
+  empty, invalid, or yields zero tokens; a --map `$type` that is not a DTCG
+  type is invalid. Never a pass. (argparse usage errors also exit 2 —
+  equally non-passing.)
 Per-token status:
 * MATCH — resolved values are equal after normalization.
 * MISMATCH — both resolved; values differ (both values printed).
 * MISSING_IN_APP — the design token has no app counterpart.
 * UNRESOLVED — a side could not be resolved or normalized: alias/var() cycle,
   undefined reference, a CSS property defined twice with different values
-  (theme/selector scoping is not modeled — skip rather than guess), a value
-  that does not parse as its declared `$type`, or a composite-vs-scalar pair.
+  (theme/selector scoping is not modeled — skip rather than guess), a CSS
+  value with an unterminated quote/`url(` or an unbalanced bracket, a value
+  that does not parse as its declared `$type`, a --map `$type` that
+  contradicts a side's declared `$type`, or a composite-vs-scalar pair.
 App-only tokens are reported as info and never fail.
 
 INPUTS (either format on either side; `.json` = DTCG, anything else = CSS)
@@ -44,15 +47,21 @@ INPUTS (either format on either side; `.json` = DTCG, anything else = CSS)
           and local JSON Pointers `{"$ref": "#/group/token/$value"}` resolve;
           circular references are UNRESOLVED on every token in the chain.
   CSS   : `--name: value;` custom properties anywhere in the file (comments
-          stripped, `!important` dropped); `var(--x)` and `var(--x, fallback)`
-          resolve recursively with cycle detection.
+          stripped, `!important` dropped). Values are tokenized respecting
+          quotes and brackets: a `;` inside `"..."`, `'...'`, or `url(...)`
+          does not end the value. Only a statement that starts with
+          `--name:` is a declaration, so text inside an at-rule prelude
+          (`@container style(--theme: dark)`) is never a token. `var(--x)`
+          and `var(--x, fallback)` resolve recursively with cycle detection.
 Normalization: colors (hex3/4/6/8, rgb/rgba, hsl/hsla, DTCG srgb objects,
 `transparent`/`black`/`white`) -> rgba, equal within half an 8-bit step;
 dimensions px/rem (rem x --root-px, default 16) -> px, other units compared
 as-is; durations s/ms -> ms; font weights (DTCG keywords -> numbers) only when
 the `$type` is fontWeight; font families -> lowercase unquoted list. A --map
 `$type` column, else the design's `$type`, else the app's, drives
-normalization of both sides (two different declared types -> MISMATCH); an
+normalization of both sides (two different declared types -> MISMATCH,
+with or without an override; an override that differs from a declared type
+-> UNRESOLVED); an
 untyped value is parsed as color, then dimension, then number, then a
 whitespace-normalized string.
 
@@ -81,7 +90,15 @@ COULD_NOT_CHECK = 2
 
 _NUM = r"[+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?"
 _ALIAS_RE = re.compile(r"\{([^{}]+)\}")
-_CSS_DECL_RE = re.compile(r"(?<![\w-])(--[A-Za-z0-9_-]+)\s*:\s*([^;{}]*)")
+# A custom-property declaration starts a CSS statement: `--name` then `:`.
+_CSS_DECL_START_RE = re.compile(r"(--[A-Za-z0-9_-]+)\s*:")
+_CLOSERS = {"(": ")", "[": "]", "{": "}"}
+# Every `$type` the Design Tokens Format Module defines (7 simple, 6
+# composite). A --map override outside this set is a map defect, not a type.
+_DTCG_TYPES = frozenset({
+    "color", "dimension", "fontFamily", "fontWeight", "duration", "cubicBezier", "number",
+    "strokeStyle", "border", "transition", "shadow", "gradient", "typography",
+})
 # DTCG fontWeight keyword table (Design Tokens Format Module, fontWeight type).
 _WEIGHTS = {
     "thin": 100, "hairline": 100, "extra-light": 200, "ultra-light": 200,
@@ -112,10 +129,10 @@ def _isnum(v: object) -> bool:
 class _Side:
     """One loaded side: its tokens plus a memoized, cycle-detecting resolver.
 
-    `tokens` maps name -> {"raw", "type", "conflict"}; names are DTCG dotted
-    paths or CSS `--names`. `resolve()` raises Unresolved, never returns a
-    guessed value; errors are memoized per token so a cycle is reported once
-    per token, deterministically.
+    `tokens` maps name -> {"raw", "type", "conflict"[, "invalid"]}; names
+    are DTCG dotted paths or CSS `--names`. `resolve()` raises Unresolved,
+    never returns a guessed value; errors are memoized per token so a cycle
+    is reported once per token, deterministically.
     """
 
     def __init__(self, path: str, fmt: str, tokens: dict) -> None:
@@ -145,6 +162,8 @@ class _Side:
         token = self.tokens[name]
         self._stack.append(name)
         try:
+            if token.get("invalid"):
+                raise Unresolved(token["invalid"])
             if token["conflict"]:
                 raise Unresolved(
                     "defined more than once with different values ("
@@ -211,25 +230,20 @@ class _Side:
 
     def _css(self, text: str) -> str:
         """Substitute every `var(--x[, fallback])` in a CSS value, recursively."""
-        out, pos = [], 0
-        while True:
-            start = text.find("var(", pos)
-            if start < 0:
-                out.append(text[pos:])
-                break
-            out.append(text[pos:start])
-            depth, end = 0, None
-            for i in range(start + 3, len(text)):
-                if text[i] == "(":
-                    depth += 1
-                elif text[i] == ")":
-                    depth -= 1
-                    if depth == 0:
-                        end = i
-                        break
-            if end is None:
+        out, pos, i = [], 0, 0
+        while i < len(text):
+            if text[i] in "\"'":
+                # `var(` inside a quoted string is literal text, not a reference.
+                i, _ok = _skip_string(text, i)
+                continue
+            if not (text.startswith("var(", i) and (i == 0 or not _is_ident_char(text[i - 1]))):
+                i += 1
+                continue
+            end = _match_paren(text, i + 3)
+            if end < 0:
                 raise Unresolved(f"unbalanced var( in {text!r}")
-            ref, has_fallback, fallback = text[start + 4:end].partition(",")
+            out.append(text[pos:i])
+            ref, has_fallback, fallback = text[i + 4:end].partition(",")
             ref = ref.strip()
             if ref in self.tokens:
                 out.append(self.resolve(ref))
@@ -237,7 +251,8 @@ class _Side:
                 out.append(self._css(fallback.strip()))
             else:
                 raise Unresolved(f"var({ref}) is not defined and has no fallback")
-            pos = end + 1
+            pos = i = end + 1
+        out.append(text[pos:])
         result = " ".join("".join(out).split())
         if not result:
             raise Unresolved("empty value")
@@ -269,14 +284,182 @@ def _dtcg_tokens(data: object) -> dict:
     return tokens
 
 
+def _is_ident_char(ch: str) -> bool:
+    """True for a character that can continue a CSS identifier."""
+    return ch.isalnum() or ch in "-_"
+
+
+def _skip_string(text: str, i: int) -> tuple[int, bool]:
+    """Skip the quoted string opening at `text[i]`; return (index after it, ok).
+
+    Backslash escapes (including an escaped newline) stay inside the string.
+    An unescaped newline or end of input leaves the string unterminated:
+    ok is False and the index is where the string stopped.
+    """
+    quote, j = text[i], i + 1
+    while j < len(text):
+        ch = text[j]
+        if ch == "\\":
+            j += 2
+            continue
+        if ch == quote:
+            return j + 1, True
+        if ch == "\n":
+            return j, False
+        j += 1
+    return len(text), False
+
+
+def _match_paren(text: str, i: int) -> int:
+    """Index of the `)` closing the `(` at `text[i]`, skipping strings; -1 if none."""
+    depth, j = 0, i
+    while j < len(text):
+        ch = text[j]
+        if ch in "\"'":
+            j, _ok = _skip_string(text, j)
+            continue
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+            if depth == 0:
+                return j
+        j += 1
+    return -1
+
+
+def _split_top_level(text: str, sep: str = ",") -> list[str]:
+    """Split on `sep` outside quoted strings and brackets (`"A,B", serif` -> 2 parts)."""
+    parts, stack, start, j = [], [], 0, 0
+    while j < len(text):
+        ch = text[j]
+        if ch in "\"'":
+            j, _ok = _skip_string(text, j)
+            continue
+        if ch in _CLOSERS:
+            stack.append(_CLOSERS[ch])
+        elif stack and ch == stack[-1]:
+            stack.pop()
+        elif ch == sep and not stack:
+            parts.append(text[start:j])
+            start = j + 1
+        j += 1
+    parts.append(text[start:])
+    return parts
+
+
+def _scan_statement(text: str, i: int, declaration: bool) -> tuple[str, int, str | None]:
+    """Scan one CSS statement from `text[i]`; return (text, stop index, problem).
+
+    Quoted strings, `url(...)` (quoted or not), and bracket nesting are kept
+    whole, so a `;` inside `"a;b"`, `'a;b'`, or `url(data:...;...)` does not
+    end the statement; comments become a single space. A declaration ends at
+    a top-level `;` or at the `}` closing its rule block; anything else (a
+    selector or an at-rule prelude such as `@container style(--x: y)`) also
+    ends at the `{` opening its block. The stop index points AT the
+    terminator. `problem` is None, or why the text is not trustworthy: an
+    unterminated string or `url(`, or an unbalanced bracket.
+    """
+    parts: list[str] = []
+    stack: list[str] = []
+    problem: str | None = None
+    while i < len(text):
+        ch = text[i]
+        if ch in "\"'":
+            end, ok = _skip_string(text, i)
+            parts.append(text[i:end])
+            if not ok:
+                problem = problem or "unterminated quoted string"
+            i = end
+            continue
+        if text.startswith("/*", i):
+            end = text.find("*/", i + 2)
+            parts.append(" ")
+            i = len(text) if end < 0 else end + 2
+            continue
+        if (ch == "(" and i >= 3 and text[i - 3:i].lower() == "url"
+                and (i < 4 or not _is_ident_char(text[i - 4]))):
+            j = i + 1
+            while j < len(text) and text[j].isspace():
+                j += 1
+            if j < len(text) and text[j] not in "\"'":
+                # Unquoted url(): raw text up to `)`; quotes and `;` are literal.
+                while j < len(text) and text[j] != ")":
+                    j += 2 if text[j] == "\\" else 1
+                if j >= len(text):
+                    parts.append(text[i:])
+                    problem = problem or "unterminated url("
+                    i = len(text)
+                    break
+                parts.append(text[i:j + 1])
+                i = j + 1
+                continue
+        if ch == "{" and not declaration:
+            break
+        if ch == "}" and "{" not in stack:
+            break
+        if ch == ";" and not stack:
+            break
+        if ch in _CLOSERS:
+            stack.append(ch)
+        elif ch in ")]}":
+            if stack and _CLOSERS[stack[-1]] == ch:
+                stack.pop()
+            else:
+                problem = problem or f"unbalanced {ch!r}"
+                if ch == "}":
+                    while stack and stack.pop() != "{":
+                        pass
+        parts.append(ch)
+        i += 1
+    if stack:
+        problem = problem or f"unbalanced {stack[-1]!r}"
+    return "".join(parts), i, problem
+
+
+def _css_decls(raw: str) -> list[tuple[str, str, str | None]]:
+    """List every `--name: value` declaration as (name, value, problem).
+
+    Only a statement that STARTS with `--name:` is a declaration, so
+    custom-property-looking text inside an at-rule prelude or a selector is
+    never read as a token.
+    """
+    decls: list[tuple[str, str, str | None]] = []
+    i = 0
+    while i < len(raw):
+        if raw[i].isspace() or raw[i] in "{};":
+            i += 1
+            continue
+        if raw.startswith("/*", i):
+            end = raw.find("*/", i + 2)
+            i = len(raw) if end < 0 else end + 2
+            continue
+        match = _CSS_DECL_START_RE.match(raw, i)
+        if match:
+            value, i, problem = _scan_statement(raw, match.end(), declaration=True)
+            decls.append((match.group(1), value, problem))
+        else:
+            _text, i, _problem = _scan_statement(raw, i, declaration=False)
+    return decls
+
+
 def _css_tokens(raw: str) -> dict:
-    """Collect `--name: value` declarations; flag conflicting redefinitions."""
+    """Collect `--name: value` declarations; flag redefinitions and bad syntax.
+
+    A name defined twice with different values carries `conflict`; a
+    declaration whose value has an unterminated string/url( or an unbalanced
+    bracket carries `invalid` (the reason). Both resolve as UNRESOLVED.
+    """
     seen: dict[str, list[str]] = {}
-    for name, value in _CSS_DECL_RE.findall(re.sub(r"/\*.*?\*/", "", raw, flags=re.S)):
+    invalid: dict[str, str] = {}
+    for name, value, problem in _css_decls(raw):
         value = " ".join(re.sub(r"!\s*important\s*$", "", value.strip(), flags=re.I).split())
+        if problem and name not in invalid:
+            invalid[name] = f"CSS value does not parse ({problem}): {value!r}"
         if value not in seen.setdefault(name, []):
             seen[name].append(value)
-    return {name: {"raw": vals[0], "type": None, "conflict": vals if len(vals) > 1 else None}
+    return {name: {"raw": vals[0], "type": None, "conflict": vals if len(vals) > 1 else None,
+                   "invalid": invalid.get(name)}
             for name, vals in seen.items()}
 
 
@@ -440,7 +623,7 @@ def normalize(value: object, ttype: str | None, root_px: float) -> tuple:
             raise Unresolved(f"not a fontWeight (1-1000 or a DTCG keyword): {value!r}")
         return ("weight", float(num))
     if ttype == "fontFamily":
-        names = value.split(",") if isinstance(value, str) else value
+        names = _split_top_level(value) if isinstance(value, str) else value
         if not (isinstance(names, list) and names and all(isinstance(n, str) for n in names)):
             raise Unresolved(f"not a fontFamily (string or list of strings): {value!r}")
         cleaned = tuple(n.strip().strip("'\"").strip().lower() for n in names)
@@ -537,6 +720,9 @@ def _load_map(path: str) -> list[tuple[str, str, str | None]]:
         fields = [f.strip() for f in line.split("\t")]
         if len(fields) not in (2, 3) or not all(fields):
             raise ValueError(f"--map line {lineno} is not 'design<TAB>app[<TAB>type]': {line!r}")
+        if len(fields) == 3 and fields[2] not in _DTCG_TYPES:
+            raise ValueError(f"--map line {lineno}: unknown $type {fields[2]!r} (expected one of "
+                             f"{', '.join(sorted(_DTCG_TYPES))})")
         rows.append((fields[0], fields[1], fields[2] if len(fields) == 3 else None))
     if not rows:
         raise ValueError(f"--map has no rows ({path!r})")
@@ -559,8 +745,14 @@ def _compare_one(design: _Side, dname: str | None, app: _Side, aname: str | None
     except Unresolved as exc:
         return "UNRESOLVED", f"app side: {exc}"
     dtype, atype = design.type_of(dname), app.type_of(aname)
-    if not override and dtype and atype and dtype != atype:
+    # An override types an untyped side; it never silences a declared-type
+    # disagreement, and it cannot overrule a type a side declares.
+    if dtype and atype and dtype != atype:
         return "MISMATCH", f"declared $type differs: design {dtype} vs app {atype}"
+    for side, declared in (("design", dtype), ("app", atype)):
+        if override and declared and declared != override:
+            return "UNRESOLVED", (f"--map $type {override} contradicts the {side} side's "
+                                  f"declared $type {declared}")
     ttype = override or dtype or atype
     try:
         dcanon = normalize(dval, ttype, root_px)
@@ -730,14 +922,63 @@ def _selftest() -> int:
         check("dangling-alias", compare(dangling, put("c.css", "--c: #fff;")), MISMATCH,
               {"c": "UNRESOLVED"}, ("'nope.x' is not defined",))
 
+        # CSS values are tokenized respecting quotes and brackets: a `;`
+        # inside a string or url() must not truncate the value (a truncated
+        # prefix would compare equal on both sides and hide the difference).
+        check("css-data-url", compare(
+            put("durl-d.css", ":root { --icon: url(\"data:image/svg+xml;utf8,<svg fill='red'/>\");"
+                              " --icon-raw: url(data:image/svg+xml;utf8,%3Csvg%20fill=red%3E); }"),
+            put("durl-a.css", ":root { --icon: url(\"data:image/svg+xml;utf8,<svg fill='blue'/>\");"
+                              " --icon-raw: url(data:image/svg+xml;utf8,%3Csvg%20fill=blue%3E); }")),
+            MISMATCH, {"--icon": "MISMATCH", "--icon-raw": "MISMATCH"}, ("fill='blue'", "fill=blue"))
+        check("css-quoted-semicolon", compare(
+            put("q-d.css", ':root { --f: "A;B", serif; --g: "A;B", serif; --k: #fff; --s: "var(--k)"; }'),
+            put("q-a.css", ':root { --f: "A;C", serif; --g: "A;B", serif; --k: #fff; --s: "#fff"; }')),
+            MISMATCH, {"--f": "MISMATCH", "--g": "MATCH", "--k": "MATCH", "--s": "MISMATCH"},
+            ('design="A;B",serif app="A;C",serif',))
+        fam_map = put("fam.tsv", "--h\t--h\tfontFamily\n")
+        check("css-family-quoted-comma", compare(
+            put("fam-d.css", '--h: "A,B", serif;'), put("fam-a.css", '--h: "A", "B", serif;'),
+            fam_map), MISMATCH, {"--h": "MISMATCH"}, ("design=a,b, serif app=a, b, serif",))
+        # Custom-property-looking text in an at-rule prelude is not a token.
+        check("css-container-prelude", compare(
+            put("cq-d.css", "@container style(--theme: dark) { :root { --c: #fff; } }"),
+            put("cq-a.css", ":root { --c: #fff; }")), MATCH, {"--c": "MATCH"})
+        # Unbalanced quote / bracket / url( -> UNRESOLVED on that token only.
+        check("css-unbalanced", compare(
+            put("ub-d.css", ':root { --p: rgb(1, 2, 3; }\n:root { --w: #fff; }\n--u: "abc;'),
+            put("ub-a.css", ':root { --p: rgb(1, 2, 3); --w: #fff; --u: "abc"; }')),
+            MISMATCH, {"--p": "UNRESOLVED", "--w": "MATCH", "--u": "UNRESOLVED"},
+            ("unbalanced '('", "unterminated quoted string"))
+        check("css-unterminated-url", compare(
+            put("uu-d.css", "--q: url(data:a;b"), put("uu-a.css", "--q: url(data:a;b);")),
+            MISMATCH, {"--q": "UNRESOLVED"}, ("unterminated url(",))
+
+        # A --map $type must be a DTCG type, and an override never silences
+        # a declared-type disagreement or overrules a declared type.
+        check("map-unknown-type", compare(d_css, a_css, put("colour.tsv", "--c\t--c\tcolour\n")),
+              COULD_NOT_CHECK, {}, ("unknown $type 'colour'",))
+        weight_json = put("w-d.json", '{"w": {"$type": "fontWeight", "$value": 700}}')
+        check("map-type-keeps-declared-conflict", compare(
+            weight_json, put("w-a.json", '{"w": {"$type": "number", "$value": 700}}'),
+            put("num.tsv", "w\tw\tnumber\n")), MISMATCH, {"w": "MISMATCH"},
+            ("declared $type differs: design fontWeight vs app number",))
+        check("map-type-contradicts-declared", compare(
+            weight_json, put("w-a.css", "--w: 700;"), put("num2.tsv", "w\t--w\tnumber\n")),
+            MISMATCH, {"w": "UNRESOLVED"},
+            ("--map $type number contradicts the design side's declared $type fontWeight",))
+
     if failures:
         print("SELFTEST FAILED:")
         for failure in failures:
             print(f"  - {failure}")
         return 1
     print("SELFTEST OK: full=1 (12 match, mismatch, missing, 2 cycles, conflict) mapped=0 "
-          "root-px=1 css-untyped=1 css-map-type=0 fold-collision=1 dangling-alias=1 refuse(absent/empty/"
-          "invalid/no-tokens/bad-map)=2")
+          "root-px=1 css-untyped=1 css-map-type=0 fold-collision=1 dangling-alias=1 "
+          "css-data-url=1 css-quoted-semicolon=1 css-family-quoted-comma=1 "
+          "css-container-prelude=0 css-unbalanced=1 css-unterminated-url=1 "
+          "map-type-keeps-declared-conflict=1 map-type-contradicts-declared=1 "
+          "refuse(absent/empty/invalid/no-tokens/bad-map/map-unknown-type)=2")
     return 0
 
 
