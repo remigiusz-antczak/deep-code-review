@@ -35,11 +35,14 @@ replace hand-reading and hand-posting a board issue:
   receipt).
 - `scripts/board_post.py` — run for every post: typed header, 1000-char cap,
   body from a file, privacy lint; rejects STATUS/ACK/READY chatter and a
-  FIX-CLAIM lacking a default-branch `sha:` plus a `test:`.
+  FIX-CLAIM lacking a default-branch `sha:` plus a `test:`; AUDIT posts
+  `verdict:gap|done|na` per ref at such a `sha:`.
 - `scripts/board_state.py` — run after any CLAIM, RELEASE, HANDOFF, BLOCKER,
-  FIX-CLAIM, or DECISION: renders claims with TTL, known issues, and
-  owner-gated items into the issue body between markers.
-- `scripts/claim_probe.py` — run before any claim or write: GO/NO-GO (below).
+  FIX-CLAIM, or DECISION: renders claims (TTL), issues, owner gates in the
+  issue body; `--backlog --head <sha>` is the audit as a dispatch queue: spawn
+  from it; re-verify REVERIFY rows, don't re-audit from scratch (#1071).
+- `scripts/claim_probe.py` — run before any claim or write: GO/NO-GO (below);
+  audited `done`/`na` is NO-GO.
 
 A coordination lesson closes only when a script or gate enforcing it lands
 with an eval exercising it; prose alone leaves it open.
@@ -463,7 +466,8 @@ makes every peer claim at the same instant); this is the **preventive** fix both
   a per-item path, or a **deterministically-named branch/ref** for the item
   (`claim/<item-id>`) whose second `git push` of that same new ref the forge rejects. The
   failed create **is** the collision signal, delivered at claim time to the loser — a real
-  mutex, not an announcement.
+  mutex, not an announcement. Starting a shared long-lived helper (watchdog, server) is the
+  same claim: `scripts/serial_gate.py run --singleton` starts it once, adopting a live holder (#1078).
 - **A comment or a registry *row* is a fine place to record and read a claim, but not to
   *win* one.** Appending a row to a committed registry file has the same non-atomicity as a
   comment (two peers add a row, both push, the second merges — both rows land, neither create

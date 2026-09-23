@@ -1534,6 +1534,39 @@
         "Names `focus_gate.py` or the owner-priority focus gate",
         "Says the lane cannot widen, close, or mark done the owner-authored priority record"
       ]
+    },
+    {
+      "id": "peer-audit-is-the-backlog-not-a-remeasure",
+      "prompt": "Two agent sessions share one coordination board for a UI migration. Session A posted a measured audit an hour ago classifying every module as done, not-applicable, or a real gap, at mainline commit `4f1c2ab`. Three merges have landed since. Session B, just starting, plans to boot the dev server, screenshot every module itself, and spawn one worker per module that looks off. Good plan?",
+      "expected_output": "No. Session A's audit is the shared backlog: one agent measures, every agent consumes. Session B should run `board_state.py --backlog --head <current mainline sha>`, which lists each audited module as DISPATCH (a gap measured at head, unclaimed), REVERIFY (any verdict measured at an older commit, here `4f1c2ab`), CLAIMED, or SKIP (done or not-applicable at head). It dispatches only DISPATCH rows. For REVERIFY rows it spot-checks at the current head that the verdict still holds, without re-measuring from scratch, because three merges may have shipped a gap or reopened a done module. It never spawns a worker for a module still done or not-applicable. `claim_probe.py` also returns NO-GO for a module the audit marked done or not-applicable. If a re-check shows the audit is wrong, the fix is to post a fresh AUDIT, not to silently re-measure.",
+      "expectations": [
+        "Says the peer's audit is consumed as the backlog, not independently re-measured",
+        "Names `board_state.py --backlog` (or the audit dispatch list) as the mechanism",
+        "Says gap rows measured at an older commit are spot-checked at the current head before dispatch",
+        "Says done / not-applicable modules get no worker, and `claim_probe.py` returns NO-GO on them"
+      ]
+    },
+    {
+      "id": "second-session-adopts-live-helper-not-a-second-watchdog",
+      "prompt": "An owner backgrounds one agent session and starts a second one with the same brief. Each session's startup launches its own app watchdog that restarts the served app whenever upstream changes. Since then the preview flaps: it restarts twice per change and sometimes never settles. The second session proposes debugging the app's startup code for flakiness. Right call?",
+      "expected_output": "No. The flapping comes from the tooling, not the app: two independent watchdogs both react to every change and each restarts the app, so each restart can re-trigger the other. Make the helper a singleton across sessions. Start it through `serial_gate.py run --singleton --lock-dir <dir> --build-id <current sha> -- <watchdog>`. The first caller takes a kernel lock, held by a small supervisor for exactly the helper's lifetime (the helper never receives the lock, so a process it backgrounds cannot keep it). A later caller never waits and never starts a twin: it adopts the live holder and exits 0, or refuses with exit 75 and a `SERIAL_GATE: STALE_HOLDER` line when the holder records a different build id, because a live holder can still be serving stale code. If the lock is held but its record names no live process with the recorded start time, it refuses with `SERIAL_GATE: ORPHAN_HOLDER` instead of adopting. Avoid a pidfile check-then-write, which races, and avoid `pgrep -f <script>`, which can match the caller's own shell and leave zero instances running.",
+      "expectations": [
+        "Diagnoses two per-session watchdogs, not app flakiness, as the cause",
+        "Names a cross-session singleton (such as `serial_gate.py run --singleton` or an exclusive lock) as the fix",
+        "Says a second start adopts the live holder instead of spawning another",
+        "Flags that a live holder on a different build or commit must not be adopted silently"
+      ]
+    },
+    {
+      "id": "rollup-undercount-and-staged-not-committed-stall-throughput",
+      "prompt": "A multi-agent run's merge gate reads the combined status rollup and keeps reporting PRs as not green, even though every re-run passed. Separately, a lane reports 'edits done' but its branch on the remote never changed. The coordinator plans to wait for both to sort themselves out. Right call?",
+      "expected_output": "No. Both are known pipeline stalls with checks that catch them. For the gate, judge each check name by its own latest run at the exact head sha, never by the rollup, which can carry stale or empty entries and undercount a green head. `surface_check.py checks --gh-repo R --sha S` does this: a cancelled or in-progress latest run is pending, not failed. For the lane, a commit a hook rejected (for example a malformed tests line) leaves the edits staged but not committed, so 'edit done' is not committed and not pushed. `surface_check.py ref --require-clean --expect-sha <HEAD>` fails on that dirty tree even though the old HEAD is already on the remote. The coordinator should then commit and push the lane's work itself instead of waiting or looping.",
+      "expectations": [
+        "Says to read the latest check-run per check name at the head sha, not the status rollup",
+        "Names `surface_check.py checks` (or an equivalent per-name check-run read)",
+        "Identifies a hook-rejected commit leaving edits staged-not-committed, so edit done is not pushed",
+        "Names `ref --require-clean` or a dirty-tree check, and says the coordinator recovers the lane's commit and push"
+      ]
     }
   ]
 }

@@ -27,6 +27,24 @@ WHAT THE RECORD HOLDS
 - Owner-gated items: QUESTION or BLOCKER carrying `gate:owner`, open until a
   DECISION or ANSWER cites it with `of:<comment id>`. Plus open (ungated)
   questions and the last RECENT_DECISIONS decisions.
+- Audit verdicts: an AUDIT post records one peer's measured `verdict:`
+  (gap / done / na) per ref at `sha:`; the latest posted AUDIT on a ref wins
+  (comment order, not commit age), so a fresh post supersedes an older one.
+
+THE BACKLOG VIEW (--backlog --head SHA)
+---------------------------------------
+One agent measures, every agent consumes: before spawning a worker, print the
+audited refs as a dispatch list instead of re-measuring them. Each ref is
+exactly one of DISPATCH (gap, measured at --head, unclaimed or claim
+expired), REVERIFY (any verdict measured at another sha: spot-check that it
+still holds at head before acting; do not re-measure from scratch), CLAIMED
+(gap under a live claim), or SKIP (done / na measured at head: nothing to
+build; a live claim on it is flagged as a likely duplicate dispatch). --head
+is required and must be a lowercase hex sha of 7-40 chars, since an audit row
+is only as current as the commit it measured. Sha comparison is
+by prefix, so REVERIFY means "not measured at this exact head", never a
+judgement of how far behind. A ref no AUDIT names is not listed: the view is
+the audited backlog, not every open item.
 
 PROPERTIES
 ----------
@@ -58,6 +76,7 @@ USAGE
 -----
   board_state.py --repo OWNER/NAME --issue N [--now 2026-01-05T10:00:00Z]          # print record
   board_state.py --repo OWNER/NAME --issue N --write                                # splice into body
+  board_state.py --repo OWNER/NAME --issue N --backlog --head <mainline sha>        # dispatch list
   board_state.py --selftest
 
 Exit codes: 0 rendered (and written, or unchanged); 2 error; 3 the issue
@@ -96,7 +115,7 @@ def fold(comments: list, now: datetime) -> dict:
     Only posts whose header parses with zero grammar errors change state.
     """
     st = {"max_id": 0, "counts": {"typed": 0, "chatter": 0, "untyped": 0, "malformed": 0},
-          "claims": {}, "contested": [], "ignored": [], "issues": {}, "questions": {}, "decisions": []}
+          "claims": {}, "contested": [], "ignored": [], "issues": {}, "questions": {}, "decisions": [], "audits": {}}
     for c in sorted(comments, key=lambda c: c["id"]):
         st["max_id"] = max(st["max_id"], c["id"])
         post = bc.parse_header(bc.first_line(c["body"]))
@@ -147,6 +166,9 @@ def _apply(st: dict, c: dict, post: dict) -> None:
         else:
             entry["status"], entry["fixes"] = "fix-claimed", entry["fixes"] + 1
             entry["fix"] = (fields["sha"], fields["test"], cid)
+    elif ptype == "AUDIT":
+        for ref in refs:
+            st["audits"][ref] = {"verdict": fields["verdict"], "sha": fields["sha"], "agent": agent, "id": cid}
     if ptype == "QUESTION" or (ptype == "BLOCKER" and fields.get("gate") == "owner"):
         st["questions"][cid] = {"agent": agent, "type": ptype, "refs": post["refs"], "gated": fields.get("gate") == "owner",
                                 "text": bc.snippet(c["body"], True), "answered_by": 0}
@@ -180,6 +202,9 @@ def render(st: dict) -> str:
         out.append(f"- contested: `{ref}` also claimed by agent:{agent} (comment {cid}) while agent:{holder} held it")
     if st["ignored"]:
         out.append(f"- ignored release/handoff from a non-holder: comments {', '.join(map(str, sorted(set(st['ignored']))))}")
+    out += ["", "### Audit (latest verdict per ref; `--backlog` for the dispatch list)"]
+    out += [f"- `{ref}` - {a['verdict']} at `{a['sha']}` by agent:{a['agent']} (comment {a['id']})"
+            for ref, a in sorted(st["audits"].items())] or ["- none"]
     out += ["", "### Known issues"]
     for key in sorted(st["issues"]):
         e = st["issues"][key]
@@ -204,6 +229,56 @@ def render(st: dict) -> str:
             for cid, agent, refs, of, text in recent] or ["- none"]
     out.append(END)
     return "\n".join(out)
+
+
+def _same_sha(a: str, b: str) -> bool:
+    """True iff the shorter of two hex shas prefixes the longer. Pure."""
+    n = min(len(a), len(b))
+    return a[:n].lower() == b[:n].lower()
+
+
+BACKLOG_ORDER = (("DISPATCH", "dispatch"), ("REVERIFY", "re-verify"), ("CLAIMED", "claimed"), ("SKIP", "skip"))
+
+
+def backlog(st: dict, head: str) -> list:
+    """The dispatch view of the folded audits at mainline `head` (see THE BACKLOG VIEW). Pure.
+
+    Returns a summary line then one line per audited ref, ordered DISPATCH,
+    REVERIFY, CLAIMED, SKIP and by ref within each. A claim counts only while
+    unexpired, exactly as the Claims section reads it. Raises ValueError when
+    `head` (or a folded audit sha) is not a lowercase hex sha of 7-40 chars:
+    an empty or garbage head would otherwise prefix-match every audit.
+    """
+    if not bc.FIELD_RULES["sha"].match(head or ""):
+        raise ValueError(f"--head {head!r} is not a lowercase hex sha of 7-40 chars")
+    rows = {kind: [] for kind, _ in BACKLOG_ORDER}
+    for ref, a in sorted(st["audits"].items()):
+        cl = st["claims"].get(ref)
+        held = cl if cl and not cl["expired"] else None
+        src = f"(agent:{a['agent']}, comment {a['id']})"
+        if not bc.FIELD_RULES["sha"].match(a["sha"]):
+            raise ValueError(f"audit of {ref} carries a malformed sha {a['sha']!r}")
+        if a["verdict"] != "gap":
+            note = (f"; claimed by agent:{held['agent']}: an audited-{a['verdict']} item under a live claim is "
+                    "likely a duplicate dispatch" if held else "")
+            if _same_sha(a["sha"], head):
+                rows["SKIP"].append(f"SKIP `{ref}` {a['verdict']} at {a['sha']} {src}: nothing to build{note}")
+            else:
+                # A done/na verdict dates to the commit it measured: a later
+                # merge can revert or reopen it, so it is not a SKIP at head.
+                rows["REVERIFY"].append(f"REVERIFY `{ref}` {a['verdict']} measured at {a['sha']}, not head {head} "
+                                        f"{src}: spot-check it still holds at head; post a fresh AUDIT if not{note}")
+        elif held:
+            rows["CLAIMED"].append(f"CLAIMED `{ref}` gap, held by agent:{held['agent']} until "
+                                   f"{bc.format_ts(held['expires'])} {src}")
+        elif _same_sha(a["sha"], head):
+            rows["DISPATCH"].append(f"DISPATCH `{ref}` gap measured at head {src}")
+        else:
+            rows["REVERIFY"].append(f"REVERIFY `{ref}` gap measured at {a['sha']}, not head {head} {src}: "
+                                    "spot-check it is still open at head, then dispatch; do not re-measure from scratch")
+    counts = ", ".join(f"{len(rows[kind])} {label}" for kind, label in BACKLOG_ORDER)
+    summary = f"Backlog: {len(st['audits'])} audited refs at head {head}: {counts}"
+    return [summary] + [line for kind, _ in BACKLOG_ORDER for line in rows[kind]]
 
 
 def splice(body: str, block: str) -> str:
@@ -238,6 +313,22 @@ def read_board(repo: str, issue: int, runner):
     if not isinstance(total, int) or len({c.get("id") for c in comments}) < total:
         raise bc.ForgeError(f"read {len(comments)} comments, issue reports {total}: truncated, refusing to fold")
     return issue_obj, comments
+
+
+def run_backlog(repo: str, issue: int, now: datetime, head: str, runner, out) -> int:
+    """Fetch and fold the board, then print the backlog view. Returns an exit code.
+
+    Side-effects: `gh` reads through `runner` only; never writes. Fails closed
+    (exit 2, nothing on stdout) on any read error or truncated comment stream.
+    """
+    try:
+        _, comments = read_board(repo, issue, runner)
+        lines = backlog(fold(comments, now), head)
+    except (bc.ForgeError, KeyError, TypeError, ValueError) as exc:
+        print(f"board_state: {exc}; no backlog", file=sys.stderr)
+        return ERROR
+    out.write("\n".join(lines) + "\n")
+    return OK
 
 
 def run(repo: str, issue: int, now: datetime, write: bool, runner, out) -> int:
@@ -435,7 +526,91 @@ def _selftest() -> int:
         rc, gh, patches = raced(lambda gh: gh.comments.append(_c(99, 30, "[agent:beta] CLAIM refs:#77\nnew")))
         return rc == CONFLICT and patches == 0 and gh.body == "Owner text.\n", f"rc={rc} patches={patches}"
 
+    head, old = "1111111aaaa", "2222222bbbb"
+
+    def audit_fixture():
+        return [
+            _c(1, 0, f"[agent:alpha] AUDIT refs:#1,web/cart sha:{head} verdict:gap\nmeasured at mainline"),
+            _c(2, 1, f"[agent:alpha] AUDIT refs:#2 sha:{old} verdict:gap\nmeasured three merges ago"),
+            _c(3, 2, f"[agent:alpha] AUDIT refs:#3 sha:{head} verdict:done\nalready shipped"),
+            _c(4, 3, f"[agent:alpha] AUDIT refs:#4 sha:{head} verdict:na\nno counterpart"),
+            _c(5, 4, f"[agent:alpha] AUDIT refs:#5 sha:{head} verdict:gap\nreal gap"),
+            _c(6, 5, "[agent:beta] CLAIM refs:#5 ttl:60\ntaking it"),
+            _c(7, 6, "[agent:beta] CLAIM refs:#3 ttl:60\nspawned before reading the audit"),
+            _c(8, 7, f"[agent:alpha] AUDIT refs:#6 sha:{head} verdict:gap\nfirst pass"),
+            _c(9, 8, f"[agent:gamma] AUDIT refs:#6 sha:{head} verdict:done\nre-measured: merged since"),
+            _c(10, 9, "[agent:beta] CLAIM refs:#7 ttl:5\nabandoned"),
+            _c(11, 10, f"[agent:alpha] AUDIT refs:#7 sha:{head} verdict:gap\nreal gap"),
+        ]
+
+    def audit_rendered_latest_wins():
+        text = rendered(audit_fixture())
+        section = text.split("### Audit")[1].split("###")[0] if "### Audit" in text else ""
+        ok = ("`#6` - done at `1111111aaaa` by agent:gamma (comment 9)" in section
+              and "`web/cart` - gap" in section and "`#4` - na" in section)
+        return ok, section or text
+
+    def backlog_view():
+        st = fold(audit_fixture(), now)
+        lines = backlog(st, head)
+        text = "\n".join(lines)
+        kinds = [ln.split()[0] for ln in lines[1:]]
+        ok = (lines[0].startswith("Backlog: 8 audited refs at head 1111111aaaa: 3 dispatch, 1 re-verify, 1 claimed, 3 skip")
+              and kinds == ["DISPATCH"] * 3 + ["REVERIFY", "CLAIMED"] + ["SKIP"] * 3
+              and "DISPATCH `#7`" in text and "DISPATCH `web/cart`" in text
+              and "REVERIFY `#2` gap measured at 2222222bbbb" in text
+              and "CLAIMED `#5` gap, held by agent:beta" in text
+              and "SKIP `#3` done" in text and "claimed by agent:beta: an audited-done item under a live claim is likely a duplicate dispatch" in text
+              and "SKIP `#6` done" in text and "SKIP `#4` na" in text)
+        return ok, text
+
+    def backlog_needs_head():
+        saved, sys.stderr = sys.stderr, _Sink()
+        try:
+            rc1 = main(["--repo", "acme/board", "--issue", "7", "--backlog"])
+            rc2 = main(["--repo", "acme/board", "--issue", "7", "--backlog", "--head", "zz-not-hex"])
+            rc3 = main(["--repo", "acme/board", "--issue", "7", "--backlog", "--head", head, "--write"])
+        finally:
+            sys.stderr = saved
+        return rc1 == rc2 == rc3 == ERROR, f"rc={rc1},{rc2},{rc3}"
+
+    def stale_done_or_na_reverify():
+        comments = [
+            _c(1, 0, f"[agent:alpha] AUDIT refs:#8 sha:{old} verdict:done\nshipped three merges ago"),
+            _c(2, 1, f"[agent:alpha] AUDIT refs:#9 sha:{old} verdict:na\nno counterpart then"),
+            _c(3, 2, f"[agent:alpha] AUDIT refs:#10 sha:{head} verdict:done\nshipped at head"),
+        ]
+        lines = backlog(fold(comments, now), head)
+        text = "\n".join(lines)
+        ok = ("REVERIFY `#8` done measured at 2222222bbbb" in text and "REVERIFY `#9` na measured at 2222222bbbb" in text
+              and "SKIP `#10` done at 1111111aaaa" in text and "SKIP `#8`" not in text and "SKIP `#9`" not in text
+              and lines[0].endswith("0 dispatch, 2 re-verify, 0 claimed, 1 skip"))
+        return ok, text
+
+    def backlog_rejects_bad_head():
+        st = fold(audit_fixture(), now)
+        refused = []
+        for bad in ("", "abc", "ZZZZZZZ1", "1111111AAAA", "1111111aaaa;rm"):
+            try:
+                backlog(st, bad)
+                refused.append(False)
+            except ValueError:
+                refused.append(True)
+        rc = run_backlog("acme/board", 7, now, "", bc.FakeGh(audit_fixture()), _Sink())
+        return all(refused) and rc == ERROR, f"refused={refused} rc={rc}"
+
+    def backlog_run_reads_forge():
+        sink = _Sink()
+        rc = run_backlog("acme/board", 7, now, head, bc.FakeGh(audit_fixture()), sink)
+        return rc == OK and "DISPATCH `#1`" in sink.text and "REVERIFY `#2`" in sink.text, sink.text
+
     cases = [
+        ("audit-rendered-latest-wins", audit_rendered_latest_wins),
+        ("backlog-dispatch-reverify-claimed-skip", backlog_view),
+        ("backlog-requires-hex-head-and-no-write", backlog_needs_head),
+        ("backlog-reads-forge", backlog_run_reads_forge),
+        ("backlog-stale-done-or-na-reverify", stale_done_or_na_reverify),
+        ("backlog-rejects-bad-head", backlog_rejects_bad_head),
         ("claims-ttl-contested-handoff-ignored", claims_ttl_contested_handoff),
         ("changed-body-before-patch-conflicts", body_changed_before_patch_not_overwritten),
         ("new-comment-before-patch-conflicts", comment_added_before_patch_not_overwritten),
@@ -479,6 +654,8 @@ def main(argv=None) -> int:
     parser.add_argument("--issue", type=int)
     parser.add_argument("--now", help="evaluate claim expiry at this UTC time (YYYY-MM-DDTHH:MM:SSZ); default: now")
     parser.add_argument("--write", action="store_true", help="splice the record into the issue body (an external write)")
+    parser.add_argument("--backlog", action="store_true", help="print the audit dispatch list (read-only); needs --head")
+    parser.add_argument("--head", help="mainline commit sha the audits are compared against (hex, 7-40 chars)")
     parser.add_argument("--selftest", action="store_true")
     args = parser.parse_args(argv)
     if args.selftest:
@@ -491,6 +668,12 @@ def main(argv=None) -> int:
     except ValueError:
         print("board_state: --now must be YYYY-MM-DDTHH:MM:SSZ", file=sys.stderr)
         return ERROR
+    if args.backlog:
+        if args.write or not bc.FIELD_RULES["sha"].match(args.head or ""):
+            print("board_state: --backlog needs --head <hex sha, 7-40 chars> and cannot be combined with --write",
+                  file=sys.stderr)
+            return ERROR
+        return run_backlog(args.repo, args.issue, now, args.head, bc.default_runner, sys.stdout)
     return run(args.repo, args.issue, now, args.write, bc.default_runner, sys.stdout)
 
 

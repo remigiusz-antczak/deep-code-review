@@ -50,10 +50,10 @@ import sys
 from datetime import datetime, timezone
 from urllib.parse import parse_qs, urlsplit
 
-TYPES = ("CLAIM", "RELEASE", "DECISION", "HANDOFF", "BLOCKER", "FIX-CLAIM", "QUESTION", "ANSWER")
+TYPES = ("CLAIM", "RELEASE", "DECISION", "HANDOFF", "BLOCKER", "FIX-CLAIM", "QUESTION", "ANSWER", "AUDIT")
 CHATTER_TYPES = ("STATUS", "ACK", "READY", "LANDED")
 
-FIELD_ORDER = ("sha", "test", "topic", "ttl", "to", "of", "gate")
+FIELD_ORDER = ("sha", "test", "verdict", "topic", "ttl", "to", "of", "gate")
 
 AGENT_PATTERN = r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}"
 _AGENT_RE = re.compile(rf"^{AGENT_PATTERN}$")
@@ -72,6 +72,9 @@ FIELD_RULES = {
     "to": _AGENT_RE,
     "of": re.compile(r"^[0-9]{1,20}$"),
     "gate": re.compile(r"^owner$"),
+    # AUDIT outcome for one item: a real gap to build, already done, or not
+    # applicable (no counterpart). Only `gap` is dispatchable work.
+    "verdict": re.compile(r"^(?:gap|done|na)$"),
 }
 
 # Which optional fields each TYPE may carry. A field outside its TYPE's set is
@@ -85,14 +88,16 @@ TYPE_FIELDS = {
     "FIX-CLAIM": {"sha", "test", "topic"},
     "QUESTION": {"gate"},
     "ANSWER": {"of"},
+    "AUDIT": {"sha", "verdict", "topic"},
 }
 TYPE_REQUIRED = {
     "HANDOFF": {"to"},
     "FIX-CLAIM": {"sha", "test"},
     "ANSWER": {"of"},
+    "AUDIT": {"sha", "verdict"},
 }
 # Types that act on a specific item and therefore cannot use `refs:-`.
-TYPES_NEEDING_REFS = {"CLAIM", "RELEASE", "HANDOFF"}
+TYPES_NEEDING_REFS = {"CLAIM", "RELEASE", "HANDOFF", "AUDIT"}
 
 PAGE_SIZE = 100  # GitHub REST maximum per_page for issue comments
 
@@ -375,6 +380,13 @@ def _selftest() -> int:
         ("duplicate-field-errors", lambda: (bool(parse_header("[agent:a] CLAIM refs:#1 ttl:5 ttl:6")["errors"]), "no error")),
         ("claim-needs-refs", lambda: (bool(validate_post("CLAIM", "-", {})), "accepted refs:-")),
         ("fix-claim-needs-sha", lambda: (any("sha" in e for e in validate_post("FIX-CLAIM", "#1", {"test": "t.py"})), "no sha error")),
+        ("audit-roundtrip", lambda: (
+            (lambda p: (p is not None and not p["errors"] and p["fields"] == {"sha": "abc1234", "verdict": "na"}, p))(
+                parse_header("[agent:a] AUDIT refs:#7,web/cart sha:abc1234 verdict:na")))),
+        ("audit-needs-verdict-sha-refs", lambda: (
+            (lambda e: (any("verdict" in x for x in e[0]) and any("sha" in x for x in e[0]) and e[1] and e[2], e))(
+                (validate_post("AUDIT", "#7", {}), validate_post("AUDIT", "-", {"sha": "abc1234", "verdict": "gap"}),
+                 validate_post("AUDIT", "#7", {"sha": "abc1234", "verdict": "maybe"}))))),
         ("snippet-strips-markup", lambda: (
             (lambda s: ("-->" not in s and "\x1b" not in s and "|" not in s, s))(
                 snippet("head\n\x1b[31mred --> | x", True)))),

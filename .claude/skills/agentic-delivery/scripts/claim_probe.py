@@ -11,7 +11,10 @@ exclusive step, it compares what you plan to touch against:
 
   1. live board CLAIMs — the board issue folded by board_state.fold (the one
      TTL implementation: an expired claim does not block, a renewed one does;
-     your own claims, named by --agent, are skipped);
+     your own claims, named by --agent, are skipped) — and the latest board
+     AUDIT verdict on the item you name: `done` or `na` is NO-GO, because a
+     peer already measured it as nothing to build (#1071). A fresh AUDIT
+     `verdict:gap` supersedes it once a re-measure shows otherwise;
   2. every open PR, drafts included — its full, paginated file list against
      --paths, its title and head branch against --keyword, and its title and
      body against any `#<n>` --ref;
@@ -168,7 +171,14 @@ def probe(repo: str, issue: int, paths, refs, keywords, agent: str, ignore_prs, 
     evidence, counts = [], {"claims": 0, "prs": 0, "branches": 0}
     _, comments = bs.read_board(repo, issue, runner)
     kw_items = {_item_ref(k) for k in keywords} - {None}
-    for ref, cl in sorted(bs.fold(comments, now)["claims"].items()):
+    state = bs.fold(comments, now)
+    for ref, au in sorted(state["audits"].items()):
+        item = _item_ref(ref) if ref.startswith("#") else None
+        if au["verdict"] != "gap" and (ref in refs or (item and (item in refs or item in kw_items))):
+            evidence.append(f"audit  {_show(ref)} verdict:{au['verdict']} at {au['sha']} by agent:{au['agent']} "
+                            f"(board comment {au['id']}): a peer measured nothing to build; if that is stale, "
+                            "re-measure and post AUDIT verdict:gap before starting")
+    for ref, cl in sorted(state["claims"].items()):
         if cl["expired"] or cl["agent"] == agent:
             continue
         counts["claims"] += 1
@@ -470,7 +480,21 @@ def _selftest() -> int:
         return (rc == NOGO and "claim  #77" in out and "no --ref" in out and "#78" not in out
                 and own[0] == GO and named[0] == GO), (rc, out, err, own, named)
 
+    def audited_done_or_na_no_go():
+        comments = [_c(1, 0, "[agent:alpha] AUDIT refs:#3,#4 sha:abc1234 verdict:done\nalready shipped"),
+                    _c(2, 1, "[agent:alpha] AUDIT refs:#5 sha:abc1234 verdict:gap\nreal gap"),
+                    _c(3, 2, "[agent:alpha] AUDIT refs:#6 sha:abc1234 verdict:na\nno counterpart"),
+                    _c(4, 3, "[agent:gamma] AUDIT refs:#4 sha:def5678 verdict:gap\nre-measured: regressed")]
+        done = _probe(_forge(comments=comments, prs=[]), "--ref", "#3")
+        na = _probe(_forge(comments=comments, prs=[]), "--keyword", "6")
+        gap = _probe(_forge(comments=comments, prs=[]), "--ref", "#5")
+        superseded = _probe(_forge(comments=comments, prs=[]), "--ref", "#4")
+        return (done[0] == NOGO and "audit  #3 verdict:done at abc1234 by agent:alpha (board comment 1)" in done[1]
+                and na[0] == NOGO and "audit  #6 verdict:na" in na[1]
+                and gap[0] == GO and superseded[0] == GO), (done, na, gap, superseded)
+
     cases = [
+        ("audited-done-or-na-no-go", audited_done_or_na_no_go),
         ("live-claim-no-go", live_claim_no_go),
         ("lagging-pr-same-paths-no-go", lagging_pr_same_paths_no_go),
         ("disjoint-go-and-really-read", disjoint_go_and_really_read),
