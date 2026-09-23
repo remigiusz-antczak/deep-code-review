@@ -167,8 +167,14 @@ keeps that load small:
 - **Frozen budgets.** CI caps every skill map at 24,000 bytes, freezes each
   reference's byte size, and pins each review type's must-read token total.
   Raising a size budget needs an explicit `size-budget-raise:` marker.
+- **Lookup tables, not browsing.** Every skill ships a generated `INDEX.md`
+  (file → when to read it → estimated tokens → headings), so an agent opens one
+  file instead of scanning references. CI fails when an index goes stale.
 - **Short handbacks.** The handback cap and one-line reporting default stop
   per-lane narration multiplying across a fleet.
+- **Measure it.** `agentic-ceo/scripts/token_report.py --session <transcript>`
+  reports main-agent vs subagent tokens, each subagent's startup and output
+  cost, and flags an orchestration share above 20%.
 - **Host settings.** The verified Claude Code settings that cut per-turn tokens
   are documented in
   [`host-enforcement.md`](.claude/skills/agentic-delivery/references/host-enforcement.md).
