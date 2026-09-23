@@ -207,7 +207,10 @@ equally "recent" for an agent that has already exited. Acting on the stat cuts b
 **ping it answers** — never from the transcript file's size or age. Killing a lane is a
 **destructive, shared-state action** (principle 9 — closing or deleting shared state needs evidence, not
 presumption): confirm the agent is genuinely idle by a *positive* signal before terminating. If nothing but the
-transcript is observable, the honest state is **`UNVERIFIED`**, not "dead." Distinct from the Conductor's
+transcript is observable, the honest state is **`UNVERIFIED`**, not "dead." **`scripts/lane_liveness.py
+--worktree <path> [--pid N]`** computes exactly this positive-signal read offline — ALIVE / QUIET / DEAD from a
+live process, file/git-state mtimes, and a CPU-time sample, never a kill verdict — so "slow, not stuck" is a
+checkable report instead of prose alone (#1070). Distinct from the Conductor's
 context-isolation rule ("read status, not the raw transcript" — do not consume the transcript as *context*):
 this is not reading its **file stat** as *liveness*. And distinct from the idle-before-duplicate section above:
 that is a false-**positive** "completed" leading to a duplicate dispatch; this is a false-**negative** liveness
@@ -350,6 +353,10 @@ Two activities run the same commands but are different contracts — do not conf
   discovery pass surfaces, but **re-confirm each at the new head before acting on it** — a finding carried
   forward without a re-run is `unverified`, not still-open (`deep-code-review` `method.md`) — and
   **discard the pass/fail**, never filing it as certification.
+- **A returning reviewer re-confirming at the new head reads a digest, not the whole tree.** Run
+  **`scripts/review_digest.py --since <last-seen-sha>`** for commits, per-directory +/- counts, flagged
+  test/CI/config paths, and the diff stat since their last pass; review the flagged hunks the digest names, not
+  a full re-read (#1080).
 
 This composes with *a worktree assignment is a path… an integrator on a shared branch detaches* above: that
 fixes **where** the integrator merges (a detached tree at the tip), this fixes **when** release verification

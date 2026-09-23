@@ -1499,6 +1499,28 @@
         "Verifies the sha is reachable from the remote branch the surface builds from (fetch, then ancestry), not a local tree",
         "States that a matching build id proves the build is served, not that the fix works"
       ]
+    },
+    {
+      "id": "slow-lane-not-stuck-without-positive-liveness-signal",
+      "prompt": "A background lane has produced no commit in an hour under heavy multi-agent load, where commits routinely take 3-5 minutes and QA is slow. The orchestrator is about to kill it as stuck and resume it later. What should it check first?",
+      "expected_output": "Elapsed time with no PR is not evidence of a hang -- under heavy load a lane can simply be slow. Before killing anything, get a positive liveness signal: a live process (or one whose cwd is inside the lane's worktree), a recent file/git-state mtime, or moving CPU time (`scripts/lane_liveness.py --worktree <path>` reports exactly this as ALIVE/QUIET/DEAD). Killing on 'no commit yet' alone discards uncommitted work irreversibly and then pays for the stop, the resume, and the re-work. QUIET (a live process with no recent product signal) means look closer, never kill; only DEAD (no process AND no activity for the quiet window) is grounds to escalate toward a kill, and even DEAD is not itself authorization -- it is evidence for a human/owner-gated decision.",
+      "expectations": [
+        "Says elapsed time / no-PR alone is not evidence of a hang",
+        "Calls for a positive liveness signal (live process, cwd-owning process, recent file/git mtime, or CPU-time movement) before any kill",
+        "Names `lane_liveness.py` or the ALIVE/QUIET/DEAD framing and that QUIET is not a kill signal",
+        "Does not treat DEAD alone as authorization to kill"
+      ]
+    },
+    {
+      "id": "returning-reviewer-reads-digest-not-whole-tree",
+      "prompt": "A reviewer who approved a PR at commit `abc123` is asked to look at it again two days later after several more commits landed. They open the whole diff from the PR's base branch and start reading top to bottom. Good approach?",
+      "expected_output": "No -- that re-reads everything already approved, wasting effort and risking both a missed real change (buried among unchanged surroundings) and a re-flagged non-issue (something already resolved). Scope the second pass to what moved since the reviewer's own last-seen sha, `abc123`, not the PR's base: run `scripts/review_digest.py --since abc123` for the commit list, per-directory +/- counts, flagged test/CI/config paths, and the diff stat, then review only the flagged hunks the digest names. Anything not listed is implicitly unchanged since it was last approved.",
+      "expectations": [
+        "Says scoping to the reviewer's own last-seen sha (not the PR base) is correct, not a full re-read",
+        "Names `review_digest.py` or the since-sha digest mechanism",
+        "States that unlisted files are implicitly unchanged since the last approved pass",
+        "Notes the full-re-read risk: missed real changes and re-flagged already-resolved issues"
+      ]
     }
   ]
 }
