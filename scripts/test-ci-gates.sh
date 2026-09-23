@@ -2047,8 +2047,8 @@ else
 fi
 
 # ===========================================================================
-# dcr-gates opt-in delivery gates — refix_gate.py and priority_gate.py (own
-# lane; APPENDED AT THE END by convention). Both are OFF by default; a set
+# dcr-gates opt-in delivery gates — refix_gate.py, priority_gate.py, and focus_gate.py (own
+# lane; APPENDED AT THE END by convention). All are OFF by default; a set
 # flag with agentic-delivery missing, a bad flag value, or a missing input
 # fails closed; each gate FIRES on a planted violation through the runner.
 # ===========================================================================
@@ -2093,10 +2093,10 @@ git -C "$og" commit -q -m 'style(a): reformat'
 
 # 2) Default run (no flags): neither opt-in gate runs.
 og_run "$WORK/og-default.log"
-if [ "$OG_RC" -eq 0 ] && ! grep -qE 'refix_gate|priority_gate' "$WORK/og-default.log"; then
-  record 0 "dcr-gates opt-in: both gates are off by default"
+if [ "$OG_RC" -eq 0 ] && ! grep -qE 'refix_gate|priority_gate|focus_gate' "$WORK/og-default.log"; then
+  record 0 "dcr-gates opt-in: all three gates are off by default"
 else
-  record 1 "dcr-gates opt-in: both gates are off by default"
+  record 1 "dcr-gates opt-in: all three gates are off by default"
 fi
 
 # 3) Planted RED: re-touching a just-fixed file with no test/eval change FIRES.
@@ -2150,6 +2150,40 @@ if [ "$og_red_rc" -ne 0 ] && grep -q 'BLOCKING #3' "$WORK/og-prio-red.log" \
   record 0 "dcr-gates opt-in: priority_gate fires on an inversion, passes once cited (planted RED)"
 else
   record 1 "dcr-gates opt-in: priority_gate fires on an inversion, passes once cited (planted RED)"
+fi
+
+# 8) DCR_FOCUS_GATE=1: with no owner priority record the run fails closed;
+#    an owner-committed OPEN record FIRES on a change outside its scope; the
+#    same gate passes once the owner's acceptance command exits 0 (DONE).
+og_run "$WORK/og-focus-norecord.log" DCR_FOCUS_GATE=1 DCR_OWNER_EMAIL=jane@example.com
+if [ "$OG_RC" -ne 0 ] && grep -q 'no record at' "$WORK/og-focus-norecord.log" \
+  && grep -q 'dcr-gates: focus_gate FAIL' "$WORK/og-focus-norecord.log"; then
+  record 0 "dcr-gates opt-in: focus_gate with no priority record fails closed"
+else
+  record 1 "dcr-gates opt-in: focus_gate with no priority record fails closed"
+fi
+og_focus_record() {  # <acceptance-command> <subject>
+  printf 'priority: design-alignment\nscope: src/**\nacceptance: %s\n' "$1" >"$og/.claude/PRIORITY.md"
+  git -C "$og" add .claude/PRIORITY.md >/dev/null 2>&1
+  git -C "$og" commit -q -m "$2"
+}
+og_focus_record false 'chore: record owner priority'
+mkdir -p "$og/web"
+printf 'a { color: red; }\n' >"$og/web/app.css"
+git -C "$og" add web/app.css >/dev/null 2>&1
+git -C "$og" commit -q -m 'style(web): recolor links'
+og_run "$WORK/og-focus-red.log" DCR_FOCUS_GATE=1 DCR_OWNER_EMAIL=jane@example.com
+og_red_rc="$OG_RC"
+og_run "$WORK/og-focus-agent.log" DCR_FOCUS_GATE=1 DCR_OWNER_EMAIL=owner@example.com
+og_agent_rc="$OG_RC"
+og_focus_record true 'chore: owner accepts design alignment'
+og_run "$WORK/og-focus-ok.log" DCR_FOCUS_GATE=1 DCR_OWNER_EMAIL=jane@example.com
+if [ "$og_red_rc" -ne 0 ] && grep -q 'outside scope: web/app.css' "$WORK/og-focus-red.log" \
+  && [ "$og_agent_rc" -ne 0 ] && grep -q 'is not the owner' "$WORK/og-focus-agent.log" \
+  && [ "$OG_RC" -eq 0 ] && grep -q 'dcr-gates: focus_gate PASS' "$WORK/og-focus-ok.log"; then
+  record 0 "dcr-gates opt-in: focus_gate fires outside an OPEN priority, rejects a non-owner record, passes once DONE (planted RED)"
+else
+  record 1 "dcr-gates opt-in: focus_gate fires outside an OPEN priority, rejects a non-owner record, passes once DONE (planted RED)"
 fi
 
 # ===========================================================================

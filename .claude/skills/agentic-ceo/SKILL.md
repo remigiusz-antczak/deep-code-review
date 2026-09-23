@@ -134,6 +134,8 @@ Dispatch aged P0 / mechanism work before presentation polish; `agentic-delivery`
 `unattended-operating-mode.md` routes two opt-in gates: `scripts/priority_gate.py`
 blocks a presentation PR while aged P0/mechanism work is uncited, and
 `scripts/refix_gate.py` blocks churn without a class artifact.
+An OPEN owner priority outranks both: dispatch nothing outside it until DONE or BLOCKED
+(same file, **An open owner priority outranks every other item**; `scripts/focus_gate.py`).
 
 ## Output discipline (no slop) — enforced across the suite
 Every user-facing output the suite produces — message, report, plan, table, or
