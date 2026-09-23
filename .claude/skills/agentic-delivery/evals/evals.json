@@ -1354,6 +1354,30 @@
         "Treats a merge into an auto-deploying branch as a deploy that no standing grant covers",
         "Parks the merges as an owner ask while continuing un-gated work, rather than stopping the loop or merging anyway"
       ]
+    },
+    {
+      "id": "board-read-is-a-cursor-digest-not-the-tail",
+      "prompt": "Several agent sessions coordinate on one GitHub issue that now has about 700 comments. The protocol written in the issue body says: at the start of each loop, run `gh issue view <n>` to catch up, then act. A session that joins mid-run does exactly that on a terminal and starts building the item it thinks is free. Is that a sound read?",
+      "expected_output": "No. On a terminal `gh issue view <n>` prints the issue body plus only the newest comment (the rest are hidden behind a 'Not showing N comments' line), and the body is stale if nobody re-renders it, so the session read roughly a one-comment window and can miss every claim, correction, or collision flag posted since. Re-reading the whole thread with --comments every loop is the opposite failure: a token cost that grows with the board. The read should be a per-agent cursor: run scripts/board_sync.py, which fetches the full range since this agent's high-water mark with a paginated `gh api` call (edited comments come back because `since` filters on update time), prints a compact one-line-per-post digest with the unread count, and advances the cursor only after the digest is printed, so the advance is the read receipt. A first read fetches everything and refuses to advance if pagination came back short. Joining sessions should also read the rendered state record in the issue body (scripts/board_state.py) instead of replaying the stream. And the lesson is not closed by adding a prose rule: it closes only when a script or gate enforcing it lands with an eval that exercises it.",
+      "expectations": [
+        "Identifies that gh issue view on a terminal shows the body plus only the newest comment, so it is a tail read that misses intervening posts",
+        "Rejects a full --comments re-read every loop as the fix because its cost grows with the board",
+        "Prescribes a per-agent cursor read (board_sync.py): full paginated range since the high-water mark, edits included, compact digest with an unread count",
+        "States the cursor advances only after the digest is printed, so the advance is the read receipt and a failed or truncated read advances nothing",
+        "States that a coordination lesson closes only when an enforcing script or gate lands with an eval, not with prose alone"
+      ]
+    },
+    {
+      "id": "fix-claim-needs-default-branch-sha-and-test",
+      "prompt": "On a shared coordination issue, an agent posts: 'ROOT CAUSE found and fixed for good, this cannot recur', citing a commit that exists only on its own local branch and naming no test. A second agent wants to mark the known issue closed in the board's state and move on. Should it?",
+      "expected_output": "No. A fix claim is only checkable when it carries a commit that is reachable from the default (governing) branch and a regression test that exists at that commit; a commit on a local or unmerged branch fixes nothing that other agents run, and 'for good' without a test is an assertion, not evidence. The post should go through scripts/board_post.py as a FIX-CLAIM, which rejects it unless `sha:` resolves to a commit that is an ancestor of the default branch and `test:` names a file (and, for path::name, a test name) present at that commit. Even a verified FIX-CLAIM is recorded by scripts/board_state.py as 'fix-claimed', not 'fixed', in a known-issues table keyed by topic; a later BLOCKER on the same topic reopens the entry and increments its recurrence count, so a fix that did not hold is visible in the state record instead of buried in the stream. The second agent should leave the issue open and ask for the claim to be re-posted with the proof fields.",
+      "expectations": [
+        "Refuses to close the issue on an unverified 'fixed for good' claim",
+        "Requires the fix commit to be reachable from the default branch, not only a local or unmerged branch",
+        "Requires a regression test id that exists at that commit",
+        "Names board_post.py FIX-CLAIM verification (sha: plus test:) as the mechanism that rejects the post",
+        "Explains that board_state.py records fix-claimed with a recurrence count that a later BLOCKER on the same topic increments"
+      ]
     }
   ]
 }
