@@ -6039,6 +6039,17 @@
         "States a commit/push hook must never invoke a live reaper at all, not just that it needs a flag",
         "Names the shared/preview serving port as a required keep-list entry, distinct from generic operator-config exclusions"
       ]
+    },
+    {
+      "id": "design-realign-without-feedback-accept-file-overrides-feedback",
+      "prompt": "Review this lane plan for a restyle: \"The design export named latest is the source of truth. Run parity_differ against it and fix every MISMATCH row until it reports MATCH.\" The app already carries two changes from survey feedback and a meeting action item that the design export never picked up. Anything wrong with the plan?",
+      "expected_output": "Yes. The plan treats one requirement source, the design export, as the whole requirement set. Fixing every MISMATCH row would undo the implemented feedback the design never captured, because those changes show up as CHANGED or EXTRA_IN_APP rows and the lane would revert them. The delivery ledger (`agentic-delivery/scripts/feedback_ledger.py`) holds the full set. Before re-aligning, run its `accept-file` and pass the output as the parity differ's `--accept` file, so decided feedback is accepted rather than reverted. Any design-vs-feedback conflict goes to the owner as a question and is never settled by re-aligning.",
+      "expectations": [
+        "Flags that the plan would revert implemented feedback the design export never captured",
+        "States the design export is one requirement source, not the requirement set",
+        "Requires running the ledger's `accept-file` and passing it to the parity differ via `--accept` before re-aligning",
+        "Routes design-vs-feedback conflicts to the owner rather than resolving them by re-aligning"
+      ]
     }
   ]
 }

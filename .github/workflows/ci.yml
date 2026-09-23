@@ -91,7 +91,11 @@ jobs:
           python3 .claude/skills/agentic-delivery/scripts/surface_check.py --selftest
           python3 .claude/skills/agentic-delivery/scripts/lane_liveness.py --selftest
           python3 .claude/skills/agentic-delivery/scripts/review_digest.py --selftest
+<<<<<<< HEAD
           python3 .claude/skills/agentic-ceo/scripts/task_ledger.py --selftest
+=======
+          python3 .claude/skills/agentic-delivery/scripts/feedback_ledger.py --selftest
+>>>>>>> 84a65a9
 
       # Every fix(...) commit in the pushed/PR range must touch a test surface
       # or carry a non-empty No-Test-Reason: trailer. Fails closed on an
