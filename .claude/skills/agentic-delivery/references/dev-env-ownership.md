@@ -2,7 +2,7 @@
 
 Read this when: booting a dev server in a lane, separating the serving tree from the committing tree, re-running a
 generator after commit, gating an absolute-count ratchet under parallel lanes, handling a live-feedback burst or
-new mid-task requirements, applying an ownership map, or probing contention against a PR's changed-file list. Part
+new mid-task requirements, applying an ownership map, probing contention against a PR's changed-file list, or bringing up the local stack for G5. Part
 of the `fast-agentic-delivery.md` lesson ledger — its index, sources, and cross-references live there; an
 "above"/"below" pointer to a section not in this file resolves through that index.
 
@@ -298,3 +298,21 @@ orchestrator keeps dispatching lanes onto doomed fixes that collide the instant 
   same reconcile-against-the-operator's-number discipline the tracker section below applies.
 - **🚩 tell:** a contention / ownership probe that reads *absent from a `--json files` page* as *uncontested*
   with no count-reconciliation, on a repo with a many-hundred-file release PR open.
+
+## Local environment — the five-step stack procedure
+
+The procedure behind `SKILL.md` **Local environment (own it)** and its G5 rule.
+
+1. **Discover** the project's one-command path (`README` / `package.json` /
+   `compose.yaml` / `.devcontainer` / `Makefile`) — prefer what the repo
+   documents; do not invent a second stack.
+2. **Bring it up** in the writer's worktree; record the command, URL/port, and
+   the health probe that returned 200. A missing prerequisite's `doctor` output
+   is the receipt — do not skip to "tests passed on the host."
+3. **Verify against the running process**, not only the repository: served
+   smoke, empty/error UI states where a UI exists, the project's own
+   `verify:served` if it has one.
+4. **Tear down** with the matching command; leave no orphan listener.
+5. **Never** `npm run build` (or equivalent) against a directory a running
+   server is serving — that stale-asset bug is a known ship failure; use the
+   project's isolated verify dir.

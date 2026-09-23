@@ -21,9 +21,10 @@ it expands.
   levers, CI-offload, draft-gated heavy checks, worktree isolation → `merge-queue-worktrees.md`
 - Delegating by measured number, foreground verification, finalize and done-contracts, stranded PRs, hard-to-write
   tests, liveness and duplicate dispatch, plugin forks, self-polling lanes, timeboxed briefs, release verification,
-  `Verify:` lines, fan-out joins, relaying findings, soft prohibitions → `verification-handback.md`
+  `Verify:` lines, fan-out joins, relaying findings, soft prohibitions, context-inheriting forks → `verification-handback.md`
 - Dev-server dependency copies, serve-vs-commit trees, hard-reset sync loops, generator re-stamps, absolute-count
-  ratchets, live-feedback bursts, requirement queues, ownership maps, contention probes → `dev-env-ownership.md`
+  ratchets, live-feedback bursts, requirement queues, ownership maps, contention probes, the local-stack procedure →
+  `dev-env-ownership.md`
 - Tracker auto-close and issue closing, PR-body markers, fan-out ETAs, the unattended work loop, go-faster signals,
   monitors, the add-only loop set, degradation workarounds, research vs delivery, terminus, surface enumeration →
   `unattended-trackers.md`

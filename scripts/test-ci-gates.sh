@@ -160,9 +160,9 @@ printf 'literal depth\n' >"$literal/references/literal.md"
 gate "$GATES" routing "$literal"
 if [ "$GATE_RC" -ne 0 ]; then record 0 "routing: reject reference matched only via regex-meta basename"; else record 1 "routing: reject reference matched only via regex-meta basename"; fi
 
-# Oversized, well-routed, NON-allowlisted SKILL.md: the size ratchet now FAILS on
-# bloat (it used to only warn). The fixture basename (skill-big) is not on the
-# reasoned allowlist, so it must fail with a SIZE FAIL diagnostic.
+# Oversized, well-routed SKILL.md: the size ratchet FAILS on bloat (it used to
+# only warn), and there is no per-skill allowlist, so it must fail with a SIZE
+# FAIL diagnostic.
 big="$WORK/skill-big"
 mkdir -p "$big/references"
 printf '# Skill\n\nSee references/routed.md for depth.\n' >"$big/SKILL.md"
@@ -171,14 +171,14 @@ printf 'routed depth\n' >"$big/references/routed.md"
 
 gate "$GATES" routing --max-bytes "$SKILL_BUDGET" "$big"
 if [ "$GATE_RC" -ne 0 ] && grep -q 'SIZE FAIL' "$WORK/last.log"; then
-  record 0 "routing: FAIL (not warn) when a non-allowlisted SKILL.md exceeds the budget"
+  record 0 "routing: FAIL (not warn) when a SKILL.md exceeds the budget"
 else
-  record 1 "routing: FAIL (not warn) when a non-allowlisted SKILL.md exceeds the budget"
+  record 1 "routing: FAIL (not warn) when a SKILL.md exceeds the budget"
 fi
 
-# An allowlisted skill (agentic-delivery) may exceed the budget: it emits SIZE
-# ALLOWED and PASSES. Same oversized body; only the dir basename differs, and the
-# allowlist keys on that basename. Proves the allowlist is real, not a blanket skip.
+# The former size allowlist is gone: a skill dir named agentic-delivery (the one
+# name the allowlist used to exempt) with the same oversized body now FAILS with
+# SIZE FAIL and never prints SIZE ALLOWED. Planted RED against a re-added pin.
 allow="$WORK/agentic-delivery"
 mkdir -p "$allow/references"
 printf '# Skill\n\nSee references/routed.md for depth.\n' >"$allow/SKILL.md"
@@ -186,10 +186,20 @@ head -c $((SKILL_BUDGET * 4)) </dev/zero | tr '\0' 'x' >>"$allow/SKILL.md"
 printf 'routed depth\n' >"$allow/references/routed.md"
 
 gate "$GATES" routing --max-bytes "$SKILL_BUDGET" "$allow"
-if [ "$GATE_RC" -eq 0 ] && grep -q 'SIZE ALLOWED' "$WORK/last.log"; then
-  record 0 "routing: allowlisted skill (agentic-delivery) may exceed the size budget"
+if [ "$GATE_RC" -ne 0 ] && grep -q 'SIZE FAIL' "$WORK/last.log" \
+  && ! grep -q 'SIZE ALLOWED' "$WORK/last.log"; then
+  record 0 "routing: agentic-delivery is not size-allowlisted (oversized fixture FAILS)"
 else
-  record 1 "routing: allowlisted skill (agentic-delivery) may exceed the size budget"
+  record 1 "routing: agentic-delivery is not size-allowlisted (oversized fixture FAILS)"
+fi
+
+# The real agentic-delivery skill fits the CI cap on its own (routing ok, no
+# SIZE ALLOWED escape hatch), so ci.yml's routing line enforces the cap on it.
+gate "$GATES" routing --max-bytes 24000 "$ROOT/.claude/skills/agentic-delivery"
+if [ "$GATE_RC" -eq 0 ] && ! grep -q 'SIZE' "$WORK/last.log"; then
+  record 0 "routing: real agentic-delivery SKILL.md is within the 24000-byte cap"
+else
+  record 1 "routing: real agentic-delivery SKILL.md is within the 24000-byte cap"
 fi
 
 # ---------------------------------------------------------------------------

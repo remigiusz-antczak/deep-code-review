@@ -3,7 +3,7 @@
 Read this when: delegating visual/parity work by measured number, running or finalizing verification, writing a
 lane's definition of done, recovering a stranded PR, judging a lane's liveness or a plugin's forks, timeboxing an
 open brief, verifying a release head or a delegated green, carrying a `Verify:` line, joining a fan-out review,
-relaying a subagent's findings, or checking a brief's prohibition against its effect. Part of the
+relaying a subagent's findings, checking a brief's prohibition against its effect, or briefing a context-inheriting fork. Part of the
 `fast-agentic-delivery.md` lesson ledger — its index, sources, and cross-references live there; an "above"/"below"
 pointer to a section not in this file resolves through that index.
 
@@ -291,6 +291,15 @@ across several pings while its own reports keep saying "done, background work st
 queuing behind a self-poll that will never read them, and the trivial remaining step could have been finished
 directly turns ago.
 
+From `SKILL.md` **Failure** — the converse of *a running lane is not a finished one*, which that section keeps:
+
+- **The converse: a lane's scope ends at its own finish line, not at the
+  merge.** Once a lane's PR is open with its gates green, its job is done — it
+  does not loop re-checking CI for a merge that is the Conductor's (or a merge
+  guard's) job. Re-polling a green PR burns turns on unchanged news; report
+  once, then stop — the "event-driven, not polled" discipline applied by a lane
+  to itself.
+
 ## An open-ended brief gives the judge nothing to judge — timebox it and require an interim checkpoint
 
 The section above says how to **judge** a lane once you're looking at it — from its actual product, never the
@@ -525,7 +534,7 @@ The catch that makes this its own discipline: a refrained-action claim has an
 gate. "It did nothing forbidden" has none; it is a **union of effect surfaces**, and a clean check of one clears
 none of the others. `git status`/`git diff` in the worktree proves only that no *tracked file there* changed —
 nothing about a branch or tag pushed to the remote, a PR opened, an issue filed, a comment or message sent, or a
-paid tool called (the context-inheriting-fork rule in `SKILL.md` makes the same point for the narrow-brief
+paid tool called (the context-inheriting-fork section below makes the same point for the narrow-brief
 fork). So enumerate the surfaces the brief actually named and check each: the **per-agent tool-call record**
 where the harness exposes one; **remote refs** (`git ls-remote`) for a pushed branch or tag; **open PRs**; and
 the **diff scope** — did `VERSION`/`CHANGELOG`/`SHA256SUMS` move when the brief said "build only, stamps later"?
@@ -539,3 +548,22 @@ since that is where the reach happens; and weight the post-hoc effect-surface ch
 lanes, re-checking on resume after an idle gap. This is a different use of "idle" from
 *confirm a subagent is idle before dispatching a duplicate* above — there idleness is a
 **precondition to check before acting**; here it is a **predictor of when a delegate drifts past its brief**.
+
+## A context-inheriting fork is not a blank slate — a narrow brief does not erase the inherited wider one
+
+Moved from `SKILL.md` **Worktrees and occupancy**; "the tree-sharing risk above" in the rule below is that section's first bullet (a subagent or fork is not automatically a separate worktree).
+
+- **A context-inheriting fork is not a blank slate — a narrow instruction to
+  it is ambiguous by construction.** Distinct from the tree-sharing risk
+  above: a fork hands a subagent every prior instruction, not only the newest.
+  A lane earlier told "file an issue for anything you find" and later forked
+  with "return a table, create or change nothing" inherits both — the narrower
+  ask does not erase the wider one still in its context, and it can act on the
+  old brief. Two mitigations, both required for narrow or research-only work:
+  prefer a **fresh, non-forked** unit (no inherited brief to fall back on);
+  when a fork genuinely needs the parent's context, state the prohibition
+  explicitly *and* verify compliance from what the lane actually called, not
+  its own summary — `git status`/`git diff` proves no tracked file changed and
+  proves nothing about an issue filed, a comment posted, or a message sent
+  (`parallel-audit.md` §2 covers the read-only fan-out case; this is the
+  general-lane case).

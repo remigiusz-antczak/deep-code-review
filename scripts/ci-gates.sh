@@ -10,7 +10,7 @@
 #
 # Subcommands:
 #   privacy --banlist <file> <path...>   scan paths for banned patterns (files only, never content)
-#   routing [--max-bytes N] <skill-dir>  every references/*.md routed from SKILL.md; SKILL.md over N bytes FAILS (reasoned allowlist)
+#   routing [--max-bytes N] <skill-dir>  every references/*.md routed from SKILL.md; SKILL.md over N bytes FAILS (no allowlist)
 #   version <root>                       VERSION is byte-exact ASCII core semver; first CHANGELOG heading announces it
 #   install --src <dir> --dest <dir> --mode <claude|minimal|full|codex|overlays|gates|recommend>
 #                                        run the real installer, then verify vendored docs are real (not placeholders)
@@ -152,8 +152,8 @@ cmd_privacy() {
 #
 # Every references/*.md must be routed by basename from SKILL.md, and every
 # route named in SKILL.md must resolve to a file. An oversized SKILL.md FAILS the
-# gate against the documented byte budget, unless it is on the reasoned size
-# allowlist (a justified, comment-explained overage); broken routing always fails.
+# gate against the documented byte budget, for every skill (no allowlist);
+# broken routing always fails.
 # ---------------------------------------------------------------------------
 cmd_routing() {
   local max_bytes=""
@@ -196,26 +196,16 @@ cmd_routing() {
     fi
   done < <(grep -oE 'references/[A-Za-z0-9._-]+\.md' "$skill_md" | sort -u)
 
-  # 3) Size budget — FAILS on bloat (the ratchet has teeth), except a small
-  #    reasoned allowlist of skills whose size is justified. A pin is ALLOWED its
-  #    overage, never required to keep it: an allowlisted skill that slims back
-  #    under budget simply passes here.
+  # 3) Size budget — FAILS on bloat (the ratchet has teeth) for every skill, with
+  #    no per-skill allowlist: an oversized SKILL.md moves depth into a routed
+  #    references/ file instead of earning an exemption.
   if [ -n "$max_bytes" ]; then
     local size
     size="$(wc -c < "$skill_md" | tr -d '[:space:]')"
     if [ "$size" -gt "$max_bytes" ]; then
-      case "$(basename "$skill_dir")" in
-        agentic-delivery)
-          # The full gated G0–G10 delivery OS plus the software-house role overlay —
-          # the largest SKILL.md by design. Trimming depth into references/ later is
-          # welcome but not required. (ratchet allowlist)
-          printf 'SIZE ALLOWED: %s SKILL.md is %s bytes (over %s-byte budget) — allowlisted\n' \
-            "$(basename "$skill_dir")" "$size" "$max_bytes" >&2 ;;
-        *)
-          printf 'SIZE FAIL: %s SKILL.md is %s bytes (exceeds %s-byte budget)\n' \
-            "$(basename "$skill_dir")" "$size" "$max_bytes" >&2
-          fail=1 ;;
-      esac
+      printf 'SIZE FAIL: %s SKILL.md is %s bytes (exceeds %s-byte budget)\n' \
+        "$(basename "$skill_dir")" "$size" "$max_bytes" >&2
+      fail=1
     fi
   fi
 
