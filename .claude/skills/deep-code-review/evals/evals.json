@@ -810,6 +810,28 @@
       ]
     },
     {
+      "id": "parity-missing-sections-on-a-signed-out-render-is-a-state-mismatch",
+      "prompt": "scripts/parity_differ.py reports MISMATCH: missing sections 'activity' and 'drafts'. The app render used to produce that report was captured signed-out; the design shows a signed-in, populated state. Should the lanes build the 'activity' and 'drafts' sections?",
+      "expected_output": "Not yet -- read the differ's own precondition first: MATCH/MISMATCH/CANNOT_COMPARE require both renders to share the same auth + data state, and a signed-out app render drops every gated section, which the differ then reports as 'missing' -- a false build order, not a real structural gap. Re-render the app authenticated: sign in with a dev identity, seed its data through a committed, idempotent, dev-only seed command that writes through the app's own real write paths (each record labelled sample, never production), and disclose the comparison state (auth + data) next to the verdict -- the goalpost rule forbids reporting 'default' after quietly reconfiguring persona or seed. Re-run the differ on the matched-state renders; only a residual 'missing' after that is a genuine build order. Do not spawn a build lane for 'activity'/'drafts' on the signed-out evidence. (migration-parity.md; scripts/parity_differ.py MISMATCH precondition line.)",
+      "expectations": [
+        "Refuses to treat the signed-out-render 'missing' sections as a build order",
+        "Names the auth-state mismatch (signed-out app vs signed-in design) as the actual cause",
+        "Requires re-rendering the app authenticated via a dev identity, seeded through a committed, idempotent, dev-only seed command using real write paths, with sample records labelled and never production",
+        "Requires disclosing the comparison state (auth + data) beside the verdict before re-running the differ"
+      ]
+    },
+    {
+      "id": "port-wide-lsof-kill-reaps-clients-and-the-listen-filter-needs-dash-i",
+      "prompt": "A teardown script runs `lsof -ti tcp:3000 | xargs kill -9` to free the dev port between runs. A teammate proposes fixing the collateral damage with `lsof -ti -sTCP:LISTEN tcp:3000` so only the listener is targeted. Any problems with either command?",
+      "expected_output": "Both are broken, for opposite reasons. The original selects EVERY process holding port 3000 -- the listener and any connected client (a browser tab, a test runner, a proxy) -- so `xargs kill -9` reaps clients that have nothing to do with the server. The proposed fix is not a fix: `-s` state-filtering binds only to an `-i` address/port selector that appears BEFORE it, so `lsof -ti -sTCP:LISTEN tcp:3000` (with `-s` ahead of the `-i`-equivalent `tcp:3000` token) matches nothing and exits with a status error -- `xargs kill` then kills nothing and the port stays bound. The verified listener-only form is `lsof -t -iTCP:3000 -sTCP:LISTEN` (tested on macOS lsof 4.91; confirm on Linux before treating it as universal). This is an instance of 'terminate only what you own, never by a bare pattern or port' -- prefer an owned process group over any lsof-by-port kill when the lane started the server itself. (concurrency-shared-state.md.)",
+      "expectations": [
+        "Flags the original lsof-ti-tcp-kill as reaping connected clients, not only the listener",
+        "Rejects the proposed `-sTCP:LISTEN` fix as broken -- the state filter must follow an `-i` selector or it silently matches nothing",
+        "Gives the verified listener-only form `lsof -t -iTCP:PORT -sTCP:LISTEN` and scopes the verification to macOS, not claimed universal",
+        "Ties the finding to killing only what you own, preferring an owned process group over any port-wide kill"
+      ]
+    },
+    {
       "id": "wrong-base-for-integration-branch-high",
       "prompt": "This repo uses git-flow: features integrate into develop, which is ~40 commits ahead of main. A contributor's large visual-port PR (touching ~30 files) is based on main, not develop. Stage is growth. How do I rate the base?",
       "expected_output": "High -- a wrong-base coordination defect, not Medium merge-debt. The PR is built against a product state that no longer exists on the integration line (develop carries ~40 commits main lacks), so merging it into develop will conflict with or revert those commits, and the cost compounds with every commit added on the wrong base -- so the High is intrinsic, and stage (growth here) sets only the urgency to block now, not the severity. Measure and state the divergence -- git rev-list --left-right --count develop...<branch> -- and name the fix in the finding: retarget/rebase onto develop BEFORE more work lands. This sits above the Medium merge-debt row, which is for a long-lived branch diverged from main (a different case). Rating it only 'diverged long-lived branch -> Medium' misses that the base itself is wrong. (branch-and-merge-hygiene.md.)",
