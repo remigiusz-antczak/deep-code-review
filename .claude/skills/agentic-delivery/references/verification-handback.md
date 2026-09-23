@@ -380,9 +380,13 @@ certification); **land re-runs the full gate** and *that* verdict is the one of 
   workspace-local subset: naming the narrow scope proactively is what stops a lane building green against a gate
   narrower than the one that actually gates.
 - **Before relaying any lane PR, run `lane_guard.py handback --sha <head> --base <integration-ref>`** —
-  a parentless root/orphan head, or one with no `git merge-base` to the integration ref, diffs clean and passes
-  CI (the forge compares trees, not ancestry) yet explodes into a full-tree conflict on rebase; the check fails
-  closed on either an empty-parent or an unresolvable/unrelated-history result. Recovery: a fresh branch from the
+  a parentless root/orphan head, one with no `git merge-base` to the integration ref, or any root commit
+  reachable in `<base>..<head>` (an unrelated-history merge can pull a second root in through a merge commit
+  that itself has parents and does share a merge-base with the integration ref), diffs clean and passes CI (the
+  forge compares trees, not ancestry) yet explodes into a full-tree conflict on rebase; the check also refuses
+  a shallow clone (truncated history can't prove ancestry either way) and a repo with a grafts file present
+  (parentage rewritten underneath it), and forces `GIT_NO_REPLACE_OBJECTS=1` on every git call so a replace ref
+  can't mask a bad parent. Fails closed on any of these, never a pass. Recovery: a fresh branch from the
   integration ref, `git checkout <bad-sha> -- <paths>`, commit normally, then a force-push with an explicit lease
   (owner/standing-grant gated, same as any other force-push here).
 

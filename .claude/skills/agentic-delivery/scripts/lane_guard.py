@@ -51,15 +51,26 @@ Catches a root/orphan commit: a lane that committed in an unusual state (an
 orphan or unborn HEAD, or plumbing commands) can produce a head whose tree is
 the whole repository, yet a tree-diff PR view and CI both look normal — the
 defect surfaces only on rebase, as a full-tree conflict. Exit 0 (one
-`LANE_GUARD OK:` line) only when BOTH hold:
+`LANE_GUARD OK:` line) only when ALL hold:
+  0. `git rev-parse --is-shallow-repository` is not `true` (a shallow clone's
+     truncated history cannot prove ancestry either way, so this refuses
+     before attempting any of the diagnosis below), and neither a graft
+     (`$(git rev-parse --git-common-dir)/info/grafts` does not exist) nor a
+     replace ref can rewrite parentage — every git call in this mode runs
+     with `GIT_NO_REPLACE_OBJECTS=1`.
   1. `git log -1 --format=%P <sha>` succeeds and is non-empty (the head has at
      least one parent — a root/orphan commit's is empty).
   2. `git merge-base <sha> <base>` succeeds (the head shares history with the
      integration ref; an unresolvable ref or an unrelated history both fail
      this).
-Otherwise exit 1 with exactly one `LANE_GUARD REFUSE:` line, fail closed on any
-git failure at either step (never a pass). Recovery: check out a fresh branch
-from `<base>`, take the lane's files from the bad commit
+  3. `git rev-list --max-parents=0 <base>..<sha>` succeeds and is empty (no
+     root commit is reachable at all in `<base>..<head>` — catches an
+     unrelated-history merge that pulls in a second root even though the
+     merge commit itself has parents and a merge-base with `<base>`).
+Otherwise exit 1 with exactly one `LANE_GUARD REFUSE:` line. Fails closed:
+any nonzero = refuse; pass only when exit 0 AND an OK line is printed — a
+git failure at any step is a refusal, never a pass. Recovery: check out a
+fresh branch from `<base>`, take the lane's files from the bad commit
 (`git checkout <bad-sha> -- <paths>`), commit normally, and force-push with an
 explicit lease on the old head (force-push stays owner/standing-grant gated,
 same as any other force-push in this repo).
@@ -77,13 +88,18 @@ _STRIPPED_ENV = ("GIT_DIR", "GIT_WORK_TREE", "GIT_COMMON_DIR", "GIT_INDEX_FILE")
 _ALWAYS_DEFAULTS = ("main", "master")
 
 
-def _git(args, cwd, git="git"):
+def _git(args, cwd, git="git", extra_env=None):
     """Run one read-only git command; return (returncode, stripped stdout).
 
     A missing binary or an OS-level refusal returns code 127 instead of raising,
-    so the caller turns it into a refusal line rather than a traceback.
+    so the caller turns it into a refusal line rather than a traceback. `extra_env`
+    is applied after the strip below, so a caller can force a variable (handback
+    mode forces GIT_NO_REPLACE_OBJECTS=1) that plain environment inheritance can't
+    guarantee.
     """
     env = {k: v for k, v in os.environ.items() if k not in _STRIPPED_ENV}
+    if extra_env:
+        env.update(extra_env)
     try:
         proc = subprocess.run(
             [git, *args], cwd=cwd, env=env, capture_output=True, text=True, timeout=30
@@ -91,6 +107,17 @@ def _git(args, cwd, git="git"):
     except (OSError, subprocess.SubprocessError):
         return 127, ""
     return proc.returncode, proc.stdout.strip()
+
+
+def _git_handback(args, cwd, git="git"):
+    """Like `_git`, but forces GIT_NO_REPLACE_OBJECTS=1 on every call.
+
+    Handback's ancestry checks (parent, merge-base, reachable-root) all reason
+    about true commit parentage; a replace ref can swap in a different parent
+    at read time and make a bad head look clean. Every git call `check_handback`
+    makes goes through this wrapper, never bare `_git`.
+    """
+    return _git(args, cwd, git, extra_env={"GIT_NO_REPLACE_OBJECTS": "1"})
 
 
 def _main_checkout_branch(cwd, git):
@@ -187,17 +214,49 @@ def check_handback(cwd, sha, base, git="git"):
     """Evaluate a lane's head commit right before it is relayed onward (merged,
     or handed to a human/reviewer); return (exit_code, one-line message).
 
-    Refuses when `sha` has no parent (a root/orphan commit — its tree replays
-    as a full-repo diff on rebase even though a tree-diff PR view and CI both
-    look normal) or when `sha` shares no `git merge-base` with `base` (an
-    unresolvable ref, or a history unrelated to the integration branch — both
-    would explode the same way on rebase/merge). Fails closed: a git failure
-    at either step is a refusal, never a pass. Side-effect free: runs
-    read-only git commands only.
+    Refuses when:
+      - the repository is shallow (`git rev-parse --is-shallow-repository` ==
+        `true`) — truncated history cannot prove ancestry either way, so this
+        fires before any of the diagnosis below runs, never as a mislabeled
+        orphan/unrelated-history result;
+      - `$(git rev-parse --git-common-dir)/info/grafts` exists — a graft
+        rewrites parentage in a way these checks can't see through;
+      - `sha` has no parent (a root/orphan commit — its tree replays as a
+        full-repo diff on rebase even though a tree-diff PR view and CI both
+        look normal);
+      - `sha` shares no `git merge-base` with `base` (an unresolvable ref, or
+        a history unrelated to the integration branch — both would explode
+        the same way on rebase/merge);
+      - `git rev-list --max-parents=0 <base>..<sha>` finds any root commit
+        reachable in `<base>..<head>` — an unrelated-history merge can pull a
+        second root in through a merge commit that itself has parents and
+        does share a merge-base with `base`, so the merge-base check alone
+        would pass it.
+    Every git call above runs with GIT_NO_REPLACE_OBJECTS=1 (`_git_handback`),
+    so a replace ref cannot mask true parentage. Fails closed: any nonzero =
+    refuse; pass only when exit 0 AND an OK line is printed — a git failure
+    (including a nonzero from the rev-list check itself) is a refusal, never
+    a pass. Side-effect free: runs read-only git commands only.
     """
     if not sha or not base:
         return REFUSED, "LANE_GUARD REFUSE: handback needs both --sha and --base"
-    code, parents = _git(["log", "-1", "--format=%P", sha, "--"], cwd, git)
+
+    code, is_shallow = _git_handback(["rev-parse", "--is-shallow-repository"], cwd, git)
+    if code != 0:
+        return REFUSED, f"LANE_GUARD REFUSE: cannot determine shallow-ness in {cwd}"
+    if is_shallow == "true":
+        return REFUSED, "LANE_GUARD REFUSE: shallow clone — git fetch --unshallow, then rerun"
+
+    code, common_dir = _git_handback(["rev-parse", "--git-common-dir"], cwd, git)
+    if code != 0 or not common_dir:
+        return REFUSED, f"LANE_GUARD REFUSE: cannot resolve git-common-dir in {cwd}"
+    grafts_path = os.path.join(os.path.realpath(os.path.join(cwd, common_dir)), "info", "grafts")
+    if os.path.exists(grafts_path):
+        return REFUSED, (
+            f"LANE_GUARD REFUSE: grafts file present at {grafts_path}; parentage cannot be trusted"
+        )
+
+    code, parents = _git_handback(["log", "-1", "--format=%P", sha, "--"], cwd, git)
     if code != 0:
         return REFUSED, f"LANE_GUARD REFUSE: cannot resolve head {sha!r} in {cwd}"
     if not parents:
@@ -205,15 +264,28 @@ def check_handback(cwd, sha, base, git="git"):
             f"LANE_GUARD REFUSE: head {sha} has no parent (root/orphan commit); "
             "recover via a fresh branch from the integration ref, not a rebase in place"
         )
-    code, merge_base = _git(["merge-base", sha, base], cwd, git)
+
+    code, merge_base = _git_handback(["merge-base", sha, base], cwd, git)
     if code != 0 or not merge_base:
         return REFUSED, (
             f"LANE_GUARD REFUSE: no merge-base between {sha} and {base!r} "
             "(unrelated history, or base does not resolve)"
         )
+
+    code, roots = _git_handback(["rev-list", "--max-parents=0", f"{base}..{sha}"], cwd, git)
+    if code != 0:
+        return REFUSED, (
+            f"LANE_GUARD REFUSE: cannot check for reachable root commits in {base}..{sha}"
+        )
+    if roots:
+        return REFUSED, (
+            f"LANE_GUARD REFUSE: root commit reachable in {base}..{sha} ({roots.splitlines()[0]}); "
+            "an unrelated-history merge pulled in a second root"
+        )
+
     return OK, (
         f"LANE_GUARD OK: head {sha} has parent(s) {parents}, "
-        f"merge-base with {base} is {merge_base}"
+        f"merge-base with {base} is {merge_base}, no reachable root commits in {base}..{sha}"
     )
 
 
@@ -405,6 +477,63 @@ def _selftest():
         _, unrelated_sha = _git(["rev-parse", "HEAD"], repo2)
         expect("handback-unrelated-refused", check_handback(repo2, unrelated_sha, "main"),
                REFUSED, "no merge-base")
+
+        # A merge that pulls in a second, unrelated root: the merge commit
+        # itself has parents and does share a merge-base with main (via
+        # lane-normal), so only the reachable-root scan (not the parent or
+        # merge-base check) can catch this one.
+        _git(["checkout", "-q", "-b", "lane-merged", "lane-normal"], repo2)
+        code, _ = _git(
+            ["-c", "user.name=Test", "-c", "user.email=test@example.com",
+             "-c", "commit.gpgsign=false", "-c", "core.hooksPath=" + os.devnull,
+             "merge", "-q", "--no-edit", "--allow-unrelated-histories", "lane-unrelated"],
+            repo2,
+        )
+        if code != 0:
+            print(f"SELFTEST FAILED: setup unrelated-histories merge exited {code}")
+            return 1
+        _, merged_sha = _git(["rev-parse", "HEAD"], repo2)
+        expect("handback-merged-root-refused", check_handback(repo2, merged_sha, "main"),
+               REFUSED, "root commit reachable")
+
+        # Shallow clone: truncated history can't prove ancestry either way, so
+        # this refuses before any orphan/unrelated-history diagnosis runs —
+        # even passing a sha/base pair that would otherwise pass clean.
+        shallow = os.path.join(tmp, "repo2-shallow")
+        code, _ = _git(["clone", "-q", "--depth", "1", f"file://{repo2}", shallow], tmp)
+        if code != 0:
+            print(f"SELFTEST FAILED: setup shallow clone exited {code}")
+            return 1
+        expect("handback-shallow-refused", check_handback(shallow, normal_sha, "main"),
+               REFUSED, "shallow clone")
+
+        # Grafts file: parentage can be rewritten underneath these checks, so
+        # refuse rather than trust it. Clean the file up immediately after so
+        # it doesn't leak into the tests below.
+        _, common_dir = _git(["rev-parse", "--git-common-dir"], repo2)
+        grafts_dir = os.path.join(os.path.realpath(os.path.join(repo2, common_dir)), "info")
+        os.makedirs(grafts_dir, exist_ok=True)
+        grafts_path = os.path.join(grafts_dir, "grafts")
+        with open(grafts_path, "w", encoding="utf-8") as handle:
+            handle.write(f"{normal_sha}\n")
+        try:
+            expect("handback-grafts-refused", check_handback(repo2, normal_sha, "main"),
+                   REFUSED, "grafts")
+        finally:
+            os.remove(grafts_path)
+
+        # rev-list itself failing (not just returning empty) must refuse too —
+        # a command error is never read as "no roots found".
+        real_git = shutil.which("git")
+        revlist_shim = os.path.join(tmp, "git-no-revlist")
+        with open(revlist_shim, "w", encoding="utf-8") as handle:
+            handle.write(f'#!/bin/sh\n[ "$1" = rev-list ] && exit 1\nexec "{real_git}" "$@"\n')
+        os.chmod(revlist_shim, 0o755)
+        expect(
+            "handback-revlist-error-refused",
+            check_handback(repo2, normal_sha, "main", git=revlist_shim),
+            REFUSED, "cannot check for reachable root commits",
+        )
 
         # Unresolvable refs: neither a bad sha nor a bad base is allowed to
         # pass by falling through — fail closed on both.
