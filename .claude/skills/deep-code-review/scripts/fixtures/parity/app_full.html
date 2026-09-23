@@ -1,19 +1,23 @@
 <!doctype html>
 <!--
   parity_differ.py self-test fixture: an APP that matches the design.
-  alpha, beta, gamma all populated -> expect MATCH (exit 0).
+  alpha, beta, gamma all populated, each with its heading, so the element
+  inventory equals the design's -> expect MATCH (exit 0).
 -->
 <html>
 <body>
 <main>
   <section data-section="alpha">
+    <h2>Alpha</h2>
     <div data-item>Alpha card one</div>
     <div data-item>Alpha card two</div>
   </section>
   <section data-section="beta">
+    <h2>Beta</h2>
     <div data-item>Beta card one</div>
   </section>
   <section data-section="gamma">
+    <h2>Gamma</h2>
     <div data-item>Gamma card one</div>
   </section>
 </main>

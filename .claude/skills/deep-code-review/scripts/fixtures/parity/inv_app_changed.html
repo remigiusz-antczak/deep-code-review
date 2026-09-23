@@ -1,0 +1,46 @@
+<!doctype html>
+<!--
+  parity_differ.py self-test fixture: an APP identical to the inventory design
+  except one greeting string changed -> expect MISMATCH (exit 1) with exactly
+  one CHANGED text row; with inv_accept.tsv it becomes MATCH (accepted).
+-->
+<html>
+<body>
+<main>
+  <section data-section="overview" data-state="ready">
+    <h1>Acme Capital portfolio</h1>
+    <img src="logo.svg" alt="Acme Capital logo">
+    <p data-item>Good morning, Jane Smith</p>
+    <p>Total balance <span data-value>$4,200</span></p>
+    <button type="button">Export CSV</button>
+    <button type="button">Share</button>
+    <a href="/holdings">View all holdings</a>
+  </section>
+  <section data-section="holdings">
+    <h2>Holdings</h2>
+    <label for="q">Search holdings</label>
+    <input id="q" type="search">
+    <label><input type="checkbox"> Show closed positions</label>
+    <table>
+      <tr><th>Fund</th><th>Value</th></tr>
+      <tr data-item><td>Growth Fund</td><td data-value>$1,000</td></tr>
+      <tr data-item><td>Income Fund</td><td data-value>$2,000</td></tr>
+    </table>
+    <button type="button">Add holding</button>
+  </section>
+  <section data-section="activity">
+    <h2>Recent activity</h2>
+    <div role="tablist">
+      <button role="tab">All</button>
+      <button role="tab">Deposits</button>
+    </div>
+    <ul>
+      <li data-item>Deposit received</li>
+      <li data-item>Report generated</li>
+      <li data-item>Profile updated</li>
+    </ul>
+    <button type="button"><svg aria-hidden="true"></svg>Load more</button>
+  </section>
+</main>
+</body>
+</html>

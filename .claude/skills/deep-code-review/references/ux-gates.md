@@ -104,11 +104,11 @@ task:
    in `ux-dataviz.md`), and whether the readout returns the *right* value stays a human inspection.
 
 4. **Parity differ (parity tasks only — proves *equivalence*, not just that a human looked).** For a
-   "make X match reference Y" task, build a mechanical differ **before** any pixel-matching and gate
+   "make X match reference Y" task, run a mechanical differ **before** any pixel-matching and gate
    every "matches" claim on it. The differ drives both the reference and the target for each screen and
-   emits (a) a side-by-side + pixel-diff **image** and (b) a **structured** mismatch list — which nav /
-   tab labels are present or absent on each side, the header strings, and bounding-box geometry deltas
-   for key elements. **The artifact shown to a reviewer is the diff image, never a sentence.** **Render
+   emits (a) a side-by-side + pixel-diff **image** and (b) a **structured** mismatch list — each
+   section's element inventory, present/absent per side (`scripts/parity_differ.py`); size is
+   never completeness evidence. **The artifact shown to a reviewer is the diff image, never a sentence.** **Render
    both sides at the same viewport width** and diff the corresponding region — a cropped or scaled
    screenshot of **one** side is a **hypothesis, not evidence**; never infer a present/absent delta from
    one side alone. Before recording an element as app-only or design-only, **confirm its state on the
@@ -121,7 +121,7 @@ task:
    unchecked. Load a no-routing prototype **once and click-navigate** its in-page tabs (it has no
    per-screen URL to fetch), and diff against an existing **running build** of the design if one is in
    the repo rather than reverse-engineering its source (reference-fidelity order,
-   `rendered-parity.md`). It diffs **chrome / structure / styling, not text values** — diffing the numbers would flag
+   `rendered-parity.md`). It diffs **chrome / structure / styling, not data values** — diffing the numbers would flag
    real data as a mismatch and tempt the fix that fabricates (`migration-parity.md`). What it **cannot**
    prove: an intentional improvement from a regression, and its pixel threshold is **agreed, not
    derived** — a human still owns the ship call. **Parity is *set equality*, not containment — run the

@@ -8,9 +8,10 @@ WHY THIS EXISTS (the failure it closes)
 Names prove nothing: the app can carry every design name with different
 values (a different token foundation), and then no per-screen restyle ever
 converges. This tool resolves every alias on both sides, normalizes each
-resolved value to a canonical form, and compares VALUES. It is tier 1 of the
+resolved value to a canonical form, and compares VALUES. It is tier 2 of the
 check order in `references/migration-parity.md`: cheap and deterministic, run
-before `parity_differ.py` (structural sections) and before any screenshot.
+after `parity_differ.py` (the element inventory, the only completeness check)
+and before any screenshot.
 
 WHAT IT DOES NOT VERIFY (read before quoting a MATCH)
 ------------------------------------------------------
@@ -843,7 +844,7 @@ def compare(design_path: str | None, app_path: str | None, map_path: str | None 
                f"mismatch={counts['MISMATCH']} missing_in_app={counts['MISSING_IN_APP']} "
                f"unresolved={counts['UNRESOLVED']}")
     scope = ("scope: verifies resolved token VALUES only, not that components use them; "
-             "next run parity_differ.py (sections), screenshots last.")
+             "completeness is parity_differ.py's element inventory; screenshots last.")
     return code, results, "\n".join([header, *lines, summary, *info, scope])
 
 

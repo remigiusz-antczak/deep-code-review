@@ -42,7 +42,7 @@ axes:
 - **structure** — which sections / components / chrome / affordances are **present** (vs absent), in
   what order, grouping, nesting / DOM;
 - **styling** — the rendered *look* of what is present: font size / weight, colour, spacing, radius,
-  shadow; each affordance's **glyph** (a star, a caret, a control); overall layout dimensions;
+  shadow; each affordance's **glyph** (a star, a caret, a control);
 - **content** — the words / copy;
 - **data** — the numbers / rows / entities.
 
@@ -68,8 +68,7 @@ appearance itself (`report-format.md`, the proxy trap). To claim rendered parity
 appearance of the default state** against Y: a screenshot and/or **computed styles** — the styling-axis
 properties above, side by side. Anything less names its proxy and says the render wasn't checked. Beware
 the dodge **"I diffed the *rendered* structure"**: "rendered structure" is still the **structure** axis
-— it proves the sections rendered, in order, not that they *look* like Y. Opening the page confirms
-structure rendered; rendered **appearance** is the styling properties, and only a styling diff shows it.
+— it proves the sections rendered, in order, not that they *look* like Y; only a styling diff shows that.
 
 **Do not move the goalpost you measure against.** If the work changed the configuration that *defines*
 the default surface — the env default, a seed, a feature flag, the demo persona, a local default — that
@@ -80,11 +79,11 @@ reconfiguring what "default" means is a claim about a surface you wrote, not the
 
 **Enumerate every diff in one pass before fixing any.** Finding diffs one at a time — fix, re-declare
 "done," the user finds the next — is the loop that burns trust and manufactures the repeated false ✅.
-Start with the fastest discriminator: a **gross-dimension diff** — the total height / width of the
-compared surface. A large delta (one surface markedly taller or wider than Y) is by itself evidence
-styling parity does **not** hold, before any element-level work. Then do a **full side-by-side of the
-whole surface**, list every styling / placement delta at once, and fix against that inventory; the
-parity claim is made only when every row is closed or owner-accepted.
+Start with the **inventory diff** (`scripts/parity_differ.py`) — completeness is judged **only** there,
+then token values, then the visual pass for styling. Size, height, width, or bounding boxes are never
+completeness or "aligned" evidence; geometry proves only layout defects (overlap, clipping, viewport fit
+— `testing-ui.md`). Then do a **full side-by-side of the whole surface**, list every styling / placement
+delta at once, and fix against that list; the claim is made only when every row is closed or owner-accepted.
 
 **Told "not the same" → disambiguate the axis before acting.** One question — "the layout / structure,
 the styling (fonts / spacing / colour / chrome), the copy, or the data?" — costs one turn; guessing
