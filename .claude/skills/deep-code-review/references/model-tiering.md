@@ -54,9 +54,15 @@ provider with an equivalent primitive, even where the exact mechanism differs.
    Prompt caching). **Each model keeps its own cache: tiering a task across
    models forfeits every prior model's cached prefix on the very next request,
    even when the resent content is byte-identical** (Claude Code — How Claude
-   Code uses prompt caching) — so exhaust lever 1 (tune effort down inside the
-   current model namespace) before tiering the model down, and cost a cascade's
-   later tiers as a fresh full-price read, never the cached rate. Cache reads
+   Code uses prompt caching) — so pick model and effort (lever 1) at session
+   start, and cost a cascade's later tiers as a fresh full-price read, never the
+   cached rate. Effort is no free mid-session knob either: on most models each
+   effort level has its own cache, so an effort change also re-reads the whole
+   history uncached. Only Opus 5.5 and Fable 5.1 with an API key or a Claude
+   subscription keep the cache across it — not on Amazon Bedrock, Google Cloud's
+   Agent Platform, or a Claude apps gateway, nor with
+   `CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS` or a HIPAA configuration (same
+   source); only there is lowering effort mid-session cache-free. Cache reads
    are routinely the largest single component of task cost — worth more than
    most model-choice decisions. `parallel-audit.md` §1's "assemble the shared
    context packet once, hand it to every subagent" is already a stable, reused

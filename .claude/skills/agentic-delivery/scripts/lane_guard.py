@@ -3,26 +3,34 @@
 
 Run as the FIRST step of every write-lane, from the lane's working directory:
 
-    python3 .claude/skills/agentic-delivery/scripts/lane_guard.py [--expect-branch NAME]
+    python3 .claude/skills/agentic-delivery/scripts/lane_guard.py --expect-branch NAME
 
 Exit 0 (one `LANE_GUARD OK:` line) only when ALL hold:
-  1. git answers a plain read in the cwd (a PATH shim or sandbox that blocks
+  1. --expect-branch was given. Without it the guard could only prove "some
+     linked worktree on some non-default branch", not "this lane's worktree",
+     so it refuses. --allow-any-branch waives this for a non-lane probe and
+     then makes only that weaker claim; a lane brief never uses it.
+  2. git answers a plain read in the cwd (a PATH shim or sandbox that blocks
      git fails it). A tool-call hook never sees this subprocess, so chain the
      lane's own direct read first: `git rev-parse HEAD && python3 lane_guard.py`.
-  2. The cwd is a LINKED worktree: `git rev-parse --git-dir` differs from
+  3. The cwd is a LINKED worktree: `git rev-parse --git-dir` differs from
      `--git-common-dir`. Equal means the main checkout (a shared tree), which
      is exactly the escape this guard exists to catch.
-  3. HEAD is on a named branch (not detached) that is not the default branch.
-  4. With --expect-branch, HEAD's branch equals it exactly.
+  4. HEAD is on a named branch (not detached) that is not a default branch.
+  5. HEAD's branch equals --expect-branch exactly.
 
 Otherwise exit 1 with exactly one `LANE_GUARD REFUSE: <reason>` line on stdout,
 written to be quoted verbatim in the lane's handback. The lane stops at that
 point; it never retries the refused step through another path.
 
-DEFAULT BRANCH. Taken from --default-branch when given; else from the remote
-HEAD (`git symbolic-ref refs/remotes/origin/HEAD`); else, when neither is
-known, BOTH `main` and `master` count as default (fail closed rather than
-guess which one this repo uses).
+DEFAULT BRANCHES. A union, never a single guess: `main` and `master`, the
+remote HEAD's target (`git symbolic-ref refs/remotes/origin/HEAD`) when set,
+the main checkout's current branch (first entry of `git worktree list
+--porcelain`) when it is on one, and --default-branch when given (it adds to
+the set, never replaces it). A stale origin/HEAD therefore cannot make `main`
+pass. Fails closed: when the worktree list cannot be read, or when neither
+origin/HEAD, the main checkout's branch, nor --default-branch names a branch
+(so the repository's real default is unknown), the guard refuses.
 
 ENVIRONMENT. GIT_DIR, GIT_WORK_TREE, GIT_COMMON_DIR and GIT_INDEX_FILE are
 removed from every git call's environment, so an inherited variable (for
@@ -42,7 +50,7 @@ import tempfile
 OK = 0
 REFUSED = 1
 _STRIPPED_ENV = ("GIT_DIR", "GIT_WORK_TREE", "GIT_COMMON_DIR", "GIT_INDEX_FILE")
-_FALLBACK_DEFAULTS = ("main", "master")
+_ALWAYS_DEFAULTS = ("main", "master")
 
 
 def _git(args, cwd, git="git"):
@@ -61,22 +69,66 @@ def _git(args, cwd, git="git"):
     return proc.returncode, proc.stdout.strip()
 
 
+def _main_checkout_branch(cwd, git):
+    """Return (readable, branch) for the main checkout.
+
+    The main checkout is the first entry of `git worktree list --porcelain`.
+    `readable` is False when that list cannot be read or parsed; `branch` is
+    None when the main checkout is detached or bare (no branch to add).
+    """
+    code, out = _git(["worktree", "list", "--porcelain"], cwd, git)
+    if code != 0 or not out.startswith("worktree "):
+        return False, None
+    prefix = "branch refs/heads/"
+    for line in out.split("\n\n", 1)[0].splitlines():
+        if line.startswith(prefix) and len(line) > len(prefix):
+            return True, line[len(prefix):]
+    return True, None
+
+
 def _default_branches(cwd, explicit, git):
-    """Return the set of branch names treated as default (see module docstring)."""
+    """Return (set of default branch names, refusal reason or None).
+
+    See the module docstring: the union of main/master, origin/HEAD's target,
+    the main checkout's branch, and `explicit`. The reason is set (fail
+    closed) when the worktree list is unreadable or no source names a branch.
+    """
+    defaults = set(_ALWAYS_DEFAULTS)
+    named = False
     if explicit:
-        return {explicit}
+        defaults.add(explicit)
+        named = True
     code, ref = _git(["symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"], cwd, git)
     prefix = "refs/remotes/origin/"
     if code == 0 and ref.startswith(prefix) and len(ref) > len(prefix):
-        return {ref[len(prefix):]}
-    return set(_FALLBACK_DEFAULTS)
+        defaults.add(ref[len(prefix):])
+        named = True
+    readable, main_branch = _main_checkout_branch(cwd, git)
+    if not readable:
+        return defaults, "cannot read the worktree list to find the main checkout's branch"
+    if main_branch:
+        defaults.add(main_branch)
+        named = True
+    if not named:
+        return defaults, (
+            "default branch unknown (no origin/HEAD, main checkout not on a branch); "
+            "pass --default-branch"
+        )
+    return defaults, None
 
 
-def check(cwd, expect_branch=None, default_branch=None, git="git"):
+def check(cwd, expect_branch=None, default_branch=None, git="git", allow_any_branch=False):
     """Evaluate the lane at `cwd`; return (exit_code, one-line message).
 
-    Side-effect free: runs read-only git commands only.
+    Refuses when `expect_branch` is None unless `allow_any_branch` is True
+    (then the OK line proves only a non-default linked worktree, not which
+    lane). Side-effect free: runs read-only git commands only.
     """
+    if expect_branch is None and not allow_any_branch:
+        return REFUSED, (
+            "LANE_GUARD REFUSE: no --expect-branch given; a write-lane must name its own "
+            "branch (--allow-any-branch is for non-lane probes only)"
+        )
     code, top = _git(["rev-parse", "--show-toplevel"], cwd, git)
     if code != 0 or not top:
         return REFUSED, (
@@ -97,7 +149,9 @@ def check(cwd, expect_branch=None, default_branch=None, git="git"):
     code, branch = _git(["symbolic-ref", "--quiet", "--short", "HEAD"], top, git)
     if code != 0 or not branch:
         return REFUSED, f"LANE_GUARD REFUSE: HEAD is detached in {top}; a write-lane needs its own branch"
-    defaults = _default_branches(top, default_branch, git)
+    defaults, unknown = _default_branches(top, default_branch, git)
+    if unknown:
+        return REFUSED, f"LANE_GUARD REFUSE: {unknown} in {top}"
     if branch in defaults:
         return REFUSED, f"LANE_GUARD REFUSE: HEAD is on default branch '{branch}' in {top}"
     if expect_branch is not None and branch != expect_branch:
@@ -107,13 +161,17 @@ def check(cwd, expect_branch=None, default_branch=None, git="git"):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--expect-branch", help="refuse unless HEAD is on exactly this branch")
-    parser.add_argument("--default-branch", help="default branch name (else origin/HEAD, else main+master)")
+    parser.add_argument("--expect-branch", help="required: refuse unless HEAD is on exactly this branch")
+    parser.add_argument("--allow-any-branch", action="store_true",
+                        help="waive --expect-branch (non-lane probes only; proves less)")
+    parser.add_argument("--default-branch",
+                        help="add a default branch name (joins main, master, origin/HEAD, main checkout)")
     parser.add_argument("--selftest", action="store_true", help="prove every refusal fires")
     args = parser.parse_args(argv)
     if args.selftest:
         return _selftest()
-    code, line = check(os.getcwd(), args.expect_branch, args.default_branch)
+    code, line = check(os.getcwd(), args.expect_branch, args.default_branch,
+                       allow_any_branch=args.allow_any_branch)
     print(line)
     return code
 
@@ -157,40 +215,81 @@ def _selftest():
         plain = os.path.join(tmp, "not-a-repo")
         os.makedirs(plain)
 
-        expect("main-checkout-refused", check(repo), REFUSED, "not a linked worktree")
-        expect("linked-lane-ok", check(wt_lane), OK, "LANE_GUARD OK")
-        expect("subdir-of-lane-ok", check(_mkdir(wt_lane, "sub")), OK, "LANE_GUARD OK")
-        expect("detached-refused", check(wt_detached), REFUSED, "detached")
-        expect("expect-branch-match-ok", check(wt_lane, expect_branch="lane-a"), OK, "LANE_GUARD OK")
+        lane = "lane-a"
+        # --expect-branch is required; only --allow-any-branch waives it.
+        expect("no-expect-branch-refused", check(wt_lane), REFUSED, "no --expect-branch")
+        expect("allow-any-branch-ok", check(wt_lane, allow_any_branch=True), OK, "LANE_GUARD OK")
+        expect("main-checkout-refused", check(repo, expect_branch="main"),
+               REFUSED, "not a linked worktree")
+        expect("linked-lane-ok", check(wt_lane, expect_branch=lane), OK, "LANE_GUARD OK")
+        expect("subdir-of-lane-ok", check(_mkdir(wt_lane, "sub"), expect_branch=lane),
+               OK, "LANE_GUARD OK")
+        expect("detached-refused", check(wt_detached, expect_branch=lane), REFUSED, "detached")
         expect("expect-branch-mismatch-refused", check(wt_lane, expect_branch="lane-b"),
                REFUSED, "expected 'lane-b'")
-        expect("explicit-default-refused", check(wt_lane, default_branch="lane-a"),
+        expect("explicit-default-refused",
+               check(wt_lane, expect_branch=lane, default_branch=lane),
                REFUSED, "default branch 'lane-a'")
-        expect("not-a-repo-refused", check(plain), REFUSED, "git read failed")
-        expect("git-refused-refused", check(wt_lane, git=os.path.join(tmp, "no-such-git")),
+        expect("not-a-repo-refused", check(plain, expect_branch=lane), REFUSED, "git read failed")
+        expect("git-refused-refused",
+               check(wt_lane, expect_branch=lane, git=os.path.join(tmp, "no-such-git")),
                REFUSED, "git read failed")
-
-        # Default-branch detection: fallback treats main as default, and a
-        # linked worktree on main (main checkout moved to trunk) is refused.
-        _git(["checkout", "-q", "trunk"], repo)
-        wt_main = os.path.join(tmp, "wt-main")
-        _git(["worktree", "add", "-q", wt_main, "main"], repo)
-        expect("fallback-default-main-refused", check(wt_main), REFUSED, "default branch 'main'")
-        # origin/HEAD wins over the fallback: with it naming trunk, main is an
-        # ordinary lane branch and passes.
-        _git(["symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/trunk"], repo)
-        expect("origin-head-main-ok", check(wt_main), OK, "LANE_GUARD OK")
+        # A git that answers everything except the worktree list: fail closed.
+        real_git = shutil.which("git")
+        shim = os.path.join(tmp, "git-no-worktree-list")
+        with open(shim, "w", encoding="utf-8") as handle:
+            handle.write(f'#!/bin/sh\n[ "$1" = worktree ] && exit 1\nexec "{real_git}" "$@"\n')
+        os.chmod(shim, 0o755)
+        expect("worktree-list-unreadable-refused", check(wt_lane, expect_branch=lane, git=shim),
+               REFUSED, "cannot read the worktree list")
 
         # An inherited GIT_DIR must not redirect the check to another repo.
         saved = os.environ.get("GIT_DIR")
         os.environ["GIT_DIR"] = os.path.join(repo, ".git")
         try:
-            expect("inherited-git-dir-ignored", check(wt_lane), OK, "LANE_GUARD OK")
+            expect("inherited-git-dir-ignored", check(wt_lane, expect_branch=lane),
+                   OK, "LANE_GUARD OK")
         finally:
             if saved is None:
                 os.environ.pop("GIT_DIR", None)
             else:
                 os.environ["GIT_DIR"] = saved
+
+        # No origin/HEAD, main checkout moved to trunk: main stays default via
+        # the always-default names, and a lane force-added onto the main
+        # checkout's own branch is refused.
+        _git(["checkout", "-q", "trunk"], repo)
+        wt_main = os.path.join(tmp, "wt-main")
+        wt_trunk = os.path.join(tmp, "wt-trunk")
+        _git(["worktree", "add", "-q", wt_main, "main"], repo)
+        _git(["worktree", "add", "-q", "--force", wt_trunk, "trunk"], repo)
+        expect("always-default-main-refused", check(wt_main, expect_branch="main"),
+               REFUSED, "default branch 'main'")
+        expect("main-checkout-branch-refused", check(wt_trunk, expect_branch="trunk"),
+               REFUSED, "default branch 'trunk'")
+        # --default-branch adds to the set; it never un-defaults main.
+        expect("explicit-default-adds-not-replaces",
+               check(wt_main, expect_branch="main", default_branch="trunk"),
+               REFUSED, "default branch 'main'")
+        # origin/HEAD's target is default; a stale origin/HEAD (naming trunk)
+        # does not make main pass.
+        _git(["symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/lane-a"], repo)
+        expect("origin-head-target-refused", check(wt_lane, expect_branch=lane),
+               REFUSED, "default branch 'lane-a'")
+        _git(["symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/trunk"], repo)
+        expect("stale-origin-head-main-refused", check(wt_main, expect_branch="main"),
+               REFUSED, "default branch 'main'")
+        expect("origin-head-other-lane-ok", check(wt_lane, expect_branch=lane),
+               OK, "LANE_GUARD OK")
+        # No origin/HEAD and a detached main checkout: the real default is
+        # unknown, so refuse unless --default-branch names it.
+        _git(["symbolic-ref", "--delete", "refs/remotes/origin/HEAD"], repo)
+        _git(["checkout", "-q", "--detach"], repo)
+        expect("default-unknown-refused", check(wt_lane, expect_branch=lane),
+               REFUSED, "default branch unknown")
+        expect("default-unknown-explicit-ok",
+               check(wt_lane, expect_branch=lane, default_branch="trunk"),
+               OK, "LANE_GUARD OK")
     finally:
         if saved_ceiling is None:
             os.environ.pop("GIT_CEILING_DIRECTORIES", None)

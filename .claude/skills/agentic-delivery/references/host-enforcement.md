@@ -38,9 +38,12 @@ tool access at the level you can enforce; narrow the dependent action when only 
 Isolation is a control too: a lane that lost it writes a shared tree. A write-lane brief's first
 command is `git rev-parse HEAD && python3 .claude/skills/agentic-delivery/scripts/lane_guard.py
 --expect-branch <branch>` — the direct read probes any command-wrapping hook; `lane_guard.py`
-(`--selftest`) prints one quotable `LANE_GUARD REFUSE:` line and exits non-zero unless the cwd is a
-linked worktree on the expected, non-default branch. At that or any later refusal the lane stops and
-hands back the line plus its changed files. The brief names the dodges as out of bounds, own branch
+(`--selftest`) requires `--expect-branch` (`--allow-any-branch` waives it, never in a lane brief),
+prints one quotable `LANE_GUARD REFUSE:` line and exits non-zero unless the cwd is a linked worktree
+on exactly that branch and it is not a default one (origin/HEAD's target, `main`, `master`, or the
+main checkout's branch). At that refusal, or any later git or file-write refusal, the lane stops and
+hands back the line plus its changed files; any other missing control narrows only the dependent
+action (above). The brief names the dodges as out of bounds, own branch
 included: an absolute binary path, a wrapper (`env`, `sh -c`, a script), a subshell — all
 permission-laundering (`multi-session-coordination.md`). The orchestrator audits live processes
 (`pgrep -fl 'git push'`), not only lane reports. Without host isolation, the orchestrator makes each
@@ -120,20 +123,27 @@ A CLAUDE.md line telling every subagent "default to the cheapest tier" is
 **Protocol** only — a subagent's own `model:` frontmatter still wins over it.
 On Claude Code, `CLAUDE_CODE_SUBAGENT_MODEL` (an alias or model ID) plus
 `CLAUDE_CODE_SUBAGENT_MODEL_FORCE=1` in `settings.json`'s `env` block is
-**Host-enforced** instead: with both set, every subagent, teammate, and
-workflow agent runs on the named model regardless of its own `model:`
-frontmatter; with only the `FORCE` var set, they run on the main
-conversation's model (requires Claude Code v2.1.257+).
+**Host-enforced** instead (v2.1.257+): every subagent, teammate, and workflow
+agent's `model:` field (built-in Explore and Plan included) is ignored and they
+run on the named model; with only `FORCE` set, on the main conversation's
+model. Exceptions to declare: a fork, and a skill run in a subagent with
+`model: inherit`, still run on the main conversation's model; with only
+`FORCE` set, built-in Explore keeps its cap (Opus, on the Claude API).
 
-Cache lifetime is the sibling spend control, same enforcement split: the main
-conversation's `promptCacheTtl` setting or `CLAUDE_CODE_PROMPT_CACHE_TTL` env
-var, and every other request's (including subagents') `subagentPromptCacheTtl`
-setting or `CLAUDE_CODE_SUBAGENT_PROMPT_CACHE_TTL` env var, pin a `5m`/`1h`
-cache TTL bucket at the host level (both require v2.1.242+); a single
-subagent can instead opt into its own TTL via `experimental.cacheTtl` in its
-own frontmatter (v2.1.248+; per-agent, so it is Protocol, not Host-enforced,
-unless the host-level setting also constrains it). Declare which of the three
-is actually set — an undeclared default silently runs the 5-minute floor.
+Cache lifetime is the sibling spend control. Defaults: on a Claude subscription
+within plan usage, the main conversation gets `1h` and every other request
+(subagents, workflows, teammates, forks, compaction) `5m`, except a few
+server-controlled helper requests (`1h`); on usage credits, an API key, or a
+cloud provider, both get `5m`. Pins take `5m`/`1h` (v2.1.242+): the main
+conversation's `promptCacheTtl` setting / `CLAUDE_CODE_PROMPT_CACHE_TTL` env
+var, everything else's `subagentPromptCacheTtl` / `CLAUDE_CODE_SUBAGENT_PROMPT_CACHE_TTL`.
+First match wins: `FORCE_PROMPT_CACHING_5M=1` (both buckets) → the bucket's env
+var → its setting → a subagent's own `experimental.cacheTtl` frontmatter
+(v2.1.248+; `1h` ignored while a subscription is on usage credits) →
+`ENABLE_PROMPT_CACHING_1H=1` (both buckets) → the bucket default. The
+frontmatter is per-agent (Protocol); the other-requests env/setting pin or
+`FORCE_PROMPT_CACHING_5M` overrides it.
+Declare which control is set, and its bucket default.
 
 ```json
 {
