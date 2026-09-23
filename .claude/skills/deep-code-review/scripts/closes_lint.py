@@ -17,13 +17,14 @@ WHAT COUNTS AS A CLOSING KEYWORD (case-insensitive)
 ------------------------------------------------------
 `close`, `closes`, `closed`, `fix`, `fixes`, `fixed`, `resolve`, `resolves`,
 `resolved` — GitHub's own closing-keyword list — followed by a colon and/or
-whitespace, then a reference: `#N` or `owner/repo#N` (`Closes #12`,
+whitespace, then a reference: `#N`, `owner/repo#N`, or an issue/PR URL
+`https://<host>/owner/repo/issues/N` or `.../pull/N` (`Closes #12`,
 `Closes: #12`, and `Closes:#12` all count; `Closes#12`, glued with neither
-separator, does not). The keyword match must sit at the start of the line,
-or be preceded by a whitespace character — this bounds false positives from
-an ordinary English word that happens to contain one of these as a
-substring (`prefixes #12` does not match: the `fixes` inside it is glued to
-`pre`, with no whitespace boundary before it).
+separator, does not). The keyword must not be glued to a preceding letter,
+digit, or underscore — `(?<![A-Za-z0-9_])` — so punctuation or markup right
+before it still counts (`(fixes #12)`, `**Closes #12**`, `done;closes #12`),
+while an ordinary English word that merely contains a keyword does not
+(`prefixes #12`: the `fixes` inside it is glued to `pre`).
 
 HONESTY (read this before wiring it into CI or citing it in a report)
 -----------------------------------------------------------------------
@@ -31,27 +32,36 @@ This is a heuristic LINT, not a re-implementation of GitHub's own closing-
 keyword parser (GitHub does not publish one; `unattended-trackers.md`
 documents the real behavior as widely observed to match anywhere in a PR
 body or commit message, including inside a quote or a code fence). This
-tool deliberately narrows to a bounded, deterministic position rule
-(line-start or after-whitespace) so
-its verdict is reproducible — it will MISS a keyword+number pair that reads
-as a genuine GitHub closing reference but sits mid-sentence with no
-preceding whitespace boundary (rare), and it does not attempt quote/code-
-fence awareness. It also does not aggregate a comma-separated reference list
-(`Closes #12, #34`) beyond the first `#N` immediately following the
-keyword — a second, bare `#34` with no keyword of its own is not itself a
-closing reference by this tool's rule (nor reliably by GitHub's, which is
-why the honest style is one keyword per issue, per line). Never claim this
-tool proves a commit message's closing references are "correct" — it proves
-only that every one it can see appears in the declared allowed set.
+tool deliberately uses a bounded, deterministic position rule (the keyword
+is not glued to a preceding word character) so its verdict is reproducible.
+It can over-report — it has no quote/code-fence awareness, so a keyword
+inside a quote or a fence still counts — and it will MISS a pair GitHub
+might act on when the keyword is glued to a word character (`xCloses #12`)
+or the reference takes a form it does not parse (a URL with no
+`/issues/N` or `/pull/N` path). It does not aggregate a comma-separated
+reference list (`Closes #12, #34`) beyond the first reference immediately
+following the keyword — a second, bare `#34` with no keyword of its own is
+not itself a closing reference by this tool's rule (nor reliably by
+GitHub's, which is why the honest style is one keyword per issue, per
+line). A URL's host is not checked: any host is keyed by its owner/repo
+path. Never claim this tool proves a commit message's closing references
+are "correct" — it proves only that every one it can see appears in the
+declared allowed set.
 
-ALLOWED SET
--------------
-Either `--allow N,M,...` (a literal comma-separated list of issue/PR
-numbers this change is entitled to close), or `--pr-body FILE` (a file
-holding the landing PR's own body text; the allowed set is every number
-THAT file's own closing keywords reference — same regex, same rule). Both
-may be given together (the sets union). Neither given is a usage error
-(exit 2): there is nothing to check a reference against.
+ALLOWED SET (keyed on repository AND number)
+----------------------------------------------
+Every reference is keyed as (repository, number). An unqualified `#N` is
+the LOCAL repository; `owner/repo#N` and a URL are keyed by that owner/repo
+(case-insensitive), so `other/repo#12` never matches an allowed `12`. Pass
+`--repo OWNER/REPO` to name the local repository: a qualified reference or
+URL to it then keys as local, the same as `#N`. Without `--repo`, a
+qualified self-reference must be allowed in qualified form.
+Either `--allow SPEC` (comma-separated; each entry `N`, `#N`, or
+`owner/repo#N`), or `--pr-body FILE` (a file holding the landing PR's own
+body text; the allowed set is every reference THAT file's own closing
+keywords make — same regex, same keying). Both may be given together (the
+sets union). Neither given is a usage error (exit 2): there is nothing to
+check a reference against.
 
 EXIT CODES (fail-closed; every branch below is load-bearing)
 ---------------------------------------------------------------
@@ -60,9 +70,9 @@ EXIT CODES (fail-closed; every branch below is load-bearing)
      commits in range.
   1  at least one closing-keyword reference names a number outside the
      allowed set; each is printed as its own FAIL line (commit + line).
-  2  FAIL CLOSED — usage error, an unreadable --pr-body file, an unresolvable
-     --base/--head, or the working directory is not a git repository. Never
-     a silent skip.
+  2  FAIL CLOSED — usage error (a malformed --allow entry or --repo
+     included), an unreadable --pr-body file, an unresolvable --base/--head,
+     or the working directory is not a git repository. Never a silent skip.
 
 Stdlib only (subprocess + git; no network, no third-party parser).
 """
@@ -74,7 +84,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from typing import NoReturn
+from typing import NoReturn, Optional, Tuple
 
 OK = 0
 FAIL = 1
@@ -85,23 +95,28 @@ ZERO_SHA = "0" * 40
 # GitHub's own closing-keyword set (case-insensitive): close/closes/closed,
 # fix/fixes/fixed, resolve/resolves/resolved.
 _KEYWORD = r"(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)"
-# `#N` or `owner/repo#N`.
-_REF = r"(?:[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)?#(\d+)"
+_REPO = r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+"
+# `#N`, `owner/repo#N`, or an issue/PR URL `<scheme>://<host>/owner/repo/(issues|pull)/N`.
+_REF = (rf"(?:(?P<repo>{_REPO})?#(?P<num>\d+)"
+        rf"|https?://[^\s/]+/(?P<urepo>{_REPO})/(?:issues|pull)/(?P<unum>\d+))")
 # A separator between the keyword and the reference: a colon (with zero or
 # more following whitespace — `Closes:#12` and `Closes: #12` both count) or,
 # with no colon, one or more whitespace characters (`Closes #12`). Either
 # form requires at least one of {colon, whitespace} — `Closes#12` (glued,
 # neither) does not count.
 _SEP = r"(?::\s*|\s+)"
-# The keyword must be at the very start of the line, or preceded by a
-# whitespace character — `(?:^|(?<=\s))`. Leading indentation before the
-# keyword also satisfies this: the whitespace character immediately before
-# the keyword's first letter is what the lookbehind sees, regardless of how
-# much more whitespace precedes it.
+# The keyword must not be glued to a preceding letter, digit, or underscore:
+# line start, whitespace, punctuation, and markup all pass (`(fixes #12)`,
+# `**Closes #12**`, `done;closes #12`); `prefixes #12` does not.
 _CLOSES_RE = re.compile(
-    rf"(?:^|(?<=\s)){_KEYWORD}{_SEP}{_REF}",
+    rf"(?<![A-Za-z0-9_]){_KEYWORD}{_SEP}{_REF}",
     re.IGNORECASE,
 )
+_REPO_RE = re.compile(rf"^{_REPO}$")
+_ALLOW_RE = re.compile(rf"^(?:(?P<repo>{_REPO})?#)?(?P<num>\d+)$")
+
+# A reference key: (lower-cased "owner/repo", or None for the local repository; number).
+RefKey = Tuple[Optional[str], int]
 
 
 def die(code: int, msg: str) -> NoReturn:
@@ -109,13 +124,37 @@ def die(code: int, msg: str) -> NoReturn:
     raise SystemExit(code)
 
 
-def find_refs(text: str) -> list[tuple[int, str, int]]:
-    """Return (1-based line number, matched text, referenced number) for every
-    closing-keyword reference in `text`, scanned one physical line at a time."""
-    hits: list[tuple[int, str, int]] = []
+def ref_key(repo: str | None, num: int, local_repo: str | None = None) -> RefKey:
+    """Key one reference. Pure. `repo` None (an unqualified `#N`) is the local
+    repository; a qualified repo is case-folded, and folds to None when it
+    equals `local_repo` (already case-folded or not)."""
+    if repo is None:
+        return (None, num)
+    folded = repo.casefold()
+    if local_repo is not None and folded == local_repo.casefold():
+        return (None, num)
+    return (folded, num)
+
+
+def show_key(key: RefKey) -> str:
+    """Render a key as it reads in a message: `#N` (local) or `owner/repo#N`. Pure."""
+    repo, num = key
+    return f"#{num}" if repo is None else f"{repo}#{num}"
+
+
+def find_refs(text: str, local_repo: str | None = None) -> list[tuple[int, str, RefKey]]:
+    """Return (1-based line number, matched text, reference key) for every
+    closing-keyword reference in `text`, scanned one physical line at a time.
+    Pure. Keys follow `ref_key` (unqualified = local; `local_repo` folds a
+    qualified self-reference or URL to local)."""
+    hits: list[tuple[int, str, RefKey]] = []
     for n, line in enumerate(text.splitlines(), start=1):
         for m in _CLOSES_RE.finditer(line):
-            hits.append((n, m.group(0).strip(), int(m.group(1))))
+            if m.group("num") is not None:
+                key = ref_key(m.group("repo"), int(m.group("num")), local_repo)
+            else:
+                key = ref_key(m.group("urepo"), int(m.group("unum")), local_repo)
+            hits.append((n, m.group(0).strip(), key))
     return hits
 
 
@@ -148,8 +187,10 @@ def _resolve_commit(repo: str, ref: str) -> str | None:
     return proc.stdout.strip()
 
 
-def run_lint(repo: str, base: str, head: str, allowed: set[int]) -> tuple[int, list[str]]:
-    """Evaluate `base..head` in `repo` against `allowed`; return (exit_code, lines).
+def run_lint(repo: str, base: str, head: str, allowed: set[RefKey],
+             local_repo: str | None = None) -> tuple[int, list[str]]:
+    """Evaluate `base..head` in `repo` against `allowed` (a set of `ref_key`
+    keys); return (exit_code, lines). Reads git; writes nothing.
 
     Fail-closed ordering: repo-ness, then the all-zeros sentinel, then ref
     resolution, then the range walk, are each checked before any commit is
@@ -190,13 +231,14 @@ def run_lint(repo: str, base: str, head: str, allowed: set[int]) -> tuple[int, l
             body = _run_git(repo, ["log", "-1", "--format=%B", sha])
         except GitError as exc:
             return ERROR, [f"error: cannot read commit message for {sha}: {exc}"]
-        for n, matched, num in find_refs(body):
-            if num in allowed:
+        for n, matched, key in find_refs(body, local_repo):
+            if key in allowed:
                 continue
             fail = True
+            shown = ", ".join(sorted(show_key(k) for k in allowed))
             lines.append(
-                f"FAIL {sha[:7]} L{n}: {matched!r} references #{num}, not in the "
-                f"allowed set {sorted(allowed)} — strip it unless this change is "
+                f"FAIL {sha[:7]} L{n}: {matched!r} references {show_key(key)}, not in the "
+                f"allowed set [{shown}] — strip it unless this change is "
                 "meant to close it (issue #1121: a stray closing keyword from an "
                 "unrelated commit auto-closes a ready PR when it reaches the "
                 "default branch)"
@@ -207,15 +249,17 @@ def run_lint(repo: str, base: str, head: str, allowed: set[int]) -> tuple[int, l
     return OK, [f"closes_lint: ok ({len(shas)} commit(s) checked, 0 out-of-set closing reference(s))"]
 
 
-def _parse_allow(spec: str) -> set[int]:
-    out: set[int] = set()
+def _parse_allow(spec: str, local_repo: str | None = None) -> set[RefKey]:
+    """Parse `--allow` (entries `N`, `#N`, or `owner/repo#N`) into keys; exit 2 on a malformed entry."""
+    out: set[RefKey] = set()
     for part in spec.split(","):
         part = part.strip()
         if not part:
             continue
-        if not part.isdigit():
-            die(ERROR, f"--allow entry is not a plain issue number: {part!r}")
-        out.add(int(part))
+        m = _ALLOW_RE.match(part)
+        if m is None:
+            die(ERROR, f"--allow entry is not N, #N, or owner/repo#N: {part!r}")
+        out.add(ref_key(m.group("repo"), int(m.group("num")), local_repo))
     return out
 
 
@@ -228,11 +272,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--base", help="range base ref (exclusive)")
     parser.add_argument("--head", help="range head ref (inclusive)")
-    parser.add_argument("--allow", help="comma-separated issue/PR numbers this change may close")
+    parser.add_argument("--allow", help="comma-separated references this change may close: N, #N, or owner/repo#N")
     parser.add_argument(
         "--pr-body", metavar="FILE",
         help="file holding the landing PR's own body; its own closing keywords define (part of) the allowed set",
     )
+    parser.add_argument("--repo", metavar="OWNER/REPO",
+                        help="the local repository; a qualified reference or URL to it keys as unqualified #N")
     parser.add_argument("--selftest", action="store_true", help="run the built-in selftest and exit")
     args = parser.parse_args(argv)
 
@@ -243,9 +289,15 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--base and --head are both required")
         return ERROR  # pragma: no cover — parser.error() already exits(2)
 
-    allowed: set[int] = set()
+    local_repo = None
+    if args.repo is not None:
+        if not _REPO_RE.match(args.repo):
+            die(ERROR, f"--repo is not OWNER/REPO: {args.repo!r}")
+        local_repo = args.repo.casefold()
+
+    allowed: set[RefKey] = set()
     if args.allow:
-        allowed |= _parse_allow(args.allow)
+        allowed |= _parse_allow(args.allow, local_repo)
     if args.pr_body:
         path = Path(args.pr_body)
         if not path.is_file():
@@ -254,11 +306,11 @@ def main(argv: list[str] | None = None) -> int:
             body_text = path.read_text(encoding="utf-8")
         except (OSError, UnicodeError) as exc:
             die(ERROR, f"--pr-body file unreadable: {exc}")
-        allowed |= {num for _, _, num in find_refs(body_text)}
+        allowed |= {key for _, _, key in find_refs(body_text, local_repo)}
     if not args.allow and not args.pr_body:
         parser.error("one of --allow or --pr-body is required (nothing to check references against)")
 
-    code, lines = run_lint(".", args.base, args.head, allowed)
+    code, lines = run_lint(".", args.base, args.head, allowed, local_repo)
     for line in lines:
         print(line)
     return code
@@ -300,12 +352,14 @@ def _commit(repo: Path, message: str, files: dict[str, str]) -> str:
 
 
 def _run_tool(repo: Path, base: str, head: str, allow: str | None = None,
-              pr_body: Path | None = None) -> tuple[int, str]:
+              pr_body: Path | None = None, local: str | None = None) -> tuple[int, str]:
     args = [sys.executable, __file__, "--base", base, "--head", head]
     if allow is not None:
         args += ["--allow", allow]
     if pr_body is not None:
         args += ["--pr-body", str(pr_body)]
+    if local is not None:
+        args += ["--repo", local]
     proc = subprocess.run(args, cwd=str(repo), capture_output=True, text=True)
     return proc.returncode, (proc.stdout + proc.stderr)
 
@@ -329,29 +383,51 @@ def _selftest() -> int:
         tmp_path = Path(tmp)
 
         # 1) unit tests of the regex/extractor, no git involved.
+        # Keys: (None, N) is the local repository; ("owner/repo", N) is qualified.
         cases = [
-            ("Closes #12", [(1, 12)]),
-            ("closes #12", [(1, 12)]),
-            ("Closed #12", [(1, 12)]),
-            ("Fix #12", [(1, 12)]),
-            ("Fixes #12", [(1, 12)]),
-            ("Fixed #12", [(1, 12)]),
-            ("Resolve #12", [(1, 12)]),
-            ("Resolves #12", [(1, 12)]),
-            ("Resolved #12", [(1, 12)]),
-            ("Closes: #12", [(1, 12)]),
-            ("Closes:#12", [(1, 12)]),
-            ("Fixes acme-corp/widgets#42", [(1, 42)]),
+            ("Closes #12", [(1, (None, 12))]),
+            ("closes #12", [(1, (None, 12))]),
+            ("Closed #12", [(1, (None, 12))]),
+            ("Fix #12", [(1, (None, 12))]),
+            ("Fixes #12", [(1, (None, 12))]),
+            ("Fixed #12", [(1, (None, 12))]),
+            ("Resolve #12", [(1, (None, 12))]),
+            ("Resolves #12", [(1, (None, 12))]),
+            ("Resolved #12", [(1, (None, 12))]),
+            ("Closes: #12", [(1, (None, 12))]),
+            ("Closes:#12", [(1, (None, 12))]),
+            ("Closes#12", []),  # glued: neither colon nor whitespace separator
+            ("Fixes acme-corp/Widgets#42", [(1, ("acme-corp/widgets", 42))]),
             ("random prose with no keyword", []),
-            ("prefixes #12", []),  # glued to "pre" — no preceding whitespace boundary
-            ("Body:\nCloses #7\nmore text", [(2, 7)]),
-            ("  Closes #9", [(1, 9)]),  # leading whitespace before line-start keyword
-            ("some text. Closes #5", [(1, 5)]),  # keyword after whitespace mid-line
+            ("prefixes #12", []),  # the keyword is glued to "pre" — a word character
+            ("_fixes #12", []),  # an underscore is a word character too
+            ("Body:\nCloses #7\nmore text", [(2, (None, 7))]),
+            ("  Closes #9", [(1, (None, 9))]),  # leading whitespace before line-start keyword
+            ("some text. Closes #5", [(1, (None, 5))]),  # keyword after whitespace mid-line
+            # Punctuation or markup right before the keyword still counts.
+            ("see (fixes #12)", [(1, (None, 12))]),
+            ("**Closes #12**", [(1, (None, 12))]),
+            ("done;closes #12", [(1, (None, 12))]),
+            # Issue and pull-request URLs are keyed by their owner/repo path.
+            ("Closes https://github.com/o/r/issues/12", [(1, ("o/r", 12))]),
+            ("Closes https://github.com/o/r/pull/12", [(1, ("o/r", 12))]),
+            ("Closes https://github.com/o/r", []),  # no /issues/N or /pull/N path
         ]
         for text, want in cases:
-            got = [(n, num) for n, _, num in find_refs(text)]
+            got = [(n, key) for n, _, key in find_refs(text)]
             if got != want:
                 failures.append(f"find_refs({text!r}): got {got}, want {want}")
+        # With the local repository named, a qualified self-reference or URL
+        # keys as local; any other repository stays qualified.
+        local_cases = [
+            ("Closes O/R#4", [(1, (None, 4))]),
+            ("Closes https://github.com/o/r/pull/4", [(1, (None, 4))]),
+            ("Closes other/r#4", [(1, ("other/r", 4))]),
+        ]
+        for text, want in local_cases:
+            got = [(n, key) for n, _, key in find_refs(text, "o/r")]
+            if got != want:
+                failures.append(f"find_refs({text!r}, 'o/r'): got {got}, want {want}")
 
         # 2) clean: commit's Closes # is in the allowed set -> OK.
         repo = tmp_path / "case_clean"
@@ -372,7 +448,7 @@ def _selftest() -> int:
             {"a.txt": "2"},
         )
         rc, out = _run_tool(repo, base, head, allow="12")
-        check("stray-out-of-set", rc, out, FAIL, must_have=("FAIL", head[:7], "#99", "[12]"))
+        check("stray-out-of-set", rc, out, FAIL, must_have=("FAIL", head[:7], "#99", "[#12]"))
 
         # 4) multiple commits, only one dirty -> FAIL exit 1, only the
         # offending line reported (the clean commit's own Closes # is silent).
@@ -454,7 +530,11 @@ def _selftest() -> int:
 
         # 15) non-numeric --allow entry -> fail closed, exit 2.
         rc, out = _run_tool(repo, base, head, allow="5,abc")
-        check("allow-non-numeric", rc, out, ERROR, must_have=("not a plain issue number",))
+        check("allow-non-numeric", rc, out, ERROR, must_have=("not N, #N, or owner/repo#N",))
+        rc, out = _run_tool(repo, base, head, allow="x#5")
+        check("allow-bad-qualifier", rc, out, ERROR, must_have=("not N, #N, or owner/repo#N",))
+        rc, out = _run_tool(repo, base, head, allow="5,9", local="not-a-repo")
+        check("repo-malformed", rc, out, ERROR, must_have=("--repo is not OWNER/REPO",))
 
         # 16) merge commit's own hand-edited message is scanned too (a
         # squash/merge is not exempt — the #1121 report describes exactly
@@ -471,12 +551,58 @@ def _selftest() -> int:
         rc, out = _run_tool(repo, base, head, allow="1")
         check("merge-commit-scanned", rc, out, FAIL, must_have=("FAIL", "#55"))
 
+        # 17) a keyword right after punctuation/markup is a real reference:
+        # `(fixes #99)`, `**Closes #98**`, and `done;closes #97` all FAIL
+        # against an allowed set that holds none of them.
+        repo = tmp_path / "case_punct"
+        _init_repo(repo)
+        base = _commit(repo, "chore: init", {"a.txt": "1"})
+        head = _commit(repo, "fix: a (fixes #99)\n\n**Closes #98**\ndone;closes #97", {"a.txt": "2"})
+        rc, out = _run_tool(repo, base, head, allow="12")
+        check("punctuation-before-keyword", rc, out, FAIL, must_have=("#99", "#98", "#97"))
+
+        # 18) the allowed set is keyed on (repo, N): a same-numbered reference
+        # in ANOTHER repository — qualified or as an issue/PR URL — FAILs
+        # against an unqualified allowed 12, and passes once allowed qualified.
+        repo = tmp_path / "case_cross_repo"
+        _init_repo(repo)
+        base = _commit(repo, "chore: init", {"a.txt": "1"})
+        head = _commit(
+            repo,
+            "feat: x\n\nCloses other/lib#12\nFixes https://github.com/other/lib/pull/12",
+            {"a.txt": "2"},
+        )
+        rc, out = _run_tool(repo, base, head, allow="12")
+        check("cross-repo-same-number", rc, out, FAIL, must_have=("other/lib#12",))
+        rc, out = _run_tool(repo, base, head, allow="#12,Other/Lib#12")
+        check("cross-repo-allowed-qualified", rc, out, OK, must_have=("ok",))
+
+        # 19) --repo names the local repository: a qualified self-reference
+        # and an issue URL to it key as local, so an unqualified allowed 12
+        # covers them; a --pr-body URL reference to it allows `#12` too.
+        head = _commit(
+            repo,
+            "feat: y\n\nCloses acme/app#12\nCloses https://github.com/acme/app/issues/12",
+            {"a.txt": "3"},
+        )
+        rc, out = _run_tool(repo, base, head, allow="12", local="Acme/App")
+        check("local-repo-qualified", rc, out, FAIL, must_have=("other/lib#12",), must_not=("acme/app#12",))
+        mid = _sh(repo, "rev-parse", "HEAD~1")
+        rc, out = _run_tool(repo, mid, head, allow="12", local="acme/app")
+        check("local-repo-only", rc, out, OK, must_have=("ok",))
+        rc, out = _run_tool(repo, mid, head, allow="12")
+        check("local-repo-unnamed", rc, out, FAIL, must_have=("acme/app#12",))
+        pr_url = tmp_path / "pr_url.txt"
+        pr_url.write_text("Closes https://github.com/acme/app/pull/12\n")
+        rc, out = _run_tool(repo, mid, head, pr_body=pr_url, local="acme/app")
+        check("pr-body-url-local", rc, out, OK, must_have=("ok",))
+
     if failures:
         print("SELFTEST FAILED:")
         for f in failures:
             print(f"  - {f}")
         return 1
-    print("SELFTEST OK: 16/16 cases passed")
+    print("SELFTEST OK: 26/26 cases passed")
     return 0
 
 

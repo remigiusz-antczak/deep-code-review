@@ -73,14 +73,18 @@
 #                           skill installed.
 #   DCR_CLOSES_LINT=1       run deep-code-review's closes_lint.py over the
 #                           same BASE_SHA..HEAD_SHA range: a `close[sd]?` /
-#                           `fix(e[sd])?` / `resolve[sd]?` + `#N` closing
-#                           keyword in any commit in range may only reference
-#                           a number in the allowed set from DCR_CLOSES_ALLOW
-#                           (comma-separated issue/PR numbers) and/or
-#                           DCR_CLOSES_PR_BODY (a file holding the landing
-#                           PR's own body — its own closing keywords also
-#                           define the set); at least one of the two is
-#                           required. Catches a stray closing keyword left
+#                           `fix(e[sd])?` / `resolve[sd]?` + `#N` /
+#                           `owner/repo#N` / issue-or-PR-URL closing keyword
+#                           in any commit in range may only reference a
+#                           (repository, number) in the allowed set from
+#                           DCR_CLOSES_ALLOW (comma-separated `N`, `#N`, or
+#                           `owner/repo#N`) and/or DCR_CLOSES_PR_BODY (a file
+#                           holding the landing PR's own body — its own
+#                           closing keywords also define the set); at least
+#                           one of the two is required. Optional
+#                           DCR_CLOSES_REPO=owner/repo names this repository,
+#                           so a qualified self-reference counts as `#N`.
+#                           Catches a stray closing keyword left
 #                           over from a different lane's commit message
 #                           silently auto-closing a ready PR when the range
 #                           reaches the default branch (issue #1121;
@@ -420,12 +424,18 @@ if opt_in DCR_CLOSES_LINT; then
     if [ -n "${DCR_CLOSES_PR_BODY:-}" ]; then
       closes_args+=(--pr-body "${DCR_CLOSES_PR_BODY}")
     fi
+    # --repo is checked apart: it names an identity, never an allowed set.
+    closes_repo=()
+    if [ -n "${DCR_CLOSES_REPO:-}" ]; then
+      closes_repo=(--repo "${DCR_CLOSES_REPO}")
+    fi
     if [ "${#closes_args[@]}" -eq 0 ]; then
       printf 'dcr-gates: FAIL closes_lint (DCR_CLOSES_LINT=1 needs DCR_CLOSES_ALLOW and/or DCR_CLOSES_PR_BODY)\n'
       FAIL=1
-    # closes_lint.py resolves the range against its OWN process cwd (it takes
-    # no --repo flag), so this must run with cwd == REPO_ROOT.
-    elif (cd "${REPO_ROOT}" && python3 "${CLOSES_LINT}" --base "${BASE_SHA}" --head "${HEAD_SHA}" "${closes_args[@]}"); then
+    # closes_lint.py resolves the range against its OWN process cwd (its
+    # --repo is an owner/repo identity, not a path), so this must run with
+    # cwd == REPO_ROOT.
+    elif (cd "${REPO_ROOT}" && python3 "${CLOSES_LINT}" --base "${BASE_SHA}" --head "${HEAD_SHA}" "${closes_args[@]}" "${closes_repo[@]+"${closes_repo[@]}"}"); then
       printf 'dcr-gates: closes_lint PASS\n'
     else
       printf 'dcr-gates: closes_lint FAIL\n' >&2

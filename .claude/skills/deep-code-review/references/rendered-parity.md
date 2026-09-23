@@ -81,9 +81,9 @@ reconfiguring what "default" means is a claim about a surface you wrote, not the
 "done," the user finds the next — is the loop that burns trust and manufactures the repeated false ✅.
 Start with the **inventory diff** (`scripts/parity_differ.py`) — completeness is judged **only** there,
 then token values, then `--style` (computed styles of text-matched pairs: a FOUNDATION row — one
-property off on most pairs — is fixed globally before any per-section work), then the visual pass.
+property off on most pairs, in 2+ sections — is fixed globally before any per-section work), then the visual pass.
 The orchestrator spot-checks a harness's pair count before trusting its verdict (`--min-pairs N`, your
-floor, on either differ): too few pairs = an empty or wrong page, never a pass. Size, height, width, or bounding boxes are never
+floor, on either differ; `--style-min-pairs N` for style): too few pairs = an empty or wrong page, never a pass. Size, height, width, or bounding boxes are never
 completeness or "aligned" evidence; geometry proves only layout defects (overlap, clipping, viewport fit
 — `testing-ui.md`). Then do a **full side-by-side of the whole surface**, list every styling / placement
 delta at once, and fix against that list; the claim is made only when every row is closed or owner-accepted

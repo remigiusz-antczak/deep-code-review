@@ -26,9 +26,9 @@ left over from a different lane's message closes an issue or PR that has nothing
 change the moment it reaches the default branch, and the close is attributed to whoever pushed, so it reads
 as intentional and nobody re-checks it (issue #1121). Strip a closing keyword the landing PR does not itself
 own before the squash/amend lands. `closes_lint.py` (deep-code-review's `scripts/`) mechanizes this: given a
-commit range and an allowed set of issue/PR numbers (`--allow`, or `--pr-body` naming the landing PR's own
+commit range and an allowed set of (repo, number) references (`--allow`, or `--pr-body` naming the landing PR's own
 body, whose own closing keywords define the set), it fails on any `close[sd]?` / `fix(e[sd])?` /
-`resolve[sd]?` + `#N` reference outside that set — opt in via `DCR_CLOSES_LINT=1` in the installed
+`resolve[sd]?` + `#N` / `o/r#N` / URL reference outside that set — opt in via `DCR_CLOSES_LINT=1` in the installed
 `dcr-gates.sh`. **Treat "PR closed, not merged, and its head is not an ancestor of the target branch" as an
 incident, not a shrug**: check the close event's actor and source (a keyword-triggered auto-close vs. a
 human decision) before assuming intent, and reopen it — the mirror, for the cross-PR case, of

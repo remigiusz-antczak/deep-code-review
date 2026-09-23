@@ -53,19 +53,25 @@ CONTRACT (fail-closed; every branch below is load-bearing, not cosmetic)
   visibility marker (VISIBILITY below); the `--accept` file is not owner-
   authored, not committed, or malformed; a would-be MATCH rests on a side
   with no inventory (a `.json` section list) or on zero matched element
-  pairs; or fewer pairs matched than the caller's `--min-pairs N` (a harness
-  that compared an empty or wrong page — this outranks MISMATCH, whose work
-  queue would then point the wrong way). N is caller-supplied, never
-  guessed. Never a score, never a pass.
+  pairs; or fewer inventory pairs matched than the caller's `--min-pairs N`
+  (a harness that compared an empty or wrong page — this outranks MISMATCH,
+  whose work queue would then point the wrong way). N is caller-supplied,
+  never guessed. Never a score, never a pass. Style never exits 3.
 * CANNOT_COMPARE (4) — the app is UNSEEDED: every design-populated section
   exists in the app but is uniformly empty. This is a precondition failure
   (seed the app's data), NOT a structural mismatch — it must never be "fixed"
   by condensing or deleting the empty sections. Distinct from MISMATCH so an
   agent cannot quietly reclassify "unseeded" as "aligned once trimmed down."
 * STYLE_DIFF (5) — `--style` only: the inventory passes but a text-matched
-  pair differs in computed style (COMPUTED STYLE below). A failing inventory
-  exit always wins; `verdict` stays the completeness verdict and
-  `style.verdict` is reported separately.
+  pair differs in computed style (COMPUTED STYLE below).
+* STYLE_COULD_NOT_CHECK (6) — `--style` only: the inventory passes but style
+  is unverifiable — a malformed `data-cs`, zero text-matched style pairs, or
+  fewer than the caller's `--style-min-pairs N` (its own floor; the
+  inventory's `--min-pairs` never applies to style). Never a pass.
+  For both style exits: a failing inventory exit (1/3/4) always wins, with
+  the style lines appended; STYLE_MATCH leaves MATCH (0) as is; `verdict`
+  stays the completeness verdict and `style.verdict` (STYLE_MATCH /
+  STYLE_DIFF / STYLE_COULD_NOT_CHECK) is reported separately.
 * Extra app sections beyond the design are reported as info ("kept as
   superset") and never cause a failure on their own. Extra ITEMS inside a
   matched section are EXTRA_IN_APP rows and do fail until resolved or
@@ -185,16 +191,19 @@ conversion. A visible `data-cs` element is paired by section + role
 (heading level, control role, explicit `role`, else `text`) + its full
 visible text (masked as in the inventory), duplicates in document order;
 an element with no visible text or no counterpart is not style-checked.
-Rows print grouped by property. A property that differs on more than half
-of all pairs is one FOUNDATION row — a global type/box mismatch to fix
-before any per-section work — instead of one row per pair. Style verdict:
-STYLE_MATCH, STYLE_DIFF, or COULD_NOT_CHECK (a malformed `data-cs`, zero
-pairs, or fewer than `--min-pairs`). No accept path covers style rows.
+Rows print grouped by property. A property is one FOUNDATION row — a global
+type/box mismatch to fix before any per-section work — instead of one row
+per pair only when it differs on more than half of all pairs AND on pairs
+in >= 2 sections AND on >= max(3, `--style-min-pairs`) pairs; a narrower
+majority (2 pairs, or one section) prints per pair. Style verdict:
+STYLE_MATCH, STYLE_DIFF, or STYLE_COULD_NOT_CHECK (a malformed `data-cs`,
+zero pairs, or fewer than `--style-min-pairs`). No accept path covers style
+rows.
 
 USAGE
 -----
   parity_differ.py --design <file> --app <file> [--accept <tsv> [--accept-rev REV]]
-                   [--min-pairs N] [--style] [--json]
+                   [--min-pairs N] [--style [--style-min-pairs N]] [--json]
   parity_differ.py --selftest
 Public API for sibling scripts: `compare()` (the dict `--json` prints) and
 `inventory_keys()` (one side's item keys, never a verdict).
@@ -202,8 +211,10 @@ Public API for sibling scripts: `compare()` (the dict `--json` prints) and
 from __future__ import annotations
 
 import argparse
+import contextlib
 import functools
 import importlib.util
+import io
 import json
 import os
 import re
@@ -226,7 +237,11 @@ USAGE_ERROR = 2
 COULD_NOT_CHECK = 3
 CANNOT_COMPARE = 4
 STYLE_DIFF = 5                                # --style only; inventory passed
+STYLE_COULD_NOT_CHECK = 6                     # --style only; inventory passed, style unverifiable
 MATCH_WITH_ACCEPTED = "MATCH_WITH_ACCEPTED"   # verdict name; exit code is MATCH
+# FOUNDATION breadth floors (COMPUTED STYLE): pairs and distinct sections.
+_FOUNDATION_MIN_PAIRS = 3
+_FOUNDATION_MIN_SECTIONS = 2
 
 _VERDICT_NAMES = {MATCH: "MATCH", MISMATCH: "MISMATCH", USAGE_ERROR: "USAGE_ERROR",
                   COULD_NOT_CHECK: "COULD_NOT_CHECK", CANNOT_COMPARE: "CANNOT_COMPARE"}
@@ -939,10 +954,12 @@ def diff_styles(design: list[dict], app: list[dict], min_pairs: int | None = Non
     inventory masks when both sections carry value markers; duplicates pair
     in document order. Returns `{"verdict", "pairs", "identical", "unpaired",
     "foundation", "rows", "lines"}`, each row `{"section", "element",
-    "property", "design", "app", "foundation"}`. A property differing on more
-    than half of all pairs is FOUNDATION. COULD_NOT_CHECK on any malformed
-    `data-cs`, zero pairs, or fewer pairs than `min_pairs`. Style never feeds
-    inventory completeness.
+    "property", "design", "app", "foundation"}`. A property is FOUNDATION only
+    when it differs on more than half of all pairs AND on pairs in >= 2
+    sections AND on >= max(3, `min_pairs`) pairs; otherwise its rows print
+    per pair. STYLE_COULD_NOT_CHECK on any malformed `data-cs`, zero pairs, or
+    fewer pairs than `min_pairs` (the caller's `--style-min-pairs`, never the
+    inventory floor). Style never feeds inventory completeness.
     """
     bad = [f"{side} section '{s['id']}': {b}" for side, recs in (("design", design), ("app", app))
            for s in recs for b in s["cs_bad"]]
@@ -970,17 +987,22 @@ def diff_styles(design: list[dict], app: list[dict], min_pairs: int | None = Non
             by_prop[p].append({"section": sid, "element": element, "property": p,
                                "design": d[p], "app": a[p]})
     n = len(pairs)
-    foundation = [p for p in _STYLE_PROPS if 2 * len(by_prop[p]) > n]
+    # A global type/box claim needs breadth, not just a majority: a majority
+    # of 2 pairs, or of pairs all in one section, is a local diff.
+    floor = max(_FOUNDATION_MIN_PAIRS, min_pairs or 0)
+    foundation = [p for p in _STYLE_PROPS
+                  if 2 * len(by_prop[p]) > n and len(by_prop[p]) >= floor
+                  and len({r["section"] for r in by_prop[p]}) >= _FOUNDATION_MIN_SECTIONS]
     rows = [dict(r, foundation=p in foundation) for p in _STYLE_PROPS for r in by_prop[p]]
     head = (f"style: {n} text-matched pair(s); style-identical {identical}/{n} = {_pct(identical, n)}; "
             f"{unpaired} design element(s) with no counterpart not style-checked.")
     if bad or not n or (min_pairs is not None and n < min_pairs):
-        verdict = "COULD_NOT_CHECK"
+        verdict = "STYLE_COULD_NOT_CHECK"
         why = (f"malformed data-cs (needs a JSON object with {', '.join(_STYLE_PROPS)}): "
                f"{'; '.join(bad[:5])}" if bad else
                "no text-matched data-cs pairs — export computed styles on both sides" if not n else
-               f"{n} style pair(s), below the caller's --min-pairs {min_pairs}")
-        lines = [f"STYLE COULD_NOT_CHECK: {why}.", head]
+               f"{n} style pair(s), below the caller's --style-min-pairs {min_pairs}")
+        lines = [f"STYLE_COULD_NOT_CHECK: {why}.", head]
     elif rows:
         verdict = "STYLE_DIFF"
         lines = [f"STYLE_DIFF: {len(rows)} property difference(s) on {n - identical} of {n} pair(s); "
@@ -1166,7 +1188,8 @@ _BASIS = ("basis: element inventory (headings, visible text, controls by role + 
 
 def compare(design_path: str | None, app_path: str | None, accept_path: str | None = None,
             accept_rev: str | None = None, use_focus_gate: bool | None = None,
-            min_pairs: int | None = None, style: bool = False) -> dict:
+            min_pairs: int | None = None, style: bool = False,
+            style_min_pairs: int | None = None) -> dict:
     """Compare a design render against an app render; return the full result.
 
     The result dict carries `exit_code`, `verdict`, `report` (human text) and,
@@ -1176,10 +1199,11 @@ def compare(design_path: str | None, app_path: str | None, accept_path: str | No
     sectionless side on EITHER end, an unresolved class-based hiding token,
     or an accept file that is not owner-authored or is malformed returns
     COULD_NOT_CHECK before any comparison runs; so do zero pairs on a
-    would-be pass and fewer pairs than `min_pairs` on any verdict.
+    would-be pass and fewer inventory pairs than `min_pairs` on any verdict.
     `verdict` stays the completeness verdict; a passing inventory takes the
-    style exit (STYLE_DIFF / COULD_NOT_CHECK). `use_focus_gate` is passed to
-    `read_owner_authored`.
+    style exit (STYLE_DIFF / STYLE_COULD_NOT_CHECK). `style_min_pairs` floors
+    style pairs only; `min_pairs` never reaches style. `use_focus_gate` is
+    passed to `read_owner_authored`.
     """
     def early(code: int, report: str) -> dict:
         """Result for a verdict reached before any inventory comparison."""
@@ -1336,15 +1360,15 @@ def compare(design_path: str | None, app_path: str | None, accept_path: str | No
              f"{completeness}."),
             *body, _BASIS, *info]
     verdict = verdict or _VERDICT_NAMES[code]
-    style_res = diff_styles(design, app, min_pairs) if style else None
+    style_res = diff_styles(design, app, style_min_pairs) if style else None
     if style_res is not None:
         if code == MATCH and style_res["verdict"] != "STYLE_MATCH":
-            code = STYLE_DIFF if style_res["verdict"] == "STYLE_DIFF" else COULD_NOT_CHECK
+            code = STYLE_DIFF if style_res["verdict"] == "STYLE_DIFF" else STYLE_COULD_NOT_CHECK
             report = style_res["lines"] + report   # the headline names what set the exit
         else:
             report += style_res["lines"]
     return {"exit_code": code, "verdict": verdict, "overall": overall, "pairs": tot_matched,
-            "min_pairs": min_pairs, "style": style_res, "accepted_n": accepted_n, "sections": sections,
+            "min_pairs": min_pairs, "style_min_pairs": style_min_pairs, "style": style_res, "accepted_n": accepted_n, "sections": sections,
             "section_gaps": {"missing": missing, "empty": empty},
             "extra_sections": extra, "report": "\n".join(report)}
 
@@ -1576,7 +1600,8 @@ def _selftest() -> int:
         "json(no-inventory)=3 hidden(dialog,details,opacity,class)=ok label(visible,placeholder)=ok "
         "coverage(media,icon,option,mask-count,broken)=ok accept(owner,count,pin,untrusted)=ok "
         "inventory-keys=ok min-pairs(floor,outranks-mismatch,zero-pairs)=ok "
-        "style(foundation,opt-in,normalized,inventory-wins,malformed,empty-value,no-export,floor)=ok"
+        "style(foundation,opt-in,normalized,inventory-wins,malformed,empty-value,no-export,floor,"
+        "floor-separate,needs-style)=ok foundation-breadth(one-section,two-pairs,default,style-floor)=ok"
     )
     return 0
 
@@ -1613,13 +1638,16 @@ def _selftest_floor_style(write, check, failures: list, design: str, app_full: s
             "background-color": "rgba(0, 0, 0, 0)", "padding": "0px", "border-radius": "0px",
             "box-shadow": "none"}
 
-    def page(over: dict | None = None, bold: tuple | None = None, attr: str | None = None) -> str:
-        """Three sections x (heading, button, text), each element carrying data-cs."""
+    def page(over: dict | None = None, bold: tuple | None = None, attr: str | None = None,
+             sids: tuple = ("overview", "holdings", "activity"), over_in: tuple | None = None) -> str:
+        """Sections (default three) x (heading, button, text), each element carrying data-cs;
+        `over` applies to every section, or only to those named in `over_in`."""
         out = []
-        for sid in ("overview", "holdings", "activity"):
+        for sid in sids:
             els = []
+            here = over if over_in is None or sid in over_in else None
             for tag, text in (("h2", sid.title()), ("button", f"Open {sid}"), ("p", f"{sid} note")):
-                props = {**base, **(over or {}), **({"font-weight": "600"} if bold == (sid, tag) else {})}
+                props = {**base, **(here or {}), **({"font-weight": "600"} if bold == (sid, tag) else {})}
                 els.append(f"<{tag} data-cs='{attr if attr is not None else json.dumps(props)}'>{text}</{tag}>")
             out.append(f'<section data-section="{sid}"><div data-item>x</div>{"".join(els)}</section>')
         return "".join(out)
@@ -1645,15 +1673,51 @@ def _selftest_floor_style(write, check, failures: list, design: str, app_full: s
     r = compare(sd, wrong, style=True)
     check("style-inventory-wins", r["exit_code"], r["report"], MISMATCH, must_have=("FOUNDATION line-height",))
     r = compare(sd, write("st-bad.html", page(attr='{"color": "red"}')), style=True)
-    check("style-malformed", r["exit_code"], r["report"], COULD_NOT_CHECK, must_have=("malformed data-cs",))
+    check("style-malformed", r["exit_code"], r["report"], STYLE_COULD_NOT_CHECK, must_have=("malformed data-cs",))
     blank = page({"padding": ""})   # an unserialized shorthand on BOTH sides is not "equal"
     r = compare(write("st-bd.html", blank), write("st-ba.html", blank), style=True)
-    check("style-empty-value", r["exit_code"], r["report"], COULD_NOT_CHECK, must_have=("malformed data-cs",))
+    check("style-empty-value", r["exit_code"], r["report"], STYLE_COULD_NOT_CHECK, must_have=("malformed data-cs",))
     r = compare(sd, write("st-none.html", re.sub(r" data-cs='[^']*'", "", page())), style=True)
-    check("style-no-export", r["exit_code"], r["report"], COULD_NOT_CHECK, must_have=("no text-matched",))
-    r = compare(sd, norm, style=True, min_pairs=10)   # 12 inventory pairs, 9 style pairs
-    check("style-floor", r["exit_code"], r["report"], COULD_NOT_CHECK,
-          must_have=("9 style pair(s), below the caller's --min-pairs 10",))
+    check("style-no-export", r["exit_code"], r["report"], STYLE_COULD_NOT_CHECK, must_have=("no text-matched",))
+    # --style-min-pairs is the style floor; the inventory's --min-pairs never reaches style.
+    r = compare(sd, norm, style=True, style_min_pairs=10)   # 12 inventory pairs, 9 style pairs
+    check("style-floor", r["exit_code"], r["report"], STYLE_COULD_NOT_CHECK,
+          must_have=("STYLE_COULD_NOT_CHECK:", "9 style pair(s), below the caller's --style-min-pairs 10"))
+    r = compare(sd, norm, style=True, min_pairs=10)
+    check("style-floor-separate", r["exit_code"], r["report"], MATCH,
+          must_have=("STYLE_MATCH",), must_not=("COULD_NOT_CHECK",))
+    r = compare(sd, sa, style=True, min_pairs=13)   # inventory floor still outranks style
+    check("style-inventory-floor-wins", r["exit_code"], r["report"], COULD_NOT_CHECK,
+          must_have=("--min-pairs 13",))
+    try:
+        with contextlib.redirect_stderr(io.StringIO()):
+            main(["--design", sd, "--app", sa, "--style-min-pairs", "3"])
+        failures.append("style-min-pairs-needs-style: accepted without --style")
+    except SystemExit as exc:
+        if exc.code != USAGE_ERROR:
+            failures.append(f"style-min-pairs-needs-style: exit {exc.code}, want {USAGE_ERROR}")
+    # FOUNDATION needs breadth: >half of pairs AND >= 2 sections AND >= max(3, floor) pairs.
+    one = page(sids=("overview",))
+    r = compare(write("fd1-d.html", one), write("fd1-a.html", page({"line-height": "24px"}, sids=("overview",))),
+                style=True)
+    check("foundation-one-section", r["exit_code"], r["report"], STYLE_DIFF,
+          must_have=("STYLE_DIFF line-height (3 pair(s))",), must_not=("FOUNDATION line-height",))
+    def heads(over: dict | None = None) -> str:
+        """Two sections, one data-cs heading each: two style pairs across two sections."""
+        cs = json.dumps({**base, **(over or {})})
+        return "".join(f"<section data-section=\"{s}\"><div data-item>x</div><h2 data-cs='{cs}'>{s}</h2></section>"
+                       for s in ("left", "right"))
+    r = compare(write("fd2-d.html", heads()), write("fd2-a.html", heads({"line-height": "24px"})), style=True)
+    check("foundation-two-pairs", r["exit_code"], r["report"], STYLE_DIFF,
+          must_have=("STYLE_DIFF line-height (2 pair(s))", "2 text-matched pair(s)"),
+          must_not=("FOUNDATION line-height",))
+    six = write("fd6-a.html", page({"line-height": "24px"}, over_in=("overview", "holdings")))
+    r = compare(sd, six, style=True)
+    check("foundation-at-default-floor", r["exit_code"], r["report"], STYLE_DIFF,
+          must_have=("FOUNDATION line-height: differs on 6/9 pairs in 2 section(s)",))
+    r = compare(sd, six, style=True, style_min_pairs=7)
+    check("foundation-style-floor", r["exit_code"], r["report"], STYLE_DIFF,
+          must_have=("STYLE_DIFF line-height (6 pair(s))",), must_not=("FOUNDATION line-height",))
 
 
 def _selftest_accept(tmp: str, write, check, failures: list, inv_design: str, fx) -> None:
@@ -1751,7 +1815,7 @@ def _selftest_accept(tmp: str, write, check, failures: list, inv_design: str, fx
 
 
 def _min_pairs(text: str) -> int:
-    """argparse type for `--min-pairs`: an integer >= 1 (a floor of 0 checks nothing)."""
+    """argparse type for `--min-pairs` / `--style-min-pairs`: an integer >= 1 (a floor of 0 checks nothing)."""
     if not re.fullmatch(r"[1-9][0-9]*", text.strip()):
         raise argparse.ArgumentTypeError(f"must be an integer >= 1: {text!r}")
     return int(text)
@@ -1772,6 +1836,8 @@ def main(argv: list[str] | None = None) -> int:
                         "element pairs than N (your floor for this page; never guessed)")
     parser.add_argument("--style", action="store_true", help="also diff computed styles (data-cs) of "
                         "text-matched pairs; reported apart from completeness")
+    parser.add_argument("--style-min-pairs", type=_min_pairs, help="with --style: STYLE_COULD_NOT_CHECK "
+                        "(exit 6) when fewer text-matched style pairs than N; separate from --min-pairs")
     parser.add_argument("--json", action="store_true", help="print the full result as JSON (board posts)")
     parser.add_argument("--selftest", action="store_true", help="run the committed-fixture self-test")
     args = parser.parse_args(argv)
@@ -1784,9 +1850,11 @@ def main(argv: list[str] | None = None) -> int:
         return USAGE_ERROR  # pragma: no cover — parser.error() already exits(2)
     if args.accept_rev and not args.accept:
         parser.error("--accept-rev needs --accept")
+    if args.style_min_pairs is not None and not args.style:
+        parser.error("--style-min-pairs needs --style")
 
     result = compare(args.design, args.app, args.accept, args.accept_rev,
-                     min_pairs=args.min_pairs, style=args.style)
+                     min_pairs=args.min_pairs, style=args.style, style_min_pairs=args.style_min_pairs)
     print(json.dumps(result, indent=2, ensure_ascii=False) if args.json else result["report"])
     return result["exit_code"]
 

@@ -3098,6 +3098,68 @@ else
   record 1 "data isolation: FIRES when the parent index drops a sub-file's row (planted RED)"
 fi
 
+# ===========================================================================
+# dcr-gates DCR_CLOSES_LINT through the installed runner (own lane; APPENDED
+# AT THE END by convention): an in-set closing keyword PASSES, a planted stray
+# keyword naming the same number in ANOTHER repository FAILS (the allowed set
+# is keyed on repo + number), DCR_CLOSES_REPO reaches the script as --repo,
+# and a set flag with no allowed set fails closed.
+# ===========================================================================
+
+clg="$WORK/closes-gate"
+mkdir -p "$clg/src"
+git -C "$clg" init -q
+git -C "$clg" config user.email "jane@example.com"
+git -C "$clg" config user.name "Jane Smith"
+git -C "$clg" config commit.gpgsign false
+printf 'x = 1\n' >"$clg/src/a.txt"
+git -C "$clg" add src/a.txt >/dev/null 2>&1
+git -C "$clg" commit -q -m 'chore: init'
+gate "$GATES" install --src "$ROOT" --dest "$clg" --mode gates
+clg_install_rc="$GATE_RC"
+rm -rf "$clg/.claude/skills/deep-code-review/scripts/__pycache__"
+printf 'x = 2\n' >"$clg/src/a.txt"
+git -C "$clg" add src/a.txt >/dev/null 2>&1
+git -C "$clg" commit -q -m 'feat(a): widen x' -m 'Closes #12'
+
+# clg_run <log> [VAR=value ...] — run the target's runner with the closes
+# lint on; sets CLG_RC to its real exit code.
+clg_run() {
+  local log="$1"
+  shift
+  if env DCR_CLOSES_LINT=1 "$@" bash "$clg/scripts/dcr-gates.sh" >"$log" 2>&1; then CLG_RC=0; else CLG_RC=$?; fi
+}
+
+clg_run "$WORK/clg-green.log" DCR_CLOSES_ALLOW=12
+if [ "$clg_install_rc" -eq 0 ] && [ "$CLG_RC" -eq 0 ] \
+  && grep -q 'dcr-gates: closes_lint PASS' "$WORK/clg-green.log"; then
+  record 0 "dcr-gates closes_lint: an in-set closing keyword passes (GREEN)"
+else
+  record 1 "dcr-gates closes_lint: an in-set closing keyword passes (GREEN)"
+fi
+
+clg_run "$WORK/clg-noset.log"
+if [ "$CLG_RC" -ne 0 ] \
+  && grep -q 'FAIL closes_lint (DCR_CLOSES_LINT=1 needs DCR_CLOSES_ALLOW and/or DCR_CLOSES_PR_BODY)' "$WORK/clg-noset.log"; then
+  record 0 "dcr-gates closes_lint: a set flag with no allowed set fails closed"
+else
+  record 1 "dcr-gates closes_lint: a set flag with no allowed set fails closed"
+fi
+
+printf 'x = 3\n' >"$clg/src/a.txt"
+git -C "$clg" add src/a.txt >/dev/null 2>&1
+git -C "$clg" commit -q -m 'chore(a): tidy' -m 'done;closes other/lib#12'
+clg_run "$WORK/clg-red.log" DCR_CLOSES_ALLOW=12
+clg_red_rc="$CLG_RC"
+clg_run "$WORK/clg-repo.log" DCR_CLOSES_ALLOW=12 DCR_CLOSES_REPO=other/lib
+if [ "$clg_red_rc" -ne 0 ] && grep -q 'references other/lib#12, not in the allowed set \[#12\]' "$WORK/clg-red.log" \
+  && grep -q 'dcr-gates: closes_lint FAIL' "$WORK/clg-red.log" \
+  && [ "$CLG_RC" -eq 0 ] && grep -q 'dcr-gates: closes_lint PASS' "$WORK/clg-repo.log"; then
+  record 0 "dcr-gates closes_lint: a stray same-number keyword in another repository fails; DCR_CLOSES_REPO reaches --repo (planted RED)"
+else
+  record 1 "dcr-gates closes_lint: a stray same-number keyword in another repository fails; DCR_CLOSES_REPO reaches --repo (planted RED)"
+fi
+
 # ---------------------------------------------------------------------------
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"

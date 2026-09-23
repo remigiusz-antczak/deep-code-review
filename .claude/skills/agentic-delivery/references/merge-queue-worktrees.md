@@ -381,13 +381,16 @@ either burns time re-diagnosing a failure that already has a known fix, or an
 agent works around it locally — skipping the test, bypassing the hook — in a
 way that quietly weakens the gate instead of fixing the actual staleness.
 
-- **Land the fix, then find every branch that doesn't have it yet — propagate
-  it, don't wait for each branch to discover it on its own.** Once the fix
-  lands at `<sha>`, list branches still missing it:
-  `git for-each-ref --format='%(refname:short)' --no-contains <sha> refs/remotes/origin`
-  and rebase each one before its next push. This runs on the **landing** of
-  the fix, not on the next flake report, and it is the Ops / Merge-Guard
-  lane's routine plumbing (`roles.md`) — not a Conductor-level decision.
+- **Land the fix, then find every open PR head that doesn't have it yet —
+  propagate it, don't wait for each branch to discover it.** Once the fix
+  lands at `<sha>`, list open-PR heads
+  (`gh pr list --state open --json headRefName`) — never a raw ref sweep,
+  which also returns `origin/HEAD` and merged or abandoned branches — keep
+  each where `git merge-base --is-ancestor <sha> origin/<head>` exits
+  non-zero, and tell its **owning lane** to rebase before its next push;
+  rebase it yourself only when no one is writing to that branch. This runs on
+  the **landing** of the fix, not on the next flake report, and it is Ops /
+  Merge-Guard plumbing (`roles.md`) — not a Conductor-level decision.
 - **A branch that cannot rebase right now scope-skips that one test, never
   disables it.** A documented, temporary deselect of the specific test for
   local pushes only, with a pointer comment to `<sha>`, while CI keeps running
