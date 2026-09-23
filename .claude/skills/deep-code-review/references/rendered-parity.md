@@ -83,7 +83,8 @@ Start with the **inventory diff** (`scripts/parity_differ.py`) — completeness 
 then token values, then the visual pass for styling. Size, height, width, or bounding boxes are never
 completeness or "aligned" evidence; geometry proves only layout defects (overlap, clipping, viewport fit
 — `testing-ui.md`). Then do a **full side-by-side of the whole surface**, list every styling / placement
-delta at once, and fix against that list; the claim is made only when every row is closed or owner-accepted.
+delta at once, and fix against that list; the claim is made only when every row is closed or owner-accepted
+(accept file: owner-authored only).
 
 **Told "not the same" → disambiguate the axis before acting.** One question — "the layout / structure,
 the styling (fonts / spacing / colour / chrome), the copy, or the data?" — costs one turn; guessing

@@ -50,7 +50,7 @@ cc52f678848b814373757b460383bf61960e4943c203735adde0a350b3e50989  .claude/skills
 bb541f96bd7d0c3bb4adff8dcaac0f50efa2493b8215b6aa671805bfbb89c42b  .claude/skills/contribution/references/contribution-procedure.md
 735843833b638c7caa6259ae0e0341be56b7f2b57e984275e239a1c408fb402e  .claude/skills/deep-code-review/SKILL.md
 f50a6cbdff96a1012b615805c04d7f1d0b640358087470dddd79586203b9b63a  .claude/skills/deep-code-review/VERSION
-a6dcacdcd7d6ece98b89eac9e3484d4ffde7455dde6a9759f571b1c17c3bea72  .claude/skills/deep-code-review/evals/evals.json
+e2de4028c9cb95d9d26aed519cb127d515baf830ea858b3b183722d781fd9b15  .claude/skills/deep-code-review/evals/evals.json
 a24fdb1c8dd47a852c0e02b395a256b0b9b5e188cf0a09cceeaa33ece45ba815  .claude/skills/deep-code-review/references/a11y-aria.md
 5a3e66353bcdabb0289ea926c7f192dbad750edca74ef0f0d8c0f6b71bcbf5ef  .claude/skills/deep-code-review/references/a11y-color-motion.md
 8b7507aecf973b020c10ce00792e296fa8a3585c52dccee5add7d51cb0b553db  .claude/skills/deep-code-review/references/a11y-focus.md
@@ -115,7 +115,7 @@ d82ccb09e1cf77bff20b5485ec85f826453c6cfc381541b6ff16133d662eeadf  .claude/skills
 39f174c8a542a3130a7b6bf6762b5a0bf285adaec121a6506b543610ab902c21  .claude/skills/deep-code-review/references/merge-operations.md
 3a9b2c54c5cbbe9af140ac42da57af85491fb5e5aabb24262834790dd134f68b  .claude/skills/deep-code-review/references/method-situational.md
 8ee8f226b643c81ce4e97d3a5e27ea6b7aeb86ff1f35b100a418eeb27143b904  .claude/skills/deep-code-review/references/method.md
-ae67a79c404f729cb8675e5259f1b119e68b36951dbee76833558d9677c0a3fd  .claude/skills/deep-code-review/references/migration-parity.md
+d069aa142ae7bbed7c268295304923eb53073ae31f2f5ae639a289572c7ad1b2  .claude/skills/deep-code-review/references/migration-parity.md
 503c7a02eec45805f445e1b0c04b4c754227a6b6f4e3e67df0d5cebc3bfc2271  .claude/skills/deep-code-review/references/mobile-appsec.md
 c84d772b202758ea85aa3abe1eb4afe1bc60b4f862d1e3aa9e74ff823ad6537d  .claude/skills/deep-code-review/references/model-tiering.md
 534213ac8732fc959a8214468e12c7ccdc6d6b70b61894855ba00ddca3ab6d55  .claude/skills/deep-code-review/references/observability.md
@@ -127,7 +127,7 @@ e447f346b97c53646557d13791742c1d02abc9acdfb4c1b1445d34f78baa40d0  .claude/skills
 5978e95203bb95f9918241cbc0b8748052d9f427177213f7ef65837a7bc8bc71  .claude/skills/deep-code-review/references/readme-authoring.md
 b1fa57ead98530633969065aa8d1438b8c6cadb9afa3053341515c5a940da60c  .claude/skills/deep-code-review/references/release-engineering.md
 4e42669597f70130cd4901c706a835849d85c802eaeeab9b339da178524d094a  .claude/skills/deep-code-review/references/reliability-error-handling.md
-8770441e5536763ee5c39d53626c34210c06bf74b99b17facfb7587e8e0c1495  .claude/skills/deep-code-review/references/rendered-parity.md
+30684f00410ac710e4addceccbf4f5f0f550e2d890b642ff8e5b2c3924036956  .claude/skills/deep-code-review/references/rendered-parity.md
 7970a7f27238f0f5062c4a009cc9deb7ee52f2837841579dffa47382c522b9d7  .claude/skills/deep-code-review/references/report-format.md
 3d79b2176667193b91f0e1bf9ba73e55e1e628b6936f082ef0a9e5326fe23b41  .claude/skills/deep-code-review/references/role-coverage.md
 9aa91ea0e701c629d68345b8d408223c1ab6ab4d486e79302e1b3db8f603be5f  .claude/skills/deep-code-review/references/security-agent-skills.md
@@ -156,7 +156,7 @@ fe8a4fbbe5bc918042a3ea8ad9ba037fcb16221d518a0a7e788aceaf9e3747e7  .claude/skills
 2b9658a9c597d5d216c11c3db27f7fd59c7b2cd968e4a778b00c02dd384c9375  .claude/skills/deep-code-review/scripts/fixtures/parity/app_partial.html
 b41320aab9d3540398d065a470b3abb05241e2928fd02682a9264c7922dc39b7  .claude/skills/deep-code-review/scripts/fixtures/parity/app_unseeded.html
 424f89b0865cdd430c04dc27e24df004aff0515592a4aff07ea478a5e6339f63  .claude/skills/deep-code-review/scripts/fixtures/parity/design.html
-00f2581c8344bf80c86ede030da856c2ea64d19798a93d67ad93b3ac94f3e3d9  .claude/skills/deep-code-review/scripts/fixtures/parity/inv_accept.tsv
+dd1bd6dcd921aa489c9b2807b4c382fb9e49a9391657860cbd878366759881e0  .claude/skills/deep-code-review/scripts/fixtures/parity/inv_accept.tsv
 9657602beebb6fae4c33a5d599799bedfae0b8f692289c58317cc621c6fcbb50  .claude/skills/deep-code-review/scripts/fixtures/parity/inv_app_changed.html
 2861076457b4db7524d81248f0fc895927e1beb658c0e0d8df61ec81200b8253  .claude/skills/deep-code-review/scripts/fixtures/parity/inv_app_missing.html
 d2203c3d0e96e269851d1f03d927ba5c448b6a843259b0a7e064d03eda98b699  .claude/skills/deep-code-review/scripts/fixtures/parity/inv_app_taller.html
@@ -164,7 +164,7 @@ d2203c3d0e96e269851d1f03d927ba5c448b6a843259b0a7e064d03eda98b699  .claude/skills
 de270db043b761ce236c9c80197c514b89a5db4d2965de76321383927623bd1c  .claude/skills/deep-code-review/scripts/fixtures/tokens/app.css
 5a8cc3aadf5a95f7872572f223a5f5eeb5537192be25c7ec988330e8422cea7c  .claude/skills/deep-code-review/scripts/fixtures/tokens/design.tokens.json
 97ad0860bb3ee1b0f14f8fb9e55519dc9d0a8f1ece7e5dfc8734420c6475e045  .claude/skills/deep-code-review/scripts/fixtures/tokens/map_match.tsv
-2ce6446d11850128f569407d1c3e19b1f08c038dc1405b0d8352bc43a36ad564  .claude/skills/deep-code-review/scripts/parity_differ.py
+e952977edae0c32383bd3b22bd25de251ddf5ccbb9b4446cb2b8f97dc1320948  .claude/skills/deep-code-review/scripts/parity_differ.py
 417ae1f1b7b7360b48dfe6b97acf7326e85296434330caeec0bc173941c6de8a  .claude/skills/deep-code-review/scripts/reaper_lint.py
 761ccb5730e297f41d865aeec9babd44b00b5cc029a8d4e7b2cb37b1122222be  .claude/skills/deep-code-review/scripts/source_scan_tests.py
 8ae2e63e402bc3a57743fc048ec7751b49e68613654759b678caa5a037ffe8cc  .claude/skills/deep-code-review/scripts/token_differ.py

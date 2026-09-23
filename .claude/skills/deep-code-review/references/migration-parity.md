@@ -102,7 +102,8 @@ missing or unreadable → `COULD_NOT_CHECK`, never a pass. Design-populated sect
 but empty in the app → `CANNOT_COMPARE`: seed the app's data to the design's data state first
 — never condense or remove the empty sections to "match," the design wants them populated.
 Extra app sections are a reported superset; a differing item fails unless owner-accepted
-(`--accept`). The
+(`--accept`: owner-authored only — the differ checks commit authorship and prints
+`MATCH_WITH_ACCEPTED`, never a plain MATCH). The
 `MISMATCH` list **is** the work queue — mirror it section-by-section, and never spawn a
 mirror lane for a section the differ already reports MATCH. Compare like-for-like: the
 design's default view against the app's **same** view, and verify the owner's stated-priority
@@ -164,7 +165,9 @@ data (dozens–hundreds of rows) while the mockup shows three to five. Much of t
 **data-volume artifact**, not a design difference — the mockup's calm emptiness is partly
 just emptiness. Anchor findings on **treatment** (layout structure, spacing scale, component
 choice, hierarchy, chrome/nav, default view, empty/overflow handling), **not** absolute list
-length, page height, or item count.
+length, page height, or item count. The differ is the one exception: it always compares row
+and value-slot counts, so seed the app to the design's data state first; `data-sample` masks
+values, never counts.
 
 **Run a foundation check before classifying screen-by-screen: diff both sides' design tokens
 by resolved value, not name.** Bucket-(a) gaps recurring on every screen despite repeated
