@@ -368,6 +368,17 @@ or directory`) and `xargs kill` kills nothing.
 - **Leave a teardown record.** Killing a lane must release its claim and mark its
   worktree/lock stale-and-recoverable (the stray-worktree red flag below), so the
   next scheduler pass reclaims it rather than trips on it.
+- **A "reclaim memory"/cleanup script is the same bug at fleet scale.** Reap only
+  what is provably the caller's own or orphaned — parent PID 1, a cwd inside the
+  caller's own worktree, or a PID file the caller wrote — never "everything in a
+  port range," a bare name/command-line match (`pkill -f`, `killall`), or a
+  hard-coded "protected ports" literal (goes stale the moment an operator adds a
+  real serving port; source exclusions from operator config instead); default to
+  a dry run, requiring an explicit `--apply` to act. `scripts/reaper_lint.py
+  <path>` statically flags the four concrete shapes (a port-range kill loop, a
+  terse+network `lsof` selector left unfiltered to `-sTCP:LISTEN`, a broad
+  `pkill`/`killall` match, a hard-coded protected-port list); `--selftest` proves
+  it fires.
 
 The shedding **trigger** (memory/swap or contention, never staleness) lives in
 `agentic-delivery/references/fanout-host-sizing.md`; this file is the **mechanism**.

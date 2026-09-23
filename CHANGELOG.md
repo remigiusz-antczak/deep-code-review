@@ -3,6 +3,16 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.440.0] — 2026-09-23
+
+### Changed — web review load cut 56%
+- The `web` archetype must-load drops from 86,820 → 38,039 estimated tokens. `frontend-a11y.md` (125 KB → 24 KB) and `product-ux-quality.md` (133 KB → 39 KB) keep what every web review needs; depth moves into 14 routed sub-files (`a11y-aria`, `a11y-live`, `a11y-focus`, `a11y-color-motion`, `a11y-forms`, `web-fetch`, `web-render`, `ux-writes`, `ux-dataviz`, `ux-lists`, `ux-components`, `ux-interaction`, `ux-sweep`, `ux-gates`). The WCAG section was first re-tagged into real headings with no content change. Line conservation: 2,564 lines, 0 duplicated, 98 pointer rewrites. A structural test pins that a non-form, non-chart web review loads none of the form/chart sub-files.
+
+### Added
+- `deep-code-review/scripts/reaper_lint.py` (opt-in `DCR_REAPER_LINT=1` in `templates/dcr-gates.sh`): flags cleanup scripts that kill by port range, pipe `lsof -t` into kill without `-sTCP:LISTEN` (which also kills connected clients), use `pkill -f`/`killall` on browser/server patterns, or hard-code protected ports; `# reaper-lint: allow <reason>` escape. Doctrine: reap only provably own or orphaned processes; dry-run by default. Closes #1101.
+- Log-parsing gates anchor on the runner's real summary line and are dry-run against a known-green and a known-red log (`lang-shell.md`, #1097); a review harness with no report file raises its handback cap with a matcher-scoped `SubagentStop` entry instead of being exempted (`host-enforcement.md`, #1099). +evals.
+- size-budget-raise: .claude/skills/deep-code-review/references/concurrency-shared-state.md 30122→30933 reaper rules + reaper_lint command (#1101)
+
 ## [1.439.0] — 2026-09-23
 
 ### Changed — the load every review pays cut by ~46%

@@ -29,7 +29,7 @@
 #     printf '%s\t%s\n' "$f" "$(LC_ALL=C wc -c < "$f" | tr -d '[:space:]')"; done
 .claude/skills/agentic-ceo/SKILL.md	11611
 .claude/skills/agentic-delivery/SKILL.md	29153
-.claude/skills/agentic-delivery/references/dev-env-ownership.md	25648
+.claude/skills/agentic-delivery/references/dev-env-ownership.md	25647
 .claude/skills/agentic-delivery/references/fanout-host-sizing.md	36022
 .claude/skills/agentic-delivery/references/fast-agentic-delivery.md	6293
 .claude/skills/agentic-delivery/references/host-enforcement.md	10189
@@ -60,7 +60,7 @@
 .claude/skills/deep-code-review/references/api-contracts.md	27601
 .claude/skills/deep-code-review/references/billing-correctness.md	8429
 .claude/skills/deep-code-review/references/branch-and-merge-hygiene.md	46376
-.claude/skills/deep-code-review/references/concurrency-shared-state.md	30122
+.claude/skills/deep-code-review/references/concurrency-shared-state.md	30933
 .claude/skills/deep-code-review/references/data-quality.md	75230
 .claude/skills/deep-code-review/references/dependency-currency-and-upgrades.md	16037
 .claude/skills/deep-code-review/references/docs-and-dx.md	22511
