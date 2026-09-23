@@ -165,3 +165,31 @@ Declare which control is set, and its bucket default.
   }
 }
 ```
+
+## Per-turn token levers (a Host-enforced instance, Claude Code)
+
+Five `settings.json` keys cut what reaches context every turn — the host
+clamps or truncates before Claude ever sees the excess, so a worker cannot
+prompt its way past them (Host-enforced by the ladder above). Verified
+against `settings-reference.md` / `tools-reference.md`
+(`docs/standards-index.md`, 2026-09-23).
+
+| Setting | Saves | Start at | Trade-off |
+|---|---|---|---|
+| `bashOutputMaxChars` | Inline chars of a *successful* Bash/PowerShell result; unset = ~30,000 inline, clamped 4,000–128,000 (v2.1.261+) | `10000` | Overflow lands in a session-dir file plus a 2,000-char preview — Claude must `Read` it back when it needs the tail |
+| `skillListingMaxDescChars` | Chars of each skill's `description`+`when_to_use` resent every turn; default `1536` | `300` | A cut mid-sentence can drop the phrase that would have triggered auto-invocation of a rarely-used skill |
+| `skillListingBudgetFraction` | Listing size as a fraction of the context window; default `0.01` (1%); over budget, Claude Code drops descriptions (names survive) of the least-used skills first | keep `0.01` unless 50+ skills are installed | Lower it and fewer full descriptions survive, so Claude self-selects an idle skill less often |
+| `skillOverrides` | Whole skill entries — `"name-only"` drops the description, `"user-invocable-only"` hides from Claude but keeps `/name`, `"off"` hides both | `"name-only"` on every skill irrelevant to this project | Miscalled on a skill Claude actually needed, it never self-invokes; only above `"off"` does `/name` still work |
+| `subagentPromptCacheTtl` | Cache write/read cost across a subagent's own turns and resumed runs (not the per-turn caps above); unset → `5m` (subagents sit outside the main-conversation bucket even on a subscription) | leave `5m` for one-shot subagents | `1h` writes at the higher cache-write rate — pays off only if that subagent is reused inside the hour, else pure loss |
+
+`CLAUDE_CODE_SUBAGENT_MODEL` (+`_FORCE`) is the sibling model-pin lever —
+see "Subagent model + cache-TTL pin" above; not restated here.
+
+```json
+{
+  "bashOutputMaxChars": 10000,
+  "skillListingMaxDescChars": 300,
+  "skillOverrides": { "<skill-irrelevant-to-project>": "name-only" },
+  "subagentPromptCacheTtl": "5m"
+}
+```

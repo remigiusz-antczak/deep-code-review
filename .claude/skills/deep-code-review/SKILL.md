@@ -11,7 +11,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.442.0"
+  version: "1.443.0"
 ---
 
 # Deep Code Review
@@ -172,9 +172,8 @@ review after the first-response block.
 | 5 Report | Chat BLUF ≤30 lines + full table out-of-tree; in-repo `code-review/` only on confirmation | `report-format.md`, `example-review-report.md` |
 | 6 Imprint | Opt-in `AGENTS.md` + gates; detect-and-stop if present; pair each standard with a gate | `docs-and-dx.md` |
 
-Phase 6 imprints **this project's review bar**. It does **not** install
-delivery. Delivery is `./install.sh --with-delivery` (or `--full`) on the
-owner's yes.
+Phase 6 imprints **this project's review bar**, never delivery (an overlay
+below, on the owner's yes).
 
 ---
 
@@ -192,7 +191,7 @@ applicable domains. Language footguns:
 | A | Correctness & logic | `domain-a.md`, `time-date-correctness.md` (timestamps, durations, recurring/scheduled times, time zones) |
 | B | AppSec (OWASP Top 10:2025) | `domain-b.md`, `security-appsec.md` → `appsec-edge.md`, `appsec-scan-tests.md`, `appsec-links.md`, `appsec-approvals.md`, `appsec-supply.md`, `appsec-crypto.md`, `appsec-ssti.md`, `appsec-files.md`, `appsec-tokens.md`, `appsec-login.md`, `appsec-design.md`; `security-api.md` (serves its own HTTP / GraphQL / gRPC / WebSocket API, any archetype), `mobile-appsec.md` (ships an iOS / Android / native mobile client; MASVS/MASTG deltas) |
 | C | AI / LLM / agents | `domain-c.md`, `security-ai-agents.md`, `security-agent-skills.md` |
-| D | Data integrity | `domain-d.md`, `data-quality.md` |
+| D | Data integrity | `domain-d.md`, `data-quality.md` → `data-identity.md`, `data-scoring.md`, `data-metrics.md`, `data-freshness.md`, `data-ml.md`, `data-contracts.md`, `data-shapes.md`, `data-graph.md` |
 | E | Performance, efficiency & cost | `domain-e.md`, `performance-db-cost.md`, `model-tiering.md`, `billing-correctness.md` (when the target meters, subscribes, or charges) |
 | F | Reliability & error handling | `domain-f.md`, `reliability-error-handling.md` |
 | G | Concurrency & shared state | `domain-g.md`, `concurrency-shared-state.md` |
@@ -395,14 +394,12 @@ repo. This review skill always composes.
 
 ## Appendix — reference standards
 
-Verified live for this repository (URLs + dates in
-`docs/standards-index.md` / `references/standards-index.md` after install):
+Verified live for this repository (URLs + dates: the standards index above):
 OWASP Top 10:2025; OWASP Top 10 for LLM Applications 2026; OWASP Top 10 for
 Agentic Applications 2026; OWASP Agentic Skills Top 10 (AST01–AST10); OWASP
 API Security Top 10 (2023); CWE Top 25
 (2025); WCAG 2.2; Google Engineering Practices; Diátaxis; C4; dependency
-currency (`dependency-currency-and-upgrades.md`); branch/merge
-hygiene (`branch-and-merge-hygiene.md`).
+currency; branch/merge hygiene.
 
 By name (fetch before citing version-specific detail): OWASP WSTG; Cheat
 Sheet Series; MITRE CWE/CVE and ATLAS; NIST SSDF and AI RMF; SLSA; CIS

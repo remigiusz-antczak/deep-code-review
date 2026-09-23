@@ -93,7 +93,7 @@ failure paths that *produce* these signals are section F /
   error / high-latency traces, and compute rate & latency SLIs from **unsampled** counters /
   histograms (the SLO/burn-rate lens in `role-coverage.md`), not the sampled trace set.
   (Distinct from the privacy point above — a sampled leak is still a leak — and from
-  analytics event-stream reweighting in `data-quality.md` §8.)
+  analytics event-stream reweighting in `data-metrics.md`.)
 - **Log injection**: user-controlled strings must be emitted as structured
   fields, never concatenated into a line — embedded `\n`/`\r` lets an attacker
   forge entries and break the parser (CRLF/log-forging, CWE-117 — name only,

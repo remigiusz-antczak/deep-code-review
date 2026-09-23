@@ -3,6 +3,25 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.443.0] — 2026-09-23
+
+### Changed — data review load cut; token levers documented
+- `data-quality.md` 75 KB → 35 KB + 8 routed sub-files (`data-identity`, `-scoring`, `-metrics`, `-freshness`, `-ml`, `-contracts`, `-shapes`, `-graph`): the `data` archetype must-load drops 29,569 → 19,548 estimated tokens; 891 lines conserved, 0 duplicated.
+- `host-enforcement.md` documents the verified host settings that cut per-turn tokens: `bashOutputMaxChars`, `skillListingMaxDescChars`, `skillListingBudgetFraction`, `skillOverrides`, `subagentPromptCacheTtl`, with starting values and a settings snippet.
+
+### Added
+- `parity_differ.py --style`: computed-style diff on text-matched pairs (line-height, letter-spacing, font, colour, padding, radius, shadow); a property off across ≥2 sections and ≥3 pairs is reported once as FOUNDATION; style never affects the completeness verdict; style can't-check has its own exit code (6). `--min-pairs` / `--style-min-pairs` and `token_differ.py --min-pairs`: too few matched pairs is COULD_NOT_CHECK, never MATCH; zero matched pairs never MATCH (#1108, #1112).
+- `deep-code-review/scripts/closes_lint.py` (opt-in `DCR_CLOSES_LINT=1`): closing keywords in a commit range may reference only issues the landing PR owns (handles parenthetical, bold, URL, and cross-repo forms) (#1121). Merge-train culprit isolation holds the others out for the suspect's full cycle (#1119).
+- Ops/merge-guard hat fires on an event (≥2 live lanes + plumbing), does rebase/re-run/ready-flip only; merging stays with the integration owner; flaky-fix propagation asks owning lanes to rebase open-PR heads (#1117, #1118). The conductor is bound by one-writer on delegated files and runs `claim_probe.py` before editing (#1122).
+- size-budget-raise: .claude/skills/agentic-delivery/references/fast-agentic-delivery.md 6348→6401 merged 1.443.0 lanes (see Added/Changed)
+- size-budget-raise: .claude/skills/agentic-delivery/references/host-enforcement.md 10189→12517 merged 1.443.0 lanes (see Added/Changed)
+- size-budget-raise: .claude/skills/agentic-delivery/references/merge-queue-worktrees.md 55529→58681 merged 1.443.0 lanes (see Added/Changed)
+- size-budget-raise: .claude/skills/agentic-delivery/references/roles.md 18783→22237 merged 1.443.0 lanes (see Added/Changed)
+- size-budget-raise: .claude/skills/deep-code-review/references/merge-operations.md 41227→44629 merged 1.443.0 lanes (see Added/Changed)
+- size-budget-raise: .claude/skills/deep-code-review/references/migration-parity.md 26130→26181 merged 1.443.0 lanes (see Added/Changed)
+- size-budget-raise: .claude/skills/deep-code-review/references/release-engineering.md 20790→20792 merged 1.443.0 lanes (see Added/Changed)
+- size-budget-raise: .claude/skills/deep-code-review/references/rendered-parity.md 9752→10131 merged 1.443.0 lanes (see Added/Changed)
+
 ## [1.442.0] — 2026-09-23
 
 ### Added — design completeness by element; owner priority; requirement ledger; CEO task ledger

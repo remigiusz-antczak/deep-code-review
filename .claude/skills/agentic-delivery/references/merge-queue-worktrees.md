@@ -2,9 +2,10 @@
 
 Read this when: draining a ready queue or a single merge seat, scoping an auto-merger, hitting a permission
 asymmetry or a human-run escape hatch, reading a fleet-wide, load-flaky, contention-red, or absent check,
-offloading a heavy gate to CI, or isolating a lane's worktree (stale refs, `git stash`, out-of-tree scratch, an
-assignment path). Part of the `fast-agentic-delivery.md` lesson ledger — its index, sources, and cross-references
-live there; an "above"/"below" pointer to a section not in this file resolves through that index.
+offloading a heavy gate to CI, propagating a landed flaky-test fix to queued/in-flight branches, or isolating a
+lane's worktree (stale refs, `git stash`, out-of-tree scratch, an assignment path). Part of the
+`fast-agentic-delivery.md` lesson ledger — its index, sources, and cross-references live there; an "above"/"below"
+pointer to a section not in this file resolves through that index.
 
 ---
 
@@ -367,6 +368,53 @@ rule above: that is the CI required-check verdict with a same-commit rerun; here
 must *also* be **isolated**. **🚩 tell:** a lane opening a fix or reverting on the **first** red of a heavy local
 gate — or bypassing the gate — while other heavy lanes are live on the same box, with no isolated re-run of the
 failing check to separate contention from a defect.
+
+## A landed flaky-test fix only protects a branch that already has it — rebase every queued branch onto it, don't wait for each to re-discover the failure
+
+A pre-push (or pre-commit) hook tests the tree being **pushed**, not the tree
+on the base branch, so fixing a flaky test on the base does nothing for a
+branch that was cut before the fix landed: it keeps re-running the old, still-
+flaky test on every push until that branch is rebased onto (or merged with)
+the commit that carries the fix. In parallel delivery many branches are cut
+before any given fix lands and stay open for hours, so left implicit each one
+either burns time re-diagnosing a failure that already has a known fix, or an
+agent works around it locally — skipping the test, bypassing the hook — in a
+way that quietly weakens the gate instead of fixing the actual staleness.
+
+- **Land the fix, then find every open PR head that doesn't have it yet —
+  propagate it, don't wait for each branch to discover it.** Once the fix
+  lands at `<sha>`, list open-PR heads
+  (`gh pr list --state open --json headRefName`) — never a raw ref sweep,
+  which also returns `origin/HEAD` and merged or abandoned branches — keep
+  each where `git merge-base --is-ancestor <sha> origin/<head>` exits
+  non-zero, and tell its **owning lane** to rebase before its next push;
+  rebase it yourself only when no one is writing to that branch. This runs on
+  the **landing** of the fix, not on the next flake report, and it is Ops /
+  Merge-Guard plumbing (`roles.md`) — not a Conductor-level decision.
+- **A branch that cannot rebase right now scope-skips that one test, never
+  disables it.** A documented, temporary deselect of the specific test for
+  local pushes only, with a pointer comment to `<sha>`, while CI keeps running
+  it; the fix commit itself never disables or skips the test, and the hook is
+  never silently bypassed (`--no-verify`).
+- **Track the queued-branch list so the fix actually reaches them.** A fix
+  landed on the base and never checked against the open-branch list is the
+  same silent-drop failure the *feedback-coverage map* (`roles.md`) exists to
+  catch on the product side — the branch list isn't closed until each entry is
+  rebased or explicitly scope-skipped with its `<sha>` pointer, not merely
+  landed and left to chance.
+
+**🚩 tell:** a branch pushed after a known flaky-test fix landed still fails on
+that exact test, or a skip/deselect for that test sits in a diff with no
+commit pointer, in place of a rebase.
+
+Distinct from *A load-flaky required gate is not a confirmed red* (above):
+that section is about diagnosing and reclassifying a flaky test the **first**
+time a drainer sees it; this is about **propagating a fix that already
+exists** to every branch that has not received it yet. Distinct from *A
+rebase or merge-conflict resolution is unverified code, not a confirmed pass*
+(above): that says re-run the lint/unit tier after a rebase's conflict
+resolution; this says rebase in the first place, specifically to pick up a
+landed fix, before the branch's next push.
 
 ## Absent checks are a third state, not a slow "pending" — an uncomputable merge ref suppresses the run; bounded-wait then re-trigger, never wait forever
 

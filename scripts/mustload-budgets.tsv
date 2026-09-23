@@ -157,13 +157,29 @@
 # 18772->18829, agent / LLM / MCP 18911->18981, IaC / platform 4338->4342.
 # Floors: phase-floor-light 35839->35854, phase-floor-full 47433->47448.
 #
-web	23350
+# DATA SPLIT (data-quality.md must-load cut): data-quality.md, the largest ref
+# in the data / ETL row, kept what every data review needs (monotonic writes
+# and the non-regression gate, no fabrication and provenance, stable-id
+# resolution and normalized joins, the quality dimensions with N/A, nulls,
+# freshness and field validation, dedupe and the consumer census, idempotency,
+# ownership and soft-delete lifecycle, config and parser discipline, honest
+# collection, cost, and the data contract) plus an index of routed sub-files,
+# each with a concrete trigger: data-identity.md, data-scoring.md,
+# data-metrics.md, data-freshness.md, data-ml.md, data-contracts.md,
+# data-shapes.md, and data-graph.md. SKILL.md routes them from the domain D
+# row and paid for the names by folding two duplicate standards-index / route
+# mentions in its appendix and the delivery restatement under the phase table
+# (23915 -> 23889 bytes). Re-pinned: data / ETL 29569->19548, web
+# 23350->23349 (product-ux-quality.md repoints). Floors: phase-floor-light
+# 35854->35848, phase-floor-full 47448->47442.
+#
+web	23349
 mobile	14046
 api / service	18829
-data / ETL	29569
+data / ETL	19548
 agent / LLM / MCP	18981
 IaC / platform	4342
 lib / SDK	10907
-phase-floor-light	35854
-phase-floor-full	47448
+phase-floor-light	35848
+phase-floor-full	47442
 phase-conditional	method-situational.md
