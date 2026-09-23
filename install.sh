@@ -33,9 +33,13 @@
 #   --with-gates         also write .github/workflows/dcr-gates.yml +
 #                         scripts/dcr-gates.sh, wiring the INSTALLED skill's
 #                         own gate scripts (fix_class_gate, binaries_gate)
-#                         into the target's own CI. Prints (does not write)
-#                         a SubagentStop settings.json snippet for
-#                         agentic-delivery's handback_cap hook.
+#                         into the target's own CI; and .githooks/pre-push, a
+#                         local hook that reruns the fast lint+unit tier
+#                         before every push (opt in yourself: git config
+#                         core.hooksPath .githooks -- never run by this
+#                         script). Prints (does not write) a SubagentStop
+#                         settings.json snippet for agentic-delivery's
+#                         handback_cap hook.
 # Narrow:
 #   --minimal            only .claude/skills/ + AGENTS.md
 #   --claude-only        only .claude/skills/ ; skip AGENTS.md
@@ -83,9 +87,12 @@ on re-install). Overlay skills are opt-in.
   --full               Review + delivery + critic + comms
   --with-gates         Write .github/workflows/dcr-gates.yml + scripts/dcr-gates.sh,
                        wiring the INSTALLED skill's own gate scripts (fix_class_gate,
-                       binaries_gate) into the target's own CI; never overwrites an
-                       existing file at either path (writes .new instead). Prints
-                       (does not write) a SubagentStop settings.json snippet for
+                       binaries_gate) into the target's own CI, plus
+                       .githooks/pre-push (reruns the fast lint+unit tier before every
+                       push -- opt in yourself with `git config core.hooksPath
+                       .githooks`, never run by this script); never overwrites an
+                       existing file at any of these paths (writes .new instead).
+                       Prints (does not write) a SubagentStop settings.json snippet for
                        agentic-delivery's handback_cap hook. Mechanism, not a skill.
   --recommend          Inspect TARGET and print a recommended pack; no writes
   -h, --help           Show this help
@@ -308,12 +315,13 @@ write_gate_file() {
 
 if [[ "${WITH_GATES}" -eq 1 ]]; then
   GATES_SRC="${SCRIPT_DIR}/.claude/skills/${REVIEW_NAME}/templates"
-  if [[ ! -f "${GATES_SRC}/dcr-gates.yml" || ! -f "${GATES_SRC}/dcr-gates.sh" ]]; then
-    echo "error: cannot find ${GATES_SRC}/dcr-gates.{yml,sh}" >&2
+  if [[ ! -f "${GATES_SRC}/dcr-gates.yml" || ! -f "${GATES_SRC}/dcr-gates.sh" || ! -f "${GATES_SRC}/pre-push-verify.sh" ]]; then
+    echo "error: cannot find ${GATES_SRC}/{dcr-gates.yml,dcr-gates.sh,pre-push-verify.sh}" >&2
     exit 1
   fi
   write_gate_file "${GATES_SRC}/dcr-gates.yml" "${TARGET_DIR}/.github/workflows/dcr-gates.yml" 0
   write_gate_file "${GATES_SRC}/dcr-gates.sh" "${TARGET_DIR}/scripts/dcr-gates.sh" 1
+  write_gate_file "${GATES_SRC}/pre-push-verify.sh" "${TARGET_DIR}/.githooks/pre-push" 1
   cat <<'EOF'
 
 CI enforcement wired (--with-gates):
@@ -321,6 +329,15 @@ CI enforcement wired (--with-gates):
   scripts/dcr-gates.sh             calls the INSTALLED skill's own gate scripts
                                     (fix_class_gate, binaries_gate) by resolved
                                     path -- no duplicated gate logic, no copies
+  .githooks/pre-push               reruns the fast lint+unit tier (DCR_PREPUSH_CMD)
+                                    before every push -- catches an unverified rebase-
+                                    conflict-resolution commit locally, before CI. Not
+                                    wired yet: run this yourself (not run by install.sh)
+                                    to opt in:
+                                      git config core.hooksPath .githooks
+                                    Then set DCR_PREPUSH_CMD (e.g. "make lint test-unit")
+                                    in your shell profile. It is self-report, not a
+                                    substitute for CI -- see the hook's own header.
 Edit the workflow's trigger branch if this repo's default branch isn't `main`.
 
 Optional (not written -- add yourself if wanted, and only useful alongside

@@ -2274,6 +2274,115 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# pre-push-verify.sh (templates/deep-code-review) — pre-push hook template
+# (#1093): reruns the fast lint+unit tier on the pushed range before
+# allowing `git push`, so a rebase/merge-conflict resolution (unverified code
+# even when the branch's earlier commits were hook-checked) gets checked
+# locally before CI. Own fixture repo (a bare "remote" + a working clone),
+# since it needs real refs and a real remote-tracking branch, unlike the
+# plain `git add` fixtures above.
+# ---------------------------------------------------------------------------
+
+PPV="$ROOT/.claude/skills/deep-code-review/templates/pre-push-verify.sh"
+
+ppvroot="$WORK/ppv-fixture"
+mkdir -p "$ppvroot"
+git init -q --bare "$ppvroot/remote.git"
+git init -q -b main "$ppvroot/local"
+git -C "$ppvroot/local" config user.email "test@example.com"
+git -C "$ppvroot/local" config user.name "Test"
+printf 'a\n' >"$ppvroot/local/f.txt"
+git -C "$ppvroot/local" add f.txt >/dev/null 2>&1
+git -C "$ppvroot/local" commit -qm init >/dev/null 2>&1
+git -C "$ppvroot/local" remote add origin "$ppvroot/remote.git"
+git -C "$ppvroot/local" push -q origin HEAD:main >/dev/null 2>&1
+git -C "$ppvroot/local" remote set-head origin main >/dev/null 2>&1
+
+ppv_local_sha="$(git -C "$ppvroot/local" rev-parse HEAD)"
+ppv_zero="0000000000000000000000000000000000000000"
+
+# ppv_run <log> <ref-line> [env=val ...] — feed one stdin ref-line to the hook
+# from inside the fixture clone, under `env`'s var=val prefix args (so a
+# failing invocation never trips this harness's own `set -e`; same idiom as
+# `og_run` above).
+ppv_run() {
+  local log="$1" line="$2"
+  shift 2
+  if printf '%s\n' "$line" | (cd "$ppvroot/local" && env "$@" bash "$PPV" origin) >"$log" 2>&1; then
+    PPV_RC=0
+  else
+    PPV_RC=$?
+  fi
+}
+
+# Case: bash -n — the template itself parses as valid bash.
+if bash -n "$PPV"; then
+  record 0 "pre-push-verify: bash -n parses the template"
+else
+  record 1 "pre-push-verify: bash -n parses the template"
+fi
+
+# Case: an existing-branch update with a PASSING DCR_PREPUSH_CMD allows the push.
+ppv_run "$WORK/ppv-pass.log" "refs/heads/main $ppv_local_sha refs/heads/main $ppv_local_sha" \
+  DCR_PREPUSH_CMD=true
+if [ "$PPV_RC" -eq 0 ]; then
+  record 0 "pre-push-verify: a passing DCR_PREPUSH_CMD allows the push"
+else
+  record 1 "pre-push-verify: a passing DCR_PREPUSH_CMD allows the push"
+fi
+
+# Case: the SAME push, but a FAILING DCR_PREPUSH_CMD blocks it (planted RED).
+ppv_run "$WORK/ppv-fail.log" "refs/heads/main $ppv_local_sha refs/heads/main $ppv_local_sha" \
+  DCR_PREPUSH_CMD=false
+if [ "$PPV_RC" -ne 0 ] && grep -q 'FAIL -- rejecting push' "$WORK/ppv-fail.log"; then
+  record 0 "pre-push-verify: a failing DCR_PREPUSH_CMD blocks the push (planted RED)"
+else
+  record 1 "pre-push-verify: a failing DCR_PREPUSH_CMD blocks the push (planted RED)"
+fi
+
+# Case: DCR_PREPUSH_CMD unset fails closed by default (no env=val args below,
+# so neither var is set in the hook's environment).
+ppv_run "$WORK/ppv-unset.log" "refs/heads/main $ppv_local_sha refs/heads/main $ppv_local_sha"
+if [ "$PPV_RC" -ne 0 ] && grep -q 'DCR_PREPUSH_CMD is not set' "$WORK/ppv-unset.log"; then
+  record 0 "pre-push-verify: unset DCR_PREPUSH_CMD fails closed by default"
+else
+  record 1 "pre-push-verify: unset DCR_PREPUSH_CMD fails closed by default"
+fi
+
+# Case: the SAME unset config, but DCR_PREPUSH_ALLOW_UNSET=1 lets it through.
+ppv_run "$WORK/ppv-unset-allowed.log" "refs/heads/main $ppv_local_sha refs/heads/main $ppv_local_sha" \
+  DCR_PREPUSH_ALLOW_UNSET=1
+if [ "$PPV_RC" -eq 0 ] && grep -q 'allowing push through' "$WORK/ppv-unset-allowed.log"; then
+  record 0 "pre-push-verify: DCR_PREPUSH_ALLOW_UNSET=1 lets an unset tier through"
+else
+  record 1 "pre-push-verify: DCR_PREPUSH_ALLOW_UNSET=1 lets an unset tier through"
+fi
+
+# Case: a deleted ref (local sha all zeros) is skipped -- never runs DCR_PREPUSH_CMD.
+ppv_run "$WORK/ppv-delete.log" "refs/heads/gone $ppv_zero refs/heads/gone $ppv_local_sha" \
+  DCR_PREPUSH_CMD=false
+if [ "$PPV_RC" -eq 0 ] && grep -q 'is a delete -- skipping' "$WORK/ppv-delete.log"; then
+  record 0 "pre-push-verify: a deleted ref is skipped, never runs the tier"
+else
+  record 1 "pre-push-verify: a deleted ref is skipped, never runs the tier"
+fi
+
+# Case: a brand-new branch (remote sha all zeros) computes BASE_SHA as the
+# merge-base against the remote's default branch, not the literal zero sha.
+git -C "$ppvroot/local" checkout -qb feature >/dev/null 2>&1
+printf 'b\n' >>"$ppvroot/local/f.txt"
+git -C "$ppvroot/local" commit -qam feature >/dev/null 2>&1
+ppv_feat_sha="$(git -C "$ppvroot/local" rev-parse HEAD)"
+ppv_expected_base="$(git -C "$ppvroot/local" merge-base origin/main "$ppv_feat_sha")"
+ppv_run "$WORK/ppv-newbranch.log" "refs/heads/feature $ppv_feat_sha refs/heads/feature $ppv_zero" \
+  'DCR_PREPUSH_CMD=printf "BASE=$BASE_SHA HEAD=$HEAD_SHA\n"'
+if [ "$PPV_RC" -eq 0 ] && grep -q "BASE=$ppv_expected_base HEAD=$ppv_feat_sha" "$WORK/ppv-newbranch.log"; then
+  record 0 "pre-push-verify: a new-branch push computes BASE_SHA as the merge-base against the remote default branch"
+else
+  record 1 "pre-push-verify: a new-branch push computes BASE_SHA as the merge-base against the remote default branch"
+fi
+
+# ---------------------------------------------------------------------------
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
