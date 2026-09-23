@@ -257,7 +257,7 @@ design-quality checklist in `references/migration-parity.md` (#124).
 
 ## Referenced by name (not fetched this session — verify before citing a URL)
 
-- **Published metric/measurement standards** — cited in `data-quality.md` §7 (#396) as the
+- **Published metric/measurement standards** — cited in `data-scoring.md` (#396) as the
   constructive escape from an invented score: **CHAOSS** (community activity/health metrics +
   metric-models), **Fellegi-Sunter** (probabilistic record-linkage match tiers, incl. a
   possible-match "skip" band), **W3C PROV** (provenance/lineage), **rel=me / ORCID / schema.org
@@ -481,7 +481,7 @@ encoded (business-ops routes applicability to counsel).
 
 Verification date for the rows below: **2026-09-19**. Added for the deep-code-review
 `testing-ml.md` ML-pipeline-correctness lens (leakage + reproducibility) and
-`data-quality.md` label-quality bullet.
+`data-metrics.md` label-quality bullet.
 
 | Standard / tool | URL | What was confirmed |
 |---|---|---|
@@ -1191,6 +1191,16 @@ name in the skill text; each row fetched this session.
 | Claude docs — Prompt caching (pricing detail) | https://platform.claude.com/docs/en/build-with-claude/prompt-caching | Re-verified for the exact multipliers beyond the 2026-09-08 row above (same URL). Verbatim: "5-minute cache write tokens are 1.25 times the base input tokens price[;] 1-hour cache write tokens are 2 times the base input tokens price[;] Cache read tokens are 0.1 times the base input tokens price (see the table footnote for per-model exceptions)... These multipliers stack with other pricing modifiers such as the Batch API discount and data residency." Per-model read-price exceptions: 0.05x base input on Claude Opus 5.5, 0.025x on Claude Fable 5.1 and Claude Mythos 5.1. Minimum cacheable-prompt sizes (shorter prompts "cannot be cached, even if marked with `cache_control`... processed without caching, and no error is returned"): 512 tokens (Fable 5.1, Mythos 5.1, Opus 5.5, Opus 5, Fable 5, Mythos 5), 1,024 tokens (Opus 4.8, Sonnet 5, Sonnet 4.6, Sonnet 4.5), 2,048 tokens (Mythos Preview, Opus 4.7, Haiku 3.5), 4,096 tokens (Opus 4.6, Opus 4.5, Haiku 4.5). Fetched + verified 2026-09-23. |
 | Claude docs — Context editing | https://platform.claude.com/docs/en/build-with-claude/context-editing | Re-verified for the exact defaults beyond the 2026-09-13 row above (same URL). The `clear_tool_uses_20250919` strategy's configuration options, verbatim defaults: `trigger` = 100,000 input tokens ("Once the prompt exceeds this threshold, clearing begins"); `keep` = 3 tool uses ("The API removes the oldest tool interactions first, preserving the most recent ones"); `clear_at_least` = none, "Ensures a minimum number of tokens is cleared each time the strategy activates... helps determine if context clearing is worth breaking your prompt cache"; `exclude_tools` = none, "List of tool names whose tool uses and results should never be cleared." Verbatim on the caching interaction: "Tool result clearing: Invalidates cached prompt prefixes when content is cleared. To account for this, clear enough tokens to make the cache invalidation worthwhile... You'll incur cache write costs each time content is cleared, but subsequent requests can reuse the newly cached prefix." Fetched + verified 2026-09-23. |
 | Claude docs — Batch processing | https://platform.claude.com/docs/en/build-with-claude/batch-processing | Re-verified for the exact discount beyond the 2026-09-08 row above (same URL). Verbatim: "cutting costs by 50%"; "most batches finishing in less than 1 hour while reducing costs by 50% and increasing throughput." On stacking with prompt caching, verbatim: "The pricing discounts from prompt caching and Message Batches can stack, providing even greater cost savings when both features are used together." (Batch cache-hit rates are best-effort, "typically... ranging from 30% to 98%, depending on... traffic patterns" — not a guaranteed hit rate.) Fetched + verified 2026-09-23. |
+
+## Verified by direct fetch (2026-09-23) — host settings that cut per-turn tokens (`settings-reference.md`, `tools-reference.md`)
+
+Sourced for `agentic-delivery/references/host-enforcement.md`'s new "Per-turn token
+levers" section. Each row fetched this session via the markdown endpoint.
+
+| Standard / source | URL | What was confirmed |
+|---|---|---|
+| Claude Code — All settings (settings reference) | https://code.claude.com/docs/en/settings-reference | `bashOutputMaxChars`: "Set how many characters of a successful Bash or PowerShell command's output Claude receives inline. When output passes the limit, Claude Code saves it to a file and Claude receives a short preview plus the file's path." Type "a positive integer. Claude Code clamps the value into the range `4000` to `128000`"; default "unset, so Claude receives up to 30,000 characters inline"; requires v2.1.261+; setting it makes Claude Code ignore `BASH_MAX_OUTPUT_LENGTH`. `skillListingMaxDescChars`: caps how many characters of each skill's `description`+`when_to_use` text show in the per-turn skill listing; "longer text is cut at the cap"; default `1536`. `skillListingBudgetFraction`: caps the skill listing at "a share of the context window... When the listing is over the cap, Claude Code keeps every skill's name but drops the descriptions of the least-used skills"; type "a fraction greater than `0` and at most `1`"; default `0.01` ("reserves 1% of the context window"). `skillOverrides`: object mapping skill name to one of `"on"` (Claude sees name+description, `/name` works), `"name-only"` (name only, `/name` works), `"user-invocable-only"` (hidden from Claude, `/name` still works), `"off"` (hidden from Claude and `/` autocomplete); default unset, "every skill is `\"on\"`". `subagentPromptCacheTtl`: string `"5m"`\|`"1h"` for "the requests Claude Code makes outside the main conversation" (subagents, workflows, background/helper requests); default unset → the request's bucket default; requires v2.1.242+. Fetched + verified 2026-09-23. |
+| Claude Code — Tool use reference (Bash output limits) | https://code.claude.com/docs/en/tools-reference | "Output limits" table, Valid row verbatim: "Inline up to roughly 30,000 characters by default; past that, the path of a file saved to the session directory and truncated past 64 MiB, plus a preview of up to the first 2,000 characters, and Claude reads or searches the file when it needs the rest." Confirms `bashOutputMaxChars` "sizes the inline ceiling and the read-back window together... up to 128,000 characters," at which point Claude Code "ignores `BASH_MAX_OUTPUT_LENGTH`." Fetched + verified 2026-09-23. |
 
 ## Verified by direct fetch (2026-09-23) — design-token formats and color conversion (`token_differ.py`)
 

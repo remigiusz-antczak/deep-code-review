@@ -9,6 +9,23 @@ diverge: **judge the output, not just the source.**
 The governing rule: **good data can only be kept or improved, never silently
 degraded.** Everything below serves that.
 
+## Routed depth — load a sub-file only on its trigger
+
+Every section below keeps the checks each data review needs: units and scale, nulls and
+defaults, joins and keys, dedupe and identity, provenance, freshness, and idempotent writes.
+Narrower depth lives in these sub-files; load one when the target or diff matches its trigger.
+
+| Load | When the target or diff … |
+|---|---|
+| `data-identity.md` | resolves or clusters entity identity without a stable id (name or fuzzy matching, an external identity cluster, clusters built from pairwise links), weights a shared value as a match key, changes the entity roster or resolution logic, or runs a connector / transform pivot graph |
+| `data-scoring.md` | computes a score, rank, tier, leaderboard, or confidence; fuses or corroborates several sources into one value; or sets a decision field (`status`, `verdict`, `recommendation`) under a stated source precedence |
+| `data-metrics.md` | measures its own output quality or enrichment lift, aggregates a sampled event stream, validates a score against labels or ground truth, or reports a per-group ratio (per team, segment, or cohort) |
+| `data-freshness.md` | scores activity over time (recency, trend, velocity, an activity window), renders a per-subject verdict from store reads that can fail, serves a background-refreshed cache, or probes an external source for a current-state signal |
+| `data-ml.md` | calls a model inside the pipeline, computes ML features for both training and serving, or builds or queries an embedding / vector index |
+| `data-contracts.md` | ships data another system consumes for scoring or automation (aggregates vs raw events, delivery cadence, per-field source of truth), or converts or renders a fraction, percent, or ratio |
+| `data-shapes.md` | serves several record shapes or types through one generic list / search / filter path (a shared key accessor, a per-type scope or tag accessor, a polymorphic union) |
+| `data-graph.md` | authors or validates a graph, diagram, ring, or state machine as data (a node list, edges, an `anchor` / `startNode` field, a topology or closure check) |
+
 ---
 
 ## 1. The monotonic-quality invariant (hard)
@@ -71,36 +88,8 @@ deterministic per-source table, not an inferred judgement) and refuse a write wh
 incumbent.grade`; keep the incumbent on ties. Additive to the populated→empty and fanout checks,
 never a replacement (grade-gating alone won't stop an equal-grade blanking). Record each refused /
 accepted overwrite with the grades, so the arbitration is auditable.
-- **A stated precedence must be enforced in the branch that sets the DECISION field — writing the
-  higher-authority value into an adjacent column a reader never consults is precedence in name only.**
-  When a doc / contract says one source **outranks** another (a human read > a model estimate, a
-  manual correction > an automated guess), grep the field that actually **encodes the acted-on
-  decision** (`status`, `verdict`, `recommendation`) and confirm the senior source is consulted
-  **first in the branch that computes THAT field** — not merely written *somewhere* on the row. The
-  breach: the override lands in a side `notes` / `read` / `urgency` column while the decision field is
-  computed **purely from the junior (model) branch and never reads the override**, so a row shows
-  `status="keep"` beside a human note that says "do NOT do this." This is the authority-**direction**
-  complement to grade-monotonic write-authority above — that refuses a *junior* value from overwriting
-  a senior one; this makes a *senior* value actually **reach** the decision — and a field-granularity
-  case of the write-only-value defect (§7, an acknowledgment nobody reads). Distinct from §6's
-  dual-registered write-target (which *store* holds a field) and from a compare-and-swap that guards
-  the wrong column (`concurrency-shared-state.md`): here one store, one record — the write reaches the
-  row, but the decision branch ignores it. Compounding tell: **truncating** the caveat-bearing field
-  to a length that can cut the disqualifying clause (a read of "strong, but do NOT proceed —
-  regulated" clipped to "strong") — never truncate a field whose job is to carry the reason; clip
-  low-information display fields instead. Test the **conflict case**: a row where override and base
-  disagree must render the **override's** verdict in the acted-on cell.
-- **An identity / roster change re-attributes cached signals — classify the drop, don't blind-ack
-  or blind-block.** A change that improves the entity roster or resolution (fills anchors, corrects
-  matches) **re-keys attribution** across every cached downstream signal, so a per-dimension
-  **volume drop** can be a **correction** (a signal re-attributed to a better-matched entity, or
-  poisoned as newly-ambiguous — one handle now known to belong to two entities) rather than a
-  **regression** (a valid attribution wrongly lost); the count alone cannot tell them apart. When an
-  identity / roster / entity-resolution change is in the diff or ran in the pipeline, **investigate
-  the fold** (which signals moved or dropped, and why) before acking (blind-ack ships a possible
-  regression) or blocking (blind-block rejects a correctness improvement). The volume floor (and the run-over-run drift guard above) is the
-  **trigger**; the fold investigation is the **adjudication** — after an identity/roster/ER change,
-  "beyond-attrition drop = regression" names what to **investigate**, not the automatic verdict.
+
+Depth: `data-scoring.md` (a stated precedence over a decision field), `data-identity.md` (an identity or roster change that re-attributes cached signals).
 
 ## 2. No fabrication in the data itself
 
@@ -116,7 +105,7 @@ accepted overwrite with the grades, so the arbitration is auditable.
   Collapse **derivation** (a source that cites or derives from another is the same
   origin), not just same-domain duplicates; where derivation cannot be established
   deterministically (no citation / link / "via" signal, no known-aggregator list),
-  prefer the **conservative** count over assuming independence. (This is source *independence* — how many origins exist; a separate rule governs what a corroboration count may *promote*: occurrence, never entity-attribution, §7.)
+  prefer the **conservative** count over assuming independence. (This is source *independence* — how many origins exist; a separate rule governs what a corroboration count may *promote*: occurrence, never entity-attribution, `data-scoring.md`.)
 - **Provenance + confidence per record/field:** where a value came from and how
   sure you are (a deterministic score is preferred over a model-assigned one).
   Keep provenance tags honest — "live-queried" (a command that returns the same
@@ -142,7 +131,7 @@ accepted overwrite with the grades, so the arbitration is auditable.
   "collected-zero" cell has no constructor), then pin it with a "never emits X" test. This is
   `reliability-error-handling.md`'s *make impossible states unrepresentable* applied to data honesty —
   the how-to-guarantee behind the open-world third state (`ux-dataviz.md`) and "an absent
-  window is not a decline" (§8). Reviewer check for each honesty invariant: *can the dishonest value
+  window is not a decline" (`data-freshness.md`). Reviewer check for each honesty invariant: *can the dishonest value
   even be constructed?* If yes, it rests on a convention a future edit can silently violate.
 
 ## 3. Entity resolution — bias false-exclude over false-merge
@@ -154,28 +143,8 @@ accepted overwrite with the grades, so the arbitration is auditable.
   then a name **only as a last resort behind a collision (namesake) guard** — and
   surface the **unresolved/ambiguous count as a first-class output**, never a
   silent drop.
-- **Consume an external pre-computed identity cluster instead of running a forbidden internal model.**
-  When resolving identity would need a model or number you are not allowed to run (a no-ML constraint,
-  a spend gate, a privacy limit), the clean escape is to consume an **external, pre-computed** cluster
-  or id — plus its **public artifact** (an authoritative registry id, a published disambiguation) — as
-  the resolver, rather than fall back to a name-only match or ship the forbidden model anyway. Treat
-  the external cluster as a **corroborating source** (§2 independence): record its provenance, and do
-  not promote a lone external cluster to certainty. It keeps "skip rather than guess" intact when the
-  in-house resolver is off the table.
 - Matches must clear a threshold on **multiple independent signals**; ambiguous
   or conflicting matches are **flagged for review, never auto-merged**.
-- **Grade a shared value by frequency; don't treat it as all-or-nothing.** A value's
-  weight as a match / join key is **inversely related to how common it is**: a field
-  shared by two entities is signal (two co-founders, one company); shared by forty it
-  is a role / vendor / generic value to **demote** as a key. Binary include/exclude is
-  wrong both ways — it drops legitimate rare-value signal and trusts generic-value
-  collisions. Compute a **deterministic value-commonness table** (distinct entities per
-  normalized value) from data on hand — below a small **named** frequency band a value
-  still counts, above it is demoted — and **scale the required corroboration by
-  commonness** (a rare value clears a lower bar; a common one demands more independent
-  evidence, since the chance it silently collapses two distinct entities rises with
-  frequency). Thresholds are named constants with a rationale, never a tuned magic
-  number; route any demotion that empties a field through the non-regression gate (§1).
 - **Join on a normalized key or a resolved id — a *substring-containment* match (`a in b or b in a`)
   leaks one entity's row onto another, and over-correcting to bare exact-match silently drops
   legitimate rows.** Matching two datasets by bidirectional substring with no word-boundary or length
@@ -193,23 +162,13 @@ accepted overwrite with the grades, so the arbitration is auditable.
   expected row missing); a join is unproven until both counts are seen. Same substring-`includes`
   antipattern as the status / suppression rule in §7, on a different surface — a **join key** that
   leaks a whole row, not a categorical decision that drops one.
-- Prefer revealed-preference, hard-to-game, multi-signal evidence over a single
-  vanity/attention signal.
 - Temporal claims (a prior role, a past affiliation) require an explicit
   temporal anchor — don't write a current attribute as a historical one.
 - Free-text→structured extraction reliably captures **descriptors, not
   entities** (a category or adjective lands where a name belongs). It needs a
   structured source, not a regex; treat its bulk writes as unsafe by default.
-- **Don't trust raw connected components — a bridge edge signals a false merge.** When clustering
-  identities from pairwise links, taking **raw connected components** silently over-merges: one
-  spurious `A~B` link plus a real `B~C` collapses two distinct entities (the transitive-chaining
-  case a shared-key-collision gate never sees). Run **graph metrics** over the merge graph — a
-  **bridge** edge (removing it splits the cluster), especially one backed by a **single artifact**
-  joining two otherwise well-connected sub-clusters, is a prime false positive: flag or skip it and
-  log why (skip-rather-than-guess); **low neighborhood overlap** (few shared neighbors between the
-  edge's two endpoints — the weak-tie indicator) is a further false-link signal.
-  Pure false-merge insurance — it does not conflict with monotonic-quality (§1); it keeps a bad
-  merge from ever entering the bundle.
+
+Depth (external identity clusters, value-commonness weighting, revealed-preference evidence, bridge-edge false merges): `data-identity.md`.
 
 ## 4. The six data-quality dimensions — measure separately
 
@@ -229,80 +188,21 @@ rate), validity (schema/format/range). For each:
   `privacy-compliance.md`'s suppression boundary, not a per-dashboard filter a new consumer omits; an
   `is_test` / `environment` field that rides on the event but isn't enforced at the boundary is
   the red flag.
-- **A per-group ratio's numerator and denominator must share one membership rule for a shared
-  entity.** Denominator integrity (above) is a **single-metric** property — is the failing type in
-  the base at all. A **per-group** rate/score (a per-team, per-segment, or per-cohort ratio) has a
-  distinct failure no single-row check can see: when the **numerator** attributes a shared or
-  ownerless entity's failure under a **broad fan-out** rule (every group it touches gets charged)
-  while the **denominator** attributes membership under a **strict single-owner** rule for that
-  same entity, an ownerless entity has no single owner to credit — so it is **charged to every
-  group's numerator while sitting in no group's denominator**, inflating the ratio for every group
-  it fans out to (and leaving it **undefined** — divide-by-zero — for any group whose entities are
-  *all* shared/ownerless, since the strict rule credits that group nothing). Each row's own
-  increment is individually correct, which is why no single-row check catches it. Fix: derive the
-  numerator and the denominator from the **same** attribution/membership rule for the same entity —
-  both fan-out, or both single-owner, never mixed. Minimal-proof construction: one shared failing
-  entity E with no single owner, fanning out to groups A and B (A otherwise has 8 owned entities
-  with 1 failing; B has 6 owned entities with 1 failing). Hand-compute the ratio both ways: under
-  the **mismatched** rule (E's failure fans into both numerators; E is excluded from both
-  denominators since it has no owner) A reads 2/8 = 25% and B reads 2/6 ≈ 33%; under the
-  **matched** fan-out rule (E also counted in both denominators) A reads 2/9 ≈ 22% and B reads
-  2/7 ≈ 29% — both ratios move once numerator and denominator agree, proving the mismatch inflates
-  every group that shares the entity.
 - **Empty-shape honesty:** distinguish **absent**, **expected-empty**,
   **false**, and **empty-list** when completeness or compare-and-swap logic
   collapses them — treating "blank field" as "no check" or "no prior" mis-scores
   and loses races.
 - **A named quantity must carry the same value everywhere** it appears; add a
   check that flags stale duplicates. Repetition is not corroboration.
-- **A structural / topology validity gate on a graph *authored as data* never checks that a
-  separate `anchor` / `startNode` field agrees with the declared entry — closure and
-  start-designation are orthogonal, so a valid ring can still begin at the wrong step.** A
-  diagram authored as data — an ordered node list, directed edges, a prose narrative of step
-  order, and an explicit `anchor` / `startNode` a renderer reads to decide where to begin
-  walking the cycle — carries that anchor as a **denormalized restatement** of *where the ring
-  begins*, and nothing forces it to equal the **declared entry**: the node list's first element
-  and the narrative's first clause. A gate asserting *the edges form one closed cycle covering
-  every node* passes green on a perfectly valid ring — so a reviewer reads "validated" — yet it
-  never checks *which* node is declared the start, so an anchor set to the last node (or an
-  arbitrary "most interesting" one) sails through and **every consumer renders the ring rotated
-  to the wrong step** — a wrong-start, not a broken graph. Detection compares the anchor to the
-  declared entry (`anchor == nodes[0]`, and the narrative's first clause), **never** "is the
-  anchor a valid node id" — validity of the topology is the wrong question. Fix **by
-  construction**: derive the anchor *from* the declared entry, or gate the two authored fields
-  into equality so they cannot drift (§2, *make a dishonest value unrepresentable*). Because
-  such a diagram is usually emitted by a **template / porting script / author habit**, one wrong
-  anchor is a strong prior that its **siblings from the same authoring pass carry the same
-  disagreement** — run the outward instance-set sweep across every sibling, not just the file in
-  hand (`method.md` Phase 4). **Discriminators:** the named-quantity rule above flags a
-  *quantity* that drifted **stale** across copies (repetition is not corroboration); here a
-  *start-designation* is authored **wrong from origin** and a green **topology** gate supplies
-  the false assurance. The partition / ring validity gate in `language-stack-redflags.md` is a
-  partitioning *routine's* off-by-one that **falsely rejects** a valid decomposition; this is
-  authored *data* whose gate **falsely accepts** by omitting a whole dimension. And §1's
-  stated-precedence rule is authority **direction** — one source *outranks* another and must
-  reach the decision field; here the anchor and the declared entry are **co-equal** fields that
-  must simply be **equal**, and no gate compares them.
 - **Freshness is computed from the subject's own newest activity**, never your
   crawl/fetch timestamp (re-crawling otherwise makes dormant records look
   permanently fresh). Treat "undated" as a flagged third state, never silently
   fresh or stale.
-- Derived trend/velocity metrics have a **cold start** — don't emit a value
-  until enough snapshots exist; handle the warm-up window explicitly.
 - **Validate what lands in a field:** reject your own pipeline labels leaking in
   as a subject's name; reject shape mismatches (an email in a name field is both
   a quality defect and an unintended PII exposure).
-- **A percent-unit guard needs an upper bound, not just a lower one.** A guard written to catch an
-  unconverted 0–1 fraction rendered under a percent unit (`0.5` shown as `0.5%` instead of `50%`)
-  typically checks only a **lower** bound (`value < 1` ⇒ needs `* 100`); with no **upper** bound it
-  is asymmetric by construction, and a value that lands **above 1** — a metric whose semantics can
-  legitimately exceed 100% (an attainment, ratio, or index that can run over par), or an accidental
-  **double conversion** (`0.5 * 100 * 100` = `5000`) — sails straight through and renders wildly
-  wrong with **no error**. Extend the guard to a **plausible range check with a sane upper bound
-  for that metric's own semantics**, and fail loud (flag, don't silently clamp) outside it. The
-  question that sets the bound is: **can this metric legitimately exceed 100%?** — if no, cap at
-  100 and treat anything above it as the same class of bug as the unconverted fraction below 1; if
-  yes, name the ceiling the domain actually supports instead of leaving the guard one-sided.
+
+Depth: `data-metrics.md` (per-group ratio membership), `data-graph.md` (a graph or diagram authored as data), `data-freshness.md` (trend cold start), `data-contracts.md` (percent-unit guard).
 
 ## 5. Deduplication & consistency
 
@@ -337,48 +237,8 @@ rate), validity (schema/format/range). For each:
   the primitives and check each. The test that proves guard coverage must
   **discover** write-sites (grep/AST), never hardcode a list that goes stale as
   new sites are added.
-- **A shared accessor over polymorphic shapes silently no-ops for the shape whose
-  key it doesn't reach — the read-side sibling of the erosion-guard rule above.** A
-  generic exact-key filter serving several record shapes from one path often matches
-  against a **hardcoded OR-list of top-level field names**
-  (`[row.fooId, row.barKey, …].filter(Boolean).includes(key)`, or an equivalent `??`
-  chain). It works for every shape whose id is a plain top-level property and
-  **silently returns empty — no error** — for any shape whose id is **nested** under a
-  sub-object (`metadata` / `frontmatter` / `attributes` / `config`): none of the
-  top-level candidates is ever truthy, so the list is empty and `[].includes(key)` is
-  always `false`, and that collection reads as "nothing ever matches" instead of
-  failing loudly. It survives review because each shape works alone and a **per-shape**
-  search/scope accessor (built correctly, reaching into the nested field) usually masks
-  it, so a smoke test on the common shapes passes. Catch it: enumerate **every** shape
-  the filter serves and check each one's real field nesting **at its schema/type, not
-  by assumption**; if a sibling accessor already reaches the nested key correctly while
-  the shared filter does not, that inconsistency confirms a genuine gap, not a
-  limitation; and if the endpoint documents the parameter as working uniformly across
-  shapes, the silent per-shape gap is a broken promise (a contract breach on par with a public-API change, `api-contracts.md`). Fix: a per-shape accessor
-  registry (`shape → (row) => key | null`), mirroring the per-shape accessors the code
-  already has for other concerns — not another ad-hoc entry bolted onto the top-level list. Unlike the erosion-guard’s open-ended write-site surface above, the shape set is closed and type-checkable, so the registry can be exhaustiveness-checked rather than discovered. Regression-test one fetch-by-real-key per shape, not just the first-tested one.
-- **An accessor returning an empty collection to signal "not applicable" is indistinguishable,
-  to a generic membership filter, from "applies but matches nothing."** One generic list/search
-  path often serves several row shapes and narrows by a `scope`/dimension filter through a
-  per-type accessor — `SCHEMAS[type].keys(row) → string[]`, matched via
-  `keys(row).includes(requested)`. Some types are legitimately never scoped by that dimension, so
-  their accessor is a constant `() => []` — the author's way of saying "N/A here," sometimes with
-  a comment saying so. The generic filter can't see the comment: `[].includes(requested)` is
-  `false` whether the type is inapplicable or genuinely scoped-and-empty, so the whole type
-  silently drops out of results whenever any caller passes that filter — no error, just fewer
-  rows. This is the *design-intent* sibling of the nested-key accessor gap above: there the
-  accessor is empty **by mistake** (unreachable nesting); here it is empty **on purpose**, and
-  the generic predicate still can't tell the two apart. Represent inapplicability explicitly
-  instead of overloading empty — a whole-type bypass from that filter's domain, a sentinel
-  (`null`) the filter special-cases before calling `.includes()`/`.some()`, or excluding the type
-  from the filter's domain entirely — never a bare empty collection a generic predicate reads as
-  exclusion. (Same "generic code can't see a per-type intent" shape as `product-ux-quality.md`'s
-  empty-state coverage rule — an empty render that can't tell "not queried" from "genuinely
-  zero," there at the UI layer.) Most dangerous when the endpoint's own contract documents the
-  filter as *narrowing* results rather than *excluding whole types*: supplying it then does the
-  exact opposite of what the docs promise, silently (cross-ref `api-contracts.md` — behavior that
-  diverges from the documented contract). Regression-test: a scoped search call, run against a
-  fixture that includes an N/A-by-design type, must still return that type's rows.
+
+Depth (a shared accessor over polymorphic record shapes): `data-shapes.md`.
 
 ## 6. Idempotency, ownership & lifecycle
 
@@ -480,57 +340,6 @@ rate), validity (schema/format/range). For each:
   before the consumer reads. The review test is a **grep for a reader**: a flag written at one site
   and read at none is the finding (§5's **artifact → consumer census** — a written artifact with
   zero readers is dead pipe — is the persisted-store cousin of the same defect).
-- **Never sum heterogeneous constructs into one composite score.** A blended
-  "urgency"/"risk" number often merges constructs that imply *opposite* actions —
-  raise-timing overdue (introduce to investors) vs distress/contraction (triage) —
-  so summing them manufactures false positives and hides which action is warranted.
-  Score each construct separately and derive the action from the combination (a
-  2×2 / tiering), never from one blended number.
-- **Name a derived field for what it measures, not for the conclusion you want it
-  to support.** A column called `relationship_strength` that is really a
-  co-occurrence *count* (co-authored papers, shared events) is a schema-level
-  overclaim — it asserts a synthesized "strength" the data never measured. Surface
-  the **corroborating evidence** (co-authored 4 papers; met at 3 events), not a
-  manufactured score, and require **multiple independent signals** before asserting
-  a tie at all — a lone co-mention or co-attendance is a lead, not a relationship.
-  A relationship is often **two-sided**: dropping its edge from one endpoint's
-  view erases a real connection, so reconcile the edge from both endpoints (this
-  holds for a directional edge too — record the adjacency at each end). (The UI
-  half — never
-  render a bare synthesized "strength" number as fact — is the confidence-tier
-  false-precision rule in `ux-dataviz.md`.)
-- **Corroboration raises only the component it evidences — never the entity-attribution.** An
-  event/activity confidence often fuses three independent propositions: *occurrence* (did it
-  happen), *role*, and *entity-attribution* (whose is it). Cross-source corroboration — N
-  independent publishers naming the same event — evidences **occurrence** (and role); it says nothing
-  about whether **entity X** was involved. A promotion that lifts the *whole* fused confidence to
-  "fact-grade" on an agreement count therefore **silently promotes a weakly-matched
-  attribution** — the worst axis, since a confident false attribution is worse than publishing
-  nothing (§2). The tell: a confidence computed as `min(identity_match, occurrence, role)`
-  **raised** by a corroboration count that only evidences occurrence — `identity_match` was the
-  binding minimum *because* attribution was uncertain, and the promotion overrides exactly that.
-  Rule: corroboration may raise only occurrence/role, **never past the entity-attribution
-  component's own value** — it answers "did it happen," never "whose is it." Safest default:
-  carry the corroboration **count as unrendered evidence** (the derived-field rule above) and
-  don't promote a fused confidence at all.
-- **When the anti-fabrication rule forbids an invented score, the constructive escape is a
-  *published standard* — checked at both the definition *and* the selection layer.** A data
-  product barred from an "invented composite index" or an inferred human-judgment score can turn a
-  forbidden invented metric into a **cited third-party primitive** by adopting an external published
-  standard whose *definition* is the spec, not the tool's judgment — e.g. **CHAOSS** (community
-  activity/health), **Fellegi-Sunter** (record-linkage match tiers), **W3C PROV** (lineage),
-  **rel=me / ORCID / schema.org `sameAs`** (identity), **network-science centrality** (e.g. Freeman
-  betweenness), **ESCO / O\*NET** (skills) — each looked up at its own spec (named here **by name
-  only**; verify the current spec before citing a version or a specific claim). **The subtle trap:**
-  citing each metric's spec while **hand-picking which metrics to include** re-introduces the
-  invented index **one level up** — the *selection* is now editorial judgment, hidden because every
-  row still carries a spec URL. So the check is two-layer, plus observability: (1) is each metric an
-  external, cited **definition**? (2) is the metric **selection** itself a cited published **model**,
-  not a set the tool chose? (3) is each metric's **input actually observable** by the product (else
-  it is redundant with a system that already observes it)? Where the product must deviate from a published model, it **records the
-  deviation per metric, with a reason**. Corollary: a standard often supplies the honest **skip
-  band** for free — Fellegi-Sunter's *possible-match* middle tier is literally "skip rather than
-  guess" (§2).
 - **Test every enum/config mapping against the source's *real* value
   distribution.** A lookup keyed on the wrong domain — a geography→multiplier map
   keyed on region names while the source emits ISO-3166 alpha-2 codes (plus
@@ -565,17 +374,6 @@ rate), validity (schema/format/range). For each:
   the violation, so it exercises only round-trip fidelity, never the violation path
   — `testing-and-evals.md`). This is the
   data-integrity face of untrusted deserialization (CWE-502, `security-appsec.md`).
-- **Any ranking, scoring, or leaderboard gates on an *observed* liveness signal;
-  a missing liveness field is a blocker, not a nice-to-have.** Ranking an entity
-  set with no liveness gate puts dead or discontinued entities on a live shortlist
-  — the same failure the exclusion gate above catches at parse time, here as an
-  affirmative *input requirement*. Liveness comes from the subject's **own recent
-  activity** (cf. §4 freshness — from the subject's own newest activity, never your
-  fetch timestamp), not from the record merely existing; if the source emits no
-  liveness signal, that is fail-closed — exclude or flag `unknown`, never rank as
-  live. (A covered-but-dead entity is distinct from an uncovered one — §8
-  observed-low vs unobserved on the data side, and the honest-empty rule in
-  `product-ux-quality.md` on the UI side.)
 - **A suppression / allow-list / status match compares an *exact value set*, never
   a substring.** `status.toLowerCase().includes("pass")` matches "passed term sheet
   to legal" and "compass" as readily as the intended "need to pass", silently
@@ -583,173 +381,16 @@ rate), validity (schema/format/range). For each:
   rendering. Match against an explicit `Set` through **one shared predicate** (not a
   copy-pasted `includes` at each funnel stage), and emit a **row-level audit** of
   everything auto-excluded so a wrong suppression is visible, not silent.
-- **Carry a per-row coverage flag; keep each score glass-box.** A score computed
-  on partial inputs is a weaker claim than one computed on full inputs — stamp
-  each row with which inputs were actually present (a coverage / provenance flag)
-  so a consumer never reads a thin-input score as equal-confidence to a
-  fully-covered one, and keep the derivation inspectable (the inputs that drove
-  this row's number are recoverable), never an opaque scalar. Principle 2 at row
-  scope: a missing input is not a low input. (The *interpretation* rule — an
-  absent window is not a decline — is in §8; this owns the per-row mechanism.)
+
+Depth (composite scores, derived-field names, corroboration and fusion, published standards, liveness gates, per-row coverage flags): `data-scoring.md`.
 
 ## 8. Measuring the outcome honestly
 
-- Measure enrichment **lift on the subset that actually surfaces to users**, not
-  total fill rate — filling fields on records nobody sees moves no outcome.
-- **A sampled event stream must record each event's inclusion probability and reweight before
-  aggregating.** Sampling is fine — often *preferred*, to cheaply buy precision on a rare outcome
-  (case-control / stratified sampling) — but a rate from **raw** sampled counts is biased whenever
-  the rate differs by stratum (keep 100% of errors, 10% of successes → the naive success rate reads
-  far too low). The fix is **not** "sample uniformly": every retained event carries a **known
-  inclusion probability** and the metric **reweights by 1/probability** (inverse-probability /
-  Horvitz–Thompson) before aggregating — then uniform *and* outcome-stratified sampling both recover
-  the true rate. It is genuinely **unrecoverable** only when the probability is **unknown/unrecorded**
-  (an unlogged adaptive or load-shedding sampler) or **zero for a stratum** (a hard drop — e.g. "drop
-  the highest-volume users" — no weight resurrects a stratum never sampled). A pipeline that aggregates
-  raw sampled counts with no reweighting and no recorded sampling design is the finding; state the
-  design where the metric is defined.
-- **Self-consistency / inter-model agreement is not precision.** Treat output
-  quality as *unmeasured* until an expert rates a frozen, labeled cohort; don't
-  stack features on an unvalidated base. See `testing-ai-evals.md` for the
-  eval-harness pattern.
-- **Requiring expert labels sets the bar; check the labels themselves are any
-  good.** Label errors in a held-out set both distort the metric *and* re-rank
-  models — test sets carry "an average of at least 3.3% errors" across the 10 benchmarks studied, and correcting them
-  can flip which model wins (Northcutt et al., NeurIPS 2021). So measure
-  **inter-annotator agreement** across independent labelers (it bounds label noise
-  and caps the achievable metric — a model can't beat the label ceiling), spot-audit
-  the flagged errors, and handle **class imbalance** honestly (99%-majority
-  "accuracy" is the base rate, not skill). This is the *opposite* lesson from
-  inter-**model** agreement above: agreement among independent *humans* is signal
-  about the labels; agreement among *models* is not precision.
-- **Backtest a proxy-derived metric against ground truth before shipping it — a
-  plausible formula that passes unit tests can be near-useless.** For any
-  derived/scored value built from indirect proxies (estimating runway from
-  last-round size ÷ headcount × burn, say), require a ground-truth validation step
-  in review — report MAE / correlation / base-rate against real actuals. Unit
-  tests prove the math; only a backtest proves the *value*. On failure, **demote
-  or gate** it (a coarse band + "corroboration-required"), never ship it as a
-  ranker.
-- **Match the validation metric to the claim the score makes.** A predictor whose
-  correlation is weak but nonzero, with MAE too large to publish a point estimate,
-  can still rank usefully — but validate ranking with **concordance / a C-index
-  against an observable binary event** ("raised within 6 months", "shut down within
-  6 months"), *not* MAE on the noisy latent quantity. Emit an ordinal tier, not a
-  point estimate, when MAE is large relative to the decision range, and reject a
-  self-refuting "±N" band — a band wider than the decision range is noise on
-  screen.
-- **An absent window is not a decline — and recency must be monotone in elapsed
-  time.** A time/activity score must not read a coverage gap (no observation in a
-  window, a source that went quiet, a period not yet collected) as a substantive
-  low value ("declining", "churned", "at risk"): distinguish *observed-low* from
-  *unobserved* before the number implies a trend. And a recency/freshness score
-  must be **monotone in elapsed time** — more time since the last event can only
-  lower freshness, never raise it; a non-monotone recency curve manufactures false
-  "re-activation". Principle 2 again: the quiet window is evidence only once a
-  positive control confirms the source was actually read for it.
-- **A failed *read* is not a negative *verdict* — carry a distinct
-  `unknown`/`degraded` state, never fold it into the accusing bucket.** A
-  per-subject verdict (compliant/delinquent, posted/missing, present/absent)
-  joined from several store reads often wraps each read to degrade to an empty
-  result on error (`catch → []` / `new Map()`) so one flaky store never 500s the
-  page — an often-correct resilience choice. But when that empty-on-failure
-  fallback feeds a computation whose *absence* reads as a specific **negative**
-  claim, the resilience silently converts an infrastructure fault into a false,
-  actionable accusation against a **named subject**: "couldn't read your posting
-  history" renders as the same red "never posted" badge (and inflated "still
-  owed" count) a genuine miss earns, with nothing in the response telling the two
-  apart. This is the read-*failure* sibling of "an absent window is not a
-  decline" above — there a coverage gap must not read as a substantive-low
-  *score*; here a read that *errored* must not read as a substantive-negative
-  *verdict* about an identified subject — and it is worse, because the output is a
-  specific accusation, not a neutral "no data yet." Make it reviewable on two
-  axes: **(a) polarity** — trace each catch-to-empty forward and ask which bucket
-  the empty lands in; into the *positive/compliant* bucket it is an honest floor
-  (safe), into the *negative* bucket it fabricates the accusation; **(b) the bit
-  must live in the response *shape*** — a `degraded` flag, a `dataIssues:
-  string[]`, or a per-row `unknown`/`unverifiable` state the caller can render —
-  because a server-side log the reader never sees is not a distinguishing signal.
-  Keep the don't-500 resilience; just stop discarding the one bit (did every
-  source actually respond?) that says whether the negative is real. Best enforced
-  by construction: give the verdict type a third state so "delinquent" has **no
-  constructor** from an unread store (§2, *make a dishonest value
-  unrepresentable*). Same failure mode as the gate discipline in
-  `reliability-error-handling.md` (a can't-check needs a distinct exit + message
-  from a found-problem) and the metric version in `observability.md` (a 429 /
-  timeout is not "no match" / "score 0"), but on a **different surface**: here the
-  distinguishing bit must ride a **per-row response field** the UI can render,
-  which a process exit code and an aggregate metric label structurally cannot
-  carry.
-- **A background-refreshed cache serves the last-good value with no *as-of*
-  surface — so a dead refresher renders byte-identical to live.** A hot read path
-  that can't query its store synchronously (a sync render function, an async-only
-  client) keeps a module-level *last-good snapshot* and kicks off refresh in the
-  background, serving the old snapshot on refresh failure rather than throwing —
-  a defensible resilience choice, like the don't-500 fallback above. The honesty
-  defect is on the **read surface**: the snapshot usually already carries a
-  `generated_at` / `refreshed_at` the consumer *could* render, but no caller reads
-  it (the accessor's only reference is its own declaration — the same **dead-pipe**
-  tell as §5's *artifact → consumer census*: produced, consumed nowhere), and the
-  refresh failure is logged **server-side only**. So through an outage of any
-  length every consumer renders identically to a fully live read. This is the
-  **successful-read twin** of the read-*failure* bullet above — there a read that
-  *errored* must not render as a verdict; here a read served from a cache whose
-  refresher *silently died* must not render as live — and a server log the reader
-  never sees is again not a distinguishing signal. **Do not conflate this with §4
-  freshness:** §4 scores the *subject's* own newest activity (never a fetch/refresh
-  timestamp); this is the *pipe's* liveness — can the cache still refresh from
-  source — a different question, which a subject-level "this record is N days old
-  vs its cadence" signal never answers yet is routinely mistaken for in review
-  because both use the vocabulary "fresh"/"stale". Fix: **wire the `generated_at`
-  into a visible surface** (a "data as of HH:MM" cue, or a banner once cache age
-  exceeds N expected refresh intervals) **or assert a read-time freshness bound**;
-  pair it with the operator-side alarm on an overdue refresh (`observability.md` —
-  freshness = time since last successful run; page when none in 2× the interval),
-  which alone still leaves the *reader* blind. If the reader-side signal is
-  deliberately deferred, **downgrade the unwired accessor from a shipped API to a
-  tracked follow-up** so a later reviewer doesn't read its mere existence as wired
-  coverage. Distinct from the cache **stampede** / **negative-cache** /
-  invalidation bugs in `performance-db-cost.md` (correctness and cost of the cache
-  *mechanism*) — this is a cache that never *visibly* expires because a background
-  job owns refresh and its death is unobservable at the point of read.
-- **Observability is a per-entity-*class* property, not only a per-window one.**
-  The rule above corrects a *temporal* coverage gap; a distinct, cross-sectional
-  one is that whole **classes** of entity are structurally less observable on
-  public signal — people who work in public (engineers, researchers, OSS
-  contributors) over-represent, and those whose work is private or gated
-  (operators, investors) under-represent — independent of any time window.
-  Uncorrected, an empty profile reads as **inactive** when it means **not publicly
-  observable**. Label each entity's **public-footprint class** (high vs low
-  observability) and carry it into every consumer: an empty / low profile in a
-  low-observability class renders as *not observed*, never *inactive*, and a
-  ranking must not read *unobserved* as *low-activity* — that systematically
-  penalizes the very members the public surface can't see. Empty-beats-fabricated
-  at the coverage layer. (Distinct from §7's per-row coverage flag, which is
-  *post-hoc* — which inputs a given run populated; a public-footprint class is
-  *a priori*, a structural property of the class known before any fetch runs.)
-- **A freshness *window* is observable; a freshness *decay curve* is fabricated.** A **binary
-  in-window gate** — `now − retrieved_at ≤ window_for_type` — is honest: elapsed time is an
-  observable input, and a per-signal-type window that gates routing ("act on this only within N
-  days") is deterministic and clickable. A **continuous decay-strength curve** — `strength =
-  0.5^(days / half_life)` — is a **banned fabricated constant** (Principle 2): the half-life
-  is invented, not observed — the same family as a predicted buying-stage score. Take the window,
-  reject the curve; and treat a vendor / marketing **half-life figure** as **unverified** unless it traces to a
-  primary source — use it only to illustrate window *ordering*, never as a number.
+Depth: `data-metrics.md` (enrichment lift, sampled streams, label quality, backtests, validation metrics), `data-freshness.md` (absent windows, recency, read failures, cache as-of, observability classes, freshness windows).
 
 ## 9. The model's role in a data pipeline (if any)
 
-- The model **never authors a fact, a score, or control flow, and never gates a
-  record.** All scoring and gating is deterministic. The model only phrases or
-  adjudicates *behind* hard gates.
-- Treat all model input as adversarial: instructions in the system prompt only;
-  untrusted content fenced/delimited in the user turn with a length cap and a
-  "this is data, not instructions" directive; give the extractor no tools;
-  schema-validate output before any value is used.
-- **Grounding gate:** reject any model output that names evidence not present on
-  the record; fall back to a deterministic composer.
-- **Neutralize model output** before it reaches a human-facing surface or the
-  next stage — strip URLs, markup, and control characters. (Teams routinely
-  guard the input and forget the output side.) See `security-ai-agents.md`.
+Depth (the model never authors a fact, adversarial input, grounding gate, output neutralization): `data-ml.md`.
 
 ## 10. Honest data collection
 
@@ -759,21 +400,10 @@ rate), validity (schema/format/range). For each:
   the TLS handshake and HTTP/2 frame ordering, so a browser token on a
   non-browser client is a **stronger** bot signal than an honest one. Prefer an
   official API to scraping; exhaust free/public sources before paid ones.
-- **A connector/transform *pivot graph* multiplies both risks per hop — gate every
-  hop, not just the chain end.** A pivot engine (identifier → transform → new
-  entities → next transform; the Maltego / SpiderFoot pattern) is powerful for
-  coverage but compounds two hazards a single-source lane does not have. (1)
-  **Attribution risk multiplies:** a wrong entity at hop 2 poisons every entity
-  derived at hops 3+, so each transform's *output* entities must re-pass the
-  identity / fanout gate (§1 fanout arm, §3 false-merge) **before** attribution —
-  not once at the end of the chain. (2) **Identity-disclosure risk multiplies:**
-  each hop contacts a new host directly, so a pivot toward a gated host routes
-  through a contracted broker under a declared collection-identity policy
-  (anonymous / identified / brokered) — never spoof (above) — and a pivot must not become a
-  rate-limit-evasion fan-out. A pivot graph without per-hop guards is both a
-  fanout amplifier and an identity-exposure amplifier.
 - Enforce data-subject suppression/erasure **once at the export/publish
   boundary**, so every downstream consumer inherits it.
+
+Depth (a connector / transform pivot graph): `data-identity.md`.
 
 ## 11. Cost discipline (enrichment specifics)
 
@@ -791,18 +421,8 @@ rate), validity (schema/format/range). For each:
   entity id, dated events, location) the working copy lacks. Scope external
   acquisition to the **measured residual** only; a plan that adds scrapers before
   measuring over-scopes.
-- **A feasibility probe for a *current-state* signal gates on freshness, not just
-  schema and match-rate.** An external source can pass API-works, has-the-fields,
-  and adequate identity-match yet still describe *last year's* state. Query the
-  **max timestamp per metric** (`... MAX(sample_date) ... GROUP BY metric` —
-  per-metric, since columns in one table lag differently) and compare to today
-  **before** designing anything on it. Label a derived signal by the recency of the
-  metric it is **actually computed from**, not the freshest column in the table
-  (overstating freshness in a deliverable is a silent correctness bug; the freshness
-  dimension itself is §4). Run the **cheapest decisive go/no-go query first** —
-  match-rate can look like the kill-question while staleness is the real one — and
-  keep the probe **re-runnable**: a finding of *too stale to use* outvalues a
-  polished pipeline built on a stale signal.
+
+Depth (a feasibility probe for a current-state signal): `data-freshness.md`.
 
 ## 12. Data contracts & the train/serve seam
 
@@ -815,96 +435,40 @@ rate), validity (schema/format/range). For each:
   *even when the row still parses* — a currency silently switched from cents to dollars passes
   every type check. Look for the contract expressed **as code** (a schema-plus-expectations
   fixture, e.g. Great Expectations or dbt tests) so a breach fails CI, not a downstream dashboard.
-- **A provider that feeds another system's scoring / automation owes the consumer's
-  *inputs*, not its own raw output.** When the product's job is to be a data provider
-  (its output is another system's scoring or automation input), the contract seam has
-  four failure modes no shape-only check catches: (1) it **emits raw events when the
-  consumer needs scoring inputs** — the consumer's rubric wants windowed aggregates and
-  velocity ("≥2 events in 90d," a top-decile proxy), keyed on the **consumer's canonical
-  ids** and carrying provenance + license/tier, not discrete triggers the consumer must
-  re-aggregate (a join it does not want to own); (2) **static / manual delivery** (a
-  hand-run dump) where the consumer needs a **live channel + cadence** (a table/feed read
-  on a schedule); (3) **no per-field source-of-truth declaration** (authoritative /
-  partial / never) — so the consumer wires fields the provider never ships and expects
-  data it does not own; (4) **a claimed input stale or misclassified vs the provider's
-  live artifact** — reconcile **every** claimed provider-input (count *and*
-  classification) against the provider's current output **before it drives a downstream
-  score/decision** (a pre-reclassification blend that inflated a category ~100× can
-  silently drive a network-wide score). Pair with a gate: diff the consumer's declared
-  provider-inputs against the provider's actual current output; a mismatch blocks
-  sign-off. (Shape lives in `api-contracts.md` consumer-driven contract; this is the
-  quality / semantics half at the provider seam.)
-- **Training/serving skew.** When an ML feature is computed one way for **training** (batch, full
-  history, post-hoc) and another for **serving** (online, partial, real-time), the model meets a
-  different distribution in production than it trained on and degrades **silently, with no error**.
-  The fix is a **single feature definition** both paths derive from (one shared transform or a
-  feature store), and a **point-in-time / as-of** join in training so a feature never uses data
-  that would not have been available at prediction time (label leakage's cousin). Flag a feature
-  transformed in two places, a training join with no as-of bound, or no monitoring of the
-  train-vs-serve feature distribution.
-- **A vector index is a derived dataset whose *embedding model + version* is part of its
-  contract.** Embeddings from two different models (or two versions of one) live in
-  **different latent spaces**, so a similarity search across them is meaningless — and if
-  both produce the **same dimension** there is **no error**, just silently wrong
-  nearest-neighbours (a *different* dimension is the loud, easy case: a dimension-typed
-  `vector(n)` column rejects it). Two failure modes a shape-check misses: **(a)
-  mixed-version index** — a model upgrade that re-embeds only *new* rows (or backfills
-  incrementally) leaves the store comparing vectors from two spaces; upgrading requires
-  **re-embedding the whole corpus** and an **atomic index swap**, with the query path pinned
-  to the **same** model+version the index was built with (tag each vector with its embedding
-  model+version; refuse cross-version compares). **(b) stale index** — source documents
-  changed or were re-chunked but not re-embedded, so retrieval returns outdated content with
-  no error; needs a re-embed-on-source-change pipeline and a freshness/version gate. **(c)
-  metric / normalization mismatch** — the contract is not just the model but the **distance
-  metric** (cosine vs dot-product vs Euclidean) and its normalization assumption: **cosine
-  and dot-product agree on ranking only for unit-normalized vectors**, so an unnormalized
-  corpus queried under dot-product conflates vector **magnitude** with relevance. An index built or tuned for one metric but
-  queried under another throws no error and no dimension mismatch — just silently
-  **reordered nearest-neighbours**, the same "no error, just wrong" shape as the model-version
-  case (keep this generic; the exact operator-class behavior varies by vector store). This is
-  the *correctness* face of a vector store — distinct from the **security** face (RAG
-  access-control / embedding-inversion, `security-ai-agents.md` LLM09) and the **cost** face
-  (don't re-embed unchanged inputs, §11). (`pgvector` enforces one dimensionality per typed
-  `vector(n)` column, so a different-dimension mix errors loudly; a same-dimension
-  cross-model mix does not — it performs no model-provenance check.)
+
+Depth: `data-contracts.md` (a provider that feeds another system's scoring), `data-ml.md` (training/serving skew, vector indexes).
 
 ---
 
-**🚩 red flags**: unconditional `UPDATE`/upsert that ignores existing
-confidence; `merge` on a single fuzzy field; dedup on non-normalized keys; a dedup/idempotency
-key hashed over a truncated display slug;
-"latest wins" clobbering verified data; a metric scored `0` where it doesn't
-apply; failure types excluded from the denominator; absent/empty/false/list
-collapsed in completeness or CAS; freshness derived from `fetched_at`; a model
-call that returns a score or a boolean gate; weights inlined in code with no
-snapshot; a consumer/export that re-queries raw instead of the filtered set;
-written artifact with no reader; an edit written to a store the read path does not
-read for that field; mass status-change on an upstream error; a read / JOIN / COUNT on a soft-delete table with no `deleted_at IS NULL`
-filter (deleted rows leak into results); a `UNIQUE` column on a soft-delete table with no
-partial-index carve-out (cannot re-create a soft-deleted value); a hard delete leaving dangling
-foreign keys on an unenforced/`SET NULL` FK, or an `ON DELETE CASCADE` that over-deletes
-shared/audit rows; live
-counts hard-coded into docs; a coverage threshold lowered in the same diff that
-would otherwise fail it; a composite score that **sums** heterogeneous
-constructs; a ranker validated with **MAE** instead of concordance, or a "±N"
-band wider than the decision range; a config/enum map never tested against a
-`SELECT DISTINCT` of real source values; a fanout/uniqueness gate that
-blanket-blocks a newly-shared standing value; new enrichment scoped before
-existing-source coverage was measured; a per-row score with no coverage/provenance
-flag or no recoverable derivation; a time/activity score that reads an unobserved
-window as a decline; an entity's structurally-low-observability class read as
-inactive rather than not-observed; a non-monotone recency curve; a boolean parser that recognises
-only `"true"`, or an exclusion gate defaulting an unrecognised value to `false`; a
-substring `includes`/`indexOf` driving a categorical status / suppression decision;
-an external-source feasibility sign-off with no max-timestamp freshness check; a
-producer schema/semantic change with no declared consumer data contract (breaks a
-consumer even though the row still parses); an ML feature transformed differently
-for training vs serving, or a training join with no as-of/point-in-time bound; a
-derived field named for a conclusion it did not measure (a co-occurrence count
-called a "strength"/"relationship" score); a ranking/leaderboard with no
-observed-liveness gate (a missing liveness field ranked as live); a data provider
-that ships raw events where the consumer scores on aggregates, or a claimed
-provider-input never reconciled against the provider's live output before it feeds a
-downstream score; a deserializer that trusts a serialized computed field (a count
-read verbatim, not re-derived from the validated collection) or checks only a
-primitive type, not element shape — weaker than its own builder; a corroboration / fusion step that raises a fused confidence past its **entity-attribution** component on agreement that only evidences occurrence; a hand-rolled composite / score / tiering where a citable external standard exists and wasn't used, or per-metric spec URLs over a **tool-chosen metric set** (the invented index one level up); a non-empty value-A→value-B overwrite with no source-grade arbitration; a join / corroboration key not weighted by value-commonness (a value shared by dozens treated as a confirming match); a corroboration count that collapses same-domain duplicates but not derivation; a per-dimension volume-floor drop acked or blocked with no fold investigation after an identity/roster/entity-resolution change (a correction and a regression are identical from the count); an identity cluster built from raw connected components with no bridge / centrality check (transitive over-merge); a fabricated freshness decay curve (`0.5^(days/half_life)`) or an adopted vendor half-life in place of an observable in-window gate; a diff / index keyed on a **bare `id`** over a list mixing multiple entity **kinds** (a `(kind, id)` collision that silently merges two entities into one delta); a vector index mixing embeddings from two model versions, queried with a different model than it was built with, not re-embedded after its source docs changed, or built for one distance metric / normalization and queried under another; a per-group ratio whose numerator fans a shared/ownerless entity out to every group while its denominator credits it to a single owner (inflated, or undefined, for every group that shares it); a percent-unit guard with a lower bound only, so a value above 1 (legitimate over-100% semantics, or a double conversion) renders wrong with no error; a `scopeKeys`/`tags`/`labels`-style per-type accessor with a constant `[]` return (or a `// not scoped by X` comment) feeding a shared `.includes()`/`.some()` filter with no whole-type bypass, silently dropping that type from every scoped result; a stated precedence (`A` outranks `B`) whose override writes an adjacent `notes`/`read` column while the `status` / decision field is computed only from `B` and never consults it (worse if that caveat-bearing field is then truncated to a length that cuts the disqualifying clause); a dataset join by unguarded substring containment (`a in b or b in a`) that inherits an unrelated entity's confidential row, or a bare exact-match overlay that silently drops rows differing only by a legal suffix / case / punctuation; a graph / diagram authored as data whose closure / topology validity gate stays green while a separate `anchor` / `startNode` field disagrees with the declared entry (the node-list first element / the narrative's first clause), rendering the cycle rotated to the wrong start — and batch-inherited across every sibling from the same authoring pass.
+**🚩 red flags**:
+unconditional `UPDATE`/upsert that ignores existing confidence;
+`merge` on a single fuzzy field;
+dedup on non-normalized keys;
+a dedup/idempotency key hashed over a truncated display slug;
+"latest wins" clobbering verified data;
+a metric scored `0` where it doesn't apply;
+failure types excluded from the denominator;
+absent/empty/false/list collapsed in completeness or CAS;
+freshness derived from `fetched_at`;
+a model call that returns a score or a boolean gate;
+weights inlined in code with no snapshot;
+a consumer/export that re-queries raw instead of the filtered set;
+written artifact with no reader;
+an edit written to a store the read path does not read for that field;
+mass status-change on an upstream error;
+a read / JOIN / COUNT on a soft-delete table with no `deleted_at IS NULL` filter (deleted rows leak into results);
+a `UNIQUE` column on a soft-delete table with no partial-index carve-out (cannot re-create a soft-deleted value);
+a hard delete leaving dangling foreign keys on an unenforced/`SET NULL` FK, or an `ON DELETE CASCADE` that over-deletes shared/audit rows;
+live counts hard-coded into docs;
+a coverage threshold lowered in the same diff that would otherwise fail it;
+a config/enum map never tested against a `SELECT DISTINCT` of real source values;
+a fanout/uniqueness gate that blanket-blocks a newly-shared standing value;
+new enrichment scoped before existing-source coverage was measured;
+a boolean parser that recognises only `"true"`, or an exclusion gate defaulting an unrecognised value to `false`;
+a substring `includes`/`indexOf` driving a categorical status / suppression decision;
+a producer schema/semantic change with no declared consumer data contract (breaks a consumer even though the row still parses);
+a deserializer that trusts a serialized computed field (a count read verbatim, not re-derived from the validated collection) or checks only a primitive type, not element shape — weaker than its own builder;
+a non-empty value-A→value-B overwrite with no source-grade arbitration;
+a corroboration count that collapses same-domain duplicates but not derivation;
+a diff / index keyed on a **bare `id`** over a list mixing multiple entity **kinds** (a `(kind, id)` collision that silently merges two entities into one delta);
+a dataset join by unguarded substring containment (`a in b or b in a`) that inherits an unrelated entity's confidential row, or a bare exact-match overlay that silently drops rows differing only by a legal suffix / case / punctuation;

@@ -151,7 +151,7 @@ Beyond delivery throughput, **developer productivity and experience are multi-di
 and efficiency/flow, precisely because any single proxy (lines of code, commit or PR count, story
 points) is gameable and misleads. A review that reduces "productivity" or "velocity" to one number
 is the finding — the same false-precision bar as a composite score that sums heterogeneous
-constructs (`data-quality.md`). Name what a metric can and cannot support, and **route a
+constructs (`data-scoring.md`). Name what a metric can and cannot support, and **route a
 people-performance judgement to the owner** — never assert it from repo activity.
 
 ---
@@ -186,7 +186,7 @@ on.
   **fails fast** before the expensive tier ever starts. This is a **free re-ordering**, taken
   *before* the paid platform levers in the paragraph above (cache a step, shard the suite) — the
   same cheapest-decisive-first discipline as running the cheapest go/no-go query first in
-  `data-quality.md`, here spending CI minutes and developer wait instead of a query. Grep the hook
+  `data-freshness.md`, here spending CI minutes and developer wait instead of a query. Grep the hook
   / workflow definition (`.pre-commit-config.yaml`, `.husky/`, a `lefthook.yml`, a
   `.github/workflows/*.yml` job `needs:` graph or step order) and read whether a fast
   lint/format/message check gates the slow build/test tier or merely trails it.

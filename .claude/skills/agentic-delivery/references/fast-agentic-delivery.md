@@ -17,8 +17,9 @@ it expands.
   dev-server memory cap, a shared quota ceiling, a remembered constraint-state, worktree lifecycle and teardown →
   `fanout-host-sizing.md`
 - Ready-queue sweeps, head-of-line starvation, auto-merge scoping, permission asymmetries and escape hatches, the
-  fleet-wide advisory, merge cascade and single seat, staggered ready-flips, flaky/contended/absent checks, opt-in
-  levers, CI-offload, draft-gated heavy checks, worktree isolation → `merge-queue-worktrees.md`
+  fleet-wide advisory, merge cascade and single seat, staggered ready-flips, flaky/contended/absent checks,
+  propagating a landed flaky-fix to queued branches, opt-in levers, CI-offload, draft-gated heavy checks, worktree
+  isolation → `merge-queue-worktrees.md`
 - Delegating by measured number, foreground verification, finalize and done-contracts, stranded PRs, hard-to-write
   tests, liveness and duplicate dispatch, plugin forks, self-polling lanes, timeboxed briefs, release verification,
   `Verify:` lines, fan-out joins, relaying findings, soft prohibitions, context-inheriting forks → `verification-handback.md`

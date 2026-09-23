@@ -17,6 +17,24 @@ each subsequent PR's own checks ran. A **merge train** verifies the *combination
    thread instead of closing them.
 4. Discard the integration branch; it's never itself merged.
 
+**A squash or amend that collects several lanes' work must keep each closing keyword scoped to its
+own PR — a stray one silently closes someone else's.** Step 3 above already preserves each member's own
+commits and its own issue-closing keyword by never squashing the union; the same discipline applies to
+*any* squash or amend that consolidates multi-lane work into one commit (a merge-train squash fallback, a
+maintainer's "clean up the history" squash, an agent amending a commit message) — a keyword copy-pasted or
+left over from a different lane's message closes an issue or PR that has nothing to do with the landing
+change the moment it reaches the default branch, and the close is attributed to whoever pushed, so it reads
+as intentional and nobody re-checks it (issue #1121). Strip a closing keyword the landing PR does not itself
+own before the squash/amend lands. `closes_lint.py` (deep-code-review's `scripts/`) mechanizes this: given a
+commit range and an allowed set of (repo, number) references (`--allow`, or `--pr-body` naming the landing PR's own
+body, whose own closing keywords define the set), it fails on any `close[sd]?` / `fix(e[sd])?` /
+`resolve[sd]?` + `#N` / `o/r#N` / URL reference outside that set — opt in via `DCR_CLOSES_LINT=1` in the installed
+`dcr-gates.sh`. **Treat "PR closed, not merged, and its head is not an ancestor of the target branch" as an
+incident, not a shrug**: check the close event's actor and source (a keyword-triggered auto-close vs. a
+human decision) before assuming intent, and reopen it — the mirror, for the cross-PR case, of
+`unattended-trackers.md`'s over-fire rules (a quoted mention, an umbrella issue) that don't cover a keyword
+landing from a wholly unrelated commit.
+
 **The union verifies the combination; it is not on the critical path.** Its CI aggregates every member's
 checks, so it concludes no sooner than the slowest member and usually later — treating "union CI still pending
 or red" as a reason to hold members already green re-serializes the very wait the train exists to remove. Once
@@ -46,6 +64,23 @@ never licenses a member merging *because* it carries a marker, and is not a per-
 pre-splits the cap to dodge a merge conflict — that remedy was rejected (`dev-env-ownership.md`'s *never raise
 the ceiling to pass*). The union still owes the same gate everything else does: pass the ratchet/cap, or don't
 merge.
+
+**Isolating a culprit member: park the others for the suspect's full verification cycle, not merely
+until the next tick — or bisect.** The paragraph above attributes a numeric-ratchet overshoot to its
+owning member directly from the diff; when the failure instead needs an actual isolation run to find the
+culprit (a flaky interaction, a build-only break the ratchet can't compute per-member), "park every other
+member for one cycle, retry with the suspect alone" only works if the parking **survives past that one
+retry**. Park for **at least two cycles** — one to run the suspect alone, a second to hold the rest out
+*while that result is read and acted on* — never "parked members become eligible again on the very next
+tick," which re-includes everyone the cycle right after the isolated run and reproduces the exact same
+failing union forever: no new information, one burned verification cycle per attempt, and a failure that
+reads as flaky/unstable instead of attributable (issue #1119). A suspect that itself fails in isolation is
+parked **for real** — excluded from the union, not merely skipped once — and the search continues with the
+remainder; a suspect that passes in isolation clears it, making the interaction between two-or-more members
+the next hypothesis. Where the member count makes one-at-a-time isolation too slow, **bisect the member
+set** instead (halve it, retry, recurse into the failing half) — same convergence guarantee, fewer cycles.
+Either way, any downstream gate the union depends on should independently report **which member's diff**
+tripped it, so a culprit is nameable without relying on the parking loop alone.
 
 ### Mergeable is a snapshot against a moving base head — re-check before each merge; freeze the sweep while a resolver runs
 

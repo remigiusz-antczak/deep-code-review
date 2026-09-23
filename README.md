@@ -240,7 +240,7 @@ identical API/LLM/DB calls, over-fetching, "call it every run" patterns).
 | A Correctness | logic, edge cases, money precision, time/UTC | — |
 | B App security | OWASP Top 10:2025, injection, SSRF, authz, secrets | `security-appsec.md` (indexes its routed sub-files) |
 | C AI / LLM / agents | OWASP LLM Top 10:2026 + Agentic 2026 + AST01–AST10, injection, output handling | `security-ai-agents.md`, `security-agent-skills.md` |
-| D Data integrity | monotonic quality, no-fabrication, entity resolution, evals | `data-quality.md` |
+| D Data integrity | monotonic quality, no-fabrication, entity resolution, evals | `data-quality.md` (indexes its routed sub-files) |
 | E Performance & cost | N+1, indexes, migrations, API/LLM spend | `performance-db-cost.md` |
 | F Reliability | error handling, retries, idempotency, rollbacks | `reliability-error-handling.md` |
 | G Concurrency | races, TOCTOU, shared-state writes | `concurrency-shared-state.md` |

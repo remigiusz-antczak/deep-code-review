@@ -71,6 +71,29 @@
 #                           known shape matched, not that every conditional
 #                           path has rendered-DOM coverage. Needs no other
 #                           skill installed.
+#   DCR_CLOSES_LINT=1       run deep-code-review's closes_lint.py over the
+#                           same BASE_SHA..HEAD_SHA range: a `close[sd]?` /
+#                           `fix(e[sd])?` / `resolve[sd]?` + `#N` /
+#                           `owner/repo#N` / issue-or-PR-URL closing keyword
+#                           in any commit in range may only reference a
+#                           (repository, number) in the allowed set from
+#                           DCR_CLOSES_ALLOW (comma-separated `N`, `#N`, or
+#                           `owner/repo#N`) and/or DCR_CLOSES_PR_BODY (a file
+#                           holding the landing PR's own body — its own
+#                           closing keywords also define the set); at least
+#                           one of the two is required. Optional
+#                           DCR_CLOSES_REPO=owner/repo names this repository,
+#                           so a qualified self-reference counts as `#N`.
+#                           Catches a stray closing keyword left
+#                           over from a different lane's commit message
+#                           silently auto-closing a ready PR when the range
+#                           reaches the default branch (issue #1121;
+#                           doctrine: merge-operations.md, "A squash or
+#                           amend that collects several lanes' work must
+#                           keep each closing keyword scoped to its own
+#                           PR"). A heuristic lint (see the script's own
+#                           HONESTY section for what it can't see). Needs no
+#                           other skill installed.
 # The next three need the agentic-delivery skill installed; a set flag with
 # that skill or its script missing is a failure, never a skip.
 #   DCR_REFIX_GATE=1        run agentic-delivery's refix_gate.py over the same
@@ -374,7 +397,55 @@ if opt_in DCR_SOURCE_SCAN_LINT; then
 fi
 
 # ---------------------------------------------------------------------------
-# 6-8) OPT-IN delivery gates. Each runs its own --selftest first (a gate that
+# 6) OPT-IN closes_lint — a close[sd]?/fix(e[sd])?/resolve[sd]? + #N closing
+#    keyword in BASE_SHA..HEAD_SHA may only reference a number this change
+#    owns (issue #1121: a stray keyword from an unrelated commit auto-closes
+#    a ready PR when it reaches the default branch). Runs its own --selftest
+#    first (a gate that cannot prove it fires is not trusted).
+# ---------------------------------------------------------------------------
+if opt_in DCR_CLOSES_LINT; then
+  CLOSES_LINT="${REVIEW_ROOT}/scripts/closes_lint.py"
+  if [ ! -f "${CLOSES_LINT}" ]; then
+    printf 'dcr-gates: closes_lint.py not found at %s (FAIL, fail closed)\n' "${CLOSES_LINT}" >&2
+    FAIL=1
+  elif ! python3 "${CLOSES_LINT}" --selftest; then
+    printf 'dcr-gates: selftest FAILED for %s\n' "${CLOSES_LINT}" >&2
+    FAIL=1
+  elif [ "${RANGE_STATE}" = partial ]; then
+    printf 'dcr-gates: FAIL closes_lint (caller supplied an incomplete BASE_SHA/HEAD_SHA range)\n'
+    FAIL=1
+  elif [ "${RANGE_STATE}" = none ]; then
+    printf 'dcr-gates: closes_lint skipped (no range supplied and HEAD~1 unresolvable: single-commit repo?)\n'
+  else
+    closes_args=()
+    if [ -n "${DCR_CLOSES_ALLOW:-}" ]; then
+      closes_args+=(--allow "${DCR_CLOSES_ALLOW}")
+    fi
+    if [ -n "${DCR_CLOSES_PR_BODY:-}" ]; then
+      closes_args+=(--pr-body "${DCR_CLOSES_PR_BODY}")
+    fi
+    # --repo is checked apart: it names an identity, never an allowed set.
+    closes_repo=()
+    if [ -n "${DCR_CLOSES_REPO:-}" ]; then
+      closes_repo=(--repo "${DCR_CLOSES_REPO}")
+    fi
+    if [ "${#closes_args[@]}" -eq 0 ]; then
+      printf 'dcr-gates: FAIL closes_lint (DCR_CLOSES_LINT=1 needs DCR_CLOSES_ALLOW and/or DCR_CLOSES_PR_BODY)\n'
+      FAIL=1
+    # closes_lint.py resolves the range against its OWN process cwd (its
+    # --repo is an owner/repo identity, not a path), so this must run with
+    # cwd == REPO_ROOT.
+    elif (cd "${REPO_ROOT}" && python3 "${CLOSES_LINT}" --base "${BASE_SHA}" --head "${HEAD_SHA}" "${closes_args[@]}" "${closes_repo[@]+"${closes_repo[@]}"}"); then
+      printf 'dcr-gates: closes_lint PASS\n'
+    else
+      printf 'dcr-gates: closes_lint FAIL\n' >&2
+      FAIL=1
+    fi
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# 7-9) OPT-IN delivery gates. Each runs its own --selftest first (a gate that
 #      cannot prove it fires is not trusted), then the real check.
 # ---------------------------------------------------------------------------
 

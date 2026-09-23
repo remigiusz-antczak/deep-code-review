@@ -2984,6 +2984,182 @@ case "$dev_flat" in
   *) record 1 "doctrine pin: dev-env-ownership.md does not over-claim what surface_check can know about a /version id" ;;
 esac
 
+# ===========================================================================
+# Data must-load isolation (own lane; APPENDED AT THE END by convention).
+# data-quality.md is the data / ETL must-load; its conditional depth lives in
+# routed data-*.md sub-files, each indexed in the parent with a trigger. Pin,
+# structurally, that a plain ETL review with no embeddings / vector index and
+# no entity resolution -- the LIGHT floor parsed live from SKILL.md's phase
+# table, plus the `data / ETL` row's must-load refs parsed live from the load
+# map, plus the default-domain checklists domain-a/d/e/f/g/j.md -- loads
+# neither data-ml.md nor data-identity.md: neither is in that load set, and no
+# content line of either appears verbatim in it. Also pin that every data-*.md
+# sub-file is routed from the parent's index AND from SKILL.md, and that the
+# vector-index / identity index rows name their trigger. Planted RED: pasting
+# one data-ml.md line back into the parent must FIRE, and dropping the
+# data-identity.md index row must FIRE.
+# ===========================================================================
+
+# data_plain_leaks <skill_dir> — print every content line (>= 25 chars, after
+# the 4-line title / blank / trigger / blank header) of data-ml.md or
+# data-identity.md found verbatim in the plain-ETL load set, plus either
+# sub-file if the load set names it outright. Empty == isolated.
+data_plain_leaks() {
+  local sd="$1" f
+  local set_list="$WORK/data-plain-set.txt" pats="$WORK/data-plain-pats.txt"
+  : >"$set_list"
+  : >"$pats"
+  while IFS= read -r f; do
+    case "$f" in
+      data-ml.md|data-identity.md) printf 'LOAD SET NAMES A VECTOR/IDENTITY FILE: %s\n' "$f" ;;
+    esac
+    printf '%s\n' "$sd/references/$f" >>"$set_list"
+  done < <({ floor_light_refs "$sd"; archetype_mustload_refs "$sd" "data / ETL"; } | sort -u)
+  printf '%s\n' "$sd/SKILL.md" >>"$set_list"
+  for f in domain-a.md domain-d.md domain-e.md domain-f.md domain-g.md domain-j.md; do
+    printf '%s\n' "$sd/references/$f" >>"$set_list"
+  done
+  for f in data-ml.md data-identity.md; do
+    [ -f "$sd/references/$f" ] || { printf 'MISSING SUB-FILE: %s (fail closed)\n' "$f"; continue; }
+    awk 'NR > 4 && length($0) >= 25' "$sd/references/$f" >>"$pats"
+  done
+  [ -s "$pats" ] || { printf 'NO VECTOR/IDENTITY PATTERNS (fail closed)\n'; return 0; }
+  while IFS= read -r f; do
+    [ -f "$f" ] || { printf 'MISSING LOAD-SET FILE: %s (fail closed)\n' "$f"; continue; }
+    grep -Fxf "$pats" "$f" | sed "s|^|LEAK $(basename "$f"): |" || true
+  done <"$set_list"
+}
+
+# data_index_unrouted <skill_dir> — print every data-*.md sub-file not named in
+# a `| \`<file>\` |` row of data-quality.md's index or (backticked) in
+# SKILL.md, and a vector-index / identity index row that does not name its
+# trigger. Empty output == fully routed.
+data_index_unrouted() {
+  local sd="$1" f b
+  for f in "$sd"/references/data-*.md; do
+    [ -e "$f" ] || continue
+    b="$(basename "$f")"
+    [ "$b" = "data-quality.md" ] && continue
+    grep -qF "| \`$b\` |" "$sd/references/data-quality.md" || printf 'UNROUTED %s (parent data-quality.md)\n' "$b"
+    grep -qF "\`$b\`" "$sd/SKILL.md" || printf 'UNROUTED %s (SKILL.md)\n' "$b"
+  done
+  grep -E '^\| `data-ml\.md` \|' "$sd/references/data-quality.md" | grep -qi 'vector index' \
+    || printf 'TRIGGERLESS data-ml.md index row\n'
+  grep -E '^\| `data-identity\.md` \|' "$sd/references/data-quality.md" | grep -qi 'entity identity' \
+    || printf 'TRIGGERLESS data-identity.md index row\n'
+}
+
+etl_set="$({ floor_light_refs "$dcr_sd"; archetype_mustload_refs "$dcr_sd" "data / ETL"; } | sort -u | tr '\n' ' ')"
+data_leaks="$(data_plain_leaks "$dcr_sd")"
+data_unrouted="$(data_index_unrouted "$dcr_sd")"
+data_subs="$(ls "$dcr_sd"/references/data-*.md 2>/dev/null | grep -v '/data-quality\.md$' | wc -l | tr -d ' ')"
+if [ -n "$etl_set" ] && [ -z "$data_leaks" ] \
+  && printf '%s' "$etl_set" | grep -qF 'data-quality.md' \
+  && printf '%s' "$etl_set" | grep -qF 'performance-db-cost.md'; then
+  record 0 "data isolation: a plain ETL review with no vector index and no entity resolution (${etl_set}+ domain-a/d/e/f/g/j.md) loads neither data-ml.md nor data-identity.md"
+else
+  printf '%s\n' "$data_leaks" | head -5
+  record 1 "data isolation: a plain ETL review with no vector index and no entity resolution (${etl_set}+ domain-a/d/e/f/g/j.md) loads neither data-ml.md nor data-identity.md"
+fi
+
+if [ -z "$data_unrouted" ] && [ "$data_subs" -ge 8 ]; then
+  record 0 "data isolation: every data-*.md sub-file ($data_subs) is routed from data-quality.md's index and SKILL.md; vector-index/identity rows name their trigger"
+else
+  printf '%s\n' "$data_unrouted" | head -5
+  record 1 "data isolation: every data-*.md sub-file ($data_subs) is routed from data-quality.md's index and SKILL.md; vector-index/identity rows name their trigger"
+fi
+
+# Planted RED: a copy of the skill whose data parent re-absorbs one vector-
+# index line must be flagged as a leak into the plain-ETL load set.
+diso_sd="$WORK/data-iso/deep-code-review"
+rm -rf "$WORK/data-iso"
+mkdir -p "$WORK/data-iso"
+cp -R "$dcr_sd" "$diso_sd"
+awk 'NR > 6 && length($0) >= 25 { print; exit }' "$diso_sd/references/data-ml.md" \
+  >>"$diso_sd/references/data-quality.md"
+diso_leaks="$(data_plain_leaks "$diso_sd")"
+if printf '%s\n' "$diso_leaks" | grep -q '^LEAK data-quality.md: '; then
+  record 0 "data isolation: FIRES when vector-index depth leaks back into the data / ETL must-load set (planted RED)"
+else
+  record 1 "data isolation: FIRES when vector-index depth leaks back into the data / ETL must-load set (planted RED)"
+fi
+
+# Planted RED: a parent index that drops the data-identity.md row leaves the
+# identity sub-file unrouted from its parent -- the routing check must FIRE.
+grep -vF '| `data-identity.md` |' "$dcr_sd/references/data-quality.md" \
+  >"$diso_sd/references/data-quality.md" || true
+# Capture first: piping straight into `grep -q` can SIGPIPE the producer under
+# `set -o pipefail` and read as a non-match.
+diso_unrouted="$(data_index_unrouted "$diso_sd")"
+if printf '%s\n' "$diso_unrouted" | grep -qF 'UNROUTED data-identity.md (parent data-quality.md)' \
+  && printf '%s\n' "$diso_unrouted" | grep -qF 'TRIGGERLESS data-identity.md index row'; then
+  record 0 "data isolation: FIRES when the parent index drops a sub-file's row (planted RED)"
+else
+  record 1 "data isolation: FIRES when the parent index drops a sub-file's row (planted RED)"
+fi
+
+# ===========================================================================
+# dcr-gates DCR_CLOSES_LINT through the installed runner (own lane; APPENDED
+# AT THE END by convention): an in-set closing keyword PASSES, a planted stray
+# keyword naming the same number in ANOTHER repository FAILS (the allowed set
+# is keyed on repo + number), DCR_CLOSES_REPO reaches the script as --repo,
+# and a set flag with no allowed set fails closed.
+# ===========================================================================
+
+clg="$WORK/closes-gate"
+mkdir -p "$clg/src"
+git -C "$clg" init -q
+git -C "$clg" config user.email "jane@example.com"
+git -C "$clg" config user.name "Jane Smith"
+git -C "$clg" config commit.gpgsign false
+printf 'x = 1\n' >"$clg/src/a.txt"
+git -C "$clg" add src/a.txt >/dev/null 2>&1
+git -C "$clg" commit -q -m 'chore: init'
+gate "$GATES" install --src "$ROOT" --dest "$clg" --mode gates
+clg_install_rc="$GATE_RC"
+rm -rf "$clg/.claude/skills/deep-code-review/scripts/__pycache__"
+printf 'x = 2\n' >"$clg/src/a.txt"
+git -C "$clg" add src/a.txt >/dev/null 2>&1
+git -C "$clg" commit -q -m 'feat(a): widen x' -m 'Closes #12'
+
+# clg_run <log> [VAR=value ...] — run the target's runner with the closes
+# lint on; sets CLG_RC to its real exit code.
+clg_run() {
+  local log="$1"
+  shift
+  if env DCR_CLOSES_LINT=1 "$@" bash "$clg/scripts/dcr-gates.sh" >"$log" 2>&1; then CLG_RC=0; else CLG_RC=$?; fi
+}
+
+clg_run "$WORK/clg-green.log" DCR_CLOSES_ALLOW=12
+if [ "$clg_install_rc" -eq 0 ] && [ "$CLG_RC" -eq 0 ] \
+  && grep -q 'dcr-gates: closes_lint PASS' "$WORK/clg-green.log"; then
+  record 0 "dcr-gates closes_lint: an in-set closing keyword passes (GREEN)"
+else
+  record 1 "dcr-gates closes_lint: an in-set closing keyword passes (GREEN)"
+fi
+
+clg_run "$WORK/clg-noset.log"
+if [ "$CLG_RC" -ne 0 ] \
+  && grep -q 'FAIL closes_lint (DCR_CLOSES_LINT=1 needs DCR_CLOSES_ALLOW and/or DCR_CLOSES_PR_BODY)' "$WORK/clg-noset.log"; then
+  record 0 "dcr-gates closes_lint: a set flag with no allowed set fails closed"
+else
+  record 1 "dcr-gates closes_lint: a set flag with no allowed set fails closed"
+fi
+
+printf 'x = 3\n' >"$clg/src/a.txt"
+git -C "$clg" add src/a.txt >/dev/null 2>&1
+git -C "$clg" commit -q -m 'chore(a): tidy' -m 'done;closes other/lib#12'
+clg_run "$WORK/clg-red.log" DCR_CLOSES_ALLOW=12
+clg_red_rc="$CLG_RC"
+clg_run "$WORK/clg-repo.log" DCR_CLOSES_ALLOW=12 DCR_CLOSES_REPO=other/lib
+if [ "$clg_red_rc" -ne 0 ] && grep -q 'references other/lib#12, not in the allowed set \[#12\]' "$WORK/clg-red.log" \
+  && grep -q 'dcr-gates: closes_lint FAIL' "$WORK/clg-red.log" \
+  && [ "$CLG_RC" -eq 0 ] && grep -q 'dcr-gates: closes_lint PASS' "$WORK/clg-repo.log"; then
+  record 0 "dcr-gates closes_lint: a stray same-number keyword in another repository fails; DCR_CLOSES_REPO reaches --repo (planted RED)"
+else
+  record 1 "dcr-gates closes_lint: a stray same-number keyword in another repository fails; DCR_CLOSES_REPO reaches --repo (planted RED)"
+fi
+
 # ---------------------------------------------------------------------------
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"

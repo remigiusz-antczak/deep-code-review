@@ -54,6 +54,7 @@ Two rules override the whole roster:
 | Hat | Fires when | Owns at gates | Depth |
 |---|---|---|---|
 | **Conductor** | Every multi-hat change | Intent, task graph, merge plan, evidence roll-up (G0, G2, G7); never self-approves; once a lane is staffed, never self-executes its work — even under pressure | `SKILL.md` Operating model |
+| **Ops / Merge-Guard** | ≥2 live lanes **and** a plumbing event | No gate ownership — serializes pushes, rebases / re-runs / ready-flips green PRs (the G7 owner merges), debugs flaky hooks, stops a retry loop only once its owner confirms; reports only exceptions, keeping the Conductor's context free for G0/G2/G7 | **below** |
 | **Product Analyst** | Feedback / a "make it do X" ask / a vague outcome | Turns the ask into a testable spec + a feedback-coverage entry (G0, G1) | **below** |
 | **Architect** | New surface, data model, or cross-cutting change | Seams, dependency direction, SPOFs, NFR budgets, drift from the stated design (G3) | role-coverage.md *Architect* |
 | **Implementer** | Any code change | The diff, its tests, its rationale, one writer per worktree (G4) | **below** |
@@ -67,9 +68,53 @@ Two rules override the whole roster:
 Every hat above is the **delivery** form of a review lens `role-coverage.md`
 already defines. The review lens says *how to judge* the code from that role's
 seat; the delivery hat adds *when the hat fires in the gate flow and what it must
-produce there*. The three with **below** carry delivery discipline the review
+produce there*. The four with **below** carry delivery discipline the review
 lens does not hold; the rest are one-line pointers on purpose — restating
 `role-coverage.md` here would be the duplication this framework forbids.
+
+---
+
+## Ops / Merge-Guard — routine plumbing gets a hat, not the Conductor's context
+
+The Conductor's context is the scarcest resource in a multi-lane run — it holds
+the map of every lane, the plan for the next wave, and the state needed to
+verify delivered work on the real surface. Plumbing — pushes, PR finishing,
+flaky hooks, stuck retry loops — needs none of that judgment; left unowned, it
+lands on the Conductor anyway, and that context is gone for the run.
+
+- **Fires on an event, not as standing staff.** It fires when ≥2 lanes are
+  live **and** a plumbing event lands (a push race, a green PR to finish, a
+  flaky hook, a stuck retry loop). A single-agent project has no separable ops
+  lane — that agent wears the hat (*Hats, not headcount*, above); staffing it
+  for one worker, or before any event, is the "fifth bot" the anti-patterns
+  (below) reject.
+- **Owns the plumbing, not the plan or the merge.** Serializing pushes so two
+  lanes don't race a ref; *finishing* a green PR — rebase, re-run its checks,
+  flip it ready, nothing more: merging stays with the G7 integration owner;
+  chasing a flaky pre-push/pre-commit hook; stopping a retry loop that stopped
+  making progress — only after identifying its owner (lane, session, or job)
+  and getting that owner's confirmation. Known-mechanism work, not a judgment
+  call the Conductor must make.
+- **Reports only exceptions.** A push serialized, a PR finished, a hook fixed,
+  a loop stopped — none of that is a status update to the Conductor; only what
+  the lane could not resolve on its own is. The Conductor's event budget
+  (*Conductor operating rhythm*, `SKILL.md`) stays reserved for a lane blocking
+  a gate, a receipt, a budget breach, or a preflight collision — plumbing that
+  already has an owner is never one of the four.
+- **Route the event, don't absorb it.** The anti-patterns name a Conductor
+  that *takes work back* from a staffed lane (below); this is the other side —
+  when a plumbing event lands, hand it to the hat at once (a lane with slack
+  wears it), so the Conductor is never the only one available. A Conductor
+  spending its turns on a push or a hook signals an unrouted event, not work
+  small enough to absorb.
+- **Mechanism, not narrative.** Use the shipped tools, never a
+  re-implementation: `scripts/serial_gate.py run` serializes a command across lanes with a
+  flock-based lock (the push-serialization case), `scripts/lane_guard.py
+  handback` verifies a lane's exact-SHA handback before it is treated as
+  finished (the PR-finishing case), and `scripts/surface_check.py checks`
+  reads each named check's latest run at a SHA (the flaky-hook-diagnosis
+  case). The lane's own judgment is in reading those outputs and deciding
+  when to escalate — the exceptions it reports.
 
 ---
 
@@ -276,6 +321,10 @@ can't-check is not a finding.
   decision-gate or hard blocker. Reviews back up, other lanes go unstaffed, and
   the fix still lands late — the context-switch cost drops delivery below
   single-lane throughput, the opposite of what taking it over was meant to buy.
+  One-writer binds the Conductor too: once a file is delegated to a lane, route
+  every change to it — a safety fix included — through the owning lane, and run
+  `scripts/claim_probe.py` before editing any path, like any lane; a direct
+  edit can race the lane's write-then-rename and vanish with no conflict.
 - **Collapsing a gate because "it's small."** Low-blast reversible work may
   collapse *adjacent* gates; it may never remove independent verification or a
   human approval that actually applies (`SKILL.md` Gates).
