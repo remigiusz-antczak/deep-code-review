@@ -61,6 +61,20 @@ Modes (stdlib only, no third-party dependency):
       commit statuses are not read: a check that reports only as a status
       shows as NO-RUN under --require (fail closed).
 
+      --wait [--interval S] [--min-checks K]
+          Poll the same per-name verdicts every S seconds (default 45) until
+          every observed/required name is a terminal PASS, one is a terminal
+          FAIL, or --timeout's total budget elapses (default 60s; in --wait
+          mode --timeout is the WHOLE poll's wall-clock budget, not one gh
+          call's — each individual gh read stays bounded to <=30s so a stuck
+          call cannot itself eat the budget). --min-checks K (default 1)
+          guards a false-green report: fewer than K names observed keeps
+          polling rather than declaring ALL GREEN on zero dispatched checks.
+          Prints exactly ONE line: `<gh-repo> @<sha> checks=<n> ALL GREEN` or
+          `<gh-repo> @<sha> checks=<n> NOT-GREEN: <name, name, ...>`. Exit 0
+          ALL GREEN; 1 a FAIL is terminal; 2 timed out still PENDING/NO-RUN or
+          under --min-checks, or the sha/repo could not be checked at all.
+
   --json  print one JSON object (verdict, observed id, surface, reason, UTC
           observation time) for a board post or a handback `Verify:` line.
 
@@ -407,6 +421,8 @@ def _gh_default(args, timeout):
 
 
 _gh = _gh_default  # the selftest swaps in a fake forge
+_sleep = time.sleep  # the selftest swaps in a no-op / counting fake
+_monotonic = time.monotonic  # the selftest swaps in a fake stepped clock
 
 
 def _decode_objects(text):
@@ -447,9 +463,14 @@ def _latest_verdict(runs):
     return ("PASS" if concl in CHECK_PASS else "PENDING" if concl == "cancelled" else "FAIL"), concl
 
 
-def check_checks(slug, sha, required, timeout):
-    """Return (code, summary, reason) for the per-name latest check-run verdict (see `checks`)."""
-    expected = _sha(sha, "--sha")
+def _check_states(slug, expected, required, timeout):
+    """Return {name: (state, detail)} — state in PASS/FAIL/PENDING/NO-RUN — for one gh read. `expected` is pre-normalised.
+
+    Raises CheckError when the read itself is uncheckable (bad slug, gh
+    failure, truncated pages) or when there are no runs at all and no
+    --require list was given (nothing to report). An empty {} is never
+    returned silently in that case — the caller sees the CheckError.
+    """
     if not REPO_SLUG_RE.match(slug or ""):
         raise CheckError(f"--gh-repo {slug!r} is not OWNER/NAME")
     rc, out, err = _gh(["gh", "api", "--paginate",
@@ -467,7 +488,7 @@ def check_checks(slug, sha, required, timeout):
         if HEX_RE.match(head) and len(head) >= MIN_SHA and _matches(expected, head) and r.get("name"):
             by_name.setdefault(str(r["name"]), []).append(r)
     if not by_name and not required:
-        return COULD_NOT_CHECK, None, f"no check-runs for {expected}: not passed, not failed; dispatch a run"
+        raise CheckError(f"no check-runs for {expected}: not passed, not failed; dispatch a run")
     states = {}
     for name in (required or sorted(by_name)):
         group = by_name.get(name)
@@ -485,6 +506,16 @@ def check_checks(slug, sha, required, timeout):
             # no run is authoritative, so never let the newest one win.
             seen = ", ".join(f"app {a} suite {s}: {concl}" for (a, s), (_, concl) in verdicts.items())
             states[name] = ("FAIL", f"ambiguous: {len(verdicts)} latest runs disagree ({seen})")
+    return states
+
+
+def check_checks(slug, sha, required, timeout):
+    """Return (code, summary, reason) for the per-name latest check-run verdict (see `checks`)."""
+    expected = _sha(sha, "--sha")
+    try:
+        states = _check_states(slug, expected, required, timeout)
+    except CheckError as exc:
+        return COULD_NOT_CHECK, None, str(exc)
     tally = {k: sorted(n for n, (st, _) in states.items() if st == k) for k in ("PASS", "FAIL", "PENDING", "NO-RUN")}
     summary = ", ".join(f"{len(v)} {k}" for k, v in tally.items())
     detail = "; ".join(f"{k}: " + ", ".join(f"{n} ({states[n][1]})" if k != "NO-RUN" else n for n in v)
@@ -494,6 +525,41 @@ def check_checks(slug, sha, required, timeout):
     if tally["PENDING"] or tally["NO-RUN"]:
         return COULD_NOT_CHECK, summary, f"{summary} — {detail}: wait or re-dispatch, then re-check"
     return PASS, summary, f"{summary} at {expected[:12]} (latest run per check name)"
+
+
+def wait_for_checks(slug, sha, required, interval, timeout, min_checks):
+    """Poll `_check_states` every `interval`s until terminal or `timeout`s elapse. Return (code, label, reason).
+
+    ALL GREEN only when every observed/required name is PASS AND at least
+    `min_checks` names were observed (a green report before any check has
+    even been dispatched proves nothing — this guards it). A terminal FAIL
+    returns immediately (a completed red does not get greener with more
+    waiting); PENDING/NO-RUN/too-few-observed keep polling until `timeout`.
+    `label` is the single line the CLI prints; never blocks past `timeout`.
+    """
+    expected = _sha(sha, "--sha")
+    deadline = _monotonic() + max(0.0, timeout)
+    last_n, last_desc = 0, f"no checks observed (fewer than --min-checks {min_checks})"
+    while True:
+        try:
+            states = _check_states(slug, expected, required, min(30.0, max(1.0, timeout)))
+            names = sorted(states)
+            failed = [n for n in names if states[n][0] == "FAIL"]
+            not_green = [n for n in names if states[n][0] != "PASS"]
+            if failed:
+                return (FAIL, f"{slug} @{expected[:12]} checks={len(names)} NOT-GREEN: {', '.join(failed)}",
+                        "at least one check is a terminal FAIL")
+            if not not_green and len(names) >= min_checks:
+                return (PASS, f"{slug} @{expected[:12]} checks={len(names)} ALL GREEN",
+                        "all named checks are a terminal PASS")
+            last_n = len(names)
+            last_desc = ", ".join(not_green) if not_green else f"fewer than --min-checks {min_checks} observed"
+        except CheckError as exc:
+            last_n, last_desc = 0, f"uncheckable: {exc}"
+        if _monotonic() >= deadline:
+            return (COULD_NOT_CHECK, f"{slug} @{expected[:12]} checks={last_n} NOT-GREEN: {last_desc}",
+                    f"timed out after {timeout:g}s waiting for green")
+        _sleep(max(0.0, min(interval, deadline - _monotonic())))
 
 
 # --------------------------------------------------------------------------
@@ -525,7 +591,13 @@ def _parser():
     c.add_argument("--gh-repo", required=True, help="OWNER/NAME on the forge")
     c.add_argument("--sha", required=True)
     c.add_argument("--require", action="append", default=[], help="a check name that must PASS (repeatable)")
-    c.add_argument("--timeout", type=float, default=60.0, help="seconds for the gh read")
+    c.add_argument("--timeout", type=float, default=60.0,
+                   help="seconds for the gh read (in --wait mode: the WHOLE poll's wall-clock budget instead)")
+    c.add_argument("--wait", action="store_true",
+                   help="poll every --interval seconds until every check is green, one FAILs, or --timeout elapses")
+    c.add_argument("--interval", type=float, default=45.0, help="--wait: seconds between polls")
+    c.add_argument("--min-checks", type=int, default=1,
+                   help="--wait: require at least this many checks observed before ALL GREEN")
     return p
 
 
@@ -544,23 +616,34 @@ def main(argv=None):
         surface, proves = f"{redact_url(args.remote)}/{args.branch} in {args.repo}", PROVES_REF
     else:
         surface, proves = f"check-runs of {args.gh_repo}", PROVES_CHECKS
+    waiting = args.mode == "checks" and getattr(args, "wait", False)
+    label = None
     try:
         if args.mode == "served":
             code, observed, reason = check_served(args.url, args.expect_sha, args.probe, args.timeout)
         elif args.mode == "ref":
             code, observed, reason = check_ref(args.repo, args.remote, args.branch, args.expect_sha, args.timeout,
                                                args.require_clean)
+        elif waiting:
+            code, label, reason = wait_for_checks(args.gh_repo, args.sha, args.require, args.interval,
+                                                  args.timeout, args.min_checks)
+            observed = None
         else:
             code, observed, reason = check_checks(args.gh_repo, args.sha, args.require, args.timeout)
     except CheckError as exc:
         code, observed, reason = COULD_NOT_CHECK, None, str(exc)
     if getattr(args, "json", False):
-        print(json.dumps({
+        doc = {
             "mode": args.mode, "verdict": VERDICT[code], "exit": code, "surface": surface,
             "expect_sha": args.sha if args.mode == "checks" else args.expect_sha, "observed": observed, "reason": reason,
             "checked_at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "proves": proves,
-        }, sort_keys=True))
+        }
+        if waiting:
+            doc["label"] = label
+        print(json.dumps(doc, sort_keys=True))
+    elif waiting:
+        print(label)
     else:
         print(f"surface_check {args.mode}: {VERDICT[code]} — {reason}")
         print(f"  surface: {surface}; proves: {proves}")
@@ -821,28 +904,39 @@ def _selftest():
     p2, f2 = _selftest_checks()
     passed += p2
     failed += f2
+    p3, f3 = _selftest_wait()
+    passed += p3
+    failed += f3
     print(f"\nselftest: {passed}/{passed + failed} passed")
     return 0 if failed == 0 else 1
 
 
+_FAKE_SHA = "0123456789abcdef0123456789abcdef01234567"  # shared by _selftest_checks and _selftest_wait
+
+
+def _cr(i, name, status="completed", conclusion="success", done="2026-09-23T10:00:00Z", head=_FAKE_SHA, app=None,
+        suite=None):
+    """One fake check-run object (see the `checks --gh-repo` docstring for the fields judged). Pure."""
+    run = {"id": i, "name": name, "status": status, "conclusion": conclusion if status == "completed" else None,
+           "completed_at": done if status == "completed" else None, "head_sha": head}
+    if app is not None:
+        run["app"] = {"id": app, "slug": f"app{app}"}
+    if suite is not None:
+        run["check_suite"] = {"id": suite}
+    return run
+
+
+def _pages(*page_runs, total=None):
+    """Concatenated `gh api --paginate` pages for the given per-page run lists. Pure."""
+    n = sum(len(r) for r in page_runs) if total is None else total
+    return "".join(json.dumps({"total_count": n, "check_runs": list(r)}) for r in page_runs)
+
+
 def _selftest_checks():
     """Offline `checks` cases: a fake `gh` answers the check-runs read. Returns (passed, failed)."""
-    sha = "0123456789abcdef0123456789abcdef01234567"
+    sha = _FAKE_SHA
     passed = failed = 0
-
-    def cr(i, name, status="completed", conclusion="success", done="2026-09-23T10:00:00Z", head=sha, app=None,
-           suite=None):
-        run = {"id": i, "name": name, "status": status, "conclusion": conclusion if status == "completed" else None,
-               "completed_at": done if status == "completed" else None, "head_sha": head}
-        if app is not None:
-            run["app"] = {"id": app, "slug": f"app{app}"}
-        if suite is not None:
-            run["check_suite"] = {"id": suite}
-        return run
-
-    def pages(*page_runs, total=None):
-        n = sum(len(r) for r in page_runs) if total is None else total
-        return "".join(json.dumps({"total_count": n, "check_runs": list(r)}) for r in page_runs)
+    cr, pages = _cr, _pages
 
     def case(name, out, argv_extra, want, must, rc=0):
         global _gh
@@ -916,6 +1010,89 @@ def _selftest_checks():
     passed += ok
     failed += not ok
     print(f"{'PASS' if ok else 'FAIL'}  checks: bad --gh-repo refused (rc={rc})")
+    return passed, failed
+
+
+def _selftest_wait():
+    """Offline `checks --wait` cases: a scripted `_gh` sequence plus a fake clock (no real sleeping). Returns (passed, failed)."""
+    global _gh, _sleep, _monotonic
+    sha, cr, pages = _FAKE_SHA, _cr, _pages
+    passed = failed = 0
+
+    def case(name, gh_responses, argv_extra, want, must, min_sleeps=None):
+        global _gh, _sleep, _monotonic
+        nonlocal passed, failed
+        calls = {"gh": 0, "sleep": 0}
+        clock = [0.0]
+
+        def fake_gh(args, timeout):
+            i = min(calls["gh"], len(gh_responses) - 1)
+            calls["gh"] += 1
+            out = gh_responses[i]
+            return (0, out, "") if out is not None else (1, "", "HTTP 502")
+
+        def fake_sleep(seconds):
+            calls["sleep"] += 1
+            clock[0] += max(seconds, 1.0)  # a no-op sleep must still advance the fake clock past --interval
+
+        def fake_monotonic():
+            return clock[0]
+
+        saved = (_gh, _sleep, _monotonic)
+        _gh, _sleep, _monotonic = fake_gh, fake_sleep, fake_monotonic
+        buf = io.StringIO()
+        try:
+            with contextlib.redirect_stdout(buf):
+                rc = main(["checks", "--gh-repo", "acme/app", "--sha", sha, "--wait", *argv_extra])
+        finally:
+            _gh, _sleep, _monotonic = saved
+        text = buf.getvalue()
+        ok = rc == want and must in text and (min_sleeps is None or calls["sleep"] >= min_sleeps)
+        passed += ok
+        failed += not ok
+        print(f"{'PASS' if ok else 'FAIL'}  wait: {name} (rc={rc}, want {want}, gh calls={calls['gh']}, "
+              f"sleeps={calls['sleep']})" + ("" if ok else f"\n      {text.strip()}"))
+
+    all_green = pages([cr(1, "test"), cr(2, "lint")])
+    one_pending = pages([cr(1, "test"), cr(2, "lint", status="in_progress")])
+    terminal_fail = pages([cr(1, "test", conclusion="failure"), cr(2, "lint")])
+    none_yet = pages([])
+
+    case("already green: no polling needed", [all_green], ["--interval", "0.01", "--timeout", "5"], PASS,
+         "ALL GREEN", min_sleeps=0)
+    case("green line names the repo, sha, and count", [all_green], ["--interval", "0.01", "--timeout", "5"], PASS,
+         f"acme/app @{sha[:12]} checks=2 ALL GREEN")
+    case("terminal FAIL returns immediately, no polling wasted", [terminal_fail],
+         ["--interval", "0.01", "--timeout", "5"], FAIL, "NOT-GREEN: test", min_sleeps=0)
+    case("pending then green: one poll, one sleep", [one_pending, all_green],
+         ["--interval", "0.01", "--timeout", "5"], PASS, "ALL GREEN", min_sleeps=1)
+    case("still pending at the deadline -> COULD_NOT_CHECK, names the pending check", [one_pending] * 5,
+         ["--interval", "1", "--timeout", "2"], COULD_NOT_CHECK, "NOT-GREEN: lint")
+    case("zero checks dispatched yet stays NOT-GREEN past --min-checks, never a false green", [none_yet] * 5,
+         ["--interval", "1", "--timeout", "2", "--min-checks", "1"], COULD_NOT_CHECK, "checks=0 NOT-GREEN")
+    case("uncheckable gh read (--gh error) keeps polling, not an immediate crash", [None, all_green],
+         ["--interval", "0.01", "--timeout", "5"], PASS, "ALL GREEN", min_sleeps=1)
+    case("--require narrows to the named subset only", [pages([cr(1, "lint"), cr(2, "docs", conclusion="failure")])],
+         ["--require", "lint", "--interval", "0.01", "--timeout", "5"], PASS, "checks=1 ALL GREEN")
+
+    saved = _gh
+    try:
+        _gh = lambda args, timeout: (0, all_green, "")
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            rc = main(["checks", "--gh-repo", "acme/app", "--sha", sha, "--wait", "--json",
+                      "--interval", "0.01", "--timeout", "5"])
+    finally:
+        _gh = saved
+    try:
+        doc = json.loads(buf.getvalue())
+        ok = (rc == PASS and doc["verdict"] == "PASS" and doc["label"] == f"acme/app @{sha[:12]} checks=2 ALL GREEN"
+              and doc["proves"] == PROVES_CHECKS)
+    except (ValueError, KeyError):
+        ok = False
+    passed += ok
+    failed += not ok
+    print(f"{'PASS' if ok else 'FAIL'}  wait --json: carries the one-line label plus the usual verdict/proves fields")
     return passed, failed
 
 

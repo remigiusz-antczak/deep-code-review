@@ -1697,6 +1697,42 @@
         "States the orchestrator's unattended-run chat default is 'one line per material landing' from unattended-operating-mode.md, referenced (not restated) from agentic-ceo's output-discipline section",
         "Notes that no new hook was needed for the peer-post or chat-reply cases -- only documentation plus the caps/routing that already exist"
       ]
+    },
+    {
+      "id": "quota-death-priority-respawn-not-wholesale",
+      "prompt": "Ten delivery lanes all ran on the same mid-tier model in one fleet session. The account weekly quota for that model just ran dry mid-run: five lanes are mid-commit, three are mid-PR-body, two just started. The orchestrator itself runs on a different tier and is still alive. Someone proposes respawning all ten lanes immediately on the next tier up so nothing is lost. What is wrong with that plan, and what should actually happen to each lane?",
+      "expected_output": "Respawning the whole fleet onto the next tier up repeats the same single-point-of-failure shape one tier up -- ten lanes bursting onto that tier risks exhausting it too, and the orchestrator itself may already depend on that same tier, which would then take the orchestrator down with the lanes it is trying to save. fanout-host-sizing.md's quota section requires priority-ordered respawn instead: P0/user-facing lanes go to the next capable tier; mechanical finishing (a PR-body fix, a changelog fragment, a rerun) goes to the cheapest tier; everything else waits for the reset. Never move the whole fleet onto the tier the orchestrator itself depends on. Each respawned lane is briefed from its worktree (git status, the unpushed log) plus its queue entry in the orchestrator's own state file -- never only from the dead lane's context, which died with it -- which is why lanes are expected to checkpoint to a durable artifact (a pushed branch, a saved file) before a quota death, not only carry state in a live context.",
+      "expectations": [
+        "States that bursting the whole fleet onto the next tier repeats the single-point-of-failure one tier up, and can exhaust that tier too",
+        "Names the guard: never move the whole fleet onto the tier the orchestrator itself depends on",
+        "Gives the priority order: P0/user-facing to the next capable tier, mechanical finishing to the cheapest tier, everything else waits for the reset",
+        "States a respawned lane is briefed from its worktree plus the orchestrator's own queue/state record, never only from the dead lane's context",
+        "Ties this back to checkpointing partial work to a durable artifact before a lane can die, so the briefing above is possible at all"
+      ]
+    },
+    {
+      "id": "forced-update-protected-branch-freeze-all-pushes",
+      "prompt": "A fetch on the integration branch shows the merge-base jumped back three weeks and thousands of commits are gone -- a sibling session ran a history-rewriting purge meant for a different repository against this one. About twenty lanes are still running. One teammate says: 'broadcast a HOLD telling every lane not to push to the integration branch, but let lanes keep pushing their own feature branches, that part is still safe.' Is that HOLD correct? What should actually happen, in order?",
+      "expected_output": "No -- that HOLD is the exact mistake incident-response.md's VCS history-rewrite section calls out: a HOLD that only forbids the integration branch still lets an own-branch push land after the rewrite, and that branch falls outside the pre-rewrite mirror the restore step rebuilds from, so every own-branch push during the hold just adds another branch to the restorer's manual list. The freeze must forbid ALL pushes, rebases, merges, and new branches from the integration branch, own branches included, from the first broadcast -- lanes keep committing locally, and pushes resume per branch only after the restore owner's GO. In order: (1) Detect -- a forced-update on a protected branch is an incident signal, enter the runbook at Triage. (2) Freeze all pushes fleet-wide, ideally mechanized via a pre-push hook that refuses every push while a HOLD marker file sits in the git common dir. (3) Attribute via local reflogs and rewrite-tool traces, since a shared hosting account makes the host's event log useless. (4) Backup-mirror the current (post-incident) state before restoring anything. (5) Build a per-branch restore ledger classifying each branch PRE / REWRITTEN / TIP-REWRITTEN against the pre-rewrite mirror, skip branches an active lane still owns, and restore each with --force-with-lease, verifying the ref afterward.",
+      "expectations": [
+        "States the proposed HOLD is wrong because it still allows own-branch pushes, which fall outside the pre-rewrite mirror the restore rebuilds from",
+        "States the corrected freeze: ALL pushes/rebases/merges/new branches, including a lane's own branch, from the first broadcast",
+        "Names local commits continuing while push resumes only after the restore owner's GO",
+        "Gives the ordered sequence: Detect -> Freeze (mechanized via a pre-push HOLD-marker check) -> Attribute (local reflog, since the host log is useless on a shared account) -> Backup mirror -> per-branch Restore ledger",
+        "Names the three-way branch classification (PRE / REWRITTEN / TIP-REWRITTEN) and force-with-lease plus ref verification as the restore step"
+      ]
+    },
+    {
+      "id": "destructive-op-vague-target-confirmation",
+      "prompt": "A brief says: 'purge the large binary files from version control history.' Two repositories are open in the current session. Before running a history-rewriting purge, what must happen, and why did skipping it cause a real incident?",
+      "expected_output": "The vague brief names no specific repository, so a destructive, irreversible history-rewrite must never be run against an inferred target when more than one is in scope. incident-response.md's VCS history-rewrite section requires naming the exact target out loud -- repository owner/name (never 'the project') and the full ref list being touched -- and requiring a confirmation input that matches those exact coordinates before running anything. This is exactly the gap a real incident hit: a brief this vague ('purge content from version control') was misread as applying to a secondary repository when it was meant for the primary one, and the purge landed on the wrong repo with no confirmation prompt or repo-specific anchor in the command to catch the mismatch. The fix generalizes past this one command: a destructive history tool should itself confirm repository identity (remote URL plus a repo-specific marker, not name alone) before running, so a wrong-target run fails the confirmation instead of executing.",
+      "expectations": [
+        "States the brief is too vague to authorize running against either repo without explicit disambiguation",
+        "States the requirement: name owner/name plus the full ref list, and require a confirmation input matching those exact coordinates before running",
+        "Connects this to the real incident: a purge meant for one repo landed on another because nothing confirmed the target before executing",
+        "States the mechanized form of the fix: the tool itself confirms remote URL plus a repo-specific marker, not name alone, before running",
+        "Never treats a bare yes/proceed as sufficient confirmation when multiple targets are in scope"
+      ]
     }
   ]
 }
