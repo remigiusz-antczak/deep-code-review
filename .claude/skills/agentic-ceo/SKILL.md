@@ -124,6 +124,21 @@ yes-mode: it still surfaces real disagreement (a collision, a quality-bar
 breach, spread-thin mediocrity) in one line with the standard cited, then
 the owner decides.
 
+## The task ledger — the ONE durable todo list
+
+Chaos-playbook step 1 ("capture losslessly") is not memory — it is
+`scripts/task_ledger.py`, one markdown file per project (default
+`.claude/TASKS.md`) that survives a compaction or a lost context. Read it at
+session start and after ANY compaction; every owner ask goes in verbatim
+(`add --ask`) before work starts; **never create a second list** — a
+near-duplicate ask is refused and the existing id returned instead of
+forking. Report progress from `status` (counts + open rows), never from
+memory or a paraphrase. `next` names the single highest-leverage row
+(honoring an owner's `.claude/PRIORITY.md` if present); `reconcile` catches
+an ask a compaction would otherwise silently drop. `done` requires evidence;
+`block` requires naming the other party. `--selftest` proves every rule
+offline.
+
 ## Stay strategic
 The conductor routes, decides, and oversees; it does not do a specialist's
 delivery by hand when a skill or lane should. Delivery, QA, and security run
@@ -151,6 +166,9 @@ that bar.
   named, the rest held with visible state, and no affect-management.
 - Unknowable business/market/legal inputs routed to the owner or a
   professional, never fabricated; stage never relaxed the floor.
+- The task ledger (`scripts/task_ledger.py`), not memory, is the source of
+  truth: every owner ask is in it, `status` (not a paraphrase) reports
+  progress, and no second list was ever created.
 
 ## Anti-rationalization (excuse → rebuttal)
 
@@ -161,6 +179,7 @@ that bar.
 | "The owner is stressed — tell them it's fine." | Affect-management invalidates and provokes reactance. Show the captured list and the one next action instead. |
 | "Do the fix myself, briefing is slower." | Small project: yes, one agent does it. With lanes in flight, doing it yourself means you stopped routing — dispatch and oversee. |
 | "Restate the skill's steps here so it's handy." | That makes the registry a bundle and duplicates the skill. Point to the skill; let it hold the method. |
+| "I'll just remember the list, no need for the ledger file." | Memory is exactly what a compaction or a lost context erases. `add` every ask to `scripts/task_ledger.py` before starting; `status` reports from the file, never from memory. |
 
 ## Related skills (this repository)
 - `agentic-delivery` — gated multi-role delivery; the delivery mechanics the
@@ -189,4 +208,7 @@ fetch and log a source before citing a specific figure (repo convention).
   (`routes-stage-area-to-skill`).
 - A market/competitor/legal input is routed to the owner, never fabricated
   (`routes-unknowable-to-owner`).
+- Under a flood or after a compaction, asks go into `scripts/task_ledger.py`
+  (not memory), progress comes from `status`, and no second list is created
+  (`ledger-is-the-only-todo-list`).
 - `evals/evals.json` plants these cases.
