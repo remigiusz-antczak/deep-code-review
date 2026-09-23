@@ -35,7 +35,8 @@ with no harm inventory and no human gate on its high-stakes actions**, and — i
 mirror — **stamping such a feature "safe" or "unbiased"** on evidence that cannot
 support the claim.
 
-Persisted artifacts stay normal English. Chat may be terse.
+Persisted artifacts stay normal English. Chat may be terse. Lookup table:
+`INDEX.md`; read it instead of opening references blindly.
 
 ---
 

@@ -25,7 +25,8 @@ market truth the model asserts. This is the highest fabrication-risk area in the
 suite (no ground truth lives in the repo or the model), so the guardrails are the
 point, not an afterthought.
 
-Persisted artifacts stay normal English. Chat may be terse.
+Persisted artifacts stay normal English. Chat may be terse. Lookup table:
+`INDEX.md`; read it instead of opening references blindly.
 
 ---
 

@@ -27,7 +27,7 @@ this pack for gated multi-role work, always `deep-code-review` for audit.
 Persisted artifacts (code, PR bodies, ADRs, commits) are **normal English**;
 chat may be terse. Don't vendor a chat-voice skill here — if compressed prose
 is wanted, add [JuliusBrussee/caveman](https://github.com/JuliusBrussee/caveman)
-separately.
+separately. Lookup table: `INDEX.md`; read it instead of opening references blindly.
 
 ---
 

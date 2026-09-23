@@ -173,6 +173,11 @@
 # 23350->23349 (product-ux-quality.md repoints). Floors: phase-floor-light
 # 35854->35848, phase-floor-full 47448->47442.
 #
+# skill_index.py wave: SKILL.md gained a one-line pointer to its new INDEX.md
+# lookup table (23889 -> 23962 bytes; SKILL.md's own bytes count toward the
+# Phase 0-2 floor). Floors: phase-floor-light 35848->35866, phase-floor-full
+# 47442->47460.
+#
 web	23349
 mobile	14046
 api / service	18829
@@ -180,6 +185,6 @@ data / ETL	19548
 agent / LLM / MCP	18981
 IaC / platform	4342
 lib / SDK	10907
-phase-floor-light	35848
-phase-floor-full	47442
+phase-floor-light	35866
+phase-floor-full	47460
 phase-conditional	method-situational.md
