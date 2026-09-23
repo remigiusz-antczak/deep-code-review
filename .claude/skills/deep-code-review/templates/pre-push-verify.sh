@@ -24,14 +24,19 @@
 # CONFIGURATION (env vars):
 #   DCR_PREPUSH_CMD             the fast tier to run before allowing the
 #                                push, e.g. "make lint test-unit". Run through
-#                                `sh -c`, so it may be a `&&`-chain or a
-#                                pipeline. A non-zero exit REFUSES the push.
-#   DCR_PREPUSH_ALLOW_UNSET      when DCR_PREPUSH_CMD is unset, "1" lets the
-#                                push through with a warning instead of
-#                                failing closed. Unset, "0", or any other
-#                                value: fails closed (the default — an
-#                                unconfigured hook must not silently pass
-#                                every push).
+#                                `sh -c` with its stdin from /dev/null (so it
+#                                can never consume the ref list this hook is
+#                                still reading off its own stdin), so it may
+#                                be a `&&`-chain or a pipeline. A non-zero
+#                                exit REFUSES the push. Whitespace-only (e.g.
+#                                exported but blank) is treated the same as
+#                                unset, not as an empty-but-passing command.
+#   DCR_PREPUSH_ALLOW_UNSET      when DCR_PREPUSH_CMD is unset (or
+#                                whitespace-only), "1" lets the push through
+#                                with a warning instead of failing closed.
+#                                Unset, "0", or any other value: fails closed
+#                                (the default — an unconfigured hook must not
+#                                silently pass every push).
 #   DCR_PREPUSH_DEFAULT_BRANCH   override the remote default branch used to
 #                                compute the base for a brand-new branch
 #                                push. Unset -> resolved from
@@ -48,23 +53,48 @@
 #
 # Git feeds the pushed refs to this hook's STDIN, one line per ref:
 #   <local ref> <local sha> <remote ref> <remote sha>
-# A deleted ref (local sha all zeros) is skipped: nothing local to verify.
-# A brand-new branch (remote sha all zeros) has no remote-side commit to
-# diff against, so BASE_SHA becomes the merge-base of the local head and the
+# A deleted ref (local sha all zeros — 40 hex for SHA-1 or 64 for a
+# SHA-256 repo, matched by `^0+$`, not a hardcoded 40-char literal) is
+# skipped: nothing local to verify. A brand-new branch (remote sha all
+# zeros, same either-length match) has no remote-side commit to diff
+# against, so BASE_SHA becomes the merge-base of the local head and the
 # remote's default branch (falling back to the local branch's root commit if
 # no merge-base is found — e.g. an unrelated-history remote).
 #
+# PUSHED-RANGE HONESTY: this hook can only ever run DCR_PREPUSH_CMD against
+# the tree that is actually checked out on disk right now — it cannot check
+# out each pushed ref's exact commit first. So for every non-deleted pushed
+# ref it refuses (clear message, fails closed) unless the pushed local sha
+# equals `git rev-parse HEAD` AND the working tree is clean; otherwise a
+# "pass" would silently verify a tree that is not the code being pushed.
+#
 # Exit code: 0 iff every non-deleted pushed ref's tier run passed (or was
-# explicitly allowed through unset). Fails closed on every other path.
+# explicitly allowed through unset/blank). Fails closed on every other path.
 set -euo pipefail
 
 remote_name="${1:-origin}"
 
-ZERO_SHA="0000000000000000000000000000000000000000"
-
 die() {
   printf 'pre-push-verify: %s\n' "$*" >&2
   exit 1
+}
+
+# is_zero_sha <sha> — true iff <sha> is non-empty and every char is '0'.
+# Matches `^0+$` without hardcoding a length, so a 40-hex SHA-1 zero id and a
+# 64-hex SHA-256 zero id (a SHA-256 repo's "no commit" sentinel) both count.
+is_zero_sha() {
+  case "$1" in
+    ''|*[!0]*) return 1 ;;
+    *) return 0 ;;
+  esac
+}
+
+# is_blank <str> — true iff <str> is empty or contains only whitespace.
+is_blank() {
+  case "$1" in
+    *[![:space:]]*) return 1 ;;
+    *) return 0 ;;
+  esac
 }
 
 # resolve_default_branch — print the remote's default branch name.
@@ -86,7 +116,7 @@ resolve_default_branch() {
 
 print_unset_help() {
   cat >&2 <<EOF
-pre-push-verify: DCR_PREPUSH_CMD is not set -- refusing to push (fail closed).
+pre-push-verify: DCR_PREPUSH_CMD is not set (or whitespace-only) -- refusing to push (fail closed).
 Configure the fast tier this hook must run before every push, e.g. in your
 shell profile or a project-local env file your shell sources:
   export DCR_PREPUSH_CMD="make lint test-unit"
@@ -98,16 +128,34 @@ EOF
 fail=0
 saw_ref=0
 
+# Captured once, before reading any ref: the tree this hook is actually able
+# to verify. Every non-deleted pushed ref is checked against this snapshot
+# (see PUSHED-RANGE HONESTY above) rather than re-read per ref, so a
+# DCR_PREPUSH_CMD invocation that itself dirties the tree can't change the
+# answer mid-loop.
+current_head="$(git rev-parse HEAD 2>/dev/null || true)"
+tree_is_dirty=1
+if git diff-index --quiet HEAD -- 2>/dev/null && [ -z "$(git status --porcelain 2>/dev/null)" ]; then
+  tree_is_dirty=0
+fi
+
 while read -r local_ref local_sha remote_ref remote_sha; do
   [ -n "${local_ref:-}" ] || continue
   saw_ref=1
 
-  if [ "${local_sha}" = "${ZERO_SHA}" ]; then
+  if is_zero_sha "${local_sha}"; then
     printf 'pre-push-verify: %s is a delete -- skipping\n' "${remote_ref}"
     continue
   fi
 
-  if [ "${remote_sha}" = "${ZERO_SHA}" ]; then
+  if [ -z "${current_head}" ] || [ "${local_sha}" != "${current_head}" ]; then
+    die "refusing ${local_ref} (${local_sha}) -- this hook can only verify the tree currently checked out (HEAD is ${current_head:-unknown}), and that does not match the commit being pushed. Check out ${local_sha} (or push from that commit) before pushing, or run DCR_PREPUSH_CMD yourself against the right tree."
+  fi
+  if [ "${tree_is_dirty}" -eq 1 ]; then
+    die "refusing ${local_ref} -- the working tree is dirty, so this hook's checked-out tree no longer matches HEAD (${current_head}), which is what it verifies. Commit or stash your changes before pushing."
+  fi
+
+  if is_zero_sha "${remote_sha}"; then
     default_branch="$(resolve_default_branch)"
     default_ref="refs/remotes/${remote_name}/${default_branch}"
     base_sha=""
@@ -126,7 +174,7 @@ while read -r local_ref local_sha remote_ref remote_sha; do
   export BASE_SHA="${base_sha}"
   export HEAD_SHA="${local_sha}"
 
-  if [ -z "${DCR_PREPUSH_CMD:-}" ]; then
+  if is_blank "${DCR_PREPUSH_CMD:-}"; then
     if [ "${DCR_PREPUSH_ALLOW_UNSET:-0}" = "1" ]; then
       printf 'pre-push-verify: DCR_PREPUSH_CMD is unset -- allowing push through (DCR_PREPUSH_ALLOW_UNSET=1)\n' >&2
       continue
@@ -136,7 +184,7 @@ while read -r local_ref local_sha remote_ref remote_sha; do
   fi
 
   printf 'pre-push-verify: %s (%s..%s): running: %s\n' "${local_ref}" "${base_sha}" "${local_sha}" "${DCR_PREPUSH_CMD}"
-  if ! sh -c "${DCR_PREPUSH_CMD}"; then
+  if ! sh -c "${DCR_PREPUSH_CMD}" </dev/null; then
     printf 'pre-push-verify: FAIL -- rejecting push of %s (DCR_PREPUSH_CMD exited non-zero)\n' "${local_ref}" >&2
     fail=1
   fi

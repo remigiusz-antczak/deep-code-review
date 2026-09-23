@@ -2367,6 +2367,82 @@ else
   record 1 "pre-push-verify: a deleted ref is skipped, never runs the tier"
 fi
 
+# Case: a SHA-256-repo-shaped zero id (64 hex chars, not the hardcoded 40-char
+# SHA-1 literal) is still detected as a delete and DCR_PREPUSH_CMD never runs.
+ppv_zero64="0000000000000000000000000000000000000000000000000000000000000000"
+ppv_run "$WORK/ppv-delete64.log" "refs/heads/gone64 $ppv_zero64 refs/heads/gone64 $ppv_local_sha" \
+  DCR_PREPUSH_CMD=false
+if [ "$PPV_RC" -eq 0 ] && grep -q 'is a delete -- skipping' "$WORK/ppv-delete64.log"; then
+  record 0 "pre-push-verify: a 64-hex (SHA-256-shaped) all-zero local sha is still detected as a delete"
+else
+  record 1 "pre-push-verify: a 64-hex (SHA-256-shaped) all-zero local sha is still detected as a delete"
+fi
+
+# Case: pushed-range honesty -- a pushed local sha that does NOT match the
+# checked-out HEAD is refused with a clear message, even though the ref line
+# looks well-formed and DCR_PREPUSH_CMD would otherwise pass.
+ppv_bogus_sha="abababababababababababababababababababab"
+ppv_run "$WORK/ppv-honesty-sha.log" "refs/heads/main $ppv_bogus_sha refs/heads/main $ppv_bogus_sha" \
+  DCR_PREPUSH_CMD=true
+if [ "$PPV_RC" -ne 0 ] && grep -q 'does not match the commit being pushed' "$WORK/ppv-honesty-sha.log"; then
+  record 0 "pre-push-verify: a pushed local sha that mismatches checked-out HEAD is refused"
+else
+  record 1 "pre-push-verify: a pushed local sha that mismatches checked-out HEAD is refused"
+fi
+
+# Case: pushed-range honesty -- a dirty working tree is refused even when the
+# pushed local sha matches HEAD, since the checked-out tree no longer matches
+# what DCR_PREPUSH_CMD would actually verify. Cleaned up immediately after so
+# later cases (which assume a clean fixture) are unaffected.
+printf 'dirty\n' >>"$ppvroot/local/f.txt"
+ppv_run "$WORK/ppv-honesty-dirty.log" "refs/heads/main $ppv_local_sha refs/heads/main $ppv_local_sha" \
+  DCR_PREPUSH_CMD=true
+git -C "$ppvroot/local" checkout -q -- f.txt
+if [ "$PPV_RC" -ne 0 ] && grep -q 'working tree is dirty' "$WORK/ppv-honesty-dirty.log"; then
+  record 0 "pre-push-verify: a dirty working tree is refused"
+else
+  record 1 "pre-push-verify: a dirty working tree is refused"
+fi
+
+# Case: whitespace-only DCR_PREPUSH_CMD is treated the same as unset --
+# fails closed by default (not run as an empty-but-passing shell command).
+ppv_run "$WORK/ppv-blank.log" "refs/heads/main $ppv_local_sha refs/heads/main $ppv_local_sha" \
+  'DCR_PREPUSH_CMD=   '
+if [ "$PPV_RC" -ne 0 ] && grep -q 'DCR_PREPUSH_CMD is not set' "$WORK/ppv-blank.log"; then
+  record 0 "pre-push-verify: whitespace-only DCR_PREPUSH_CMD fails closed like unset"
+else
+  record 1 "pre-push-verify: whitespace-only DCR_PREPUSH_CMD fails closed like unset"
+fi
+
+# Case: the SAME whitespace-only config, but DCR_PREPUSH_ALLOW_UNSET=1 lets
+# it through via the unset path (not by running the blank string as a command).
+ppv_run "$WORK/ppv-blank-allowed.log" "refs/heads/main $ppv_local_sha refs/heads/main $ppv_local_sha" \
+  'DCR_PREPUSH_CMD=   ' DCR_PREPUSH_ALLOW_UNSET=1
+if [ "$PPV_RC" -eq 0 ] && grep -q 'allowing push through' "$WORK/ppv-blank-allowed.log"; then
+  record 0 "pre-push-verify: whitespace-only DCR_PREPUSH_CMD + ALLOW_UNSET=1 lets the push through"
+else
+  record 1 "pre-push-verify: whitespace-only DCR_PREPUSH_CMD + ALLOW_UNSET=1 lets the push through"
+fi
+
+# Case: DCR_PREPUSH_CMD must not be able to consume the ref list off the
+# hook's own stdin. Two refs are pushed in one invocation; the command reads
+# (drains) whatever stdin it is handed. If the hook fails to redirect the
+# command's stdin from /dev/null, draining eats the second ref line before
+# the `while read` loop can see it, so the second ref's check silently never
+# runs. The command decides pass/fail from BASE_SHA (distinct per ref, via
+# each ref's own remote sha) rather than from anything on stdin, so this
+# proves the *loop*, not the command's own logic, is what's under test.
+ppv_second_base="1111111111111111111111111111111111111e"
+ppv_stdin_cmd="cat >/dev/null; if [ \"\$BASE_SHA\" = \"${ppv_second_base}\" ]; then exit 1; else exit 0; fi"
+ppv_two_refs="refs/heads/main $ppv_local_sha refs/heads/main $ppv_local_sha
+refs/heads/second $ppv_local_sha refs/heads/second $ppv_second_base"
+ppv_run "$WORK/ppv-stdin.log" "$ppv_two_refs" "DCR_PREPUSH_CMD=$ppv_stdin_cmd"
+if [ "$PPV_RC" -ne 0 ] && grep -q 'FAIL -- rejecting push of refs/heads/second' "$WORK/ppv-stdin.log"; then
+  record 0 "pre-push-verify: DCR_PREPUSH_CMD can't consume the ref list -- the second ref still runs and its failure blocks"
+else
+  record 1 "pre-push-verify: DCR_PREPUSH_CMD can't consume the ref list -- the second ref still runs and its failure blocks"
+fi
+
 # Case: a brand-new branch (remote sha all zeros) computes BASE_SHA as the
 # merge-base against the remote's default branch, not the literal zero sha.
 git -C "$ppvroot/local" checkout -qb feature >/dev/null 2>&1

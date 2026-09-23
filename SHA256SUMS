@@ -133,7 +133,7 @@ d5606abd5b9ec08d6d4bf98e0e51b1c52d430040bb1a957e4b545bff816ae2cf  .claude/skills
 317acae212ed73279df66eb7b419b8426733bb1be05345b0e1c8b2c6790ad8a1  .claude/skills/deep-code-review/scripts/validate_status_claims.py
 20c9c131848f08fbf7bdfcd9a84224da7fe69e7e68ad65c2228911380c7b77a3  .claude/skills/deep-code-review/templates/dcr-gates.sh
 e9df3483336d6470072f8b7d7bfd5e93e281da2b5a892590101b4cb3ed89e419  .claude/skills/deep-code-review/templates/dcr-gates.yml
-76dbc8b83b553fbe09abb4cf020c1fc13490e190ddb8489e1fa844bac23cb9de  .claude/skills/deep-code-review/templates/pre-push-verify.sh
+9ae59c95c762326473bb9351ba21924682676844218beea07d12cfa2cbffe2f3  .claude/skills/deep-code-review/templates/pre-push-verify.sh
 5068e60f9615684c8d8bf8fbd7896748267cf6688895a701bdd25cd945181cb8  .claude/skills/growth-analytics/SKILL.md
 cc52f678848b814373757b460383bf61960e4943c203735adde0a350b3e50989  .claude/skills/growth-analytics/VERSION
 4c8047eeb8b174b520c736e7b189d5a49e4a755aad738e9c44c8af4e25fe1067  .claude/skills/growth-analytics/evals/evals.json

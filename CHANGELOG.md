@@ -6,13 +6,20 @@ follows Keep a Changelog; versioning follows Semantic Versioning.
 ## [1.439.0] — 2026-09-23
 
 ### Changed — the load every review pays cut by ~46%
-- The Phase 0–2 mandatory load drops from 65,903 → 35,858 estimated tokens (LIGHT) and 87,137 → 47,452 (FULL). `method.md`, `testing-and-evals.md`, `language-stack-redflags.md`, `domain-checklists.md`, and `branch-and-merge-hygiene.md` keep only what every review needs; conditional depth moves into routed sub-files loaded on an explicit trigger (`lang-*` per language family — shell and SQL fire on any CI/hook/build shell or any SQL/ORM/migration; `domain-a…w`; `testing-ui` / `testing-ai-evals` / `testing-ml`; `method-situational`; `merge-operations`). Line conservation verified: all 3,770 original non-blank lines appear exactly once. One always-on line stays in `method.md`: check any gate against its cited standard and run it twice. Every archetype must-load ceiling ratcheted down.
+- The Phase 0–2 mandatory load drops from 65,903 → 35,858 estimated tokens (LIGHT) and 87,137 → 47,452 (FULL). `method.md`, `testing-and-evals.md`, `language-stack-redflags.md`, `domain-checklists.md`, and `branch-and-merge-hygiene.md` keep only what every review needs; conditional depth moves into routed sub-files loaded on an explicit trigger (`lang-*` per language family — shell and SQL fire on any CI/hook/build shell or any SQL/ORM/migration; `domain-a…w`; `testing-ui` / `testing-ai-evals` / `testing-ml`; `method-situational`; `merge-operations`). 3,770 lines conserved: 0 duplicated, 41 pointer repoints. One always-on line stays in `method.md`: check any gate against its cited standard and run it twice. Every archetype must-load ceiling ratcheted down.
 - `ci-gates.sh mustload`: phase floors are exact pins (a drop must be re-pinned, so a mandatory reference can't silently leave the floor); conditional phase references must be listed as `phase-conditional` rows; the phase-table parser handles plain and conditional forms in one cell.
 - The SKILL.md role table was removed as a duplicate of `role-coverage.md` (still routed on its trigger; QA and Release rows gained `testing-ui.md` and `merge-operations.md`).
 
 ### Added
 - `deep-code-review/templates/pre-push-verify.sh`: a pre-push hook for target repos that re-runs the configured fast lint + unit step (`DCR_PREPUSH_CMD`) on the pushed range and fails closed when unconfigured — a rebase or merge-conflict resolution is unverified code. `install.sh --with-gates` writes it to `.githooks/pre-push` (never overwrites) and prints the `core.hooksPath` command. A hook is self-report; CI stays the control. +1 eval. Closes #1093.
 - size-budget-raise: .claude/skills/agentic-delivery/references/merge-queue-worktrees.md 55121→55535 post-rebase re-verify bullet (#1093) net of repointed cross-references
+
+### Fixed — pre-push-verify.sh (#1093 follow-up hardening)
+- `DCR_PREPUSH_CMD` now runs with its stdin redirected from `/dev/null`, so a command that itself reads stdin (e.g. a test runner or `cat`) can no longer drain the pushed-ref list off the hook's own stdin mid-loop and silently skip every ref after the one it drained.
+- **Pushed-range honesty**: the hook can only ever run `DCR_PREPUSH_CMD` against the tree actually checked out on disk, never each pushed ref's own commit. It now refuses (clear message, fails closed) any non-deleted pushed ref whose local sha does not equal `git rev-parse HEAD`, and refuses outright when the working tree is dirty — either way a "pass" would have silently verified a tree that is not the code being pushed. Header comment updated to state this explicitly.
+- Whitespace-only `DCR_PREPUSH_CMD` (set but blank) is now treated the same as unset — fails closed unless `DCR_PREPUSH_ALLOW_UNSET=1` — instead of running the blank string as a trivially-passing no-op command.
+- Zero-sha detection (deleted ref / brand-new branch) now matches `^0+$` instead of a hardcoded 40-char SHA-1 literal, so a SHA-256 repo's 64-hex all-zero id is recognized too.
+- 6 new END-block cases in `scripts/test-ci-gates.sh` (stdin-draining second ref, mismatched-HEAD refusal, dirty-tree refusal, whitespace-only-as-unset x2, 64-hex zero-sha delete), each verified fail-before / pass-after against the pre-fix template.
 
 ## [1.438.0] — 2026-09-23
 
