@@ -49,7 +49,7 @@ cc52f678848b814373757b460383bf61960e4943c203735adde0a350b3e50989  .claude/skills
 bb541f96bd7d0c3bb4adff8dcaac0f50efa2493b8215b6aa671805bfbb89c42b  .claude/skills/contribution/references/contribution-procedure.md
 ccc539d9dcacc70bbf111c9e2491944c8e062f677864d2a009be92b2fb48a615  .claude/skills/deep-code-review/SKILL.md
 4192f5586528400a787f784821861981ca186f293dfc0f39b73c8bd69af1e0d0  .claude/skills/deep-code-review/VERSION
-7c2d33a9f4d78cd827bc2c03187d73eff21d27130779e24e3a0e0b56c059cc25  .claude/skills/deep-code-review/evals/evals.json
+2960f169630e6b20570f3da8af73c895ac095b511f18a78707a70312818cef18  .claude/skills/deep-code-review/evals/evals.json
 a24fdb1c8dd47a852c0e02b395a256b0b9b5e188cf0a09cceeaa33ece45ba815  .claude/skills/deep-code-review/references/a11y-aria.md
 5a3e66353bcdabb0289ea926c7f192dbad750edca74ef0f0d8c0f6b71bcbf5ef  .claude/skills/deep-code-review/references/a11y-color-motion.md
 8b7507aecf973b020c10ce00792e296fa8a3585c52dccee5add7d51cb0b553db  .claude/skills/deep-code-review/references/a11y-focus.md
@@ -111,7 +111,7 @@ ba03d850119e84e0abfd6875ab482b827d47edba1bec2bc0be0eb26806235f4d  .claude/skills
 f2374ef94de331d8a965a4647c6039bf43dc9b198f697b365825ccc744d30175  .claude/skills/deep-code-review/references/lang-sql.md
 be322c1ce89821b4582ce742dd9e6b8fdac1778693eb5f4882663f85e603e52f  .claude/skills/deep-code-review/references/language-stack-redflags.md
 d82ccb09e1cf77bff20b5485ec85f826453c6cfc381541b6ff16133d662eeadf  .claude/skills/deep-code-review/references/machine-report.md
-384f7cf982523ceeb6e927350f4d7eafe8ba8378b9e04e4ad4778350d4ae082c  .claude/skills/deep-code-review/references/merge-operations.md
+39f174c8a542a3130a7b6bf6762b5a0bf285adaec121a6506b543610ab902c21  .claude/skills/deep-code-review/references/merge-operations.md
 3a9b2c54c5cbbe9af140ac42da57af85491fb5e5aabb24262834790dd134f68b  .claude/skills/deep-code-review/references/method-situational.md
 8ee8f226b643c81ce4e97d3a5e27ea6b7aeb86ff1f35b100a418eeb27143b904  .claude/skills/deep-code-review/references/method.md
 b365b87e6f514422d5ef9bc10142f0f1d07a9e3deead2c93f6125a1bc8d25548  .claude/skills/deep-code-review/references/migration-parity.md
