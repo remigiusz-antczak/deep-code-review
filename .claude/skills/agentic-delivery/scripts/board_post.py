@@ -17,7 +17,7 @@ refuses a post that breaks a rule, before anything reaches the forge.
 RULES (each rejection names the rule; exit 1)
 ---------------------------------------------
 - TYPE must be one of CLAIM RELEASE DECISION HANDOFF BLOCKER FIX-CLAIM
-  QUESTION ANSWER. STATUS/ACK/READY/LANDED are rejected as chatter; a body
+  QUESTION ANSWER AUDIT. STATUS/ACK/READY/LANDED are rejected as chatter; a body
   that is only an acknowledgement ("ok", "thanks", "+1", ...) is rejected too.
 - Header + body <= MAX_POST_CHARS (1000). Longer content belongs in a
   committed file or PR, linked from the post.
@@ -42,6 +42,11 @@ RULES (each rejection names the rule; exit 1)
   whole quoted string, never a bare substring. A claim of "fixed" is thus
   pinned to a commit on the governing branch and a regression test that
   exists in it.
+- AUDIT requires `--sha` and `--verdict gap|done|na`: one peer's measured
+  verdict on each ref, taken at a commit that must be an ancestor of the
+  default branch (the same check as FIX-CLAIM's sha). It is the shared
+  backlog peers consume instead of re-measuring (`board_state.py --backlog`,
+  `claim_probe.py`), so an audit of an unmerged tree is refused.
 
 OUTPUT
 ------
@@ -57,6 +62,8 @@ USAGE
                 --body-file note.md [--ttl 90] [--post]
   board_post.py ... --type FIX-CLAIM --refs '#12' --sha abc1234 \\
                 --test tests/test_x.py::test_y [--topic ratchet] --body-file fix.md
+  board_post.py ... --type AUDIT --refs '#12,web/cart' --sha abc1234 \\
+                --verdict na --body-file audit.md
   board_post.py --selftest
 
 Exit codes: 0 composed (and posted with --post); 1 rejected by a rule;
@@ -185,12 +192,13 @@ def _ere_escape(literal: str) -> str:
     return re.sub(r"([.\[\]\\(){}*+?^$|])", r"\\\1", literal)
 
 
-def verify_fix_claim(sha: str, test: str, default_branch: str | None, repo_dir: str, runner) -> list:
-    """Return rule violations for a FIX-CLAIM's sha:/test: (empty = verified).
+def verify_on_default(sha: str, default_branch: str | None, repo_dir: str, runner) -> tuple:
+    """Return `(violations, full_sha)`: is `sha` a commit reachable from the default branch?
 
-    Side-effects: read-only git queries through `runner`. Raises GitError when
-    git cannot answer at all (no repo, no resolvable default branch), which the
-    caller turns into exit 2 — an unanswerable proof is not a passing proof.
+    Shared by FIX-CLAIM and AUDIT. Side-effects: read-only git queries through
+    `runner`. Raises GitError when git cannot answer at all (no repo, no
+    resolvable default branch), which the caller turns into exit 2 — an
+    unanswerable proof is not a passing proof.
     """
     def git(*args):
         return runner(["git", "-C", repo_dir, *args])
@@ -208,13 +216,28 @@ def verify_fix_claim(sha: str, test: str, default_branch: str | None, repo_dir: 
         raise GitError(f"default branch {ref!r} does not resolve to a commit")
     rc, full, _ = git("rev-parse", "--verify", "--quiet", f"{sha}^{{commit}}")
     if rc != 0:
-        return [f"sha:{sha} is not a commit in this repository"]
+        return [f"sha:{sha} is not a commit in this repository"], ""
     full = full.strip()
     rc, _, err = git("merge-base", "--is-ancestor", full, ref)
     if rc == 1:
-        return [f"sha:{sha} is not reachable from the default branch {ref} (a fix off the governing branch fixes nothing)"]
+        return [f"sha:{sha} is not reachable from the default branch {ref} (off the governing branch it proves nothing)"], ""
     if rc != 0:
         raise GitError(f"merge-base failed: {err.strip()[:200]}")
+    return [], full
+
+
+def verify_fix_claim(sha: str, test: str, default_branch: str | None, repo_dir: str, runner) -> list:
+    """Return rule violations for a FIX-CLAIM's sha:/test: (empty = verified).
+
+    Side-effects: read-only git queries through `runner`. Raises GitError when
+    git cannot answer at all (see verify_on_default).
+    """
+    def git(*args):
+        return runner(["git", "-C", repo_dir, *args])
+
+    errors, full = verify_on_default(sha, default_branch, repo_dir, runner)
+    if errors:
+        return errors
     path, _, name = test.partition("::")
     rc, kind, _ = git("cat-file", "-t", f"{full}:{path}")
     if rc != 0:
@@ -237,9 +260,9 @@ def verify_fix_claim(sha: str, test: str, default_branch: str | None, repo_dir: 
 def compose(args, body: str, rules: list, runner) -> tuple:
     """Validate one post; return (violations, composed_text). Pure except git.
 
-    Side-effects: only the read-only git queries a FIX-CLAIM needs.
+    Side-effects: only the read-only git queries a FIX-CLAIM or AUDIT needs.
     """
-    fields = {k: str(v) for k, v in (("sha", args.sha), ("test", args.test), ("topic", args.topic),
+    fields = {k: str(v) for k, v in (("sha", args.sha), ("test", args.test), ("verdict", args.verdict), ("topic", args.topic),
                                      ("ttl", args.ttl), ("to", args.to), ("of", args.of), ("gate", args.gate)) if v is not None}
     errors = []
     if not bc.validate_agent(args.agent):
@@ -259,6 +282,8 @@ def compose(args, body: str, rules: list, runner) -> tuple:
     errors += [f"privacy: {h}" for h in privacy_hits(text, rules)]
     if args.type == "FIX-CLAIM" and not errors:
         errors += verify_fix_claim(args.sha, args.test, args.default_branch, args.repo_dir, runner)
+    if args.type == "AUDIT" and not errors:
+        errors += verify_on_default(args.sha, args.default_branch, args.repo_dir, runner)[0]
     return errors, text
 
 
@@ -273,6 +298,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--body-file")
     p.add_argument("--sha")
     p.add_argument("--test")
+    p.add_argument("--verdict", help="AUDIT only: gap | done | na")
     p.add_argument("--topic")
     p.add_argument("--ttl", type=int)
     p.add_argument("--to")
@@ -448,6 +474,10 @@ def _selftest() -> int:
         ("fix-claim-directory-path-rejected", lambda: expect(REJECTED, "fixed", *fix, "--sha", g["on"], "--test", "tests", needle="is a tree, not a file")),
         ("fix-claim-trivial-substring-name-rejected", lambda: expect(REJECTED, "fixed", *fix, "--sha", g["on"], "--test", "tests/test_ratchet.py::test", needle="no definition")),
         ("fix-claim-prefix-name-rejected", lambda: expect(REJECTED, "fixed", *fix, "--sha", g["on"], "--test", "tests/test_ratchet.py::test_allowlist", needle="no definition")),        ("fix-claim-verified-accepted", lambda: expect(OK, "Pinned allowlist; regression test added.", *fix, "--sha", g["on"], "--test", "tests/test_ratchet.py::test_allowlist_pin")),
+        ("audit-without-verdict-rejected", lambda: expect(REJECTED, "measured", "--type", "AUDIT", "--refs", "#12", "--sha", g["on"], needle="requires verdict:")),
+        ("audit-bad-verdict-rejected", lambda: expect(REJECTED, "measured", "--type", "AUDIT", "--refs", "#12", "--sha", g["on"], "--verdict", "maybe", needle="verdict: has a malformed")),
+        ("audit-off-default-branch-rejected", lambda: expect(REJECTED, "measured", "--type", "AUDIT", "--refs", "#12", "--sha", g["off"], "--verdict", "gap", needle="not reachable")),
+        ("audit-verified-accepted", lambda: expect(OK, "Measured at mainline: no counterpart module.", "--type", "AUDIT", "--refs", "#12,web/cart", "--sha", g["on"], "--verdict", "na")),
         ("fix-claim-option-shaped-branch-errors", lambda: expect(ERROR, "fixed", *fix, "--sha", g["on"], "--test", "tests/test_ratchet.py", "--default-branch=--output=x", needle="looks like an option")),
         ("fix-claim-bad-default-branch-errors", lambda: expect(ERROR, "fixed", *fix, "--sha", g["on"], "--test", "tests/test_ratchet.py", "--default-branch", "nope", needle="does not resolve")),
     ]

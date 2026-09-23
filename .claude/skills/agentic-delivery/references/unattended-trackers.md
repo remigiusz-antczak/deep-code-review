@@ -151,6 +151,8 @@ An agent holding a block of unattended time *to work a backlog* treats the *firs
 deliverable merged, the item it was pointed at finished — as the end of the assignment, goes quiet, and leaves
 the rest of the granted window unspent. The grant was a loop; that milestone was one turn of it. Read a time
 budget as *work the ranked backlog until a termination condition fires*, not *do the one thing, then wait*.
+Every move-on rule here and in the next two sections yields to an OPEN owner priority:
+`unattended-operating-mode.md` **An open owner priority outranks every other item**.
 
 - **Keep the backlog outside the working context.** A ranked list of what to do next lives in a file or a
   tracker the loop re-reads each turn — not only in the conversation, which a compaction or a handoff can drop.

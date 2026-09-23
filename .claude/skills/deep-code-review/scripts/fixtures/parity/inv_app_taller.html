@@ -1,0 +1,54 @@
+<!doctype html>
+<!--
+  parity_differ.py self-test fixture: an APP that is taller and wider than the
+  inventory design (explicit heights/widths, spacers, extra wrappers, line
+  breaks) and shows different sample values, marked data-sample. Its element
+  inventory equals the design's -> expect MATCH (exit 0). Size is never an input.
+-->
+<html>
+<body style="width: 1920px">
+<main style="min-height: 3000px; padding: 64px">
+  <section data-section="overview" data-state="ready" style="height: 900px">
+    <div class="hero" style="height: 240px">
+      <h1>Acme Capital portfolio</h1>
+    </div>
+    <img src="logo.svg" alt="Acme Capital logo" width="640" height="320">
+    <div style="height: 120px"></div>
+    <p data-item>Welcome back, <strong>Jane Smith</strong></p>
+    <p>Total balance <span data-sample>$9,999</span></p>
+    <br><br>
+    <div class="toolbar" style="width: 1200px">
+      <button type="button" style="width: 400px; height: 96px">Export CSV</button>
+      <button type="button" style="width: 400px; height: 96px">Share</button>
+    </div>
+    <a href="/holdings" style="display: block; height: 80px">View all holdings</a>
+  </section>
+  <section data-section="holdings" style="height: 1400px">
+    <h2>Holdings</h2>
+    <label for="search-holdings">Search holdings</label>
+    <input id="search-holdings" type="search" style="width: 900px">
+    <label><input type="checkbox"> Show closed positions</label>
+    <table style="width: 1800px">
+      <tr style="height: 120px"><th>Fund</th><th>Value</th></tr>
+      <tr data-item style="height: 120px"><td>Growth Fund</td><td data-sample>$7,500</td></tr>
+      <tr data-item style="height: 120px"><td>Income Fund</td><td data-sample>$3,100</td></tr>
+    </table>
+    <button type="button">Add holding</button>
+  </section>
+  <section data-section="activity" style="height: 1200px">
+    <h2>Recent activity</h2>
+    <div role="tablist" style="height: 72px">
+      <button role="tab">All</button>
+      <button role="tab">Deposits</button>
+    </div>
+    <ul style="line-height: 3">
+      <li data-item>Deposit received</li>
+      <li data-item>Report generated</li>
+      <li data-item>Profile updated</li>
+    </ul>
+    <div style="height: 200px"></div>
+    <button type="button"><svg aria-hidden="true" width="48" height="48"></svg>Load more</button>
+  </section>
+</main>
+</body>
+</html>

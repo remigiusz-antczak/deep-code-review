@@ -2,6 +2,16 @@
   "skill_name": "agentic-ceo",
   "evals": [
     {
+      "id": "ledger-is-the-only-todo-list",
+      "prompt": "We just came back from a context compaction mid-session with a pile of owner asks in flight. What do you check before doing anything else, and how do you report progress?",
+      "expected_output": "Read scripts/task_ledger.py's ledger file (status/next) as the source of truth rather than trying to recall the asks from memory; every owner ask already in flight should already be a row, add --ask any that are missing (never fabricate a new list from memory), and report progress via `status`, not a paraphrase. Never create a second todo list.",
+      "expectations": [
+        "Reads the durable ledger file first, not memory, after a compaction",
+        "Reports progress from the ledger's status output rather than a recalled paraphrase",
+        "Does not create a second/parallel todo list"
+      ]
+    },
+    {
       "id": "routes-not-fans-out-on-small-work",
       "prompt": "Two-day prototype, one repo, small change. Should I spin up a fleet of subagents to move faster?",
       "expected_output": "No. One agent wearing several skill-hats; fan-out is only for read-mostly, decomposable work. A swarm on a small or write-heavy job burns tokens and collides.",

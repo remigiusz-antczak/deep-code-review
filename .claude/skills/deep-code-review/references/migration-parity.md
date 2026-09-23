@@ -94,14 +94,16 @@ the "Beware the proxy" completion trap — `report-format.md`.)
 
 **"Aligned / matched / mirrored" is a two-sided claim, gated by `scripts/parity_differ.py`.**
 Read this when a port, restyle, or migration is about to be called aligned to its reference:
-run the differ, section-by-section, before the claim. MATCH (exit 0) requires comparing the
-**rendered** design against the **rendered, running** app, per named section — a page height,
-a screenshot, a token-name similarity, or a lane's self-report is not alignment and may never
+run the differ before the claim. MATCH (exit 0) requires comparing the **rendered** design
+against the **rendered, running** app, per named section and its element inventory — a page
+height, element sizes, a screenshot, a token-name similarity, or a lane's self-report is not alignment and may never
 be quoted as a verdict; a one-sided measurement produces a confident **wrong** pass. One side
 missing or unreadable → `COULD_NOT_CHECK`, never a pass. Design-populated sections present
 but empty in the app → `CANNOT_COMPARE`: seed the app's data to the design's data state first
 — never condense or remove the empty sections to "match," the design wants them populated.
-Extra app sections beyond the design are kept as a superset and reported, never failed. The
+Extra app sections are a reported superset; a differing item fails unless owner-accepted
+(`--accept`: owner-authored only — the differ checks commit authorship and prints
+`MATCH_WITH_ACCEPTED`, never a plain MATCH). The
 `MISMATCH` list **is** the work queue — mirror it section-by-section, and never spawn a
 mirror lane for a section the differ already reports MATCH. Compare like-for-like: the
 design's default view against the app's **same** view, and verify the owner's stated-priority
@@ -117,17 +119,21 @@ For the differ's matched-state diff of gated sections, render both sides past si
 dev identity), or its `missing` list is an auth gap, not a build order (the MISMATCH
 precondition line); the signed-out default surface stays its own required check
 (`rendered-parity.md`). Disclose the comparison state beside the verdict (goalpost rule, `rendered-parity.md`).
-Only on matched states is a gross-dimension delta parity evidence, not a volume notice (below).
 
 **Pin the target export first.** When a design package holds several exports of one prototype,
 grep each for distinctive UI strings from the newest change-log entries; the one holding all is
 the target (record it where every lane reads it), never the largest or best-named. None matches →
 ask the design owner (`method-situational.md`'s stale-input rule).
+Even the pinned export is **one requirement source, not the requirement set**: feedback from
+other sources that it never captured is kept in the delivery ledger
+(`agentic-delivery/scripts/feedback_ledger.py`). Before re-aligning to the design, run its
+`accept-file`; the owner commits it as the differ's `--accept`. Send a design-vs-feedback
+conflict to the owner; never settle it by re-aligning.
 
-**Check order: cheap and deterministic first — an earlier mismatch stops the rest.** Token
-**values**: `scripts/token_differ.py --design <f> --app <f>` (0 = all MATCH), then the
-structural differ, then screenshots: a token or `MISMATCH`/`CANNOT_COMPARE` verdict often
-explains a later pixel diff — fix, re-run first.
+**Check order: cheap and deterministic first — an earlier mismatch stops the rest.** Inventory
+(`parity_differ.py`; completeness = items matched, never pixels), then token **values**
+(`scripts/token_differ.py --design <f> --app <f>`, 0 = all MATCH), then structure/visual
+screenshots: an earlier verdict often explains a later pixel diff — fix, re-run first.
 
 ## Scope a parity claim to the correspondence table — one screen verified is not the product
 
@@ -164,7 +170,9 @@ data (dozens–hundreds of rows) while the mockup shows three to five. Much of t
 **data-volume artifact**, not a design difference — the mockup's calm emptiness is partly
 just emptiness. Anchor findings on **treatment** (layout structure, spacing scale, component
 choice, hierarchy, chrome/nav, default view, empty/overflow handling), **not** absolute list
-length, page height, or item count.
+length, page height, or item count. The differ is the one exception: it always compares row
+and value-slot counts, so seed the app to the design's data state first; `data-sample` masks
+values, never counts.
 
 **Run a foundation check before classifying screen-by-screen: diff both sides' design tokens
 by resolved value, not name.** Bucket-(a) gaps recurring on every screen despite repeated

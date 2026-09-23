@@ -124,6 +124,20 @@ yes-mode: it still surfaces real disagreement (a collision, a quality-bar
 breach, spread-thin mediocrity) in one line with the standard cited, then
 the owner decides.
 
+## The task ledger — the ONE durable todo list
+
+Chaos-playbook step 1 ("capture losslessly") is not memory — it is
+`scripts/task_ledger.py`, one markdown file per project (default
+`.claude/TASKS.md`) that survives a compaction. Read it at session start and
+after ANY compaction. Split a multi-ask message into one `add --ask` per
+ask, verbatim, before work starts. **Never a second list**: the harness
+TodoWrite may be a per-session view of the ledger, never a second source. A
+near-duplicate prints both texts; answer `--same T-###` or `--new`. Report
+from `status` (exit 1 = open asks exist, informational), never memory.
+`next` returns `doing` first, then `.claude/PRIORITY.md`, then the oldest
+open; `reconcile` catches a dropped ask. `done` needs a sha/URL/`#N`/test
+id; `block` needs `--party`; `drop` needs the owner's `--quote`.
+
 ## Stay strategic
 The conductor routes, decides, and oversees; it does not do a specialist's
 delivery by hand when a skill or lane should. Delivery, QA, and security run
@@ -134,6 +148,8 @@ Dispatch aged P0 / mechanism work before presentation polish; `agentic-delivery`
 `unattended-operating-mode.md` routes two opt-in gates: `scripts/priority_gate.py`
 blocks a presentation PR while aged P0/mechanism work is uncited, and
 `scripts/refix_gate.py` blocks churn without a class artifact.
+An OPEN owner priority outranks both: dispatch nothing outside it until DONE or BLOCKED
+(same file, **An open owner priority outranks every other item**; `scripts/focus_gate.py`).
 
 ## Output discipline (no slop) — enforced across the suite
 Every user-facing output the suite produces — message, report, plan, table, or
@@ -151,6 +167,9 @@ that bar.
   named, the rest held with visible state, and no affect-management.
 - Unknowable business/market/legal inputs routed to the owner or a
   professional, never fabricated; stage never relaxed the floor.
+- The task ledger (`scripts/task_ledger.py`), not memory, is the source of
+  truth: every owner ask is in it, `status` (not a paraphrase) reports
+  progress, and no second list was ever created.
 
 ## Anti-rationalization (excuse → rebuttal)
 
@@ -161,6 +180,7 @@ that bar.
 | "The owner is stressed — tell them it's fine." | Affect-management invalidates and provokes reactance. Show the captured list and the one next action instead. |
 | "Do the fix myself, briefing is slower." | Small project: yes, one agent does it. With lanes in flight, doing it yourself means you stopped routing — dispatch and oversee. |
 | "Restate the skill's steps here so it's handy." | That makes the registry a bundle and duplicates the skill. Point to the skill; let it hold the method. |
+| "I'll just remember the list, no need for the ledger file." | Memory is exactly what a compaction or a lost context erases. `add` every ask to `scripts/task_ledger.py` before starting; `status` reports from the file, never from memory. |
 
 ## Related skills (this repository)
 - `agentic-delivery` — gated multi-role delivery; the delivery mechanics the
@@ -189,4 +209,7 @@ fetch and log a source before citing a specific figure (repo convention).
   (`routes-stage-area-to-skill`).
 - A market/competitor/legal input is routed to the owner, never fabricated
   (`routes-unknowable-to-owner`).
+- Under a flood or after a compaction, asks go into `scripts/task_ledger.py`
+  (not memory), progress comes from `status`, and no second list is created
+  (`ledger-is-the-only-todo-list`).
 - `evals/evals.json` plants these cases.

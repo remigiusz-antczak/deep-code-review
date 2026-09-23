@@ -27,26 +27,26 @@
 #   find .claude/skills \( -name 'SKILL.md' -o -path '*/references/*.md' \) \
 #     -type f | LC_ALL=C sort | while IFS= read -r f; do \
 #     printf '%s\t%s\n' "$f" "$(LC_ALL=C wc -c < "$f" | tr -d '[:space:]')"; done
-.claude/skills/agentic-ceo/SKILL.md	11611
-.claude/skills/agentic-delivery/SKILL.md	23804
-.claude/skills/agentic-delivery/references/dev-env-ownership.md	26676
+.claude/skills/agentic-ceo/SKILL.md	13257
+.claude/skills/agentic-delivery/SKILL.md	23862
+.claude/skills/agentic-delivery/references/dev-env-ownership.md	28376
 .claude/skills/agentic-delivery/references/fanout-host-sizing.md	36927
 .claude/skills/agentic-delivery/references/fast-agentic-delivery.md	6348
 .claude/skills/agentic-delivery/references/gate-epistemology.md	3955
 .claude/skills/agentic-delivery/references/host-enforcement.md	10189
 .claude/skills/agentic-delivery/references/incident-response.md	7665
 .claude/skills/agentic-delivery/references/merge-queue-worktrees.md	55529
-.claude/skills/agentic-delivery/references/multi-session-coordination.md	56102
+.claude/skills/agentic-delivery/references/multi-session-coordination.md	56462
 .claude/skills/agentic-delivery/references/production-grade-product-playbook.md	6635
-.claude/skills/agentic-delivery/references/project-state.md	6404
+.claude/skills/agentic-delivery/references/project-state.md	7452
 .claude/skills/agentic-delivery/references/retrospective.md	4577
-.claude/skills/agentic-delivery/references/roles.md	17065
+.claude/skills/agentic-delivery/references/roles.md	18783
 .claude/skills/agentic-delivery/references/support-ops.md	4455
 .claude/skills/agentic-delivery/references/template-adr.md	2481
 .claude/skills/agentic-delivery/references/template-postmortem.md	3223
-.claude/skills/agentic-delivery/references/unattended-operating-mode.md	17653
-.claude/skills/agentic-delivery/references/unattended-trackers.md	43395
-.claude/skills/agentic-delivery/references/verification-handback.md	49536
+.claude/skills/agentic-delivery/references/unattended-operating-mode.md	19535
+.claude/skills/agentic-delivery/references/unattended-trackers.md	43567
+.claude/skills/agentic-delivery/references/verification-handback.md	50258
 .claude/skills/business-ops/SKILL.md	10581
 .claude/skills/business-ops/references/regulated-domain-triage.md	8045
 .claude/skills/communication-structure/SKILL.md	5196
@@ -72,7 +72,7 @@
 .claude/skills/deep-code-review/references/appsec-tokens.md	6997
 .claude/skills/deep-code-review/references/billing-correctness.md	8429
 .claude/skills/deep-code-review/references/branch-and-merge-hygiene.md	46376
-.claude/skills/deep-code-review/references/concurrency-shared-state.md	30933
+.claude/skills/deep-code-review/references/concurrency-shared-state.md	31964
 .claude/skills/deep-code-review/references/data-quality.md	75230
 .claude/skills/deep-code-review/references/dependency-currency-and-upgrades.md	16031
 .claude/skills/deep-code-review/references/docs-and-dx.md	22511
@@ -117,7 +117,7 @@
 .claude/skills/deep-code-review/references/merge-operations.md	41227
 .claude/skills/deep-code-review/references/method-situational.md	12841
 .claude/skills/deep-code-review/references/method.md	56467
-.claude/skills/deep-code-review/references/migration-parity.md	25466
+.claude/skills/deep-code-review/references/migration-parity.md	26130
 .claude/skills/deep-code-review/references/mobile-appsec.md	25914
 .claude/skills/deep-code-review/references/model-tiering.md	12968
 .claude/skills/deep-code-review/references/observability.md	17988
@@ -129,7 +129,7 @@
 .claude/skills/deep-code-review/references/readme-authoring.md	6910
 .claude/skills/deep-code-review/references/release-engineering.md	20790
 .claude/skills/deep-code-review/references/reliability-error-handling.md	41344
-.claude/skills/deep-code-review/references/rendered-parity.md	9786
+.claude/skills/deep-code-review/references/rendered-parity.md	9752
 .claude/skills/deep-code-review/references/report-format.md	20158
 .claude/skills/deep-code-review/references/role-coverage.md	19668
 .claude/skills/deep-code-review/references/security-agent-skills.md	6509
@@ -145,7 +145,7 @@
 .claude/skills/deep-code-review/references/time-date-correctness.md	17098
 .claude/skills/deep-code-review/references/ux-components.md	27305
 .claude/skills/deep-code-review/references/ux-dataviz.md	9906
-.claude/skills/deep-code-review/references/ux-gates.md	13626
+.claude/skills/deep-code-review/references/ux-gates.md	13619
 .claude/skills/deep-code-review/references/ux-interaction.md	14023
 .claude/skills/deep-code-review/references/ux-lists.md	8005
 .claude/skills/deep-code-review/references/ux-sweep.md	18229

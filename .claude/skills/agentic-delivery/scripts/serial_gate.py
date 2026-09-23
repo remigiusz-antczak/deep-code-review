@@ -87,6 +87,40 @@ run --lock-dir DIR [--timeout SECONDS] -- <cmd...>
     by hand": a lock that looks held IS held, for as long as its holder's
     process is alive, however long that is.
 
+run --singleton --lock-dir DIR [--build-id ID] -- <helper cmd...>
+    Make a long-lived helper (a watchdog, a static server) a singleton across
+    sessions, so "start the helper" is idempotent however many sessions call
+    it (#1078). One non-blocking try of the same flock: if it is free, fork
+    a small SUPERVISOR process that keeps the only lock fd and starts the
+    helper WITHOUT it (the fd is close-on-exec and never passed), then
+    propagate the helper's exit code. So the lock lives exactly as long as
+    the helper: it survives SIGKILL of this wrapper (the supervisor lives on),
+    and it is released the moment the helper exits even if the helper left a
+    backgrounded grandchild behind (a grandchild that inherited the fd would
+    otherwise hold the lock with no recorded process alive). Accepted gap:
+    SIGKILL of the supervisor itself releases the lock while the helper may
+    still run; nothing portable can tie a lock to an arbitrary program's
+    lifetime without handing that program the fd.
+    If it is held, never wait and never start a twin: read the holder's
+    record, then exit 0 with `adopted`, or refuse with exit 75
+    (NOT_ADOPTED, EX_TEMPFAIL from sysexits.h) and one marker line on stdout:
+      `SERIAL_GATE: STALE_HOLDER`  --build-id is given and the live holder's
+                                   recorded build id differs (it can still be
+                                   serving stale code);
+      `SERIAL_GATE: ORPHAN_HOLDER` the lock is held but the record names no
+                                   live process: its `pid` is dead, or alive
+                                   with a different start time than recorded
+                                   (pid reuse), or the record is unreadable or
+                                   has no start time. Some process outside
+                                   the record holds the lock ("orphan holds
+                                   lock"); it is never adopted.
+    The marker, not the number alone, identifies a refusal: a helper may
+    itself exit 75. A holder is reported, never killed: stop it only if it is
+    yours. --timeout is ignored. No pidfile check-then-write (a race) and no
+    `pgrep -f <name>` match (it can match the caller's own shell and exit
+    with zero instances running): only the kernel lock decides who holds it;
+    the record's pid plus start time decide only whether to trust the record.
+
     PLATFORM SCOPE: POSIX advisory locks (`flock`) apply per open-file-table
     entry on a single host's local filesystem. This is not a distributed
     lock: it does not work over NFS or other network filesystems, and it says
@@ -100,6 +134,7 @@ USAGE
   serial_gate.py select --map map.tsv --base origin/main --head HEAD
   serial_gate.py select --map map.tsv --changed-file src/foo.py
   serial_gate.py run --lock-dir /tmp/x.lock -- pytest -k foo
+  serial_gate.py run --singleton --lock-dir /tmp/watchdog.lock --build-id "$(git rev-parse HEAD)" -- ./watchdog.sh
   serial_gate.py --selftest
 """
 from __future__ import annotations
@@ -127,6 +162,12 @@ OK = 0
 USAGE_ERROR = 2
 LOCK_TIMEOUT = 124
 LOCK_ERROR = 1
+# --singleton refusal (stale build or orphan holder): EX_TEMPFAIL from
+# sysexits.h, so it cannot be mistaken for a small helper exit code. A
+# helper can still exit 75 itself; the marker line on stdout disambiguates.
+STALE_HOLDER = 75
+STALE_MARKER = "SERIAL_GATE: STALE_HOLDER"
+ORPHAN_MARKER = "SERIAL_GATE: ORPHAN_HOLDER"
 
 FULL = "FULL"
 
@@ -134,6 +175,8 @@ DEFAULT_LOCK_TIMEOUT = 120.0
 _POLL_START = 0.05
 _POLL_CAP = 1.0
 _POLL_BACKOFF = 1.6
+_ADOPT_READ_TRIES = 20  # x 0.1s: time for a just-started holder to write its record
+_LOCK_FREED = -1  # internal: the record never verified, but the lock is free again; retry the start once
 
 
 # --------------------------------------------------------------------------
@@ -371,20 +414,25 @@ def acquire_lock(lock_dir: str, timeout: float) -> int:
         delay = min(delay * _POLL_BACKOFF, _POLL_CAP)
 
 
-def _write_owner_info(fd: int) -> None:
+def _write_owner_info(fd: int, extra: dict | None = None) -> None:
     """Best-effort, human-readable record of who holds the lock right now.
 
     Truncates and rewrites the SAME fd that holds the flock with this
-    process's pid, host, and UTC acquire time, so a human looking at the
-    lock file mid-run can see who has it. Never read back by this tool and
-    never consulted for correctness — only the flock itself decides who
-    holds the lock. A failure to write is swallowed: it cannot affect
-    whether the lock is held.
+    process's pid, host, and UTC acquire time (plus `extra`, which
+    `--singleton` uses for `pid_start`, `child_pid`, and `build_id`), so a
+    human looking at the lock file mid-run can see who has it. Plain `run`
+    never reads it back; `--singleton` reads it only to decide whether the
+    record can be trusted (pid alive with the recorded start time) and to
+    compare the holder's build id when adopting — never to decide who holds
+    the lock, which only the flock decides. A failure to write is swallowed:
+    it cannot affect whether the lock is held (an unwritten record makes a
+    peer report an orphan holder, never adopt).
     """
     owner = {
         "pid": os.getpid(),
         "host": socket.gethostname(),
         "acquired_utc": datetime.now(timezone.utc).isoformat(),
+        **(extra or {}),
     }
     try:
         os.lseek(fd, 0, os.SEEK_SET)
@@ -453,6 +501,245 @@ def run_locked(lock_dir: str, timeout: float, cmd: list[str]) -> int:
         signal.signal(signal.SIGINT, old_int)
 
 
+def _pid_alive(pid: int) -> bool:
+    """True iff `pid` names a live process (another user's counts as live)."""
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+def _proc_start(pid: int) -> str | None:
+    """An opaque start-time token for `pid`, or None when it cannot be read.
+
+    Two readings of the same live process compare equal; a different process
+    that later reuses the pid gets a different token. Linux: field 22
+    (`starttime`, clock ticks since boot) of `/proc/<pid>/stat`, read after
+    the last `)` so a command name holding spaces or parentheses cannot shift
+    the fields. Elsewhere (macOS has no /proc): `ps -o lstart= -p <pid>` under
+    the C locale, one-second resolution — a pid reused within the same second
+    is the residual risk. Side-effects: reads /proc or runs `ps`.
+    """
+    try:
+        with open(f"/proc/{pid}/stat", encoding="utf-8", errors="replace") as fh:
+            fields = fh.read().rsplit(")", 1)[1].split()
+        return "proc:" + fields[19]  # fields[0] is field 3 (state), so field 22 is index 19
+    except (OSError, IndexError):
+        pass
+    try:
+        proc = subprocess.run(["ps", "-o", "lstart=", "-p", str(pid)], capture_output=True, text=True,
+                              timeout=5, env={**os.environ, "LC_ALL": "C"})
+    except (OSError, subprocess.SubprocessError):
+        return None
+    stamp = " ".join(proc.stdout.split())
+    return f"ps:{stamp}" if proc.returncode == 0 and stamp else None
+
+
+def _read_holder(lock_dir: str) -> dict | None:
+    """The holder's record, or None unless it names the process holding the lock.
+
+    Trusted only when its `pid` is a live process whose start time equals the
+    recorded `pid_start`: a dead pid is a previous holder's leftover (the file
+    outlives the lock), a live pid with another start time is an unrelated
+    process that reused the number, and a record without a start time cannot
+    be verified. Side-effects: reads the lock file, may run `ps`.
+    """
+    try:
+        with open(_lock_file_path(lock_dir), encoding="utf-8") as fh:
+            rec = json.load(fh)
+    except (OSError, ValueError):
+        return None
+    if not isinstance(rec, dict):
+        return None
+    pid, start = rec.get("pid"), rec.get("pid_start")
+    if not (isinstance(pid, int) and pid > 0 and isinstance(start, str) and start and _pid_alive(pid)):
+        return None
+    return rec if _proc_start(pid) == start else None
+
+
+def _lock_is_free(lock_dir: str) -> bool:
+    """One non-blocking probe: True iff nobody holds the lock right now (released again at once)."""
+    try:
+        fd = os.open(_lock_file_path(lock_dir), os.O_RDWR | os.O_CREAT, 0o644)
+    except OSError:
+        return False
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        return False
+    finally:
+        os.close(fd)  # closing the only fd on this open file description drops a lock just taken
+    return True
+
+
+def _refuse(marker: str, message: str) -> int:
+    """Print the machine-readable marker line (stdout) and the reason (stderr); return STALE_HOLDER."""
+    print(marker, flush=True)
+    print(f"serial_gate: {message}", file=sys.stderr)
+    return STALE_HOLDER
+
+
+def _adopt(lock_dir: str, build_id: str | None) -> int:
+    """Report on the live holder of a --singleton lock; never start a twin.
+
+    Returns OK (adopted), STALE_HOLDER with the STALE marker (--build-id
+    given and the verified holder recorded another build), STALE_HOLDER with
+    the ORPHAN marker (the lock stays held but no record ever verifies), or
+    the internal `_LOCK_FREED` when the lock turned free while the record was
+    being read (the holder just exited; the caller retries the start once).
+    """
+    rec = None
+    for _ in range(_ADOPT_READ_TRIES):
+        rec = _read_holder(lock_dir)
+        if rec is not None:
+            break
+        time.sleep(0.1)
+    if rec is None:
+        if _lock_is_free(lock_dir):
+            return _LOCK_FREED
+        return _refuse(ORPHAN_MARKER, f"orphan holds lock: {lock_dir} is locked, but its record names no live "
+                       "process with the recorded start time (dead pid, reused pid, or no record); not adopted "
+                       "and nothing started. Find the holder with `lsof` on the lock file and stop it only if it "
+                       "is yours")
+    who = f"pid {rec.get('child_pid') or rec.get('pid')}, build {rec.get('build_id')}"
+    if build_id is not None and rec.get("build_id") != build_id:
+        return _refuse(STALE_MARKER, f"singleton held by {who}, not build {build_id}: not adopted. The holder may "
+                       "serve stale code; stop it only if it is yours, then re-run")
+    print(f"serial_gate: singleton already running ({who}); adopted, not starting a second instance: {lock_dir}")
+    return OK
+
+
+def _exit_code(status: int) -> int:
+    """A shell-style exit code from a returncode or `os.waitstatus_to_exitcode` value (-N -> 128+N)."""
+    return status if status >= 0 else 128 - status
+
+
+def _supervise(fd: int, lock_dir: str, build_id: str | None, cmd: list[str]) -> int:
+    """Body of the forked supervisor: hold `fd`, run the helper without it, return its exit code.
+
+    The helper is started with `close_fds=True` (the default) and `fd` is
+    non-inheritable, so neither the helper nor anything it spawns receives
+    the lock; this process keeps the only reference, so the lock is released
+    exactly when this process exits after the helper does. SIGTERM/SIGINT
+    kill the helper, then exit 128+signal. Side-effects: rewrites the lock
+    record, starts the helper, prints one `started` line.
+    """
+    os.set_inheritable(fd, False)
+
+    def _on_signal(signum, _frame):
+        raise SystemExit(128 + signum)
+
+    signal.signal(signal.SIGTERM, _on_signal)
+    signal.signal(signal.SIGINT, _on_signal)
+    record = {"pid_start": _proc_start(os.getpid()), "child_pid": None, "build_id": build_id}
+    _write_owner_info(fd, record)
+    proc = None
+    try:
+        try:
+            proc = subprocess.Popen(cmd)
+        except OSError as exc:
+            print(f"serial_gate: cannot start the helper: {exc}", file=sys.stderr)
+            return LOCK_ERROR
+        _write_owner_info(fd, {**record, "child_pid": proc.pid})
+        print(f"serial_gate: singleton started (pid {proc.pid}, build {build_id}): {lock_dir}", flush=True)
+        return _exit_code(proc.wait())
+    finally:
+        if proc is not None and proc.poll() is None:
+            proc.kill()
+            proc.wait()
+
+
+def run_singleton(lock_dir: str, build_id: str | None, cmd: list[str]) -> int:
+    """Start `cmd` as the lock-holding singleton, or adopt the live holder.
+
+    Side effects: creates `lock_dir`, takes a non-blocking flock, and either
+    forks a supervisor that holds the lock and runs `cmd` without the fd
+    (returning `cmd`'s exit code), or starts nothing and returns `_adopt`'s
+    code (0 adopted, 75 refused with a marker line). This wrapper closes its
+    own copy of the fd right after the fork and never LOCK_UNs (unlocking
+    would release the supervisor's lock too). SIGTERM/SIGINT to this wrapper
+    is forwarded to the supervisor, which kills the helper; SIGKILL of this
+    wrapper leaves the supervisor, and so the lock, alive while the helper
+    runs. Fails closed (exit 2, nothing started) without `fcntl`.
+    """
+    if fcntl is None:
+        print("serial_gate: fcntl is unavailable on this platform; refusing to start an unguarded helper",
+              file=sys.stderr)
+        return USAGE_ERROR
+    for attempt in range(2):
+        try:
+            os.makedirs(lock_dir, exist_ok=True)
+            fd = os.open(_lock_file_path(lock_dir), os.O_RDWR | os.O_CREAT, 0o644)
+        except OSError as exc:
+            print(f"serial_gate: cannot open the singleton lock: {exc}", file=sys.stderr)
+            return LOCK_ERROR
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            os.close(fd)
+            code = _adopt(lock_dir, build_id)
+            if code != _LOCK_FREED:
+                return code
+            if attempt == 0:
+                continue  # the holder exited while we read its record: try the start again, once
+            return _refuse(ORPHAN_MARKER, f"orphan holds lock: {lock_dir} kept changing hands; not adopted")
+        except OSError as exc:
+            os.close(fd)
+            print(f"serial_gate: singleton lock failed: {exc}", file=sys.stderr)
+            return LOCK_ERROR
+        return _fork_supervisor(fd, lock_dir, build_id, cmd)
+    return LOCK_ERROR  # pragma: no cover — the loop always returns
+
+
+def _fork_supervisor(fd: int, lock_dir: str, build_id: str | None, cmd: list[str]) -> int:
+    """Fork the lock-holding supervisor, drop this process's fd, and wait for it.
+
+    Why a fork and not `pass_fds` to the helper: a helper cannot be made to
+    mark an inherited fd close-on-exec before it spawns children, so any
+    grandchild it backgrounds would keep the lock after the helper exits.
+    Returns the supervisor's exit code (the helper's code), or 128+signal
+    when this wrapper was told to stop.
+    """
+    sys.stdout.flush()
+    sys.stderr.flush()
+    pid = os.fork()
+    if pid == 0:  # supervisor: never return into the caller's stack
+        code = LOCK_ERROR
+        try:
+            code = _supervise(fd, lock_dir, build_id, cmd)
+        except SystemExit as exc:
+            code = exc.code if isinstance(exc.code, int) else LOCK_ERROR
+        except BaseException as exc:  # noqa: BLE001 — any failure must still end this forked process
+            print(f"serial_gate: supervisor failed: {exc}", file=sys.stderr)
+        finally:
+            sys.stdout.flush()
+            sys.stderr.flush()
+            os._exit(code)
+    os.close(fd)  # the supervisor now holds the only reference to the locked open file description
+    stopped: dict[str, int] = {}
+
+    def _forward(signum, _frame):
+        stopped["sig"] = signum
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+
+    old_term = signal.signal(signal.SIGTERM, _forward)
+    old_int = signal.signal(signal.SIGINT, _forward)
+    try:
+        _, status = os.waitpid(pid, 0)  # PEP 475: retried after _forward runs
+    finally:
+        signal.signal(signal.SIGTERM, old_term)
+        signal.signal(signal.SIGINT, old_int)
+    if "sig" in stopped:
+        return 128 + stopped["sig"]
+    return _exit_code(os.waitstatus_to_exitcode(status))
+
+
 # --------------------------------------------------------------------------
 # CLI
 # --------------------------------------------------------------------------
@@ -475,6 +762,13 @@ def _cmd_run(args: argparse.Namespace, cmd: list[str]) -> int:
     if not cmd:
         print("serial_gate: run requires a command after '--'", file=sys.stderr)
         return USAGE_ERROR
+    if args.build_id is not None and (not args.singleton or not args.build_id.strip()
+                                      or any(c.isspace() for c in args.build_id) or len(args.build_id) > 200):
+        print("serial_gate: --build-id needs --singleton and a non-empty id without whitespace (<= 200 chars)",
+              file=sys.stderr)
+        return USAGE_ERROR
+    if args.singleton:
+        return run_singleton(args.lock_dir, args.build_id, cmd)
     return run_locked(args.lock_dir, args.timeout, cmd)
 
 
@@ -505,6 +799,9 @@ def main(argv: list[str] | None = None) -> int:
     p_run.add_argument("--lock-dir", required=True, help="lock directory path (holds a file named 'lock')")
     p_run.add_argument("--timeout", type=float, default=DEFAULT_LOCK_TIMEOUT,
                         help=f"seconds to wait for the lock before giving up (default {DEFAULT_LOCK_TIMEOUT})")
+    p_run.add_argument("--singleton", action="store_true",
+                       help="start a long-lived helper once across sessions; adopt a live holder instead of waiting")
+    p_run.add_argument("--build-id", help="with --singleton: adopt only a holder recorded with this build id")
 
     cmd: list[str] = []
     if "run" in argv:
@@ -734,6 +1031,7 @@ def _selftest_lock(tmp: str, check) -> None:
     _selftest_lock_exit_code(tmp, check, script_path)
     _selftest_lock_no_age_reclaim(tmp, check, script_path)
     _selftest_lock_no_fcntl(tmp, check)
+    _selftest_singleton(tmp, check, script_path)
 
 
 def _selftest_lock_many_racers(tmp: str, check, script_path: str) -> None:
@@ -933,6 +1231,173 @@ def _selftest_lock_no_fcntl(tmp: str, check) -> None:
         globals()["fcntl"] = saved
     check("no-fcntl-exit-2", rc == USAGE_ERROR, f"rc={rc}")
     check("no-fcntl-command-not-run", not os.path.exists(marker))
+
+
+def _selftest_singleton(tmp: str, check, script_path: str) -> None:
+    """`run --singleton`: a second start adopts the live holder instead of
+    spawning a twin (#1078), a different --build-id is refused rather than
+    adopted, the lock survives SIGKILL of the wrapper while the helper child
+    lives (the forked supervisor keeps the lock fd), and a start after the helper
+    exits runs normally.
+    """
+    lock_dir = os.path.join(tmp, "singleton")
+    started = os.path.join(tmp, "singleton_started")
+    release = os.path.join(tmp, "singleton_release")
+    twin = os.path.join(tmp, "singleton_twin_ran")
+    holder_child = (
+        f"import pathlib,time; pathlib.Path({started!r}).touch(); "
+        f"r=pathlib.Path({release!r})\n"
+        f"while not r.exists(): time.sleep(0.02)\n"
+    )
+    holder = subprocess.Popen([
+        sys.executable, script_path, "run", "--singleton", "--lock-dir", lock_dir,
+        "--build-id", "abc1234", "--", sys.executable, "-c", holder_child,
+    ], stdout=subprocess.DEVNULL)
+
+    def start(*extra: str) -> tuple[int, str, float]:
+        t0 = time.monotonic()
+        proc = subprocess.run([
+            sys.executable, script_path, "run", "--singleton", "--lock-dir", lock_dir, *extra,
+            "--", sys.executable, "-c", f"open({twin!r}, 'w').close()",
+        ], capture_output=True, text=True, timeout=60)
+        return proc.returncode, proc.stdout + proc.stderr, time.monotonic() - t0
+
+    try:
+        check("singleton-holder-started", _wait_for(started, timeout=10))
+        rc, out, took = start("--build-id", "abc1234")
+        check("singleton-second-start-adopts", rc == OK and "adopted" in out and took < 10
+              and not os.path.exists(twin), f"rc={rc} took={took:.2f}s out={out!r}")
+        rc, out, _ = start()
+        check("singleton-adopts-without-build-id", rc == OK and "adopted" in out
+              and not os.path.exists(twin), f"rc={rc} out={out!r}")
+        rc, out, _ = start("--build-id", "def5678")
+        check("singleton-stale-build-not-adopted", rc == STALE_HOLDER and "not adopted" in out
+              and "abc1234" in out and not os.path.exists(twin), f"rc={rc} out={out!r}")
+        holder.kill()  # SIGKILL the wrapper only; the supervisor keeps the lock while the helper lives
+        holder.wait(timeout=10)
+        rc, out, _ = start("--build-id", "abc1234")
+        check("singleton-survives-wrapper-sigkill", rc == OK and "adopted" in out
+              and not os.path.exists(twin), f"rc={rc} out={out!r}")
+    finally:
+        open(release, "w").close()
+        if holder.poll() is None:
+            holder.wait(timeout=15)
+    check("singleton-free-after-helper-exits", _lock_free(lock_dir, timeout=10))
+    rc, out, _ = start()
+    check("singleton-starts-when-free", rc == OK and os.path.exists(twin), f"rc={rc} out={out!r}")
+    rc = subprocess.run([
+        sys.executable, script_path, "run", "--lock-dir", lock_dir, "--build-id", "abc1234",
+        "--", sys.executable, "-c", "pass",
+    ], capture_output=True).returncode
+    check("build-id-needs-singleton", rc == USAGE_ERROR, f"rc={rc}")
+
+    _selftest_singleton_codes(tmp, check, script_path)
+    _selftest_singleton_grandchild(tmp, check, script_path)
+    _selftest_singleton_orphan(tmp, check, script_path)
+
+
+def _singleton_start(script_path: str, lock_dir: str, helper: str, *extra: str) -> tuple[int, str]:
+    """One `run --singleton` whose helper is `python -c helper`; returns (rc, stdout + stderr)."""
+    proc = subprocess.run([
+        sys.executable, script_path, "run", "--singleton", "--lock-dir", lock_dir, *extra,
+        "--", sys.executable, "-c", helper,
+    ], capture_output=True, text=True, timeout=60)
+    return proc.returncode, proc.stdout + proc.stderr
+
+
+def _selftest_singleton_codes(tmp: str, check, script_path: str) -> None:
+    """A not-adopted exit is distinguishable from any helper exit code: the
+    stale-build refusal exits 75 (EX_TEMPFAIL) with a `SERIAL_GATE:
+    STALE_HOLDER` marker line, while a helper that exits 3 propagates 3 with
+    no marker. Before the fix both exited 3, so a caller could not tell "the
+    helper failed" from "nothing was started".
+    """
+    lock_dir = os.path.join(tmp, "singleton_codes")
+    rc_helper, out_helper = _singleton_start(script_path, lock_dir, "import sys; sys.exit(3)", "--build-id", "abc1234")
+    check("singleton-helper-exit-3-propagated", rc_helper == 3 and STALE_MARKER not in out_helper
+          and ORPHAN_MARKER not in out_helper, f"rc={rc_helper} out={out_helper!r}")
+    started = os.path.join(tmp, "codes_started")
+    release = os.path.join(tmp, "codes_release")
+    holder = subprocess.Popen([
+        sys.executable, script_path, "run", "--singleton", "--lock-dir", lock_dir, "--build-id", "abc1234",
+        "--", sys.executable, "-c",
+        f"import pathlib,time; pathlib.Path({started!r}).touch(); r=pathlib.Path({release!r})\n"
+        f"while not r.exists(): time.sleep(0.02)\n",
+    ], stdout=subprocess.DEVNULL)
+    try:
+        check("singleton-codes-holder-started", _wait_for(started, timeout=10))
+        rc_stale, out_stale = _singleton_start(script_path, lock_dir, "pass", "--build-id", "def5678")
+        check("singleton-stale-exit-75-with-marker", rc_stale == 75 and STALE_MARKER in out_stale.splitlines()
+              and rc_stale != rc_helper, f"rc={rc_stale} out={out_stale!r}")
+    finally:
+        open(release, "w").close()
+        holder.wait(timeout=15)
+
+
+def _selftest_singleton_grandchild(tmp: str, check, script_path: str) -> None:
+    """A helper that backgrounds a grandchild and exits must not leave that
+    grandchild holding the lock (#1078 follow-up). Before the fix the helper
+    inherited the lock fd, so `sh -c 'sleep 8 & exit 0'` left `sleep` holding
+    the lock for 8s with no recorded process alive; the supervisor now keeps
+    the only lock fd and the helper tree never receives it.
+    """
+    lock_dir = os.path.join(tmp, "singleton_grandchild")
+    pidfile = os.path.join(tmp, "grandchild.pid")
+    # stdout/stderr go to DEVNULL: a pipe would stay open in `sleep` and make
+    # the wrapper's caller wait the full 8s for EOF.
+    rc = subprocess.run([
+        sys.executable, script_path, "run", "--singleton", "--lock-dir", lock_dir,
+        "--", "sh", "-c", f"sleep 8 & echo $! > {pidfile}; exit 0",
+    ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=30).returncode
+    try:
+        check("singleton-grandchild-helper-exit-0", rc == 0, f"rc={rc}")
+        check("singleton-grandchild-does-not-keep-lock", _lock_free(lock_dir, timeout=1.0),
+              "a backgrounded grandchild of the helper still holds the singleton lock")
+    finally:
+        try:
+            with open(pidfile, encoding="utf-8") as fh:
+                os.kill(int(fh.read().strip()), signal.SIGKILL)
+        except (OSError, ValueError):
+            pass
+
+
+def _selftest_singleton_orphan(tmp: str, check, script_path: str) -> None:
+    """The lock is held but the holder record names no live process, or names
+    a live pid whose start time does not match (pid reuse): exit 75 with a
+    `SERIAL_GATE: ORPHAN_HOLDER` marker, never adopt, never start a twin.
+    Before the fix, both cases were adopted (exit 0) without --build-id.
+    """
+    dead = subprocess.Popen([sys.executable, "-c", "pass"])
+    dead.wait(timeout=10)
+    records = {
+        "dead-pid": {"pid": dead.pid, "pid_start": "ps:never"},
+        "reused-pid": {"pid": os.getpid(), "pid_start": "ps:not-this-process"},
+        "no-start-time": {"pid": os.getpid()},
+    }
+    for label, rec in records.items():
+        lock_dir = os.path.join(tmp, f"singleton_orphan_{label}")
+        os.makedirs(lock_dir)
+        started = os.path.join(tmp, f"orphan_{label}_started")
+        release = os.path.join(tmp, f"orphan_{label}_release")
+        twin = os.path.join(tmp, f"orphan_{label}_twin")
+        planter = (
+            "import fcntl,json,os,pathlib,time\n"
+            f"fd=os.open({_lock_file_path(lock_dir)!r}, os.O_RDWR|os.O_CREAT, 0o644)\n"
+            "fcntl.flock(fd, fcntl.LOCK_EX)\n"
+            f"os.write(fd, json.dumps({rec!r}).encode())\n"
+            f"pathlib.Path({started!r}).touch(); r=pathlib.Path({release!r})\n"
+            "while not r.exists(): time.sleep(0.02)\n"
+        )
+        holder = subprocess.Popen([sys.executable, "-c", planter])
+        try:
+            check(f"orphan-{label}-planted", _wait_for(started, timeout=10))
+            rc, out = _singleton_start(script_path, lock_dir, f"open({twin!r}, 'w').close()")
+            check(f"orphan-{label}-refused", rc == 75 and ORPHAN_MARKER in out.splitlines()
+                  and "orphan holds lock" in out and "adopted" not in out.replace("not adopted", "")
+                  and not os.path.exists(twin), f"rc={rc} out={out!r}")
+        finally:
+            open(release, "w").close()
+            holder.wait(timeout=15)
 
 
 if __name__ == "__main__":

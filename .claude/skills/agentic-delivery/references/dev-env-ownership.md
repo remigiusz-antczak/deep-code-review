@@ -2,7 +2,8 @@
 
 Read this when: booting a dev server in a lane, separating the serving tree from the committing tree, re-running a
 generator after commit, gating an absolute-count ratchet under parallel lanes, handling a live-feedback burst or
-new mid-task requirements, applying an ownership map, probing contention against a PR's changed-file list, or bringing up the local stack for G5. Part
+new mid-task requirements, applying an ownership map, probing contention against a PR's changed-file list,
+verifying a "the served environment is on the latest commit" claim, or bringing up the local stack for G5. Part
 of the `fast-agentic-delivery.md` lesson ledger — its index, sources, and cross-references live there; an
 "above"/"below" pointer to a section not in this file resolves through that index.
 
@@ -59,6 +60,23 @@ atomically — a deployed preview, or a warmed standby (a second tree behind a s
 switched once its main routes answer, both backends on one shared local data store); restart in place only when
 the active backend fails its health check. Check a "feature X is gone" report against the restart log before
 treating it as a regression.
+
+## "Latest" means the process restarted and a fetched page proves it — the serving tree's git HEAD is not evidence
+
+A different axis from every liveness rule above and in `verification-handback.md` (those ask *is the process
+alive*; this asks *does what it serves match the merge*) — `verification-handback.md`'s *A transcript's size or
+mtime is not a liveness signal* section is the process-aliveness cousin, not this rule. A served UI's freshness
+claim needs **both**: (1) evidence the serving process **restarted after** the merge — a recorded restart
+timestamp/PID change, a supervisor log, or proof its hot-reload path actually re-served the changed files — and
+(2) a **fetched page** from the running surface showing the newest merged change. Git state of the serving
+directory/worktree satisfies neither: a long-lived dev server that only hot-reloaded, or never restarted, keeps
+serving the pre-merge build even while `git log`/`git status` in its checkout show the merge landed — "the
+serving tree's git HEAD matches the branch" is not "the running process serves it." `surface_check.py served --url
+… --expect-sha … --probe …` is the mechanism for (2): it fetches the running
+app and extracts the build/commit id the app reports, refusing a data timestamp — but it cannot know how a
+`/version` endpoint derives that id, so require the endpoint to report the id **baked in at build time** (a
+handler that reads git HEAD live repeats the trap); the script is `agentic-delivery/scripts/surface_check.py`.
+Report `UNMEASURED`/`UNVERIFIED`, never "latest," when only the serving tree's git state was checked.
 
 ## Re-running the generator after the commit re-stamps its own output — a one-shot dirty tree that hangs the push
 
