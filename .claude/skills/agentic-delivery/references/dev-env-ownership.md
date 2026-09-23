@@ -73,8 +73,9 @@ directory/worktree satisfies neither: a long-lived dev server that only hot-relo
 serving the pre-merge build even while `git log`/`git status` in its checkout show the merge landed — "the
 serving tree's git HEAD matches the branch" is not "the running process serves it." `surface_check.py served --url
 … --expect-sha … --probe …` is the mechanism for (2): it fetches the running
-app and extracts the build/commit id the **serving process itself** reports, refusing a data timestamp or a
-git-HEAD read as a substitute; `scripts/surface_check.py` lives in this skill's own `agentic-delivery/scripts/`.
+app and extracts the build/commit id the app reports, refusing a data timestamp — but it cannot know how a
+`/version` endpoint derives that id, so require the endpoint to report the id **baked in at build time** (a
+handler that reads git HEAD live repeats the trap); the script is `agentic-delivery/scripts/surface_check.py`.
 Report `UNMEASURED`/`UNVERIFIED`, never "latest," when only the serving tree's git state was checked.
 
 ## Re-running the generator after the commit re-stamps its own output — a one-shot dirty tree that hangs the push

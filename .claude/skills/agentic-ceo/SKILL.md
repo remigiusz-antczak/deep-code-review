@@ -128,16 +128,15 @@ the owner decides.
 
 Chaos-playbook step 1 ("capture losslessly") is not memory — it is
 `scripts/task_ledger.py`, one markdown file per project (default
-`.claude/TASKS.md`) that survives a compaction or a lost context. Read it at
-session start and after ANY compaction; every owner ask goes in verbatim
-(`add --ask`) before work starts; **never create a second list** — a
-near-duplicate ask is refused and the existing id returned instead of
-forking. Report progress from `status` (counts + open rows), never from
-memory or a paraphrase. `next` names the single highest-leverage row
-(honoring an owner's `.claude/PRIORITY.md` if present); `reconcile` catches
-an ask a compaction would otherwise silently drop. `done` requires evidence;
-`block` requires naming the other party. `--selftest` proves every rule
-offline.
+`.claude/TASKS.md`) that survives a compaction. Read it at session start and
+after ANY compaction. Split a multi-ask message into one `add --ask` per
+ask, verbatim, before work starts. **Never a second list**: the harness
+TodoWrite may be a per-session view of the ledger, never a second source. A
+near-duplicate prints both texts; answer `--same T-###` or `--new`. Report
+from `status` (exit 1 = open asks exist, informational), never memory.
+`next` returns `doing` first, then `.claude/PRIORITY.md`, then the oldest
+open; `reconcile` catches a dropped ask. `done` needs a sha/URL/`#N`/test
+id; `block` needs `--party`; `drop` needs the owner's `--quote`.
 
 ## Stay strategic
 The conductor routes, decides, and oversees; it does not do a specialist's
