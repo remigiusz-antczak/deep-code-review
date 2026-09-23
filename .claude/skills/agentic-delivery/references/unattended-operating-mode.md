@@ -138,22 +138,23 @@ defers here):
   self-sourced finding, a cheap cosmetic fix. "The next item" means the next
   item **inside its scope**.
 - **Work outside it only when it is DONE or BLOCKED.** DONE = the owner's
-  acceptance command exits 0 on the current tree, never a lane's "mostly done".
+  acceptance command exits 0 on a clean checkout, never a lane's "mostly done".
   BLOCKED = an owner-accepted row naming **another party** plus an evidence
   link; a hard sub-problem or a red test is not a blocker. Neither → keep at it
   (split, re-approach, spike) and report OPEN with the acceptance output.
 - **The record is owner-authored** — the owner's own commit to
-  `.claude/PRIORITY.md` or a verbatim dated quote, the standing-grant rule
-  (`SKILL.md` **Human gates**). An agent never creates, widens, narrows, or
-  closes it; a change is an ask.
+  `.claude/PRIORITY.md`, the standing-grant rule (`SKILL.md` **Human gates**).
+  An agent never creates, widens, narrows, closes, or deletes it; a change is an
+  ask.
 - **Design alignment is done** only when `deep-code-review`'s parity differ
   reports inventory MATCH for every in-scope screen (`rendered-parity.md`) —
   never a size, height, or screenshot judgement. That is its acceptance command.
 - `scripts/focus_gate.py` — **use this when** picking the next item, dispatching,
-  or reviewing a change while a priority record exists. `status` prints
-  OPEN/DONE/BLOCKED with evidence; `check` (item ref, paths, or a commit range)
-  is NO-GO outside scope while OPEN. Fails closed: a missing or non-owner record
-  is OPEN and its command never runs. CI: `DCR_FOCUS_GATE=1` in `dcr-gates.sh`.
+  or reviewing a change. `status` prints state and evidence; `check` (item,
+  paths, or commit range) is NO-GO outside scope while OPEN. Fails closed: a
+  non-owner record or deletion, a `**` scope, or a trivially-true acceptance is
+  never DONE; no record ever → GO with a notice. CI: `DCR_FOCUS_GATE=1`
+  (`dcr-gates.sh`).
 
 ## The run-lifecycle gate: a run-start checklist and a run-end self-audit
 

@@ -2152,15 +2152,16 @@ else
   record 1 "dcr-gates opt-in: priority_gate fires on an inversion, passes once cited (planted RED)"
 fi
 
-# 8) DCR_FOCUS_GATE=1: with no owner priority record the run fails closed;
-#    an owner-committed OPEN record FIRES on a change outside its scope; the
-#    same gate passes once the owner's acceptance command exits 0 (DONE).
+# 8) DCR_FOCUS_GATE=1: when no priority record ever existed the run passes
+#    with a notice; an owner-committed OPEN record FIRES on a change outside
+#    its scope; a trivially-true acceptance (`true`) never counts as DONE; the
+#    gate passes once the owner's real acceptance command exits 0 (DONE).
 og_run "$WORK/og-focus-norecord.log" DCR_FOCUS_GATE=1 DCR_OWNER_EMAIL=jane@example.com
-if [ "$OG_RC" -ne 0 ] && grep -q 'no record at' "$WORK/og-focus-norecord.log" \
-  && grep -q 'dcr-gates: focus_gate FAIL' "$WORK/og-focus-norecord.log"; then
-  record 0 "dcr-gates opt-in: focus_gate with no priority record fails closed"
+if [ "$OG_RC" -eq 0 ] && grep -q 'no priority record ever existed' "$WORK/og-focus-norecord.log" \
+  && grep -q 'dcr-gates: focus_gate PASS' "$WORK/og-focus-norecord.log"; then
+  record 0 "dcr-gates opt-in: focus_gate with no priority record ever passes with a notice"
 else
-  record 1 "dcr-gates opt-in: focus_gate with no priority record fails closed"
+  record 1 "dcr-gates opt-in: focus_gate with no priority record ever passes with a notice"
 fi
 og_focus_record() {  # <acceptance-command> <subject>
   printf 'priority: design-alignment\nscope: src/**\nacceptance: %s\n' "$1" >"$og/.claude/PRIORITY.md"
@@ -2176,10 +2177,14 @@ og_run "$WORK/og-focus-red.log" DCR_FOCUS_GATE=1 DCR_OWNER_EMAIL=jane@example.co
 og_red_rc="$OG_RC"
 og_run "$WORK/og-focus-agent.log" DCR_FOCUS_GATE=1 DCR_OWNER_EMAIL=owner@example.com
 og_agent_rc="$OG_RC"
-og_focus_record true 'chore: owner accepts design alignment'
+og_focus_record true 'chore: owner records a trivial acceptance'
+og_run "$WORK/og-focus-trivial.log" DCR_FOCUS_GATE=1 DCR_OWNER_EMAIL=jane@example.com
+og_trivial_rc="$OG_RC"
+og_focus_record 'grep -q 2 src/a.txt' 'chore: owner accepts design alignment'
 og_run "$WORK/og-focus-ok.log" DCR_FOCUS_GATE=1 DCR_OWNER_EMAIL=jane@example.com
 if [ "$og_red_rc" -ne 0 ] && grep -q 'outside scope: web/app.css' "$WORK/og-focus-red.log" \
   && [ "$og_agent_rc" -ne 0 ] && grep -q 'is not the owner' "$WORK/og-focus-agent.log" \
+  && [ "$og_trivial_rc" -ne 0 ] && grep -q 'trivially-true acceptance rejected' "$WORK/og-focus-trivial.log" \
   && [ "$OG_RC" -eq 0 ] && grep -q 'dcr-gates: focus_gate PASS' "$WORK/og-focus-ok.log"; then
   record 0 "dcr-gates opt-in: focus_gate fires outside an OPEN priority, rejects a non-owner record, passes once DONE (planted RED)"
 else

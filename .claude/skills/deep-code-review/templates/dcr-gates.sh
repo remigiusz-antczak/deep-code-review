@@ -90,13 +90,16 @@
 #                           DCR_FOCUS_ITEM ref, e.g. "#123"): while the
 #                           owner-authored priority record (DCR_FOCUS_RECORD,
 #                           default .claude/PRIORITY.md) is OPEN, a change
-#                           outside its scope fails. The owner email comes from
-#                           DCR_OWNER_EMAIL (set it from protected CI config)
-#                           or `git config dcr.owner`; none configured, an
-#                           agent-authored record, or no range and no item
-#                           fails closed. Optional DCR_FOCUS_ARGS (extra
-#                           options, whitespace-split, never glob-expanded,
-#                           e.g. "--commit-only --require-signed").
+#                           outside its scope fails; the acceptance command
+#                           runs on a clean checkout of HEAD_SHA. The owner
+#                           email comes from DCR_OWNER_EMAIL (set it from
+#                           protected CI config; `git config dcr.owner` is an
+#                           unprotected local fallback); none configured, an
+#                           agent-authored or agent-deleted record, or no range
+#                           and no item fails closed. A record that never
+#                           existed passes with a notice. Optional
+#                           DCR_FOCUS_ARGS (extra options, whitespace-split,
+#                           never glob-expanded, e.g. "--require-signed").
 #
 # Exit code: 0 iff every gate below passed. Fails closed — an unresolvable
 # skill install, a gate or selftest script missing from that install, or any
