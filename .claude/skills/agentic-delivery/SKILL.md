@@ -171,9 +171,8 @@ reset, or deciding what keeps an unattended run alive.
 **Claimed vs enforced** — before asserting state, permission, or spend is
 *enforced* rather than merely followed (or when designing a host adapter), grade
 the claim against `references/host-enforcement.md` — **read it when** you would
-otherwise write "the gate / budget / permission is enforced." Model-tier
-selection (which tier, and when to escalate) is `model-tiering.md` in the
-`deep-code-review` skill.
+otherwise write "the gate / budget / permission is enforced," or brief a
+write-lane. Model-tier selection: `deep-code-review`'s `model-tiering.md`.
 
 **A subagent's handback narration is capped by a host hook, not only asked to
 be short** — `references/host-enforcement.md` routes `scripts/handback_cap.py`,
