@@ -2695,6 +2695,7 @@ fi
 rm -rf "$og/ops"
 
 # ===========================================================================
+<<<<<<< HEAD
 # AppSec must-load isolation (own lane; APPENDED AT THE END by convention).
 # security-appsec.md is must-load for web, mobile, api / service, and
 # agent / LLM / MCP; its conditional depth lives in routed appsec-*.md
@@ -2867,6 +2868,49 @@ if printf '%s' "$traversal_block" | grep -qi 'path traversal' \
 else
   record 1 "appsec pointer: A05 grep block names a path-traversal (CWE-22) sink line pointing to appsec-files.md"
 fi
+=======
+# dcr-gates opt-in source_scan_tests (own lane; APPENDED AT THE END by
+# convention), on the optin-gates target above. Relative
+# DCR_SOURCE_SCAN_LINT_PATHS entries resolve against the target's repo root
+# even when the runner is started from another directory, and a
+# whitespace-only value fails closed with a named message instead of
+# aborting on an empty-array expansion.
+# ===========================================================================
+
+mkdir -p "$og/uitests"
+cat >"$og/uitests/Disclosure.test.tsx" <<'FIXTURE'
+import fs from 'fs';
+test('collapses on click', () => {
+  const src = fs.readFileSync('./Disclosure.tsx', 'utf8');
+  expect(src.includes('aria-expanded')).toBe(true);
+});
+FIXTURE
+ssl_run() {  # <log> [VAR=value ...] — run the runner from $WORK; sets SSL_RC
+  local log="$1"
+  shift
+  if (cd "$WORK" && env DCR_SOURCE_SCAN_LINT=1 "$@" bash "$og_runner") >"$log" 2>&1; then SSL_RC=0; else SSL_RC=$?; fi
+}
+ssl_run "$WORK/ssl-red.log" DCR_SOURCE_SCAN_LINT_PATHS=uitests
+if [ "$SSL_RC" -ne 0 ] && grep -q 'Disclosure.test.tsx:3:' "$WORK/ssl-red.log" \
+  && grep -q 'dcr-gates: source_scan_tests FAIL' "$WORK/ssl-red.log"; then
+  record 0 "dcr-gates opt-in: source_scan_tests resolves a relative path against the repo root and FIRES (planted RED)"
+else
+  record 1 "dcr-gates opt-in: source_scan_tests resolves a relative path against the repo root and FIRES (planted RED)"
+fi
+ssl_run "$WORK/ssl-green.log" DCR_SOURCE_SCAN_LINT_PATHS=src
+if [ "$SSL_RC" -eq 0 ] && grep -q 'dcr-gates: source_scan_tests PASS' "$WORK/ssl-green.log"; then
+  record 0 "dcr-gates opt-in: source_scan_tests passes a clean relative path"
+else
+  record 1 "dcr-gates opt-in: source_scan_tests passes a clean relative path"
+fi
+ssl_run "$WORK/ssl-blank.log" DCR_SOURCE_SCAN_LINT_PATHS='   '
+if [ "$SSL_RC" -ne 0 ] && grep -q 'FAIL source_scan_tests (DCR_SOURCE_SCAN_LINT_PATHS names no path)' "$WORK/ssl-blank.log"; then
+  record 0 "dcr-gates opt-in: whitespace-only DCR_SOURCE_SCAN_LINT_PATHS fails closed"
+else
+  record 1 "dcr-gates opt-in: whitespace-only DCR_SOURCE_SCAN_LINT_PATHS fails closed"
+fi
+rm -rf "$og/uitests"
+>>>>>>> 3cfd70a
 
 # ---------------------------------------------------------------------------
 

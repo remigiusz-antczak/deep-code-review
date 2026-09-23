@@ -887,6 +887,17 @@
       ]
     },
     {
+      "id": "source-scan-is-not-behaviour-evidence-for-a-collapse",
+      "prompt": "A 'show more' row list has a PR claiming the collapse/expand behaviour is covered. The only test for it reads the component's source with fs.readFileSync('./RowList.tsx', 'utf8') and asserts src.includes('slice(0, visibleCount)') -- no render, no mount, no screen query anywhere in the test file. Is the collapse behaviour verified?",
+      "expected_output": "No. Reading the component's source as text and regex/includes-checking a string proves only that the author typed that substring somewhere in the file -- it cannot observe what the DOM actually contains before and after the interaction. This is exactly the bug class it misses: a list sliced by a live count can sit right next to a SECOND, unconditionally-mapped list of the same rows, so every row renders regardless of what the slice string check finds. A source scan is fine as a lint-shaped invariant (an import ban, a banned-pattern check) but is never behaviour evidence for a conditional-render claim. Require at least one test that renders the component and asserts DOM presence/absence before and after the interaction: render it collapsed, assert the row past visibleCount is absent (queryByText(...).not.toBeInTheDocument()), fire the expand interaction, then assert it is present. Flag the claim as unverified until that rendered-DOM assertion exists. (testing-ui.md.)",
+      "expectations": [
+        "Refuses to treat the collapse/expand claim as verified on the source-scan test alone",
+        "Explains a source-scan proves only that a string is present in the file text, not what the DOM renders",
+        "Names the specific miss: a second, unconditionally-rendered list of the same rows would pass the string check while breaking the collapse",
+        "Requires a test that renders the component and asserts DOM presence/absence before and after the interaction"
+      ]
+    },
+    {
       "id": "parity-claim-scoped-to-verified-screens-not-the-product",
       "prompt": "A visual port: reference design plus six app routes. So far only the changelog page (static prose, almost no shared chrome) has been rendered and compared -- it matches. Can I report 'the app now matches the design'?",
       "expected_output": "No -- that generalizes one verified screen to the whole product. Scope the claim to the rows actually verified: report '1/6 screens verified' and list the five unverified routes; an unrendered screen is an unprobed surface, unverified, not matched (an absence is evidence only after a positive control fires). Aggregate phrasing ('the app matches', 'parity achieved') is valid only when every row in the correspondence table reads verified. Cap the verdict below Approve while any in-scope screen is unverified, and carry a 'Parity coverage: 1/6' line in the ground-truth block. Generalizing a sample to the population is a High communication defect -- it retires the verification task and the owner stops checking, then the mismatch surfaces later. Also: the changelog page is the weakest possible sample -- it exercises almost none of the shared shell -- so verify a chrome-bearing, data-dense route next, not another static page. (migration-parity.md.)",
