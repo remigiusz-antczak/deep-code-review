@@ -1,5 +1,5 @@
 b488b32bdc46c18b89f07c39e311430bf08e90ba9d79f4911b06561c69114fc8  .claude/skills/agentic-ceo/INDEX.md
-89997c938c995d59989921929ecc66896f2c255f603f8eba2206e4d3a64ab556  .claude/skills/agentic-ceo/SKILL.md
+efce27819f5808f6dd479d99ab00fc4170746ea4ddbc948a70e3a7065252f4cc  .claude/skills/agentic-ceo/SKILL.md
 cc52f678848b814373757b460383bf61960e4943c203735adde0a350b3e50989  .claude/skills/agentic-ceo/VERSION
 c6d8a3f82ab3d135138c45d96c3d8309f0f98447d563ccbc54eac565b16a502d  .claude/skills/agentic-ceo/evals/evals.json
 c055291d4401717a50cb0dd296efc03d7270496fb0e769440cff6f0a112a77e9  .claude/skills/agentic-ceo/scripts/fixtures/token/session.jsonl
@@ -9,14 +9,14 @@ e3229aa03cb46428a334e96ea8ad00dc27dfb5606ffbe99ca99c2524597d353f  .claude/skills
 b7cfe7316bb0d0f4a2219dc017998494a34206b9899dea6349bb4441d542054e  .claude/skills/agentic-ceo/scripts/task_ledger.py
 0de1f06b124c17ed7101179af844b78e33836bc619d438583080a7fff6f024ef  .claude/skills/agentic-ceo/scripts/token_report.py
 4ab55281a36b9807625ebd333f804f9c475dbe3ae6779c03f3453b9bcfd5f78a  .claude/skills/agentic-delivery/INDEX.md
-690b7b06b0bdd8cf1e35432b1eef709464d41a8b7dd1cb5361faab42124109df  .claude/skills/agentic-delivery/SKILL.md
+8649270e7065b7c234cc8e79b426c78950abbe8ea4d0783bfb5c62563b4d4c9c  .claude/skills/agentic-delivery/SKILL.md
 3687881bd7e73e381f862871e32f0cbcc09e36d4fd80322ee7d548c2387e831b  .claude/skills/agentic-delivery/VERSION
-d9efd9e77f0d34a86552b09ac54a14c6884fda34d896341945b1e008386c0968  .claude/skills/agentic-delivery/evals/evals.json
+63013dcca9be4da43a570a7e53fbb8574317e583e8b03d6d2c9275f94a41bd4c  .claude/skills/agentic-delivery/evals/evals.json
 08e75df1f13454c109f74daa47208bbc084e65e430c9500320350c7fb3cf186d  .claude/skills/agentic-delivery/references/dev-env-ownership.md
 a8aeed98167e3a3589d570e394ee97a73f97d5a2030283760ae6b1c1a0ef4b71  .claude/skills/agentic-delivery/references/fanout-host-sizing.md
 d8c53166e9d955e308f4e50dc096ebc83adc9c255afae7305db66c1161ba78fa  .claude/skills/agentic-delivery/references/fast-agentic-delivery.md
 b638d1535ed7519643bdb0da01c44831c671cc93393d731507fa4ae100f73dd7  .claude/skills/agentic-delivery/references/gate-epistemology.md
-978c385c80c8144ed54bf1b3d5354ab7e140da86b0e11ef8ea36c993aa36576b  .claude/skills/agentic-delivery/references/host-enforcement.md
+24d330b15f1afb6490ed2d8262e7c0adb1cd1d56aa141d72025b9fc24317f2c6  .claude/skills/agentic-delivery/references/host-enforcement.md
 1b8d16e76c453aef8ac31e1c096935268d2cea9347ee78e643f7da7c77815e2c  .claude/skills/agentic-delivery/references/incident-response.md
 84cafa753c5d12358d16562a01892b0c3cd7f7c4a68569ab497d148ab5c380f1  .claude/skills/agentic-delivery/references/merge-queue-worktrees.md
 f500c2201aa04674a5643f29e91e1d8305e5a04b73c3dbd74f3bc06aa66e9f5b  .claude/skills/agentic-delivery/references/multi-session-coordination.md
@@ -45,6 +45,7 @@ a93ac9578390ca3bc5cf670c3c88c20e2e9e298cbe65e754a65f08c256aead76  .claude/skills
 4a6fb3e0620bf882a53698af6fbe0fa7b8c8d2e8bb4d9e457940f8a2980cbf35  .claude/skills/agentic-delivery/scripts/review_digest.py
 85a2afa0992f5316aaa6db82bb119ce4e82df10a09e8de7c329ebc3518d7082c  .claude/skills/agentic-delivery/scripts/serial_gate.py
 62974c41f34a8f422d7dfb08d9b17293916fd623221924421347f87ff1178fb4  .claude/skills/agentic-delivery/scripts/surface_check.py
+7b406c8f23970121f7a20ba45030d3ace466f4e75b26bc74840cd56af7879beb  .claude/skills/agentic-delivery/templates/lane-preamble.md
 66ce3097baa3d28835d7f2324c0b665cf228ece7210f4a1f64d3a4bb30944b81  .claude/skills/business-ops/INDEX.md
 0cd7c319554c6fb42c62540e7bfbf28c25941d024ad72b917265cbea85821283  .claude/skills/business-ops/SKILL.md
 acb57a7135b2d7d6e665f67f056e21353023b93835f54def1ae523bf76f1bfb3  .claude/skills/business-ops/VERSION

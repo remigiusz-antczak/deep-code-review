@@ -153,6 +153,7 @@ blocks a presentation PR while aged P0/mechanism work is uncited, and
 `scripts/refix_gate.py` blocks churn without a class artifact.
 An OPEN owner priority outranks both: dispatch nothing outside it until DONE or BLOCKED
 (same file, **An open owner priority outranks every other item**; `scripts/focus_gate.py`).
+Paste `agentic-delivery`'s `templates/lane-preamble.md` into every lane brief before dispatch.
 
 ## Output discipline (no slop) — enforced across the suite
 Every user-facing output the suite produces — message, report, plan, table, or
