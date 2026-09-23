@@ -31,9 +31,9 @@ orphaned, or (c) make several role-reviewers add up to one whole-target audit.
 | **Backend (API & DB)** | B I E A G T | `security-appsec.md`, `security-api.md`, `api-contracts.md`, `performance-db-cost.md` | — |
 | **Data & AI** | D C E J Q | `data-quality.md`, `security-ai-agents.md`, `privacy-compliance.md` | — |
 | **Platform / DevOps / SRE** | L K M N F W | `infra-iac-containers.md`, `observability.md`, `reliability-error-handling.md` | **SLI/SLO, error budget & burn-rate** |
-| **QA / performance / a11y** | J E P | `testing-and-evals.md`, `performance-db-cost.md`, `frontend-a11y.md` | — |
-| **Release & docs** | S O K | `branch-and-merge-hygiene.md`, `docs-and-dx.md` | **Release owner sign-off** |
-| **Agent-readiness** | C J K M N F O H | `security-ai-agents.md`, `security-agent-skills.md`, `observability.md`, `testing-and-evals.md` | **Agent-readiness lens** |
+| **QA / performance / a11y** | J E P | `testing-and-evals.md`, `testing-ui.md`, `performance-db-cost.md`, `frontend-a11y.md` | — |
+| **Release & docs** | S O K | `branch-and-merge-hygiene.md`, `merge-operations.md`, `docs-and-dx.md` | **Release owner sign-off** |
+| **Agent-readiness** | C J K M N F O H | `security-ai-agents.md`, `security-agent-skills.md`, `observability.md`, `testing-and-evals.md`, `testing-ai-evals.md` | **Agent-readiness lens** |
 
 Roles overlap on purpose — B is read by frontend, backend, and data; E by
 architect, backend, data, SRE, and QA. Overlap is not duplication of *work*: the

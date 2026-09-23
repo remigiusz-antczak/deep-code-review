@@ -298,7 +298,7 @@ Every billable or slow call must map to value delivered.
 - **LLM specifics**: `max_tokens` and `timeout` set; prompt/response sizes
   bounded — but a *size* bound is not a drop-priority: what silently gets shed when the
   assembled input overflows (often the system instructions) is governed by a correctness
-  check at the context-assembly seam (`testing-and-evals.md`), not by this cost bound; a deterministic
+  check at the context-assembly seam (`testing-ai-evals.md`), not by this cost bound; a deterministic
   fallback path for when generation fails, with a
   counter reporting how often the fallback fired; don't ask the model to do work
   a function can do (see `security-ai-agents.md`). On cost:
@@ -490,7 +490,7 @@ Every billable or slow call must map to value delivered.
   = parallelize, or read once) — here the read is *unused on the branch that always runs*, so
   only relocating the call helps; from **over-fetch / whole-collection** above, which trim what a
   *used* result contains (here nothing on the hot path uses it); and from dead code in
-  `domain-checklists.md` §H (an unreferenced function nobody calls) — here the call **runs** on
+  `domain-h.md` (an unreferenced function nobody calls) — here the call **runs** on
   every request and only its *result* is dead on the hot branch.
 - No unbounded growth: ever-growing lists/maps/caches, accumulating `defer`s,
   unclosed resources. Stream large data instead of buffering it all in memory.

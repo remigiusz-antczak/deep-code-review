@@ -160,7 +160,7 @@ Functions) invoked by a queue, stream, or table trigger wired up in IaC
   write to a resource the trigger ignores (a separate table/attribute), filtering
   the trigger on a system-authored marker so the function's own writes don't
   re-trigger it, or computing the value on read instead of writing it back.
-  Cross-ref `domain-checklists.md` §W (topology).
+  Cross-ref `domain-w.md` (topology).
 
 **🚩 grep**: a function's write/publish target is also configured as a trigger
 source for the same function or an upstream one — check the event-source-mapping

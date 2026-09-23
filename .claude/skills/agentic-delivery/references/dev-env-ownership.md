@@ -148,7 +148,7 @@ the ratchet exists to enforce (observed: a baseline bumped `1015→1016` by thre
 tried to revert its own bump back to `1015` could not, since the real count was already `1016` and the pre-push
 hook had no override).
 **A forward-progress ratchet that also blocks a revert-to-green is misconfigured — a revert must not be gated by the metric it is restoring.**
-Give it an audited revert path judged against the targeted commit, not current HEAD, or size headroom (above) so
+Give it an audited revert path judged against the targeted commit, not current HEAD, or a delta gate (above) so
 a redundant bump never needs a same-day revert.
 
 ## Acknowledge a live-feedback burst before dispatching — silent throughput reads as ignoring

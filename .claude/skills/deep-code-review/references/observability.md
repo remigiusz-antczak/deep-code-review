@@ -49,7 +49,7 @@ failure paths that *produce* these signals are section F /
   agent feature shipped with only service-level latency/error signals is under-instrumented:
   capture per-call **token usage** (prompt/completion), **latency** and **cost**, the **model +
   version** (and, for LLM calls, a **prompt version tag or template hash** — so a quality regression
-  is attributable to the *prompt* revision, not just a model bump; `testing-and-evals.md`), the
+  is attributable to the *prompt* revision, not just a model bump; `testing-ai-evals.md`), the
   **outcome** (success / error / refusal / empty / tool-call), and a **trace**
   spanning the agent's tool calls, so a failing or token-burning agent is visible — but emit
   **structured telemetry: counts and metadata, never the raw prompt/response payload** (redact per

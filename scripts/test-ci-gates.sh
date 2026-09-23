@@ -681,14 +681,132 @@ for phren in '1 Ground truth|1. Ground truth|1' '2 Domain audits|Phase 2 Domain 
   fi
 done
 
+# CONDITIONAL qualifier: a Phase 0-2 ref written "`ref.md` when <trigger>" is a
+# routed sub-file loaded only on that trigger -- excluded from both floors,
+# but it must exist on disk. Three cases on a copy of the clean fixture, with
+# a deliberately huge conditional ref (1000 tokens) so counting it by mistake
+# would blow straight through the ceiling:
+#   (a) "when" -> excluded: the gate passes and reports the unchanged floor;
+#   (b) positive control -- the same ref WITHOUT "when" is counted and FIRES,
+#       proving the qualifier (not the ref's mere presence) excludes it;
+#   (c) the conditional ref missing on disk fails closed, naming it.
+cond_root="$WORK/mustload-fixture/cond"
+rm -rf "$cond_root"
+cp -R "$mlroot" "$cond_root"
+sed 's/^| 1 Ground truth | fixture phase 1 | `ref-p1.md`, `ref-p2.md` |$/| 1 Ground truth | fixture phase 1 | `ref-p1.md`, `ref-p2.md`; `ref-p5.md` when a gate verdict is disputed |/' \
+  "$mlroot/.claude/skills/deep-code-review/SKILL.md" >"$cond_root/.claude/skills/deep-code-review/SKILL.md"
+head -c 4000 </dev/zero | tr '\0' 'h' >"$cond_root/.claude/skills/deep-code-review/references/ref-p5.md"
+cond_skill_tok=$(( $(wc -c <"$cond_root/.claude/skills/deep-code-review/SKILL.md" | tr -d '[:space:]') / 4 ))
+cond_light=$(( cond_skill_tok + 10 + 5 + 10 ))
+cond_full=$(( cond_light + 20 ))
+printf 'demo\t15\ndemo2\t10\nphase-floor-light\t%d\nphase-floor-full\t%d\nphase-conditional\tref-p5.md\n' \
+  "$cond_light" "$cond_full" >"$WORK/mustload-cond.tsv"
+gate "$GATES" mustload --config "$WORK/mustload-cond.tsv" "$cond_root"
+if [ "$GATE_RC" -eq 0 ] \
+  && grep -qF "phase floor LIGHT $cond_light/$cond_light, FULL $cond_full/$cond_full" "$WORK/last.log" \
+  && grep -qF '`ref-p5.md` when ' "$cond_root/.claude/skills/deep-code-review/SKILL.md"; then
+  record 0 "mustload: a \"when\"-qualified Phase 0-2 ref is conditional -- excluded from the floor"
+else
+  record 1 "mustload: a \"when\"-qualified Phase 0-2 ref is conditional -- excluded from the floor"
+fi
+sed 's/`ref-p5.md` when a gate verdict is disputed/`ref-p5.md` on every scope/' \
+  "$cond_root/.claude/skills/deep-code-review/SKILL.md" >"$WORK/cond-skill-unqualified.md"
+cp "$WORK/cond-skill-unqualified.md" "$cond_root/.claude/skills/deep-code-review/SKILL.md"
+gate "$GATES" mustload --config "$WORK/mustload-cond.tsv" "$cond_root"
+if [ "$GATE_RC" -ne 0 ] && grep -q 'MUSTLOAD FLOOR FAIL: phase-floor-light' "$WORK/last.log"; then
+  record 0 "mustload: the same ref without \"when\" is counted into the floor and FIRES (positive control)"
+else
+  record 1 "mustload: the same ref without \"when\" is counted into the floor and FIRES (positive control)"
+fi
+sed 's/^| 1 Ground truth | fixture phase 1 | `ref-p1.md`, `ref-p2.md` |$/| 1 Ground truth | fixture phase 1 | `ref-p1.md`, `ref-p2.md`; `ref-p5.md` when a gate verdict is disputed |/' \
+  "$mlroot/.claude/skills/deep-code-review/SKILL.md" >"$cond_root/.claude/skills/deep-code-review/SKILL.md"
+rm -f "$cond_root/.claude/skills/deep-code-review/references/ref-p5.md"
+gate "$GATES" mustload --config "$WORK/mustload-cond.tsv" "$cond_root"
+if [ "$GATE_RC" -ne 0 ] \
+  && grep -q 'MUSTLOAD FLOOR MISSING REF: Phase 0-2 conditional ref references/ref-p5.md' "$WORK/last.log"; then
+  record 0 "mustload: a \"when\"-qualified ref missing on disk fails closed (planted RED)"
+else
+  record 1 "mustload: a \"when\"-qualified ref missing on disk fails closed (planted RED)"
+fi
+
+# Pinned conditional set: the refs allowed to carry " when " are pinned as
+# `phase-conditional<TAB><ref>` rows. Each case below restores the pinned
+# cond_root fixture (ref-p5.md on disk, "when"-qualified in phase 1) first.
+cond_skill_ok="$WORK/cond-skill-ok.md"
+sed 's/^| 1 Ground truth | fixture phase 1 | `ref-p1.md`, `ref-p2.md` |$/| 1 Ground truth | fixture phase 1 | `ref-p1.md`, `ref-p2.md`; `ref-p5.md` when a gate verdict is disputed |/' \
+  "$mlroot/.claude/skills/deep-code-review/SKILL.md" >"$cond_skill_ok"
+head -c 4000 </dev/zero | tr '\0' 'h' >"$cond_root/.claude/skills/deep-code-review/references/ref-p5.md"
+
+# (d) A "when"-qualified ref with no `phase-conditional` row fails closed and
+# names the ref -- marking a floor ref conditional is not self-certifying.
+cp "$cond_skill_ok" "$cond_root/.claude/skills/deep-code-review/SKILL.md"
+grep -v '^phase-conditional' "$WORK/mustload-cond.tsv" >"$WORK/mustload-cond-unpinned.tsv"
+gate "$GATES" mustload --config "$WORK/mustload-cond-unpinned.tsv" "$cond_root"
+if [ "$GATE_RC" -ne 0 ] \
+  && grep -q 'MUSTLOAD CONDITIONAL UNPINNED: Phase 0-2 ref references/ref-p5.md' "$WORK/last.log"; then
+  record 0 "mustload: a \"when\"-qualified ref with no phase-conditional pin fails closed (planted RED)"
+else
+  record 1 "mustload: a \"when\"-qualified ref with no phase-conditional pin fails closed (planted RED)"
+fi
+
+# (e) One cell naming the pinned ref BOTH plain and "when"-qualified: the
+# plain occurrence is counted into the floor (FLOOR FAIL -- the 1000-token ref
+# blows the pin) and the pin is reported stale. A whole-cell grep for
+# "`ref-p5.md` when " used to classify the ref conditional and pass here.
+sed 's/`ref-p2.md`; `ref-p5.md` when/`ref-p2.md`, `ref-p5.md`; `ref-p5.md` when/' \
+  "$cond_skill_ok" >"$cond_root/.claude/skills/deep-code-review/SKILL.md"
+gate "$GATES" mustload --config "$WORK/mustload-cond.tsv" "$cond_root"
+if [ "$GATE_RC" -ne 0 ] \
+  && grep -q 'MUSTLOAD FLOOR FAIL: phase-floor-light' "$WORK/last.log" \
+  && grep -q 'MUSTLOAD CONDITIONAL NOW UNCONDITIONAL: pinned conditional ref references/ref-p5.md' "$WORK/last.log"; then
+  record 0 "mustload: a cell naming a pinned ref plain AND \"when\" counts it and flags the stale pin (planted RED)"
+else
+  record 1 "mustload: a cell naming a pinned ref plain AND \"when\" counts it and flags the stale pin (planted RED)"
+fi
+
+# (f) A pinned ref the phase table no longer names at all is a dangling pin.
+cp "$mlroot/.claude/skills/deep-code-review/SKILL.md" "$cond_root/.claude/skills/deep-code-review/SKILL.md"
+printf 'demo\t15\ndemo2\t10\nphase-floor-light\t%d\nphase-floor-full\t%d\nphase-conditional\tref-p5.md\n' \
+  "$ml_floor_light" "$ml_floor_full" >"$WORK/mustload-cond-dangling.tsv"
+gate "$GATES" mustload --config "$WORK/mustload-cond-dangling.tsv" "$cond_root"
+if [ "$GATE_RC" -ne 0 ] \
+  && grep -q 'MUSTLOAD CONDITIONAL DANGLING: "phase-conditional" row for references/ref-p5.md' "$WORK/last.log"; then
+  record 0 "mustload: a phase-conditional pin the phase table no longer names fails closed (planted RED)"
+else
+  record 1 "mustload: a phase-conditional pin the phase table no longer names fails closed (planted RED)"
+fi
+
+# (g) A malformed phase-conditional value (not a <name>.md ref) fails closed.
+printf 'demo\t15\ndemo2\t10\nphase-floor-light\t%d\nphase-floor-full\t%d\nphase-conditional\t12\n' \
+  "$ml_floor_light" "$ml_floor_full" >"$WORK/mustload-cond-malformed.tsv"
+gate "$GATES" mustload --config "$WORK/mustload-cond-malformed.tsv" "$mlroot"
+if [ "$GATE_RC" -ne 0 ] && grep -q 'malformed phase-conditional ref "12"' "$WORK/last.log"; then
+  record 0 "mustload: a malformed phase-conditional row fails closed (planted RED)"
+else
+  record 1 "mustload: a malformed phase-conditional row fails closed (planted RED)"
+fi
+
+# (h) Exact-equality floor ratchet: a floor BELOW its pin fails and names the
+# new total to re-pin to, so a cut cannot leave slack for later regrowth.
+head -c 4 </dev/zero | tr '\0' 'e' >"$mlroot/.claude/skills/deep-code-review/references/ref-p2.md"
+gate "$GATES" mustload --config "$WORK/mustload-clean.tsv" "$mlroot"
+if [ "$GATE_RC" -ne 0 ] \
+  && grep -qF "MUSTLOAD FLOOR BELOW PIN: phase-floor-light totals $(( ml_floor_light - 4 )) tokens (pin $ml_floor_light)" "$WORK/last.log" \
+  && grep -qF "MUSTLOAD FLOOR BELOW PIN: phase-floor-full totals $(( ml_floor_full - 4 )) tokens (pin $ml_floor_full)" "$WORK/last.log"; then
+  record 0 "mustload: a floor below its pin fails (exact-equality ratchet; planted RED)"
+else
+  record 1 "mustload: a floor below its pin fails (exact-equality ratchet; planted RED)"
+fi
+head -c 20 </dev/zero | tr '\0' 'e' >"$mlroot/.claude/skills/deep-code-review/references/ref-p2.md"
+
 # The real repo's Phase 0-2 mandatory floor is within its frozen ceiling too
 # -- confirms the new mechanism actually engaged against real data, not just
 # the fixture.
 gate "$GATES" mustload --config "$ROOT/scripts/mustload-budgets.tsv" "$ROOT"
 if [ "$GATE_RC" -eq 0 ] && grep -q 'phase floor LIGHT' "$WORK/last.log"; then
-  record 0 "mustload: the real repo's Phase 0-2 mandatory floor is within its frozen ceiling"
+  record 0 "mustload: the real repo's Phase 0-2 mandatory floor equals its pin"
 else
-  record 1 "mustload: the real repo's Phase 0-2 mandatory floor is within its frozen ceiling"
+  record 1 "mustload: the real repo's Phase 0-2 mandatory floor equals its pin"
 fi
 
 # ---------------------------------------------------------------------------
@@ -2022,6 +2140,366 @@ if [ "$og_red_rc" -ne 0 ] && grep -q 'BLOCKING #3' "$WORK/og-prio-red.log" \
   record 0 "dcr-gates opt-in: priority_gate fires on an inversion, passes once cited (planted RED)"
 else
   record 1 "dcr-gates opt-in: priority_gate fires on an inversion, passes once cited (planted RED)"
+fi
+
+# ===========================================================================
+# Language-family load isolation (own lane; APPENDED AT THE END by
+# convention). The Phase 0-2 floor carries only the cross-language core of
+# language-stack-redflags.md; each language family lives in its own routed
+# lang-*.md. Pin, structurally, that a Python repo -- the LIGHT floor parsed
+# live from SKILL.md's phase table, plus lang-python.md, plus lang-shell.md
+# because its CI runs shell in `run:` steps (the Shell row's trigger) --
+# reads no other family: no other lang-*.md is in that load set, and no
+# content line of any other family file appears verbatim in it. Planted RED:
+# pasting one JavaScript bullet back into the parent must FIRE, and a Shell
+# row that no longer names CI `run:` steps must FIRE.
+# ===========================================================================
+
+# floor_light_refs <skill_dir> — print the LIGHT Phase 0-2 refs (one per
+# line): backticked refs in phase rows 0/1/2's Load cell that carry neither
+# the " on FULL" nor the " when " qualifier. An independent re-derivation of
+# cmd_mustload's parse (a test oracle, not a call into the gate under test).
+floor_light_refs() {
+  awk -F'|' '
+    $0 == "| Phase | Does | Load |" { on = 1; next }
+    on && /^\|---/ { next }
+    on && !/^\|/ { on = 0 }
+    on {
+      ph = $2; sub(/^[[:space:]]+/, "", ph)
+      if (ph !~ /^[012] /) next
+      cell = $4
+      while (match(cell, /`[A-Za-z0-9._-]+\.md`/)) {
+        ref = substr(cell, RSTART + 1, RLENGTH - 2)
+        rest = substr(cell, RSTART + RLENGTH)
+        cell = rest
+        if (rest ~ /^ on FULL/ || rest ~ /^ when /) continue
+        print ref
+      }
+    }
+  ' "$1/SKILL.md" | sort -u
+}
+
+# py_only_leaks <skill_dir> — print every line of a family file other than
+# Python and shell (content lines >= 25 chars after its 3-line title/trigger
+# header) found verbatim in the Python-with-CI-shell load set, plus any other
+# lang-*.md named in the floor. Empty output == isolated.
+py_only_leaks() {
+  local sd="$1" f
+  local set_list="$WORK/py-only-set.txt" pats="$WORK/py-only-pats.txt"
+  : >"$set_list"
+  : >"$pats"
+  while IFS= read -r f; do
+    case "$f" in
+      lang-*.md) printf 'FLOOR NAMES A LANGUAGE FILE: %s\n' "$f" ;;
+    esac
+    printf '%s\n' "$sd/references/$f" >>"$set_list"
+  done < <(floor_light_refs "$sd")
+  printf '%s\n' "$sd/SKILL.md" "$sd/references/lang-python.md" "$sd/references/lang-shell.md" >>"$set_list"
+  for f in "$sd"/references/lang-*.md; do
+    case "$(basename "$f")" in
+      lang-python.md|lang-shell.md) continue ;;
+    esac
+    awk 'NR > 3 && length($0) >= 25' "$f" >>"$pats"
+  done
+  [ -s "$pats" ] || { printf 'NO FAMILY PATTERNS (fail closed)\n'; return 0; }
+  while IFS= read -r f; do
+    grep -Fxf "$pats" "$f" | sed "s|^|LEAK $(basename "$f"): |" || true
+  done <"$set_list"
+}
+
+# shell_row_covers_ci <skill_dir> — succeed only when the parent's Shell row
+# routes CI `run:` shell (plus hooks, Dockerfile RUN, Makefile recipes) to
+# lang-shell.md, and lang-shell.md's own trigger line names CI `run:` steps.
+shell_row_covers_ci() {
+  local row
+  row="$(grep -F '`lang-shell.md` |' "$1/references/language-stack-redflags.md" || true)"
+  printf '%s' "$row" | grep -qF 'CI (`run:`)' \
+    && printf '%s' "$row" | grep -qF 'hooks' \
+    && printf '%s' "$row" | grep -qF 'Dockerfile `RUN`' \
+    && printf '%s' "$row" | grep -qF 'Makefile' \
+    && sed -n 3p "$1/references/lang-shell.md" | grep -qF 'CI `run:` steps'
+}
+
+dcr_sd="$ROOT/.claude/skills/deep-code-review"
+py_floor="$(floor_light_refs "$dcr_sd" | tr '\n' ' ')"
+py_leaks="$(py_only_leaks "$dcr_sd")"
+if [ -n "$py_floor" ] && [ -z "$py_leaks" ] \
+  && grep -qxF '| Python | `lang-python.md` |' "$dcr_sd/references/language-stack-redflags.md" \
+  && grep -qxF '## Python' "$dcr_sd/references/lang-python.md" \
+  && shell_row_covers_ci "$dcr_sd" \
+  && ! grep -qE '^## (Python|JavaScript|Go|Java|Ruby|PHP|C / C\+\+|Rust|SQL)' "$dcr_sd/references/language-stack-redflags.md"; then
+  record 0 "language isolation: a Python repo with CI run: shell (floor: ${py_floor}+ lang-python.md + lang-shell.md) loads no other language family"
+else
+  printf '%s\n' "$py_leaks" | head -5
+  record 1 "language isolation: a Python repo with CI run: shell (floor: ${py_floor}+ lang-python.md + lang-shell.md) loads no other language family"
+fi
+
+# Every language file on disk is routed from the parent index AND SKILL.md,
+# so "load only the languages present" can reach each one.
+lang_unrouted=""
+for f in "$dcr_sd"/references/lang-*.md; do
+  b="$(basename "$f")"
+  grep -qF "\`$b\`" "$dcr_sd/references/language-stack-redflags.md" || lang_unrouted="$lang_unrouted $b(parent)"
+  grep -qF "\`$b\`" "$dcr_sd/SKILL.md" || lang_unrouted="$lang_unrouted $b(SKILL.md)"
+done
+if [ -z "$lang_unrouted" ] && [ "$(ls "$dcr_sd"/references/lang-*.md | wc -l | tr -d ' ')" -ge 2 ]; then
+  record 0 "language isolation: every lang-*.md is routed from language-stack-redflags.md and SKILL.md"
+else
+  record 1 "language isolation: every lang-*.md is routed from language-stack-redflags.md and SKILL.md (unrouted:$lang_unrouted)"
+fi
+
+# Planted RED: a copy of the skill whose parent re-absorbs one JavaScript
+# bullet must be flagged as a leak into the Python-only load set.
+iso_sd="$WORK/lang-iso/deep-code-review"
+rm -rf "$WORK/lang-iso"
+mkdir -p "$WORK/lang-iso"
+cp -R "$dcr_sd" "$iso_sd"
+awk 'NR > 3 && length($0) >= 25 { print; exit }' "$iso_sd/references/lang-js-ts.md" \
+  >>"$iso_sd/references/language-stack-redflags.md"
+if py_only_leaks "$iso_sd" | grep -q '^LEAK language-stack-redflags.md: '; then
+  record 0 "language isolation: FIRES when another family's content leaks into the Python-only load set (planted RED)"
+else
+  record 1 "language isolation: FIRES when another family's content leaks into the Python-only load set (planted RED)"
+fi
+
+# Planted RED: a Shell row narrowed back to "shell scripts" no longer routes a
+# Python repo's CI `run:` shell to lang-shell.md -- the trigger check must FIRE.
+sed 's/^| Shell .*| `lang-shell.md` |$/| Shell \/ Bash scripts | `lang-shell.md` |/' \
+  "$dcr_sd/references/language-stack-redflags.md" >"$iso_sd/references/language-stack-redflags.md"
+if ! shell_row_covers_ci "$iso_sd" \
+  && grep -qxF '| Shell / Bash scripts | `lang-shell.md` |' "$iso_sd/references/language-stack-redflags.md"; then
+  record 0 "language isolation: FIRES when the Shell row stops routing CI run: shell to lang-shell.md (planted RED)"
+else
+  record 1 "language isolation: FIRES when the Shell row stops routing CI run: shell to lang-shell.md (planted RED)"
+fi
+
+# ---------------------------------------------------------------------------
+# pre-push-verify.sh (templates/deep-code-review) — pre-push hook template
+# (#1093): reruns the fast lint+unit tier on the pushed range before
+# allowing `git push`, so a rebase/merge-conflict resolution (unverified code
+# even when the branch's earlier commits were hook-checked) gets checked
+# locally before CI. Own fixture repo (a bare "remote" + a working clone),
+# since it needs real refs and a real remote-tracking branch, unlike the
+# plain `git add` fixtures above.
+# ---------------------------------------------------------------------------
+
+PPV="$ROOT/.claude/skills/deep-code-review/templates/pre-push-verify.sh"
+
+ppvroot="$WORK/ppv-fixture"
+mkdir -p "$ppvroot"
+git init -q --bare "$ppvroot/remote.git"
+git init -q -b main "$ppvroot/local"
+git -C "$ppvroot/local" config user.email "test@example.com"
+git -C "$ppvroot/local" config user.name "Test"
+printf 'a\n' >"$ppvroot/local/f.txt"
+git -C "$ppvroot/local" add f.txt >/dev/null 2>&1
+git -C "$ppvroot/local" commit -qm init >/dev/null 2>&1
+git -C "$ppvroot/local" remote add origin "$ppvroot/remote.git"
+git -C "$ppvroot/local" push -q origin HEAD:main >/dev/null 2>&1
+git -C "$ppvroot/local" remote set-head origin main >/dev/null 2>&1
+
+ppv_local_sha="$(git -C "$ppvroot/local" rev-parse HEAD)"
+ppv_zero="0000000000000000000000000000000000000000"
+
+# ppv_run <log> <ref-line> [env=val ...] — feed one stdin ref-line to the hook
+# from inside the fixture clone, under `env`'s var=val prefix args (so a
+# failing invocation never trips this harness's own `set -e`; same idiom as
+# `og_run` above).
+ppv_run() {
+  local log="$1" line="$2"
+  shift 2
+  if printf '%s\n' "$line" | (cd "$ppvroot/local" && env "$@" bash "$PPV" origin) >"$log" 2>&1; then
+    PPV_RC=0
+  else
+    PPV_RC=$?
+  fi
+}
+
+# Case: bash -n — the template itself parses as valid bash.
+if bash -n "$PPV"; then
+  record 0 "pre-push-verify: bash -n parses the template"
+else
+  record 1 "pre-push-verify: bash -n parses the template"
+fi
+
+# Case: an existing-branch update with a PASSING DCR_PREPUSH_CMD allows the push.
+ppv_run "$WORK/ppv-pass.log" "refs/heads/main $ppv_local_sha refs/heads/main $ppv_local_sha" \
+  DCR_PREPUSH_CMD=true
+if [ "$PPV_RC" -eq 0 ]; then
+  record 0 "pre-push-verify: a passing DCR_PREPUSH_CMD allows the push"
+else
+  record 1 "pre-push-verify: a passing DCR_PREPUSH_CMD allows the push"
+fi
+
+# Case: the SAME push, but a FAILING DCR_PREPUSH_CMD blocks it (planted RED).
+ppv_run "$WORK/ppv-fail.log" "refs/heads/main $ppv_local_sha refs/heads/main $ppv_local_sha" \
+  DCR_PREPUSH_CMD=false
+if [ "$PPV_RC" -ne 0 ] && grep -q 'FAIL -- rejecting push' "$WORK/ppv-fail.log"; then
+  record 0 "pre-push-verify: a failing DCR_PREPUSH_CMD blocks the push (planted RED)"
+else
+  record 1 "pre-push-verify: a failing DCR_PREPUSH_CMD blocks the push (planted RED)"
+fi
+
+# Case: DCR_PREPUSH_CMD unset fails closed by default (no env=val args below,
+# so neither var is set in the hook's environment).
+ppv_run "$WORK/ppv-unset.log" "refs/heads/main $ppv_local_sha refs/heads/main $ppv_local_sha"
+if [ "$PPV_RC" -ne 0 ] && grep -q 'DCR_PREPUSH_CMD is not set' "$WORK/ppv-unset.log"; then
+  record 0 "pre-push-verify: unset DCR_PREPUSH_CMD fails closed by default"
+else
+  record 1 "pre-push-verify: unset DCR_PREPUSH_CMD fails closed by default"
+fi
+
+# Case: the SAME unset config, but DCR_PREPUSH_ALLOW_UNSET=1 lets it through.
+ppv_run "$WORK/ppv-unset-allowed.log" "refs/heads/main $ppv_local_sha refs/heads/main $ppv_local_sha" \
+  DCR_PREPUSH_ALLOW_UNSET=1
+if [ "$PPV_RC" -eq 0 ] && grep -q 'allowing push through' "$WORK/ppv-unset-allowed.log"; then
+  record 0 "pre-push-verify: DCR_PREPUSH_ALLOW_UNSET=1 lets an unset tier through"
+else
+  record 1 "pre-push-verify: DCR_PREPUSH_ALLOW_UNSET=1 lets an unset tier through"
+fi
+
+# Case: a deleted ref (local sha all zeros) is skipped -- never runs DCR_PREPUSH_CMD.
+ppv_run "$WORK/ppv-delete.log" "refs/heads/gone $ppv_zero refs/heads/gone $ppv_local_sha" \
+  DCR_PREPUSH_CMD=false
+if [ "$PPV_RC" -eq 0 ] && grep -q 'is a delete -- skipping' "$WORK/ppv-delete.log"; then
+  record 0 "pre-push-verify: a deleted ref is skipped, never runs the tier"
+else
+  record 1 "pre-push-verify: a deleted ref is skipped, never runs the tier"
+fi
+
+# Case: a SHA-256-repo-shaped zero id (64 hex chars, not the hardcoded 40-char
+# SHA-1 literal) is still detected as a delete and DCR_PREPUSH_CMD never runs.
+ppv_zero64="0000000000000000000000000000000000000000000000000000000000000000"
+ppv_run "$WORK/ppv-delete64.log" "refs/heads/gone64 $ppv_zero64 refs/heads/gone64 $ppv_local_sha" \
+  DCR_PREPUSH_CMD=false
+if [ "$PPV_RC" -eq 0 ] && grep -q 'is a delete -- skipping' "$WORK/ppv-delete64.log"; then
+  record 0 "pre-push-verify: a 64-hex (SHA-256-shaped) all-zero local sha is still detected as a delete"
+else
+  record 1 "pre-push-verify: a 64-hex (SHA-256-shaped) all-zero local sha is still detected as a delete"
+fi
+
+# Case: pushed-range honesty -- a pushed local sha that does NOT match the
+# checked-out HEAD is refused with a clear message, even though the ref line
+# looks well-formed and DCR_PREPUSH_CMD would otherwise pass.
+ppv_bogus_sha="abababababababababababababababababababab"
+ppv_run "$WORK/ppv-honesty-sha.log" "refs/heads/main $ppv_bogus_sha refs/heads/main $ppv_bogus_sha" \
+  DCR_PREPUSH_CMD=true
+if [ "$PPV_RC" -ne 0 ] && grep -q 'does not match the commit being pushed' "$WORK/ppv-honesty-sha.log"; then
+  record 0 "pre-push-verify: a pushed local sha that mismatches checked-out HEAD is refused"
+else
+  record 1 "pre-push-verify: a pushed local sha that mismatches checked-out HEAD is refused"
+fi
+
+# Case: pushed-range honesty -- a dirty working tree is refused even when the
+# pushed local sha matches HEAD, since the checked-out tree no longer matches
+# what DCR_PREPUSH_CMD would actually verify. Cleaned up immediately after so
+# later cases (which assume a clean fixture) are unaffected.
+printf 'dirty\n' >>"$ppvroot/local/f.txt"
+ppv_run "$WORK/ppv-honesty-dirty.log" "refs/heads/main $ppv_local_sha refs/heads/main $ppv_local_sha" \
+  DCR_PREPUSH_CMD=true
+git -C "$ppvroot/local" checkout -q -- f.txt
+if [ "$PPV_RC" -ne 0 ] && grep -q 'working tree is dirty' "$WORK/ppv-honesty-dirty.log"; then
+  record 0 "pre-push-verify: a dirty working tree is refused"
+else
+  record 1 "pre-push-verify: a dirty working tree is refused"
+fi
+
+# Case: whitespace-only DCR_PREPUSH_CMD is treated the same as unset --
+# fails closed by default (not run as an empty-but-passing shell command).
+ppv_run "$WORK/ppv-blank.log" "refs/heads/main $ppv_local_sha refs/heads/main $ppv_local_sha" \
+  'DCR_PREPUSH_CMD=   '
+if [ "$PPV_RC" -ne 0 ] && grep -q 'DCR_PREPUSH_CMD is not set' "$WORK/ppv-blank.log"; then
+  record 0 "pre-push-verify: whitespace-only DCR_PREPUSH_CMD fails closed like unset"
+else
+  record 1 "pre-push-verify: whitespace-only DCR_PREPUSH_CMD fails closed like unset"
+fi
+
+# Case: the SAME whitespace-only config, but DCR_PREPUSH_ALLOW_UNSET=1 lets
+# it through via the unset path (not by running the blank string as a command).
+ppv_run "$WORK/ppv-blank-allowed.log" "refs/heads/main $ppv_local_sha refs/heads/main $ppv_local_sha" \
+  'DCR_PREPUSH_CMD=   ' DCR_PREPUSH_ALLOW_UNSET=1
+if [ "$PPV_RC" -eq 0 ] && grep -q 'allowing push through' "$WORK/ppv-blank-allowed.log"; then
+  record 0 "pre-push-verify: whitespace-only DCR_PREPUSH_CMD + ALLOW_UNSET=1 lets the push through"
+else
+  record 1 "pre-push-verify: whitespace-only DCR_PREPUSH_CMD + ALLOW_UNSET=1 lets the push through"
+fi
+
+# Case: DCR_PREPUSH_CMD must not be able to consume the ref list off the
+# hook's own stdin. Two refs are pushed in one invocation; the command reads
+# (drains) whatever stdin it is handed. If the hook fails to redirect the
+# command's stdin from /dev/null, draining eats the second ref line before
+# the `while read` loop can see it, so the second ref's check silently never
+# runs. The command decides pass/fail from BASE_SHA (distinct per ref, via
+# each ref's own remote sha) rather than from anything on stdin, so this
+# proves the *loop*, not the command's own logic, is what's under test.
+ppv_second_base="1111111111111111111111111111111111111e"
+ppv_stdin_cmd="cat >/dev/null; if [ \"\$BASE_SHA\" = \"${ppv_second_base}\" ]; then exit 1; else exit 0; fi"
+ppv_two_refs="refs/heads/main $ppv_local_sha refs/heads/main $ppv_local_sha
+refs/heads/second $ppv_local_sha refs/heads/second $ppv_second_base"
+ppv_run "$WORK/ppv-stdin.log" "$ppv_two_refs" "DCR_PREPUSH_CMD=$ppv_stdin_cmd"
+if [ "$PPV_RC" -ne 0 ] && grep -q 'FAIL -- rejecting push of refs/heads/second' "$WORK/ppv-stdin.log"; then
+  record 0 "pre-push-verify: DCR_PREPUSH_CMD can't consume the ref list -- the second ref still runs and its failure blocks"
+else
+  record 1 "pre-push-verify: DCR_PREPUSH_CMD can't consume the ref list -- the second ref still runs and its failure blocks"
+fi
+
+# Case: a brand-new branch (remote sha all zeros) computes BASE_SHA as the
+# merge-base against the remote's default branch, not the literal zero sha.
+git -C "$ppvroot/local" checkout -qb feature >/dev/null 2>&1
+printf 'b\n' >>"$ppvroot/local/f.txt"
+git -C "$ppvroot/local" commit -qam feature >/dev/null 2>&1
+ppv_feat_sha="$(git -C "$ppvroot/local" rev-parse HEAD)"
+ppv_expected_base="$(git -C "$ppvroot/local" merge-base origin/main "$ppv_feat_sha")"
+ppv_run "$WORK/ppv-newbranch.log" "refs/heads/feature $ppv_feat_sha refs/heads/feature $ppv_zero" \
+  'DCR_PREPUSH_CMD=printf "BASE=$BASE_SHA HEAD=$HEAD_SHA\n"'
+if [ "$PPV_RC" -eq 0 ] && grep -q "BASE=$ppv_expected_base HEAD=$ppv_feat_sha" "$WORK/ppv-newbranch.log"; then
+  record 0 "pre-push-verify: a new-branch push computes BASE_SHA as the merge-base against the remote default branch"
+else
+  record 1 "pre-push-verify: a new-branch push computes BASE_SHA as the merge-base against the remote default branch"
+fi
+
+# Case: a leftover conflict marker inside the PUSHED RANGE rejects the push
+# even though DCR_PREPUSH_CMD itself passes (planted RED -- before #1094's
+# change the marker check does not exist, so the hook's exit code is 0 and
+# this case fails; after the change it fails closed and this case passes).
+git -C "$ppvroot/local" checkout -q main >/dev/null 2>&1
+printf 'l1\n<<<<<<< HEAD\nl2\n=======\nl3\n>>>>>>> other\n' >"$ppvroot/local/marker.txt"
+git -C "$ppvroot/local" add marker.txt >/dev/null 2>&1
+git -C "$ppvroot/local" commit -qm marker >/dev/null 2>&1
+ppv_marker_sha="$(git -C "$ppvroot/local" rev-parse HEAD)"
+ppv_run "$WORK/ppv-marker.log" "refs/heads/main $ppv_marker_sha refs/heads/main $ppv_local_sha" \
+  DCR_PREPUSH_CMD=true
+if [ "$PPV_RC" -ne 0 ] && grep -q 'leftover conflict marker' "$WORK/ppv-marker.log"; then
+  record 0 "pre-push-verify: a leftover conflict marker in the pushed range rejects the push"
+else
+  record 1 "pre-push-verify: a leftover conflict marker in the pushed range rejects the push"
+fi
+
+# Case: the SAME planted marker, but DCR_PREPUSH_ALLOW_UNSET=1 and no
+# DCR_PREPUSH_CMD set -- the marker check runs before the unset-command path
+# and still blocks (it must not be treated as "nothing configured, let it
+# through").
+ppv_run "$WORK/ppv-marker-allowed.log" "refs/heads/main $ppv_marker_sha refs/heads/main $ppv_local_sha" \
+  DCR_PREPUSH_ALLOW_UNSET=1
+if [ "$PPV_RC" -ne 0 ] && grep -q 'leftover conflict marker' "$WORK/ppv-marker-allowed.log"; then
+  record 0 "pre-push-verify: DCR_PREPUSH_ALLOW_UNSET=1 does not let a leftover conflict marker through"
+else
+  record 1 "pre-push-verify: DCR_PREPUSH_ALLOW_UNSET=1 does not let a leftover conflict marker through"
+fi
+
+# Case: the SAME marker, but it sits only in the BASE (already on the far
+# side of the pushed range, as if the remote already has it) -- a further,
+# marker-free commit on top must not be blocked by it.
+printf 'clean\n' >"$ppvroot/local/clean.txt"
+git -C "$ppvroot/local" add clean.txt >/dev/null 2>&1
+git -C "$ppvroot/local" commit -qm clean >/dev/null 2>&1
+ppv_clean_sha="$(git -C "$ppvroot/local" rev-parse HEAD)"
+ppv_run "$WORK/ppv-marker-in-base.log" "refs/heads/main $ppv_clean_sha refs/heads/main $ppv_marker_sha" \
+  DCR_PREPUSH_CMD=true
+if [ "$PPV_RC" -eq 0 ] && ! grep -q 'leftover conflict marker' "$WORK/ppv-marker-in-base.log"; then
+  record 0 "pre-push-verify: a marker already in the base (outside the pushed range) does not block"
+else
+  record 1 "pre-push-verify: a marker already in the base (outside the pushed range) does not block"
 fi
 
 # ---------------------------------------------------------------------------

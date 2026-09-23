@@ -187,7 +187,7 @@ one green-base window (many in a short burst — the wait only bites *between* w
 admission check does with a base run still in flight *between* members is sharpened just below), plus CI
 speed-ups, plus a **union-proven merge train** (above) where queued PRs might still conflict. Keep the merge
 seat a single `exclusive_role` in the claim registry (`multi-session-coordination.md`) — a second seat is not
-throughput, it is base churn. Distinct from `branch-and-merge-hygiene.md`'s
+throughput, it is base churn. Distinct from `merge-operations.md`'s
 *freeze merges while a resolver is active* rule — that is merger-vs-**resolver** (protecting the resolver's own
 just-computed rebase); this is merger-vs-**merger** (protecting every *other* open PR's base-diff gate and
 in-flight runs). This is the flip side of the merge-train rule: back-to-back draining from *one* seat is the
@@ -201,7 +201,7 @@ This sharpens the single-seat, back-to-back draining lever above: that lever nam
 *when* it drains (one green-base window — it **opens** on a known-green base and **closes** on the post-batch
 green re-confirmation below), not what the window's own admission check does, in its interior, with a base run
 still in flight *between* members. Pending is admissible *inside* the window; only its open and close are
-required to read green. It is not a new claim so much as the same logic `branch-and-merge-hygiene.md`'s
+required to read green. It is not a new claim so much as the same logic `merge-operations.md`'s
 merge-train section already states for the *union* branch's CI: treating "union CI still pending or red" as a
 reason to hold members that are each already green re-serializes the very wait the train exists to remove.
 Applied here to the **integration base's own post-merge run** instead of a union's: a shared base commonly
@@ -213,7 +213,7 @@ lever (above) exists to remove, reappearing *inside* the single seat instead of 
 The fix is the admission predicate, not a new draining mechanism: gate the window on the base reading merely
 **not red** — pending / in-progress is admissible, only a **confirmed-failing** check on the base blocks — and
 drain every member that is (a) own-green on its own required checks and (b) still mergeable, re-checked per PR
-since a sibling landing can flip one to `CONFLICTING` (`branch-and-merge-hygiene.md`'s
+since a sibling landing can flip one to `CONFLICTING` (`merge-operations.md`'s
 mergeability-is-a-snapshot rule; not restated here). Where the queue might interact, prove the union once up
 front, exactly as the merge-train lever above already directs (`SKILL.md` gate epistemology principle 6; not
 restated). Close the window with **one post-batch check**: re-confirm the base actually resolved green after the
@@ -221,7 +221,7 @@ drain, so a combination that reds it despite every member's own green is caught 
 assumed safe merely because no single merge paused to watch its own run resolve.
 
 This does not loosen the **red-base discharge** floor: a base already **confirmed** red is a deadlock that needs
-a proven union to discharge (`branch-and-merge-hygiene.md` §5), not a not-red-gate bypass — not-red admission
+a proven union to discharge (`merge-operations.md`), not a not-red-gate bypass — not-red admission
 covers the ordinary *pending* case that rule doesn't address, never a base already known to have failed. Nor
 does it touch *cadence* (the independent-queue-cascade section above, on how **often** the seat re-evaluates the
 queue) — this is the check's **threshold** (which base state admits the next merge); the two **compose** — a
@@ -280,7 +280,7 @@ browser/probe/hydration check, rerun and recheck **before** reverting") to the v
 **autonomous merge-drainer** draws from a required check's pass/fail bit after each merge. Principle 3 carries
 the discriminator — identify the failing job **and step**, match it against a known-flaky signature, revert only
 once the failure **reproduces** and is causally tied to the change — and the rerun **mechanics** live in
-`branch-and-merge-hygiene.md` §5: diagnose a slow/stuck shard by its log, **rerun at most once, only after**
+`merge-operations.md`: diagnose a slow/stuck shard by its log, **rerun at most once, only after**
 diagnosis, no *rerun-storm*, and retry only an indeterminate result (an `UNKNOWN`), never a **definite**
 failure, as if it were transient. Neither is restated here. What the drainer case adds is the **verdict layer**:
 a first red is not a regression conclusion, the premature *halt* is as costly as the premature *revert*, and an
@@ -300,7 +300,7 @@ misread and is just as costly.
   (para 1). Green on rerun confirms the flake; proceed. This is how a first red *becomes* a **confirmed** red:
   only after the bounded reruns still fail is the trunk a confirmed-failing base, at which point the
   **red-base discharge floor** applies (a confirmed red is a real deadlock needing a proven union to discharge —
-  the floor above, and `branch-and-merge-hygiene.md` §5) and a revert is warranted — name the candidate commits.
+  the floor above, and `merge-operations.md`) and a revert is warranted — name the candidate commits.
   The first red is never itself the confirmed red.
 - **Only a known-flaky shape is a rerun candidate; everything else is real immediately.** A shape *not* on the
   list — a real assertion, a type error, a lint — is deterministic and reproduces, so it is a real regression on
@@ -354,6 +354,11 @@ delivery gate's own verdict.
   load (free RAM + the swap trend, *Gate on free RAM and the swap trend* above; the peer-aggregate form is
   `multi-session-coordination.md`'s shared heavy-lane reservation), and run locally only the gate CI actually
   enforces (*CI-offload the heavy gate* above) — so fewer contention-flakes reach the verdict step at all.
+- **A rebase or merge-conflict resolution is unverified code, not a confirmed pass.** `git rebase --continue`
+  never re-invokes `pre-commit` on the replayed commits, so re-run the lint+unit tier explicitly right after
+  conflict resolution and before `git push`; `templates/pre-push-verify.sh` (`deep-code-review`) can enforce this
+  mechanically, but a hook is self-report, not the control — `branch-and-merge-hygiene.md`'s "Self-report ≠
+  control" is the trusted-evidence rule (not restated here).
 
 Distinct from *Gate on free RAM and the swap trend* and *CI-offload the heavy gate* (#935): those decide
 **whether and how heavily** to run the local gate (sizing) — prevention; this decides
@@ -385,12 +390,12 @@ blocked-head case above, but from a head that was never *checked* rather than on
   non-mergeable (`dirty` / `CONFLICTING`) = **stalled**: the run was suppressed and needs a re-fire. Zero checks
   + `MERGEABLE` = **genuinely just-triggered**: a bounded wait is correct. The two act on
   **different fields, and neither is wait-forever**: poll the *mergeability* field until it settles (the brief
-  `UNKNOWN`-while-recomputing state `branch-and-merge-hygiene.md` bounds to 2–4 tries), then apply
+  `UNKNOWN`-while-recomputing state `merge-operations.md` bounds to 2–4 tries), then apply
   bounded-wait-then-re-fire to the *check list*. The check list alone cannot split stalled from fresh; the
   mergeability field is what does.
 - **Recover by re-triggering, not waiting.** A fresh fetch + merge-of-base + push (or a rebase) recomputes the
   merge ref; if the re-merge is conflict-free, `mergeable` flips and CI fires within seconds — the rebase /
-  re-run-CI mechanics are `branch-and-merge-hygiene.md`'s, not restated here. A true `dirty` from a real
+  re-run-CI mechanics are `merge-operations.md`'s, not restated here. A true `dirty` from a real
   conflict needs that conflict resolved first; either way the move is an **action**, never more polling.
 - **Time-box zero-checks, and never read it as a verdict.** Past a short dispatch-delay threshold **and** while
   non-mergeable → escalate to a re-merge; do not keep polling. Never interpret zero-checks as an implicit
@@ -398,7 +403,7 @@ blocked-head case above, but from a head that was never *checked* rather than on
   at zero checks while non-mergeable past a normal dispatch delay — a nonzero count is work stalling invisibly
   on uncomputable merge refs.
 
-Distinct from the **config-unsatisfiable required check** (`branch-and-merge-hygiene.md`'s
+Distinct from the **config-unsatisfiable required check** (`merge-operations.md`'s
 *a required check must be satisfiable* rule, the #262 *no-status* case): there a required check **name** never
 gets a job to report because the workflow is wired wrong (a path filter, a trigger-event gap, a missing
 `on.pull_request.branches` base entry), and the fix is **config-side** and permanent — a pass-through job or a
@@ -515,7 +520,7 @@ worktree onto the freshly-fetched remote ref before running any script); (2) for
 **current** remote / CI state — merge gates, required-check verification —
 **query the forge/server API for the actual check-runs** — immune to local staleness — rather than trusting a
 local script copy (the same "trusted evidence is a forge run pinned to the reviewed SHA" discipline in
-`deep-code-review`'s `branch-and-merge-hygiene.md`). **🚩** an agent that infers "the gate is broken" from a
+`deep-code-review`'s `merge-operations.md`). **🚩** an agent that infers "the gate is broken" from a
 worktree without confirming its base ref is current; a merge or CI decision made from a local script in a
 worktree of unknown freshness.
 

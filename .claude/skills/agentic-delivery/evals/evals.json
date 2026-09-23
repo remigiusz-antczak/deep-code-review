@@ -393,7 +393,7 @@
     {
       "id": "pr-body-verified-claim-without-a-verify-line-is-unverified",
       "prompt": "An agent-authored delivery PR is ready to land. Its body says 'Tested and working -- confirmed the new checkout flow renders and submits in the browser.' The CI gates (lint, unit tests, type-check) are green. No screenshot, no command, no surface named. A reviewer who did not watch the work is about to approve on the strength of that sentence. Sound?",
-      "expected_output": "No. 'Tested and working / confirmed in the browser' is a self-reported CLAIM, not evidence -- and the green CI gates certify the code, not that the interface was exercised (they do not run the browser flow). The claim carries no `Verify:` line naming HOW it was checked: the exact command, the surface/URL exercised, the evidence (screenshot / recording / link). Treat it as UNVERIFIED and ask for the method, not the adjective -- a false 'done' is trusted, built on, and surfaces late. The `Verify:` line is a claim-quality requirement that makes the assertion auditable; it is NOT itself a trusted control (still self-reported -- the SHA-pinned forge run is the control). And if a `Verify:`-line gate is added, co-evolve the lane template so agent PRs emit it, or every automated PR strands. (agentic-delivery verification-handback.md; deep-code-review branch-and-merge-hygiene.md self-reported-evidence.)",
+      "expected_output": "No. 'Tested and working / confirmed in the browser' is a self-reported CLAIM, not evidence -- and the green CI gates certify the code, not that the interface was exercised (they do not run the browser flow). The claim carries no `Verify:` line naming HOW it was checked: the exact command, the surface/URL exercised, the evidence (screenshot / recording / link). Treat it as UNVERIFIED and ask for the method, not the adjective -- a false 'done' is trusted, built on, and surfaces late. The `Verify:` line is a claim-quality requirement that makes the assertion auditable; it is NOT itself a trusted control (still self-reported -- the SHA-pinned forge run is the control). And if a `Verify:`-line gate is added, co-evolve the lane template so agent PRs emit it, or every automated PR strands. (agentic-delivery verification-handback.md; deep-code-review merge-operations.md self-reported-evidence.)",
       "expectations": [
         "Identifies 'tested and working / confirmed in the browser' as a self-reported claim, and notes green CI gates certify the code, not that the interface/browser flow was exercised",
         "Requires a `Verify:` line naming the method (command run, surface exercised, evidence link) before trusting it -- treat as unverified, ask for the method not the adjective",
@@ -1466,6 +1466,16 @@
         "Says debouncing shortens or spaces out the gap but does not remove it",
         "Recommends an atomic update for the human-watched surface: a deployed preview or a warmed standby behind a proxy that switches once routes answer",
         "Restarts in place only when the active backend fails its health check"
+      ]
+    },
+    {
+      "id": "rebase-conflict-unverified-until-relinted",
+      "prompt": "A lane rebases its branch onto main, resolves a conflict inside a test file by hand, and is about to push.",
+      "expected_output": "Re-run the fast lint and unit test tier right after `git rebase --continue` (or a merge) and before `git push` -- the conflict-resolution commit is unverified code even though the branch's earlier commits were hook-checked, because `git rebase --continue` does not re-invoke pre-commit on the replayed commits. A pre-push hook (deep-code-review's `templates/pre-push-verify.sh`) can enforce this mechanically, but it is self-report, not the control -- CI on the pushed SHA stays the trusted gate.",
+      "expectations": [
+        "Names the conflict-resolution commit as unverified code needing its own lint+test run",
+        "Runs the check after `git rebase --continue` (or a merge) and before `git push`, not relying on the pre-commit hook having already run",
+        "Treats a local pre-push hook as advisory / self-report, not a substitute for the CI check on the reviewed SHA"
       ]
     }
   ]

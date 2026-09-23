@@ -47,7 +47,7 @@ explicit third choice), not which one this review prefers.
 - **Snapshot / weight-pin** — stable identities (ids, dedup/join keys,
   normalized values) and every scoring weight/threshold, so a silent change is
   caught as a reviewed diff.
-- **AI evals** — for any model-dependent output (see below).
+- **AI evals** — for any model-dependent output (see `testing-ai-evals.md`).
 - **Non-functional** — performance/load/stress/spike/endurance where relevant,
   and accessibility (see `frontend-a11y.md`).
 
@@ -145,7 +145,7 @@ explicit third choice), not which one this review prefers.
   signal** (a specific selector / text is present) over a network-idle heuristic,
   which a live hot-reload socket keeps busy so the capture waits forever and yields
   zero images. (Distinct from reproducing a **build-specific** defect, which must use
-  the production build — `method.md`; this is capturing *feature* evidence past an
+  the production build — `method-situational.md`; this is capturing *feature* evidence past an
   auth gate.)
 - **Meaningful assertions.** Not `assertTrue(true)`; not a mock that makes the
   test pass trivially; not coverage inflated by tests that assert nothing.
@@ -315,7 +315,7 @@ explicit third choice), not which one this review prefers.
   whose only shared signal is their *structure*, driven by no fix), from the coherence test
   above (which runs one fixture through mirrored paths asserting *identical* output —
   inapplicable when each copy targets a different field), and from the sentinel-sibling
-  comparator in `language-stack-redflags.md` (value-set completeness inside **one** function;
+  comparator in `lang-js-ts.md` (value-set completeness inside **one** function;
   this is guard-set parity across **N** functions).
 - **A store with interchangeable backends fails on the one the tests never instantiate — and a
   faithful fake cannot catch it.** When one interface has several implementations chosen at runtime
@@ -393,129 +393,11 @@ independently hit the *same* gate failure and each "fixes" it by copying the rea
 into their checkout, the defect is the fixture/gate contract, not their environments — the
 workaround masks a standing Definition-of-Done violation.
 
-## Prove a rendered-layout claim with geometry, not class names
+## Conditional depth — load only what the target has
 
-A UI test that asserts **the class that is supposed to produce a layout** —
-`expect(pill).toHaveClass(…)`, `toBeVisible()`, a markup snapshot — proves only that
-the author wrote the class they typed; it passes while the two elements render **on
-top of each other**. Overlap, collision, and clipping are **geometric** properties,
-provable cheaply and deterministically, and a class assertion can never catch them.
-
-For any pair of adjacent elements whose collision is user-visible (a label + its
-status pill / badge, a row's text + its action cluster, a header + an overflow
-control), the test that counts is a **rendered bounding-box assertion**, run at
-**each width the project already screenshots** (an overlap is width-dependent and
-usually shows only at the narrow one):
-
-```js
-// Playwright: adjacent elements must not intersect at the target width.
-// boundingBox() returns null for a non-rendered element — assert presence first.
-const a = await label.boundingBox();
-const b = await pill.boundingBox();
-expect(a && b).toBeTruthy();             // both rendered (not null)
-const intersects = (r1, r2) =>
-  r1.x < r2.x + r2.width && r2.x < r1.x + r1.width &&
-  r1.y < r2.y + r2.height && r2.y < r1.y + r1.height;
-expect(intersects(a, b)).toBe(false);    // non-intersection
-expect(a.width).toBeGreaterThan(0);      // and neither collapsed to zero
-```
-
-Equivalent primitives elsewhere: `getBoundingClientRect()` pairs in a browser-backed
-unit runner, or `elementHandle.boundingBox()` per locator. Two companion assertions
-share the mechanism:
-- **Clip / truncation:** `scrollWidth > clientWidth` on an element that must not
-  ellipsise.
-- **Disabled-looks-disabled:** assert the **computed** affordance (`opacity`,
-  `cursor`, or painted colour) of a disabled control, not the `disabled` attribute or
-  the class — an attribute that blocks the click while the control still *styles* as
-  live is a dead control that looks clickable.
-
-**Scope discipline — invariants, not pixels.** These assertions are for
-**non-intersection and non-clipping**, which hold on every renderer. They are **not**
-for absolute positions or exact widths, which are renderer- and font-metric-dependent
-and produce the cross-OS flake the bar warns against (the renderer-tolerance / pinned-
-exception discipline, `product-ux-quality.md` gate 3). The assertion is "these two do
-not overlap," never "this is 132px wide." Show it **red before / green after** the
-fix, like any regression test. This is the mechanical proof behind the
-screenshot-inspection checklist's **overlap** and **clip** items
-(`product-ux-quality.md` gate 1).
-
-## Capturing the pre-hydration render — the disabled-until-hydrated write control
-
-The geometry assertions above run against the *hydrated* DOM, and one gate-1 defect is
-invisible there: a write control gated on client-only state (`useSession` / `useAuth`) is
-server-rendered `disabled` and enables only once the client bundle hydrates, so for the
-SSR → hydration window it looks like a permanent dead control (`product-ux-quality.md` gate 1,
-*not-dead-before-hydration*). Catching it needs a snapshot taken **before the client bundle
-runs** — three captures, cheapest first:
-
-- **Server HTML** — fetch the route's server-rendered markup with no JS executed (the raw
-  SSR/SSG response, the same bytes the user first receives) and parse it.
-- **JS-disabled render** — load the route with scripting off (Playwright:
-  `browser.newContext({ javaScriptEnabled: false })`), which freezes the pre-hydration paint.
-- **Throttled capture** — screenshot within the hydration window under slow-CPU emulation;
-  least reliable (a race), used only when the two above cannot reach the route.
-
-The assertion is the same across all three: a control that **will** become interactive must
-not present as a bare `disabled` (or `aria-disabled="true"`) with **no loading sibling in its
-container** in that pre-hydration snapshot — it carries a skeleton/spinner affordance, or is
-optimistically enabled (its click captured for replay, never a no-op).
-
-```js
-// Playwright: the pre-hydration paint must not show a dead write control.
-const ctx = await browser.newContext({ javaScriptEnabled: false });
-const page = await ctx.newPage();
-await page.goto(url);                               // server HTML, no hydration
-// scope to the control's own wrapper so the affordance is a sibling, not page-global
-// (a page-wide match would pass on any unrelated spinner; a broken scope that matches
-// nothing would fail every disabled control — stricter than the standard, gate 1 forbids):
-const box = page.locator('[data-testid="composer"]'); // the write control's container
-const btn = box.getByRole('button', { name: /add|submit|post/i });
-const disabled = (await btn.getAttribute('disabled')) !== null
-  || (await btn.getAttribute('aria-disabled')) === 'true';
-const affordance = await box
-  .locator('[aria-busy="true"], [data-loading], .skeleton, [role="status"]').count() > 0;
-expect(disabled && !affordance).toBe(false);        // dead-until-hydrated is the defect
-```
-
-This is the **positive control** for the *not-dead-before-hydration* detector — the instrument
-that converts the static `disabled={!session}` *lead* into a finding (principle 2: *an absence
-is evidence only after a positive control fires*). Where the harness cannot produce any of the
-three captures for a route, the item is **could-not-check** and fails **open**; a missing
-snapshot is not a clean pass (`product-ux-quality.md` gate 1). It complements
-`domain-checklists.md`'s SSR/static-HTML inspection, which catches hydration-*nesting* faults
-in the same server-rendered output.
-
-## A rewritten browser spec names its retired coverage and pins the wiring it can no longer reach
-
-The geometry assertions above prove a rendered claim you can still reach. This is the
-opposite case: a redesign makes a spec's target surface **structurally unreachable in the
-test environment** — a surface that now renders only user-submitted content while the
-test store is intentionally empty, so there is nothing to drive the interaction — and the
-spec is correctly rewritten against a different surface. The trap is that the rewrite
-**silently drops** what the old spec covered: surface A and surface B both exercised an
-overlay; B is redesigned to nothing-to-click; the spec moves A-only; a later change
-removes B's wiring (the feed's import of the shared overlay-link component) and **no test
-goes red**, because the only spec that covered B is gone.
-
-When a spec is rewritten because its surface became unreachable, three things are owed —
-and their absence is a finding:
-
-1. **Name the retired coverage as a gap.** What did the old spec assert that the new one
-   does not? A dropped assertion is an *absence*, and an unrecorded absence reads as
-   coverage (principle 2: *an absence is evidence only after a positive control fires*).
-   Record it where coverage gaps are already tracked (the *honest coverage taxonomy*
-   above), not in a commit message the next reader never sees.
-2. **State whether the wiring is now unverifiable via a browser test** without seeding
-   the store (or standing up a costly fixture), and why — so the gap is a decision, not
-   an accident.
-3. **Add a source-level structural gate that pins the wiring** the browser spec can no
-   longer reach: a unit/source assertion that the feed component still imports and uses
-   the shared overlay-link component (the pattern the codebase's other overlay-wiring
-   tests already use). This guarantee is **weaker** than the browser scenario it replaces
-   — it proves the component is *referenced*, not that the interaction *works* — so it is
-   a **named fallback for a retired check, never a substitute** that lets a team trade
-   rendered coverage for import checks and call the surface covered.
+- Rendered UI, browser, or E2E specs → `testing-ui.md` (layout geometry, pre-hydration capture, rewritten specs, state-dependent specs).
+- Model-dependent output (LLM features, RAG, agents) → `testing-ai-evals.md`.
+- Classical ML pipelines, served models, fairness, or notebooks → `testing-ml.md`.
 
 ## A negative-assertion (assert-absent) test is a ratified constraint — never loosen it to ship a conflicting feature
 
@@ -536,236 +418,9 @@ constraint**: *this surface must not show X.* When a new feature request conflic
   assertion — while adding a feature** is a red flag: check whether it silently reverses a
   recorded decision. Changing a ratified constraint is an **explicit, owner-visible** decision (its
   own reasoned commit), never a side effect of a feature PR. Distinct from the retired-coverage
-  case above (a spec dropped because its surface became *unreachable*, owed a named gap): here the
+  case in `testing-ui.md` (a spec dropped because its surface became *unreachable*, owed a named gap): here the
   surface is reachable and the constraint is **still intended** — the test is not stale, it is
   load-bearing.
-
-## A state-dependent spec must assert its precondition, not lean on a default
-
-A browser / E2E spec that depends on an **implicit UI default** passes only by
-coincidence, and the coincidence breaks silently:
-- **A flipped default breaks specs that leaned on the old one — at the browser tier,
-  not on commit.** A spec that asserts on content visible only while a card is
-  *expanded*, or that clicks a bulk "Expand all" a redesign already removed
-  (`if (await btn.count()) await btn.click()` — a no-op when the count is `0`), is
-  green *only because the default happened to match what it needed*. Flip the default
-  and it fails on the slow gate. Make each such spec **drive the state it needs
-  explicitly** (open/collapse the specific control by its own affordance), and prefer
-  an explicit state assertion over a best-effort "click if present" — a control the
-  redesign has since removed silently leaves the precondition unmet.
-- **Pin the equivalence between a "should-render / should-expand" predicate and the
-  set it gates.** When one boolean decides whether to show or expand something and a
-  *separate* path builds what renders inside, independent computation lets them drift —
-  the predicate says "expand" but the body is empty, or it collapses a group that has
-  content. Derive both from the same source where possible, and pin
-  `predicate(x) === (renderSet(x).length > 0)` **in both directions and non-vacuously**
-  (at least one input exercising each branch), so a later edit to either side cannot
-  silently make them disagree — the class of bug where a "smart default" hides real
-  content or expands an empty container.
-
-## AI evals (for any model-dependent output)
-
-A mocked-LLM unit test verifies **wiring, not model quality.** Model quality
-needs its own harness:
-
-- A **labeled golden set** scored for correctness/consistency (not vibes),
-  tracked over time, with an **accuracy threshold that gates** prompt or
-  model-version changes (a change that drops accuracy fails the build). The golden
-  set must be **disjoint from the prompt / few-shot / fine-tune content** — a
-  leaked example makes the bench measure memorization, not quality; treat
-  contamination as a Critical eval defect.
-- The harness's **own scoring logic is pure and unit-tested**, and it
-  **fail-fasts on a malformed case** — silently skipping a case inflates the
-  score.
-- **Grounding / anti-fabrication checks** where claims reach users: every named
-  entity and number in generated text must anchor to the input facts (match
-  numbers on digit boundaries so a value can't pass on a fragment); ungrounded
-  output is rejected to a deterministic fallback. Distinguish **anti-fabrication
-  from anti-reasoning**: where the output's value *is* its reasoning, gate only
-  the checkable facts plus a drift/overlap floor and a meta-leak guard, and allow
-  inference language — don't force robotic restatement.
-- Use **temperature 0** for judges/verifiers so the eval itself is deterministic.
-- **Self-consistency / inter-model agreement is not precision.** Output quality
-  is *unmeasured* until an expert rates a frozen, labeled cohort; don't stack
-  features on an unvalidated base.
-- A **decorrelated review ensemble** (multiple *different* models/reviewers, all
-  must pass) catches a miss or an injection that lands on one reviewer; fail
-  soft.
-- **An LLM judge carries known biases — test for them structurally and cheaply,
-  before trusting its scores.** Beyond temperature 0 and the frozen-cohort validation
-  above (Zheng et al., 2023 document position, verbosity, and self-enhancement biases
-  in strong judges): **(a) order-swap consistency** — for any pairwise/comparative
-  judge, run it twice with the candidates' positions swapped; a flipped verdict is
-  **positional bias** in the judge prompt itself, caught with two calls and zero human
-  labels. **(b) judge/subject independence** — when the system under test and the judge
-  share a model or vendor family, flag **self-preference** bias risk explicitly. **(c)
-  verbosity correlation** — on the labeled cohort, check the judge's score against
-  output length; a strong positive correlation with no length-normalized rubric is
-  evidence it rewards length, not quality. And **name the agreement bar** the
-  frozen-cohort check must clear — strong judges reach roughly **≥80%** agreement with
-  human preference (Zheng et al., 2023) — and **re-check it when the judge model version
-  changes**: an unpinned judge is the same latent-bug class as an unpinned embedding
-  model (`data-quality.md`).
-- **A retrieval-augmented (RAG) app is evaluated at the retrieval seam, not only
-  end-to-end.** The generation-grounding check above is necessary but not
-  sufficient: a faithful answer over the *wrong* retrieved context is still wrong,
-  and a good end-to-end score can hide a retrieval miss the model papered over from
-  parametric memory (which then fails silently when the knowledge base changes).
-  Evaluate the two stages separately — **retrieval quality** (context *precision*:
-  retrieved chunks are relevant; context *recall*: the needed facts were retrieved
-  at all — measured @k, with chunk-boundary loss and reranking in view) and
-  **generation faithfulness** (is the answer factually consistent with *that*
-  retrieved context — groundedness), with **answer relevancy** (does it actually
-  address the question) as a separate check. (RAG = a parametric generator plus a non-parametric
-  retrieval component over external knowledge — Lewis et al., 2020. The metric names
-  are operationalized by open-source eval libraries, e.g. RAGAS — a *tool*, not a
-  standard: frame the concept, don't pin a vendor's exact formula.)
-- **Any prompt assembler is evaluated at the *context-assembly* seam — input budget and
-  placement, not only its upstream quality.** A RAG pipeline is one instance; a chat turn
-  that concatenates a system prompt + conversation history + tool/function output + the
-  user's message is another. Any assembler that joins parts with no budget guard has the
-  same two silent-failure checks between "the right material was gathered" and "the model
-  answered": **(a) input-budget overflow** — when the assembled input exceeds the model's
-  context budget, is the check computed with the target model's **actual tokenizer** (not
-  a char/word estimate), and on overflow are **whole lowest-priority units dropped** (for
-  RAG, the lowest-ranked chunks), never a unit **truncated mid-content** (a mid-cut fact or
-  citation the model then completes or misattributes)? **The drop-priority must be explicit
-  and protect the load-bearing input** — a naive assembler that merely overflows silently
-  sheds the *earliest* text, which is the **system instructions** (or clips a load-bearing
-  data blob), so the model quietly stops following its own rules with no error raised; a
-  chat assembler's priority is "shed the oldest turns, never the system prompt or the
-  current user message." Force the overflow in a test and assert no partial unit reached the
-  prompt, the dropped units were the lowest-priority (never the system prompt), and the drop
-  was counted/logged. **(b) placement, not just fit** — even when everything fits, a unit
-  ranked below #1 but still needed for the answer should sit at the **start or end**, not
-  left buried mid-concatenation in raw score order (ranking is imperfect, so the part with
-  the answer is not always the #1 hit): models access "relevant information in the middle of
-  long contexts" markedly worse ("Lost in the Middle," Liu et al., 2023). This is **per-call
-  prompt arithmetic** — distinct from a long-running agent's conversation compaction
-  (`security-ai-agents.md`) and from an output `max_tokens` cap (that bounds what comes
-  *out*; this bounds what goes *in*).
-- **An agent (tool-using, multi-step) is evaluated on its trajectory, not only its
-  final answer.** Score tool-call *selection* (did it pick the right tool), tool-call
-  *arguments* (well-formed, correctly bound), and multi-step *task completion* (the
-  sequence reached the goal without an unrecoverable wrong turn). A right final
-  answer reached via a lucky or unsafe path is a latent failure, and a wrong tool
-  choice is invisible to an output-only bench.
-
-## ML pipeline correctness — data leakage & training reproducibility
-
-Distinct from AI evals above (which score a model's *output*): these are the
-*pipeline* defects that make a reported metric **false** — the classical-ML sibling
-of the LLM golden-set contamination rule. (Temporal / as-of *feature* leakage in a
-train/serve pipeline is in `data-quality.md` §12; this is the train/test
-split-hygiene and reproducibility half.)
-- **Split first; never fit on test.** Data leakage is "information that would not be
-  available at prediction time is used when building the model," giving "overly
-  optimistic performance estimates" (scikit-learn). Check: the data is **split into
-  train/test before any preprocessing**; a scaler / encoder / imputer is **fit on the
-  training subset only** (fitting on all data leaks the test distribution — a
-  Pipeline keeps cross-validation and tuning from leaking); **no target leakage** (a
-  feature derived from the label or from the future); and **no duplicate rows across
-  splits**. A leaked split doesn't fail — it *passes too well*, so the tell is an
-  implausibly high score, not an error.
-- **The split must respect group and time structure, and resampling happens inside the split.** Beyond fit-on-train, the *split strategy itself* leaks when rows aren't i.i.d.: a plain `KFold` scatters **correlated rows that share a group** (many samples per patient / user / device) across train and test, so the model memorizes the group and the score doesn't predict a genuinely new group — "the i.i.d. assumption is broken if the underlying generative process yields groups of dependent samples"; use `GroupKFold`, which "ensures that the same group is not represented in both testing and training sets" (scikit-learn). For **time-ordered** data a shuffled `KFold`/`ShuffleSplit` trains on the future to predict the past — the same source warns these "would result in unreasonable correlation between training and testing instances ... on time series data"; use a forward-chaining `TimeSeriesSplit`. And **class-imbalance resampling (SMOTE / over- / under-sampling) belongs inside the fold, on train only**: resampling the whole dataset before the split both leaks and makes the *test set artificially balanced* — the model then "will not be tested on a dataset with class distribution similar to the real use-case" (imbalanced-learn) — so the metric describes a distribution production never sees. All three **pass too well** rather than erroring, the same tell as the leaked-split rule above. (Distinct from the as-of *feature* leakage in `data-quality.md` §12 — this is split *structure*.)
-- **Training is reproducible, so a metric delta is attributable.** Retraining on the
-  same data should yield the same model; unseeded RNG and unpinned data / model / code
-  versions make a score change unattributable — you can't tell a real regression from
-  noise. Seed the training RNG and pin the data + model + code version behind each
-  reported number (Breck et al., *The ML Test Score*, 2017).
-
-## ML in production — drift monitoring & safe model rollout
-
-The lifecycle sibling of the two sections above: §"ML pipeline correctness" verifies the model
-was **trained** honestly and `data-quality.md` §12 verifies a feature is **computed the same**
-for training and serving — this is the **post-deployment** half, where a model that was correct
-at ship time silently decays, or a swap ships a quietly worse one. Both are invisible to the
-checks that guard training.
-- **Monitor drift, not just uptime.** A served model **silently loses accuracy** (no error is
-  thrown) as the live input distribution drifts from the training distribution **over time** —
-  distinct from `data-quality.md` §12's train/serve *parity* check (two computation paths at one
-  instant); this compares live inputs to the training baseline as time passes. Monitor the **input-feature
-  distribution** and the **prediction distribution** (a sudden shift in either is the early
-  signal), plus realized **performance against ground truth** — but **ground truth often lags** (the
-  label for today's prediction lands days or weeks later), so quality is delayed and the thing
-  you alert on in the meantime is a **proxy** (distribution shift, a confidence drop). A model
-  with green infra dashboards and no distribution/quality monitoring is unmonitored where it
-  matters (cf. the monitoring category of the ML Test Score cited above; the generic signal
-  plumbing is `observability.md`).
-- **Roll a new model out behind a quality gate, not a health check.** A new model version is a
-  behavior change, not just a deploy — and **green error-rate and latency do not mean the new
-  model is as good** (they miss a quieter, worse model). Prove the candidate on **prediction
-  quality** first: **shadow** it (run it on live traffic in parallel, compare outputs, serve
-  none), or **canary / champion-challenger** to a slice with a **prediction-quality** promotion
-  gate (not just error/latency), keeping a **rollback path** to the incumbent. Because ground
-  truth lags, a model canary needs a **longer, quality-based bake** than a code canary —
-  promoting on a few minutes of green health is how a worse model reaches everyone. This
-  specializes the generic canary/rollback discipline in `release-engineering.md` to the ML case,
-  where the load-bearing signal is delayed prediction quality, not error rate.
-
-## ML fairness — detect it in review, never certify it
-
-**Scope gate — apply this first.** This lens applies only when the model makes a
-**consequential decision about people** (credit, hiring, housing, moderation, benefits,
-ranking that gates access) **and** the data carries at least one group dimension or a proxy
-for one. If you cannot name the decision, the affected people, and a group dimension present
-in the data, the lens **does not apply — say so and stop**. Hunting fairness in a model with
-no protected-group dimension manufactures a finding — the "stricter than the standard" defect
-(`method.md`).
-
-Where it applies, bias is **systemic, statistical, and human** (NIST SP 1270); computational
-metrics are necessary, not sufficient. The review question mirrors this suite's own thesis —
-*not just whether the model is biased, but whether it does what is claimed* (NIST SP 1270).
-Detect, do not grade:
-
-- **Protected attributes and proxies.** Is a protected characteristic (race, sex, age, …) used
-  as a feature — **disparate treatment** — or **not used but proxied** by a correlated feature
-  (zip, name, device, purchase history) — **disparate impact**? A proxy claim is **demonstrated**
-  — show the feature's correlation with the group attribute *in this data* — never asserted from
-  a stereotype; and **absence of the protected attribute does not establish fairness**, since a
-  model can discriminate through proxies alone. Dropping a suspected proxy without measuring
-  outcomes is not a fix — it removes signal untested and other proxies may remain.
-- **Fairness is measured, and the metric is chosen on purpose.** A consequential model gated
-  only on **aggregate** accuracy carries no fairness signal — it can be accurate overall and
-  systematically worse for a subgroup. Require a **disaggregated** evaluation by group, and
-  require the team to **state which fairness metric they target and justify it against the
-  decision** (demographic parity and error-rate balance answer different questions — the metric
-  must fit the decision, not be picked for looking best). The **absence of any stated, justified
-  choice** is the finding — not your preferred metric. Show coverage; never a fabricated
-  "0% bias" (the coverage-not-grade rule; `product-output-safety` MEASURE).
-- **Documentation.** On a consequential model, flag a **missing model card** — intended use,
-  out-of-scope uses, and **per-subgroup** measured performance (Mitchell et al., 2019).
-  `product-output-safety` (when installed) prescribes *producing* the card; in review, flag that
-  it is **absent**.
-- **Dataset bias is a data-quality dimension.** Group representativeness in the training set is
-  the statistical-bias leg — measure it as a completeness/representativeness dimension under
-  `data-quality.md` §4, do not re-derive it here.
-
-**🚩** a consequential-decision model whose only gate is aggregate accuracy; a protected
-attribute or a demonstrated proxy in the feature set with no disaggregated evaluation; a
-"fair" / "unbiased" claim carrying no named metric, no per-group numbers, and no model card.
-
-This is the **detection** lens for a default review; the output-harm guardrail — inventory the
-bias harm, never certify "unbiased", report residual risk — is the `product-output-safety`
-overlay, not restated here. Whether a demonstrated disparity is **unlawful
-discrimination** is a legal determination — route it to counsel (`business-ops` Lane R names the
-regime); the code finding is the **missing measurement or unstated metric**, never a legal verdict.
-
-## Notebook review — hidden state & committed outputs (data-science code)
-
-A Jupyter/Colab notebook is code with two failure modes a normal source review misses, both distinct from the
-ML-pipeline correctness above:
-- **Out-of-order execution → hidden state.** A notebook's results reflect the order cells were *run*, not
-  top-to-bottom source order; an output can depend on a variable set by a cell since edited, moved, or deleted,
-  so the committed `.ipynb` may not reproduce from a clean kernel. The only honest check is **Restart & Run
-  All** (or `jupyter nbconvert --execute` / `nbclient` in CI) from a fresh kernel — a notebook that only works
-  in its author's live session is not reproducible, and "it ran for me" is not evidence. 🚩 a committed
-  notebook with non-monotonic `execution_count`s, or a CI that never executes it fresh.
-- **Committed output cells leak data and secrets.** `.ipynb` stores cell *outputs* in the file: a printed
-  `df.head()` with real rows (PII), an API token echoed in a repr, credentials in a traceback, a base64 image,
-  or megabytes of data — committed into git history where a diff-scoped review never looks. Strip outputs before
-  commit (`nbstripout`, a `--clear-output` pre-commit hook, or a CI gate); a secret that reached a commit is compromised and must be **rotated**, not just stripped (cross-ref `security-appsec.md` Secrets), and treat a committed output cell like any other emitted value (cross-ref `observability.md` Logs & traces and `privacy-compliance.md`). 🚩 an
-  `.ipynb` with populated `outputs` / `execution_count` in the diff and no output-stripping gate.
 
 ## Business rules as executable specs
 

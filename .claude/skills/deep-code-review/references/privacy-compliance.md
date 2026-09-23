@@ -156,7 +156,7 @@ a copy is gone) — here the question is where a copy sits.
   outside the promised boundary, or a cross-region replica/backup that exists
   outside it, is the finding — independent of whether a legal transfer mechanism
   covers it. This generalizes the multi-tenancy isolation check's residency
-  clause (`domain-checklists.md` §T: a tenant promised its own encryption key or
+  clause (`domain-t.md`: a tenant promised its own encryption key or
   data residency that a shared-pool default silently violates) beyond the
   tenant case — the same promise-vs-actual check applies to every stated
   residency commitment, tenant-scoped or not.

@@ -610,7 +610,7 @@ rate), validity (schema/format/range). For each:
   design where the metric is defined.
 - **Self-consistency / inter-model agreement is not precision.** Treat output
   quality as *unmeasured* until an expert rates a frozen, labeled cohort; don't
-  stack features on an unvalidated base. See `testing-and-evals.md` for the
+  stack features on an unvalidated base. See `testing-ai-evals.md` for the
   eval-harness pattern.
 - **Requiring expert labels sets the bar; check the labels themselves are any
   good.** Label errors in a held-out set both distort the metric *and* re-rank

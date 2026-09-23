@@ -11,7 +11,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.438.0"
+  version: "1.439.0"
 ---
 
 # Deep Code Review
@@ -74,23 +74,10 @@ Domains outside the default set: **N/A with a one-line reason**. `other` has
 no default — derive from Phase 0 entry points.
 
 **Role overlay (optional lens).** Orders and assigns the same A–W domains; it
-never adds or drops one. Full per-role checklists, colour model, and
-architecture / product-planning / SLO / release-sign-off lists:
+never adds or drops one. The role → domain map, per-role checklists, colour
+model, and architecture / product-planning / SLO / release-sign-off lists:
 `references/role-coverage.md` — **read it when** the request is framed by
 delivery role or security-team colour.
-
-| Role | Leads on |
-|---|---|
-| Architect | A E G H I + architecture quality |
-| Product | A O J + lightweight product planning |
-| UX & UI | P R |
-| Frontend | P · A · B · N |
-| Backend | B I E A G T |
-| Data & AI | D C E J Q |
-| Platform / SRE | L K M N F W + SLI/SLO |
-| QA | J E P |
-| Release & docs | S O K + release sign-off |
-| Agent-readiness | C J K M N F O H + agent-readiness lens |
 
 **Security-team colours** re-package the same evidence (no new rules); the
 Red/Blue/Purple/Yellow/Green/Orange/White model is tabulated in
@@ -178,8 +165,8 @@ review after the first-response block.
 | Phase | Does | Load |
 |---|---|---|
 | 0 Map | Pin `START_SHA`, worktree, history depth, trust boundaries, banned remedies, coverage ledger | `method.md`, `branch-and-merge-hygiene.md` on FULL |
-| 1 Ground truth | Documented setup, aggregate gate by name + exit code, per-subtree coverage, planted-defect probe (missing / empty / wrong / path-excluding config) | `method.md`, `testing-and-evals.md`, `language-stack-redflags.md` |
-| 2 Domain audits | Walk applicable A–W with `file:line`; fan-out under `parallel-audit.md` | `domain-checklists.md` + per-domain refs |
+| 1 Ground truth | Documented setup, aggregate gate by name + exit code, per-subtree coverage, planted-defect probe (missing / empty / wrong / path-excluding config) | `method.md`, `testing-and-evals.md`, `language-stack-redflags.md` + `lang-*.md` per language present; `method-situational.md` when a gate verdict is disputed |
+| 2 Domain audits | Walk applicable A–W with `file:line`; fan-out under `parallel-audit.md` | `domain-checklists.md` → `domain-<letter>.md` per applicable domain + per-domain refs |
 | 3 Adversarial | Hostile user **and** hostile upstream; networked openers: anon GET, two-principal swap, dual-surface, then injection/SSRF | `security-appsec.md`, `security-ai-agents.md`, `security-agent-skills.md` |
 | 4 Synthesize | Dedup, compounds, snippet-or-drop at `START_SHA`, fail-open vs fail-closed, **anti-slop** | `method.md` |
 | 5 Report | Chat BLUF ≤30 lines + full table out-of-tree; in-repo `code-review/` only on confirmation | `report-format.md`, `example-review-report.md` |
@@ -194,33 +181,35 @@ owner's yes.
 ## Domain map (A–W)
 
 One-line each; twenty-one domains span A–W (**U, V and X–Z are unassigned — a
-domain earns its letter**). **Checklists:** `references/domain-checklists.md` —
-**read when** walking a domain. Per-item detection in the linked file. Language
-footguns: `references/language-stack-redflags.md`.
+domain earns its letter**). **Checklists:** each row's first file, **only** for
+applicable domains (index: `references/domain-checklists.md`). Language footguns:
+`references/language-stack-redflags.md` + only the languages present:
+`lang-python.md`, `lang-js-ts.md`, `lang-go.md`, `lang-jvm.md`, `lang-ruby-php.md`,
+`lang-c-cpp-rust.md`, `lang-shell.md`, `lang-sql.md`.
 
 | | Domain | Depth |
 |---|---|---|
-| A | Correctness & logic | `domain-checklists.md`, `time-date-correctness.md` (timestamps, durations, recurring/scheduled times, time zones) |
-| B | AppSec (OWASP Top 10:2025) | `security-appsec.md`; `security-api.md` — **read when** the target serves its own HTTP / GraphQL / gRPC / WebSocket API (any archetype); `mobile-appsec.md` — **read when** the target ships an iOS / Android / native mobile client (MASVS/MASTG deltas) |
-| C | AI / LLM / agents | `security-ai-agents.md`, `security-agent-skills.md` |
-| D | Data integrity | `data-quality.md` |
-| E | Performance, efficiency & cost | `performance-db-cost.md`, `model-tiering.md`, `billing-correctness.md` (when the target meters, subscribes, or charges) |
-| F | Reliability & error handling | `reliability-error-handling.md` |
-| G | Concurrency & shared state | `concurrency-shared-state.md` |
-| H | Tech debt, dead code, maintainability | `domain-checklists.md`, `skill-authoring-and-size.md` (when the target ships/installs skills) |
-| I | API, contracts, integration | `api-contracts.md` |
-| J | Testing & evaluation | `testing-and-evals.md` |
-| K | Build, CI, supply chain, release | `dependency-currency-and-upgrades.md`, `release-engineering.md` |
-| L | Infra / IaC / containers / cloud / serverless | `infra-iac-containers.md` (how-to-secure existing), `infra-evolution-by-stage.md` (when-to-add, by stage) |
-| M | Observability | `observability.md` |
-| N | Config, secrets, environments | `domain-checklists.md` |
-| O | Docs & DX | `docs-and-dx.md`, `docs-evolution-by-stage.md` (which-docs-when, by stage), `readme-authoring.md` (writing/reviewing a README for onboarding) |
-| P | Frontend / UI / a11y | `frontend-a11y.md`, `product-ux-quality.md` (design half), `rendered-parity.md` (rendered-appearance / design-parity — "make X look like Y", a port/restyle), `migration-parity.md` (matching a prototype / mockup / design-export — don't over-claim parity from a structural or seed-data audit, or delete real features to match a sparse mockup) |
-| Q | Privacy, compliance, licensing | `privacy-compliance.md` (code layer), `privacy-by-design.md` (pre-code product artifacts) |
-| R | i18n, encoding, localization | `domain-checklists.md`, `i18n-l10n.md` (depth: bidi/RTL, Unicode normalization, CLDR plurals) |
-| S | Branches, merges, open-work triage | `branch-and-merge-hygiene.md` |
-| T | Multi-tenancy & isolation | `domain-checklists.md` (when one deployment serves multiple tenants) |
-| W | Workflows, jobs & scheduling | `domain-checklists.md` (when the target runs cron, queues, or multi-step workflows) |
+| A | Correctness & logic | `domain-a.md`, `time-date-correctness.md` (timestamps, durations, recurring/scheduled times, time zones) |
+| B | AppSec (OWASP Top 10:2025) | `domain-b.md`, `security-appsec.md`; `security-api.md` — **read when** the target serves its own HTTP / GraphQL / gRPC / WebSocket API (any archetype); `mobile-appsec.md` — **read when** the target ships an iOS / Android / native mobile client (MASVS/MASTG deltas) |
+| C | AI / LLM / agents | `domain-c.md`, `security-ai-agents.md`, `security-agent-skills.md` |
+| D | Data integrity | `domain-d.md`, `data-quality.md` |
+| E | Performance, efficiency & cost | `domain-e.md`, `performance-db-cost.md`, `model-tiering.md`, `billing-correctness.md` (when the target meters, subscribes, or charges) |
+| F | Reliability & error handling | `domain-f.md`, `reliability-error-handling.md` |
+| G | Concurrency & shared state | `domain-g.md`, `concurrency-shared-state.md` |
+| H | Tech debt, dead code, maintainability | `domain-h.md`, `skill-authoring-and-size.md` (when the target ships/installs skills) |
+| I | API, contracts, integration | `domain-i.md`, `api-contracts.md` |
+| J | Testing & evaluation | `domain-j.md`, `testing-and-evals.md`; `testing-ui.md` (UI, browser specs), `testing-ai-evals.md` (model output), `testing-ml.md` (ML, notebooks) |
+| K | Build, CI, supply chain, release | `domain-k.md`, `dependency-currency-and-upgrades.md`, `release-engineering.md` |
+| L | Infra / IaC / containers / cloud / serverless | `domain-l.md`, `infra-iac-containers.md` (how-to-secure existing), `infra-evolution-by-stage.md` (when-to-add, by stage) |
+| M | Observability | `domain-m.md`, `observability.md` |
+| N | Config, secrets, environments | `domain-n.md` |
+| O | Docs & DX | `domain-o.md`, `docs-and-dx.md`, `docs-evolution-by-stage.md` (which-docs-when, by stage), `readme-authoring.md` (writing/reviewing a README for onboarding) |
+| P | Frontend / UI / a11y | `domain-p.md`, `frontend-a11y.md`, `product-ux-quality.md` (design half), `rendered-parity.md` (rendered-appearance / design-parity — "make X look like Y", a port/restyle), `migration-parity.md` (matching a prototype / mockup / design-export) |
+| Q | Privacy, compliance, licensing | `domain-q.md`, `privacy-compliance.md` (code layer), `privacy-by-design.md` (pre-code product artifacts) |
+| R | i18n, encoding, localization | `domain-r.md`, `i18n-l10n.md` (depth: bidi/RTL, Unicode normalization, CLDR plurals) |
+| S | Branches, merges, open-work triage | `domain-s.md`, `branch-and-merge-hygiene.md`; `merge-operations.md` (landing PRs, merge gates) |
+| T | Multi-tenancy & isolation | `domain-t.md` (when one deployment serves multiple tenants) |
+| W | Workflows, jobs & scheduling | `domain-w.md` (when the target runs cron, queues, or multi-step workflows) |
 
 **Skills as targets.** When the repo ships or installs agent skills, review them
 for leanness and progressive disclosure (a thin core + routed `references/` + a

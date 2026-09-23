@@ -73,7 +73,7 @@ Handling 5→10.
   control and tenant isolation; no cross-user/cross-tenant retrieval
   leakage; embeddings and retrieval can't be manipulated to exfiltrate. (This is the
   RAG *security* half; RAG *correctness* evaluation — retrieval quality + generation
-  faithfulness + agent-trajectory — is in `testing-and-evals.md` AI evals.)
+  faithfulness + agent-trajectory — is in `testing-ai-evals.md`.)
   (Was LLM08:2025.)
 - **LLM10:2026 Improper Output Handling**. Model output is schema-validated
   / sanitized **before** any downstream use — never fed raw into SQL, a
@@ -348,7 +348,7 @@ LLM-backed feature, add cases that assert the guardrail holds:
   injection-sink rule above (which governs *where* output goes — sink hygiene,
   never raw into SQL / a shell / HTML / `eval`); this governs whether the
   response *is what was asked for at all*. It is the *model-response* instance
-  of the `JSON.parse`-without-a-schema footgun in `language-stack-redflags.md`
+  of the `JSON.parse`-without-a-schema footgun in `lang-js-ts.md`
   (that is untrusted **input** robustness; here the input is the model's own
   reply, malformed by class rather than by attack), and it shares the
   truncation-as-complete root with the streaming / `finish_reason` rule below
@@ -375,7 +375,7 @@ LLM-backed feature, add cases that assert the guardrail holds:
   compliant/complete/safe?") can be wrong or coerced by the same injection that produced the
   bad output, so a self-report must **corroborate** a deterministic check (allowlist, argument
   validation at the tool boundary), never replace it — **self-reported evidence is not a
-  trusted control** (cross-ref `branch-and-merge-hygiene.md` and `model-tiering.md`). Test
+  trusted control** (cross-ref `merge-operations.md` and `model-tiering.md`). Test
   with the field missing, `null`, and wrong-typed, and confirm the safe branch is taken.
 - **Least-privilege tools** with allowlisted actions and argument validation at
   the tool boundary (not left to the model to "please only…"). **Locate the
@@ -448,7 +448,7 @@ LLM-backed feature, add cases that assert the guardrail holds:
   above applied to correctness. The FSM form (no stuck/orphan states) is
   `reliability-error-handling.md`; the eval form — labeled *premature-continuation* (done, kept
   going) and *premature-termination* (FM-3.1; incomplete, stopped) trajectory cases — extends
-  `testing-and-evals.md`'s agent-trajectory eval, which scores task completion as an outcome but
+  `testing-ai-evals.md`'s agent-trajectory eval, which scores task completion as an outcome but
   not the loop's own goal-satisfied predicate or step-repetition. **🚩** an agent loop with a spend
   cap but no goal-satisfied predicate; a tool-result consumer that checks only `ok`/status, never
   the payload.

@@ -3,8 +3,8 @@
 Read this when reviewing anything that **stores, computes, schedules, or renders**
 timestamps, durations, recurring events, or calendar math — especially across time
 zones or a DST transition. Expands domain **A** of `SKILL.md`; cross-ref domain **W**
-(`domain-checklists.md`, cron/jobs) and domain **E** (`billing-correctness.md`, usage
-windows). The one-line rule in `domain-checklists.md` domain A points here for depth.
+(`domain-w.md`, cron/jobs) and domain **E** (`billing-correctness.md`, usage
+windows). The one-line rule in `domain-a.md` points here for depth.
 
 ---
 
@@ -66,12 +66,12 @@ kind is already lost **upstream** of all of that. Three faces, by boundary.
   default-argument `new Date()` bullet above (the no-arg *now* clock reading the server's zone)
   and from the `toISOString().slice(0,10)` **bucketing** bullet below (truncating an instant you
   already hold); this is the parse of an **incoming string**. Grep-signal in
-  `language-stack-redflags.md`.
+  `lang-js-ts.md`.
 - **Face 2 — the WIRE site (a payload → an instant).** A timestamp **ingested** from a client, a
   file, or a third-party API **with no offset** forces the parser to **guess** the sender's zone —
   and it guesses the receiver's zone or UTC, neither of which is the sender's. This is the
   **receiving** mirror of the `datetime.now()`/`utcnow()`-naive **construction** footgun in
-  `language-stack-redflags.md` (there you *mint* a zoneless value; here you *accept* one). RFC 3339
+  `lang-python.md` (there you *mint* a zoneless value; here you *accept* one). RFC 3339
   leaves no room for it: the offset is part of the grammar — `time-offset = "Z" / time-numoffset`
   and `full-time = partial-time time-offset` (no brackets — not optional), so a conforming
   `date-time` **carries** one. The subtlety a reviewer must know: `-00:00` is legal and
@@ -135,7 +135,7 @@ occurrence deliberately (PEP 495's `fold`); for a **missing** time, map it forwa
 the post-transition instant or reject it — never leave the choice to a library default.
 A scheduler that fires a "2:30 am" job on the spring-forward night, or runs a
 fold-hour job twice or zero times, is the finding (same root as the cron DST
-double/zero-run in `domain-checklists.md` domain W).
+double/zero-run in `domain-w.md`).
 
 ## The tz database is a dependency that goes stale
 
@@ -192,7 +192,7 @@ composite `(ts, seq)` — not a strict-inequality comparison against a **non-uni
 cursor's index") also works, but **only** for a genuinely append-only, never-resorted log: a
 backfill that inserts a row sorting *earlier* than an already-consumed index (one of the tie-causes
 above) silently reintroduces the drop, whereas a monotonic id does not. Same root cause as the
-incremental-sync-cursor trap in `domain-checklists.md` domain A — that is the **paginated /
+incremental-sync-cursor trap in `domain-a.md` — that is the **paginated /
 bulk-fetch face** (drops or double-reads rows at a page boundary); this is the **single-comparison /
 since-checkpoint face** (drops the one newest record on a tie). This hides behind code that is
 otherwise scrupulously honest: a module that documents "never fabricate an absence" and correctly

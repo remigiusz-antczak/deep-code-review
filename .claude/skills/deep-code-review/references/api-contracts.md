@@ -93,7 +93,7 @@ body", cross-ref `reliability-error-handling.md`).
   silently spawns a **second** operation and the work runs twice. This is the
   provider half of the caller-side idempotency rule in
   `reliability-error-handling.md`; the job's own internal durability / compensation
-  is domain W (`domain-checklists.md`).
+  is domain W (`domain-w.md`).
 
 ---
 
@@ -213,7 +213,7 @@ not restated here.)
   WS reconnect that just re-subscribes with no catch-up; a reconnect backoff with no jitter (fine for one
   client, a synchronized re-storm risk after a fleet-wide drop).
 - **Bound a slow consumer — never let one connection grow server memory without limit.** The backpressure
-  discipline required for queues (`domain-checklists.md`) applies *per live connection*: a server fanning
+  discipline required for queues (`domain-w.md`) applies *per live connection*: a server fanning
   out to N clients where one reads slowly must cap that connection's send buffer and pick a policy —
   drop-oldest, coalesce, or disconnect — not queue unboundedly. On the browser send side, a
   high-frequency `send()` loop must watch `bufferedAmount` ("the number of bytes ... queued using
