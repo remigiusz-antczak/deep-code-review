@@ -517,6 +517,12 @@ cat >"$mlroot/.claude/skills/deep-code-review/SKILL.md" <<'EOF'
 |---|---|---|
 | demo | A B | `ref-a.md`, `ref-b.md` |
 | demo2 | C | `ref-c.md` |
+
+| Phase | Does | Load |
+|---|---|---|
+| 0 Map | fixture phase 0 | `ref-p1.md`, `ref-p4.md` on FULL |
+| 1 Ground truth | fixture phase 1 | `ref-p1.md`, `ref-p2.md` |
+| 2 Domain audits | fixture phase 2 | `ref-p3.md` + per-domain refs |
 EOF
 # ref-a.md = 40 bytes (10 tokens), ref-b.md = 20 bytes (5 tokens): demo totals
 # 15. ref-c.md = 40 bytes (10 tokens): demo2 totals 10. chars/4, floor; head -c
@@ -525,7 +531,27 @@ head -c 40 </dev/zero | tr '\0' 'a' >"$mlroot/.claude/skills/deep-code-review/re
 head -c 20 </dev/zero | tr '\0' 'b' >"$mlroot/.claude/skills/deep-code-review/references/ref-b.md"
 head -c 40 </dev/zero | tr '\0' 'c' >"$mlroot/.claude/skills/deep-code-review/references/ref-c.md"
 
-printf 'demo\t15\ndemo2\t10\n' >"$WORK/mustload-clean.tsv"
+# Phase 0-2 mandatory-floor fixture refs, deliberately disjoint from the
+# archetype refs above so growing one never perturbs the other's totals.
+# ref-p1.md (10 tokens) is named in BOTH phase 0 and phase 1's Load column,
+# proving the dedup: it must count once, not twice. ref-p2.md (5 tokens) and
+# ref-p3.md (10 tokens) are LIGHT-only. ref-p4.md (20 tokens) is the sole
+# "on FULL" ref, added only to the FULL total.
+head -c 40 </dev/zero | tr '\0' 'd' >"$mlroot/.claude/skills/deep-code-review/references/ref-p1.md"
+head -c 20 </dev/zero | tr '\0' 'e' >"$mlroot/.claude/skills/deep-code-review/references/ref-p2.md"
+head -c 40 </dev/zero | tr '\0' 'f' >"$mlroot/.claude/skills/deep-code-review/references/ref-p3.md"
+head -c 80 </dev/zero | tr '\0' 'g' >"$mlroot/.claude/skills/deep-code-review/references/ref-p4.md"
+
+# SKILL.md's own byte count is part of the floor too (computed, not
+# hand-counted, so a future edit to this fixture's heredoc can't silently
+# desync the ceiling below).
+ml_skill_bytes="$(wc -c <"$mlroot/.claude/skills/deep-code-review/SKILL.md" | tr -d '[:space:]')"
+ml_skill_tok=$(( ml_skill_bytes / 4 ))
+ml_floor_light=$(( ml_skill_tok + 10 + 5 + 10 ))
+ml_floor_full=$(( ml_floor_light + 20 ))
+
+printf 'demo\t15\ndemo2\t10\nphase-floor-light\t%d\nphase-floor-full\t%d\n' \
+  "$ml_floor_light" "$ml_floor_full" >"$WORK/mustload-clean.tsv"
 gate "$GATES" mustload --config "$WORK/mustload-clean.tsv" "$mlroot"
 if [ "$GATE_RC" -eq 0 ]; then
   record 0 "mustload: passes when every archetype is at or under its frozen ceiling"
@@ -581,6 +607,88 @@ if [ "$GATE_RC" -eq 0 ]; then
   record 0 "mustload: the real repo's archetypes are all within their frozen ceiling"
 else
   record 1 "mustload: the real repo's archetypes are all within their frozen ceiling"
+fi
+
+# ---------------------------------------------------------------------------
+# mustload — Phase 0-2 mandatory floor: `phase-floor-light` / `phase-floor-
+# full`, parsed live from the same fixture SKILL.md's "| Phase | Does |
+# Load |" table (never a second hardcoded copy of that list -- see
+# scripts/ci-gates.sh cmd_mustload). Separate END block per case, reusing
+# the mlroot fixture built above.
+# ---------------------------------------------------------------------------
+
+# Planted RED: grow the floor-only ref-p2.md (untouched by any archetype)
+# past the LIGHT ceiling. Must FIRE naming phase-floor-light, while the
+# unrelated archetype rows (demo/demo2) stay unflagged.
+head -c 400 </dev/zero | tr '\0' 'e' >"$mlroot/.claude/skills/deep-code-review/references/ref-p2.md"
+gate "$GATES" mustload --config "$WORK/mustload-clean.tsv" "$mlroot"
+if [ "$GATE_RC" -ne 0 ] \
+  && grep -q 'MUSTLOAD FLOOR FAIL: phase-floor-light' "$WORK/last.log" \
+  && ! grep -qE 'MUSTLOAD (FAIL|MISSING BUDGET|DANGLING): archetype "demo2?"' "$WORK/last.log"; then
+  record 0 "mustload: FLOOR FIRES when Phase 0-2 mandatory refs grow past their frozen ceiling (planted RED)"
+else
+  record 1 "mustload: FLOOR FIRES when Phase 0-2 mandatory refs grow past their frozen ceiling (planted RED)"
+fi
+# restore under-ceiling content so later cases (and other worktrees sharing
+# this fixture pattern) start clean
+head -c 20 </dev/zero | tr '\0' 'e' >"$mlroot/.claude/skills/deep-code-review/references/ref-p2.md"
+
+# Fail closed: a SKILL.md with a valid Archetype -> load map table but NO
+# "| Phase | Does | Load |" table at all must fail closed naming the
+# unparseable section, before any archetype-level check even runs.
+noph="$WORK/mustload-fixture/noph"
+mkdir -p "$noph/.claude/skills/deep-code-review/references"
+cat >"$noph/.claude/skills/deep-code-review/SKILL.md" <<'EOF'
+# Fixture skill (no Phase table)
+
+| Archetype | Default domains | Must-load refs |
+|---|---|---|
+| demo | A B | `ref-x.md` |
+EOF
+head -c 40 </dev/zero | tr '\0' 'x' >"$noph/.claude/skills/deep-code-review/references/ref-x.md"
+printf 'demo\t999\nphase-floor-light\t999\nphase-floor-full\t999\n' >"$WORK/mustload-noph.tsv"
+gate "$GATES" mustload --config "$WORK/mustload-noph.tsv" "$noph"
+if [ "$GATE_RC" -ne 0 ] \
+  && grep -q 'no Phase 0-2 mandatory refs parsed' "$WORK/last.log"; then
+  record 0 "mustload: fails closed when SKILL.md has no parseable Phase 0-2 table (planted RED)"
+else
+  record 1 "mustload: fails closed when SKILL.md has no parseable Phase 0-2 table (planted RED)"
+fi
+
+# Fail closed: a mandatory phase row renamed out of the "<digit> <name>"
+# shape used to be skipped silently, shrinking the floor while the gate
+# stayed green. Each variant copies the clean mlroot fixture, rewrites one
+# row, and gives every ceiling generous headroom so ONLY the missing-phase
+# check can fail.
+printf 'demo\t999\ndemo2\t999\nphase-floor-light\t9999\nphase-floor-full\t9999\n' \
+  >"$WORK/mustload-phren.tsv"
+for phren in '1 Ground truth|1. Ground truth|1' '2 Domain audits|Phase 2 Domain audits|2'; do
+  phren_from="${phren%%|*}"
+  phren_rest="${phren#*|}"
+  phren_to="${phren_rest%%|*}"
+  phren_num="${phren_rest#*|}"
+  phren_root="$WORK/mustload-fixture/phren-$phren_num"
+  rm -rf "$phren_root"
+  cp -R "$mlroot" "$phren_root"
+  sed "s/^| $phren_from |/| $phren_to |/" "$mlroot/.claude/skills/deep-code-review/SKILL.md" \
+    >"$phren_root/.claude/skills/deep-code-review/SKILL.md"
+  gate "$GATES" mustload --config "$WORK/mustload-phren.tsv" "$phren_root"
+  if [ "$GATE_RC" -ne 0 ] \
+    && grep -q "missing mandatory phase row(s): $phren_num " "$WORK/last.log"; then
+    record 0 "mustload: fails closed when phase row $phren_num is renamed to \"$phren_to\" (planted RED)"
+  else
+    record 1 "mustload: fails closed when phase row $phren_num is renamed to \"$phren_to\" (planted RED)"
+  fi
+done
+
+# The real repo's Phase 0-2 mandatory floor is within its frozen ceiling too
+# -- confirms the new mechanism actually engaged against real data, not just
+# the fixture.
+gate "$GATES" mustload --config "$ROOT/scripts/mustload-budgets.tsv" "$ROOT"
+if [ "$GATE_RC" -eq 0 ] && grep -q 'phase floor LIGHT' "$WORK/last.log"; then
+  record 0 "mustload: the real repo's Phase 0-2 mandatory floor is within its frozen ceiling"
+else
+  record 1 "mustload: the real repo's Phase 0-2 mandatory floor is within its frozen ceiling"
 fi
 
 # ---------------------------------------------------------------------------

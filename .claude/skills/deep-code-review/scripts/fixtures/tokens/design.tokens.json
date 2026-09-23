@@ -1,0 +1,38 @@
+{
+  "$description": "token_differ.py self-test fixture: the DESIGN side (W3C DTCG format). Fictional values only.",
+  "color": {
+    "$type": "color",
+    "brand": {
+      "primary": { "$value": "#ff0000" },
+      "accent": { "$value": { "colorSpace": "srgb", "components": [0, 0.4, 0.8], "hex": "#0066cc" } }
+    },
+    "surface": { "$value": "#fff" },
+    "overlay": { "$value": "#00000080" },
+    "link": { "$value": "{color.brand.accent}" },
+    "info": { "$value": "hsl(210, 100%, 40%)" },
+    "focus": { "$value": { "$ref": "#/color/brand/primary/$value" } },
+    "text": { "$value": "#111111" },
+    "legacy": { "$value": "#123456" }
+  },
+  "spacing": {
+    "$type": "dimension",
+    "md": { "$value": { "value": 1, "unit": "rem" } },
+    "sm": { "$value": "0.5rem" }
+  },
+  "radius": {
+    "$type": "dimension",
+    "lg": { "$value": "12px" },
+    "sm": { "$value": "4px" }
+  },
+  "font": {
+    "weight": { "bold": { "$type": "fontWeight", "$value": "bold" } },
+    "family": { "body": { "$type": "fontFamily", "$value": ["Inter", "sans-serif"] } }
+  },
+  "motion": {
+    "fast": { "$type": "duration", "$value": { "value": 0.2, "unit": "s" } }
+  },
+  "loop": {
+    "a": { "$type": "color", "$value": "{loop.b}" },
+    "b": { "$type": "color", "$value": "{loop.a}" }
+  }
+}

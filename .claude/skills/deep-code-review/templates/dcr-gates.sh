@@ -209,6 +209,7 @@ SELFTEST_SCRIPTS=(
   "${REVIEW_ROOT}/scripts/fix_class_gate.py"
   "${REVIEW_ROOT}/scripts/binaries_gate.py"
   "${REVIEW_ROOT}/scripts/parity_differ.py"
+  "${REVIEW_ROOT}/scripts/token_differ.py"
 )
 if [ -n "${DELIVERY_ROOT}" ]; then
   SELFTEST_SCRIPTS+=(

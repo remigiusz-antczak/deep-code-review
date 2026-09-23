@@ -19,7 +19,7 @@
 #   size-ratchet --base <ref> --config <file> <root>
 #                                        no size-budgets.tsv row may increase vs <ref> without a `size-budget-raise:` marker (fail closed on unresolvable base)
 #   binaries <root>                      no git-tracked file at a banned image/media/archive/build-output extension (allowlist: scripts/binaries-allowlist.tsv)
-#   mustload --config <file> <root>      every SKILL.md load-map archetype's MUST-LOAD token-est total is within its frozen mustload-budgets.tsv ceiling
+#   mustload --config <file> <root>      every SKILL.md load-map archetype's MUST-LOAD token-est total, plus the Phase 0-2 mandatory-floor total, is within its frozen mustload-budgets.tsv ceiling
 #
 set -euo pipefail
 
@@ -853,6 +853,16 @@ cmd_binaries() {
 # load map no longer defines is also a failure (a stale entry cannot silently
 # stop being checked). Plain indexed arrays only (no `declare -A`): the
 # repo's own local bash is 3.2, which has no associative arrays.
+#
+# Also enforces the Phase 0-2 MANDATORY FLOOR: the refs every review loads
+# regardless of archetype, per SKILL.md's own "| Phase | Does | Load |" table
+# (never a second hardcoded copy of that list here). Refs named in phase
+# 0/1/2's Load column are LIGHT-set; a ref suffixed literally with "on FULL"
+# in that same cell is FULL-only, added on top of LIGHT. SKILL.md's own
+# byte count is always included (it is read to reach the table at all).
+# Enforced against `phase-floor-light` / `phase-floor-full` rows in the same
+# config, same freeze-ratchet direction. Fails closed if the phase table
+# can't be found/parsed, or if a named ref isn't on disk.
 # ---------------------------------------------------------------------------
 cmd_mustload() {
   local config="" root=""
@@ -938,6 +948,116 @@ cmd_mustload() {
   [ "${#disk_archetypes[@]}" -gt 0 ] \
     || die "mustload: no Archetype -> load map table rows found in $skill_md (fail closed)"
 
+  # ---------------------------------------------------------------------------
+  # Phase 0-2 mandatory floor: parse SKILL.md's "| Phase | Does | Load |"
+  # table (the ONLY definition of what every review loads regardless of
+  # archetype -- never a second hardcoded copy here). Only phase rows 0, 1,
+  # 2 count toward the floor (3 Adversarial onward is not part of the
+  # unconditional Phase 0-2 setup). A backtick-quoted ref immediately
+  # followed by the literal " on FULL" qualifier is FULL-only; every other
+  # backtick-quoted ref in those rows is LIGHT (loaded on every scope).
+  # ---------------------------------------------------------------------------
+  local -a floor_light_refs=() floor_full_only_refs=()
+  local phrow inphase=0 phase_field load_field floor_reflist frf btick
+  local fi fj in_light in_full ff already
+  # Which of the mandatory phase rows 0, 1, 2 were actually parsed. A row
+  # renamed out of the "<digit> <name>" shape (e.g. "1. Ground truth" or
+  # "Phase 2 ...") would otherwise be skipped silently and shrink the floor
+  # while the gate stays green -- so every one of the three must be seen.
+  local seen_p0=0 seen_p1=0 seen_p2=0
+  btick='`'
+  while IFS= read -r phrow; do
+    case "$phrow" in
+      '| Phase | Does | Load |') inphase=1; continue ;;
+    esac
+    [ "$inphase" -eq 1 ] || continue
+    case "$phrow" in
+      '|---'*) continue ;;
+      '|'*)
+        phase_field="$(printf '%s' "$phrow" | awk -F'|' '{print $2}' \
+          | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')"
+        case "$phase_field" in
+          '0 '*) seen_p0=1 ;;
+          '1 '*) seen_p1=1 ;;
+          '2 '*) seen_p2=1 ;;
+          *) continue ;;
+        esac
+        load_field="$(printf '%s' "$phrow" | awk -F'|' '{print $4}')"
+        floor_reflist="$(printf '%s' "$load_field" \
+          | grep -oE '`[A-Za-z0-9._-]+\.md`' | tr -d '`')"
+        [ -n "$floor_reflist" ] \
+          || die "mustload: phase \"$phase_field\" has no backtick-quoted refs in $skill_md (fail closed)"
+        for frf in $floor_reflist; do
+          if printf '%s' "$load_field" | grep -qF "${btick}${frf}${btick} on FULL"; then
+            in_full=0
+            for fi in "${!floor_full_only_refs[@]}"; do
+              [ "${floor_full_only_refs[$fi]}" = "$frf" ] && in_full=1 && break
+            done
+            [ "$in_full" -eq 1 ] || floor_full_only_refs+=("$frf")
+          else
+            in_light=0
+            for fi in "${!floor_light_refs[@]}"; do
+              [ "${floor_light_refs[$fi]}" = "$frf" ] && in_light=1 && break
+            done
+            [ "$in_light" -eq 1 ] || floor_light_refs+=("$frf")
+          fi
+        done
+        ;;
+      *) inphase=0 ;;
+    esac
+  done < "$skill_md"
+  [ "${#floor_light_refs[@]}" -gt 0 ] \
+    || die "mustload: no Phase 0-2 mandatory refs parsed from $skill_md's Load column (fail closed)"
+  local missing_phases=""
+  [ "$seen_p0" -eq 1 ] || missing_phases="$missing_phases 0"
+  [ "$seen_p1" -eq 1 ] || missing_phases="$missing_phases 1"
+  [ "$seen_p2" -eq 1 ] || missing_phases="$missing_phases 2"
+  [ -z "$missing_phases" ] \
+    || die "mustload: Phase table in $skill_md is missing mandatory phase row(s):$missing_phases (expected rows starting \"0 \", \"1 \", \"2 \"; fail closed)"
+
+  # Drop any FULL-only ref that's also LIGHT (already counted once in the
+  # LIGHT total; never double-count it in the FULL delta).
+  local -a floor_full_delta=()
+  for fi in "${!floor_full_only_refs[@]}"; do
+    ff="${floor_full_only_refs[$fi]}"
+    already=0
+    for fj in "${!floor_light_refs[@]}"; do
+      [ "${floor_light_refs[$fj]}" = "$ff" ] && already=1 && break
+    done
+    [ "$already" -eq 1 ] || floor_full_delta+=("$ff")
+  done
+
+  # SKILL.md's own bytes: read unconditionally to reach the table, so every
+  # review's floor includes it.
+  local skill_rc skill_tok
+  skill_rc="$(LC_ALL=C wc -c < "$skill_md" | tr -d '[:space:]')"
+  skill_tok=$(( skill_rc / 4 ))
+
+  local floor_light_total="$skill_tok" floor_full_total
+  for fi in "${!floor_light_refs[@]}"; do
+    rf="${floor_light_refs[$fi]}"
+    if [ ! -f "$refs_dir/$rf" ]; then
+      printf 'MUSTLOAD FLOOR MISSING REF: Phase 0-2 floor names references/%s, not on disk (fail closed)\n' \
+        "$rf" >&2
+      fail=1
+      continue
+    fi
+    rc="$(LC_ALL=C wc -c < "$refs_dir/$rf" | tr -d '[:space:]')"
+    floor_light_total=$(( floor_light_total + rc / 4 ))
+  done
+  floor_full_total="$floor_light_total"
+  for fi in "${!floor_full_delta[@]}"; do
+    rf="${floor_full_delta[$fi]}"
+    if [ ! -f "$refs_dir/$rf" ]; then
+      printf 'MUSTLOAD FLOOR MISSING REF: Phase 0-2 floor names references/%s, not on disk (fail closed)\n' \
+        "$rf" >&2
+      fail=1
+      continue
+    fi
+    rc="$(LC_ALL=C wc -c < "$refs_dir/$rf" | tr -d '[:space:]')"
+    floor_full_total=$(( floor_full_total + rc / 4 ))
+  done
+
   # 1) Every archetype the load map defines must have a config row.
   local i j found ceiling archetype2
   for i in "${!disk_archetypes[@]}"; do
@@ -954,9 +1074,13 @@ cmd_mustload() {
   done
 
   # 2) Every config row must resolve to a load-map archetype and stay at/under
-  #    its frozen ceiling.
+  #    its frozen ceiling. `phase-floor-light` / `phase-floor-full` are a
+  #    separate namespace (checked in step 3 below), not archetypes.
   for j in "${!cfg_archetypes[@]}"; do
     archetype2="${cfg_archetypes[$j]}"
+    case "$archetype2" in
+      phase-floor-light|phase-floor-full) continue ;;
+    esac
     ceiling="${cfg_ceilings[$j]}"
     found=0
     for i in "${!disk_archetypes[@]}"; do
@@ -979,9 +1103,40 @@ cmd_mustload() {
     fi
   done
 
+  # 3) Phase 0-2 mandatory floor: `phase-floor-light` / `phase-floor-full`
+  #    rows are required in the config and must stay at/under their frozen
+  #    ceiling, same ratchet direction as the per-archetype rows above.
+  local floor_light_ceiling="" floor_full_ceiling=""
+  for j in "${!cfg_archetypes[@]}"; do
+    case "${cfg_archetypes[$j]}" in
+      phase-floor-light) floor_light_ceiling="${cfg_ceilings[$j]}" ;;
+      phase-floor-full) floor_full_ceiling="${cfg_ceilings[$j]}" ;;
+    esac
+  done
+  if [ -z "$floor_light_ceiling" ]; then
+    printf 'MUSTLOAD FLOOR MISSING BUDGET: no "phase-floor-light" row in %s (fail closed)\n' \
+      "$config" >&2
+    fail=1
+  elif [ "$floor_light_total" -gt "$floor_light_ceiling" ]; then
+    printf 'MUSTLOAD FLOOR FAIL: phase-floor-light totals %s tokens (ceiling %s) -- ratchet violated; shrink Phase 0-2 mandatory refs\n' \
+      "$floor_light_total" "$floor_light_ceiling" >&2
+    fail=1
+  fi
+  if [ -z "$floor_full_ceiling" ]; then
+    printf 'MUSTLOAD FLOOR MISSING BUDGET: no "phase-floor-full" row in %s (fail closed)\n' \
+      "$config" >&2
+    fail=1
+  elif [ "$floor_full_total" -gt "$floor_full_ceiling" ]; then
+    printf 'MUSTLOAD FLOOR FAIL: phase-floor-full totals %s tokens (ceiling %s) -- ratchet violated; shrink Phase 0-2 mandatory refs\n' \
+      "$floor_full_total" "$floor_full_ceiling" >&2
+    fail=1
+  fi
+
   [ "$fail" -eq 0 ] \
-    || die "mustload: one or more archetypes exceed their frozen ceiling, or are un-budgeted/dangling"
-  printf 'mustload: ok (%d archetype(s) within ceiling)\n' "${#cfg_archetypes[@]}"
+    || die "mustload: one or more archetypes/floors exceed their frozen ceiling, or are un-budgeted/dangling"
+  printf 'mustload: ok (%d archetype(s) within ceiling; phase floor LIGHT %s/%s, FULL %s/%s)\n' \
+    "$(( ${#cfg_archetypes[@]} - 2 ))" "$floor_light_total" "$floor_light_ceiling" \
+    "$floor_full_total" "$floor_full_ceiling"
 }
 
 [ "$#" -gt 0 ] || { usage; exit 2; }

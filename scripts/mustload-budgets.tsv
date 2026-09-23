@@ -26,7 +26,10 @@
 # archetype no longer exists in the load map, is a gate failure — see
 # scripts/ci-gates.sh cmd_mustload). This does NOT replace the coverage floor
 # (cmd_enumeration / cmd_routing's routed-reference check) — no ref is ever
-# dropped to satisfy a ceiling, only measured.
+# dropped to satisfy a ceiling, only measured. Two rows, `phase-floor-light`
+# and `phase-floor-full`, are a separate namespace (not archetype names) for
+# the Phase 0-2 mandatory floor below — both are required, fail closed if
+# either is missing.
 #
 # P1b split (context-split change): security-appsec.md's API-specific
 # overlay moved to security-api.md (must-load for `api / service` only; read
@@ -40,13 +43,18 @@
 # title and "Read this when" line plus the parent's one-line pointer; that
 # archetype still loads all of the same content, now across two files.
 #
-# NOT EXPRESSIBLE HERE: the Phase 0-2 mandatory floor (SKILL.md +
-# method.md + testing-and-evals.md + language-stack-redflags.md +
-# domain-checklists.md, + branch-and-merge-hygiene.md on FULL — ~65.9K /
-# ~87.1K tokens) is loaded by every review regardless of archetype, but
-# cmd_mustload parses only the archetype load-map table, so a floor ceiling
-# needs a gate extension (a method-table parse or a named floor row), not a
-# config row.
+# PHASE 0-2 MANDATORY FLOOR (`phase-floor-light` / `phase-floor-full` rows,
+# below): the refs every review loads regardless of archetype — SKILL.md's
+# own bytes (read to reach the table at all) + every backtick-quoted ref
+# named in SKILL.md's "| Phase | Does | Load |" table's phase 0/1/2 rows.
+# `phase-floor-light` = SKILL.md + method.md + testing-and-evals.md +
+# language-stack-redflags.md + domain-checklists.md (loaded on every scope).
+# `phase-floor-full` adds branch-and-merge-hygiene.md, the one ref phase
+# 0's Load column marks "on FULL". cmd_mustload parses that table live
+# (never a second hardcoded copy of the list) and fails closed if the
+# section is missing/unparseable or a named ref isn't on disk. Same
+# freeze-ratchet direction as the per-archetype rows: DOWN only, as the
+# mandatory set is trimmed/split.
 #
 web	86836
 mobile	28778
@@ -55,3 +63,5 @@ data / ETL	29581
 agent / LLM / MCP	33716
 IaC / platform	4342
 lib / SDK	10913
+phase-floor-light	65903
+phase-floor-full	87137
