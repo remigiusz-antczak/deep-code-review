@@ -1488,6 +1488,17 @@
         "Runs the check after `git rebase --continue` (or a merge) and before `git push`, not relying on the pre-commit hook having already run",
         "Treats a local pre-push hook as advisory / self-report, not a substitute for the CI check on the reviewed SHA"
       ]
+    },
+    {
+      "id": "deployed-claim-verified-on-served-build-id-not-merge",
+      "prompt": "A lane hands back: 'Fixed and deployed -- PR merged, CI green, the preview is updated.' The owner opens the preview and says nothing changed. The preview's /version.json has a `data_as_of` timestamp from this morning but no commit field; the lane's fix is commit 3f2a9c1e. The lane wants to spawn another fix lane. What should happen first, and what counts as proof?",
+      "expected_output": "Before spawning more work, check the surface the owner actually opens: a merge and a green CI run are proxies, and a preview can be silently stale behind HEAD, so a stale surface may be the entire complaint. Proof is the build id the serving process itself reports matching the claimed sha -- run `scripts/surface_check.py served --url <preview> --expect-sha 3f2a9c1e --probe header:<name> | meta:<name> | path:/version.json:<key>`. Here the only signal is a data_as_of timestamp, which dates the payload, not the running code, so the honest verdict is COULD_NOT_CHECK (exit 2): report 'data as of X; running code unconfirmed', never 'deployed'. Also confirm with `surface_check.py ref --branch <branch the preview builds from> --expect-sha 3f2a9c1e` that the fix is reachable from the remote branch, not only a local tree. Even a PASS proves that build is served, not that the fix works -- pair it with the functional check, and put the command output in the handback's Verify: line. (verification-handback.md, project-state.md.)",
+      "expectations": [
+        "Checks the served surface's own build id against the claimed sha before spawning another lane, naming merged/CI-green as proxies",
+        "Refuses to treat the data_as_of payload timestamp as a build id -- the verdict is could-not-check / 'running code unconfirmed', never 'deployed'",
+        "Verifies the sha is reachable from the remote branch the surface builds from (fetch, then ancestry), not a local tree",
+        "States that a matching build id proves the build is served, not that the fix works"
+      ]
     }
   ]
 }

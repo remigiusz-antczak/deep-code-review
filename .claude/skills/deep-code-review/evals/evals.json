@@ -5981,6 +5981,17 @@
         "Names `pkill -f` on a browser pattern as reaping every lane's test browser, not only orphans",
         "Names the hard-coded protected-port list as going stale and states the fix: reap only PID-1/own-worktree/PID-file-provable processes, filter to the listener, source exclusions from operator config, and default to dry-run with an explicit apply flag"
       ]
+    },
+    {
+      "id": "verify-surface-sha-read-from-served-build-not-assumed",
+      "prompt": "Reviewing a restyle PR, the author writes 'VERIFY_SURFACE: https://preview.example.com, branch feat/restyle, sha a1b2c3d' and says the new header is live. You load the page and still see the old header. The page carries `<meta name=\"build-sha\" content=\"9e8d7c6...\">`. Is the VERIFY_SURFACE field satisfied?",
+      "expected_output": "No. VERIFY_SURFACE names the sha actually rendered, and the serving process reports 9e8d7c6..., not a1b2c3d -- the author wrote the sha of the tree under review, not the one being served, so the claim is about the wrong build. Read the served id instead of asserting it: `surface_check.py served --url https://preview.example.com --expect-sha a1b2c3d --probe meta:build-sha` (agentic-delivery) exits 1 on the mismatch. Record the rendered sha as 9e8d7c6... and treat the parity/'live' claim as invalid until the preview serves the branch head; a missing build id is could-not-check, never a pass. A match would prove only which build is served, not that the header looks right -- the rendered check still follows. (SKILL.md first-response block, report-format.md.)",
+      "expectations": [
+        "Rejects the VERIFY_SURFACE field: the sha must be the one the served page reports (9e8d7c6...), not the author's branch sha",
+        "Reads the build id from the served surface (e.g. surface_check.py served with a meta probe) instead of trusting the stated sha",
+        "Treats a missing served build id as could-not-check, never as a pass",
+        "Keeps the rendered/visual check as a separate step -- a sha match does not prove the header renders correctly"
+      ]
     }
   ]
 }
