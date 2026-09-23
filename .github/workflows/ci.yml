@@ -106,8 +106,10 @@ jobs:
       # shipped script, or a gate self-test case) or carry a non-empty
       # No-Mechanism-Reason: trailer, so a filed lesson cannot stay prose that
       # never fires. Same gate implementation, range, and fail-closed exits as
-      # the fix-class step above. Here a shipped script DOES count: in this
-      # mode the script is the mechanism being added, not the code under test.
+      # the fix-class step above, except that merge commits are judged by their
+      # own changes and a SKILL.md version-stamp-only bump is not a trigger.
+      # Here a shipped script DOES count: in this mode the script is the
+      # mechanism being added, not the code under test.
       # Known limitation: it proves a mechanism path was touched, not that the
       # mechanism pins the lesson (review judges that).
       - name: Prose lessons carry a mechanism

@@ -131,8 +131,9 @@ under `agentic-delivery`; the adversarial pass is `idea-critic`; the review
 bar is `deep-code-review`. Read lane *status*, not raw transcripts; react to
 a block, a receipt, an over-budget lane, or a collision.
 Dispatch aged P0 / mechanism work before presentation polish; `agentic-delivery`'s
-`unattended-operating-mode.md` routes `scripts/priority_gate.py` and
-`scripts/refix_gate.py` to enforce that order and the churn rule.
+`unattended-operating-mode.md` routes two opt-in gates: `scripts/priority_gate.py`
+blocks a presentation PR while aged P0/mechanism work is uncited, and
+`scripts/refix_gate.py` blocks churn without a class artifact.
 
 ## Output discipline (no slop) — enforced across the suite
 Every user-facing output the suite produces — message, report, plan, table, or

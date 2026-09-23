@@ -1,4 +1,4 @@
-dd4e695b489be9051d309f1360c358075755f2996c133e5cad02a94875232cb0  .claude/skills/agentic-ceo/SKILL.md
+f101f637e1a4c3c611d76baa51ff8aee5cf9d9006a5327755379570ff782b69e  .claude/skills/agentic-ceo/SKILL.md
 cc52f678848b814373757b460383bf61960e4943c203735adde0a350b3e50989  .claude/skills/agentic-ceo/VERSION
 3122784e8b188babadd7ceb0dddf69cfb308e7a02bbf67ed82cf3527a81f5eb1  .claude/skills/agentic-ceo/evals/evals.json
 98c61795e87b504b59cb1f53fd946a68bbe30833d3896f776bdbddf5333c2b59  .claude/skills/agentic-delivery/SKILL.md
@@ -18,7 +18,7 @@ f10024adaf2be3072ed7bc39ec4f7cbd3e487960ad7e05badd0c916cc9689443  .claude/skills
 538a658aa8a65b21932795812ddaefa3ed8c15ef5b37703c76d6601a5f192748  .claude/skills/agentic-delivery/references/support-ops.md
 4c5a2dbbc8a702c16df84d5e675a7921f313de774c3ec5ec38ac83bb3a21bf2e  .claude/skills/agentic-delivery/references/template-adr.md
 dc812b0b447b7bb8c523581ec48041f373c27345b71255da568ae2a17689677c  .claude/skills/agentic-delivery/references/template-postmortem.md
-aca61c39b4be9d2748692b279e10bb99245efa54280044e64a02a400647ef77c  .claude/skills/agentic-delivery/references/unattended-operating-mode.md
+1c77a449198a802ee47321654c1887b272a0583ba91234801e995e5089935331  .claude/skills/agentic-delivery/references/unattended-operating-mode.md
 747c4abab2724f1229c4022ed1d52a8d3b7fbd8c28356fdec2e5dc52a3709070  .claude/skills/agentic-delivery/references/unattended-trackers.md
 2eada49d491638ec9fc3145a785a9b4e36d736b412f3780a4cadd3edf23c829a  .claude/skills/agentic-delivery/references/verification-handback.md
 f85098c6e97f170e76524e3dc02c54bbe28935305fa079d917a2f63ddf789f87  .claude/skills/agentic-delivery/scripts/board_common.py
@@ -26,8 +26,8 @@ f85098c6e97f170e76524e3dc02c54bbe28935305fa079d917a2f63ddf789f87  .claude/skills
 17c1864b09b4ebcf8d535d272ca8458830d2f1aea98ba10a40fac15881f2a711  .claude/skills/agentic-delivery/scripts/board_state.py
 a6fc31cf16e20c1b3107b832c1c65b766984199fd64d5cc0937df88951183e69  .claude/skills/agentic-delivery/scripts/board_sync.py
 2c3073e60df613a664060cc1a3e6d9dce36400d58549e6bbcf1b2b36a33964e8  .claude/skills/agentic-delivery/scripts/handback_cap.py
-61013b904450bc02c88e2c60405ff8223b9d31d78cca26d0900792c1232b322a  .claude/skills/agentic-delivery/scripts/priority_gate.py
-0e95662e98248f7b79ca7b7949b30514e8fbdc7b1dcd4512cb390d60e5de6d86  .claude/skills/agentic-delivery/scripts/refix_gate.py
+777e056d8eff133920942aba3923edd84049cb58ee260552bdb0bd40a83063c4  .claude/skills/agentic-delivery/scripts/priority_gate.py
+a93ac9578390ca3bc5cf670c3c88c20e2e9e298cbe65e754a65f08c256aead76  .claude/skills/agentic-delivery/scripts/refix_gate.py
 3f63c5f55c0a82ae06f9b73cb8b1ec704372bfc7d9ffda1e3d0a3315970bab57  .claude/skills/agentic-delivery/scripts/serial_gate.py
 360fbe70b5d30e33d83d2b7bd92c058c40198c8796015f4ca309298ccb2f72f0  .claude/skills/business-ops/SKILL.md
 acb57a7135b2d7d6e665f67f056e21353023b93835f54def1ae523bf76f1bfb3  .claude/skills/business-ops/VERSION
@@ -85,7 +85,7 @@ a0ed7ad061b7e60230601ee9b38a00400841d6ddf3af386edbd4b34a981c9798  .claude/skills
 1ef0bd7ea1452064bd8b0ebe448ce24a1d04b3ac0a774d01eb1b69ea8708bbfd  .claude/skills/deep-code-review/references/testing-and-evals.md
 dcee6c247e0705731a384f900b975a59dc73667c310d8b48630c01c5e75b1b84  .claude/skills/deep-code-review/references/time-date-correctness.md
 44b935341fecc7aa100acf98a0c8dd7ca60d5946f80da23dd55800c78d0803ba  .claude/skills/deep-code-review/scripts/binaries_gate.py
-9023747f1aa0c7ee0b684fbe37b9b4f8f32e0c94225a9fc63ac8a1c51b727b42  .claude/skills/deep-code-review/scripts/fix_class_gate.py
+2176c4fd97ee2635852817f62454a9588beb44752217a5d09b4601a92ea73578  .claude/skills/deep-code-review/scripts/fix_class_gate.py
 00cda3bbd8f92bba60e891d8f2aef70acf0a132de90c0896e887583566779eac  .claude/skills/deep-code-review/scripts/fixtures/parity/app_full.html
 2b9658a9c597d5d216c11c3db27f7fd59c7b2cd968e4a778b00c02dd384c9375  .claude/skills/deep-code-review/scripts/fixtures/parity/app_partial.html
 b41320aab9d3540398d065a470b3abb05241e2928fd02682a9264c7922dc39b7  .claude/skills/deep-code-review/scripts/fixtures/parity/app_unseeded.html

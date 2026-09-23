@@ -31,7 +31,11 @@ DEFINITIONS
   committed at most `--window-hours` before the committer time of `--head`.
   Commits inside the range itself are not prior fixes. The reference clock is
   the head commit's committer time (deterministic, re-runnable), not the wall
-  clock; a fix committed after the head commit reports age 0.
+  clock; a fix committed after the head commit reports age 0. The walk reads
+  all of `--base`'s history and filters by committer time in Python: git's
+  `--since` stops the walk at the first commit older than the cutoff, so a
+  base (or any commit) with an old committer date would hide newer fixes
+  behind it.
 - Class artifact: a path added, modified, or renamed-to in the range (never a
   delete) that matches one of the `--class-glob` patterns. Passing any
   `--class-glob` REPLACES the defaults, which are fix_class_gate.py's
@@ -63,6 +67,7 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import os
 import subprocess
 import sys
 import tempfile
@@ -134,8 +139,14 @@ def _refix_reason(git: GitRunner, mb: str, head: str) -> str:
 
 
 def _prior_fixes(git: GitRunner, fcg, base: str, since: int) -> list[tuple[str, int, str]]:
-    """`[(sha, committer_ts, subject), ...]` for non-merge fix commits reachable from base since `since`."""
-    out = git(["log", "--no-merges", f"--since=@{since}", "--format=%H%x1f%ct%x1f%s", base])
+    """`[(sha, committer_ts, subject), ...]` for non-merge fix commits reachable from base since `since`.
+
+    No `--since` on the walk: git stops a `--since` walk at the first commit
+    older than the cutoff, so one old-dated commit (e.g. a rebased or
+    imported base) would hide every newer fix behind it. The full history is
+    read and filtered here by committer timestamp instead.
+    """
+    out = git(["log", "--no-merges", "--format=%H%x1f%ct%x1f%s", base])
     fixes = []
     for line in out.splitlines():
         parts = line.split("\x1f")
@@ -239,8 +250,8 @@ def _fake_git(head_ts: int, fixes: list, changed: str, trailer: str = "",
         if cmd == "log" and args[1] == "-1":
             return f"{head_ts}\n"
         if cmd == "log" and args[1] == "--no-merges":
-            since = int(args[2].split("@")[1])
-            return "".join(f"{s}\x1f{t}\x1f{subj}\n" for s, t, subj, _ in fixes if t >= since)
+            # Every fix, old or new: the gate itself must apply the window.
+            return "".join(f"{s}\x1f{t}\x1f{subj}\n" for s, t, subj, _ in fixes)
         if cmd == "log":
             return trailer + "\n"
         if cmd == "diff-tree":
@@ -332,6 +343,36 @@ def _selftest() -> int:
                               cwd=tmp, capture_output=True, text=True)
         if proc.returncode != OK:
             failures.append(f"e2e-artifact: rc={proc.returncode} out={proc.stdout}{proc.stderr}")
+
+    # A base whose committer date is OLDER than a fix behind it must not hide
+    # that fix (git's `--since` walk stops at the first older-dated commit).
+    with tempfile.TemporaryDirectory(prefix="refix_gate_selftest_olddate_") as tmp:
+        repo = Path(tmp)
+        sh = real_git(tmp)
+        sh(["init", "-q"])
+        for k, v in (("user.name", "Jane Smith"), ("user.email", "jane@example.com"), ("commit.gpgsign", "false")):
+            sh(["config", k, v])
+
+        def dated(msg: str, rel: str, body: str, when: str) -> str:
+            (repo / rel).parent.mkdir(parents=True, exist_ok=True)
+            (repo / rel).write_text(body)
+            sh(["add", rel])
+            env = {**os.environ, "GIT_AUTHOR_DATE": when, "GIT_COMMITTER_DATE": when}
+            proc = subprocess.run(["git", "-C", tmp, "commit", "-q", "-m", msg], env=env,
+                                  capture_output=True, text=True)
+            if proc.returncode != 0:
+                raise GitError(proc.stderr.strip())
+            return sh(["rev-parse", "HEAD"]).strip()
+
+        dated("chore: init", "src/a.py", "x = 1\n", "2026-01-09T00:00:00Z")
+        dated("fix(a): clamp x", "src/a.py", "x = 2\n", "2026-01-10T00:00:00Z")
+        base = dated("chore: imported", "docs/n.txt", "n\n", "2001-01-01T00:00:00Z")
+        head = dated("style(a): reformat", "src/a.py", "x  = 2\n", "2026-01-10T01:00:00Z")
+        ran[0] += 1
+        proc = subprocess.run([sys.executable, __file__, "--base", base, "--head", head],
+                              cwd=tmp, capture_output=True, text=True)
+        if proc.returncode != FAIL or "REFIX src/a.py" not in proc.stdout:
+            failures.append(f"old-dated-base-hides-no-fix: rc={proc.returncode} out={proc.stdout}{proc.stderr}")
 
     if failures:
         print("SELFTEST FAILED:")

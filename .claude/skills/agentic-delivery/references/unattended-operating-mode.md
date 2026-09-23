@@ -121,7 +121,7 @@ target's CI behind env flags by `deep-code-review`'s `templates/dcr-gates.sh`):
 - `scripts/priority_gate.py` — **use this when** ordering dispatch or reviewing a
   presentation PR (by label, or every path matching a presentation glob). It
   fails that PR while any P0 / mechanism issue older than `--min-age-hours` has
-  no open or merged PR citing it; `--budget` caps the presentation share of the
+  no other open or merged PR citing it; `--budget` caps the presentation share of the
   last 24 h of merges. Pure over a JSON document (`--labels-json`), or fetched by
   paginated `gh api` (`--repo`). It proves a citing PR exists, not that the PR
   advances the issue.

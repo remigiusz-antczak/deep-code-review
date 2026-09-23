@@ -16,6 +16,11 @@ change. Read it first; the essentials are only summarized here.
 - **Verify before you cite.** Any standard, version, or date added to the skill or
   to `docs/standards-index.md` must come from a source you fetched, recorded with
   its URL and verification date. Never paste a remembered link.
+- **Prose lessons carry a mechanism.** A commit that edits a skill's `SKILL.md` or
+  `references/*.md` must also touch an eval, a skill script, or
+  `scripts/test-ci-gates.sh`, or carry a `No-Mechanism-Reason:` trailer; a
+  version-stamp-only `SKILL.md` bump is exempt. See the definition of done in
+  `CLAUDE.md`.
 - **No fabrication, no private data.** See `CLAUDE.md` for the hard confidentiality
   and no-fabrication rules; they apply to code, comments, docs, commits, and git
   history.

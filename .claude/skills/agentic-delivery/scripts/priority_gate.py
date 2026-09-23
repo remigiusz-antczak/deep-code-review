@@ -21,7 +21,10 @@ FAIL the PR under review when BOTH hold:
      merged PR citing it. A PR cites issue N when its
      title/body contains `#N`, or the issue's own `citing_prs` list names it
      (in `--repo` mode, from the issue timeline's cross-referenced events).
-     A closed-unmerged PR does not count: abandoned work is not work.
+     A closed-unmerged PR does not count: abandoned work is not work. The PR
+     under review never counts as its own citation (neither its own
+     title/body, nor its entry in `prs` or `citing_prs`): a presentation PR
+     that merely mentions `#N` would otherwise clear the gate by itself.
 Optional `--budget F` (0..1): also FAIL a presentation PR when presentation
 PRs already exceed fraction F of the PRs merged in the 24 hours before `now`.
 
@@ -173,15 +176,18 @@ def evaluate(doc, *, presentation_labels=DEFAULT_PRESENTATION_LABELS,
         def is_presentation(labels: set, paths: list) -> bool:
             return bool(labels & pres_set) or all(fcg._matches_any(p, globs) for p in paths)
 
-        live_texts = [f"{pr.get('title', '')}\n{pr.get('body', '')}"]
+        # The PR under review is excluded from every citation source: its
+        # own title/body, its entry in `prs` (in --repo mode the open-PR list
+        # includes it), and its entry in any issue's `citing_prs`.
+        live_texts = []
         merged_recent = []
         for i, other in enumerate(prs):
             what = f"prs[{i}]"
-            _number(other, what)
+            other_n = _number(other, what)
             state = other.get("state")
             if state not in ("open", "merged", "closed"):
                 raise InputError(f"{what}: 'state' must be open|merged|closed")
-            if state in ("open", "merged"):
+            if state in ("open", "merged") and other_n != pr_n:
                 live_texts.append(f"{other.get('title', '')}\n{other.get('body', '')}")
             if budget is not None and state == "merged":
                 merged_at = parse_ts(other.get("merged_at"), f"{what}.merged_at")
@@ -201,7 +207,8 @@ def evaluate(doc, *, presentation_labels=DEFAULT_PRESENTATION_LABELS,
             age = max(0.0, (now - created).total_seconds() / 3600)
             if not hit or age < min_age_hours:
                 continue
-            cited = any(isinstance(c, dict) and c.get("state") in ("open", "merged") for c in citing) \
+            cited = any(isinstance(c, dict) and c.get("state") in ("open", "merged")
+                        and c.get("number") != pr_n for c in citing) \
                 or any(_cites(t, n) for t in live_texts)
             if not cited:
                 blocking.append(f"BLOCKING #{n} [{','.join(sorted(hit))}] age={age:.1f}h has no open or merged PR citing it")
@@ -340,7 +347,11 @@ def _selftest() -> int:
     closed_doc["issues"][0]["state"] = "closed"
     case("closed-issue-ignored", closed_doc, OK)
     case("cited-by-open-pr-body", _doc(prs=[{"number": 9, "body": "Refs #3", "state": "open"}]), OK)
-    case("cited-by-own-body", _doc(pr_body="also advances #3"), OK)
+    # The PR under review never cites for itself: not its own body, not its
+    # own entry in `prs`, not its own entry in `citing_prs`.
+    case("cited-by-own-body", _doc(pr_body="also advances #3"), FAIL, must=("BLOCKING #3",))
+    case("own-entry-in-prs-does-not-cite", _doc(prs=[{"number": 7, "body": "Refs #3", "state": "open"}]), FAIL)
+    case("own-timeline-ref-does-not-cite", _doc(citing=[{"number": 7, "state": "open"}]), FAIL)
     case("cited-by-timeline-merged", _doc(citing=[{"number": 9, "state": "merged"}]), OK)
     case("closed-unmerged-does-not-cite", _doc(citing=[{"number": 9, "state": "closed"}],
                                                prs=[{"number": 9, "body": "Fixes #3", "state": "closed"}]), FAIL)
@@ -369,20 +380,26 @@ def _selftest() -> int:
     case("missing-glob-module", _doc(), ERROR, fcg=None)
 
     # --repo assembly on canned gh output, then the same verdict.
-    def fake_gh(fail_on: str = "") -> GhRunner:
+    def fake_gh(fail_on: str = "", self_cite: bool = False) -> GhRunner:
         def run(args: list) -> str:
             path = next(a for a in args if a.startswith("repos/"))
             if fail_on and fail_on in path:
                 raise GhError("HTTP 502")
             if path.endswith("/pulls/7"):
-                return json.dumps({"number": 7, "title": "polish", "body": "", "labels": ["ui"]}) + "\n"
+                body = "touches #3" if self_cite else ""
+                return json.dumps({"number": 7, "title": "polish", "body": body, "labels": ["ui"]}) + "\n"
             if path.endswith("/files?per_page=100"):
                 return "web/app.css\n" if "/pulls/7/" in path else "src/c.py\n"
             if "/issues?state=open" in path:
                 return json.dumps({"number": 3, "created_at": "2026-01-08T12:00:00Z", "labels": ["P0"]}) + "\n"
             if "/timeline" in path:
+                if self_cite:
+                    return json.dumps({"number": 7, "state": "open", "merged_at": None}) + "\n"
                 return json.dumps({"number": 9, "state": "closed", "merged_at": None}) + "\n"
             if "state=open" in path:
+                if self_cite:
+                    return json.dumps({"number": 7, "title": "polish", "body": "touches #3",
+                                       "labels": ["ui"], "state": "open"}) + "\n"
                 return ""
             if "state=closed" in path and path.endswith("page=1"):
                 return (json.dumps({"number": 5, "labels": [], "merged_at": "2026-01-10T01:00:00Z",
@@ -393,7 +410,7 @@ def _selftest() -> int:
         return run
 
     now = parse_ts(NOW, "now")
-    ran[0] += 3
+    ran[0] += 4
     try:
         doc = fetch_doc(fake_gh(), "acme/widgets", 7, DEFAULT_PRIORITY_LABELS, True, now)
         rc, lines = evaluate(doc, now=now, fcg=fcg, budget=0.9)
@@ -404,6 +421,15 @@ def _selftest() -> int:
             failures.append("repo-mode-open-citation-passes")
     except GhError as exc:
         failures.append(f"repo-mode: unexpected GhError {exc}")
+    # --repo mode: the PR under review appears in the open-PR list and in the
+    # issue timeline citing #3; neither may count as a citation.
+    try:
+        doc = fetch_doc(fake_gh(self_cite=True), "acme/widgets", 7, DEFAULT_PRIORITY_LABELS, False, now)
+        rc, lines = evaluate(doc, now=now, fcg=fcg)
+        if rc != FAIL or "BLOCKING #3" not in "\n".join(lines):
+            failures.append(f"repo-mode-self-cite-excluded: rc={rc} lines={lines}")
+    except GhError as exc:
+        failures.append(f"repo-mode-self-cite-excluded: unexpected GhError {exc}")
     try:
         fetch_doc(fake_gh(fail_on="/timeline"), "acme/widgets", 7, DEFAULT_PRIORITY_LABELS, False, now)
         failures.append("repo-mode-gh-failure: no GhError raised")

@@ -47,6 +47,12 @@ plugin manifest (`.claude-plugin/plugin.json`) ships every skill.
   `name:` matching the directory.
 - `docs/standards-index.md` contains only URLs verified this session, each dated.
 - The privacy/no-fabrication grep (below) is clean.
+- A commit that edits any skill's `SKILL.md` or `references/*.md` also touches a
+  mechanism (an `evals/evals.json`, a skill script, or `scripts/test-ci-gates.sh`)
+  or carries a non-empty `No-Mechanism-Reason:` trailer; CI's "Prose lessons carry
+  a mechanism" step enforces it, merge commits included. A commit whose only
+  trigger-path change is `SKILL.md` frontmatter `version:` lines (a release stamp
+  bump) is exempt.
 
 ## Hard rules (never violate)
 - **No fabrication.** No invented findings, data, sources, metrics, CWEs, dates,

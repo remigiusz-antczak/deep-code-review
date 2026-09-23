@@ -21,13 +21,14 @@ tree, stays the reviewer's job (see `references/method.md`, class-discipline
 passage). Any claim that this tool "enforces whole-class fixes" is a
 fabrication. The accurate claim is: it enforces a pinned test per fix.
 
-MERGE COMMITS ARE NOT CHECKED (known bypass). The range is walked with
-`git rev-list --no-merges`, so every merge commit is skipped — even one whose
-subject is `fix:`. A so-called evil merge (a merge commit that carries its own
-code change beyond resolving the two parents) can therefore introduce an
-untested fix and this gate will not see it. If that matters for a repo,
-forbid code changes in merge commits by policy/review, or squash/rebase
-instead of merging; this tool does not detect it.
+MERGE COMMITS ARE NOT CHECKED IN DEFAULT MODE (known bypass). The default
+(fix-subject) range walk uses `git rev-list --no-merges`, so every merge
+commit is skipped — even one whose subject is `fix:`. A so-called evil merge
+(a merge commit that carries its own code change beyond resolving the two
+parents) can therefore introduce an untested fix and default mode will not
+see it. If that matters for a repo, forbid code changes in merge commits by
+policy/review, or squash/rebase instead of merging. Trigger mode (below) DOES
+evaluate merge commits, by their own changes.
 
 WHAT COUNTS AS A "FIX" COMMIT
 ------------------------------
@@ -64,11 +65,27 @@ is a stated reason, not a magic keyword.
 TRIGGER MODE (`--trigger-glob`, the lesson-to-mechanism gate)
 ----------------------------------------------------------------
 Passing `--trigger-glob GLOB` (repeatable) switches WHICH commits are in
-scope and WHICH trailer exempts them; everything else (range walk, merge
-skip, test-surface matching, fail-closed exits) is shared. In trigger mode a
+scope and WHICH trailer exempts them; everything else (test-surface
+matching, fail-closed exits) is shared. In trigger mode a
 commit is in scope iff it ADDS, MODIFIES, RENAMES, or COPIES a path matching
 a trigger glob (deleting a trigger path alone does not trigger — removing
-prose adds no lesson); its subject is ignored. An in-scope commit passes iff
+prose adds no lesson); its subject is ignored. Two refinements:
+  - Merge commits are walked, and judged by their OWN changes: the diff from
+    `git merge-tree --write-tree <p1> <p2>` (the clean automatic merge of
+    the two parents) to the merge commit. A clean merge that adds nothing
+    has no changes and is out of scope; an evil merge that adds prose is in
+    scope. When that result is unavailable (git older than 2.38, a
+    conflicted merge, an octopus merge, unrelated histories) the merge's
+    diff against its FIRST parent is used instead — fail closed, a merge is
+    never skipped. `merge-tree --write-tree` writes the merged tree into the
+    object database (no ref, no worktree change).
+  - A version-stamp-only edit is not a trigger: when every changed trigger
+    path is a `SKILL.md` whose only changed lines (added and removed) are
+    frontmatter `version:` lines (`version: "1.2.3"`), the commit files no
+    lesson (a release bumps several stamps at once) and is out of scope. One
+    changed line of anything else, or a `version:` line outside the
+    frontmatter, keeps it in scope.
+An in-scope commit passes iff
 it also touches a `--test-glob` path that does NOT itself match a trigger
 glob (a path on both lists never satisfies itself — otherwise a trigger edit
 would be its own mechanism), or carries a non-empty `No-Mechanism-Reason:`
@@ -84,9 +101,9 @@ EXIT CODES (fail-closed; every branch below is load-bearing)
   0  every in-scope commit (fix, or trigger in trigger mode) passed
      (touched a test surface or was exempted by a non-empty
      `No-Test-Reason` / `No-Mechanism-Reason` trailer), including the
-     legitimately-empty case of zero commits in range. Merge commits are
-     never counted (see HONESTY), so a range whose only fix is a merge
-     commit also exits 0.
+     legitimately-empty case of zero commits in range. In default mode
+     merge commits are never counted (see above), so a range whose only fix
+     is a merge commit also exits 0; trigger mode counts them.
   1  at least one in-scope commit failed; each is printed as its own FAIL line.
   2  FAIL CLOSED — the range could not be evaluated at all, never a silent
      pass: not a git repository; an empty `--trigger-glob` (it would match
@@ -217,10 +234,110 @@ def _resolve_commit(repo: str, ref: str) -> str | None:
     return proc.stdout.strip()
 
 
-def _list_range_shas(repo: str, base: str, head: str) -> list[str]:
-    """Non-merge commit SHAs in `base..head`, oldest first. Raises GitError on a real git failure."""
-    out = _run_git(repo, ["rev-list", "--no-merges", "--reverse", f"{base}..{head}"])
+def _list_range_shas(repo: str, base: str, head: str, include_merges: bool = False) -> list[str]:
+    """Commit SHAs in `base..head`, oldest first; merges only when `include_merges`.
+
+    Raises GitError on a real git failure.
+    """
+    args = ["rev-list", "--reverse", f"{base}..{head}"]
+    if not include_merges:
+        args.insert(1, "--no-merges")
+    out = _run_git(repo, args)
     return [line for line in out.splitlines() if line.strip()]
+
+
+def _parents(repo: str, sha: str) -> list[str]:
+    """Parent SHAs of `sha` (empty for a root commit)."""
+    return _run_git(repo, ["log", "-1", "--format=%P", sha]).split()
+
+
+def _merge_diff_base(repo: str, parents: list[str]) -> str:
+    """The revision a merge commit's OWN changes are measured from.
+
+    For a two-parent merge, the tree `git merge-tree --write-tree` produces
+    for a clean automatic merge of the parents: diffing the merge commit
+    against it leaves only what the merge itself added (an evil merge). When
+    that tree is unavailable (merge-tree missing or too old, the automatic
+    merge conflicts, more than two parents, unrelated histories), return the
+    FIRST parent instead, so the merge is judged on everything it brings in:
+    fail closed, never skipped. Side effect: merge-tree writes the merged
+    tree object into the object database (no ref or worktree change).
+    """
+    if len(parents) == 2:
+        proc = subprocess.run(
+            ["git", "-C", repo, "merge-tree", "--write-tree", parents[0], parents[1]],
+            capture_output=True,
+            text=True,
+        )
+        tree = proc.stdout.split("\n", 1)[0].strip()
+        if proc.returncode == 0 and re.fullmatch(r"[0-9a-f]{40,64}", tree):
+            return tree
+    return parents[0]
+
+
+# A SKILL.md frontmatter version stamp, e.g. `  version: "1.436.0"`.
+VERSION_STAMP_RE = re.compile(r'^\s*version:\s*"?[0-9][0-9A-Za-z.+-]*"?\s*$')
+_HUNK_RE = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
+
+
+def _frontmatter_end(repo: str, rev: str, path: str) -> int:
+    """1-based line number of the closing `---` of `rev:path`'s frontmatter, or 0 if none."""
+    proc = subprocess.run(
+        ["git", "-C", repo, "cat-file", "blob", f"{rev}:{path}"],
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode != 0:
+        return 0
+    lines = proc.stdout.split("\n")
+    if not lines or lines[0].rstrip() != "---":
+        return 0
+    for i, line in enumerate(lines[1:], start=2):
+        if line.rstrip() == "---":
+            return i
+    return 0
+
+
+def _version_stamp_only(repo: str, old: str, new: str, path: str) -> bool:
+    """True iff `path` is a SKILL.md whose only changes old->new are frontmatter `version:` lines.
+
+    Reads a zero-context patch (`diff-tree -p -U0`, plumbing, so user diff
+    config cannot reshape it) and requires every added and removed line to
+    match VERSION_STAMP_RE and to sit inside that side's frontmatter. Any
+    other changed line, a mode-only change, or a file without frontmatter
+    returns False (the commit stays in scope — fail closed); a failing git
+    call raises GitError, which the caller turns into exit 2.
+    """
+    if path.rsplit("/", 1)[-1] != "SKILL.md":
+        return False
+    patch = _run_git(repo, ["diff-tree", "-p", "-U0", "--no-color", "--no-ext-diff",
+                            old, new, "--", path])
+    old_end = _frontmatter_end(repo, old, path)
+    new_end = _frontmatter_end(repo, new, path)
+    changed = 0
+    old_line = new_line = 0
+    in_hunk = False
+    for line in patch.split("\n"):
+        m = _HUNK_RE.match(line)
+        if m:
+            in_hunk = True
+            old_line, new_line = int(m.group(1)), int(m.group(3))
+            continue
+        if not in_hunk or not line or line.startswith("\\"):
+            continue
+        if line[0] == "-":
+            if not (VERSION_STAMP_RE.match(line[1:]) and 1 < old_line < old_end):
+                return False
+            old_line += 1
+            changed += 1
+        elif line[0] == "+":
+            if not (VERSION_STAMP_RE.match(line[1:]) and 1 < new_line < new_end):
+                return False
+            new_line += 1
+            changed += 1
+        else:
+            return False
+    return changed > 0
 
 
 def _subject(repo: str, sha: str) -> str:
@@ -249,8 +366,11 @@ def _trailer_value(repo: str, sha: str, key: str) -> str:
     return out.strip()
 
 
-def _changed_paths(repo: str, sha: str) -> list[tuple[str, bool]]:
-    """`[(path, counts_as_add_or_modify), ...]` touched by one non-merge commit `sha`.
+def _changed_paths(repo: str, *revs: str) -> list[tuple[str, bool]]:
+    """`[(path, counts_as_add_or_modify), ...]` touched by one non-merge commit, or between two revs.
+
+    One rev: the commit's own diff against its parent. Two revs (old, new):
+    the diff between them (used for a merge commit's own changes).
 
     Uses NUL-terminated `--name-status -z` output so paths with spaces or tabs
     never desync the parser. A rename/copy (`R`/`C`) counts its NEW path as
@@ -261,7 +381,7 @@ def _changed_paths(repo: str, sha: str) -> list[tuple[str, bool]]:
     """
     out = _run_git(
         repo,
-        ["diff-tree", "-r", "--no-commit-id", "--name-status", "-z", sha],
+        ["diff-tree", "-r", "--no-commit-id", "--name-status", "-z", *revs],
     )
     tokens = out.split("\0")
     if tokens and tokens[-1] == "":
@@ -293,9 +413,11 @@ def run_gate(repo: str, base: str, head: str, test_globs: tuple[str, ...],
     """Evaluate `base..head` in `repo`; return (exit_code, printable lines).
 
     Empty `trigger_globs` = default mode (a `fix:` subject puts a commit in
-    scope, `No-Test-Reason` exempts it). Non-empty = trigger mode (touching a
-    trigger path puts it in scope, `No-Mechanism-Reason` exempts it, and a
-    test-surface path that also matches a trigger glob never counts).
+    scope, `No-Test-Reason` exempts it; merges skipped). Non-empty = trigger
+    mode (touching a trigger path puts it in scope unless every such touch is
+    a SKILL.md frontmatter version stamp, merges are judged by their own
+    changes, `No-Mechanism-Reason` exempts, and a test-surface path that also
+    matches a trigger glob never counts).
 
     Fail-closed ordering: repo-ness, then the all-zeros sentinel, then ref
     resolution, then the range walk, are each checked before any commit is
@@ -321,51 +443,69 @@ def run_gate(repo: str, base: str, head: str, test_globs: tuple[str, ...],
     if head_sha is None:
         return ERROR, [f"error: --head {head!r} does not resolve to a commit"]
 
+    compiled_globs = _compile_globs(test_globs)
+    compiled_triggers = _compile_globs(trigger_globs)
+    trigger_mode = bool(compiled_triggers)
+
     try:
-        shas = _list_range_shas(repo, base_sha, head_sha)
+        shas = _list_range_shas(repo, base_sha, head_sha, include_merges=trigger_mode)
     except GitError as exc:
         return ERROR, [f"error: could not walk range {base}..{head}: {exc}"]
 
     if not shas:
         return OK, ["0 commits in range"]
 
-    compiled_globs = _compile_globs(test_globs)
-    compiled_triggers = _compile_globs(trigger_globs)
-    trigger_mode = bool(compiled_triggers)
     kind, key = ("trigger", "No-Mechanism-Reason") if trigger_mode else ("fix", "No-Test-Reason")
     fails: list[str] = []
     total = 0
     exempted = 0
 
-    for sha in shas:
-        subject = _subject(repo, sha)
-        if trigger_mode:
-            changed = _changed_paths(repo, sha)
-            in_scope = any(
-                counts and _matches_any(path, compiled_triggers) for path, counts in changed
+    # Any git failure mid-walk (unreadable parents, diff, trailer) is a
+    # fail-closed ERROR, never a partial verdict.
+    try:
+        for sha in shas:
+            subject = _subject(repo, sha)
+            if trigger_mode:
+                parents = _parents(repo, sha)
+                if len(parents) > 1:
+                    old, new = _merge_diff_base(repo, parents), sha
+                    changed = _changed_paths(repo, old, new)
+                else:
+                    old, new = (parents[0] if parents else ""), sha
+                    changed = _changed_paths(repo, sha)
+                triggered = [
+                    path for path, counts in changed
+                    if counts and _matches_any(path, compiled_triggers)
+                ]
+                # A commit whose every trigger-path change is a SKILL.md
+                # frontmatter version stamp files no lesson (release bumps).
+                in_scope = bool(triggered) and not (
+                    old and all(_version_stamp_only(repo, old, new, p) for p in triggered)
+                )
+            else:
+                in_scope = bool(FIX_SUBJECT_RE.match(subject))
+                changed = _changed_paths(repo, sha) if in_scope else []
+            if not in_scope:
+                continue
+            total += 1
+            touched_test = any(
+                counts
+                and _matches_any(path, compiled_globs)
+                and not _matches_any(path, compiled_triggers)
+                for path, counts in changed
             )
-        else:
-            in_scope = bool(FIX_SUBJECT_RE.match(subject))
-            changed = _changed_paths(repo, sha) if in_scope else []
-        if not in_scope:
-            continue
-        total += 1
-        touched_test = any(
-            counts
-            and _matches_any(path, compiled_globs)
-            and not _matches_any(path, compiled_triggers)
-            for path, counts in changed
-        )
-        if touched_test:
-            continue
-        if _trailer_value(repo, sha, key):
-            exempted += 1
-            continue
-        short = _short_sha(repo, sha)
-        what = "trigger path touched, " if trigger_mode else ""
-        fails.append(
-            f"FAIL {short} {subject} — {what}no test surface touched and no {key} trailer"
-        )
+            if touched_test:
+                continue
+            if _trailer_value(repo, sha, key):
+                exempted += 1
+                continue
+            short = _short_sha(repo, sha)
+            what = "trigger path touched, " if trigger_mode else ""
+            fails.append(
+                f"FAIL {short} {subject} — {what}no test surface touched and no {key} trailer"
+            )
+    except GitError as exc:
+        return ERROR, [f"error: could not evaluate range {base}..{head}: {exc}"]
 
     lines.extend(fails)
     if fails:
@@ -661,12 +801,105 @@ def _selftest() -> int:
         rc, out = _run_tool(repo, base, head, globs=mech, triggers=[""])
         check("trigger-empty-glob", rc, out, ERROR, must_have=("must not be empty",))
 
+        # 23-25) trigger mode walks merge commits and judges each by its OWN
+        # changes (vs the clean automatic merge of its parents).
+        def branch_off(r: Path) -> None:
+            _sh(r, "checkout", "-q", "-b", "feature")
+
+        # An evil merge: the merge commit itself adds prose, no mechanism -> FAIL.
+        repo, base = trig_repo("case_trigger_evil_merge")
+        branch_off(repo)
+        _commit(repo, "chore: feature work", {"src/f.py": "f = 1\n"})
+        _sh(repo, "checkout", "-q", "-")
+        _commit(repo, "chore: mainline work", {"src/m.py": "m = 1\n"})
+        _sh(repo, "merge", "--no-ff", "--no-commit", "feature")
+        Path(repo / "skills/a/references/r.md").parent.mkdir(parents=True, exist_ok=True)
+        Path(repo / "skills/a/references/r.md").write_text("lesson smuggled in a merge\n")
+        _sh(repo, "add", "skills/a/references/r.md")
+        _sh(repo, "commit", "-q", "-m", "merge feature")
+        head = _sh(repo, "rev-parse", "HEAD")
+        rc, out = _run_tool(repo, base, head, globs=mech, triggers=trig)
+        check("trigger-evil-merge", rc, out, FAIL,
+              must_have=("FAIL", head[:7], "1 trigger commit(s)"))
+
+        # A clean merge adds nothing of its own: only the feature commit (which
+        # carries its eval) is judged, and the merge is out of scope -> OK.
+        repo, base = trig_repo("case_trigger_clean_merge")
+        branch_off(repo)
+        _commit(repo, "feat: lesson plus eval",
+                {"skills/a/SKILL.md": "v2\n", "skills/a/evals/evals.json": "{}\n"})
+        _sh(repo, "checkout", "-q", "-")
+        _commit(repo, "chore: mainline work", {"src/m.py": "m = 1\n"})
+        _sh(repo, "merge", "--no-ff", "-q", "-m", "merge feature", "feature")
+        head = _sh(repo, "rev-parse", "HEAD")
+        rc, out = _run_tool(repo, base, head, globs=mech, triggers=trig)
+        check("trigger-clean-merge", rc, out, OK, must_have=("1 trigger commit(s)",), must_not=("FAIL",))
+
+        # A conflicted merge has no clean automatic result: it falls back to
+        # its diff against the first parent (fail closed, never skipped).
+        repo, base = trig_repo("case_trigger_conflict_merge")
+        branch_off(repo)
+        _commit(repo, "docs: feature wording\n\nNo-Mechanism-Reason: fixture",
+                {"skills/a/SKILL.md": "feature\n"})
+        _sh(repo, "checkout", "-q", "-")
+        _commit(repo, "docs: main wording\n\nNo-Mechanism-Reason: fixture",
+                {"skills/a/SKILL.md": "main\n"})
+        subprocess.run(["git", "-C", str(repo), "merge", "--no-ff", "feature"],
+                       capture_output=True, text=True)
+        Path(repo / "skills/a/SKILL.md").write_text("resolved with a new rule\n")
+        _sh(repo, "add", "skills/a/SKILL.md")
+        _sh(repo, "commit", "-q", "-m", "merge feature")
+        head = _sh(repo, "rev-parse", "HEAD")
+        rc, out = _run_tool(repo, base, head, globs=mech, triggers=trig)
+        check("trigger-conflict-merge", rc, out, FAIL, must_have=("FAIL", head[:7], "2 exempted"))
+
+        # 26-29) a SKILL.md frontmatter version-stamp-only edit is not a
+        # trigger (releases bump several stamps); any other changed line is.
+        fm = '---\nname: a\nmetadata:\n  version: "{v}"\n---\n# A\n\n{body}\n'
+
+        def stamp_repo(name: str) -> tuple[Path, str]:
+            r = tmp_path / name
+            _init_repo(r)
+            return r, _commit(r, "chore: init",
+                              {"skills/a/SKILL.md": fm.format(v="1.0.0", body="rule"),
+                               "skills/b/SKILL.md": fm.format(v="1.0.0", body="rule")})
+
+        repo, base = stamp_repo("case_trigger_stamp_only")
+        head = _commit(repo, "chore(release): 1.1.0",
+                       {"skills/a/SKILL.md": fm.format(v="1.1.0", body="rule"),
+                        "skills/b/SKILL.md": fm.format(v="1.1.0", body="rule")})
+        rc, out = _run_tool(repo, base, head, globs=mech, triggers=trig)
+        check("trigger-stamp-only", rc, out, OK, must_have=("0 trigger commit(s)",), must_not=("FAIL",))
+
+        repo, base = stamp_repo("case_trigger_stamp_plus_prose")
+        head = _commit(repo, "chore(release): 1.1.0",
+                       {"skills/a/SKILL.md": fm.format(v="1.1.0", body="rule"),
+                        "skills/b/SKILL.md": fm.format(v="1.1.0", body="new rule")})
+        rc, out = _run_tool(repo, base, head, globs=mech, triggers=trig)
+        check("trigger-stamp-plus-prose", rc, out, FAIL, must_have=("FAIL", head[:7]))
+
+        # A `version:` line added to, or removed from, the body is prose.
+        body_stamp = 'rule\nversion: "2.0.0"'
+        repo, base = stamp_repo("case_trigger_stamp_added_in_body")
+        head = _commit(repo, "docs: body stamp",
+                       {"skills/a/SKILL.md": fm.format(v="1.0.0", body=body_stamp)})
+        rc, out = _run_tool(repo, base, head, globs=mech, triggers=trig)
+        check("trigger-stamp-added-in-body", rc, out, FAIL, must_have=("FAIL", head[:7]))
+
+        repo, _ = stamp_repo("case_trigger_stamp_removed_from_body")
+        base = _commit(repo, "docs: body stamp\n\nNo-Mechanism-Reason: fixture",
+                       {"skills/a/SKILL.md": fm.format(v="1.0.0", body=body_stamp)})
+        head = _commit(repo, "docs: drop body stamp",
+                       {"skills/a/SKILL.md": fm.format(v="1.0.0", body="rule")})
+        rc, out = _run_tool(repo, base, head, globs=mech, triggers=trig)
+        check("trigger-stamp-removed-from-body", rc, out, FAIL, must_have=("FAIL", head[:7]))
+
     if failures:
         print("SELFTEST FAILED:")
         for f in failures:
             print(f"  - {f}")
         return 1
-    print("SELFTEST OK: 22/22 cases passed")
+    print("SELFTEST OK: 29/29 cases passed")
     return 0
 
 
