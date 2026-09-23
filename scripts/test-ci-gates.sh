@@ -2458,6 +2458,50 @@ else
   record 1 "pre-push-verify: a new-branch push computes BASE_SHA as the merge-base against the remote default branch"
 fi
 
+# Case: a leftover conflict marker inside the PUSHED RANGE rejects the push
+# even though DCR_PREPUSH_CMD itself passes (planted RED -- before #1094's
+# change the marker check does not exist, so the hook's exit code is 0 and
+# this case fails; after the change it fails closed and this case passes).
+git -C "$ppvroot/local" checkout -q main >/dev/null 2>&1
+printf 'l1\n<<<<<<< HEAD\nl2\n=======\nl3\n>>>>>>> other\n' >"$ppvroot/local/marker.txt"
+git -C "$ppvroot/local" add marker.txt >/dev/null 2>&1
+git -C "$ppvroot/local" commit -qm marker >/dev/null 2>&1
+ppv_marker_sha="$(git -C "$ppvroot/local" rev-parse HEAD)"
+ppv_run "$WORK/ppv-marker.log" "refs/heads/main $ppv_marker_sha refs/heads/main $ppv_local_sha" \
+  DCR_PREPUSH_CMD=true
+if [ "$PPV_RC" -ne 0 ] && grep -q 'leftover conflict marker' "$WORK/ppv-marker.log"; then
+  record 0 "pre-push-verify: a leftover conflict marker in the pushed range rejects the push"
+else
+  record 1 "pre-push-verify: a leftover conflict marker in the pushed range rejects the push"
+fi
+
+# Case: the SAME planted marker, but DCR_PREPUSH_ALLOW_UNSET=1 and no
+# DCR_PREPUSH_CMD set -- the marker check runs before the unset-command path
+# and still blocks (it must not be treated as "nothing configured, let it
+# through").
+ppv_run "$WORK/ppv-marker-allowed.log" "refs/heads/main $ppv_marker_sha refs/heads/main $ppv_local_sha" \
+  DCR_PREPUSH_ALLOW_UNSET=1
+if [ "$PPV_RC" -ne 0 ] && grep -q 'leftover conflict marker' "$WORK/ppv-marker-allowed.log"; then
+  record 0 "pre-push-verify: DCR_PREPUSH_ALLOW_UNSET=1 does not let a leftover conflict marker through"
+else
+  record 1 "pre-push-verify: DCR_PREPUSH_ALLOW_UNSET=1 does not let a leftover conflict marker through"
+fi
+
+# Case: the SAME marker, but it sits only in the BASE (already on the far
+# side of the pushed range, as if the remote already has it) -- a further,
+# marker-free commit on top must not be blocked by it.
+printf 'clean\n' >"$ppvroot/local/clean.txt"
+git -C "$ppvroot/local" add clean.txt >/dev/null 2>&1
+git -C "$ppvroot/local" commit -qm clean >/dev/null 2>&1
+ppv_clean_sha="$(git -C "$ppvroot/local" rev-parse HEAD)"
+ppv_run "$WORK/ppv-marker-in-base.log" "refs/heads/main $ppv_clean_sha refs/heads/main $ppv_marker_sha" \
+  DCR_PREPUSH_CMD=true
+if [ "$PPV_RC" -eq 0 ] && ! grep -q 'leftover conflict marker' "$WORK/ppv-marker-in-base.log"; then
+  record 0 "pre-push-verify: a marker already in the base (outside the pushed range) does not block"
+else
+  record 1 "pre-push-verify: a marker already in the base (outside the pushed range) does not block"
+fi
+
 # ---------------------------------------------------------------------------
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"

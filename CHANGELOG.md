@@ -12,6 +12,7 @@ follows Keep a Changelog; versioning follows Semantic Versioning.
 
 ### Added
 - `deep-code-review/templates/pre-push-verify.sh`: a pre-push hook for target repos that re-runs the configured fast lint + unit step (`DCR_PREPUSH_CMD`) on the pushed range and fails closed when unconfigured — a rebase or merge-conflict resolution is unverified code. `install.sh --with-gates` writes it to `.githooks/pre-push` (never overwrites) and prints the `core.hooksPath` command. A hook is self-report; CI stays the control. +1 eval. Closes #1093.
+- `deep-code-review/templates/pre-push-verify.sh`: a `git diff --check` conflict-marker gate now runs on the pushed range before the `DCR_PREPUSH_CMD` unset check, rejecting a push whose diff carries a leftover `<<<<<<<`/`=======`/`>>>>>>>` marker even when `DCR_PREPUSH_ALLOW_UNSET=1` — 3 new END-block cases in `scripts/test-ci-gates.sh`. Closes #1094.
 - size-budget-raise: .claude/skills/agentic-delivery/references/merge-queue-worktrees.md 55121→55535 post-rebase re-verify bullet (#1093) net of repointed cross-references
 
 ### Fixed — pre-push-verify.sh (#1093 follow-up hardening)

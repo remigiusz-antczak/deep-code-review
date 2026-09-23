@@ -14,6 +14,24 @@
 # `.claude/skills/deep-code-review/references/branch-and-merge-hygiene.md`'s
 # "Self-report ≠ control" (not restated here).
 #
+# CONFLICT-MARKER CHECK (issue #1094): a raw `<<<<<<<`/`=======`/`>>>>>>>`
+# marker left in a conflict resolution is a lint-tier failure that a cheap
+# model tier can miss and DCR_PREPUSH_CMD may not catch (e.g. a lint config
+# that doesn't flag it). So this hook runs `git diff --check` over the pushed
+# range itself, before and independently of DCR_PREPUSH_CMD -- it fires even
+# when that command is unset and DCR_PREPUSH_ALLOW_UNSET=1 lets the push
+# through otherwise. Only lines reporting "leftover conflict marker" fail the
+# push; other `git diff --check` whitespace complaints (trailing whitespace,
+# space-before-tab) are ignored -- this hook is not a whitespace linter, and
+# failing pushes on pre-existing whitespace would be friction nobody asked
+# for. The check is range-scoped (base_sha..local_sha), so a marker-shaped
+# line already sitting in the base never blocks. KNOWN FALSE POSITIVE: a
+# Markdown setext-style H1 underlined with exactly 7 `=` characters reads as
+# a conflict marker to `git diff --check`. Escape hatch: mark the file (or
+# extension) `conflict-marker-size=32` in `.gitattributes`, which raises the
+# marker-run threshold above what a real marker (7 chars) ever reaches and
+# silences the false positive without disabling the real check.
+#
 # INSTALL: `install.sh --with-gates` copies this file to
 # `<target>/.githooks/pre-push` (never overwrites an existing file there —
 # writes `.new` instead) and prints, but does not run, the one-time opt-in:
@@ -173,6 +191,22 @@ while read -r local_ref local_sha remote_ref remote_sha; do
 
   export BASE_SHA="${base_sha}"
   export HEAD_SHA="${local_sha}"
+
+  # Conflict-marker check (#1094): runs before, and independently of, the
+  # DCR_PREPUSH_CMD unset check below, so it fires even when that command is
+  # unset and DCR_PREPUSH_ALLOW_UNSET=1 would otherwise let the push through.
+  # `git diff --check` exits 2 on any issue (marker or whitespace) -- the
+  # trailing `|| true` on its command substitution keeps `set -e` from
+  # aborting on that non-zero exit, then its stdout is filtered down to
+  # marker lines only.
+  marker_check_output="$(git diff --check "${base_sha}" "${local_sha}" 2>/dev/null || true)"
+  marker_lines="$(printf '%s\n' "${marker_check_output}" | grep -F 'leftover conflict marker' || true)"
+  if [ -n "${marker_lines}" ]; then
+    printf '%s\n' "${marker_lines}" >&2
+    printf 'pre-push-verify: FAIL -- rejecting push of %s (leftover conflict marker)\n' "${local_ref}" >&2
+    fail=1
+    continue
+  fi
 
   if is_blank "${DCR_PREPUSH_CMD:-}"; then
     if [ "${DCR_PREPUSH_ALLOW_UNSET:-0}" = "1" ]; then

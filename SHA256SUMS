@@ -4,7 +4,7 @@ cc52f678848b814373757b460383bf61960e4943c203735adde0a350b3e50989  .claude/skills
 710f49f46e3979fd40a511a7d3ad07f66358b0d204fa1be9be52edcb7d293b28  .claude/skills/agentic-delivery/SKILL.md
 743d45db5347993f6fedec320ab49e51992904e68cc69af5f1179b0460c043f8  .claude/skills/agentic-delivery/VERSION
 94005a4be6e538262427b8590763ce18c7e33d6a81f35687d99ea557edbf2335  .claude/skills/agentic-delivery/evals/evals.json
-c20956be4670049f8b6591aaf5424117920355aec5c18569ddcc0f3cdbaabcb9  .claude/skills/agentic-delivery/references/dev-env-ownership.md
+6194c833483d1a669843f8a59361d15cd0ab2e97265b5ec0e85686247e2add66  .claude/skills/agentic-delivery/references/dev-env-ownership.md
 2556a808210d01e80a75f6181bf48f7ccb71f02c730a8280192313c998b2e2db  .claude/skills/agentic-delivery/references/fanout-host-sizing.md
 0d4d35995fd50fb99cc0daab02edaae596961b0a49f6bf367ba60611fe8065fd  .claude/skills/agentic-delivery/references/fast-agentic-delivery.md
 3943aca5c3fd0d89696d80d26d3dff85f619d4bd45b6340d3cf65a3586213c03  .claude/skills/agentic-delivery/references/host-enforcement.md
@@ -133,7 +133,7 @@ d5606abd5b9ec08d6d4bf98e0e51b1c52d430040bb1a957e4b545bff816ae2cf  .claude/skills
 317acae212ed73279df66eb7b419b8426733bb1be05345b0e1c8b2c6790ad8a1  .claude/skills/deep-code-review/scripts/validate_status_claims.py
 20c9c131848f08fbf7bdfcd9a84224da7fe69e7e68ad65c2228911380c7b77a3  .claude/skills/deep-code-review/templates/dcr-gates.sh
 e9df3483336d6470072f8b7d7bfd5e93e281da2b5a892590101b4cb3ed89e419  .claude/skills/deep-code-review/templates/dcr-gates.yml
-9ae59c95c762326473bb9351ba21924682676844218beea07d12cfa2cbffe2f3  .claude/skills/deep-code-review/templates/pre-push-verify.sh
+ada343e2d9fd79411b10007911243184cdd8c46cef858343ea56405302166700  .claude/skills/deep-code-review/templates/pre-push-verify.sh
 5068e60f9615684c8d8bf8fbd7896748267cf6688895a701bdd25cd945181cb8  .claude/skills/growth-analytics/SKILL.md
 cc52f678848b814373757b460383bf61960e4943c203735adde0a350b3e50989  .claude/skills/growth-analytics/VERSION
 4c8047eeb8b174b520c736e7b189d5a49e4a755aad738e9c44c8af4e25fe1067  .claude/skills/growth-analytics/evals/evals.json
