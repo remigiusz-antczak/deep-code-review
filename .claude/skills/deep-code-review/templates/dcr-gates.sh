@@ -45,11 +45,15 @@
 # 0, or 1 fails closed).
 #   DCR_REAPER_LINT=1       run deep-code-review's reaper_lint.py over
 #                           DCR_REAPER_LINT_PATHS (space-separated files/dirs,
-#                           literal — never glob-expanded; default: the whole
-#                           repo root) for a bulk/fleet-wide process-reaper
-#                           pattern (issue #1101; doctrine:
-#                           concurrency-shared-state.md "Terminating work you
-#                           own"). Needs no other skill installed.
+#                           literal — never glob-expanded; relative entries
+#                           resolve against the repo root; default: the whole
+#                           repo root; set but whitespace-only fails) for a
+#                           bulk/fleet-wide process-reaper pattern (issue
+#                           #1101; doctrine: concurrency-shared-state.md
+#                           "Terminating work you own"). A heuristic lint:
+#                           a PASS means no known shape matched, not that
+#                           every kill is scoped. Needs no other skill
+#                           installed.
 # The next two need the agentic-delivery skill installed; a set flag with
 # that skill or its script missing is a failure, never a skip.
 #   DCR_REFIX_GATE=1        run agentic-delivery's refix_gate.py over the same
@@ -270,13 +274,20 @@ if opt_in DCR_REAPER_LINT; then
     printf 'dcr-gates: selftest FAILED for %s\n' "${REAPER_LINT}" >&2
     FAIL=1
   else
+    # Relative DCR_REAPER_LINT_PATHS entries resolve against REPO_ROOT (the
+    # scan runs with cwd == REPO_ROOT), never against the caller's cwd.
     reaper_paths=()
     if [ -n "${DCR_REAPER_LINT_PATHS:-}" ]; then
       read -r -a reaper_paths <<<"${DCR_REAPER_LINT_PATHS}"
     else
-      reaper_paths=("${REPO_ROOT}")
+      reaper_paths=(.)
     fi
-    if python3 "${REAPER_LINT}" "${reaper_paths[@]}"; then
+    if [ "${#reaper_paths[@]}" -eq 0 ]; then
+      printf 'dcr-gates: FAIL reaper_lint (DCR_REAPER_LINT_PATHS names no path)\n' >&2
+      FAIL=1
+    # "${arr[@]+"${arr[@]}"}": bash 3.2 treats an empty array as unset
+    # under `set -u`; this form expands to nothing instead of aborting.
+    elif (cd "${REPO_ROOT}" && python3 "${REAPER_LINT}" "${reaper_paths[@]+"${reaper_paths[@]}"}"); then
       printf 'dcr-gates: reaper_lint PASS\n'
     else
       printf 'dcr-gates: reaper_lint FAIL\n' >&2

@@ -2648,6 +2648,42 @@ else
   record 1 "web isolation: FIRES when a parent index drops a sub-file's row (planted RED)"
 fi
 
+# ===========================================================================
+# dcr-gates opt-in reaper_lint (own lane; APPENDED AT THE END by convention),
+# on the optin-gates target above. Relative DCR_REAPER_LINT_PATHS entries
+# resolve against the target's repo root even when the runner is started from
+# another directory, and a whitespace-only value fails closed with a named
+# message instead of aborting on an empty-array expansion.
+# ===========================================================================
+
+mkdir -p "$og/ops"
+printf 'pkill -f chromium\n' >"$og/ops/reap.sh"
+rl_run() {  # <log> [VAR=value ...] — run the runner from $WORK; sets RL_RC
+  local log="$1"
+  shift
+  if (cd "$WORK" && env DCR_REAPER_LINT=1 "$@" bash "$og_runner") >"$log" 2>&1; then RL_RC=0; else RL_RC=$?; fi
+}
+rl_run "$WORK/rl-red.log" DCR_REAPER_LINT_PATHS=ops
+if [ "$RL_RC" -ne 0 ] && grep -q '\[BROAD_PKILL\]' "$WORK/rl-red.log" \
+  && grep -q 'dcr-gates: reaper_lint FAIL' "$WORK/rl-red.log"; then
+  record 0 "dcr-gates opt-in: reaper_lint resolves a relative path against the repo root and FIRES (planted RED)"
+else
+  record 1 "dcr-gates opt-in: reaper_lint resolves a relative path against the repo root and FIRES (planted RED)"
+fi
+rl_run "$WORK/rl-green.log" DCR_REAPER_LINT_PATHS=src
+if [ "$RL_RC" -eq 0 ] && grep -q 'dcr-gates: reaper_lint PASS' "$WORK/rl-green.log"; then
+  record 0 "dcr-gates opt-in: reaper_lint passes a clean relative path"
+else
+  record 1 "dcr-gates opt-in: reaper_lint passes a clean relative path"
+fi
+rl_run "$WORK/rl-blank.log" DCR_REAPER_LINT_PATHS='   '
+if [ "$RL_RC" -ne 0 ] && grep -q 'FAIL reaper_lint (DCR_REAPER_LINT_PATHS names no path)' "$WORK/rl-blank.log"; then
+  record 0 "dcr-gates opt-in: whitespace-only DCR_REAPER_LINT_PATHS fails closed"
+else
+  record 1 "dcr-gates opt-in: whitespace-only DCR_REAPER_LINT_PATHS fails closed"
+fi
+rm -rf "$og/ops"
+
 # ---------------------------------------------------------------------------
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
