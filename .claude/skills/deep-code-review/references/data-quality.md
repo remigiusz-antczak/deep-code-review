@@ -141,7 +141,7 @@ accepted overwrite with the grades, so the arbitration is auditable.
   dishonest value has **no code path that can build it** (emit a bin only for an observed period, so a
   "collected-zero" cell has no constructor), then pin it with a "never emits X" test. This is
   `reliability-error-handling.md`'s *make impossible states unrepresentable* applied to data honesty —
-  the how-to-guarantee behind the open-world third state (`product-ux-quality.md`) and "an absent
+  the how-to-guarantee behind the open-world third state (`ux-dataviz.md`) and "an absent
   window is not a decline" (§8). Reviewer check for each honesty invariant: *can the dishonest value
   even be constructed?* If yes, it rests on a convention a future edit can silently violate.
 
@@ -498,7 +498,7 @@ rate), validity (schema/format/range). For each:
   holds for a directional edge too — record the adjacency at each end). (The UI
   half — never
   render a bare synthesized "strength" number as fact — is the confidence-tier
-  false-precision rule in `product-ux-quality.md`.)
+  false-precision rule in `ux-dataviz.md`.)
 - **Corroboration raises only the component it evidences — never the entity-attribution.** An
   event/activity confidence often fuses three independent propositions: *occurrence* (did it
   happen), *role*, and *entity-attribution* (whose is it). Cross-source corroboration — N

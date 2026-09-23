@@ -413,7 +413,7 @@ constraint**: *this surface must not show X.* When a new feature request conflic
   split / reopen, or loosen the test themselves, explicitly). (Observed: a lane asked for a live
   OKR dashboard added the honest **coverage** stat but **not** an attainment-% meter, because a
   guardrail test pinned the omit-percentage contract — a test-layer enforcement of *show coverage, not
-  a grade* in `product-ux-quality.md`.)
+  a grade* in `ux-dataviz.md`.)
 - **Review lens:** a diff that **loosens or removes an assertion — especially an absence
   assertion — while adding a feature** is a red flag: check whether it silently reverses a
   recorded decision. Changing a ratified constraint is an **explicit, owner-visible** decision (its

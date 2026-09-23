@@ -252,7 +252,7 @@ identical API/LLM/DB calls, over-fetching, "call it every run" patterns).
 | M Observability | logs/metrics/traces, golden signals, audit integrity, restore drills | `observability.md` |
 | N Config & secrets | env-only secrets, safe defaults, clean no-op | — |
 | O Docs & DX | Diátaxis, C4, ADRs, one-command setup, repo hygiene, cross-agent imprint | `docs-and-dx.md` |
-| P Frontend / a11y | WCAG 2.2 AA, Core Web Vitals, plus the *design half* (five data states, encoding, metric deltas) | `frontend-a11y.md`, `product-ux-quality.md` |
+| P Frontend / a11y | WCAG 2.2 AA, Core Web Vitals, plus the *design half* (five data states, encoding, metric deltas) | `frontend-a11y.md`, `product-ux-quality.md` (each indexes its routed sub-files) |
 | Q Privacy & licensing | minimization, retention/erasure, consent flags, license compat | `privacy-compliance.md`, `privacy-by-design.md` |
 | R i18n & encoding | locale-aware formatting, Unicode normalization | — |
 | S Branches & open-work triage | branching model, merge/PR/rebase per branch, safe cleanup | `branch-and-merge-hygiene.md`, `merge-operations.md` |

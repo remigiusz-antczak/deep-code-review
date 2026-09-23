@@ -315,7 +315,7 @@ design-quality checklist in `references/migration-parity.md` (#124).
   covers).
 - **Smart Brevity** (Axios; VandeHei, Allen & Schwartz) — lead each information unit
   with *what's new* **and** *why it matters*; the actionability pattern named in
-  `product-ux-quality.md`. Named by name only — no URL fetched this session.
+  `ux-lists.md`. Named by name only — no URL fetched this session.
 - **The Twelve-Factor App** — config/dependency/deploy hygiene.
 - **RFC 2119** — requirement-keyword conventions (MUST / SHOULD / MAY), named by
   `docs-evolution-by-stage.md`. Named by name only.
@@ -424,11 +424,11 @@ Verification date for the row below: **2026-09-17**. Added for the deep-code-rev
 ## Verified by direct fetch (2026-09-17) — ARIA APG
 
 Verification date for the row below: **2026-09-17**. Added for the deep-code-review
-`frontend-a11y.md` per-widget APG-contract lens.
+`a11y-focus.md` per-widget APG-contract lens.
 
 | Standard | URL | What was confirmed |
 |---|---|---|
-| W3C ARIA Authoring Practices Guide (APG) | https://www.w3.org/WAI/ARIA/apg/ | W3C guide, title "ARIA Authoring Practices Guide (APG)"; purpose "how to apply accessibility semantics to common design patterns and widgets" via "ARIA roles, states and properties and by implementing keyboard support," with a per-pattern functional example. Confirms the APG supplies per-widget role/state/keyboard-interaction patterns for hand-built widgets. Cited as the per-widget contract in `frontend-a11y.md` (specific keys per widget — e.g. tablist Arrow/Home/End — are the APG's documented pattern behavior). |
+| W3C ARIA Authoring Practices Guide (APG) | https://www.w3.org/WAI/ARIA/apg/ | W3C guide, title "ARIA Authoring Practices Guide (APG)"; purpose "how to apply accessibility semantics to common design patterns and widgets" via "ARIA roles, states and properties and by implementing keyboard support," with a per-pattern functional example. Confirms the APG supplies per-widget role/state/keyboard-interaction patterns for hand-built widgets. Cited as the per-widget contract in `a11y-focus.md` (specific keys per widget — e.g. tablist Arrow/Home/End — are the APG's documented pattern behavior). |
 
 ## Verified by direct fetch (2026-09-18) — mutation testing
 
@@ -829,7 +829,7 @@ Verification date for the rows below: **2026-09-20**. Added for the deep-code-re
 ## Verified by direct fetch (2026-09-20) — a11y: live regions, Label in Name, disclosure state
 
 Verification date for the rows below: **2026-09-20**. Added for the deep-code-review
-`frontend-a11y.md` folds: a loading/skeleton region needing a live-region announcement
+`a11y-live.md` / `a11y-aria.md` / `a11y-focus.md` folds: a loading/skeleton region needing a live-region announcement
 (not just `aria-busy`), WCAG SC 2.5.3 Label in Name, and a disclosure toggle needing
 `aria-expanded` state alongside its label/icon swap.
 
@@ -909,7 +909,7 @@ OWASP GenAI project page.
 ## Verified by direct fetch (2026-09-20) — required-state exposure on custom composite widgets
 
 Verification date for the rows below: **2026-09-20**. Added for the deep-code-review
-`frontend-a11y.md` fold: a shared `Field` wrapper's `aria-hidden` required asterisk needs
+`a11y-forms.md` fold: a shared `Field` wrapper's `aria-hidden` required asterisk needs
 "required" exposed through another channel, and a custom button+listbox Select/combobox
 composed inside it has none unless it sets `aria-required` itself. All four fetched via
 `curl` (raw HTML), not a summarizer.
@@ -1143,16 +1143,16 @@ project.
 ## Verified by direct fetch (2026-09-21) — ARIA APG Combobox Pattern
 
 Verification date for the row below: **2026-09-21**. Added for the deep-code-review
-`frontend-a11y.md` combobox-popup focus-exit-dismiss fold; complements the general
+`a11y-focus.md` combobox-popup focus-exit-dismiss fold; complements the general
 ARIA APG row above.
 
 | Standard | URL | What was confirmed |
 |---|---|---|
-| W3C ARIA Authoring Practices Guide (APG) — Combobox Pattern | https://www.w3.org/WAI/ARIA/apg/patterns/combobox/ | Keyboard Interaction section. Confirmed verbatim: "Tab: The combobox is in the page `Tab` sequence."; that "the popup indicator icon or button (if present), the popup, and the popup descendants are excluded from the page `Tab` sequence"; and that the only listed popup-dismiss key is "Escape: Dismisses the popup if it is visible." Basis for the `frontend-a11y.md` fold that a combobox/listbox is a single tab stop with a non-tabbable popup, so keyboard focus leaving the widget is a dismiss path separate from Escape and outside-click that must itself close the popup (else the popup is left open while focus sits on a later control — a WCAG 2.4.3 Focus Order break). The APG text does not itself state "Tab closes the popup"; the fold rests on the exclusion-from-tab-sequence fact plus the Focus Order consequence, not on an APG mandate. |
+| W3C ARIA Authoring Practices Guide (APG) — Combobox Pattern | https://www.w3.org/WAI/ARIA/apg/patterns/combobox/ | Keyboard Interaction section. Confirmed verbatim: "Tab: The combobox is in the page `Tab` sequence."; that "the popup indicator icon or button (if present), the popup, and the popup descendants are excluded from the page `Tab` sequence"; and that the only listed popup-dismiss key is "Escape: Dismisses the popup if it is visible." Basis for the `a11y-focus.md` fold that a combobox/listbox is a single tab stop with a non-tabbable popup, so keyboard focus leaving the widget is a dismiss path separate from Escape and outside-click that must itself close the popup (else the popup is left open while focus sits on a later control — a WCAG 2.4.3 Focus Order break). The APG text does not itself state "Tab closes the popup"; the fold rests on the exclusion-from-tab-sequence fact plus the Focus Order consequence, not on an APG mandate. |
 
 ## Verified by direct fetch (2026-09-21) — WCAG bypass blocks & info-and-relationships
 
-Sourced for the `frontend-a11y.md` folds that (a) correct landmarks satisfy the automated bypass-blocks check yet a sighted keyboard-only user still needs a real skip link, and (b) a tree conveying depth only via padding + colour hides its hierarchy from assistive tech.
+Sourced for the `a11y-aria.md` folds that (a) correct landmarks satisfy the automated bypass-blocks check yet a sighted keyboard-only user still needs a real skip link, and (b) a tree conveying depth only via padding + colour hides its hierarchy from assistive tech.
 
 | Standard / source | URL | What was confirmed |
 |---|---|---|

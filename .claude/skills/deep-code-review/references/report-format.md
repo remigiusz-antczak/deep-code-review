@@ -92,7 +92,7 @@ confirmed** — confirm it the way `infra-iac-containers.md` confirms a deploy (
 by fetching a byte only the new build serves, not by assuming a rebuild happened. And
 for a UI claim the **surface and the inspection are both required**: a screenshot is
 the *artifact* (a render happened), the cited **pixel-defect checklist** is the
-*evidence* (`product-ux-quality.md` gate 1 — overlap / clip / contrast /
+*evidence* (`ux-gates.md` gate 1 — overlap / clip / contrast /
 disabled-looks-disabled). `✅ route X verified — screenshot attached` with **no
 cited inspection** is downgraded to ⚠️/`unverified` — the image alone is read as a
 verification it is not.
