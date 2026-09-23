@@ -1521,6 +1521,39 @@
         "States that unlisted files are implicitly unchanged since the last approved pass",
         "Notes the full-re-read risk: missed real changes and re-flagged already-resolved issues"
       ]
+    },
+    {
+      "id": "served-latest-needs-restart-evidence-not-git-head",
+      "prompt": "An orchestrator tells the owner \"the served environment is on the latest commit\" because `git log` inside the serving worktree shows the merge landed. The dev server has been running for hours and was never restarted. Is that claim justified?",
+      "expected_output": "No -- the serving tree's git HEAD is not evidence the running process reflects it. A long-lived dev server that only hot-reloaded (or never restarted) keeps serving the pre-merge build even though its checkout's git state shows the merge. A \"latest\" claim needs both: (1) evidence the serving process restarted after the merge (or proof its hot-reload path actually re-served the changed files), and (2) a fetched page from the running surface showing the newest change -- `surface_check.py served --url ... --expect-sha ... --probe ...` is the mechanism, since it reads the build id the serving process itself reports rather than the tree's git state. Absent both, report UNMEASURED/UNVERIFIED, not \"latest.\"",
+      "expectations": [
+        "States that git HEAD of the serving tree/worktree is not evidence of what the running process serves",
+        "Requires evidence the process restarted after the merge (or proof of an effective hot-reload), not just git state",
+        "Requires a fetched page from the running surface, naming surface_check.py served (or an equivalent build-id probe) rather than a git-HEAD read",
+        "Distinguishes this content-freshness claim from process-liveness (the transcript/mtime liveness rule is a different axis)"
+      ]
+    },
+    {
+      "id": "conductor-must-not-self-execute-under-pressure",
+      "prompt": "An urgent fix was delegated to a dedicated lane. The lane reports difficulty and is running behind. The Conductor, worried about the deadline, takes the fix back and starts implementing it directly while still trying to keep the other lanes staffed and reviewed. Good call?",
+      "expected_output": "No -- the Conductor must never self-execute lane work, even under pressure; this is the same failure class as never self-approving. Taking the fix back collapses the roster's independence, backs up review/merge/staffing for every other lane, and the context-switch cost typically drops delivery below single-lane throughput -- the fix often lands later than if the Conductor had left it staffed. Keep the lane staffed with a short, clear brief, keep review/merge/staffing moving, and hand off back to the Conductor's role (re-brief, re-split, or escalate) only at a true decision-gate or hard blocker -- never by the Conductor stepping into the implementation seat itself.",
+      "expectations": [
+        "States the Conductor must never self-execute lane work, even under pressure",
+        "Names this as the same failure class as the Conductor never self-approving",
+        "States the consequence: other lanes go unstaffed/reviews back up and total throughput drops below single-lane speed",
+        "States the correct action: keep the lane staffed and dispatched, hand back only at a decision-gate or hard blocker"
+      ]
+    },
+    {
+      "id": "owner-feedback-outranks-design-spec-revert-needs-confirmation",
+      "prompt": "A feature was built earlier per real owner-collected feedback and is live. A design-spec review flags that the feature deviates from the design spec. A parity lane wants to revert it 'for design alignment.' How should this be handled?",
+      "expected_output": "Do not revert silently. Owner-collected feedback and current shipped functionality both outrank an abstract design spec -- status quo (what already ships) wins the tie against a new design ask. The design-spec deviation is a decision to surface to the owner, not an instruction to execute: reverting a shipped, feedback-backed feature for design parity needs the owner's explicit confirmation before it lands. Write the precedence ranking into the brief and read it back at review time so the same feature doesn't get reverted then re-requested in a wasted pivot cycle. `scripts/feedback_ledger.py` is the mechanism meant to make each feedback item's shipped status auditable so a proposed revert can be checked against it first.",
+      "expectations": [
+        "States owner-collected feedback and shipped functionality outrank an abstract design spec",
+        "States status quo (what currently ships) outranks a new design ask on its own",
+        "Requires explicit owner confirmation before reverting a shipped, feedback-backed feature for design parity -- never a silent revert",
+        "References feedback_ledger.py (or an equivalent auditable feedback-status mechanism) as the way to check a revert against shipped feedback status"
+      ]
     }
   ]
 }

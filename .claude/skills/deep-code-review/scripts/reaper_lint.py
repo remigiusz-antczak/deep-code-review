@@ -83,6 +83,17 @@ RULES (fail on any match not carrying the allow marker)
                   `NAME=(` ... `)` array, in a file that also kills. An
                   operator-owned exclusion list living as a script literal
                   goes stale the moment a new backend is added.
+  HOOK_LIVE_REAPER a scanned path identified as a git hook (a file under a
+                  `.githooks/`, `.husky/`, or `.git/hooks/` directory; named
+                  `lefthook.yml`; or named `*pre-commit-config.y*ml`) that
+                  invokes something reaper-named (a command/script token whose
+                  basename contains "reap", `reaper_lint`/other `*lint*`
+                  invocations excluded) with no `--dry-run`, `--dry_run`,
+                  `--stub`, `--noop`, `--check-only`, or `--simulate` flag on
+                  the same logical line. A commit/push hook running a live
+                  reaper on every commit kills every sibling lane's dev server
+                  and headless browser (issue #1113); this is a path-scoped
+                  rule, distinct from the shape-based rules above.
 
 ALLOW MARKER
 -------------
@@ -169,6 +180,15 @@ _PROTECT_NAME_RE = re.compile(
 )
 _NUMBER_RE = re.compile(r"(?<![\w.])(\d{4,5})(?![\w.])")
 
+# Git-hook path shapes (rule HOOK_LIVE_REAPER).
+_HOOK_DIR_NAMES = {".githooks", ".husky"}
+_PRECOMMIT_CONFIG_RE = re.compile(r"pre-commit-config\.ya?ml$", re.IGNORECASE)
+_REAPER_NAME_RE = re.compile(r"(?i)reap")
+_SCRIPT_EXT_RE = re.compile(r"\.(?:py|sh|bash|zsh|js|ts|rb|mjs|cjs)$", re.IGNORECASE)
+_REAPER_SAFE_FLAG_RE = re.compile(
+    r"--dry[-_]run|--stub|--noop|--check-only|--simulate", re.IGNORECASE
+)
+
 # lsof short options that take a required / optional argument (the rest of the
 # cluster, or for a required one the next token when the cluster ends there).
 _LSOF_REQ_ARG = set("AcdDekmpu")
@@ -212,6 +232,11 @@ _MSG = {
         "hard-coded protected-port list in a kill script -- goes stale the "
         "moment an operator adds a real serving port; source exclusions from "
         "operator config instead"
+    ),
+    "HOOK_LIVE_REAPER": (
+        "a reaper invoked from a git hook with no --dry-run/--stub flag -- a "
+        "commit/push hook must never run a live reaper (every agent's commit "
+        "would kill sibling lanes' dev servers and browsers)"
     ),
 }
 
@@ -610,16 +635,47 @@ def _portlike_count(value: str) -> int:
     return sum(1 for m in _NUMBER_RE.finditer(value) if 1024 <= int(m.group(1)) <= 65535)
 
 
+def _is_hook_path(path: str) -> bool:
+    """True when `path` is a git-hook-family file (rule HOOK_LIVE_REAPER)."""
+    parts = path.replace(os.sep, "/").split("/")
+    basename = parts[-1]
+    if any(p in _HOOK_DIR_NAMES for p in parts):
+        return True
+    if ".git" in parts and "hooks" in parts:
+        return True
+    if basename.lower() == "lefthook.yml":
+        return True
+    if _PRECOMMIT_CONFIG_RE.search(basename):
+        return True
+    return False
+
+
+def _reaper_invocation(text: str) -> bool:
+    """True when a logical line's tokens name a reaper-ish command/script
+    (basename contains "reap"), excluding a `*lint*` variant such as
+    `reaper_lint.py` itself (a read-only check, safe in a hook)."""
+    for seg in _segments(text):
+        for tok in _tokens(seg):
+            base = tok.rsplit("/", 1)[-1]
+            stem = _SCRIPT_EXT_RE.sub("", base)
+            if _REAPER_NAME_RE.search(stem) and "lint" not in stem.lower():
+                return True
+    return False
+
+
 # ---------------------------------------------------------------------------
 # Scan.
 # ---------------------------------------------------------------------------
 
-def _scan_text(raw: list[str], is_json: bool = False) -> list[tuple[int, str, str]]:
+def _scan_text(
+    raw: list[str], is_json: bool = False, path: str | None = None
+) -> list[tuple[int, str, str]]:
     """Return [(1-based line, RULE, message), ...] for one file's lines,
     excluding findings whose logical line carries the allow marker."""
     logical = _logical_lines(raw, is_json)
     texts = [t for _, _, t in logical]
     file_kills = any(_FILE_KILLS_RE.search(t) for t in texts)
+    is_hook = path is not None and _is_hook_path(path)
     hits: dict[tuple[int, str], None] = {}
 
     def add(li: int, rule: str) -> None:
@@ -648,6 +704,9 @@ def _scan_text(raw: list[str], is_json: bool = False) -> list[tuple[int, str, st
 
         if _range_is_portlike(text) and any(_KILL_WORD_RE.search(t) for t in texts[li:li + 6]):
             add(li, "RANGE_KILL")
+
+        if is_hook and _reaper_invocation(text) and not _REAPER_SAFE_FLAG_RE.search(text):
+            add(li, "HOOK_LIVE_REAPER")
 
         if file_kills:
             m = _PROTECT_ASSIGN_RE.match(text)
@@ -683,7 +742,7 @@ def run_gate(paths: list[str]) -> tuple[int, list[str]]:
             errors.append(f"reaper_lint: cannot decode {f} (fail closed): {exc}")
             continue
         is_json = f.lower().endswith(".json")
-        for lineno, rule, message in _scan_text(text.splitlines(), is_json):
+        for lineno, rule, message in _scan_text(text.splitlines(), is_json, path=f):
             all_findings.append((f, lineno, rule, message))
 
     out = [f"{f}:{lineno}: [{rule}] {message}" for f, lineno, rule, message in all_findings]
@@ -782,6 +841,26 @@ _CASES: tuple[tuple[str, str, str, int, str], ...] = (
      FAIL, "HARDCODED_PORTS"),
     ("hardcoded-comment-ok", "a.sh", "# keep ports 3000 8080 in sync with docs\nkill $PID\n", OK, ""),
     ("hardcoded-small-numbers-ok", "a.sh", "SKIP_TESTS=\"unit 10 20\"\nkill $PID\n", OK, ""),
+    # HOOK_LIVE_REAPER: a reaper invoked from a git-hook-family path with no
+    # dry-run/stub flag; excluded for non-hook paths and for *lint* variants.
+    ("hook-husky-live-fires", ".husky/pre-commit",
+     _SH + "python3 scripts/reaper.py --apply\n", FAIL, "HOOK_LIVE_REAPER"),
+    ("hook-husky-dry-run-ok", ".husky/pre-commit",
+     _SH + "python3 scripts/reaper.py --dry-run\n", OK, ""),
+    ("hook-githooks-live-fires", ".githooks/pre-push",
+     "#!/bin/sh\n./scripts/reaper.sh\n", FAIL, "HOOK_LIVE_REAPER"),
+    ("hook-git-hooks-dir-live-fires", ".git/hooks/pre-commit",
+     "#!/bin/sh\nbash reaper_cleanup.sh\n", FAIL, "HOOK_LIVE_REAPER"),
+    ("hook-lefthook-yml-live-fires", "lefthook.yml",
+     "pre-commit:\n  commands:\n    reap:\n      run: python3 scripts/reaper.py\n",
+     FAIL, "HOOK_LIVE_REAPER"),
+    ("hook-precommit-config-live-fires", ".pre-commit-config.yaml",
+     "repos:\n  - hooks:\n      - id: reaper\n        entry: scripts/reaper.py\n",
+     FAIL, "HOOK_LIVE_REAPER"),
+    ("hook-reaper-lint-excluded-ok", ".husky/pre-commit",
+     _SH + "python3 scripts/reaper_lint.py .\n", OK, ""),
+    ("non-hook-live-reaper-ok", "scripts/nightly.sh",
+     _SH + "python3 scripts/reaper.py --apply\n", OK, ""),
     # Allow marker: exact token, non-empty reason, same line only.
     ("allow-same-line-suppresses", "a.sh",
      "kill -9 $(lsof -ti :$port)  # reaper-lint: allow lane-owned port, verified by caller\n", OK, ""),
