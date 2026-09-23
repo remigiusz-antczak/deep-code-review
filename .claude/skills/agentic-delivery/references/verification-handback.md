@@ -214,7 +214,10 @@ checkable report instead of prose alone (#1070). Distinct from the Conductor's
 context-isolation rule ("read status, not the raw transcript" — do not consume the transcript as *context*):
 this is not reading its **file stat** as *liveness*. And distinct from the idle-before-duplicate section above:
 that is a false-**positive** "completed" leading to a duplicate dispatch; this is a false-**negative** liveness
-read leading to a destructive **kill**.
+read leading to a destructive **kill**. A **served UI's** freshness is a different axis again — not *is the
+process alive* but *does what it serves match the merge* — `dev-env-ownership.md`'s *"Latest" means the process
+restarted and a fetched page proves it* section covers that case; a serving tree's git HEAD is not evidence there
+either.
 
 ## A plugin's host hook auto-spawns forks you did not — judge them by external effect, not by unexpected provenance
 

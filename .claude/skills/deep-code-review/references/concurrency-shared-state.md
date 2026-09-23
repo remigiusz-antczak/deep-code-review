@@ -379,6 +379,19 @@ or directory`) and `xargs kill` kills nothing.
   terse+network `lsof` selector left unfiltered to `-sTCP:LISTEN`, a broad
   `pkill`/`killall` match, a hard-coded protected-port list); `--selftest` proves
   it fires.
+- **A test of a destructive reaper/cleanup script runs it stubbed or `--dry-run`
+  by default, and a commit/push hook must never invoke a live reaper at all.** A
+  test (or a hook) that calls the real script live reaps every sibling lane's dev
+  server and headless browser on every commit, invisible until the whole fleet
+  goes dark at once — the same "runs against the real shared path" failure
+  `testing-and-evals.md`'s hermetic-test rule covers for data stores, applied to
+  a destructive script instead of a store. Whatever keep-list an operator-config
+  exclusion resolves to must always include the **shared/preview serving port**
+  by name — the port every lane's UX gate and the owner's own preview depend on —
+  not only each lane's own ephemeral ports. `scripts/reaper_lint.py` also flags a
+  reaper-named invocation found inside a git hook file (`.githooks/*`,
+  `.husky/*`, `.git/hooks/*`, `lefthook.yml`, a `.pre-commit-config.yaml`) that
+  carries no `--dry-run`/`--stub` flag; `--selftest` proves it fires.
 
 The shedding **trigger** (memory/swap or contention, never staleness) lives in
 `agentic-delivery/references/fanout-host-sizing.md`; this file is the **mechanism**.

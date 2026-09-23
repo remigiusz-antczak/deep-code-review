@@ -6028,6 +6028,17 @@
         "States that the scanner's counting rule (comment/string occurrences count or not) must be explicit so deltas are comparable",
         "Treats attribution as diagnosis only -- a marker never licenses merging, the union still must pass the gate"
       ]
+    },
+    {
+      "id": "reaper-lint-flags-live-reaper-in-git-hook",
+      "prompt": "A repo's `.husky/pre-commit` hook runs `python3 scripts/reaper.py --apply` on every commit, with no dry-run flag. Every agent's commit on the shared host now kills sibling lanes' dev servers and headless browsers. Is `reaper_lint.py` expected to catch this, and what should the hook do instead?",
+      "expected_output": "Yes -- reaper_lint.py's HOOK_LIVE_REAPER rule flags a reaper-named invocation (basename containing \"reap\", excluding a *lint* variant like reaper_lint.py itself) found inside a git-hook-family path (.githooks/*, .husky/*, .git/hooks/*, lefthook.yml, a *pre-commit-config.y*ml) that carries no --dry-run/--stub/--noop/--check-only/--simulate flag. The fix is doctrine, not just the lint: a commit/push hook must never invoke a live reaper at all -- tests of a destructive reaper/cleanup script run it stubbed or --dry-run by default (concurrency-shared-state.md), and any keep-list the reaper resolves exclusions from must always include the shared/preview serving port by name.",
+      "expectations": [
+        "Names the HOOK_LIVE_REAPER rule in reaper_lint.py and its path scope (.githooks/, .husky/, .git/hooks/, lefthook.yml, pre-commit-config)",
+        "States the rule excludes a *lint* invocation such as reaper_lint.py itself",
+        "States a commit/push hook must never invoke a live reaper at all, not just that it needs a flag",
+        "Names the shared/preview serving port as a required keep-list entry, distinct from generic operator-config exclusions"
+      ]
     }
   ]
 }

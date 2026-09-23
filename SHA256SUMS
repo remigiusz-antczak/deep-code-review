@@ -4,8 +4,8 @@ cc52f678848b814373757b460383bf61960e4943c203735adde0a350b3e50989  .claude/skills
 d852c122f76103d558eba447c106e38f23627b8f613143e6ea1022bc28593618  .claude/skills/agentic-ceo/scripts/task_ledger.py
 55338e96af9a2e72124dc7c5e8da8370cc8858a78c89c6f3136f1938b887366e  .claude/skills/agentic-delivery/SKILL.md
 f50a6cbdff96a1012b615805c04d7f1d0b640358087470dddd79586203b9b63a  .claude/skills/agentic-delivery/VERSION
-c19e3a24cecdf684ee632f34965a420550fa88ff438b11b45724a32aad4d9810  .claude/skills/agentic-delivery/evals/evals.json
-2ae093ae7808717487ef0e79294237cd90e0ccadf1fe7e8857a8131cc4203ec4  .claude/skills/agentic-delivery/references/dev-env-ownership.md
+f5e8e40b71e559f7b238be4e47b10394346531bf7ad65523f525137926a287c4  .claude/skills/agentic-delivery/evals/evals.json
+cdd0f4201352d60697f72aca828c57b83956ef755dc73ae1862eba95c7b48852  .claude/skills/agentic-delivery/references/dev-env-ownership.md
 a8aeed98167e3a3589d570e394ee97a73f97d5a2030283760ae6b1c1a0ef4b71  .claude/skills/agentic-delivery/references/fanout-host-sizing.md
 b7df278751ce6f8fea24531332b26fda51cd1d9a895cb45d5d559b5c90510e44  .claude/skills/agentic-delivery/references/fast-agentic-delivery.md
 b638d1535ed7519643bdb0da01c44831c671cc93393d731507fa4ae100f73dd7  .claude/skills/agentic-delivery/references/gate-epistemology.md
@@ -16,13 +16,13 @@ b638d1535ed7519643bdb0da01c44831c671cc93393d731507fa4ae100f73dd7  .claude/skills
 0aeeac05e4eefcc5c372b56fa1fa62d6e588c34d20aa1fb93ebcefef987f9662  .claude/skills/agentic-delivery/references/production-grade-product-playbook.md
 3522cb6062924aabc860eed1a920dd4ef86808b3f7551db84b7a9f3911bfddd1  .claude/skills/agentic-delivery/references/project-state.md
 f10024adaf2be3072ed7bc39ec4f7cbd3e487960ad7e05badd0c916cc9689443  .claude/skills/agentic-delivery/references/retrospective.md
-f3d95349e9794e011cfac0f96b5d30129178eda1b59bdd56f6a60fc0892f5f19  .claude/skills/agentic-delivery/references/roles.md
+f05cb3b80c9433c6c487e65de182d1229cbbf3756ad8e01fb37bcd32b25232ec  .claude/skills/agentic-delivery/references/roles.md
 538a658aa8a65b21932795812ddaefa3ed8c15ef5b37703c76d6601a5f192748  .claude/skills/agentic-delivery/references/support-ops.md
 4c5a2dbbc8a702c16df84d5e675a7921f313de774c3ec5ec38ac83bb3a21bf2e  .claude/skills/agentic-delivery/references/template-adr.md
 dc812b0b447b7bb8c523581ec48041f373c27345b71255da568ae2a17689677c  .claude/skills/agentic-delivery/references/template-postmortem.md
 9a0d876f7d1fe19362fa5908c0acb58ae3c7daf50aa2c8cbd10a445f08c0b5a7  .claude/skills/agentic-delivery/references/unattended-operating-mode.md
 478bc05aac9d2dc0c02c8e51de6e3da2034afcb2972c9abd9faa7a2735e0cc17  .claude/skills/agentic-delivery/references/unattended-trackers.md
-cc47be309f6eb0ccc8a53a9d1416fffb892c629c7c2eb88d1578c02fca943688  .claude/skills/agentic-delivery/references/verification-handback.md
+1e38e49432bb5676c05740be478547829fdf549756432a190e77a1e6a9cdd96d  .claude/skills/agentic-delivery/references/verification-handback.md
 b15a119759c4d738c97282547b4065ef47c424473e180000fa1f84c0e06ed342  .claude/skills/agentic-delivery/scripts/board_common.py
 34d2a514f0ae8719e47e31f31917dc502c8c757ecb829558a14ae23cec545d58  .claude/skills/agentic-delivery/scripts/board_post.py
 a345b6774a3356c133ad531bf7e522cd788d260df9a27784d24b49669b581928  .claude/skills/agentic-delivery/scripts/board_state.py
@@ -51,7 +51,7 @@ cc52f678848b814373757b460383bf61960e4943c203735adde0a350b3e50989  .claude/skills
 bb541f96bd7d0c3bb4adff8dcaac0f50efa2493b8215b6aa671805bfbb89c42b  .claude/skills/contribution/references/contribution-procedure.md
 735843833b638c7caa6259ae0e0341be56b7f2b57e984275e239a1c408fb402e  .claude/skills/deep-code-review/SKILL.md
 f50a6cbdff96a1012b615805c04d7f1d0b640358087470dddd79586203b9b63a  .claude/skills/deep-code-review/VERSION
-a6dcacdcd7d6ece98b89eac9e3484d4ffde7455dde6a9759f571b1c17c3bea72  .claude/skills/deep-code-review/evals/evals.json
+088ab768be12b7200ddc239a0ea4dac4fc97fb2058d2a9ca05aae40349d2f873  .claude/skills/deep-code-review/evals/evals.json
 a24fdb1c8dd47a852c0e02b395a256b0b9b5e188cf0a09cceeaa33ece45ba815  .claude/skills/deep-code-review/references/a11y-aria.md
 5a3e66353bcdabb0289ea926c7f192dbad750edca74ef0f0d8c0f6b71bcbf5ef  .claude/skills/deep-code-review/references/a11y-color-motion.md
 8b7507aecf973b020c10ce00792e296fa8a3585c52dccee5add7d51cb0b553db  .claude/skills/deep-code-review/references/a11y-focus.md
@@ -71,7 +71,7 @@ a8825f0d50c6aab31f77eb209312382e98c741b14ad19c2348c38ae551422048  .claude/skills
 6f4c9222628d37993187da36e51ee6a5a5daee74e51f31da9b343742bc82b575  .claude/skills/deep-code-review/references/appsec-tokens.md
 cb8988398c43112a115f52fa1e602a58267beb29fa662c20ba62a309c5d95852  .claude/skills/deep-code-review/references/billing-correctness.md
 7ce576898ae02c2c8d7adc20957de4d25cb32648ca8912bdb468a146a44caaa2  .claude/skills/deep-code-review/references/branch-and-merge-hygiene.md
-12d277c8531e48a8784b25e5b6df96f613f967d710fa658e728fa8b8b10e11c4  .claude/skills/deep-code-review/references/concurrency-shared-state.md
+575e09557cedf6af7a1016b47ef75070de64ed58b8c513a487b814f9f3ccfdae  .claude/skills/deep-code-review/references/concurrency-shared-state.md
 60e8737d2f0fa1328b4689855f2c46078ebf7a43a2da24e22bf7edf008f5b2f9  .claude/skills/deep-code-review/references/data-quality.md
 bd2fedb532b7713845d0346533b4331b6a9fdfd5cf7463c897aa17469af87870  .claude/skills/deep-code-review/references/dependency-currency-and-upgrades.md
 c4d8f304363d1ec328a672743352def4ece20047d9073cd2e9e42a4dae295007  .claude/skills/deep-code-review/references/docs-and-dx.md
@@ -166,7 +166,7 @@ de270db043b761ce236c9c80197c514b89a5db4d2965de76321383927623bd1c  .claude/skills
 5a8cc3aadf5a95f7872572f223a5f5eeb5537192be25c7ec988330e8422cea7c  .claude/skills/deep-code-review/scripts/fixtures/tokens/design.tokens.json
 97ad0860bb3ee1b0f14f8fb9e55519dc9d0a8f1ece7e5dfc8734420c6475e045  .claude/skills/deep-code-review/scripts/fixtures/tokens/map_match.tsv
 2ce6446d11850128f569407d1c3e19b1f08c038dc1405b0d8352bc43a36ad564  .claude/skills/deep-code-review/scripts/parity_differ.py
-417ae1f1b7b7360b48dfe6b97acf7326e85296434330caeec0bc173941c6de8a  .claude/skills/deep-code-review/scripts/reaper_lint.py
+bbc2f65c0c18b210de34bc6cbd2d82135804d3eac68e307303f35dd807b639ff  .claude/skills/deep-code-review/scripts/reaper_lint.py
 761ccb5730e297f41d865aeec9babd44b00b5cc029a8d4e7b2cb37b1122222be  .claude/skills/deep-code-review/scripts/source_scan_tests.py
 8ae2e63e402bc3a57743fc048ec7751b49e68613654759b678caa5a037ffe8cc  .claude/skills/deep-code-review/scripts/token_differ.py
 317acae212ed73279df66eb7b419b8426733bb1be05345b0e1c8b2c6790ad8a1  .claude/skills/deep-code-review/scripts/validate_status_claims.py
