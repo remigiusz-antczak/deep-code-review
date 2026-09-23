@@ -1,0 +1,15 @@
+# token_differ.py self-test fixture: an explicit design->app map (TSV).
+# Columns: design token<TAB>app token[<TAB>$type override]. The leading
+# "--" on an app CSS name is optional. Scoped to rows that should MATCH, so
+# the mapped run is the passing case (exit 0).
+color.brand.primary	--color-brand-primary
+color.surface	--color-surface
+color.overlay	--color-overlay
+color.link	--color-link
+color.info	--color-info
+color.focus	--color-focus
+spacing.md	--spacing-md
+spacing.sm	spacing-sm
+font.weight.bold	--font-weight-bold
+font.family.body	--font-family-body
+motion.fast	--motion-fast
