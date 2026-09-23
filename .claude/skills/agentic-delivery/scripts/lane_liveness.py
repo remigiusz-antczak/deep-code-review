@@ -235,6 +235,62 @@ def cwd_pids(root: str):
     return None, "BLIND (" + "; ".join(reasons) + ")"
 
 
+def process_ancestors(pid=None, ps_bin="ps"):
+    """Return `{pid}` plus every ancestor pid reachable by climbing `ps -o ppid=`.
+
+    Used to exclude the CALLING agent's own process tree — not just its own
+    pid — from an occupancy scan: the shell/orchestrator that invoked the scan
+    can itself have its cwd inside the worktree being checked, and only the
+    ancestor chain (never a child) is that caller. `ps_bin` is injectable so a
+    test can supply a broken binary and prove the walk fails closed rather than
+    hangs or fabricates a parent. Bounded to 10_000 hops as a cycle guard; any
+    `ps` failure, a blank/unparseable ppid, or reaching pid <= 1 stops the walk
+    and returns whatever ancestors were already found — it never invents one.
+    """
+    if pid is None:
+        pid = os.getpid()
+    seen = {pid}
+    current = pid
+    for _ in range(10_000):
+        try:
+            proc = subprocess.run([ps_bin, "-o", "ppid=", "-p", str(current)],
+                                   capture_output=True, text=True, timeout=10)
+        except (OSError, subprocess.SubprocessError):
+            break
+        if proc.returncode != 0:
+            break
+        text = proc.stdout.strip()
+        if not text:
+            break
+        try:
+            ppid = int(text)
+        except ValueError:
+            break
+        if ppid <= 1 or ppid in seen:
+            break
+        seen.add(ppid)
+        current = ppid
+    return seen
+
+
+def foreign_cwd_pids(root: str, exclude=None):
+    """Like `cwd_pids`, but also drops this process's own ancestor chain.
+
+    `lane_guard.py`'s lane-start occupancy check calls this instead of
+    `cwd_pids` directly: the calling agent's own shell/orchestrator can have
+    its cwd inside the worktree being checked, and without this exclusion
+    every lane-start would find itself and refuse. `exclude` adds pids beyond
+    the ancestor chain (a test's own planted pid); both sets are removed from
+    a real scan. Same (pids_or_None, detail) contract as `cwd_pids` — a blind
+    scan returns None and must never be read as "no foreign process found."
+    """
+    pids, detail = cwd_pids(root)
+    if pids is None:
+        return None, detail
+    drop = process_ancestors() | (set(exclude) if exclude else set())
+    return pids - drop, detail
+
+
 def newest_mtime_excluding_git(root: str):
     """Newest mtime under `root`, skipping any `.git` directory.
 
@@ -522,6 +578,56 @@ def _selftest() -> int:
         finally:
             child_scan.terminate()
             child_scan.wait(timeout=5)
+
+        # foreign_cwd_pids: finds a genuinely unrelated process whose cwd is
+        # inside the worktree, but the `exclude` param removes a planted pid
+        # from the result — the same mechanism lane_guard.py relies on to drop
+        # its caller's own ancestor chain (this selftest process's real
+        # ancestors are not inside `lane_foreign`, so they cannot mask this
+        # case; `exclude` isolates the removal logic on its own).
+        lane_foreign = os.path.join(tmp, "lane-foreign")
+        os.makedirs(lane_foreign)
+        child_foreign = subprocess.Popen(["sleep", "5"], cwd=lane_foreign)
+        try:
+            found, detail = foreign_cwd_pids(lane_foreign)
+            total[0] += 1
+            if found is None or child_foreign.pid not in found:
+                failures.append(f"foreign-cwd-pids-finds-unrelated-process: {found!r} ({detail})")
+            found_excluded, _ = foreign_cwd_pids(lane_foreign, exclude={child_foreign.pid})
+            total[0] += 1
+            if found_excluded is None or child_foreign.pid in found_excluded:
+                failures.append(f"foreign-cwd-pids-exclude-param-removes-pid: {found_excluded!r}")
+        finally:
+            child_foreign.terminate()
+            child_foreign.wait(timeout=5)
+
+        # foreign_cwd_pids stays blind (never "no foreign process") when the
+        # underlying cwd_pids scan itself is blind — proven by swapping the
+        # module-level cwd_pids for a stub that reports BLIND, then restoring it.
+        lane_blind_occ = os.path.join(tmp, "lane-blind-occ")
+        os.makedirs(lane_blind_occ)
+        _module = sys.modules[__name__]
+        _orig_cwd_pids = _module.cwd_pids
+        _module.cwd_pids = lambda root: (None, "BLIND (selftest: simulated cwd_pids failure)")
+        try:
+            found_blind, detail_blind = foreign_cwd_pids(lane_blind_occ)
+            total[0] += 1
+            if found_blind is not None:
+                failures.append(f"foreign-cwd-pids-blind-stays-blind: {found_blind!r} ({detail_blind})")
+        finally:
+            _module.cwd_pids = _orig_cwd_pids
+
+        # process_ancestors: always includes the caller's own pid, and a
+        # broken `ps_bin` fails closed (returns just the seed pid) instead of
+        # hanging or fabricating a parent.
+        me = process_ancestors()
+        total[0] += 1
+        if os.getpid() not in me:
+            failures.append(f"process-ancestors-includes-self: {me!r}")
+        broken = process_ancestors(ps_bin=os.path.join(tmp, "no-such-ps"))
+        total[0] += 1
+        if broken != {os.getpid()}:
+            failures.append(f"process-ancestors-broken-ps-fails-closed: {broken!r}")
 
         # QUIET: a live process, but no recent product signal — quiet-minutes
         # set to 0 so even a just-written file does not count as "recent",

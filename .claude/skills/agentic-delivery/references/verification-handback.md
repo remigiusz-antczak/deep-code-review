@@ -210,7 +210,10 @@ presumption): confirm the agent is genuinely idle by a *positive* signal before 
 transcript is observable, the honest state is **`UNVERIFIED`**, not "dead." **`scripts/lane_liveness.py
 --worktree <path> [--pid N]`** computes this positive-signal read offline — ALIVE/QUIET/UNVERIFIED/DEAD from a
 live process, file/git-state mtimes, and a CPU-time sample, never a kill verdict — so "slow, not stuck" is a
-checkable report instead of prose alone (#1070). Distinct from the Conductor's
+checkable report instead of prose alone (#1070). The same asymmetry governs *reuse*, not just kill: resuming or
+re-assigning a lane into a worktree its previous agent may still hold requires this verdict to be **DEAD**,
+never QUIET or UNVERIFIED (#1116) — `scripts/lane_guard.py`'s lane-start check enforces that by import. Distinct
+from the Conductor's
 context-isolation rule ("read status, not the raw transcript" — do not consume the transcript as *context*):
 this is not reading its **file stat** as *liveness*. And distinct from the idle-before-duplicate section above:
 that is a false-**positive** "completed" leading to a duplicate dispatch; this is a false-**negative** liveness
