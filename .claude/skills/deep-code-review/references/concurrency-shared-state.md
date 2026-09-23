@@ -346,8 +346,9 @@ process, a shared dev server, the reviewer's editor, or the orchestrator itself 
 invisible in any diff. `lsof -ti tcp:PORT | xargs kill` has the same trap: it also
 reaps a connected client, not only the listener.
 Select the listener alone: `lsof -t -iTCP:PORT -sTCP:LISTEN` (macOS, verified).
-The state filter binds only after `-i` — `-s` before it (`lsof -ti -sTCP:LISTEN
-tcp:PORT`) matches nothing.
+Not flag order: `lsof -ti -sTCP:LISTEN tcp:PORT` puts `-s` between `-i` and its
+address, so `tcp:PORT` is read as a file (`status error on tcp:PORT: No such file
+or directory`) and `xargs kill` kills nothing.
 
 - **Own a process group / job object.** Start each lane's work in its own process
   group (`setsid`, or spawn with a new pgid; a Job Object on Windows) and record

@@ -15,8 +15,9 @@ case that model doesn't cover.
 **Scripts** (`scripts/`, stdlib Python over `gh api`, each with `--selftest`)
 replace hand-reading and hand-posting a board issue:
 - `scripts/board_sync.py` — run at every loop start and before any claim:
-  digests only the posts this agent has not read, then advances its cursor
-  (the read receipt).
+  digests only the posts this agent has not read (50 lines per run by
+  default), then advances its cursor through the last one printed (the read
+  receipt).
 - `scripts/board_post.py` — run for every post: typed header, 1000-char cap,
   body from a file, privacy lint; rejects STATUS/ACK/READY chatter and a
   FIX-CLAIM lacking a default-branch `sha:` plus a `test:`.

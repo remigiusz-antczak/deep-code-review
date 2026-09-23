@@ -6,22 +6,24 @@ follows Keep a Changelog; versioning follows Semantic Versioning.
 ## [1.435.0] — 2026-09-23
 
 ### Added — cursor-based coordination on a shared GitHub issue
-- `agentic-delivery/scripts/board_sync.py`, `board_post.py`, `board_state.py` (+ shared `board_common.py`): a per-agent cursor with a paginated `since=` read and a compact digest (never the tail-only `gh issue view`, which on a terminal shows the body plus only the newest comment); typed posts (`CLAIM`/`RELEASE`/`DECISION`/`HANDOFF`/`BLOCKER`/`FIX-CLAIM`/`QUESTION`/`ANSWER`) with a 1000-char cap that reject status/ack chatter, and a `FIX-CLAIM` that must name a reachable sha plus a test id; a deterministic state record rendered into the issue body between markers. Selftests 12/13/27/13 on an offline fake forge (130 comments over 2 pages); each planted mutation turns a selftest red. `multi-session-coordination.md` routes them and states that a coordination lesson closes only when a script/gate + eval lands. +2 agentic-delivery evals.
-- size-budget-raise: .claude/skills/agentic-delivery/references/multi-session-coordination.md 53740→54649 routes the three board scripts and names the tail-read trap
+- `agentic-delivery/scripts/board_sync.py`, `board_post.py`, `board_state.py` (+ shared `board_common.py`): a per-agent cursor with a paginated `since=` read and a compact digest (never the tail-only `gh issue view`, which on a terminal shows the body plus only the newest comment); typed posts (`CLAIM`/`RELEASE`/`DECISION`/`HANDOFF`/`BLOCKER`/`FIX-CLAIM`/`QUESTION`/`ANSWER`) with a 1000-char cap that reject status/ack chatter, and a `FIX-CLAIM` that must name a reachable sha plus a test file that is a blob at that sha and in which the named test is defined (after `def`/`function`/`func`/`fn`/`class` or as a quoted string), not merely a substring; banlist patterns are matched with a `grep -E` subprocess, as `scripts/ci-gates.sh privacy` does, so POSIX classes and `\<`/`\>` work, and a pattern grep rejects fails closed; the digest prints at most `--max-lines` (default 50) per-comment lines per run, reports how many remain, and advances the cursor only through the last printed comment; `board_state.py --write` re-reads the issue right before its PATCH and exits 3 without writing when the body or comment count changed (a guard, not compare-and-swap). Selftests 12/15/34/15 on an offline fake forge (130 comments over 2 pages); each planted mutation turns a selftest red. `multi-session-coordination.md` routes them and states that a coordination lesson closes only when a script/gate + eval lands. +2 agentic-delivery evals.
+- size-budget-raise: .claude/skills/agentic-delivery/references/multi-session-coordination.md 53740→54710 routes the three board scripts and names the tail-read trap; the board_sync bullet now states the per-run line cap and the cursor advancing only through the last printed post
 
 ### Added — matched-state parity, freshness/acceptance rows, port-scoped kill
 - `deep-code-review/scripts/parity_differ.py`: the MISMATCH report now prints a
   fixed precondition line — both renders must share the **same auth + data
   state**, or a signed-out app render reports every gated section as `missing`
-  and points the fix in the wrong direction. `_selftest`'s `mismatch` case pins
-  the substring; verified fail-before (removing the line drops the assertion)
+  and points the fix in the wrong direction. The line scopes that matched
+  state to this diff and says it does not replace the signed-out
+  default-surface check. `_selftest`'s `mismatch` case pins both substrings; verified fail-before (removing the line drops the assertion)
   / pass-after. +1 `deep-code-review` eval
   (`parity-missing-sections-on-a-signed-out-render-is-a-state-mismatch`).
 - `deep-code-review/references/migration-parity.md`: two new paragraphs —
   seed through the product's real write paths via a committed, idempotent,
   dev-only seed command (labelled sample, never production), render both
-  sides on the same dev-identity auth state, and disclose the comparison
-  state; and a check-order paragraph (design-token values, then the
+  sides past sign-in for the differ's matched-state diff of gated sections
+  (the signed-out default surface stays its own required check), and
+  disclose the comparison state; and a check-order paragraph (design-token values, then the
   structural differ, then screenshots last — an earlier-tier mismatch stops
   the later ones). Paid down by merging two duplicate "no mechanical differ
   evidence" red flags into one, dropping a red flag that restated existing
@@ -40,13 +42,15 @@ follows Keep a Changelog; versioning follows Semantic Versioning.
   you own" now covers port-scoped kills — `lsof -ti tcp:PORT | xargs kill`
   reaps every process on the port, not only the listener; the verified
   listener-only form is `lsof -t -iTCP:PORT -sTCP:LISTEN` (macOS lsof 4.91;
-  unconfirmed on Linux), since `-s` before an `-i` selector silently matches
-  nothing. Red flag extended to name/command-line/port match. +1
+  unconfirmed on Linux); the broken `lsof -ti -sTCP:LISTEN tcp:PORT` fails not
+  on flag order but because `-s` sits between `-i` and its address, so
+  `tcp:PORT` becomes a file operand and lsof errors `status error on tcp:PORT:
+  No such file or directory`. Red flag extended to name/command-line/port match. +1
   `deep-code-review` eval
   (`port-wide-lsof-kill-reaps-clients-and-the-listen-filter-needs-dash-i`).
-- size-budget-raise: .claude/skills/deep-code-review/references/migration-parity.md 24028→24869 matched-state seed/auth-disclosure paragraph + check-order paragraph, paid partway by merging/dropping duplicate red flags
+- size-budget-raise: .claude/skills/deep-code-review/references/migration-parity.md 24028→24956 matched-state seed/auth-disclosure paragraph + check-order paragraph, paid partway by merging/dropping duplicate red flags; the auth-state sentence now scopes "dev identity past sign-in" to the differ and keeps the signed-out default-surface check
 - size-budget-raise: .claude/skills/agentic-delivery/references/project-state.md 5970→6407 Published/deployed row (process build id, not payload stamp) and Acceptance row (owner's quoted words) widened in place
-- size-budget-raise: .claude/skills/deep-code-review/references/concurrency-shared-state.md 30012→30039 port-scoped kill paragraph, paid down by tightening two nearby bullets but kept the reviewer's-editor/orchestrator collateral-damage examples rather than cutting them for a further ~30 bytes
+- size-budget-raise: .claude/skills/deep-code-review/references/concurrency-shared-state.md 30012→30138 port-scoped kill paragraph, paid down by tightening two nearby bullets but kept the reviewer's-editor/orchestrator collateral-damage examples rather than cutting them for a further ~30 bytes; the failing-form explanation now quotes lsof's actual `status error` instead of the wrong "flag order, matches nothing" reason
 
 (Level-3 heading on purpose: `ci-gates.sh version` requires the first `## ` heading to announce
 `VERSION`, so this block is promoted to the next release heading when that release is cut.)
@@ -56,10 +60,14 @@ follows Keep a Changelog; versioning follows Semantic Versioning.
 Agents now load only the lesson or overlay a trigger names instead of a whole oversized file.
 Every original line survives exactly once across the parent and its sub-files, checked by a
 line-multiset script; the only added lines are titles, "Read this when" lines, index entries, and
-short pointers, plus one cross-reference repointed by filename.
+short pointers, plus four cross-references repointed by filename (three were "above"/"below"
+pointers left in a parent file after their target section moved: the OTP send-cost throttle in
+`security-appsec.md` now names `security-api.md` § API4, the reference-fidelity pointer in
+`product-ux-quality.md` names `rendered-parity.md`, and the `load1` source note in
+`fast-agentic-delivery.md` names `fanout-host-sizing.md`).
 
 - `agentic-delivery/references/fast-agentic-delivery.md` (206,207 bytes, 73 sections) is now a
-  6,221-byte index (the original intro, one trigger line per sub-file, Sources, Cross-references)
+  6,242-byte index (the original intro, one trigger line per sub-file, Sources, Cross-references)
   over five themed files that keep their sections in original order: `fanout-host-sizing.md`,
   `merge-queue-worktrees.md`, `verification-handback.md`, `dev-env-ownership.md`, and
   `unattended-trackers.md`. The largest single-lesson load drops from about 51,500 tokens to at most
@@ -84,6 +92,7 @@ short pointers, plus one cross-reference repointed by filename.
   floor cannot be expressed as a row, because `cmd_mustload` parses only the archetype table; that
   needs a gate extension.
 - size-budget-raise: .claude/skills/agentic-delivery/SKILL.md 28658→29178 five exact sub-file routes plus the lesson-ledger trigger line
+- size-budget-raise: .claude/skills/agentic-delivery/references/fast-agentic-delivery.md 6221→6242 the `load1` source note names `fanout-host-sizing.md` instead of a dangling "above" (the row still sits far below its 206207 base)
 - size-budget-raise: .claude/skills/agentic-delivery/references/unattended-operating-mode.md 15818→15969 dual-topic pointers now name both sub-files
 - size-budget-raise: .claude/skills/deep-code-review/SKILL.md 23663→23835 route security-api.md and rendered-parity.md with their triggers
 - size-budget-raise: .claude/skills/deep-code-review/references/domain-checklists.md 63927→64072 domain P names rendered-parity.md and its trigger

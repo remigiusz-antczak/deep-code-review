@@ -110,9 +110,10 @@ surface first, not whichever view the app happens to default to.
 **Seed through real write paths, never a hand-edited store.** A committed, idempotent,
 dev-only seed command (invocation named in the lane brief) writes each sample row through the
 app's own creation flow, labelled sample, never production (chrome-vs-data rule below).
-Render both sides on the **same** auth state — a dev identity past sign-in, not signed-out,
-or the differ's `missing` list is an auth gap, not a build order (the MISMATCH precondition
-line). Disclose the comparison state beside the verdict (goalpost rule, `product-ux-quality.md`).
+For the differ's matched-state diff of gated sections, render both sides past sign-in (one
+dev identity), or its `missing` list is an auth gap, not a build order (the MISMATCH
+precondition line); the signed-out default surface stays its own required check
+(`rendered-parity.md`). Disclose the comparison state beside the verdict (goalpost rule, `product-ux-quality.md`).
 Only on matched states is a gross-dimension delta parity evidence, not a volume notice (below).
 
 **Check order: cheap and deterministic first — an earlier mismatch stops the rest.** Diff

@@ -769,7 +769,7 @@ first place, and monitor for multiple pushes in a short window as an anomaly sig
 email, or a TOTP-adjacent one-time code), the same sheet sets a lifecycle floor the implementation SHOULD meet:
 enforce a short TTL, ensure single use, apply strict attempt limits, invalidate on successful verification — and
 SHOULD NOT log the OTP value. This is distinct from the constant-time compare OTP verification already needs (A04,
-above) and from the per-operation send-cost throttle on OTP dispatch (`API-specific overlay` § API4, below): those
+above) and from the per-operation send-cost throttle on OTP dispatch (`security-api.md` § API4): those
 guard the compare operation and the send volume; this bounds the code's own lifecycle and exposure. Cross-ref the
 one-shot approval-token `jti`/single-use primitive above — same record-and-reject discipline, applied to a
 human-facing OTP instead of a machine-bearer token.

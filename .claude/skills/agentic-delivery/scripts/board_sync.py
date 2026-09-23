@@ -32,9 +32,14 @@ WHAT IT DOES
    DECISION, and posts handed `to:` this agent are pinned first; typed chatter
    (STATUS/ACK/READY/LANDED) is collapsed to a list of ids — accounted for,
    not expanded. Untyped comments are always shown in full: unknown content
-   is never hidden.
+   is never hidden. At most `--max-lines` (default 50) per-comment lines print
+   per run: the printed set is an id-ordered prefix of the unread comments
+   (collapsed chatter costs no line), and the digest ends with "N more unread
+   ... rerun" when the cap cut it short.
 5. Only after the digest is fully written and flushed, atomically replaces the
-   cursor file. That advance IS the read receipt. A failed fetch, a truncated
+   cursor file, advancing it only through the last PRINTED comment: an unread
+   comment the cap held back stays unread for the next run. That advance IS
+   the read receipt. A failed fetch, a truncated
    first read, or a failed write of the digest leaves the cursor untouched, so
    the next run shows the same comments again (at-least-once, never skipped).
 
@@ -52,7 +57,7 @@ committed and never shared between agents.
 
 USAGE
 -----
-  board_sync.py --repo OWNER/NAME --issue N --agent ID [--cursor-dir DIR] [--no-advance]
+  board_sync.py --repo OWNER/NAME --issue N --agent ID [--cursor-dir DIR] [--max-lines N] [--no-advance]
   board_sync.py --selftest
 
 Exit codes: 0 digest printed (cursor advanced unless --no-advance); 2 error.
@@ -79,6 +84,7 @@ ERROR = 2
 # id, so the overlap costs a few repeated rows, never a repeated report.
 OVERLAP_SECONDS = 600
 PRIORITY_TYPES = ("BLOCKER", "DECISION")
+DEFAULT_MAX_LINES = 50
 
 
 class CursorError(Exception):
@@ -174,21 +180,32 @@ def classify(fetched: list, cursor) -> tuple:
     return new, edited
 
 
-def next_cursor(agent: str, fetched: list, cursor) -> dict:
+def next_cursor(agent: str, fetched: list, cursor, held_back: list = ()) -> dict:
     """The cursor to store after this read. Pure.
 
-    `last_comment_id`/`updated_at` only ever move forward. `seen` keeps every
-    comment whose updated_at falls inside the overlap window before the new
-    high-water mark — exactly the rows the next read can return without their
-    having changed — so it stays small no matter how long the board grows.
+    `held_back` are unread comments the line cap kept out of the digest: they
+    are excluded from the advance, and the `updated_at` high-water is capped
+    at the earliest of their updated_at values so the next `since=` fetch
+    still returns every one of them (an edited low-id comment printed ahead
+    of them can carry a later timestamp). `last_comment_id`/`updated_at` never
+    move backward. `seen` keeps every read comment whose updated_at falls
+    inside the overlap window before the new high-water mark — exactly the
+    rows the next read can return without their having changed — so it stays
+    small no matter how long the board grows.
     """
+    held = {c["id"] for c in held_back}
+    old_high = cursor.get("updated_at", "") if cursor else ""
     last = cursor["last_comment_id"] if cursor else 0
-    high = cursor.get("updated_at", "") if cursor else ""
+    high = old_high
     seen = dict(cursor["seen"]) if cursor else {}
     for c in fetched:
+        if c["id"] in held:
+            continue
         last = max(last, c["id"])
         high = max(high, c["updated_at"])
         seen[str(c["id"])] = max(seen.get(str(c["id"]), ""), c["updated_at"])
+    if held_back:
+        high = max(old_high, min(high, min(c["updated_at"] for c in held_back)))
     floor = bc.format_ts(bc.parse_ts(high) - timedelta(seconds=OVERLAP_SECONDS)) if high else ""
     seen = {k: v for k, v in seen.items() if v >= floor}
     return {"agent_id": agent, "last_comment_id": last, "updated_at": high, "seen": seen}
@@ -207,19 +224,47 @@ def digest_line(c: dict, edited: bool) -> str:
     return f"  {c['id']} {c['created_at']} {who} {what}{refs}{' [edited]' if edited else ''} | {text}"
 
 
-def render_digest(repo: str, issue: int, agent: str, total: int, new: list, edited: list, cursor) -> str:
-    """The digest text for one read. Pure."""
+def _kind(c: dict, agent: str) -> str:
+    """'chatter', 'priority', or 'normal' for one comment's digest treatment. Pure."""
+    post = bc.parse_header(bc.first_line(c["body"]))
+    if post and post["type"] in bc.CHATTER_TYPES:
+        return "chatter"
+    if post and not post["errors"] and (post["type"] in PRIORITY_TYPES or post["fields"].get("to") == agent):
+        return "priority"
+    return "normal"
+
+
+def select_printed(unread: list, agent: str, max_lines: int) -> tuple:
+    """Split id-sorted unread comments into (printed, held_back). Pure.
+
+    The printed set is an id-ordered PREFIX holding at most `max_lines`
+    non-chatter comments (collapsed chatter costs no line), so everything held
+    back has a higher id than everything printed and the cursor can advance
+    through the last printed comment without skipping one.
+    """
+    used = 0
+    for i, c in enumerate(unread):
+        if _kind(c, agent) == "chatter":
+            continue
+        if used == max_lines:
+            return unread[:i], unread[i:]
+        used += 1
+    return list(unread), []
+
+
+def render_digest(repo: str, issue: int, agent: str, total: int, new: list, edited: list, cursor,
+                  max_lines: int = DEFAULT_MAX_LINES) -> str:
+    """The digest text for one read, at most `max_lines` per-comment lines. Pure."""
     edited_ids = {c["id"] for c in edited}
     unread = sorted(new + edited, key=lambda c: c["id"])
+    printed, held_back = select_printed(unread, agent, max_lines)
     priority, normal, chatter = [], [], []
-    for c in unread:
-        post = bc.parse_header(bc.first_line(c["body"]))
-        if post and post["type"] in bc.CHATTER_TYPES:
+    for c in printed:
+        kind = _kind(c, agent)
+        if kind == "chatter":
             chatter.append(str(c["id"]))
-        elif post and not post["errors"] and (post["type"] in PRIORITY_TYPES or post["fields"].get("to") == agent):
-            priority.append(c)
         else:
-            normal.append(c)
+            (priority if kind == "priority" else normal).append(c)
     since = cursor["last_comment_id"] if cursor else "none (first read: full range)"
     out = [
         f"board {repo}#{issue}: {total} comments total; {len(unread)} unread "
@@ -233,15 +278,22 @@ def render_digest(repo: str, issue: int, agent: str, total: int, new: list, edit
         out += [digest_line(c, c["id"] in edited_ids) for c in normal]
     if chatter:
         out.append(f"CHATTER ({len(chatter)}, forge-derivable, not expanded): ids {','.join(chatter)}")
+    if held_back:
+        held_priority = sum(1 for c in held_back if _kind(c, agent) == "priority")
+        through = printed[-1]["id"] if printed else "none"
+        out.append(f"{len(held_back)} more unread ({held_priority} priority) over the {max_lines}-line cap — "
+                   f"rerun to read them; cursor advances only through comment {through}")
     return "\n".join(out) + "\n"
 
 
-def sync(repo: str, issue: int, agent: str, cursor_dir: str, runner, out, advance: bool = True) -> int:
+def sync(repo: str, issue: int, agent: str, cursor_dir: str, runner, out, advance: bool = True,
+         max_lines: int = DEFAULT_MAX_LINES) -> int:
     """Fetch, print the digest to `out`, then advance the cursor. Returns an exit code.
 
     Side-effects: `gh` calls through `runner`, writes to `out`, and (only after
     `out` was written and flushed without error, and only when `advance`)
-    replaces the cursor file.
+    replaces the cursor file — through the last printed comment only, so
+    comments beyond the `max_lines` cap are shown by the next run.
     """
     path = cursor_file(cursor_dir, repo, issue, agent)
     try:
@@ -264,8 +316,9 @@ def sync(repo: str, issue: int, agent: str, cursor_dir: str, runner, out, advanc
         )
         return ERROR
     new, edited = classify(fetched, cursor)
+    _, held_back = select_printed(sorted(new + edited, key=lambda c: c["id"]), agent, max_lines)
     try:
-        out.write(render_digest(repo, issue, agent, total, new, edited, cursor))
+        out.write(render_digest(repo, issue, agent, total, new, edited, cursor, max_lines))
         out.flush()
     except (OSError, ValueError) as exc:
         print(f"board_sync: digest not delivered ({exc}); cursor NOT advanced", file=sys.stderr)
@@ -273,7 +326,7 @@ def sync(repo: str, issue: int, agent: str, cursor_dir: str, runner, out, advanc
     if not advance:
         return OK
     try:
-        save_cursor(path, next_cursor(agent, fetched, cursor))
+        save_cursor(path, next_cursor(agent, fetched, cursor, held_back))
     except OSError as exc:
         print(f"board_sync: digest printed but cursor not saved ({exc}); next read repeats it", file=sys.stderr)
         return ERROR
@@ -313,7 +366,7 @@ def _selftest() -> int:
 
     def run(gh, advance=True, out=None, agent="gamma"):
         buf = out if out is not None else io.StringIO()
-        rc = sync("acme/board", 7, agent, tmp, gh, buf, advance)
+        rc = sync("acme/board", 7, agent, tmp, gh, buf, advance, max_lines=1000)
         return rc, buf.getvalue() if not isinstance(buf, _BrokenOut) else ""
 
     cpath = cursor_file(tmp, "acme/board", 7, "gamma")
@@ -419,8 +472,42 @@ def _selftest() -> int:
         sync("acme/board", 10, "gamma", tmp, gh, buf)
         return "\x1b" not in buf.getvalue() and "hi [2Jthere" in buf.getvalue(), repr(buf.getvalue())
 
+    def capped_reads_cover_every_comment_once():
+        gh, printed, texts = _board(130), [], []
+        for _ in range(4):
+            buf = io.StringIO()
+            rc = sync("acme/board", 11, "gamma", tmp, gh, buf, max_lines=50)
+            texts.append(buf.getvalue())
+            if rc != OK:
+                return False, f"rc={rc}"
+            for line in texts[-1].splitlines():
+                if line.startswith("  "):
+                    printed.append(int(line.split()[0]))
+                elif line.startswith("CHATTER"):
+                    printed += [int(x) for x in line.rsplit(" ", 1)[1].split(",")]
+        lines0 = [ln for ln in texts[0].splitlines() if ln.startswith("  ")]
+        cur = load_cursor(cursor_file(tmp, "acme/board", 11, "gamma"), "gamma")
+        ok = (len(lines0) == 50 and "1066" in texts[0] and "  1067 " not in texts[0]
+              and "63 more unread (16 priority)" in texts[0] and "through comment 1066" in texts[0]
+              and sorted(printed) == list(range(1000, 1130)) and "0 unread" in texts[3]
+              and cur["last_comment_id"] == 1129)
+        return ok, texts[0][-300:] + " | " + texts[-1]
+
+    def capped_cursor_keeps_earlier_timestamped_new():
+        gh = bc.FakeGh([bc.make_comment(1, "untyped first", _ts(0))])
+        sync("acme/board", 12, "gamma", tmp, gh, io.StringIO(), max_lines=1)
+        gh.comments += [bc.make_comment(2, "new second", _ts(100)), bc.make_comment(3, "new third", _ts(101))]
+        gh.comments[0]["body"], gh.comments[0]["updated_at"] = "untyped first, edited", _ts(300)
+        buf1, buf2 = io.StringIO(), io.StringIO()
+        sync("acme/board", 12, "gamma", tmp, gh, buf1, max_lines=1)  # prints the edit only
+        sync("acme/board", 12, "gamma", tmp, gh, buf2, max_lines=5)
+        ok = "2 more unread" in buf1.getvalue() and "  2 " in buf2.getvalue() and "  3 " in buf2.getvalue()
+        return ok, buf1.getvalue() + " | " + buf2.getvalue()
+
     cases = [
         ("first-read-full-range-130-across-pages", first_read),
+        ("line-cap-advances-only-through-printed", capped_reads_cover_every_comment_once),
+        ("line-cap-keeps-held-back-in-since-window", capped_cursor_keeps_earlier_timestamped_new),
         ("priority-types-pinned-first", priority_pinned),
         ("second-read-uses-since-and-is-empty", second_read_empty),
         ("new-and-edited-reported-once", new_and_edited),
@@ -449,6 +536,8 @@ def main(argv=None) -> int:
     parser.add_argument("--agent")
     parser.add_argument("--cursor-dir", default=None)
     parser.add_argument("--no-advance", action="store_true", help="print the digest without recording a read receipt")
+    parser.add_argument("--max-lines", type=int, default=DEFAULT_MAX_LINES,
+                        help="per-comment digest lines per run (default %(default)s); the rest wait for a rerun")
     parser.add_argument("--selftest", action="store_true")
     args = parser.parse_args(argv)
     if args.selftest:
@@ -457,8 +546,11 @@ def main(argv=None) -> int:
         parser.print_usage(sys.stderr)
         print("board_sync: --repo OWNER/NAME, --issue N (>0) and a valid --agent are required", file=sys.stderr)
         return ERROR
+    if args.max_lines < 1:
+        print("board_sync: --max-lines must be >= 1", file=sys.stderr)
+        return ERROR
     return sync(args.repo, args.issue, args.agent, args.cursor_dir or default_cursor_dir(), bc.default_runner,
-                sys.stdout, advance=not args.no_advance)
+                sys.stdout, advance=not args.no_advance, max_lines=args.max_lines)
 
 
 if __name__ == "__main__":

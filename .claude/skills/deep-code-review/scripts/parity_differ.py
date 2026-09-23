@@ -24,6 +24,8 @@ CONTRACT (fail-closed; every branch below is load-bearing, not cosmetic)
   carries a fixed precondition line: both renders must share the same auth +
   data state, or a signed-out app render reports every gated section as
   "missing" and points the fix in the wrong direction (build, not sign in).
+  The line scopes this matched-state diff only; the signed-out default
+  surface remains a separate required parity check.
 * USAGE_ERROR (2) — bad CLI invocation (e.g. only one of --design/--app).
 * COULD_NOT_CHECK (3) — either side is missing, unreadable, empty, or yields
   no sections. Never a score, never a pass — a one-sided input cannot compare.
@@ -251,8 +253,10 @@ def _render_verdict(design: list[tuple[str, bool]], app: list[tuple[str, bool]])
         (f"MISMATCH: {len(missing)} missing + {len(empty)} empty of "
          f"{len(design_ids)} design section(s). This list is the work queue."),
         "precondition: both renders must share the same auth + data state "
-        "(dev identity past sign-in, seeded) — a section gated behind sign-in "
-        "reads as 'missing' on a signed-out render; confirm before building.",
+        "(for gated sections: dev identity past sign-in on both sides, seeded) "
+        "— a section gated behind sign-in reads as 'missing' on a signed-out "
+        "render; confirm before building. This matched-state diff does not "
+        "replace the signed-out default-surface check.",
         *gap_lines,
         *info_lines,
     ])
@@ -318,7 +322,8 @@ def _selftest() -> int:
 
     code, report = diff_sides(design, app_partial)
     check("mismatch", code, report, MISMATCH,
-          must_have=("MISMATCH", "beta", "gamma", "delta", "same auth"),
+          must_have=("MISMATCH", "beta", "gamma", "delta", "same auth",
+                     "default-surface check"),
           must_not=("aligned",))
 
     code, report = diff_sides(design, app_unseeded)

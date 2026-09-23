@@ -1421,8 +1421,8 @@ task:
    "extra" parity call whose only evidence is a one-sided crop, or made with the other side's state
    unchecked. Load a no-routing prototype **once and click-navigate** its in-page tabs (it has no
    per-screen URL to fetch), and diff against an existing **running build** of the design if one is in
-   the repo rather than reverse-engineering its source (reference-fidelity order, "Looks the same"
-   above). It diffs **chrome / structure / styling, not text values** — diffing the numbers would flag
+   the repo rather than reverse-engineering its source (reference-fidelity order,
+   `rendered-parity.md`). It diffs **chrome / structure / styling, not text values** — diffing the numbers would flag
    real data as a mismatch and tempt the fix that fabricates (`migration-parity.md`). What it **cannot**
    prove: an intentional improvement from a regression, and its pixel threshold is **agreed, not
    derived** — a human still owns the ship call. **Parity is *set equality*, not containment — run the

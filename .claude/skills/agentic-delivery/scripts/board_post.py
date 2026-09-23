@@ -28,15 +28,20 @@ RULES (each rejection names the rule; exit 1)
   paths, secret-shaped tokens (the same shapes this repo's committed
   `.banlist.txt` blocks), plus every pattern in a banlist file (`--banlist`,
   else `<git toplevel>/.banlist.txt` and its `.banlist.local.txt` sibling when
-  present). A hit reports the line number and rule name, never the match, so
-  a secret is not echoed into a log. An unparseable banlist pattern fails
-  closed (exit 2).
+  present). Banlist patterns are `grep -E` syntax (POSIX classes, `\\<`/`\\>`),
+  so they are matched by a `grep -E` subprocess exactly as
+  `scripts/ci-gates.sh privacy` matches them, never by Python `re`. A hit
+  reports the line number and rule name, never the match, so a secret is not
+  echoed into a log. A pattern grep rejects, or a missing grep, fails closed
+  (exit 2).
 - FIX-CLAIM requires `--sha` and `--test`, and verifies both with git in
   --repo-dir: the SHA resolves to a commit that is an ancestor of the default
-  branch (`--default-branch`, else `origin/HEAD`); the test file exists at
-  that SHA; and a `path::name` test id's name occurs in that file there.
-  A claim of "fixed" is thus pinned to a commit on the governing branch and a
-  regression test that exists in it.
+  branch (`--default-branch`, else `origin/HEAD`); the test path is a file
+  (a blob, not a directory) at that SHA; and a `path::name` test id's name
+  is defined there — after `def`/`function`/`func`/`fn`/`class` or as a
+  whole quoted string, never a bare substring. A claim of "fixed" is thus
+  pinned to a commit on the governing branch and a regression test that
+  exists in it.
 
 OUTPUT
 ------
@@ -94,15 +99,38 @@ class GitError(Exception):
     """A git query could not be answered (not a repo, bad ref, git missing)."""
 
 
-def load_rules(banlist: str | None, repo_dir: str, runner) -> list:
-    """Compile builtin rules plus banlist patterns into (name, regex) pairs.
+def _grep_ere(pattern: str, text: str) -> tuple:
+    """Run `grep -a -n -E -e PATTERN` over text on stdin; return (rc, stdout).
 
-    Side-effects: reads banlist files; may run `git rev-parse` to find the
-    repo top level. Banlist patterns are named by file and ordinal only — a
-    local banlist holds private identifiers, so its patterns are never echoed.
-    Raises ValueError on an unreadable explicit banlist or a bad pattern.
+    Side-effects: spawns grep. `-a` keeps a NUL byte from collapsing the
+    output to "Binary file matches" (which carries no line numbers); `-e`
+    keeps a dash-leading pattern from parsing as an option. rc follows grep:
+    0 match, 1 no match, >1 invalid pattern; a missing grep is rc 127.
     """
-    rules = [(name, re.compile(rx)) for name, rx in BUILTIN_RULES]
+    try:
+        proc = subprocess.run(["grep", "-a", "-n", "-E", "-e", pattern], input=text,
+                              capture_output=True, text=True, timeout=30, check=False)
+    except FileNotFoundError:
+        return 127, ""
+    except subprocess.TimeoutExpired:
+        return 124, ""
+    return proc.returncode, proc.stdout
+
+
+def load_rules(banlist: str | None, repo_dir: str, runner) -> list:
+    """Return (name, kind, pattern) rules: builtins (kind "re") plus banlist ("ere").
+
+    Banlist patterns are `grep -E` syntax, so each is probed with grep on
+    empty input and kept as an "ere" rule for `privacy_hits` to run through
+    grep — Python `re` would silently misread `[[:space:]]` or `\\<`.
+    Side-effects: reads banlist files; may run `git rev-parse` to find the
+    repo top level; spawns one grep probe per pattern. Banlist patterns are
+    named by file and ordinal only — a local banlist holds private
+    identifiers, so its patterns are never echoed. Raises ValueError on an
+    unreadable explicit banlist, a pattern grep rejects, or a missing grep
+    (fail closed: an unchecked policy is not a passing one).
+    """
+    rules = [(name, "re", re.compile(rx)) for name, rx in BUILTIN_RULES]
     paths = []
     if banlist:
         if not os.path.isfile(banlist):
@@ -120,19 +148,41 @@ def load_rules(banlist: str | None, repo_dir: str, runner) -> list:
         with open(path, encoding="utf-8") as fh:
             actionable = [ln.strip() for ln in fh if ln.strip() and not ln.strip().startswith("#")]
         for i, pattern in enumerate(actionable, 1):
-            try:
-                rules.append((f"{os.path.basename(path)} pattern #{i}", re.compile(pattern)))
-            except re.error as exc:
-                raise ValueError(f"{os.path.basename(path)} pattern #{i} is not a valid regex ({exc})") from exc
+            name = f"{os.path.basename(path)} pattern #{i}"
+            rc, _ = _grep_ere(pattern, "")
+            if rc == 127:
+                raise ValueError("grep not found; cannot apply the banlist (fail closed)")
+            if rc > 1:
+                raise ValueError(f"{name} is not a valid grep -E pattern (content withheld); failing closed")
+            rules.append((name, "ere", pattern))
     return rules
 
 
 def privacy_hits(text: str, rules: list) -> list:
-    """Return 'line N: <rule name>' for every rule hit, never the matched text. Pure."""
-    hits = []
-    for n, line in enumerate(text.splitlines(), 1):
-        hits += [f"line {n}: {name}" for name, rx in rules if rx.search(line)]
-    return hits
+    """Return 'line N: <rule name>' for every rule hit, never the matched text.
+
+    Lines are split on newline only, the numbering grep uses, so a builtin
+    ("re") hit and a banlist ("ere") hit on one line report the same N.
+    Side-effects: one grep subprocess per "ere" rule. Raises ValueError when
+    grep cannot answer (rc > 1), so a failed scan never reads as clean.
+    """
+    lines = text.split("\n")
+    hit_lines = []
+    for name, kind, pattern in rules:
+        if kind == "re":
+            hit_lines.append({n for n, line in enumerate(lines, 1) if pattern.search(line)})
+            continue
+        rc, out = _grep_ere(pattern, text)
+        if rc > 1:
+            raise ValueError(f"{name}: grep failed (rc {rc}); failing closed")
+        hit_lines.append({int(row.split(":", 1)[0]) for row in out.splitlines() if row.split(":", 1)[0].isdigit()})
+    return [f"line {n}: {rules[i][0]}" for n in range(1, len(lines) + 1)
+            for i in range(len(rules)) if n in hit_lines[i]]
+
+
+def _ere_escape(literal: str) -> str:
+    """Backslash-escape every POSIX ERE metacharacter in literal. Pure."""
+    return re.sub(r"([.\[\]\\(){}*+?^$|])", r"\\\1", literal)
 
 
 def verify_fix_claim(sha: str, test: str, default_branch: str | None, repo_dir: str, runner) -> list:
@@ -166,13 +216,21 @@ def verify_fix_claim(sha: str, test: str, default_branch: str | None, repo_dir: 
     if rc != 0:
         raise GitError(f"merge-base failed: {err.strip()[:200]}")
     path, _, name = test.partition("::")
-    rc, _, _ = git("cat-file", "-e", f"{full}:{path}")
+    rc, kind, _ = git("cat-file", "-t", f"{full}:{path}")
     if rc != 0:
         return [f"test:{test} — file {path} does not exist at sha:{sha}"]
+    if kind.strip() != "blob":
+        return [f"test:{test} — {path} is a {kind.strip()}, not a file, at sha:{sha}"]
     if name:
-        rc, _, _ = git("grep", "-q", "-F", "-e", name, full, "--", path)
+        lit = _ere_escape(name)
+        definition = (f"(^|[^A-Za-z0-9_])(def|function|func|fn|class)[[:space:]]+{lit}([^A-Za-z0-9_]|$)"
+                      f"|[\"'`]{lit}[\"'`]")
+        rc, _, err = git("grep", "-q", "-E", "-e", definition, full, "--", path)
+        if rc == 1:
+            return [(f"test:{test} — no definition of {name!r} in {path} at sha:{sha} "
+                     "(a bare substring, such as a prefix of another test's name, is not a match)")]
         if rc != 0:
-            return [f"test:{test} — {name!r} does not occur in {path} at sha:{sha}"]
+            raise GitError(f"git grep failed: {err.strip()[:200]}")
     return []
 
 
@@ -306,7 +364,10 @@ def _selftest() -> int:
     g = _git_repo(tmp)
     banlist = os.path.join(tmp, "banlist.txt")
     with open(banlist, "w") as fh:
-        fh.write("# fixture policy\nAcme Capital\n")
+        fh.write("# fixture policy\nAcme Capital\n\\<Jane\\>\nJane[[:space:]]Smith\n")
+    bad_banlist = os.path.join(tmp, "bad-banlist.txt")
+    with open(bad_banlist, "w") as fh:
+        fh.write("Acme[\n")
 
     def attempt(body, *extra, post=False):
         path = os.path.join(tmp, f"body-{len(os.listdir(tmp))}.md")
@@ -321,9 +382,9 @@ def _selftest() -> int:
         result, stderr = _capture_stderr(lambda buf: run(argv, runner, buf))
         return result, stderr, gh, path
 
-    def expect(code_want, body, *extra, needle="", post=False):
+    def expect(code_want, body, *extra, needle="", post=False, absent=""):
         (rc, stdout), stderr, gh, path = attempt(body, *extra, post=post)
-        ok = rc == code_want and needle in (stderr + stdout)
+        ok = rc == code_want and needle in (stderr + stdout) and not (absent and absent in stderr + stdout)
         return ok, f"rc={rc} want={code_want} out={stdout!r} err={stderr!r}"
 
     fix = ["--type", "FIX-CLAIM", "--refs", "#12", "--topic", "ratchet"]
@@ -371,6 +432,10 @@ def _selftest() -> int:
         ("home-path-rejected", lambda: expect(REJECTED, "see /Users/jsmith/x.log", "--type", "QUESTION", needle="home path")),
         ("token-rejected-not-echoed", token_not_echoed),
         ("banlist-pattern-rejected", lambda: expect(REJECTED, "for Acme Capital", "--type", "QUESTION", needle="banlist.txt pattern #1")),
+        ("banlist-ere-word-boundary-matches", lambda: expect(REJECTED, "ask\nJane first", "--type", "QUESTION", needle="line 3: banlist.txt pattern #2")),
+        ("banlist-ere-posix-class-matches", lambda: expect(REJECTED, "cc Jane Smith", "--type", "QUESTION", needle="banlist.txt pattern #3")),
+        ("banlist-ere-word-boundary-not-substring", lambda: expect(OK, "ask Janet first", "--type", "QUESTION")),
+        ("banlist-invalid-ere-fails-closed", lambda: expect(ERROR, "x y", "--type", "QUESTION", "--banlist", bad_banlist, needle="not a valid grep -E pattern", absent="Acme[")),
         ("zero-ttl-rejected", lambda: expect(REJECTED, "taking it", "--type", "CLAIM", "--refs", "#12", "--ttl", "0", needle="ttl must be")),
         ("claim-without-refs-rejected", lambda: expect(REJECTED, "taking it", "--type", "CLAIM", needle="must name the item")),
         ("bad-agent-id-rejected", lambda: expect(REJECTED, "x y", "--type", "QUESTION", "--agent", "a b", needle="--agent")),
@@ -379,8 +444,10 @@ def _selftest() -> int:
         ("fix-claim-off-default-branch-rejected", lambda: expect(REJECTED, "fixed", *fix, "--sha", g["off"], "--test", "tests/test_ratchet.py", needle="not reachable")),
         ("fix-claim-unknown-sha-rejected", lambda: expect(REJECTED, "fixed", *fix, "--sha", "deadbeef12", "--test", "tests/test_ratchet.py", needle="not a commit")),
         ("fix-claim-missing-test-file-rejected", lambda: expect(REJECTED, "fixed", *fix, "--sha", g["on"], "--test", "tests/test_nope.py", needle="does not exist")),
-        ("fix-claim-missing-test-name-rejected", lambda: expect(REJECTED, "fixed", *fix, "--sha", g["on"], "--test", "tests/test_ratchet.py::test_other", needle="does not occur")),
-        ("fix-claim-verified-accepted", lambda: expect(OK, "Pinned allowlist; regression test added.", *fix, "--sha", g["on"], "--test", "tests/test_ratchet.py::test_allowlist_pin")),
+        ("fix-claim-missing-test-name-rejected", lambda: expect(REJECTED, "fixed", *fix, "--sha", g["on"], "--test", "tests/test_ratchet.py::test_other", needle="no definition")),
+        ("fix-claim-directory-path-rejected", lambda: expect(REJECTED, "fixed", *fix, "--sha", g["on"], "--test", "tests", needle="is a tree, not a file")),
+        ("fix-claim-trivial-substring-name-rejected", lambda: expect(REJECTED, "fixed", *fix, "--sha", g["on"], "--test", "tests/test_ratchet.py::test", needle="no definition")),
+        ("fix-claim-prefix-name-rejected", lambda: expect(REJECTED, "fixed", *fix, "--sha", g["on"], "--test", "tests/test_ratchet.py::test_allowlist", needle="no definition")),        ("fix-claim-verified-accepted", lambda: expect(OK, "Pinned allowlist; regression test added.", *fix, "--sha", g["on"], "--test", "tests/test_ratchet.py::test_allowlist_pin")),
         ("fix-claim-option-shaped-branch-errors", lambda: expect(ERROR, "fixed", *fix, "--sha", g["on"], "--test", "tests/test_ratchet.py", "--default-branch=--output=x", needle="looks like an option")),
         ("fix-claim-bad-default-branch-errors", lambda: expect(ERROR, "fixed", *fix, "--sha", g["on"], "--test", "tests/test_ratchet.py", "--default-branch", "nope", needle="does not resolve")),
     ]

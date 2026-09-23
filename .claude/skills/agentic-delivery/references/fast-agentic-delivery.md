@@ -55,7 +55,7 @@ Fetched fresh for this file (entries 1–5 verified 2026-09-09; entry 6, 2026-09
 5. Brendan Gregg, *Linux Load Averages: Solving the Mystery*. "Adding the uninterruptible state means that Linux
    load averages can increase due to a disk (or NFS) I/O workload, not just CPU demand"; worked example, "a
    heavily disk-bound system might be extremely sluggish but only have a TASK_RUNNING average of 0.1" — the
-   basis for "don't gate on `load1` alone" above.
+   basis for "don't gate on `load1` alone" in `fanout-host-sizing.md`.
    https://www.brendangregg.com/blog/2017-08-08/linux-load-averages.html
 6. GitHub Docs, *Linking a pull request to an issue*. Auto-close is default-branch-scoped: "When you merge a
    linked pull request into the **default branch** of a repository, its linked issue is automatically closed";

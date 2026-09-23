@@ -32,9 +32,14 @@ PROPERTIES
 ----------
 - Deterministic: comments are processed in id order, every list is sorted,
   and the record carries no render timestamp — the same comments and the same
-  clock minute give byte-identical output, so concurrent renders by different
-  agents converge (the body is last-write-wins and every writer writes the
-  same thing). The only clock input is claim expiry.
+  clock minute give byte-identical output. The only clock input is claim
+  expiry.
+- Guarded, not atomic, write: the forge offers no compare-and-swap on an
+  issue body, so a writer that folded fewer comments could overwrite a newer
+  record. --write therefore re-reads the issue right before the PATCH and,
+  if the body or the comment count changed since the fold, sends nothing and
+  exits 3 (conflict: rerun). A narrow window between that re-read and the
+  PATCH remains; rerun after any new post rather than trusting convergence.
 - Idempotent write: text outside the markers is preserved byte-for-byte; if
   the spliced body equals the current body, no PATCH is sent.
 - Fail closed: a `gh` error, a comment list shorter than the issue's own
@@ -55,7 +60,8 @@ USAGE
   board_state.py --repo OWNER/NAME --issue N --write                                # splice into body
   board_state.py --selftest
 
-Exit codes: 0 rendered (and written, or unchanged); 2 error.
+Exit codes: 0 rendered (and written, or unchanged); 2 error; 3 the issue
+changed between the read and the write (nothing written; rerun).
 """
 from __future__ import annotations
 
@@ -72,6 +78,7 @@ import board_common as bc  # noqa: E402  (sibling module, path set above)
 
 OK = 0
 ERROR = 2
+CONFLICT = 3
 
 START = "<!-- board-state:start -->"
 END = "<!-- board-state:end -->"
@@ -220,9 +227,11 @@ def splice(body: str, block: str) -> str:
 def run(repo: str, issue: int, now: datetime, write: bool, runner, out) -> int:
     """Fetch, fold, render; print the record or write it into the body. Returns an exit code.
 
-    Side-effects: `gh` reads through `runner`; with `write`, at most one
-    `gh api -X PATCH` (skipped when the body is already current) via a temp
-    JSON file, so no body text passes through a shell or argv.
+    Side-effects: `gh` reads through `runner`; with `write`, one re-read of
+    the issue and at most one `gh api -X PATCH` (skipped when the body is
+    already current, or when the re-read shows a changed body or comment
+    count — then CONFLICT) via a temp JSON file, so no body text passes
+    through a shell or argv.
     """
     try:
         issue_obj = bc.gh_object(runner, f"repos/{repo}/issues/{issue}")
@@ -242,6 +251,16 @@ def run(repo: str, issue: int, now: datetime, write: bool, runner, out) -> int:
     if new_body == body:
         out.write("board_state: body already current; no write\n")
         return OK
+    try:
+        fresh = bc.gh_object(runner, f"repos/{repo}/issues/{issue}")
+    except bc.ForgeError as exc:
+        print(f"board_state: re-read before write failed ({exc}); nothing written", file=sys.stderr)
+        return ERROR
+    if (fresh.get("body") or "") != body or fresh.get("comments") != total:
+        print(f"board_state: CONFLICT — the issue changed since it was read (comments {total} -> "
+              f"{fresh.get('comments')}, body {'changed' if (fresh.get('body') or '') != body else 'unchanged'}); "
+              "nothing written, rerun", file=sys.stderr)
+        return CONFLICT
     fd, tmp = tempfile.mkstemp(prefix="board-state-", suffix=".json")
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
@@ -378,8 +397,35 @@ def _selftest() -> int:
         rc = run("acme/board", 7, bc.parse_ts(T0), False, bc.FakeGh(comments), sink)
         return rc == OK and "through id 130: 130 typed" in sink.text and "`#130`" in sink.text, sink.text[:200]
 
+    def raced(mutate):
+        """Run --write where `mutate(gh)` fires on the pre-PATCH re-read of the issue."""
+        gh = bc.FakeGh(_fixture(), body="Owner text.\n")
+        real, reads = gh.__call__, []
+
+        def runner(args, cwd=None):
+            if args[:2] == ["gh", "api"] and len(args) == 3:
+                reads.append(1)
+                if len(reads) == 2:
+                    mutate(gh)
+            return real(args, cwd)
+
+        rc = run("acme/board", 7, now, True, runner, _Sink())
+        return rc, gh, sum(1 for c in gh.calls if "PATCH" in c)
+
+    def body_changed_before_patch_not_overwritten():
+        def edit(gh):
+            gh.body = "Owner text.\nA peer's newer record.\n"
+        rc, gh, patches = raced(edit)
+        return rc == CONFLICT and patches == 0 and "newer record" in gh.body, f"rc={rc} patches={patches}"
+
+    def comment_added_before_patch_not_overwritten():
+        rc, gh, patches = raced(lambda gh: gh.comments.append(_c(99, 30, "[agent:beta] CLAIM refs:#77\nnew")))
+        return rc == CONFLICT and patches == 0 and gh.body == "Owner text.\n", f"rc={rc} patches={patches}"
+
     cases = [
         ("claims-ttl-contested-handoff-ignored", claims_ttl_contested_handoff),
+        ("changed-body-before-patch-conflicts", body_changed_before_patch_not_overwritten),
+        ("new-comment-before-patch-conflicts", comment_added_before_patch_not_overwritten),
         ("known-issue-recurrence-counted", known_issue_recurrence),
         ("owner-gated-open-until-cited", owner_gated_and_answers),
         ("counts-and-malformed-ignored", counts_and_malformed_ignored),
