@@ -42,8 +42,20 @@
 #                           both are unset.
 #
 # OPT-IN gates (off unless the flag is exactly 1; any value other than unset,
-# 0, or 1 fails closed). Both need the agentic-delivery skill installed; a set
-# flag with that skill or its script missing is a failure, never a skip.
+# 0, or 1 fails closed).
+#   DCR_REAPER_LINT=1       run deep-code-review's reaper_lint.py over
+#                           DCR_REAPER_LINT_PATHS (space-separated files/dirs,
+#                           literal — never glob-expanded; relative entries
+#                           resolve against the repo root; default: the whole
+#                           repo root; set but whitespace-only fails) for a
+#                           bulk/fleet-wide process-reaper pattern (issue
+#                           #1101; doctrine: concurrency-shared-state.md
+#                           "Terminating work you own"). A heuristic lint:
+#                           a PASS means no known shape matched, not that
+#                           every kill is scoped. Needs no other skill
+#                           installed.
+# The next two need the agentic-delivery skill installed; a set flag with
+# that skill or its script missing is a failure, never a skip.
 #   DCR_REFIX_GATE=1        run agentic-delivery's refix_gate.py over the same
 #                           range: re-touching a file a fix: commit touched
 #                           within DCR_REFIX_WINDOW_HOURS (default 72) needs a
@@ -233,13 +245,9 @@ for script in "${SELFTEST_SCRIPTS[@]}"; do
   fi
 done
 
-# ---------------------------------------------------------------------------
-# 4-5) OPT-IN delivery gates. Each runs its own --selftest first (a gate that
-#      cannot prove it fires is not trusted), then the real check.
-# ---------------------------------------------------------------------------
-
 # opt_in <FLAG_NAME> — succeed iff the flag is exactly 1; unset or 0 is off;
-# any other value is a misconfiguration and fails closed.
+# any other value is a misconfiguration and fails closed. Defined here (ahead
+# of every OPT-IN section below) so each section can call it in order.
 opt_in() {
   local value="${!1:-0}"
   case "${value}" in
@@ -248,6 +256,50 @@ opt_in() {
     *) printf 'dcr-gates: FAIL %s=%s (want unset, 0, or 1)\n' "$1" "${value}" >&2; FAIL=1; return 1 ;;
   esac
 }
+
+# ---------------------------------------------------------------------------
+# 4) OPT-IN reaper_lint — flags a bulk/fleet-wide process-reaper pattern
+#    (issue #1101: a port-range reap loop, a terse+network lsof selector left
+#    unfiltered to the listener, a broad process-name-matching pkill/killall,
+#    or a hard-coded protected-port list) before it takes down every parallel
+#    lane on the host. Runs its own --selftest first (a gate that cannot
+#    prove it fires is not trusted).
+# ---------------------------------------------------------------------------
+if opt_in DCR_REAPER_LINT; then
+  REAPER_LINT="${REVIEW_ROOT}/scripts/reaper_lint.py"
+  if [ ! -f "${REAPER_LINT}" ]; then
+    printf 'dcr-gates: reaper_lint.py not found at %s (FAIL, fail closed)\n' "${REAPER_LINT}" >&2
+    FAIL=1
+  elif ! python3 "${REAPER_LINT}" --selftest; then
+    printf 'dcr-gates: selftest FAILED for %s\n' "${REAPER_LINT}" >&2
+    FAIL=1
+  else
+    # Relative DCR_REAPER_LINT_PATHS entries resolve against REPO_ROOT (the
+    # scan runs with cwd == REPO_ROOT), never against the caller's cwd.
+    reaper_paths=()
+    if [ -n "${DCR_REAPER_LINT_PATHS:-}" ]; then
+      read -r -a reaper_paths <<<"${DCR_REAPER_LINT_PATHS}"
+    else
+      reaper_paths=(.)
+    fi
+    if [ "${#reaper_paths[@]}" -eq 0 ]; then
+      printf 'dcr-gates: FAIL reaper_lint (DCR_REAPER_LINT_PATHS names no path)\n' >&2
+      FAIL=1
+    # "${arr[@]+"${arr[@]}"}": bash 3.2 treats an empty array as unset
+    # under `set -u`; this form expands to nothing instead of aborting.
+    elif (cd "${REPO_ROOT}" && python3 "${REAPER_LINT}" "${reaper_paths[@]+"${reaper_paths[@]}"}"); then
+      printf 'dcr-gates: reaper_lint PASS\n'
+    else
+      printf 'dcr-gates: reaper_lint FAIL\n' >&2
+      FAIL=1
+    fi
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# 5-6) OPT-IN delivery gates. Each runs its own --selftest first (a gate that
+#      cannot prove it fires is not trusted), then the real check.
+# ---------------------------------------------------------------------------
 
 # delivery_script <name> — print the installed agentic-delivery script's path
 # once its selftest passes; exit non-zero (caller sets FAIL) when it is

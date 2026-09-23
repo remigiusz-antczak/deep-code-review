@@ -21,7 +21,8 @@ Effective AI Agents*). All by-name; see the standards index
 `deep-code-review` references).
 
 **Cross-references.** Bare file names below — `role-coverage.md`,
-`product-ux-quality.md`, `docs-and-dx.md`, `security-appsec.md` /
+`product-ux-quality.md` (and its sub-files `ux-interaction.md`,
+`ux-gates.md`), `docs-and-dx.md`, `security-appsec.md` /
 `security-ai-agents.md`, `standards-index.md` — are files in the **sibling
 `deep-code-review` skill**, reachable at `../../deep-code-review/references/<file>`
 from here; the installer always ships that skill alongside this overlay, so the
@@ -59,7 +60,7 @@ Two rules override the whole roster:
 | **Evil Twin** | Any plan / approach / agent-originated "we should" | Attacks the claim before the owner sees it (G0/G1); pre-owner gate on every recommendation | **below** + `idea-critic` |
 | **QA** | Behaviour, data, or UI changed | Independent functional / regression / a11y / state-coverage verification at the exact SHA (G5, G6) | role-coverage.md *QA* |
 | **Security** | Authn/authz/egress/secret/supply-chain surface touched | Independent AppSec / privacy / supply-chain; red on paper + authorized testbed only (G6) | role-coverage.md *Data & AI*, *Backend*; `security-*.md` |
-| **UX & Design** | A rendered surface changed | At-home bar, five data states, encoding hygiene, interaction-completeness (G4, G6) | role-coverage.md *UX & UI*; `product-ux-quality.md` |
+| **UX & Design** | A rendered surface changed | At-home bar, five data states, encoding hygiene, interaction-completeness (G4, G6) | role-coverage.md *UX & UI*; `product-ux-quality.md`, `ux-interaction.md` |
 | **Release** | A change is ready to ship, or a feature flag is added | Named-owner sign-off, rollback proven, human approval on the outward action (G8, G9) | role-coverage.md *Release & docs* + **below** |
 | **Docs** | Behaviour, API, or nav a reader sees changed | The docs move in the **same change** as their subject; no stale pointer left behind (G4, G10) | role-coverage.md *Release & docs*; `docs-and-dx.md` |
 
@@ -90,7 +91,7 @@ multi-agent build from hallucinating a plausible-but-wrong feature (MetaGPT).
   reach, and edit** what they added, in the same surface — a write-only input is
   a defect, not a slice. Trace every state change the ask implies through to its
   read-back. Depth and the greppable red flags: the `deep-code-review` skill's
-  `product-ux-quality.md`.
+  `product-ux-quality.md` and `ux-interaction.md`.
 - **Benchmark against comparable products, by name.** Before speccing a solved
   element (a feed, a composer, an empty state, a delta, a filter), name how two
   or three comparable products solve it and match the muscle memory users already
@@ -234,7 +235,7 @@ has.
 | Dependency / supply-chain | CI | Security | No known-vulnerable or EOL dependency introduced |
 
 Every gate obeys the same epistemology (`SKILL.md` *Gate epistemology*;
-`product-ux-quality.md` for the three UX gates): it **tells "could not check"
+`ux-gates.md` for the three UX gates): it **tells "could not check"
 from "found a problem," reports `UNVERIFIED` on the former — never a pass, and a
 *required* check left `UNVERIFIED` still blocks its gated action (evidence and
 permission are separate decisions) — is proven

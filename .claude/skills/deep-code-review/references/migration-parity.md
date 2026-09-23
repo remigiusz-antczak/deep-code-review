@@ -13,7 +13,7 @@ shipping a UI that matches structurally yet feels poor to use.
 
 ## Unify the chrome/shell before porting screens — one level above component unification
 
-The unification precondition (`product-ux-quality.md`, one component per concept) has a
+The unification precondition (`ux-components.md`, one component per concept) has a
 level **above** individual components: the **chrome/shell** — per-page header, tab/section
 strip, stat-tile frame, sub-nav, and the rule that decides which tabs a surface shows.
 Porting the *outer* frame (sidebar, top bar) to a shared component does **not** unify the
@@ -46,7 +46,7 @@ the divergence is structural, not per-screen.
   mutually-exclusive prop modes, which breaks a11y (the unwired mode emits the wrong role,
   focus, and keyboard order — `frontend-a11y.md`). This is the **complement** of the
   feature-flag rule, not a contradiction of it: a feature that is *present-or-absent with
-  the same semantics* belongs **inside** the component (`product-ux-quality.md`, one
+  the same semantics* belongs **inside** the component (`ux-components.md`, one
   component per concept, #123); two *different behaviors* stay **separate wrappers over one
   shared style**.
 
@@ -116,7 +116,7 @@ read pixels: a `binaries_gate.py` allowlist entry for a screenshot is a privacy 
 For the differ's matched-state diff of gated sections, render both sides past sign-in (one
 dev identity), or its `missing` list is an auth gap, not a build order (the MISMATCH
 precondition line); the signed-out default surface stays its own required check
-(`rendered-parity.md`). Disclose the comparison state beside the verdict (goalpost rule, `product-ux-quality.md`).
+(`rendered-parity.md`). Disclose the comparison state beside the verdict (goalpost rule, `rendered-parity.md`).
 Only on matched states is a gross-dimension delta parity evidence, not a volume notice (below).
 
 **Pin the target export first.** When a design package holds several exports of one prototype,
@@ -131,7 +131,7 @@ explains a later pixel diff — fix, re-run first.
 
 ## Scope a parity claim to the correspondence table — one screen verified is not the product
 
-`product-ux-quality.md` gate 4 already defines *done* on a parity task as the
+`ux-gates.md` gate 4 already defines *done* on a parity task as the
 present-or-absent lists empty **"for every screen in the correspondence table."** That table
 **is** the coverage ledger; #200's rule is only that it **exists before any claim** and that
 a claim is **scoped to the rows actually verified**, never phrased over the product.
@@ -199,13 +199,13 @@ real surface from a mockup, confirm the difference is **treatment** (reproducibl
 
 ## Restyle an app-only feature into the target's design language — don't delete it, don't leave it old
 
-`product-ux-quality.md`'s parity differ runs **both ways** and flags an **app-only element**
+`ux-gates.md`'s parity differ runs **both ways** and flags an **app-only element**
 (present in the app, absent from the design) as a finding. That rule and the
 *preserve-a-real-extra-feature* rule above read as **opposites** — "mismatch" vs "preserve
 it" — and when two rules collide an implementer reaches for the **harsher** one: *delete it
 to match*, the wrong default and the costliest mistake on a restyle. Resolve the tension by
 **classifying** the app-only element with the differ's operative test — *does removing it
-lose a user capability?* (`product-ux-quality.md` owns that test) — into exactly one of
+lose a user capability?* (`ux-gates.md` owns that test) — into exactly one of
 three buckets:
 
 - **Decoration / pure shell** (no capability, no real data — an extra header, a "Showing N
@@ -260,7 +260,7 @@ feature spec nor a data spec.
   will "helpfully" reconcile the numbers and inject fabricated data, invisible to the
   coordinator until it ships (`agentic-delivery`).
 - **This is why the parity differ ignores text values entirely** — see the Phase-6
-  parity-differ gate (owns the differ's exact scope) in `product-ux-quality.md`.
+  parity-differ gate (owns the differ's exact scope) in `ux-gates.md`.
 
 **Acceptance:** every number in the matched product traces to a real computation or an
 honest empty state; no value present in the product originates from the design mock.
@@ -303,7 +303,7 @@ are NN/g's own:
 - **User control and freedom** (NN/g #3) — a clear exit and undo from every state; nothing
   irreversible on one mis-click.
 - **Consistency and standards** (NN/g #4) — one component per concept, one spacing scale,
-  one type scale, platform conventions (depth: `product-ux-quality.md`, one component per
+  one type scale, platform conventions (depth: `ux-components.md`, one component per
   concept; scales from Refactoring UI).
 - **Error prevention** (NN/g #5) — constrain inputs; confirm the consequential.
 - **Recognition rather than recall** (NN/g #6) — keep options visible; don't force the user

@@ -114,8 +114,19 @@ landing in an orchestrator's context uncapped. Stdlib-only; blocks (exit 2,
 which per the host's docs continues the subagent instead of stopping it, so no
 work is lost) a chat handback over 800 chars / 10 lines; exempts only agent
 types named in `HANDBACK_EXEMPT_TYPES` (default: 4 built-in types) — it never
-inspects tools, so add a custom read-only review lane's type there; releases
-after 3 blocks per agent so it never loops forever. `--selftest` proves it fires.
+inspects tools, so a custom read-only review lane is capped by default too;
+releases after 3 blocks per agent so it never loops forever. `--selftest`
+proves it fires.
+
+**A harness with no report file** (a review lane's findings ARE its chat
+answer) still needs a cap — never exempt it: exempt means uncapped, which
+reopens the cost problem. Raise the cap for that agent type only, via a
+second, `matcher`-scoped `SubagentStop` entry with env overrides:
+
+```json
+{ "matcher": "security-reviewer", "hooks": [{ "type": "command",
+    "command": "HANDBACK_MAX_LINES=25 HANDBACK_MAX_CHARS=2000 python3 .claude/skills/agentic-delivery/scripts/handback_cap.py" }] }
+```
 
 ## Subagent model + cache-TTL pin (a Host-enforced instance, Claude Code)
 

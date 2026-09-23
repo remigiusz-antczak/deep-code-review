@@ -408,7 +408,7 @@ Every billable or slow call must map to value delivered.
   sequential; that shape is not the anti-pattern. Distinct from **N+1** above (a
   query *per row* of an existing result — this is a handful of independent
   *top-level* calls, present even for a single row/request) and from the
-  client-side critical-request-chain waterfall in `frontend-a11y.md`'s Core Web
+  client-side critical-request-chain waterfall in `web-fetch.md`'s Core Web
   Vitals section (the browser's dependent-fetch chain hurting LCP/TTI, versus the
   server handler's own `await` ordering hurting TTFB here). And distinct from the
   terse `async/parallel where safe` line above, which states the principle: this
@@ -461,7 +461,7 @@ Every billable or slow call must map to value delivered.
   `await`s** bullet above, whose independent calls read *different* sources so `Promise.all`
   is the whole fix — here they read the *same* source, so `Promise.all` leaves the duplicate
   read standing. Distinct from the client-side **identity fan-out** hook in
-  `frontend-a11y.md` (N mounted consumers each re-fetching one shared singleton, coalesced
+  `web-fetch.md` (N mounted consumers each re-fetching one shared singleton, coalesced
   behind a Provider/cache): this is two sibling projections inside *one* handler, coalesced
   by hoisting the single read and deriving both locally.
 - **An expensive `await` placed *above* an early return is paid on every request that takes

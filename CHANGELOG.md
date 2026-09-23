@@ -3,6 +3,26 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.440.0] — 2026-09-23
+
+### Changed — web review load cut 56%
+- The `web` archetype must-load drops from 86,820 → 38,039 estimated tokens. `frontend-a11y.md` (125 KB → 24 KB) and `product-ux-quality.md` (133 KB → 39 KB) keep what every web review needs; depth moves into 14 routed sub-files (`a11y-aria`, `a11y-live`, `a11y-focus`, `a11y-color-motion`, `a11y-forms`, `web-fetch`, `web-render`, `ux-writes`, `ux-dataviz`, `ux-lists`, `ux-components`, `ux-interaction`, `ux-sweep`, `ux-gates`). The WCAG section was first re-tagged into real headings with no content change. Line conservation: 2,564 lines, 0 duplicated, 98 pointer rewrites. A structural test pins that a non-form, non-chart web review loads none of the form/chart sub-files.
+- 38,083 is the `web` archetype's MUST-LOAD **floor**, not a typical review's real load: a typical dashboard also triggers `web-fetch.md` (22,040 bytes / 4 = 5,510 tokens) and `a11y-live.md` (6,889 bytes / 4 = 1,722 tokens), for a combined 45,315 estimated tokens (`scripts/mustload-budgets.tsv` WEB NOTE).
+
+### Added
+- `deep-code-review/scripts/reaper_lint.py` (opt-in `DCR_REAPER_LINT=1` in `templates/dcr-gates.sh`): a heuristic, opt-in lint, not a proof. It can miss a reaper built from variables, `eval`, or a helper in another file, and a clean run means only that no known shape matched. It flags cleanup scripts that pipe `lsof -t` with an `-i` selector into `kill` without `-sTCP:LISTEN` (any flag order or cluster, including through a `pids=$(lsof …)` variable killed later in the file), kill across a port range (`seq`, `{A..B}`, or `for ((…))` with bounds of 1024 or more), use `pkill`/`killall`/`pgrep` or `ps | grep` on a browser/server name (whole-word match on the pattern argument only), call `fuser -k <port>/tcp` or `kill-port`, or assign a protected-port list of two or more port numbers. Comments are stripped and `\` continuations joined before matching. An unlistable directory, an unreadable file, or a file that is not UTF-8 text exits 2. Extensionless scripts are found by shebang, along with `*.mk`, `GNUmakefile`, and `justfile`. A line is exempted only by `# reaper-lint: allow <reason>` on that same line. Doctrine: reap only provably own or orphaned processes; dry-run by default. Closes #1101.
+- Log-parsing gates anchor on the runner's real summary line and are dry-run against a known-green and a known-red log (`lang-shell.md`, #1097); a review harness with no report file raises its handback cap with a matcher-scoped `SubagentStop` entry instead of being exempted (`host-enforcement.md`, #1099). +evals.
+- size-budget-raise: .claude/skills/deep-code-review/references/concurrency-shared-state.md 30122→30933 reaper rules + reaper_lint command (#1101)
+
+### Fixed — web reference-routing gaps
+- `product-ux-quality.md`'s pre-ship one-component-per-concept checklist box now points to its own procedure (`ux-components.md`), and the load-map trigger row for `ux-components.md` names the pre-ship box explicitly, so a reviewer ruling on that box is routed to the depth that backs it.
+- `frontend-a11y.md`'s load-map row and `a11y-focus.md`'s own trigger both now name an off-canvas, collapsed, or visually hidden region that holds focusable content, closing a routing gap where such a region loaded neither file.
+- `ux-components.md` no longer cites a nonexistent `frontend-a11y.md` grep for the "avoidance comment" pattern; it now names the pattern directly (a comment stating a reason not to use a shared primitive) and keeps the distinction from a comment promising to finish a migration.
+- `privacy-by-design.md`'s dark-pattern cross-reference pointed at a section `product-ux-quality.md` no longer carries; it now points at the `product-output-safety` skill's *Deceptive patterns* harm class (hidden defaults, manufactured urgency, hard-to-reverse consent).
+- `agentic-delivery/references/roles.md`'s UX & Design role row now also names `ux-interaction.md` beside `product-ux-quality.md`, matching the web split's interaction-completeness depth move.
+- size-budget-raise: .claude/skills/deep-code-review/references/privacy-by-design.md 4813→4924 dark-pattern cross-ref points at product-output-safety instead of a dead product-ux-quality.md section
+- size-budget-raise: .claude/skills/agentic-delivery/references/roles.md 16975→17065 UX & Design row also names ux-interaction.md
+
 ## [1.439.0] — 2026-09-23
 
 ### Changed — the load every review pays cut by ~46%

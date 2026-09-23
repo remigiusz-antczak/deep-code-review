@@ -43,18 +43,18 @@ share the mechanism:
 **non-intersection and non-clipping**, which hold on every renderer. They are **not**
 for absolute positions or exact widths, which are renderer- and font-metric-dependent
 and produce the cross-OS flake the bar warns against (the renderer-tolerance / pinned-
-exception discipline, `product-ux-quality.md` gate 3). The assertion is "these two do
+exception discipline, `ux-gates.md` gate 3). The assertion is "these two do
 not overlap," never "this is 132px wide." Show it **red before / green after** the
 fix, like any regression test. This is the mechanical proof behind the
 screenshot-inspection checklist's **overlap** and **clip** items
-(`product-ux-quality.md` gate 1).
+(`ux-gates.md` gate 1).
 
 ## Capturing the pre-hydration render — the disabled-until-hydrated write control
 
 The geometry assertions above run against the *hydrated* DOM, and one gate-1 defect is
 invisible there: a write control gated on client-only state (`useSession` / `useAuth`) is
 server-rendered `disabled` and enables only once the client bundle hydrates, so for the
-SSR → hydration window it looks like a permanent dead control (`product-ux-quality.md` gate 1,
+SSR → hydration window it looks like a permanent dead control (`ux-gates.md` gate 1,
 *not-dead-before-hydration*). Catching it needs a snapshot taken **before the client bundle
 runs** — three captures, cheapest first:
 
@@ -91,7 +91,7 @@ This is the **positive control** for the *not-dead-before-hydration* detector �
 that converts the static `disabled={!session}` *lead* into a finding (principle 2: *an absence
 is evidence only after a positive control fires*). Where the harness cannot produce any of the
 three captures for a route, the item is **could-not-check** and fails **open**; a missing
-snapshot is not a clean pass (`product-ux-quality.md` gate 1). It complements
+snapshot is not a clean pass (`ux-gates.md` gate 1). It complements
 `domain-p.md`'s SSR/static-HTML inspection, which catches hydration-*nesting* faults
 in the same server-rendered output.
 

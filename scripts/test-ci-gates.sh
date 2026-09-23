@@ -2502,6 +2502,188 @@ else
   record 1 "pre-push-verify: a marker already in the base (outside the pushed range) does not block"
 fi
 
+# ===========================================================================
+# Web must-load isolation (own lane; APPENDED AT THE END by convention). The
+# `web` archetype must-loads only the parents frontend-a11y.md and
+# product-ux-quality.md; their conditional depth lives in routed sub-files
+# (a11y-*.md, web-*.md, ux-*.md), each indexed in its parent with a trigger.
+# Pin, structurally, that a web review touching no form and no chart -- the
+# LIGHT floor parsed live from SKILL.md's phase table, plus the web row's
+# must-load refs parsed live from the load map, plus domain-p.md -- loads none
+# of the form / chart sub-files (a11y-forms.md, ux-writes.md, ux-dataviz.md):
+# none is in that load set, and no content line of any of them appears
+# verbatim in it. Also pin that every sub-file is routed from its parent's
+# index AND from SKILL.md, and that the form / chart index rows name their
+# trigger. Planted RED: pasting one forms bullet back into the parent must
+# FIRE, and dropping the ux-dataviz.md index row must FIRE.
+# ===========================================================================
+
+# web_mustload_refs <skill_dir> — print the backticked refs in the load map's
+# `| web |` row (an independent re-derivation of cmd_mustload's parse).
+web_mustload_refs() {
+  awk -F'|' '
+    $0 == "| Archetype | Default domains | Must-load refs |" { on = 1; next }
+    on && /^\|---/ { next }
+    on && !/^\|/ { on = 0 }
+    on {
+      a = $2; gsub(/^[[:space:]]+|[[:space:]]+$/, "", a)
+      if (a != "web") next
+      cell = $4
+      while (match(cell, /`[A-Za-z0-9._-]+\.md`/)) {
+        print substr(cell, RSTART + 1, RLENGTH - 2)
+        cell = substr(cell, RSTART + RLENGTH)
+      }
+    }
+  ' "$1/SKILL.md" | sort -u
+}
+
+# web_plain_leaks <skill_dir> — print every content line (>= 25 chars, after
+# the 4-line title / blank / trigger / blank header) of a form or chart
+# sub-file found verbatim in the non-form, non-chart web load set, plus any
+# form / chart sub-file the load set names outright. Empty output == isolated.
+web_plain_leaks() {
+  local sd="$1" f
+  local set_list="$WORK/web-plain-set.txt" pats="$WORK/web-plain-pats.txt"
+  : >"$set_list"
+  : >"$pats"
+  while IFS= read -r f; do
+    case "$f" in
+      a11y-forms.md|ux-writes.md|ux-dataviz.md) printf 'LOAD SET NAMES A FORM/CHART FILE: %s\n' "$f" ;;
+    esac
+    printf '%s\n' "$sd/references/$f" >>"$set_list"
+  done < <({ floor_light_refs "$sd"; web_mustload_refs "$sd"; } | sort -u)
+  printf '%s\n' "$sd/SKILL.md" "$sd/references/domain-p.md" >>"$set_list"
+  for f in a11y-forms.md ux-writes.md ux-dataviz.md; do
+    [ -f "$sd/references/$f" ] || { printf 'MISSING SUB-FILE: %s (fail closed)\n' "$f"; continue; }
+    awk 'NR > 4 && length($0) >= 25' "$sd/references/$f" >>"$pats"
+  done
+  [ -s "$pats" ] || { printf 'NO FORM/CHART PATTERNS (fail closed)\n'; return 0; }
+  while IFS= read -r f; do
+    grep -Fxf "$pats" "$f" | sed "s|^|LEAK $(basename "$f"): |" || true
+  done <"$set_list"
+}
+
+# web_index_unrouted <skill_dir> — print every a11y-*/web-*/ux-* sub-file not
+# named (backticked) in its parent's index or in SKILL.md, and a form / chart
+# index row that does not name its trigger. Empty output == fully routed.
+web_index_unrouted() {
+  local sd="$1" f b parent
+  for f in "$sd"/references/a11y-*.md "$sd"/references/web-*.md "$sd"/references/ux-*.md; do
+    [ -e "$f" ] || continue
+    b="$(basename "$f")"
+    case "$b" in
+      ux-*) parent="product-ux-quality.md" ;;
+      *) parent="frontend-a11y.md" ;;
+    esac
+    grep -qF "\`$b\`" "$sd/references/$parent" || printf 'UNROUTED %s (parent %s)\n' "$b" "$parent"
+    grep -qF "\`$b\`" "$sd/SKILL.md" || printf 'UNROUTED %s (SKILL.md)\n' "$b"
+  done
+  grep -E '^\| `a11y-forms\.md` \|' "$sd/references/frontend-a11y.md" | grep -qi 'form' \
+    || printf 'TRIGGERLESS a11y-forms.md index row\n'
+  grep -E '^\| `ux-writes\.md` \|' "$sd/references/product-ux-quality.md" | grep -qi 'form' \
+    || printf 'TRIGGERLESS ux-writes.md index row\n'
+  grep -E '^\| `ux-dataviz\.md` \|' "$sd/references/product-ux-quality.md" | grep -qi 'chart' \
+    || printf 'TRIGGERLESS ux-dataviz.md index row\n'
+}
+
+web_set="$({ floor_light_refs "$dcr_sd"; web_mustload_refs "$dcr_sd"; } | sort -u | tr '\n' ' ')"
+web_leaks="$(web_plain_leaks "$dcr_sd")"
+web_unrouted="$(web_index_unrouted "$dcr_sd")"
+web_subs="$(ls "$dcr_sd"/references/a11y-*.md "$dcr_sd"/references/web-*.md "$dcr_sd"/references/ux-*.md 2>/dev/null | wc -l | tr -d ' ')"
+if [ -n "$web_set" ] && [ -z "$web_leaks" ] \
+  && printf '%s' "$web_set" | grep -qF 'frontend-a11y.md' \
+  && printf '%s' "$web_set" | grep -qF 'product-ux-quality.md'; then
+  record 0 "web isolation: a non-form, non-chart web review (${web_set}+ domain-p.md) loads none of a11y-forms.md / ux-writes.md / ux-dataviz.md"
+else
+  printf '%s\n' "$web_leaks" | head -5
+  record 1 "web isolation: a non-form, non-chart web review (${web_set}+ domain-p.md) loads none of a11y-forms.md / ux-writes.md / ux-dataviz.md"
+fi
+
+if [ -z "$web_unrouted" ] && [ "$web_subs" -ge 14 ]; then
+  record 0 "web isolation: every a11y-*/web-*/ux-* sub-file ($web_subs) is routed from its parent's index and SKILL.md; form/chart rows name their trigger"
+else
+  printf '%s\n' "$web_unrouted" | head -5
+  record 1 "web isolation: every a11y-*/web-*/ux-* sub-file ($web_subs) is routed from its parent's index and SKILL.md; form/chart rows name their trigger"
+fi
+
+# a11y-focus.md's own trigger and frontend-a11y.md's index row for it must
+# both name an off-canvas/collapsed/visually-hidden focusable region (fix11/
+# web): such a region still holds focusable content and must not silently
+# drop out of either route.
+if grep -qi 'off-canvas, collapsed, or visually hidden' "$dcr_sd/references/a11y-focus.md" \
+  && grep -E '^\| `a11y-focus\.md` \|' "$dcr_sd/references/frontend-a11y.md" \
+     | grep -qi 'off-canvas, collapsed, or visually hidden'; then
+  record 0 "web isolation: a11y-focus.md trigger and its frontend-a11y.md index row both name an off-canvas/collapsed/visually-hidden focusable region"
+else
+  record 1 "web isolation: a11y-focus.md trigger and its frontend-a11y.md index row both name an off-canvas/collapsed/visually-hidden focusable region"
+fi
+
+# Planted RED: a copy of the skill whose a11y parent re-absorbs one forms
+# bullet must be flagged as a leak into the non-form web load set.
+wiso_sd="$WORK/web-iso/deep-code-review"
+rm -rf "$WORK/web-iso"
+mkdir -p "$WORK/web-iso"
+cp -R "$dcr_sd" "$wiso_sd"
+awk 'NR > 4 && length($0) >= 25 { print; exit }' "$wiso_sd/references/a11y-forms.md" \
+  >>"$wiso_sd/references/frontend-a11y.md"
+wiso_leaks="$(web_plain_leaks "$wiso_sd")"
+if printf '%s\n' "$wiso_leaks" | grep -q '^LEAK frontend-a11y.md: '; then
+  record 0 "web isolation: FIRES when forms depth leaks back into the web must-load set (planted RED)"
+else
+  record 1 "web isolation: FIRES when forms depth leaks back into the web must-load set (planted RED)"
+fi
+
+# Planted RED: a parent index that drops the ux-dataviz.md row leaves the chart
+# sub-file unrouted from its parent -- the routing check must FIRE.
+cp "$dcr_sd/references/frontend-a11y.md" "$wiso_sd/references/frontend-a11y.md"
+grep -vF '| `ux-dataviz.md` |' "$dcr_sd/references/product-ux-quality.md" \
+  >"$wiso_sd/references/product-ux-quality.md" || true
+# Capture first: piping straight into `grep -q` can SIGPIPE the producer under
+# `set -o pipefail` and read as a non-match.
+wiso_unrouted="$(web_index_unrouted "$wiso_sd")"
+if printf '%s\n' "$wiso_unrouted" | grep -qF 'UNROUTED ux-dataviz.md (parent product-ux-quality.md)' \
+  && printf '%s\n' "$wiso_unrouted" | grep -qF 'TRIGGERLESS ux-dataviz.md index row'; then
+  record 0 "web isolation: FIRES when a parent index drops a sub-file's row (planted RED)"
+else
+  record 1 "web isolation: FIRES when a parent index drops a sub-file's row (planted RED)"
+fi
+
+# ===========================================================================
+# dcr-gates opt-in reaper_lint (own lane; APPENDED AT THE END by convention),
+# on the optin-gates target above. Relative DCR_REAPER_LINT_PATHS entries
+# resolve against the target's repo root even when the runner is started from
+# another directory, and a whitespace-only value fails closed with a named
+# message instead of aborting on an empty-array expansion.
+# ===========================================================================
+
+mkdir -p "$og/ops"
+printf 'pkill -f chromium\n' >"$og/ops/reap.sh"
+rl_run() {  # <log> [VAR=value ...] — run the runner from $WORK; sets RL_RC
+  local log="$1"
+  shift
+  if (cd "$WORK" && env DCR_REAPER_LINT=1 "$@" bash "$og_runner") >"$log" 2>&1; then RL_RC=0; else RL_RC=$?; fi
+}
+rl_run "$WORK/rl-red.log" DCR_REAPER_LINT_PATHS=ops
+if [ "$RL_RC" -ne 0 ] && grep -q '\[BROAD_PKILL\]' "$WORK/rl-red.log" \
+  && grep -q 'dcr-gates: reaper_lint FAIL' "$WORK/rl-red.log"; then
+  record 0 "dcr-gates opt-in: reaper_lint resolves a relative path against the repo root and FIRES (planted RED)"
+else
+  record 1 "dcr-gates opt-in: reaper_lint resolves a relative path against the repo root and FIRES (planted RED)"
+fi
+rl_run "$WORK/rl-green.log" DCR_REAPER_LINT_PATHS=src
+if [ "$RL_RC" -eq 0 ] && grep -q 'dcr-gates: reaper_lint PASS' "$WORK/rl-green.log"; then
+  record 0 "dcr-gates opt-in: reaper_lint passes a clean relative path"
+else
+  record 1 "dcr-gates opt-in: reaper_lint passes a clean relative path"
+fi
+rl_run "$WORK/rl-blank.log" DCR_REAPER_LINT_PATHS='   '
+if [ "$RL_RC" -ne 0 ] && grep -q 'FAIL reaper_lint (DCR_REAPER_LINT_PATHS names no path)' "$WORK/rl-blank.log"; then
+  record 0 "dcr-gates opt-in: whitespace-only DCR_REAPER_LINT_PATHS fails closed"
+else
+  record 1 "dcr-gates opt-in: whitespace-only DCR_REAPER_LINT_PATHS fails closed"
+fi
+rm -rf "$og/ops"
+
 # ---------------------------------------------------------------------------
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"

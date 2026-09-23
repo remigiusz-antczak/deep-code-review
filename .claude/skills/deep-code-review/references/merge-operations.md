@@ -142,7 +142,7 @@ as a blocking term of the batch union, so one wedged heavy gate can't stall the 
 
 A heavy gate **broken in this environment** — its own harness crashes, a dependency it needs is down — is the
 **crash cousin** of the hang above, and likewise a **can't-check, not a red**: "could not check" is not "found
-a problem" (the gate discipline in `product-ux-quality.md`). It must **fail-open for the batch proof** — drop
+a problem" (the gate discipline in `ux-gates.md`). It must **fail-open for the batch proof** — drop
 that one broken term and run the deterministic runnable subset — so batching **continues** rather than
 collapsing the whole train to serial merging; one broken tool must not halt all batching. Hang and crash
 differ in the **response** and in **what evidence survives**: a hang is **timeboxed then escalated** (validity
@@ -181,7 +181,7 @@ never saw this PR — `SKILL.md` principle 2). Two ways it happens:
   forge itself reports a job **skipped/Success** — a job-level cost-gate `if:` an agent can't flip without an
   owner-only label or a manual dispatch — a preflight that **refuses** that green verdict is *stricter than
   the required check it stands in for* and **deadlocks** anyone without the owner lever (the gate-vs-standard
-  rule — a gate must never be stricter than the standard it enforces, `product-ux-quality.md` /
+  rule — a gate must never be stricter than the standard it enforces, `ux-gates.md` /
   `frontend-a11y.md` — applied to CI). Such a preflight must **diagnose why** a check is absent —
   *policy-declined* (cost gate: work exists, a human must grant the run) vs *nothing-to-run* (path filter: no
   in-scope change) — and **name the owner action**, not refuse blindly; conflating the two reports a false
@@ -351,7 +351,7 @@ graded, `method.md`). Anything an author can produce or skip locally is **adviso
   duplicate-source-drift (one source, not two copies that fall out of step); the trusted control stays the
   forge run pinned to the reviewed SHA. (The sibling **design** question — an evidence gate must require a
   source that *renders for the reviewer*, an uploaded attachment, not a raw-content-host link that only
-  *looks* like evidence — is `product-ux-quality.md`'s "gate on visibility, not presence.")
+  *looks* like evidence — is `ux-gates.md`'s "gate on visibility, not presence.")
 - **The *absence* of a hold marker is not authorization — a mutable-text hold can be edited away.** The mirror
   of the rule above: where a merge is blocked by a "DO NOT MERGE" / hold marker in a **mutable** surface (a
   PR-body line, a checklist box, a label a bot can toggle), its **disappearance** is self-reported too —

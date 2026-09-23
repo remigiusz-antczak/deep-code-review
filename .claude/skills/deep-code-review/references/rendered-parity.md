@@ -1,8 +1,8 @@
 # Rendered parity — "matches / looks the same" claims (domain P)
 
 Read this when a task or claim is a port, restyle, or design-parity match to a reference. Split from
-`product-ux-quality.md`, which keeps the checklist, the enforcing gate, and every rule an "above" pointer here
-names.
+`product-ux-quality.md`, which keeps the checklist and every rule an "above" pointer here names; the
+enforcing gate is in `ux-gates.md`.
 
 ## Parity claims: the default state is the canonical surface
 
