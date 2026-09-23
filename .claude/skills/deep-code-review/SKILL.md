@@ -95,7 +95,7 @@ is incomplete:
 SCOPE: <FULL | DIFF <base> | FILE <paths>>
 START_SHA: <sha | N/A>
 TREE_STATE: <CLEAN | DIRTY | WORKTREE_PATH=<path>>
-VERIFY_SURFACE: <url-or-port · tree/worktree path · branch · sha actually rendered | NONE_RUNNING> (required when ARCHETYPE: web or a port/restyle/parity task; TREE_STATE is where I edit, VERIFY_SURFACE is what a human would see — routinely different trees)
+VERIFY_SURFACE: <url-or-port · tree/worktree path · branch · sha actually rendered | NONE_RUNNING> (required on web/port/restyle/parity; TREE_STATE is where I edit, this is what a human sees — often another tree; check: agentic-delivery `surface_check.py`)
 HISTORY_DEPTH: <git rev-list --count HEAD | N/A>
 REVERTS_CHECKED: <commits | NONE>
 BANNED_REMEDIES: <rejected approaches | NONE>

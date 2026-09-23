@@ -227,6 +227,7 @@ if [ -n "${DELIVERY_ROOT}" ]; then
   SELFTEST_SCRIPTS+=(
     "${DELIVERY_ROOT}/scripts/serial_gate.py"
     "${DELIVERY_ROOT}/scripts/handback_cap.py"
+    "${DELIVERY_ROOT}/scripts/surface_check.py"
   )
 fi
 for script in "${SELFTEST_SCRIPTS[@]}"; do

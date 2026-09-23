@@ -44,7 +44,7 @@ receipt discipline survives designs, data, and published resources:
 | Code | Immutable base + final Git SHA, review scope, exact-revision test/CI evidence; G5 served-app / UI checks where applicable |
 | Document / design | Native immutable version if available, else an exported-content digest + snapshot date; render/read-back + the acceptance actually reviewed |
 | Dataset / model | Version or snapshot, content/manifest digest, source lineage + observation date; the data-quality / model-eval scope actually run |
-| Published / deployed | Provider operation or resource id **plus** the deployed version — the **serving process's own** build-baked commit/build id, never a build/timestamp field embedded in a data payload it serves (that dates the artifact, not the running code; if the payload stamp is the only signal, report "data as of X; running code unconfirmed") — content digest + observation date, and a read-back from the intended user surface |
+| Published / deployed | Provider operation or resource id **plus** the deployed version — the **serving process's own** build-baked commit/build id (`scripts/surface_check.py served`), never a timestamp in a data payload it serves (that dates the artifact, not the running code; payload stamp only → report "data as of X; running code unconfirmed") — content digest + observation date, and a read-back from the intended user surface |
 
 A mutable URL or filename alone is insufficient; capture a dated snapshot/digest
 before acceptance. **A digest proves content identity, not correctness,
