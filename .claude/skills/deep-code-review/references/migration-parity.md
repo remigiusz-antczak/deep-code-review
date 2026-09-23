@@ -107,6 +107,20 @@ mirror lane for a section the differ already reports MATCH. Compare like-for-lik
 design's default view against the app's **same** view, and verify the owner's stated-priority
 surface first, not whichever view the app happens to default to.
 
+**Seed through real write paths, never a hand-edited store.** A committed, idempotent,
+dev-only seed command (invocation named in the lane brief) writes each sample row through the
+app's own creation flow, labelled sample, never production (chrome-vs-data rule below).
+Render both sides on the **same** auth state — a dev identity past sign-in, not signed-out,
+or the differ's `missing` list is an auth gap, not a build order (the MISMATCH precondition
+line). Disclose the comparison state beside the verdict (goalpost rule, `product-ux-quality.md`).
+Only on matched states is a gross-dimension delta parity evidence, not a volume notice (below).
+
+**Check order: cheap and deterministic first — an earlier mismatch stops the rest.** Diff
+design-token **values** (below) before the structural differ, and run the differ before any
+screenshot pass: a token mismatch or a `MISMATCH`/`CANNOT_COMPARE` verdict is usually the root
+cause of a later pixel diff — fix and re-run before chasing a screenshot the structural gap
+already explains.
+
 ## Scope a parity claim to the correspondence table — one screen verified is not the product
 
 `product-ux-quality.md` gate 4 already defines *done* on a parity task as the
@@ -237,9 +251,8 @@ feature spec nor a data spec.
 - **Brief the chrome-vs-data split into every parallel worker.** A lane without the caveat
   will "helpfully" reconcile the numbers and inject fabricated data, invisible to the
   coordinator until it ships (`agentic-delivery`).
-- **This is why the parity differ ignores text values entirely** — the differ's rule follows
-  from this one; see the Phase-6 parity-differ gate (which owns the differ's exact scope) in
-  `product-ux-quality.md`.
+- **This is why the parity differ ignores text values entirely** — see the Phase-6
+  parity-differ gate (owns the differ's exact scope) in `product-ux-quality.md`.
 
 **Acceptance:** every number in the matched product traces to a real computation or an
 honest empty state; no value present in the product originates from the design mock.
@@ -310,14 +323,13 @@ heuristic a screen violates, never as a substitute for naming it. (Benchmarking 
 
 ## 🚩 grep / signals
 
-- A parity claim ("matches the reference") backed only by a structural audit, a green suite,
-  or seed-data screenshots — with no surface-by-surface real-data pass.
+- A parity claim ("matches the reference") with **no mechanical differ evidence** — backed
+  only by a structural audit, a green suite, seed-data screenshots, or an assertion with no
+  diff image / structured mismatch list attached, and no surface-by-surface real-data pass.
 - A parity / completion claim phrased over **the product / the app / all pages** with **no
   correspondence table** and no `N/M` coverage fraction — a sample generalized to the
   population (a **High** communication defect); worse when the one screen verified is a
   static, shell-less page.
-- A **"matches"** claim on a parity task with **no mechanical differ** — no diff image or
-  structured mismatch list attached, only an assertion.
 - A **structural** divergence (different columns / grouping / composition) characterised as
   **"close" / "1:1" / "mostly there"** — a category error; a different structure is a
   different screen.
@@ -334,8 +346,6 @@ heuristic a screen violates, never as a substitute for naming it. (Benchmarking 
   ledger** (single owner per shared-shell path, shell-lands-first — a **High** coordination
   defect), or a page lane's diff **editing a shared-shell path it does not own** (layout /
   nav / tokens / chrome primitive), even when correct in isolation.
-- A comparison treating **page height / row count** versus a seed-data mockup as a defect
-  rather than a notice.
 - "Match the reference and use judgment" with **no cited heuristic** named behind a redesign
   recommendation.
 - A primary task that needs a **scroll back to the top nav** to switch sections, or N clicks

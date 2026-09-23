@@ -3,6 +3,47 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [Unreleased]
+
+### Added — matched-state parity, freshness/acceptance rows, port-scoped kill
+- `deep-code-review/scripts/parity_differ.py`: the MISMATCH report now prints a
+  fixed precondition line — both renders must share the **same auth + data
+  state**, or a signed-out app render reports every gated section as `missing`
+  and points the fix in the wrong direction. `_selftest`'s `mismatch` case pins
+  the substring; verified fail-before (removing the line drops the assertion)
+  / pass-after. +1 `deep-code-review` eval
+  (`parity-missing-sections-on-a-signed-out-render-is-a-state-mismatch`).
+- `deep-code-review/references/migration-parity.md`: two new paragraphs —
+  seed through the product's real write paths via a committed, idempotent,
+  dev-only seed command (labelled sample, never production), render both
+  sides on the same dev-identity auth state, and disclose the comparison
+  state; and a check-order paragraph (design-token values, then the
+  structural differ, then screenshots last — an earlier-tier mismatch stops
+  the later ones). Paid down by merging two duplicate "no mechanical differ
+  evidence" red flags into one, dropping a red flag that restated existing
+  body text (page-height/row-count vs a seed mockup), and tightening one
+  bullet from 3 lines to 2.
+- `agentic-delivery/references/project-state.md`: the Published/deployed row
+  now names the **serving process's own** build-baked commit/build id as the
+  deployed-version signal, never a build/timestamp field embedded in a data
+  payload it serves ("data as of X; running code unconfirmed" when that is
+  the only signal). The Acceptance row now requires the Criterion to be the
+  owner's own words, quoted and minimally trimmed (names scrubbed), kept
+  apart from implementation notes, verified on their surface. +2
+  `agentic-delivery` evals (`served-freshness-reads-process-code-ref-not-payload-stamp`,
+  `acceptance-is-the-owners-quoted-words-not-a-paraphrase`).
+- `deep-code-review/references/concurrency-shared-state.md`: "Terminating work
+  you own" now covers port-scoped kills — `lsof -ti tcp:PORT | xargs kill`
+  reaps every process on the port, not only the listener; the verified
+  listener-only form is `lsof -t -iTCP:PORT -sTCP:LISTEN` (macOS lsof 4.91;
+  unconfirmed on Linux), since `-s` before an `-i` selector silently matches
+  nothing. Red flag extended to name/command-line/port match. +1
+  `deep-code-review` eval
+  (`port-wide-lsof-kill-reaps-clients-and-the-listen-filter-needs-dash-i`).
+- size-budget-raise: .claude/skills/deep-code-review/references/migration-parity.md 24028→24869 matched-state seed/auth-disclosure paragraph + check-order paragraph, paid partway by merging/dropping duplicate red flags
+- size-budget-raise: .claude/skills/agentic-delivery/references/project-state.md 5970→6407 Published/deployed row (process build id, not payload stamp) and Acceptance row (owner's quoted words) widened in place
+- size-budget-raise: .claude/skills/deep-code-review/references/concurrency-shared-state.md 30012→30042 port-scoped kill paragraph, paid down by tightening two nearby bullets but kept the reviewer's-editor/orchestrator collateral-damage examples rather than cutting them for a further ~30 bytes
+
 ## [1.434.0] — 2026-09-23
 
 ### Added — opt-in CI enforcement for target repos (`install.sh --with-gates`)

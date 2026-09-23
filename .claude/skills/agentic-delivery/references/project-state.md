@@ -18,7 +18,7 @@ record.
 | Knowledge | Facts with source + observation date; assumptions labelled separately with a validation/expiry condition; open uncertainty |
 | Work | Task id, objective revision, one accountable owner, dependencies, the direct/delegate/parallel/investigate decision + reason, status, next action/trigger |
 | Decisions | Decision id, alternatives weighed to consequence, rationale/evidence, owner, superseded decision |
-| Acceptance | Criterion, required check, artifact revision, `PASS`/`FAIL`/`UNVERIFIED`, evidence source + observer |
+| Acceptance | Criterion — the owner's own words, quoted and minimally trimmed (names scrubbed), kept apart from implementation notes and verified on their surface where one was stated — required check, artifact revision, `PASS`/`FAIL`/`UNVERIFIED`, evidence source + observer |
 | Artifacts | Real immutable identities + locations, producing task, integration/publication/visibility receipts; never invent an id for uncreated work |
 | Resources | Aggregate + per-lane budgets, spent/reserved/unknown, remaining bound, requested vs actual model config (see `model-tiering.md` in the `deep-code-review` skill) |
 | Authority | Grant source (owner-authored only; the writer never authors a grant — `SKILL.md` Human gates), authorized actor/action/resource/scope, conditions/expiry, current applicability; pending actions + denial reasons; **no credentials** |
@@ -44,7 +44,7 @@ receipt discipline survives designs, data, and published resources:
 | Code | Immutable base + final Git SHA, review scope, exact-revision test/CI evidence; G5 served-app / UI checks where applicable |
 | Document / design | Native immutable version if available, else an exported-content digest + snapshot date; render/read-back + the acceptance actually reviewed |
 | Dataset / model | Version or snapshot, content/manifest digest, source lineage + observation date; the data-quality / model-eval scope actually run |
-| Published / deployed | Provider operation or resource id **plus** the deployed version/content digest + observation date, and a read-back from the intended user surface |
+| Published / deployed | Provider operation or resource id **plus** the deployed version — the **serving process's own** build-baked commit/build id, never a build/timestamp field embedded in a data payload it serves (that dates the artifact, not the running code; if the payload stamp is the only signal, report "data as of X; running code unconfirmed") — content digest + observation date, and a read-back from the intended user surface |
 
 A mutable URL or filename alone is insufficient; capture a dated snapshot/digest
 before acceptance. **A digest proves content identity, not correctness,

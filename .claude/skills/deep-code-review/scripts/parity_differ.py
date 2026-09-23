@@ -20,7 +20,10 @@ CONTRACT (fail-closed; every branch below is load-bearing, not cosmetic)
 * MATCH (0) — the ONLY pass. Both sides present; every design section is
   present in the app; every design-populated section is populated in the app.
 * MISMATCH (1) — lists the gap per section: "missing" (build it) or "empty"
-  (seed it). That list IS the work queue for a mirror/restyle task.
+  (seed it). That list IS the work queue for a mirror/restyle task. The report
+  carries a fixed precondition line: both renders must share the same auth +
+  data state, or a signed-out app render reports every gated section as
+  "missing" and points the fix in the wrong direction (build, not sign in).
 * USAGE_ERROR (2) — bad CLI invocation (e.g. only one of --design/--app).
 * COULD_NOT_CHECK (3) — either side is missing, unreadable, empty, or yields
   no sections. Never a score, never a pass — a one-sided input cannot compare.
@@ -247,6 +250,9 @@ def _render_verdict(design: list[tuple[str, bool]], app: list[tuple[str, bool]])
     return MISMATCH, "\n".join([
         (f"MISMATCH: {len(missing)} missing + {len(empty)} empty of "
          f"{len(design_ids)} design section(s). This list is the work queue."),
+        "precondition: both renders must share the same auth + data state "
+        "(dev identity past sign-in, seeded) — a section gated behind sign-in "
+        "reads as 'missing' on a signed-out render; confirm before building.",
         *gap_lines,
         *info_lines,
     ])
@@ -312,7 +318,7 @@ def _selftest() -> int:
 
     code, report = diff_sides(design, app_partial)
     check("mismatch", code, report, MISMATCH,
-          must_have=("MISMATCH", "beta", "gamma", "delta"),
+          must_have=("MISMATCH", "beta", "gamma", "delta", "same auth"),
           must_not=("aligned",))
 
     code, report = diff_sides(design, app_unseeded)

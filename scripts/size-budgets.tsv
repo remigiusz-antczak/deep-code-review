@@ -34,7 +34,7 @@
 .claude/skills/agentic-delivery/references/incident-response.md	7665
 .claude/skills/agentic-delivery/references/multi-session-coordination.md	53740
 .claude/skills/agentic-delivery/references/production-grade-product-playbook.md	6535
-.claude/skills/agentic-delivery/references/project-state.md	5970
+.claude/skills/agentic-delivery/references/project-state.md	6407
 .claude/skills/agentic-delivery/references/retrospective.md	4415
 .claude/skills/agentic-delivery/references/roles.md	16975
 .claude/skills/agentic-delivery/references/support-ops.md	4455
@@ -50,7 +50,7 @@
 .claude/skills/deep-code-review/references/api-contracts.md	27668
 .claude/skills/deep-code-review/references/billing-correctness.md	8429
 .claude/skills/deep-code-review/references/branch-and-merge-hygiene.md	84938
-.claude/skills/deep-code-review/references/concurrency-shared-state.md	30012
+.claude/skills/deep-code-review/references/concurrency-shared-state.md	30042
 .claude/skills/deep-code-review/references/data-quality.md	75247
 .claude/skills/deep-code-review/references/dependency-currency-and-upgrades.md	16037
 .claude/skills/deep-code-review/references/docs-and-dx.md	22511
@@ -64,7 +64,7 @@
 .claude/skills/deep-code-review/references/language-stack-redflags.md	43511
 .claude/skills/deep-code-review/references/machine-report.md	10061
 .claude/skills/deep-code-review/references/method.md	67386
-.claude/skills/deep-code-review/references/migration-parity.md	24028
+.claude/skills/deep-code-review/references/migration-parity.md	24869
 .claude/skills/deep-code-review/references/mobile-appsec.md	25887
 .claude/skills/deep-code-review/references/model-tiering.md	10662
 .claude/skills/deep-code-review/references/observability.md	17989
