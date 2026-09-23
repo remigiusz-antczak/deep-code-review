@@ -93,6 +93,7 @@ jobs:
           python3 .claude/skills/agentic-delivery/scripts/lane_liveness.py --selftest
           python3 .claude/skills/agentic-delivery/scripts/review_digest.py --selftest
           python3 .claude/skills/agentic-ceo/scripts/task_ledger.py --selftest
+          python3 .claude/skills/agentic-ceo/scripts/token_report.py --selftest
           python3 .claude/skills/agentic-delivery/scripts/feedback_ledger.py --selftest
 
       # scripts/skill_index.py generates the per-skill and repo-level INDEX.md

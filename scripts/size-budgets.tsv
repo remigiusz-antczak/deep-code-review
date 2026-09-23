@@ -27,7 +27,7 @@
 #   find .claude/skills \( -name 'SKILL.md' -o -path '*/references/*.md' \) \
 #     -type f | LC_ALL=C sort | while IFS= read -r f; do \
 #     printf '%s\t%s\n' "$f" "$(LC_ALL=C wc -c < "$f" | tr -d '[:space:]')"; done
-.claude/skills/agentic-ceo/SKILL.md	13525
+.claude/skills/agentic-ceo/SKILL.md	13662
 .claude/skills/agentic-delivery/SKILL.md	23935
 .claude/skills/agentic-delivery/references/dev-env-ownership.md	28376
 .claude/skills/agentic-delivery/references/fanout-host-sizing.md	36927
@@ -36,7 +36,7 @@
 .claude/skills/agentic-delivery/references/host-enforcement.md	12805
 .claude/skills/agentic-delivery/references/incident-response.md	7665
 .claude/skills/agentic-delivery/references/merge-queue-worktrees.md	58681
-.claude/skills/agentic-delivery/references/multi-session-coordination.md	57001
+.claude/skills/agentic-delivery/references/multi-session-coordination.md	56999
 .claude/skills/agentic-delivery/references/production-grade-product-playbook.md	6635
 .claude/skills/agentic-delivery/references/project-state.md	7452
 .claude/skills/agentic-delivery/references/retrospective.md	4577

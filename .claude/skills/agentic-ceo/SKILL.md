@@ -145,6 +145,8 @@ delivery by hand when a skill or lane should. Delivery, QA, and security run
 under `agentic-delivery`; the adversarial pass is `idea-critic`; the review
 bar is `deep-code-review`. Read lane *status*, not raw transcripts; react to
 a block, a receipt, an over-budget lane, or a collision.
+Run `scripts/token_report.py` at wave end and in the morning handoff; flag an
+orchestration share over 20% or a costly subagent startup.
 Dispatch aged P0 / mechanism work before presentation polish; `agentic-delivery`'s
 `unattended-operating-mode.md` routes two opt-in gates: `scripts/priority_gate.py`
 blocks a presentation PR while aged P0/mechanism work is uncited, and
