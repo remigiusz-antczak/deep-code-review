@@ -28,7 +28,7 @@ design.
 
 ## Accessibility — WCAG 2.2 AA, how to check
 
-**Structure & semantics**
+### Structure & semantics
 - Native semantic elements (`<button>`, `<a href>`, `<nav>`, `<main>`, `<h1..h6>` in order, `<label>`,
   `<table>` with headers) before ARIA. ARIA only to fill gaps; a wrong `role` is worse than none. First rule
   of ARIA: use a native element if one exists.
@@ -341,7 +341,7 @@ design.
   `getByRole('status')` resolves), not a raw div grid. **Distinct** from the dead-`<Suspense>` bullet under
   Reliability & performance (a fallback that never *renders*) — this loader renders fine and is merely silent.
 
-**Keyboard & focus** (WCAG 2.1.1, 2.4.3, 2.4.7, and 2.2's 2.4.11)
+### Keyboard & focus (WCAG 2.1.1, 2.4.3, 2.4.7, and 2.2's 2.4.11)
 - Everything actionable is reachable and operable by keyboard alone; logical tab order; no keyboard trap.
 - **A custom interactive widget is built to its ARIA Authoring Practices (APG) pattern.** Each widget class
   (dialog, tablist, combobox, listbox, menu, disclosure, slider, tree) has a prescribed role +
@@ -526,7 +526,7 @@ design.
 - A **global focus/scroll-into-view correction** handler (the *Focus Not Obscured* remedy) must yield to an
   open overlay and scope to the focused element's own scroll container — detector below.
 
-**Global focus-correction vs. an open overlay**
+### Global focus-correction vs. an open overlay
 
 A **document-level focus/scroll-into-view correction** handler — the common remedy for *Focus Not Obscured*
 (nudge the scroll so a focused control clears sticky chrome) — must **bail while an overlay is open** (gate on
@@ -541,7 +541,7 @@ background. Container scoping is the more general fix (it also covers any nested
 correction with no open-overlay guard and no scroll-container scoping; exercise it — focus a field inside an
 open overlay and confirm the background does not move.
 
-**New in WCAG 2.2 — verify explicitly**
+### New in WCAG 2.2 — verify explicitly
 - **Target Size (Minimum) 24×24 CSS px** for pointer targets (SC 2.5.8, AA) — but **five exceptions**, so
   don't over-flag: **Spacing** (a 24 CSS px diameter circle centred on each undersized target intersects
   neither another target nor another undersized target's circle — so two adjacent small icons still fail when
@@ -562,7 +562,7 @@ open overlay and confirm the background does not move.
   exceptions — so an image CAPTCHA passes 3.3.8 but **fails 3.3.9**; hold high-stakes auth (banking, health)
   to it.
 
-**Perceivable**
+### Perceivable
 - Contrast: text ≥ 4.5:1 (large text ≥ 3:1); UI components & graphical objects ≥ 3:1 (1.4.11). Don't convey
   meaning by color alone.
 - **A two-state chip/pill that differs only by a colour token — with the state word in neither the visible
@@ -636,7 +636,7 @@ open overlay and confirm the background does not move.
   **existing** reduced-motion hook (cited as the patch), not a new pattern — the audit-by-symptom delta, not a
   re-statement of the CSS-doesn't-reach-JS rule above.
 
-**Timing & motion** (WCAG 2.2.1, 2.2.2 — both Level A)
+### Timing & motion (WCAG 2.2.1, 2.2.2 — both Level A)
 - **A time limit that logs out or discards unsaved input needs a warn-and-extend path.** A silent idle-logout
   or silent data loss fails **2.2.1 Timing Adjustable**: warn before expiry and let the user extend with one
   simple action (≥ 20 s to react), or let them turn the limit off / lengthen it. Exceptions: real-time events,
@@ -651,7 +651,7 @@ open overlay and confirm the background does not move.
   5 s grace period. Distinct from the 3×/sec flash limit above (seizure risk; this is attention /
   distraction).
 
-**Forms**
+### Forms
 - Every input has a programmatic label; errors are announced (not color-only), identified, and described;
   instructions are not placeholder-only.
 - Autocomplete tokens on personal-data fields (1.3.5).
