@@ -42,7 +42,7 @@ paths. Expands section G of `SKILL.md`. Cross-ref J /
   never gets collected) and its handler keeps firing on detached state. Same question — does the
   registration's lifetime match the subscriber's? — and same fix: pair every register with a
   deregister on teardown. The stack-agnostic form of the goroutine-leak footgun in
-  `language-stack-redflags.md`: a spawned task or subscription with no cancellation reachable from
+  `lang-go.md`: a spawned task or subscription with no cancellation reachable from
   its owner's teardown.
 - **A connection/subscription registry lives in *one process* — it does not span horizontal
   replicas.** A WebSocket/SSE server that keeps its live-connection or subscription map in **local

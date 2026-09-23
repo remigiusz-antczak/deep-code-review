@@ -858,8 +858,13 @@ cmd_binaries() {
 # regardless of archetype, per SKILL.md's own "| Phase | Does | Load |" table
 # (never a second hardcoded copy of that list here). Refs named in phase
 # 0/1/2's Load column are LIGHT-set; a ref suffixed literally with "on FULL"
-# in that same cell is FULL-only, added on top of LIGHT. SKILL.md's own
-# byte count is always included (it is read to reach the table at all).
+# in that same cell is FULL-only, added on top of LIGHT. A ref suffixed
+# literally with " when " (e.g. "`method-situational.md` when a gate verdict is
+# disputed") is CONDITIONAL: a routed sub-file loaded only on its stated
+# trigger, so it is excluded from both floors but must still exist on disk
+# (fail closed). Placeholders such as `lang-*.md` name no concrete file and are
+# not parsed at all. SKILL.md's own byte count is always included (it is read
+# to reach the table at all).
 # Enforced against `phase-floor-light` / `phase-floor-full` rows in the same
 # config, same freeze-ratchet direction. Fails closed if the phase table
 # can't be found/parsed, or if a named ref isn't on disk.
@@ -954,8 +959,10 @@ cmd_mustload() {
   # archetype -- never a second hardcoded copy here). Only phase rows 0, 1,
   # 2 count toward the floor (3 Adversarial onward is not part of the
   # unconditional Phase 0-2 setup). A backtick-quoted ref immediately
-  # followed by the literal " on FULL" qualifier is FULL-only; every other
-  # backtick-quoted ref in those rows is LIGHT (loaded on every scope).
+  # followed by the literal " on FULL" qualifier is FULL-only; one followed by
+  # the literal " when " qualifier is CONDITIONAL (loaded only on its stated
+  # trigger: existence-checked, never counted); every other backtick-quoted
+  # ref in those rows is LIGHT (loaded on every scope).
   # ---------------------------------------------------------------------------
   local -a floor_light_refs=() floor_full_only_refs=()
   local phrow inphase=0 phase_field load_field floor_reflist frf btick
@@ -988,7 +995,16 @@ cmd_mustload() {
         [ -n "$floor_reflist" ] \
           || die "mustload: phase \"$phase_field\" has no backtick-quoted refs in $skill_md (fail closed)"
         for frf in $floor_reflist; do
-          if printf '%s' "$load_field" | grep -qF "${btick}${frf}${btick} on FULL"; then
+          if printf '%s' "$load_field" | grep -qF "${btick}${frf}${btick} when "; then
+            # CONDITIONAL: never part of the floor, but a trigger that names a
+            # file which does not exist is a dangling route -- fail closed.
+            if [ ! -f "$refs_dir/$frf" ]; then
+              printf 'MUSTLOAD FLOOR MISSING REF: Phase 0-2 conditional ref references/%s, not on disk (fail closed)\n' \
+                "$frf" >&2
+              fail=1
+            fi
+            continue
+          elif printf '%s' "$load_field" | grep -qF "${btick}${frf}${btick} on FULL"; then
             in_full=0
             for fi in "${!floor_full_only_refs[@]}"; do
               [ "${floor_full_only_refs[$fi]}" = "$frf" ] && in_full=1 && break

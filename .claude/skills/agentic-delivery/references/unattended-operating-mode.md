@@ -61,14 +61,14 @@ the reversibility boundary or a human tap (`SKILL.md` **Human gates**).
 Each rung is a name and a pointer; the mechanism lives at the pointer.
 
 1. **Keep the base green.** `merge-queue-worktrees.md` **A load-flaky required gate
-   is not a confirmed red** + `deep-code-review` `branch-and-merge-hygiene.md` §5
+   is not a confirmed red** + `deep-code-review` `merge-operations.md`
    **Red base: discharge the deadlock with a train**; `SKILL.md` principle 3.
 2. **Land every green PR** — a **single merge seat**, back-to-back inside one
    not-red window (default a small batch, ~3-ready), a **union-proven train** when
    members might interact. `merge-queue-worktrees.md` **Parallelizing the merge
    seat backfires**, **The window's admission check is not-red**, **An
    independent-PR-queue cascade is a cadence choice**; `SKILL.md` principle 6;
-   `branch-and-merge-hygiene.md` §5 Merge trains.
+   `merge-operations.md` Merge trains.
 3. **Turn red / conflicting PRs green by conflict TYPE, not file count** —
    already-applied vs diverged vs regenerable-artifact vs true textual conflict,
    each resolved by its type. `deep-code-review` `branch-and-merge-hygiene.md` §4
@@ -88,7 +88,7 @@ Each rung is a name and a pointer; the mechanism lives at the pointer.
 
 - **FREEZE-THEN-TRAIN** — while a resolver rebases a cluster against the base,
   freeze merges into that base and land only non-overlapping surgical merges
-  meanwhile. `branch-and-merge-hygiene.md` §5 **freeze the sweep while a resolver
+  meanwhile. `merge-operations.md` **freeze the sweep while a resolver
   runs**; `merge-queue-worktrees.md` **Parallelizing the merge seat backfires** and
   `dev-env-ownership.md` **An ownership map blocks a dual write, not dual work** (a shared artifact in
   flight blocks only the lanes that touch it).
@@ -275,6 +275,6 @@ loudly** — silence reads as working. `communication-structure` (BLUF);
   several peer sessions on a shared host / account.
 - `references/project-state.md` — the durable backlog / ask-ledger the run-start
   checklist requires.
-- `deep-code-review`'s `branch-and-merge-hygiene.md` — the conflict-classification,
+- `deep-code-review`'s `branch-and-merge-hygiene.md` + `merge-operations.md` — the conflict-classification,
   merge-train, and red-base mechanics rung 3 and FREEZE-THEN-TRAIN route to;
   `release-engineering.md` — the review-side delivery-metric (DORA) depth.

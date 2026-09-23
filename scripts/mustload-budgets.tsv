@@ -56,12 +56,30 @@
 # freeze-ratchet direction as the per-archetype rows: DOWN only, as the
 # mandatory set is trimmed/split.
 #
-web	86836
-mobile	28778
-api / service	33573
-data / ETL	29581
-agent / LLM / MCP	33716
-IaC / platform	4342
-lib / SDK	10913
-phase-floor-light	65903
-phase-floor-full	87137
+# PHASE-FLOOR SPLIT (phase-floor cut): the five Phase 0-2 refs kept only
+# what every review needs and moved conditional depth into routed sub-files,
+# each loaded on an explicit trigger: language-stack-redflags.md -> one
+# lang-*.md per language family present; domain-checklists.md -> an index
+# over one domain-<letter>.md per applicable domain; testing-and-evals.md ->
+# testing-ui.md / testing-ai-evals.md / testing-ml.md; method.md ->
+# method-situational.md (a "when"-qualified conditional ref in the phase
+# table, which cmd_mustload excludes from the floor but existence-checks);
+# branch-and-merge-hygiene.md -> merge-operations.md. SKILL.md's duplicated
+# role table was removed to pay for the new routes (role-coverage.md already
+# holds the same table with more columns). Floors re-pinned: phase-floor-light 65903->35786, phase-floor-full
+# 87137->47350. No archetype row rose; each re-pinned down to its current
+# total (repointed cross-references, plus 3 tokens of slack already present on
+# web, mobile, api / service, and agent / LLM / MCP): web 86836->86823,
+# mobile 28778->28775, api / service 33573->33566, data / ETL 29581->29577,
+# agent / LLM / MCP 33716->33705, IaC / platform 4342->4339, lib / SDK
+# 10913->10909.
+#
+web	86823
+mobile	28775
+api / service	33566
+data / ETL	29577
+agent / LLM / MCP	33705
+IaC / platform	4339
+lib / SDK	10909
+phase-floor-light	35786
+phase-floor-full	47350

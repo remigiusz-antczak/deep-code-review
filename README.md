@@ -246,7 +246,7 @@ identical API/LLM/DB calls, over-fetching, "call it every run" patterns).
 | G Concurrency | races, TOCTOU, shared-state writes | `concurrency-shared-state.md` |
 | H Maintainability | dead code, duplication, feature flags, lockstep surfaces | — |
 | I APIs & integration | contracts, webhooks, message-schema evolution | `api-contracts.md` |
-| J Testing & evals | taxonomy, test-the-failure, AI eval harness | `testing-and-evals.md` |
+| J Testing & evals | taxonomy, test-the-failure, AI eval harness | `testing-and-evals.md`, `testing-ai-evals.md` |
 | K Build / CI / supply chain | reproducible build, SHA-pinned actions, SBOM, signatures, dependency currency | `dependency-currency-and-upgrades.md` |
 | L Infra / IaC / cloud | Docker, K8s, Terraform, IAM, network exposure | `infra-iac-containers.md` |
 | M Observability | logs/metrics/traces, golden signals, audit integrity, restore drills | `observability.md` |
@@ -255,10 +255,10 @@ identical API/LLM/DB calls, over-fetching, "call it every run" patterns).
 | P Frontend / a11y | WCAG 2.2 AA, Core Web Vitals, plus the *design half* (five data states, encoding, metric deltas) | `frontend-a11y.md`, `product-ux-quality.md` |
 | Q Privacy & licensing | minimization, retention/erasure, consent flags, license compat | `privacy-compliance.md`, `privacy-by-design.md` |
 | R i18n & encoding | locale-aware formatting, Unicode normalization | — |
-| S Branches & open-work triage | branching model, merge/PR/rebase per branch, safe cleanup | `branch-and-merge-hygiene.md` |
+| S Branches & open-work triage | branching model, merge/PR/rebase per branch, safe cleanup | `branch-and-merge-hygiene.md`, `merge-operations.md` |
 | T Multi-tenancy & isolation | tenant-scoped queries, cache/index keys, per-tenant lifecycle | — |
 | W Workflows, jobs & scheduling | cron liveness, exactly-once effect, dead-letter, saga state | — |
-| + | per-language grep-able footguns | `language-stack-redflags.md` |
+| + | per-language grep-able footguns | `language-stack-redflags.md` + one `lang-*.md` per language |
 
 > **A to Z?** Not yet — and that's the point. U, V and X–Z are unassigned; a
 > domain earns its letter, so the map grows only when a genuinely new class of

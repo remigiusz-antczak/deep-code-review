@@ -681,6 +681,54 @@ for phren in '1 Ground truth|1. Ground truth|1' '2 Domain audits|Phase 2 Domain 
   fi
 done
 
+# CONDITIONAL qualifier: a Phase 0-2 ref written "`ref.md` when <trigger>" is a
+# routed sub-file loaded only on that trigger -- excluded from both floors,
+# but it must exist on disk. Three cases on a copy of the clean fixture, with
+# a deliberately huge conditional ref (1000 tokens) so counting it by mistake
+# would blow straight through the ceiling:
+#   (a) "when" -> excluded: the gate passes and reports the unchanged floor;
+#   (b) positive control -- the same ref WITHOUT "when" is counted and FIRES,
+#       proving the qualifier (not the ref's mere presence) excludes it;
+#   (c) the conditional ref missing on disk fails closed, naming it.
+cond_root="$WORK/mustload-fixture/cond"
+rm -rf "$cond_root"
+cp -R "$mlroot" "$cond_root"
+sed 's/^| 1 Ground truth | fixture phase 1 | `ref-p1.md`, `ref-p2.md` |$/| 1 Ground truth | fixture phase 1 | `ref-p1.md`, `ref-p2.md`; `ref-p5.md` when a gate verdict is disputed |/' \
+  "$mlroot/.claude/skills/deep-code-review/SKILL.md" >"$cond_root/.claude/skills/deep-code-review/SKILL.md"
+head -c 4000 </dev/zero | tr '\0' 'h' >"$cond_root/.claude/skills/deep-code-review/references/ref-p5.md"
+cond_skill_tok=$(( $(wc -c <"$cond_root/.claude/skills/deep-code-review/SKILL.md" | tr -d '[:space:]') / 4 ))
+cond_light=$(( cond_skill_tok + 10 + 5 + 10 ))
+cond_full=$(( cond_light + 20 ))
+printf 'demo\t15\ndemo2\t10\nphase-floor-light\t%d\nphase-floor-full\t%d\n' \
+  "$cond_light" "$cond_full" >"$WORK/mustload-cond.tsv"
+gate "$GATES" mustload --config "$WORK/mustload-cond.tsv" "$cond_root"
+if [ "$GATE_RC" -eq 0 ] \
+  && grep -qF "phase floor LIGHT $cond_light/$cond_light, FULL $cond_full/$cond_full" "$WORK/last.log" \
+  && grep -qF '`ref-p5.md` when ' "$cond_root/.claude/skills/deep-code-review/SKILL.md"; then
+  record 0 "mustload: a \"when\"-qualified Phase 0-2 ref is conditional -- excluded from the floor"
+else
+  record 1 "mustload: a \"when\"-qualified Phase 0-2 ref is conditional -- excluded from the floor"
+fi
+sed 's/`ref-p5.md` when a gate verdict is disputed/`ref-p5.md` on every scope/' \
+  "$cond_root/.claude/skills/deep-code-review/SKILL.md" >"$WORK/cond-skill-unqualified.md"
+cp "$WORK/cond-skill-unqualified.md" "$cond_root/.claude/skills/deep-code-review/SKILL.md"
+gate "$GATES" mustload --config "$WORK/mustload-cond.tsv" "$cond_root"
+if [ "$GATE_RC" -ne 0 ] && grep -q 'MUSTLOAD FLOOR FAIL: phase-floor-light' "$WORK/last.log"; then
+  record 0 "mustload: the same ref without \"when\" is counted into the floor and FIRES (positive control)"
+else
+  record 1 "mustload: the same ref without \"when\" is counted into the floor and FIRES (positive control)"
+fi
+sed 's/^| 1 Ground truth | fixture phase 1 | `ref-p1.md`, `ref-p2.md` |$/| 1 Ground truth | fixture phase 1 | `ref-p1.md`, `ref-p2.md`; `ref-p5.md` when a gate verdict is disputed |/' \
+  "$mlroot/.claude/skills/deep-code-review/SKILL.md" >"$cond_root/.claude/skills/deep-code-review/SKILL.md"
+rm -f "$cond_root/.claude/skills/deep-code-review/references/ref-p5.md"
+gate "$GATES" mustload --config "$WORK/mustload-cond.tsv" "$cond_root"
+if [ "$GATE_RC" -ne 0 ] \
+  && grep -q 'MUSTLOAD FLOOR MISSING REF: Phase 0-2 conditional ref references/ref-p5.md' "$WORK/last.log"; then
+  record 0 "mustload: a \"when\"-qualified ref missing on disk fails closed (planted RED)"
+else
+  record 1 "mustload: a \"when\"-qualified ref missing on disk fails closed (planted RED)"
+fi
+
 # The real repo's Phase 0-2 mandatory floor is within its frozen ceiling too
 # -- confirms the new mechanism actually engaged against real data, not just
 # the fixture.
@@ -2022,6 +2070,108 @@ if [ "$og_red_rc" -ne 0 ] && grep -q 'BLOCKING #3' "$WORK/og-prio-red.log" \
   record 0 "dcr-gates opt-in: priority_gate fires on an inversion, passes once cited (planted RED)"
 else
   record 1 "dcr-gates opt-in: priority_gate fires on an inversion, passes once cited (planted RED)"
+fi
+
+# ===========================================================================
+# Language-family load isolation (own lane; APPENDED AT THE END by
+# convention). The Phase 0-2 floor carries only the cross-language core of
+# language-stack-redflags.md; each language family lives in its own routed
+# lang-*.md. Pin, structurally, that a Python-only review -- the LIGHT floor
+# parsed live from SKILL.md's phase table, plus lang-python.md -- reads no
+# other family: no other lang-*.md is in that load set, and no content line
+# of any other family file appears verbatim in it. Planted RED: pasting one
+# JavaScript bullet back into the parent must FIRE.
+# ===========================================================================
+
+# floor_light_refs <skill_dir> — print the LIGHT Phase 0-2 refs (one per
+# line): backticked refs in phase rows 0/1/2's Load cell that carry neither
+# the " on FULL" nor the " when " qualifier. An independent re-derivation of
+# cmd_mustload's parse (a test oracle, not a call into the gate under test).
+floor_light_refs() {
+  awk -F'|' '
+    $0 == "| Phase | Does | Load |" { on = 1; next }
+    on && /^\|---/ { next }
+    on && !/^\|/ { on = 0 }
+    on {
+      ph = $2; sub(/^[[:space:]]+/, "", ph)
+      if (ph !~ /^[012] /) next
+      cell = $4
+      while (match(cell, /`[A-Za-z0-9._-]+\.md`/)) {
+        ref = substr(cell, RSTART + 1, RLENGTH - 2)
+        rest = substr(cell, RSTART + RLENGTH)
+        cell = rest
+        if (rest ~ /^ on FULL/ || rest ~ /^ when /) continue
+        print ref
+      }
+    }
+  ' "$1/SKILL.md" | sort -u
+}
+
+# py_only_leaks <skill_dir> — print every line of a non-Python family file
+# (content lines >= 25 chars after its 3-line title/trigger header) found
+# verbatim in the Python-only load set, plus any other lang-*.md named in the
+# floor. Empty output == isolated.
+py_only_leaks() {
+  local sd="$1" f
+  local set_list="$WORK/py-only-set.txt" pats="$WORK/py-only-pats.txt"
+  : >"$set_list"
+  : >"$pats"
+  while IFS= read -r f; do
+    case "$f" in
+      lang-*.md) printf 'FLOOR NAMES A LANGUAGE FILE: %s\n' "$f" ;;
+    esac
+    printf '%s\n' "$sd/references/$f" >>"$set_list"
+  done < <(floor_light_refs "$sd")
+  printf '%s\n' "$sd/SKILL.md" "$sd/references/lang-python.md" >>"$set_list"
+  for f in "$sd"/references/lang-*.md; do
+    [ "$(basename "$f")" = "lang-python.md" ] && continue
+    awk 'NR > 3 && length($0) >= 25' "$f" >>"$pats"
+  done
+  [ -s "$pats" ] || { printf 'NO FAMILY PATTERNS (fail closed)\n'; return 0; }
+  while IFS= read -r f; do
+    grep -Fxf "$pats" "$f" | sed "s|^|LEAK $(basename "$f"): |" || true
+  done <"$set_list"
+}
+
+dcr_sd="$ROOT/.claude/skills/deep-code-review"
+py_floor="$(floor_light_refs "$dcr_sd" | tr '\n' ' ')"
+py_leaks="$(py_only_leaks "$dcr_sd")"
+if [ -n "$py_floor" ] && [ -z "$py_leaks" ] \
+  && grep -qxF '| Python | `lang-python.md` |' "$dcr_sd/references/language-stack-redflags.md" \
+  && grep -qxF '## Python' "$dcr_sd/references/lang-python.md" \
+  && ! grep -qE '^## (Python|JavaScript|Go|Java|Ruby|PHP|C / C\+\+|Rust|SQL)' "$dcr_sd/references/language-stack-redflags.md"; then
+  record 0 "language isolation: a Python-only review (floor: ${py_floor}+ lang-python.md) loads no other language family"
+else
+  printf '%s\n' "$py_leaks" | head -5
+  record 1 "language isolation: a Python-only review (floor: ${py_floor}+ lang-python.md) loads no other language family"
+fi
+
+# Every language file on disk is routed from the parent index AND SKILL.md,
+# so "load only the languages present" can reach each one.
+lang_unrouted=""
+for f in "$dcr_sd"/references/lang-*.md; do
+  b="$(basename "$f")"
+  grep -qF "\`$b\`" "$dcr_sd/references/language-stack-redflags.md" || lang_unrouted="$lang_unrouted $b(parent)"
+  grep -qF "\`$b\`" "$dcr_sd/SKILL.md" || lang_unrouted="$lang_unrouted $b(SKILL.md)"
+done
+if [ -z "$lang_unrouted" ] && [ "$(ls "$dcr_sd"/references/lang-*.md | wc -l | tr -d ' ')" -ge 2 ]; then
+  record 0 "language isolation: every lang-*.md is routed from language-stack-redflags.md and SKILL.md"
+else
+  record 1 "language isolation: every lang-*.md is routed from language-stack-redflags.md and SKILL.md (unrouted:$lang_unrouted)"
+fi
+
+# Planted RED: a copy of the skill whose parent re-absorbs one JavaScript
+# bullet must be flagged as a leak into the Python-only load set.
+iso_sd="$WORK/lang-iso/deep-code-review"
+rm -rf "$WORK/lang-iso"
+mkdir -p "$WORK/lang-iso"
+cp -R "$dcr_sd" "$iso_sd"
+awk 'NR > 3 && length($0) >= 25 { print; exit }' "$iso_sd/references/lang-js-ts.md" \
+  >>"$iso_sd/references/language-stack-redflags.md"
+if py_only_leaks "$iso_sd" | grep -q '^LEAK language-stack-redflags.md: '; then
+  record 0 "language isolation: FIRES when another family's content leaks into the Python-only load set (planted RED)"
+else
+  record 1 "language isolation: FIRES when another family's content leaks into the Python-only load set (planted RED)"
 fi
 
 # ---------------------------------------------------------------------------

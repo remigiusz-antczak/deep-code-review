@@ -510,7 +510,7 @@ design.
   a keyboard-only smoke test still "passes" — focus lands and the ring shows; only the *purpose* is missing,
   which a shape/keyboard pass never checks. Fix: derive `tabIndex` (and any `role` added *solely* to explain
   that focusability) from a live `ResizeObserver` comparing `scrollWidth > clientWidth` (or `scrollHeight >
-  clientHeight`) — the same comparison the clip/truncation check asserts (`testing-and-evals.md`) — so the
+  clientHeight`) — the same comparison the clip/truncation check asserts (`testing-ui.md`) — so the
   wrapper is a tab stop only while it can actually scroll; recompute on mount/resize, **not while the element
   holds focus**, since stripping `tabIndex` from the focused element bounces focus to `<body>`, a worse Focus
   Order break than the dead stop. When it *is* focusable it still needs a role and an accessible name so AT

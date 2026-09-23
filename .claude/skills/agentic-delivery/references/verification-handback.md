@@ -401,7 +401,7 @@ current-scope but a *moved head*; here it is a *current head* but *partial scope
 
 A delivery lane's PR body, handback, or status that asserts a **verified outcome** — "confirmed in the browser,"
 "it renders," "tested and working," "manually checked" — is a **self-reported claim, not evidence**: the trusted
-control is the forge run pinned to the reviewed SHA (`deep-code-review` `branch-and-merge-hygiene.md`), and even
+control is the forge run pinned to the reviewed SHA (`deep-code-review` `merge-operations.md`), and even
 a delegated lane's bare `verify: green` is only a lead (above). What makes the claim **auditable** is a line
 naming **how** it was checked — a `Verify:` line: the exact command run, the surface / URL exercised, the
 two-principal or anon probe, the evidence link. Without it a reviewer or the next agent cannot tell a real check
@@ -421,7 +421,7 @@ replace the forge run.
   confirmed.
 - **Gate on it only if the producers emit it.** Landing a `Verify:`-required merge gate strands every automated
   lane that does not yet write the line — co-evolve the lane template in the same change, or ramp it (the
-  co-evolve-a-body-gate-with-its-producers rule, `deep-code-review` `branch-and-merge-hygiene.md`).
+  co-evolve-a-body-gate-with-its-producers rule, `deep-code-review` `merge-operations.md`).
 - **🚩 tell:** a PR body / handback asserting "tested," "verified," "it works," or "confirmed" with no `Verify:`
   line naming the command, the surface, and the evidence — an unbacked completion claim, `unverified` until the
   method is stated (and still self-reported after — the forge run is the control).

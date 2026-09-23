@@ -18,198 +18,22 @@ grep -rInE 'console\.log|print\(|dbg!|System\.out\.print|fmt\.Print' .
 
 ---
 
-## Python
+## Per-language red flags — load only the languages present
 
-- `eval(`, `exec(`, `compile(` on any input → code injection.
-- `pickle.loads`, `yaml.load(` (without `SafeLoader`), `marshal`,
-  `jsonpickle` on untrusted data → deserialization RCE.
-- `subprocess.*(… shell=True)`, `os.system(`, `os.popen(` with a built string →
-  command injection. Use an argument list and `shell=False`.
-- `requests.*(… verify=False)`, `ssl._create_unverified_context` → TLS bypass.
-- String-built SQL: `cursor.execute("… %s" % x)`, f-strings in queries. Use
-  bound params (`execute(sql, (x,))`).
-- `assert` for validation → stripped under `python -O`; use explicit checks.
-- Mutable default args (`def f(x, acc=[])`) → shared state across calls.
-- `except:` / `except Exception: pass` → swallowed errors.
-- `random.random()`/`random.choice` for tokens → not a CSPRNG; use `secrets`.
-- `tempfile.mktemp`, predictable temp paths → TOCTOU.
-- `datetime.now()`/`utcnow()` without tz → naive datetimes; use tz-aware UTC.
-- `float` for money → use `decimal.Decimal`.
-- `a or b or default` over decoded JSON/config → a legitimately-present **falsy** value
-  (`0`, `False`, `""`, `[]`, `{}`) is skipped for the next fallback. Resolve by presence, not
-  truthiness (`x if x is not None else default`; `d[k] if k in d else default`), and test with
-  `0`/`False`/`""`/`[]` present.
+Each language family has its own file. Load the file for every language the target contains (Phase 0 detects them) and skip the rest:
 
-## JavaScript / TypeScript
+| Language(s) present | Load |
+|---|---|
+| Python | `lang-python.md` |
+| JavaScript / TypeScript | `lang-js-ts.md` |
+| Go | `lang-go.md` |
+| Java / Kotlin | `lang-jvm.md` |
+| Ruby, PHP | `lang-ruby-php.md` |
+| C / C++, Rust | `lang-c-cpp-rust.md` |
+| Shell / Bash scripts | `lang-shell.md` |
+| SQL / migrations | `lang-sql.md` |
 
-- `eval(`, `new Function(`, `setTimeout("string")` → code injection.
-- `innerHTML`, `outerHTML`, `insertAdjacentHTML`, `document.write`,
-  `dangerouslySetInnerHTML`, Vue `v-html` → DOM XSS. Use text nodes / framework
-  binding / sanitizer (DOMPurify).
-- `child_process.exec(` / `execSync(` with a built string → command injection;
-  use `execFile`/`spawn` with an arg array.
-- `==`/`!=` (coercion) vs `===`; `JSON.parse` on untrusted input without a
-  schema; prototype pollution via `Object.assign`/merge of untrusted keys
-  (`__proto__`, `constructor`, `prototype`).
-- `a || b || default` over decoded JSON/config → the same **falsy**-skip footgun (`0`, `false`,
-  `""`, `NaN` fall through). Use `??` (nullish coalescing) so only `null`/`undefined` fall back,
-  and test with `0`/`false`/`""` present.
-- A shared sort comparator that can return `NaN`: an `isMissing`/`isBlank` guard covering
-  `null`/`undefined`/`''` but not `NaN` lets a `NaN` (failed `parseFloat`/`Number()`, `0/0`, an
-  unresolved average — all `typeof 'number'`) slip the type dispatch into `a - b`, so the comparator
-  returns `NaN`. `Array.prototype.sort` never throws on this and the order is silently corrupt — one
-  `NaN` can scramble the order of *other* valid values, not only misplace itself. Fold
-  `Number.isNaN(v)` into the *same* "missing" predicate every caller shares (missing sorts last, both
-  directions); regression-test one `NaN` among several distinct numbers and assert **global
-  monotonicity** of the sorted result in both directions, not just where the `NaN` landed. Distinct
-  from the attacker-chosen-key comparator DoS below — that is worst-case *complexity*; this is a
-  wrong *return value*.
-- A sort comparator that **hand-places one sentinel but not its siblings.** A placeholder forced to
-  a fixed end by naming it — `if (a.status === 'TBD') return 1`, or a `null`-goes-first branch — pins
-  *that one* value and lets everything else fall through to the natural-key compare. Introduce a
-  **second** placeholder later (an `'N/A'` beside the `'TBD'`, a new enum member) and, because the
-  change touches the domain and not this function, it misses the branch, sorts by its **raw key**, and
-  lands in an arbitrary-but-consistent slot (a label `localeCompare`s wherever its letters fall).
-  Distinct from the `NaN` bullet above — that returns a *malformed* value and breaks the total-order
-  contract, so the monotonicity assertion catches it; this returns a **valid** order and only
-  *mis-places* the value, so that same assertion stays green and the bug reads as surface-specific.
-  Fix by keying on a **positive** predicate — *"is this a real value?"* — so the `else` forces
-  **every** placeholder, present or future, to the end by construction, with no list to keep complete.
-  If you must enumerate them, enumerate the **whole** set from the one enum/type that defines it and
-  add a test that fails when a member is added with no rule — a pinned handled-subset proves
-  non-regression, not completeness (`method.md`). A one-sided special-case (`return 1` with no
-  mirrored `return -1`) also breaks antisymmetry. The cross-version sibling of the same completeness
-  question — a consumer's exhaustive-`switch` outgrown by a **producer's** newly-added enum member —
-  is the added-enum-member breaking-change note in `api-contracts.md`.
-- `new Date('2026-03-14')` / `Date.parse` on a **date-only** string → **UTC** midnight, while a
-  `'…T00:00:00'` (time, no offset) → **local** midnight (MDN) → a viewer behind UTC renders a bare
-  day a **day early**; non-ISO/slash forms are unportable. Mechanism + fix in
-  `time-date-correctness.md`.
-- `Math.random()` for tokens/ids → use `crypto.randomBytes`/`randomUUID`.
-- `any`, `as any`, `@ts-ignore`, `!` non-null assertions → type holes; `TS` set
-  to non-`strict`.
-- Floating promises (missing `await`), `.catch` absent, `async` in `forEach`
-  (does not await) → dropped errors / races.
-- `addEventListener` / `.on(` / `.subscribe(` / `setInterval` / `setTimeout` with no matching
-  `removeEventListener` / `.off(` / `unsubscribe` / `clearInterval` / `clearTimeout` on
-  unmount / request-end / disposal → listener + timer leaks (a `useEffect` with no cleanup return
-  is the React form; see the subscription-lifetime rule in `concurrency-shared-state.md`).
-- `process.env.X` read at module load without validation → silent misconfig.
-- Secrets or API keys referenced in client/bundle code → shipped to the browser.
-- **A component/module with *no* `"use client"` directive does not thereby "render
-  once per request on the server" — render *location* (and so render *frequency*)
-  follows **who imports it**, not the file's own contents.** In a server/client-split
-  framework (React Server Components / the Next.js App Router), a directive-less module
-  is *shared*: imported by a Server Component it runs on the server (once per request);
-  imported and rendered by a **Client Component** it is pulled into the **client
-  bundle**, runs in the browser, and re-executes on **every** client render. A "runs
-  exactly once on the server" assumption baked into it then breaks silently the instant a
-  client caller imports it — a module-load singleton now re-initializes in each client
-  that loads the bundle (its value exposed client-side, no longer one-per-request); a
-  one-time side effect in the render path fires on every client render; an id / nonce /
-  timestamp "generated once" varies per client; a **server-only secret / env var** read
-  at module scope ships to the browser. It passes typecheck, lint, and unit tests (which
-  import the module in a plain Node context where it *does* run once), so only a real
-  client-side render exposes it. **Fix:** never infer render-frequency from file
-  content — enforce the boundary. Add a build-time `server-only` import to any module
-  that must never reach the client (it **fails the build** if a client module pulls it
-  in), keep once-per-request state in a request-scoped server construct rather than
-  module scope, and verify the real import graph, not the directive. Distinct from the
-  plain-value-**proxied**-across-the-boundary defect (`frontend-a11y.md` § "Server/client
-  boundary — a plain value proxied across it") — that is a **client** value turned into a
-  client-reference **proxy** when a **server** component imports it; this is the opposite
-  direction, a **directive-less** module pulled **into the client** and re-run, breaking a
-  render-once / server-only assumption.
-- **A client "tab shell" handed already-built Server-Component section bodies as props gates
-  only *display*, not *execution* — every section has already run its server-side reads and
-  shipped, whichever tab is active.** A common App-Router shape: a **Server Component** parent
-  builds N sections — each itself a Server Component doing real data reads/joins — and passes
-  them to a **Client Component** tab switcher as an array of `{ id, node }`, where `node` is
-  the **already-rendered** `ReactNode`. The client's `activeTab` state then chooses which
-  `node` to show (conditional render, or CSS `hidden`). But by the time that state exists,
-  **all N section bodies have already executed on the server** — every read, every join, for
-  every tab — and their output (plus any data serialized into the RSC payload) has already
-  been sent to the client. The active-tab state only reveals a pre-computed node; it cannot
-  un-run the work. Consequences: **wasted server work** (N sections fetched to show one),
-  repeated **over-fetch / cost** on every request, and a **leak** — data for tabs the user
-  never opens (an admin-only panel, another user's detail, a not-yet-entitled section) is
-  computed and **serialized into the payload the browser receives**, readable in the network
-  response regardless of the CSS that hides it. It passes typecheck and unit tests (each
-  section renders correctly in isolation) and looks right in the browser (only the active tab
-  shows), so only reading the RSC payload or the server query log exposes it. **Fix — gate
-  the *work*, not the *display*:** make an inactive section's body **not run** until it is
-  chosen. Give each tab its **own route/segment** (`/dashboard/overview`, `/dashboard/billing`)
-  so navigation, not a client boolean, triggers the read; or defer the body behind a boundary
-  that only renders on activation (a lazily-loaded segment that fetches on mount, a route
-  handler the tab calls when selected). Pass the **inputs** a tab needs (an id, a query key)
-  to something that fetches on demand — never the pre-built node of an unopened tab. Verify by
-  reading the RSC/network payload of a freshly-loaded page and confirming an unopened tab's
-  data is **absent**, and that the server query log shows only the active tab's reads.
-  **Discriminator vs the directive-less-module bullet above:** that one is about *where and
-  how often a single module runs* — a directive-less module pulled into a **client** import
-  re-executes in the browser every render and can leak a module-scope secret; this one is
-  about **eagerly-built server children that ran correctly, once, on the server, but cannot be
-  un-run by a client display gate**. There the fix enforces the boundary so the module never
-  reaches the client; here the boundary is fine (the sections are legitimately server-side) and
-  the fix is to **defer execution** so an inactive tab's reads never fire. Passing an
-  already-executed server node to a client switcher is exactly what makes "which tab is active"
-  unable to prevent the other tabs' work.
-
-## Go
-
-- Ignored errors: `_ =` on a call that returns `error`, or no `if err != nil`.
-- String-built SQL vs `db.Query(q, args...)`; `fmt.Sprintf` into a query.
-- `exec.Command("sh", "-c", built)` → command injection.
-- Goroutine leaks: a goroutine with no cancellation/`context`; `defer` inside a
-  loop accumulating until function return.
-- `math/rand` for security (use `crypto/rand`); missing `rows.Close()`;
-  data races (run with `-race`; a flag/state shared across goroutines needs
-  `sync/atomic` or a channel, not a plain field read); `panic` used for normal
-  control flow.
-- **Loop-variable capture in a closure/goroutine (pre-Go-1.22 semantics).** `for _, x := range xs { go func(){ use(x) }() }` shares **one** `x` across all iterations before Go 1.22, so the goroutines mostly see the last value. Go 1.22 gives each iteration a fresh variable — but the change follows the **module's declared `go` version in `go.mod`**, not the installed toolchain, so a vendored/legacy `go 1.20` module keeps the bug even built by a 1.22+ compiler. Check the `go.mod` directive, not `go version`; or capture explicitly (`x := x` / a param), which is correct under every version.
-- **Channel-close discipline.** Sending on or closing a **closed** channel, and closing a **nil** channel, are **run-time panics**, not no-ops — two fan-in producers each `defer close(ch)` panics the second close. One owner closes; use `sync.Once` or a done-channel when ownership is shared.
-- **Concurrent map access is a fatal crash, not a stale read.** An unsynchronized map write concurrent with any other access **can** be runtime-detected and abort the process (`fatal error: concurrent map writes`) even without `-race` — but the check is **best-effort** (the Go FAQ says it *can* crash), so a clean run is **not** proof of no concurrent access; an access the detector misses can still silently corrupt (the torn-value case in `concurrency-shared-state.md`). Guard with a mutex or use `sync.Map`.
-
-## Java / Kotlin
-
-- `ObjectInputStream.readObject` on untrusted bytes → deserialization RCE.
-- XXE: `DocumentBuilderFactory`/`SAXParser` without disabling external entities.
-- `Runtime.exec`/`ProcessBuilder` with a concatenated string.
-- String-built JPQL/SQL vs `PreparedStatement`/bound params.
-- `Random` for tokens (use `SecureRandom`); swallowed `catch (Exception e) {}`;
-  `printStackTrace()` to the response; broad `@SuppressWarnings`; a field shared across
-  threads read without `volatile` / `synchronized` / an `AtomicX` (double-checked
-  locking with a non-`volatile` instance field is broken).
-- **A mutable field used in `equals()`/`hashCode()` corrupts hash-key lookups.** Mutating a field that participates in `hashCode()` **after** the object is put in a `HashMap`/`HashSet` leaves it physically in the *old* bucket; a later `get`/`contains` computes the *new* hash, looks in a different bucket, and returns **not-found** with no exception (iteration/`remove` corrupt likewise). A hash-key must be effectively immutable over its `hashCode` fields while in the collection; and every field used in `hashCode()` must also be in `equals()` — a `hashCode()` that includes a field `equals()` ignores breaks the contract directly (two equal objects then hash differently); excluding an `equals()`-only field from `hashCode()` merely costs bucket distribution (Bloch). Classic trigger: a JPA `@Entity` or Lombok `@EqualsAndHashCode` over a mutable id/status.
-
-## Ruby
-
-- `eval`, `instance_eval`, `send`/`public_send` with user input, `constantize`.
-- `YAML.load` (use `safe_load`), `Marshal.load` on untrusted data.
-- String-built SQL vs parameterized (`where("x = ?", v)`); `system`/backticks
-  with input; mass assignment without strong params.
-
-## PHP
-
-- `eval`, `assert` on input, `include`/`require` from a request var (LFI/RFI),
-  `unserialize` on untrusted data, `extract($_REQUEST)`, `==` vs `===`,
-  `$wpdb->query` with a built string, `shell_exec`/`system`/backticks.
-
-## C / C++
-
-- `strcpy`, `strcat`, `sprintf`, `gets`, `scanf("%s")` → buffer overflow; use
-  bounded variants. Integer overflow before `malloc`; use-after-free / double
-  free; `memcpy` with an unchecked length; format-string bugs (`printf(user)`).
-- Run with ASan/UBSan (these map to top CWEs 787/416/125 — plus the classic/stack/heap
-  buffer-overflow family, 120/121/122) — and **ThreadSanitizer**
-  (`-fsanitize=thread`) for data races, which ASan/UBSan do **not** catch; state shared
-  across threads needs `std::atomic` / an explicit `std::memory_order`, not a plain access.
-
-## Rust
-
-- **`unsafe` is a proof obligation, not an escape hatch — review each block for the invariant it asserts.** `std::mem::transmute` reinterprets bytes at a new type with **no validation**: transmuting to an enum value that isn't a declared discriminant, or to a `bool`/`char` outside its valid bit-patterns, is **immediate undefined behaviour**, not a wrong-but-defined value (the std docs flag transmute as a last resort). Prefer a checked conversion (`TryFrom`, `match`, `from_bits`).
-- **`unsafe impl Send`/`Sync` silences the compiler's thread-safety check; it does not prove the property.** Wrapping a raw pointer / FFI handle to cross threads (`unsafe impl Send for Handle {}`) asserts a guarantee the compiler can no longer verify — if the pointee isn't actually safe to move/share (thread-affinity, interior aliasing), it is **silent UB with no backstop**, and "it compiles + tests pass" is not evidence (a normal run doesn't exercise UB). The Rustonomicon marks `Send`/`Sync` unsafe to implement for exactly this reason. Require a written safety argument per `unsafe impl` and confirm it holds.
-- **Other `unsafe` tells:** a raw-pointer deref with unproven provenance/lifetime; `get_unchecked` / `unwrap_unchecked` without a checked invariant; `slice::from_raw_parts` with an unvalidated length; `MaybeUninit::assume_init` before full initialization. **Verify with `cargo miri`** (and ASan/TSan on the C/C++ side of any FFI boundary), or mark the block `unverified` (`method.md`) — the normal test suite does not exercise UB.
+The cross-language sections below (switch/case, delimiter scanning, composed numeric bounds, partition gates, denial of service, the reviewer's own verification shell) apply to every review.
 
 ## Switch/case control flow & unreachable code
 
@@ -258,8 +82,8 @@ higher-confidence, not lower.
   "eliminate the need for break statements to prevent fall through" — only the classic
   colon form keeps Java's C-style default. Confirm both the language **and** the switch
   syntax before treating a missing terminator as a bug, or its presence as a no-op. (This
-  is switch/case control flow, not the `||`-falsy-skip "fall through" in this file's
-  JavaScript section above — that's operand short-circuiting, unrelated to case labels.)
+  is switch/case control flow, not the `||`-falsy-skip "fall through" in `lang-js-ts.md`'s
+  JavaScript section — that's operand short-circuiting, unrelated to case labels.)
 - **Code after an unconditional `return`/`throw`/`break`/`continue` is unreachable** —
   almost always a logic error, not harmless dead code: a guard clause that stopped
   guarding after a refactor, or a merge artifact that pasted a stale block past the exit
@@ -267,7 +91,7 @@ higher-confidence, not lower.
   `return`, `throw`, `continue`, and `break` statements") and CodeQL's
   `js/unreachable-statement` (CWE-561) both flag it; CodeQL's rationale: "An unreachable
   statement almost always indicates missing code or a latent bug and should be examined
-  carefully." Distinct from the unreferenced-code item in `domain-checklists.md` §H —
+  carefully." Distinct from the unreferenced-code item in `domain-h.md` —
   that's a live, reachable function/import nobody calls; this is a dead *branch* inside a
   function that **is** called, where one path through it never runs.
 - **A `let`/`const`/`class`/`function` declared inside one `case` without a block is
@@ -370,15 +194,6 @@ finding.
   **single** boundary comparator one step too strict at the *terminal / wraparound*
   position, wrongly rejecting a valid input rather than admitting an invalid one.
 
-## SQL / migrations
-
-- String interpolation into SQL (see per-language above).
-- `SELECT *` in app code; missing `LIMIT`/pagination; query inside a loop (N+1).
-- Migrations: `ALTER`/`CREATE INDEX` without `CONCURRENTLY` on a large table
-  (locks writes; Postgres syntax — use the engine's online-DDL equivalent
-  elsewhere); adding a `NOT NULL` column with no default; backfill in the same
-  transaction as DDL; no rollback path. See `performance-db-cost.md`.
-
 ## Denial of service / resource amplification
 
 - **ReDoS** — catastrophic backtracking from nested/overlapping quantifiers
@@ -451,7 +266,7 @@ finding.
   Distinct from the wire-level upload-size cap and the API10 "bound size" clause in
   `security-api.md` — both bound bytes actually *transferred*/received, not a
   size *claimed inside* a payload before those bytes arrive. Distinct too from the
-  C/C++ section's "integer overflow before `malloc`" above — that's an *undersized*
+  C/C++ section's (`lang-c-cpp-rust.md`) "integer overflow before `malloc`" above — that's an *undersized*
   allocation from an overflowed calculation, leading to a buffer overflow (memory
   corruption); this is an *oversized* allocation from a value trusted as-is,
   leading to memory exhaustion (availability) — different consequence, different
@@ -460,56 +275,7 @@ finding.
 
 ## Shell / Bash
 
-- Unquoted expansions (`rm -rf $DIR`), `eval`, `curl … | bash`, parsing `ls`,
-  missing `set -euo pipefail`, secrets in `set -x` traces, world-writable temp.
-- `for x in $LIST` as a membership/exclusion check on an **unquoted** variable —
-  bash word-splits it, zsh (default) does not, so a safety-critical skip/exclusion
-  list silently stops excluding under the wrong shell. Use `case` or a line-based
-  `grep -qxF`; full mechanism + the merge-guard instance:
-  `branch-and-merge-hygiene.md` §6.
-- **`set -u` + `"${arr[@]}"` on an *empty* array is a fatal `unbound variable`
-  under bash 3.2 — still macOS's default `/bin/bash` (verified `3.2.57`).** A
-  script that conditionally builds an array (flags, a discovered file list,
-  cleanup targets) and expands it under `set -u` aborts the instant the array is
-  empty; this most often sits in **trap / cleanup / reporting** code on the error
-  path, where it **masks the real failure** it was meant to report. Guard the
-  expansion (`${arr[@]+"${arr[@]}"}`) or seed the array — and run the script
-  against the **actual `/bin/bash` on the target**, since a dev box's
-  newer/homebrew bash can behave differently and hide it.
-- **A bracket *range* used to VALIDATE a character class — `case $x in *[!0-9a-f]*)`,
-  `[[ $x =~ ^[0-9a-f]+$ ]]`, `grep '[0-9a-f]'` — is resolved against the locale's
-  collating sequence, not codepoint order, so the *same* script returns a *different*
-  verdict under a different `LC_COLLATE`.** POSIX defines a range expression as "the set
-  of collating elements that fall between two elements in the collation sequence,
-  inclusive" and warns that "in other locales" (than POSIX/C) "a range expression has
-  unspecified behavior" (The Open Group Base Specifications, RE Bracket Expression). On
-  an implementation that collates in dictionary order under a UTF-8 locale (GNU/glibc:
-  `a A b B … z Z`), the uppercase letters sort *inside* `[a-f]`/`[a-z]`, so a guard meant
-  to *reject* anything that is not lowercase hex (`*[!0-9a-f]*`) silently *accepts* an
-  uppercase digest; under `LC_ALL=C` (byte order) the same guard is strict and rejects
-  it. The leniency is a property of the **locale + collation data, not the OS** — a
-  C/POSIX locale, or any libc that collates these ASCII ranges by codepoint, is strict,
-  so do not key the risk to a platform ("macOS is lenient"); verify the target's
-  `LC_ALL`/`LANG`. Consequence: a pre-commit hook that blocks every local commit on one
-  developer's box while CI stays green, or the reverse — a lenient local pass a strict CI
-  rejects — from a **byte-identical** script run in two locales. **Fix:** pin `LC_ALL=C`
-  for the comparison, or drop the range for an explicit enumerated set
-  (`*[!0123456789abcdef]*`); a POSIX named class (`[[:xdigit:]]`, `[[:lower:]]`) reads the
-  intent but is itself locale-scoped, so a security/gate comparison should still pin
-  `LC_ALL=C`. **Grep lead:** a bracket *range* (`[a-f]`, `[0-9a-f]`, `[A-Z]`, `[a-z]`)
-  inside a `case` / `[[ =~ ]]` / `grep` used as a validity check with no `LC_ALL=C` in
-  scope — read whether the compared value can carry the boundary case (uppercase where
-  lowercase is meant). **Discriminator vs the gate-divergence family:** the *drifted local
-  gate copy* false-green (`branch-and-merge-hygiene.md` § "Self-reported evidence is not a
-  trusted control") is two scripts that **differ** — a stale vendored paste behind the CI
-  definition — fixed by *single-sourcing* the logic; here the script is single-sourced and
-  **byte-identical**, and single-sourcing does **not** fix it: only pinning `LC_ALL=C` (or
-  an explicit set) stops one file being read two ways. Distinct too from the
-  changed-files / fetch-by-ref detective control and the extension-allow-list
-  under-coverage gate in `reliability-error-handling.md` (which turn on *which* input the
-  gate sees, not on how one input is interpreted), and from the application-text collation
-  rules in `i18n-l10n.md` (sorting / case-folding *user data* for display — this is
-  collation inside a *gate's control flow*).
+Reviewed-code shell footguns (unquoted expansions, `set -u` on empty arrays, locale-dependent bracket ranges) live in `lang-shell.md` — load it when the target ships shell scripts.
 
 ### The reviewer's own verification shell (measuring, not reviewing)
 

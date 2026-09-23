@@ -139,7 +139,7 @@ provider with an equivalent primitive, even where the exact mechanism differs.
   acceptance criterion**, not from "make the failing tests pass" (the failing tests may be the least
   of it). Verify a cheap-tier result against real acceptance — an **independent** check (the hat that
   builds never signs off its own build — `agentic-delivery`'s `roles.md`), rendered geometry for a
-  layout claim (`testing-and-evals.md`), or the criterion itself — never the model's own green
+  layout claim (`testing-ui.md`), or the criterion itself — never the model's own green
   self-report.
 
 ## Mapping onto this skill's own units and hats

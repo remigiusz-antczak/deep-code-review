@@ -479,7 +479,7 @@ the fan-out's *shape***, reported **once** with a remedy — not one finding per
   not a failure, an **absent** check. Two wrong reads follow, and they are **not symmetric**: a strict gate merely refuses a branch that is actually fine (safe but noisy); **worse**, a human sees the last green (belonging to an earlier, since-cancelled head) and merges believing the final head passed — a silent **fail-open** merge of an unverified head. Before
   trusting or merging, confirm a run **exists and concluded for the exact head SHA** —
   never infer from "the branch has a recent green"; treat "no run for this SHA" as a
-  third state (not passed, not failed → re-dispatch a run for this head, then decide), matching the required-check-must-report discipline in `branch-and-merge-hygiene.md`. Reduce the race
+  third state (not passed, not failed → re-dispatch a run for this head, then decide), matching the required-check-must-report discipline in `merge-operations.md`. Reduce the race
   at source: scope cancel-in-progress so it never cancels the newest run. That silent fail-open merge is a merge-safety defect, **not** this cost section’s default Medium: its severity is inherited from the unverified head it lands, not from runner cost.
 - **A merge guard must not render a `CANCELLED` run as a *failure* — that fails closed on a green
   head.** The mirror of the fail-open read above: a guard that buckets `CANCELLED` (a superseded /

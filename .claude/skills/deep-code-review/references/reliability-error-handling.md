@@ -90,7 +90,7 @@ the checklist.
   observed (retry a *transient* error a bounded number of times first). **Exception —
   a security / authz / integrity / spend attestation fails closed on a can't-verify,
   not open:** a CVE / secret / banned-terms / authz check whose input or dependency is
-  unreachable — **including its own harness failing to launch** — **blocks** (the missing-input fail-closed rule, `domain-checklists.md`;
+  unreachable — **including its own harness failing to launch** — **blocks** (the missing-input fail-closed rule, `domain-b.md`;
   "Fail closed on authz/crypto/integrity errors" below; a fail-open there is the bug,
   `security-appsec.md`). Never point a gate at a **retired or unversioned endpoint**,
   and **bound the gate's own runtime**
@@ -195,7 +195,7 @@ Review:
 - **Under self-overload, shed or degrade low-priority work.** A synchronous service with no path to
   shed low-priority load under overload collapses *all* callers uniformly (critical and optional
   alike) instead of protecting the critical ones (the queue/async shed-load case is in
-  `domain-checklists.md` §W; this is the synchronous-service case).
+  `domain-w.md`; this is the synchronous-service case).
 - **🚩** one global pool/client shared by a critical and a background/optional call; no admission
   check before expensive work when that dependency's breaker is already open; a fixed downstream
   capacity silently shrinking per replica with no floor; a synchronous service with no self-overload
@@ -214,7 +214,7 @@ Review:
   a partial or total failure — and so retries/deletes only the failed items versus
   the whole batch — is a separate response contract, set by the invocation's
   response shape plus an event-source-mapping config flag, not by this try/catch**
-  (depth, failure modes, and the config-flag fix: `domain-checklists.md` §W).
+  (depth, failure modes, and the config-flag fix: `domain-w.md`).
 - **A "never throws" function must guard every throwing call it makes — not lean on
   one outer `try`.** A parse/identity helper whose contract is "returns a default,
   never throws" is only as safe as its coverage: a `decodeURIComponent` (URIError on
@@ -327,7 +327,7 @@ when the PR carries no query-performance change.
 - **Scope:** applies when one logical operation spans two systems that cannot share
   a transaction (DB + bus, DB + third-party API, two datastores); a single-store /
   single-transaction operation does not need this. Distinct from multi-step **saga**
-  compensation (`domain-checklists.md`), which sequences several operations — this is
+  compensation (`domain-w.md`), which sequences several operations — this is
   the atomicity of **one** write plus **one** publish.
 
 ## State-machine / lifecycle correctness — model transitions, guard them, leave no impossible or stuck state
@@ -335,7 +335,7 @@ when the PR carries no query-performance change.
 Any entity with a **status / lifecycle** (`order: pending→paid→shipped→refunded`, a
 subscription, a document draft→published, a job, a ticket) is a state machine, usually
 **implicit**. Review it as one — distinct from multi-step **saga** compensation
-(`domain-checklists.md`) and from the dual-write atomicity above; this is the correctness of
+(`domain-w.md`) and from the dual-write atomicity above; this is the correctness of
 the entity's own transitions.
 
 - **Model the valid transition set.** Are the legal `from→to` transitions explicit (a table,
@@ -411,7 +411,7 @@ view of the instance lags its socket state.
   can still be mid-flight when its message's visibility timeout expires, letting a second worker pick
   up and process the same message concurrently before the first deletes it (a wall-clock race between
   the visibility timeout and the processing duration, distinct from the *scheduler*-level
-  overlapping-run case in `domain-checklists.md` §W), so the idempotent-processing requirement
+  overlapping-run case in `domain-w.md`), so the idempotent-processing requirement
   above must also hold against this non-failed concurrent duplicate, not only a post-shutdown or
   post-failure retry.
 - **Release the lease and flush before exit.** A shutting-down replica releases any lock/lease/claim

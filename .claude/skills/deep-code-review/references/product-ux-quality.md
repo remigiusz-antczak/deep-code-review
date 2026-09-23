@@ -163,7 +163,7 @@ distinct, retryable error state**, never the same branch as a genuine zero, beca
 *reads* as "confirmed none," and a swallowed fetch error becomes a false all-clear no copy can
 fix — the defect is architectural, not lexical. Distinct from `data-quality.md` §8's
 observed-low-vs-unobserved rule (a *scored* value, measured wrong) and from the silent-swallow 🚩
-in `domain-checklists.md` / `reliability-error-handling.md` (an error *discarded* at the code
+in `domain-f.md` / `reliability-error-handling.md` (an error *discarded* at the code
 layer, with no log or signal): here the fetch error is caught correctly, and the defect is which
 **rendered** state a correctly-handled failure is allowed to collapse into.
 
@@ -266,7 +266,7 @@ fallback, not the raw message — a test mocking only a curated 5xx won't catch 
 discipline as the least-careful-consumer rule above, a different **stakes** class: there a sibling
 ignoring a shared *readiness signal* renders a wrong confident value (data-honesty); here a path
 bypassing the shared *message mapper* leaks a raw internal string (a user-facing leak — cross-ref
-`security-appsec.md` A02 verbose-errors / A10 leaked-internals and `domain-checklists.md`'s
+`security-appsec.md` A02 verbose-errors / A10 leaked-internals and `domain-b.md`'s
 error-class-not-upstream-response-bodies rule). `reliability-error-handling.md` owns the *server* error
 contract; this owns which client path renders it.
 
@@ -751,7 +751,7 @@ consequence, so it is ruled on here too.
   **zero mount paths from any router entry, page, or parent component**: nothing on a real route ever
   imports it into a reachable tree. The file reads as alive (exported, tested, maybe lint-clean) and is
   shown to no one. **Different discriminator from domain H's dead-code-removal rule**
-  (`domain-checklists.md`): H's unreferenced-code check is blind to this case, since the component
+  (`domain-h.md`): H's unreferenced-code check is blind to this case, since the component
   *does* have a reference — its own test import — so a plain reference-count linter passes it clean; the
   defect here is *render*-reachability, not *reference*-count. H treats truly unreferenced code as
   maintenance/attack-surface and defaults to **delete**; this is a **product** defect — something built
@@ -957,7 +957,7 @@ A control is a defect until its whole loop works in the running product, not jus
   captured and replayed after hydration, so the handler is never a no-op — an enabled control whose
   pre-hydration click is dropped is the *dead control / no-op handler* trust defect above, not a fix.
   The static tell — `disabled={!session}` on a write action with no loading sibling — is an
-  **`unverified` lead, not a finding**: only a **pre-hydration render** (`testing-and-evals.md`)
+  **`unverified` lead, not a finding**: only a **pre-hydration render** (`testing-ui.md`)
   confirms it, so where the harness can't capture one the gate reports *could-not-check* and fails
   **open**.
 - **A disclosure default derived from async-fetched data silently never fires (mount-capture).** An
@@ -1109,7 +1109,7 @@ take **per-viewport** captures at specific scroll offsets (the `{top, mid-scroll
 route sweep* above already uses, which don't stitch) — and file only what survives. **Distinct** from
 the *sticky-chrome collision* invariant in the Enforcing gate below, a **real** defect (content painting
 **under** sticky/fixed chrome, seen mid-scroll) — this is its inverse, a **false** defect the capture
-*invents* for a correctly-pinned element; and a UX instance of `method.md`'s *reproduce a finding
+*invents* for a correctly-pinned element; and a UX instance of `method-situational.md`'s *reproduce a finding
 against the right surface* family (dev-vs-prod build, the gate's own detector) — here the wrong
 instrument is the **full-page stitch capture mode**, the right one the live render or a non-stitched
 per-viewport shot.
@@ -1261,7 +1261,7 @@ surface in domain P (the sweep above already enumerates them):
   elements (axis text, legend), held to the same could-not-check-vs-found-nothing discipline as the
   enforcing gate's heuristics.
 
-A *different* axis from reproducing an audit finding against the production build (`method.md` verifies
+A *different* axis from reproducing an audit finding against the production build (`method-situational.md` verifies
 *which build the reviewer reads*; this inspects an artifact the *product emits*), and where the data-viz
 checklist above is most often lost — the on-screen chart carries axes and a readout the serialiser
 drops.
@@ -1311,7 +1311,7 @@ a build passing prove the *code*, not the *rendered result* — auto-merging a U
 reference catches. Gate a UI-change class on the UX-evidence gate below **with its inspection cited**,
 not on the code gates alone; treat a **disabled or crashed** UX-quality gate as a **P0 repair that
 blocks merges of that change-class** until restored — a silently-off quality gate is worse than none, it
-reads green over unexamined UI (cf. `branch-and-merge-hygiene.md`, self-reported ≠ trusted control; and
+reads green over unexamined UI (cf. `merge-operations.md`, self-reported ≠ trusted control; and
 the auto-merge-on-bot-PRs flag in `dependency-currency-and-upgrades.md`). **🚩**: auto-merge on a
 UI-bearing change with only code/build/lint gates + a presence-only screenshot; a UX-quality gate
 disabled "temporarily" with merges still flowing.
@@ -1334,7 +1334,7 @@ task:
    other gate are the ones only a look at the image catches, so a UI status **names what it inspected**
    from this checklist (defined once here; a status cites the items):
    - **overlap** — no two text / interactive elements intersect (mechanical proof: the bounding-box
-     non-intersection assertion, `testing-and-evals.md`);
+     non-intersection assertion, `testing-ui.md`);
    - **clip / truncation** — no unintended ellipsis or cut glyph at the narrow width
      (`scrollWidth > clientWidth`, same file);
    - **contrast** — text meets AA against its *painted* background (`frontend-a11y.md`);
@@ -1370,7 +1370,7 @@ task:
    **not-dead-before-hydration reads only before the client bundle runs** — a fourth timing class
    neither the at-rest shot nor the mid-scroll sweep can see, because both capture the *post-hydration*
    render; it needs a snapshot taken inside the SSR → hydration window (a pre-hydration or CPU-throttled
-   capture, `testing-and-evals.md`), and where the harness can't take one the item is *could-not-check*,
+   capture, `testing-ui.md`), and where the harness can't take one the item is *could-not-check*,
    not clean.
 
    **A PR-body image embed is not evidence unless it renders for the reviewer, not just the author.** A

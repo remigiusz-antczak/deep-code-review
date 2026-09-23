@@ -269,7 +269,7 @@ design-quality checklist in `references/migration-parity.md` (#124).
 - **MITRE CWE / CVE** — weakness and vulnerability naming.
 - **OWASP ASVS 5.0** — Application Security Verification Standard; V3 "Web Frontend Security" groups the browser-native controls in `frontend-a11y.md`: postMessage origin/syntax (§3.5.5), Subresource Integrity (§3.6.1), Referrer-Policy (§3.4.5), clickjacking / frame-ancestors (§3.4.6). Trusted Types is **not** an ASVS V3 requirement — it is a related MDN-sourced control, cited to MDN only. §-numbers from the 5.0 spec text; by name only.
 - **IEEE 754** — binary floating-point arithmetic (`NaN` comparison-false / total-ordering
-  semantics, `±Infinity`, subnormals). Referenced in `domain-checklists.md` domain A and
+  semantics, `±Infinity`, subnormals). Referenced in `domain-a.md` and
   `api-contracts.md` for non-finite propagation and the double-precision safe-integer range (the
   range itself is corroborated by RFC 8259 §6 in the table above). Named by name only — not
   fetched this session (paywalled ANSI/IEEE standard).
@@ -444,7 +444,7 @@ fault-detection, not only line coverage).
 ## Verified by direct fetch (2026-09-19) — RAG retrieval-seam & agent-trajectory evals
 
 Verification date for the rows below: **2026-09-19**. Added for the deep-code-review
-`testing-and-evals.md` LLM-application eval lens (RAG retrieval quality + generation
+`testing-ai-evals.md` LLM-application eval lens (RAG retrieval quality + generation
 faithfulness/relevancy + agent trajectory).
 
 | Standard / tool | URL | What was confirmed |
@@ -480,7 +480,7 @@ encoded (business-ops routes applicability to counsel).
 ## Verified by direct fetch (2026-09-19) — ML pipeline correctness (leakage, reproducibility, label quality)
 
 Verification date for the rows below: **2026-09-19**. Added for the deep-code-review
-`testing-and-evals.md` ML-pipeline-correctness lens (leakage + reproducibility) and
+`testing-ml.md` ML-pipeline-correctness lens (leakage + reproducibility) and
 `data-quality.md` label-quality bullet.
 
 | Standard / tool | URL | What was confirmed |
@@ -506,7 +506,7 @@ as a **beta** regime only; its category IDs are not walked as current.
 ## Verified by direct fetch (2026-09-19) — ML fairness / bias
 
 Verification date for the rows below: **2026-09-19**. Added for the deep-code-review
-`testing-and-evals.md` ML-fairness detection lens. No legal disparate-impact threshold is
+`testing-ml.md` ML-fairness detection lens. No legal disparate-impact threshold is
 encoded (the code check is measure + deliberate handling + documentation; the legal
 determination routes to counsel).
 
@@ -885,7 +885,7 @@ rules). Fetched via `curl` (raw HTML).
 ## Verified by direct fetch (2026-09-20) — AI-generated-code API/symbol hallucination
 
 Verification date for the row below: **2026-09-20**. Added for the deep-code-review
-`domain-checklists.md` Domain A fold on API hallucination (a nonexistent method/param on a *real*
+`domain-a.md` fold on API hallucination (a nonexistent method/param on a *real*
 dependency, distinct from the package-name hallucination already cited via the Spracklen study).
 Fetched via `curl` (the arxiv abstract page).
 
@@ -925,7 +925,7 @@ composed inside it has none unless it sets `aria-required` itself. All four fetc
 ## Verified by direct fetch (2026-09-20) — code-review design section ("What to look for in a code review")
 
 Verification date for the row below: **2026-09-20**. Added for the deep-code-review
-`domain-checklists.md` Domain A default-path placement/design-fit bullet (issue #805).
+`domain-a.md` default-path placement/design-fit bullet (issue #805).
 
 | Standard / source | URL | What was confirmed |
 |---|---|---|
@@ -1161,7 +1161,7 @@ Sourced for the `frontend-a11y.md` folds that (a) correct landmarks satisfy the 
 
 ## Verified by direct fetch (2026-09-21) — POSIX RE bracket-expression range locale-dependence
 
-Sourced for the `language-stack-redflags.md` Shell/Bash fold that a bracket *range* used to validate a character class (`case`/`[[ =~ ]]`/`grep`) is matched against the locale's collating sequence, so a range-based validation gate returns a different verdict under a different `LC_COLLATE` (fix: pin `LC_ALL=C` or use an explicit character set).
+Sourced for the `lang-shell.md` Shell/Bash fold that a bracket *range* used to validate a character class (`case`/`[[ =~ ]]`/`grep`) is matched against the locale's collating sequence, so a range-based validation gate returns a different verdict under a different `LC_COLLATE` (fix: pin `LC_ALL=C` or use an explicit character set).
 
 | Standard / source | URL | What was confirmed |
 |---|---|---|

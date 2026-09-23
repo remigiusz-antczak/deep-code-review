@@ -122,7 +122,7 @@ Only on matched states is a gross-dimension delta parity evidence, not a volume 
 **Pin the target export first.** When a design package holds several exports of one prototype,
 grep each for distinctive UI strings from the newest change-log entries; the one holding all is
 the target (record it where every lane reads it), never the largest or best-named. None matches →
-ask the design owner (`method.md`'s stale-input rule).
+ask the design owner (`method-situational.md`'s stale-input rule).
 
 **Check order: cheap and deterministic first — an earlier mismatch stops the rest.** Token
 **values**: `scripts/token_differ.py --design <f> --app <f>` (0 = all MATCH), then the

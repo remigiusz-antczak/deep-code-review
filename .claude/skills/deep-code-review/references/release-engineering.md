@@ -67,7 +67,7 @@ dares remove.
   mid-request — across async continuations, retries, or separate service calls in one operation —
   can render a **composite of both code paths** in a single response. This is a config-read
   *consistency* bug, not a data race (nothing is mutated — distinct from the check-then-act TOCTOU
-  in `domain-checklists.md` / `concurrency-shared-state.md`). It is the **complement, not a
+  in `domain-g.md` / `concurrency-shared-state.md`). It is the **complement, not a
   contradiction,** of caching the flag *fetch* with a TTL (`performance-db-cost.md`): cache the
   fetch, but **pin the evaluated value** for the life of the request and pass it down rather than
   re-reading — the same shape as the lifetime-mismatch rule in `concurrency-shared-state.md`
@@ -260,7 +260,7 @@ target a human runs by hand (`npm publish`, `twine upload`, `git tag -s` + manua
 
 - `dependency-currency-and-upgrades.md` — the other half of domain K (build,
   supply chain, safe version bumps); this file never restates it.
-- `branch-and-merge-hygiene.md` §5 — **merge trains** and the **red-base
+- `merge-operations.md` — **merge trains** and the **red-base
   discharge** recipe: when the target is red and a green-base-required preflight
   blocks the fixes that would green it, the discharge is a merge train, not an
   `--admin` override. The merge mechanism lives there; this file never restates it.

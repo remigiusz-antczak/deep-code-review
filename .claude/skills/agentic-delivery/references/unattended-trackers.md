@@ -392,7 +392,7 @@ serial — the fast batch mechanism can keep running on the **runnable subset**,
 rather than downgrading everything (a tool broken *in this environment* is a **can't-check, not a red** —
 `SKILL.md` principle 3; and a merely **hung** gate is timeboxed and escalated, its reduced subset a
 proof-of-record that does **not** license merging an unvalidated member — see `deep-code-review`'s
-`branch-and-merge-hygiene.md`). Downgrading the whole vehicle to serial is a bigger regression than routing
+`merge-operations.md`). Downgrading the whole vehicle to serial is a bigger regression than routing
 around the one broken piece.
 
 Second — the costly one — **the workaround outlives the outage.** Momentum keeps the degraded mode running long

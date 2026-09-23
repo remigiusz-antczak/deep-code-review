@@ -80,7 +80,7 @@ fan-out-sizing rule. Ranked levers:
 - **Amortize the fixed gate cost** — batch several atomic, low-collision changes into one PR rather than paying
   a full gate per tiny PR.
 - **Merge trains** — verify the union once, merge members back-to-back, avoiding a per-PR base-CI wait
-  (mechanism in `deep-code-review`'s `branch-and-merge-hygiene.md`).
+  (mechanism in `deep-code-review`'s `merge-operations.md`).
 - **Break the machine ceiling** — move lanes to remote / cloud runners once the local cap is the bind.
 - **Eliminate rework** — verify-first + decorrelated pre-merge review + auto-merge-on-green, so a lane rarely
   does a wasted second pass.
