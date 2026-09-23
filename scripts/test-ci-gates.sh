@@ -2695,7 +2695,6 @@ fi
 rm -rf "$og/ops"
 
 # ===========================================================================
-<<<<<<< HEAD
 # AppSec must-load isolation (own lane; APPENDED AT THE END by convention).
 # security-appsec.md is must-load for web, mobile, api / service, and
 # agent / LLM / MCP; its conditional depth lives in routed appsec-*.md
@@ -2868,7 +2867,7 @@ if printf '%s' "$traversal_block" | grep -qi 'path traversal' \
 else
   record 1 "appsec pointer: A05 grep block names a path-traversal (CWE-22) sink line pointing to appsec-files.md"
 fi
-=======
+
 # dcr-gates opt-in source_scan_tests (own lane; APPENDED AT THE END by
 # convention), on the optin-gates target above. Relative
 # DCR_SOURCE_SCAN_LINT_PATHS entries resolve against the target's repo root
@@ -2910,7 +2909,6 @@ else
   record 1 "dcr-gates opt-in: whitespace-only DCR_SOURCE_SCAN_LINT_PATHS fails closed"
 fi
 rm -rf "$og/uitests"
->>>>>>> 3cfd70a
 
 # ---------------------------------------------------------------------------
 
