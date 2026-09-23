@@ -61,16 +61,36 @@ would resolve them). A present-but-empty trailer (`No-Test-Reason:` with
 nothing after it, or only whitespace) does NOT exempt the commit — the point
 is a stated reason, not a magic keyword.
 
+TRIGGER MODE (`--trigger-glob`, the lesson-to-mechanism gate)
+----------------------------------------------------------------
+Passing `--trigger-glob GLOB` (repeatable) switches WHICH commits are in
+scope and WHICH trailer exempts them; everything else (range walk, merge
+skip, test-surface matching, fail-closed exits) is shared. In trigger mode a
+commit is in scope iff it ADDS, MODIFIES, RENAMES, or COPIES a path matching
+a trigger glob (deleting a trigger path alone does not trigger — removing
+prose adds no lesson); its subject is ignored. An in-scope commit passes iff
+it also touches a `--test-glob` path that does NOT itself match a trigger
+glob (a path on both lists never satisfies itself — otherwise a trigger edit
+would be its own mechanism), or carries a non-empty `No-Mechanism-Reason:`
+trailer (same empty-value rule as `No-Test-Reason`). The intended use: every
+commit that files a lesson as prose (a SKILL.md or reference edit) must land
+an executable mechanism beside it (an eval, a gate script, a selftest) or
+state why not. Same honesty limit as above: it proves a mechanism path was
+touched, never that the mechanism pins the lesson. Without `--trigger-glob`
+the default mode (fix-subject trigger + `No-Test-Reason`) is unchanged.
+
 EXIT CODES (fail-closed; every branch below is load-bearing)
 ---------------------------------------------------------------
-  0  every fix commit in range passed (touched a test surface or was
-     exempted by a non-empty `No-Test-Reason` trailer), including the
+  0  every in-scope commit (fix, or trigger in trigger mode) passed
+     (touched a test surface or was exempted by a non-empty
+     `No-Test-Reason` / `No-Mechanism-Reason` trailer), including the
      legitimately-empty case of zero commits in range. Merge commits are
      never counted (see HONESTY), so a range whose only fix is a merge
      commit also exits 0.
-  1  at least one fix commit failed; each is printed as its own FAIL line.
+  1  at least one in-scope commit failed; each is printed as its own FAIL line.
   2  FAIL CLOSED — the range could not be evaluated at all, never a silent
-     pass: not a git repository; `--base`/`--head` unresolvable; `--base` is
+     pass: not a git repository; an empty `--trigger-glob` (it would match
+     nothing and pass silently); `--base`/`--head` unresolvable; `--base` is
      the all-zeros SHA (the value CI hands a brand-new branch push — pass the
      PR base ref or a computed merge-base instead); or the range itself
      could not be walked (a real git error, e.g. an unrelated/unreachable
@@ -81,6 +101,7 @@ EXIT CODES (fail-closed; every branch below is load-bearing)
 USAGE
 -----
   fix_class_gate.py --base <ref> --head <ref> [--test-glob GLOB ...]
+                    [--trigger-glob GLOB ...]
   fix_class_gate.py --selftest
 """
 from __future__ import annotations
@@ -212,8 +233,8 @@ def _short_sha(repo: str, sha: str) -> str:
     return _run_git(repo, ["rev-parse", "--short", sha]).strip()
 
 
-def _no_test_reason(repo: str, sha: str) -> str:
-    """Value of `sha`'s `No-Test-Reason` trailer, or `''` if absent/empty.
+def _trailer_value(repo: str, sha: str, key: str) -> str:
+    """Value of `sha`'s `key` trailer (`No-Test-Reason` or `No-Mechanism-Reason`), or `''` if absent/empty.
 
     `%(trailers:...,valueonly)` resolves folded (multi-line) trailer values the
     same way `git interpret-trailers` would, and yields `''` for both "trailer
@@ -223,7 +244,7 @@ def _no_test_reason(repo: str, sha: str) -> str:
     """
     out = _run_git(
         repo,
-        ["log", "-1", "--format=%(trailers:key=No-Test-Reason,valueonly)", sha],
+        ["log", "-1", f"--format=%(trailers:key={key},valueonly)", sha],
     )
     return out.strip()
 
@@ -267,8 +288,14 @@ def _changed_paths(repo: str, sha: str) -> list[tuple[str, bool]]:
     return results
 
 
-def run_gate(repo: str, base: str, head: str, test_globs: tuple[str, ...]) -> tuple[int, list[str]]:
+def run_gate(repo: str, base: str, head: str, test_globs: tuple[str, ...],
+             trigger_globs: tuple[str, ...] = ()) -> tuple[int, list[str]]:
     """Evaluate `base..head` in `repo`; return (exit_code, printable lines).
+
+    Empty `trigger_globs` = default mode (a `fix:` subject puts a commit in
+    scope, `No-Test-Reason` exempts it). Non-empty = trigger mode (touching a
+    trigger path puts it in scope, `No-Mechanism-Reason` exempts it, and a
+    test-surface path that also matches a trigger glob never counts).
 
     Fail-closed ordering: repo-ness, then the all-zeros sentinel, then ref
     resolution, then the range walk, are each checked before any commit is
@@ -303,39 +330,52 @@ def run_gate(repo: str, base: str, head: str, test_globs: tuple[str, ...]) -> tu
         return OK, ["0 commits in range"]
 
     compiled_globs = _compile_globs(test_globs)
+    compiled_triggers = _compile_globs(trigger_globs)
+    trigger_mode = bool(compiled_triggers)
+    kind, key = ("trigger", "No-Mechanism-Reason") if trigger_mode else ("fix", "No-Test-Reason")
     fails: list[str] = []
-    total_fix = 0
+    total = 0
     exempted = 0
 
     for sha in shas:
         subject = _subject(repo, sha)
-        if not FIX_SUBJECT_RE.match(subject):
+        if trigger_mode:
+            changed = _changed_paths(repo, sha)
+            in_scope = any(
+                counts and _matches_any(path, compiled_triggers) for path, counts in changed
+            )
+        else:
+            in_scope = bool(FIX_SUBJECT_RE.match(subject))
+            changed = _changed_paths(repo, sha) if in_scope else []
+        if not in_scope:
             continue
-        total_fix += 1
-        changed = _changed_paths(repo, sha)
+        total += 1
         touched_test = any(
-            counts and _matches_any(path, compiled_globs) for path, counts in changed
+            counts
+            and _matches_any(path, compiled_globs)
+            and not _matches_any(path, compiled_triggers)
+            for path, counts in changed
         )
         if touched_test:
             continue
-        reason = _no_test_reason(repo, sha)
-        if reason:
+        if _trailer_value(repo, sha, key):
             exempted += 1
             continue
         short = _short_sha(repo, sha)
+        what = "trigger path touched, " if trigger_mode else ""
         fails.append(
-            f"FAIL {short} {subject} — no test surface touched and no No-Test-Reason trailer"
+            f"FAIL {short} {subject} — {what}no test surface touched and no {key} trailer"
         )
 
     lines.extend(fails)
     if fails:
         lines.append(
-            f"fix_class_gate: FAILED ({total_fix} fix commit(s) checked, "
+            f"fix_class_gate: FAILED ({total} {kind} commit(s) checked, "
             f"{len(fails)} failing, {exempted} exempted by trailer)"
         )
         return FAIL, lines
 
-    lines.append(f"fix_class_gate: ok ({total_fix} fix commit(s) checked, {exempted} exempted by trailer)")
+    lines.append(f"fix_class_gate: ok ({total} {kind} commit(s) checked, {exempted} exempted by trailer)")
     return OK, lines
 
 
@@ -382,11 +422,14 @@ def _commit(repo: Path, message: str, files: dict[str, str], delete: list[str] |
     return _sh(repo, "rev-parse", "HEAD")
 
 
-def _run_tool(repo: Path, base: str, head: str, globs: list[str] | None = None) -> tuple[int, str]:
-    """Invoke this module's own CLI in-process-equivalent via subprocess against `repo`."""
+def _run_tool(repo: Path, base: str, head: str, globs: list[str] | None = None,
+              triggers: list[str] | None = None) -> tuple[int, str]:
+    """Invoke this module's own CLI via subprocess against `repo` (optional test/trigger globs)."""
     args = [sys.executable, __file__, "--base", base, "--head", head]
     for g in globs or []:
         args.extend(["--test-glob", g])
+    for g in triggers or []:
+        args.extend(["--trigger-glob", g])
     proc = subprocess.run(args, cwd=str(repo), capture_output=True, text=True)
     return proc.returncode, (proc.stdout + proc.stderr)
 
@@ -552,17 +595,83 @@ def _selftest() -> int:
         rc_custom, out_custom = _run_tool(repo, base, head, globs=["mytests/**"])
         check("custom-glob-overrides", rc_custom, out_custom, OK, must_not=("FAIL",))
 
+        # 15-22) trigger mode: a commit touching a trigger path must also touch a
+        # test surface (that is not itself a trigger path) or carry a non-empty
+        # No-Mechanism-Reason trailer; a non-trigger commit is out of scope.
+        trig = ["skills/*/SKILL.md", "skills/*/references/*.md"]
+        mech = ["skills/*/evals/evals.json", "skills/*/scripts/*"]
+
+        def trig_repo(name: str) -> tuple[Path, str]:
+            r = tmp_path / name
+            _init_repo(r)
+            return r, _commit(r, "chore: init", {"skills/a/SKILL.md": "v1\n"})
+
+        repo, base = trig_repo("case_trigger_no_eval")
+        head = _commit(repo, "docs: file a lesson", {"skills/a/references/r.md": "lesson\n"})
+        rc, out = _run_tool(repo, base, head, globs=mech, triggers=trig)
+        check("trigger-no-eval", rc, out, FAIL,
+              must_have=("FAIL", head[:7], "No-Mechanism-Reason", "1 trigger commit(s)"))
+
+        repo, base = trig_repo("case_trigger_with_eval")
+        head = _commit(repo, "feat: lesson plus eval",
+                       {"skills/a/SKILL.md": "v2\n", "skills/a/evals/evals.json": "{}\n"})
+        rc, out = _run_tool(repo, base, head, globs=mech, triggers=trig)
+        check("trigger-with-eval", rc, out, OK, must_have=("1 trigger commit(s)",), must_not=("FAIL",))
+
+        repo, base = trig_repo("case_trigger_trailer")
+        Path(repo / "skills/a/SKILL.md").write_text("v2\n")
+        _sh(repo, "add", ".")
+        _sh(repo, "commit", "-q", "-m",
+            "docs: reword\n\nNo-Mechanism-Reason: wording only, no new rule")
+        head = _sh(repo, "rev-parse", "HEAD")
+        rc, out = _run_tool(repo, base, head, globs=mech, triggers=trig)
+        check("trigger-trailer", rc, out, OK, must_have=("1 exempted",), must_not=("FAIL",))
+
+        repo, base = trig_repo("case_trigger_trailer_empty")
+        Path(repo / "skills/a/SKILL.md").write_text("v2\n")
+        _sh(repo, "add", ".")
+        _sh(repo, "commit", "-q", "-m", "docs: reword\n\nNo-Mechanism-Reason:")
+        head = _sh(repo, "rev-parse", "HEAD")
+        rc, out = _run_tool(repo, base, head, globs=mech, triggers=trig)
+        check("trigger-trailer-empty", rc, out, FAIL, must_have=("FAIL",))
+
+        # A fix: commit off the trigger paths is out of scope in trigger mode
+        # (subject ignored): passes with no test and no trailer.
+        repo, base = trig_repo("case_non_trigger")
+        head = _commit(repo, "fix: runtime bug", {"src/a.py": "x = 2\n"})
+        rc, out = _run_tool(repo, base, head, globs=mech, triggers=trig)
+        check("non-trigger", rc, out, OK, must_have=("0 trigger commit(s)",), must_not=("FAIL",))
+
+        # A path on BOTH lists never satisfies itself: the trigger edit is not
+        # its own mechanism even when a test glob also matches it.
+        repo, base = trig_repo("case_trigger_self_match")
+        head = _commit(repo, "docs: lesson", {"skills/a/SKILL.md": "v2\n"})
+        rc, out = _run_tool(repo, base, head, globs=["skills/**"], triggers=trig)
+        check("trigger-self-match", rc, out, FAIL, must_have=("FAIL",))
+
+        # Deleting a trigger path alone files no lesson -> out of scope.
+        repo, base = trig_repo("case_trigger_delete_only")
+        _commit(repo, "docs: add ref", {"skills/a/references/r.md": "x\n",
+                                        "skills/a/evals/evals.json": "{}\n"})
+        head = _commit(repo, "docs: drop ref", {}, delete=["skills/a/references/r.md"])
+        rc, out = _run_tool(repo, head + "~1", head, globs=mech, triggers=trig)
+        check("trigger-delete-only", rc, out, OK, must_have=("0 trigger commit(s)",), must_not=("FAIL",))
+
+        # An empty trigger glob would match nothing and pass silently -> ERROR.
+        rc, out = _run_tool(repo, base, head, globs=mech, triggers=[""])
+        check("trigger-empty-glob", rc, out, ERROR, must_have=("must not be empty",))
+
     if failures:
         print("SELFTEST FAILED:")
         for f in failures:
             print(f"  - {f}")
         return 1
-    print("SELFTEST OK: 14/14 cases passed")
+    print("SELFTEST OK: 22/22 cases passed")
     return 0
 
 
 def main(argv: list[str] | None = None) -> int:
-    """CLI entry point: `--selftest`, or `--base <ref> --head <ref> [--test-glob ...]`."""
+    """CLI entry point: `--selftest`, or `--base <ref> --head <ref> [--test-glob ...] [--trigger-glob ...]`."""
     parser = argparse.ArgumentParser(
         description=(
             "Enforce a pinned test per fix: every Conventional-Commits `fix:` commit in "
@@ -575,6 +684,11 @@ def main(argv: list[str] | None = None) -> int:
         "--test-glob", action="append", dest="test_globs", metavar="GLOB",
         help="glob a test-surface path must match; repeatable; REPLACES the defaults when given",
     )
+    parser.add_argument(
+        "--trigger-glob", action="append", dest="trigger_globs", metavar="GLOB",
+        help="trigger mode: a commit touching a matching path must also touch a test-surface "
+             "path or carry a non-empty No-Mechanism-Reason trailer; repeatable",
+    )
     parser.add_argument("--selftest", action="store_true", help="run the built-in selftest and exit")
     args = parser.parse_args(argv)
 
@@ -585,8 +699,11 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--base and --head are both required")
         return ERROR  # pragma: no cover — parser.error() already exits(2)
 
+    if any(not g.strip() for g in args.trigger_globs or ()):
+        # An empty trigger glob matches no path: trigger mode would silently pass.
+        parser.error("--trigger-glob must not be empty")
     globs = tuple(args.test_globs) if args.test_globs else DEFAULT_TEST_GLOBS
-    code, lines = run_gate(".", args.base, args.head, globs)
+    code, lines = run_gate(".", args.base, args.head, globs, tuple(args.trigger_globs or ()))
     for line in lines:
         print(line)
     return code

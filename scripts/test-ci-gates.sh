@@ -1728,6 +1728,88 @@ for plant in drop grant selfgrant; do
   fi
 done
 
+# ===========================================================================
+# lesson -> mechanism ratchet (own lane; appended at the end). A filed lesson
+# must land as an executable mechanism, not only prose. Covers: this repo's
+# ci.yml wires fix_class_gate.py trigger mode on skill prose; the contribution
+# and retrospective doctrine keep the rule (planted removals fail); the
+# shipped dcr-gates.sh runner honours DCR_TRIGGER_GLOBS and fails closed.
+# ===========================================================================
+
+if grep -qF -- "--trigger-glob '.claude/skills/*/SKILL.md'" "$ROOT/.github/workflows/ci.yml" \
+  && grep -qF -- "--trigger-glob '.claude/skills/*/references/*.md'" "$ROOT/.github/workflows/ci.yml"; then
+  record 0 "lesson-ratchet: ci.yml runs fix_class_gate trigger mode on skill prose"
+else
+  record 1 "lesson-ratchet: ci.yml runs fix_class_gate trigger mode on skill prose"
+fi
+
+lesson_doctrine() {  # <root>: 0 when both doctrine rules are present
+  grep -qF 'fails before the edit and passes' "$1/.claude/skills/contribution/SKILL.md" || return 1
+  grep -qF 'file an issue, never' "$1/.claude/skills/contribution/SKILL.md" || return 1
+  grep -qF 'never only a doc line' "$1/.claude/skills/agentic-delivery/references/retrospective.md" || return 1
+}
+if lesson_doctrine "$ROOT"; then
+  record 0 "lesson-ratchet: contribution + retrospective doctrine present"
+else
+  record 1 "lesson-ratchet: contribution + retrospective doctrine present"
+fi
+LRW="$WORK/lesson-ratchet"
+for plant in contribution retro; do
+  rm -rf "$LRW"; mkdir -p "$LRW/.claude/skills"
+  cp -R "$ROOT/.claude/skills/contribution" "$ROOT/.claude/skills/agentic-delivery" "$LRW/.claude/skills/"
+  if [ "$plant" = contribution ]; then
+    sed 's/fails before the edit and passes/is described in/' "$ROOT/.claude/skills/contribution/SKILL.md" \
+      >"$LRW/.claude/skills/contribution/SKILL.md"
+  else
+    sed 's/never only a doc line/or a doc line/' \
+      "$ROOT/.claude/skills/agentic-delivery/references/retrospective.md" \
+      >"$LRW/.claude/skills/agentic-delivery/references/retrospective.md"
+  fi
+  if lesson_doctrine "$LRW"; then
+    record 1 "lesson-ratchet: planted $plant doctrine removal fails"
+  else
+    record 0 "lesson-ratchet: planted $plant doctrine removal fails"
+  fi
+done
+
+# dcr-gates.sh trigger mode, on the gates_fresh target installed above. A
+# prose-only commit on a trigger path FAILS; the same with a test-surface
+# touch PASSES; a whitespace-only DCR_TRIGGER_GLOBS fails closed.
+mkdir -p "$gates_fresh/docs"
+printf 'lesson\n' >"$gates_fresh/docs/lesson.md"
+git -C "$gates_fresh" add docs/lesson.md >/dev/null 2>&1
+git -C "$gates_fresh" commit -q -m 'docs: file a lesson as prose only'
+lr_log="$WORK/lesson-trigger-red.log"
+(cd "$gates_fresh" && DCR_TRIGGER_GLOBS='docs/*' DCR_TEST_GLOBS='checks/*' bash "$gates_runner") >"$lr_log" 2>&1 || true
+if grep -q 'dcr-gates: fix_class_gate trigger mode FAIL' "$lr_log" \
+  && grep -q 'No-Mechanism-Reason' "$lr_log"; then
+  record 0 "lesson-ratchet: DCR_TRIGGER_GLOBS fails a prose-only trigger commit (planted RED)"
+else
+  record 1 "lesson-ratchet: DCR_TRIGGER_GLOBS fails a prose-only trigger commit (planted RED)"
+fi
+printf 'lesson v2\n' >"$gates_fresh/docs/lesson.md"
+printf 'c\n' >"$gates_fresh/checks/c.txt"
+git -C "$gates_fresh" add docs/lesson.md checks/c.txt >/dev/null 2>&1
+git -C "$gates_fresh" commit -q -m 'feat: lesson with its check'
+lr_log="$WORK/lesson-trigger-green.log"
+(cd "$gates_fresh" && DCR_TRIGGER_GLOBS='docs/*' DCR_TEST_GLOBS='checks/*' bash "$gates_runner") >"$lr_log" 2>&1 || true
+if grep -q 'dcr-gates: fix_class_gate trigger mode PASS' "$lr_log" \
+  && grep -q 'dcr-gates: all gates passed' "$lr_log"; then
+  record 0 "lesson-ratchet: DCR_TRIGGER_GLOBS passes a trigger commit with a mechanism"
+else
+  record 1 "lesson-ratchet: DCR_TRIGGER_GLOBS passes a trigger commit with a mechanism"
+fi
+if (cd "$gates_fresh" && DCR_TRIGGER_GLOBS='   ' bash "$gates_runner") >"$WORK/lesson-trigger-blank.log" 2>&1; then
+  lr_rc=0
+else
+  lr_rc=$?
+fi
+if [ "$lr_rc" -ne 0 ] && grep -q 'DCR_TRIGGER_GLOBS names no glob' "$WORK/lesson-trigger-blank.log"; then
+  record 0 "lesson-ratchet: whitespace-only DCR_TRIGGER_GLOBS fails closed"
+else
+  record 1 "lesson-ratchet: whitespace-only DCR_TRIGGER_GLOBS fails closed"
+fi
+
 # ---------------------------------------------------------------------------
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"

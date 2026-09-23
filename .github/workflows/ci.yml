@@ -99,6 +99,29 @@ jobs:
             --test-glob '.claude/skills/*/evals/evals.json' \
             --test-glob 'scripts/test-ci-gates.sh'
 
+      # Lesson -> mechanism: a commit that edits skill prose (a SKILL.md or a
+      # references/*.md) must also land an executable mechanism (an eval, a
+      # shipped script, or a gate self-test case) or carry a non-empty
+      # No-Mechanism-Reason: trailer, so a filed lesson cannot stay prose that
+      # never fires. Same gate implementation, range, and fail-closed exits as
+      # the fix-class step above. Here a shipped script DOES count: in this
+      # mode the script is the mechanism being added, not the code under test.
+      # Known limitation: it proves a mechanism path was touched, not that the
+      # mechanism pins the lesson (review judges that).
+      - name: Prose lessons carry a mechanism
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          python3 .claude/skills/deep-code-review/scripts/fix_class_gate.py \
+            --base "$BASE_SHA" --head "$HEAD_SHA" \
+            --trigger-glob '.claude/skills/*/references/*.md' \
+            --trigger-glob '.claude/skills/*/SKILL.md' \
+            --test-glob '.claude/skills/*/evals/evals.json' \
+            --test-glob '.claude/skills/*/scripts/*' \
+            --test-glob 'scripts/test-ci-gates.sh'
+
       # A size-budget row may only rise with a `size-budget-raise:` marker
       # (commit range or CHANGELOG) — budgets ratchet down by default.
       - name: Size budgets ratchet down
