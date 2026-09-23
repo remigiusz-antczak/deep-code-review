@@ -1,9 +1,9 @@
-90955c4d0a25bb1f865951524f259483d2ce1fa1032f7197a0070144d8f26485  .claude/skills/agentic-ceo/SKILL.md
+dd4e695b489be9051d309f1360c358075755f2996c133e5cad02a94875232cb0  .claude/skills/agentic-ceo/SKILL.md
 cc52f678848b814373757b460383bf61960e4943c203735adde0a350b3e50989  .claude/skills/agentic-ceo/VERSION
 3122784e8b188babadd7ceb0dddf69cfb308e7a02bbf67ed82cf3527a81f5eb1  .claude/skills/agentic-ceo/evals/evals.json
 2d35c0337b0e37910f402f00b471d7ae3e86d997b19374e16a440c912e7f3d05  .claude/skills/agentic-delivery/SKILL.md
 9a3ac2717c98eee0c1e59428004cd5df9f335e3ff729d984f66a22a48262ffae  .claude/skills/agentic-delivery/VERSION
-dbd4d38bf76b786e73c72aca1675dc11dfd04e873963ecbd153d497df91e4a67  .claude/skills/agentic-delivery/evals/evals.json
+ba7d0b05b17bd8566dceaae6e3a5f9795ad7aa4e920f34b39ff70fd4cea6a34f  .claude/skills/agentic-delivery/evals/evals.json
 13bab5c4ec46d1fcc4c0b806a4a3f5d59e167aea49cdc9423597903c748623a0  .claude/skills/agentic-delivery/references/dev-env-ownership.md
 dd0b6835bcfb85c690c7f8781feb9c7c4b19fd7f8235f4b8e52560250a04ff2c  .claude/skills/agentic-delivery/references/fanout-host-sizing.md
 e464d8e8bc0d6dc5af936c596d52cdc2b219fb7236a257a05cd9d2309e2c6a8b  .claude/skills/agentic-delivery/references/fast-agentic-delivery.md
@@ -18,7 +18,7 @@ e464d8e8bc0d6dc5af936c596d52cdc2b219fb7236a257a05cd9d2309e2c6a8b  .claude/skills
 538a658aa8a65b21932795812ddaefa3ed8c15ef5b37703c76d6601a5f192748  .claude/skills/agentic-delivery/references/support-ops.md
 4c5a2dbbc8a702c16df84d5e675a7921f313de774c3ec5ec38ac83bb3a21bf2e  .claude/skills/agentic-delivery/references/template-adr.md
 dc812b0b447b7bb8c523581ec48041f373c27345b71255da568ae2a17689677c  .claude/skills/agentic-delivery/references/template-postmortem.md
-3ed6b0afa222864a37f7d613c2913e2cc5ca0ef42b98034abf35f72bdd1ac3a4  .claude/skills/agentic-delivery/references/unattended-operating-mode.md
+aca61c39b4be9d2748692b279e10bb99245efa54280044e64a02a400647ef77c  .claude/skills/agentic-delivery/references/unattended-operating-mode.md
 747c4abab2724f1229c4022ed1d52a8d3b7fbd8c28356fdec2e5dc52a3709070  .claude/skills/agentic-delivery/references/unattended-trackers.md
 2eada49d491638ec9fc3145a785a9b4e36d736b412f3780a4cadd3edf23c829a  .claude/skills/agentic-delivery/references/verification-handback.md
 f85098c6e97f170e76524e3dc02c54bbe28935305fa079d917a2f63ddf789f87  .claude/skills/agentic-delivery/scripts/board_common.py
@@ -26,6 +26,8 @@ f85098c6e97f170e76524e3dc02c54bbe28935305fa079d917a2f63ddf789f87  .claude/skills
 8a8b03463b4c94edf586302cb4afcc7a03c8d9107daef5f752198be77f3a19aa  .claude/skills/agentic-delivery/scripts/board_state.py
 2c692f250ca0aaaabd13c754bb738fb6b5c3bb373a2d0547aff4656b6e15d0ff  .claude/skills/agentic-delivery/scripts/board_sync.py
 2c3073e60df613a664060cc1a3e6d9dce36400d58549e6bbcf1b2b36a33964e8  .claude/skills/agentic-delivery/scripts/handback_cap.py
+61013b904450bc02c88e2c60405ff8223b9d31d78cca26d0900792c1232b322a  .claude/skills/agentic-delivery/scripts/priority_gate.py
+0e95662e98248f7b79ca7b7949b30514e8fbdc7b1dcd4512cb390d60e5de6d86  .claude/skills/agentic-delivery/scripts/refix_gate.py
 3f63c5f55c0a82ae06f9b73cb8b1ec704372bfc7d9ffda1e3d0a3315970bab57  .claude/skills/agentic-delivery/scripts/serial_gate.py
 360fbe70b5d30e33d83d2b7bd92c058c40198c8796015f4ca309298ccb2f72f0  .claude/skills/business-ops/SKILL.md
 acb57a7135b2d7d6e665f67f056e21353023b93835f54def1ae523bf76f1bfb3  .claude/skills/business-ops/VERSION
@@ -90,7 +92,7 @@ b41320aab9d3540398d065a470b3abb05241e2928fd02682a9264c7922dc39b7  .claude/skills
 424f89b0865cdd430c04dc27e24df004aff0515592a4aff07ea478a5e6339f63  .claude/skills/deep-code-review/scripts/fixtures/parity/design.html
 aac1f4a98bdf674ccbc5f927ae126ece9374054ed58363d3753db20bf72a7ff8  .claude/skills/deep-code-review/scripts/parity_differ.py
 317acae212ed73279df66eb7b419b8426733bb1be05345b0e1c8b2c6790ad8a1  .claude/skills/deep-code-review/scripts/validate_status_claims.py
-35adac7f8aa4cdc3496cfe264b80630c9f5c22f4263232a4997e20a98f39a5ad  .claude/skills/deep-code-review/templates/dcr-gates.sh
+aed1f818d19f07ebb23c17954d51b5188895716490ad15598033be46fbce522e  .claude/skills/deep-code-review/templates/dcr-gates.sh
 e9df3483336d6470072f8b7d7bfd5e93e281da2b5a892590101b4cb3ed89e419  .claude/skills/deep-code-review/templates/dcr-gates.yml
 5068e60f9615684c8d8bf8fbd7896748267cf6688895a701bdd25cd945181cb8  .claude/skills/growth-analytics/SKILL.md
 cc52f678848b814373757b460383bf61960e4943c203735adde0a350b3e50989  .claude/skills/growth-analytics/VERSION

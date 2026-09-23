@@ -1728,6 +1728,112 @@ for plant in drop grant selfgrant; do
   fi
 done
 
+# ===========================================================================
+# dcr-gates opt-in delivery gates — refix_gate.py and priority_gate.py (own
+# lane; APPENDED AT THE END by convention). Both are OFF by default; a set
+# flag with agentic-delivery missing, a bad flag value, or a missing input
+# fails closed; each gate FIRES on a planted violation through the runner.
+# ===========================================================================
+
+og="$WORK/optin-gates"
+mkdir -p "$og/src"
+git -C "$og" init -q
+git -C "$og" config user.email "jane@example.com"
+git -C "$og" config user.name "Jane Smith"
+git -C "$og" config commit.gpgsign false
+printf 'x = 1\n' >"$og/src/a.txt"
+git -C "$og" add src/a.txt >/dev/null 2>&1
+git -C "$og" commit -q -m 'chore: init'
+gate "$GATES" install --src "$ROOT" --dest "$og" --mode gates
+og_runner="$og/scripts/dcr-gates.sh"
+
+# og_run <log> [VAR=value ...] — run the target's runner under env overrides;
+# sets OG_RC to its real exit code.
+og_run() {
+  local log="$1"
+  shift
+  if env "$@" bash "$og_runner" >"$log" 2>&1; then OG_RC=0; else OG_RC=$?; fi
+}
+
+# 1) A set flag with agentic-delivery NOT installed fails closed.
+og_run "$WORK/og-nodelivery.log" DCR_REFIX_GATE=1
+if [ "$GATE_RC" -eq 0 ] && [ "$OG_RC" -ne 0 ] \
+  && grep -q 'refix_gate.py not found (agentic-delivery not installed?) (FAIL, fail closed)' "$WORK/og-nodelivery.log"; then
+  record 0 "dcr-gates opt-in: DCR_REFIX_GATE=1 without agentic-delivery fails closed"
+else
+  record 1 "dcr-gates opt-in: DCR_REFIX_GATE=1 without agentic-delivery fails closed"
+fi
+
+cp -R "$ROOT/.claude/skills/agentic-delivery" "$og/.claude/skills/"
+rm -rf "$og/.claude/skills/agentic-delivery/scripts/__pycache__"
+printf 'x = 2\n' >"$og/src/a.txt"
+git -C "$og" add src/a.txt >/dev/null 2>&1
+git -C "$og" commit -q -m 'fix(a): clamp x' -m 'No-Test-Reason: fixture commit'
+printf 'x  = 2\n' >"$og/src/a.txt"
+git -C "$og" add src/a.txt >/dev/null 2>&1
+git -C "$og" commit -q -m 'style(a): reformat'
+
+# 2) Default run (no flags): neither opt-in gate runs.
+og_run "$WORK/og-default.log"
+if [ "$OG_RC" -eq 0 ] && ! grep -qE 'refix_gate|priority_gate' "$WORK/og-default.log"; then
+  record 0 "dcr-gates opt-in: both gates are off by default"
+else
+  record 1 "dcr-gates opt-in: both gates are off by default"
+fi
+
+# 3) Planted RED: re-touching a just-fixed file with no test/eval change FIRES.
+og_run "$WORK/og-refix.log" DCR_REFIX_GATE=1
+if [ "$OG_RC" -ne 0 ] && grep -q 'REFIX src/a.txt prior-fix=' "$WORK/og-refix.log" \
+  && grep -q 'dcr-gates: refix_gate FAIL' "$WORK/og-refix.log"; then
+  record 0 "dcr-gates opt-in: refix_gate fires on a re-touched fixed file (planted RED)"
+else
+  record 1 "dcr-gates opt-in: refix_gate fires on a re-touched fixed file (planted RED)"
+fi
+
+# 4) The same churn with a Refix-Reason: trailer passes.
+printf 'x   = 2\n' >"$og/src/a.txt"
+git -C "$og" add src/a.txt >/dev/null 2>&1
+git -C "$og" commit -q -m 'style(a): align' -m 'Refix-Reason: whitespace only, no behavior change'
+og_run "$WORK/og-refix-ok.log" DCR_REFIX_GATE=1
+if [ "$OG_RC" -eq 0 ] && grep -q 'dcr-gates: refix_gate PASS' "$WORK/og-refix-ok.log"; then
+  record 0 "dcr-gates opt-in: refix_gate passes with a Refix-Reason trailer"
+else
+  record 1 "dcr-gates opt-in: refix_gate passes with a Refix-Reason trailer"
+fi
+
+# 5) A flag value other than unset/0/1 fails closed.
+og_run "$WORK/og-badflag.log" DCR_REFIX_GATE=yes
+if [ "$OG_RC" -ne 0 ] && grep -q 'FAIL DCR_REFIX_GATE=yes' "$WORK/og-badflag.log"; then
+  record 0 "dcr-gates opt-in: an unrecognized flag value fails closed"
+else
+  record 1 "dcr-gates opt-in: an unrecognized flag value fails closed"
+fi
+
+# 6) DCR_PRIORITY_GATE=1 with no input fails closed.
+og_run "$WORK/og-prio-noinput.log" DCR_PRIORITY_GATE=1
+if [ "$OG_RC" -ne 0 ] && grep -q 'FAIL priority_gate (DCR_PRIORITY_GATE=1 needs' "$WORK/og-prio-noinput.log"; then
+  record 0 "dcr-gates opt-in: priority_gate with no input fails closed"
+else
+  record 1 "dcr-gates opt-in: priority_gate with no input fails closed"
+fi
+
+# 7) Planted RED: a presentation PR while a 48h-old P0 has no citing PR FIRES;
+#    the same document with a citing open PR passes.
+og_prio_json() {  # <file> <prs-json-array>
+  printf '{"now":"2026-01-10T12:00:00Z","pr":{"number":7,"labels":["ui"],"paths":["web/app.css"]},"issues":[{"number":3,"labels":["P0"],"created_at":"2026-01-08T12:00:00Z"}],"prs":%s}\n' "$2" >"$1"
+}
+og_prio_json "$WORK/og-prio-red.json" '[]'
+og_prio_json "$WORK/og-prio-ok.json" '[{"number":9,"body":"Refs #3","state":"open"}]'
+og_run "$WORK/og-prio-red.log" DCR_PRIORITY_GATE=1 DCR_PRIORITY_JSON="$WORK/og-prio-red.json"
+og_red_rc="$OG_RC"
+og_run "$WORK/og-prio-ok.log" DCR_PRIORITY_GATE=1 DCR_PRIORITY_JSON="$WORK/og-prio-ok.json"
+if [ "$og_red_rc" -ne 0 ] && grep -q 'BLOCKING #3' "$WORK/og-prio-red.log" \
+  && [ "$OG_RC" -eq 0 ] && grep -q 'dcr-gates: priority_gate PASS' "$WORK/og-prio-ok.log"; then
+  record 0 "dcr-gates opt-in: priority_gate fires on an inversion, passes once cited (planted RED)"
+else
+  record 1 "dcr-gates opt-in: priority_gate fires on an inversion, passes once cited (planted RED)"
+fi
+
 # ---------------------------------------------------------------------------
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
