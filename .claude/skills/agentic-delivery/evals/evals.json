@@ -1624,6 +1624,30 @@
         "Excludes the calling agent's own process and its ancestor chain from the occupancy check, not just its own pid",
         "Treats a blind occupancy scan as a refusal (UNVERIFIED), never as silent proof of \"no foreign process\", unless an explicit owner-only --allow-unverified override is passed"
       ]
+    },
+    {
+      "id": "ops-lane-owns-plumbing-conductor-keeps-context",
+      "prompt": "An hour into a multi-lane run, the conductor has been serializing pushes across lanes by hand, finishing up a couple of PRs once their gates went green, chasing down a pre-push hook that keeps flaking, and killing a retry loop that wouldn't stop -- no lane owns any of it, so it landed on the conductor directly. What should have happened instead, and why does it matter that the conductor did this itself?",
+      "expected_output": "None of that is wave planning or verification -- it is individual-contributor work with a known mechanism, and it should have gone to a dedicated Ops / Merge-Guard lane staffed at session start (#1117), not been absorbed by the conductor because no lane owned it. That lane owns exactly this: push serialization (`scripts/serial_gate.py run`, a flock-based lock across lanes), finishing a PR once its exact-SHA handback verifies (`scripts/lane_guard.py handback`), and diagnosing a flaky hook by reading each check's latest run at a SHA (`scripts/surface_check.py checks`) -- and it reports only the exceptions it cannot resolve, never routine status. It matters because the conductor's context is the scarcest resource in the run: it holds the map of every lane, the plan for the next wave, and the state needed to verify delivered work on the real surface. An hour spent on plumbing is an hour that map degraded, even though the plumbing itself got done -- and a conductor spending its own turns on pushes or hooks is the signal the ops lane is missing or under-scoped, not proof the work was small enough to absorb.",
+      "expectations": [
+        "Identifies the work as individual-contributor plumbing, not wave planning or verification, and says it should route to a dedicated Ops / Merge-Guard lane staffed from session start rather than be absorbed by the conductor",
+        "Scopes the rule to multi-lane runs (a small single-agent project has no separable ops lane)",
+        "Names the ops lane as reporting only exceptions it cannot resolve itself, not routine status",
+        "Points at existing mechanism the ops lane uses rather than inventing new tooling: `serial_gate.py run` (push serialization), `lane_guard.py handback` (finishing a PR/handback), `surface_check.py checks` (hook/check diagnosis)",
+        "Explains why it matters in terms of conductor context being the scarce resource (lane coverage, wave planning, on-surface verification), not just that plumbing is annoying"
+      ]
+    },
+    {
+      "id": "flaky-fix-propagate-to-queued-branches",
+      "prompt": "A flaky test was fixed and merged to main at commit `abc123`. Several branches were cut before that commit landed and are still open. One of those branches gets pushed an hour later and its pre-push hook fails on the exact test that was \"already fixed\". What went wrong, and what should have happened when the fix landed?",
+      "expected_output": "A pre-push (or pre-commit) hook tests the tree being pushed, not the tree on main, so a fix that only exists on main does nothing for a branch cut before it landed -- that branch keeps re-running the old, still-flaky test on every push until it is rebased onto (or merged with) `abc123`. The failure here is not a new flake; it is the same already-fixed test being re-discovered independently because the fix was never propagated to the branch. When the fix landed, the move should have been: list branches that don't contain it yet with `git for-each-ref --format='%(refname:short)' --no-contains abc123 refs/remotes/origin`, then rebase each one onto `abc123` before its next push -- this is the Ops / Merge-Guard lane's routine plumbing (#1117), run at the fix's landing, not at the next flake report. A branch that cannot rebase immediately should scope-skip that one test for local pushes only, with a comment pointing at `abc123`, while CI keeps running it -- the fix commit itself never disables or skips the test, and the hook is never silently bypassed with --no-verify. The queued-branch list stays open until every entry is rebased or explicitly scope-skipped with its pointer.",
+      "expectations": [
+        "Explains the mechanism: pre-push hooks test the pushed tree, not main, so a fix on main doesn't protect a branch cut before it landed",
+        "Names the concrete command to find affected branches: `git for-each-ref --format='%(refname:short)' --no-contains <sha> refs/remotes/origin`",
+        "Says the correct sequence is rebase each queued branch onto the fix commit before its next push, triggered by the fix landing rather than by each branch's own flake report",
+        "States the fallback for a branch that can't rebase now: a documented, temporary scope-skip of that one test with a pointer to the fix commit, CI still runs it, and the fix commit itself never disables the test",
+        "Never endorses silently bypassing the hook (--no-verify) or disabling the test in the fix commit as an acceptable alternative"
+      ]
     }
   ]
 }
