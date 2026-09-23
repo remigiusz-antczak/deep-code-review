@@ -733,7 +733,7 @@ hours" for a full workday. **Logout must actually terminate the session server-s
 cannot be "deleted" (clearing the client cookie is not revocation), so ASVS v5.0.0-7.4.1 (L1) requires "a solution
 such as maintaining a list of terminated tokens, disallowing tokens produced before a per-user date and time or
 rotating a per-user signing key." A token still accepted after logout, or a session with no absolute cap, is the
-finding. (Accessibility: a short idle timeout still needs the warn-and-extend affordance in `frontend-a11y.md` before
+finding. (Accessibility: a short idle timeout still needs `a11y-color-motion.md`'s warn-and-extend affordance before
 it fires.)
 
 **Fix**: rate-limit and lock out; rotate session on auth state change; short token lifetimes + server-side revocation;

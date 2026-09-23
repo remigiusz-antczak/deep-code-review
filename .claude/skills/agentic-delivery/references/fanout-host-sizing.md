@@ -94,7 +94,7 @@ fan-out-sizing rule. Ranked levers:
 - **Split a shared hand-edited file before fanning out** — when 2+ planned lanes would write one source file
   (one lane per section of a big page), don't serialize them: dispatch one **pure-move** lane first (a module
   per section, a shared module for helpers 2+ sections use, the old path kept as a transitional re-export
-  whose importers move to direct paths — `deep-code-review`'s `frontend-a11y.md` barrel rule). No logic,
+  whose importers move to direct paths — `deep-code-review`'s `web-render.md` barrel rule). No logic,
   markup, or style change; gate it on type check, lint, an **unchanged test count**, and a smoke render.
   Merge it, then fan out one lane per module.
 

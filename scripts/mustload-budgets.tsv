@@ -94,13 +94,35 @@
 # 28775->28772, api / service 33566->33563, agent / LLM / MCP
 # 33705->33702.
 #
-web	86820
+# WEB SPLIT (web must-load cut): frontend-a11y.md and product-ux-quality.md
+# kept only what every web review needs and moved conditional depth into
+# routed sub-files, each indexed in its parent with a concrete trigger.
+# frontend-a11y.md keeps the design-respect rule, the base WCAG 2.2 AA
+# checklist per family, the WCAG 2.2 additions, usability, cross-view
+# consistency, URL-backed state, the server/client boundary, the Core Web
+# Vitals thresholds, browser security, and the closing grep; its depth moved
+# to a11y-aria.md, a11y-live.md, a11y-focus.md, a11y-color-motion.md,
+# a11y-forms.md, web-fetch.md, and web-render.md. product-ux-quality.md keeps
+# the read-first stance, every data state, encoding and colour-alone,
+# self-evidence and density, the named-standard rule, the grep, and the
+# pre-ship checklist; its depth moved to ux-writes.md, ux-dataviz.md,
+# ux-lists.md, ux-components.md, ux-interaction.md, ux-sweep.md, and
+# ux-gates.md. The WCAG section was first re-tagged from bold run-in labels
+# to ### headings (byte-identical) so the split follows real sections. Paid
+# for in SKILL.md by dropping the redundant `references/` prefix from bare
+# names the tables already use unqualified, so SKILL.md shrank (23967 ->
+# 23941 bytes). Re-pinned: web 86820->38039, data / ETL 29577->29571
+# (repointed cross-references in data-quality.md and performance-db-cost.md);
+# every other archetype row unchanged at its exact total. Floors:
+# phase-floor-light 35858->35846, phase-floor-full 47452->47440.
+#
+web	38039
 mobile	28772
 api / service	33563
-data / ETL	29577
+data / ETL	29571
 agent / LLM / MCP	33702
 IaC / platform	4339
 lib / SDK	10909
-phase-floor-light	35858
-phase-floor-full	47452
+phase-floor-light	35846
+phase-floor-full	47440
 phase-conditional	method-situational.md

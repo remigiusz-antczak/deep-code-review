@@ -338,9 +338,9 @@ contract stall **A01/domain B**; the fallback is the audit, not a skip. Depth:
 **Mine the code's own comments for admitted deviations — a class of finding a
 structural search cannot reach.** The drift searches elsewhere in this method key on
 *structure*: a duplicated component, a copied string or markup block, a repeated
-scaffolding cluster (`product-ux-quality.md`'s *one component per concept*
+scaffolding cluster (`ux-components.md`'s *one component per concept*
 twin-search), or the inverse sweep that greps a hand-rolled `aria-modal` / skeleton and
-diffs it against the shared primitive's importers (`frontend-a11y.md`). All of them are
+diffs it against the shared primitive's importers (`a11y-focus.md`, `a11y-live.md`). All of them are
 blind to a call site that **reimplemented** a shared component/helper/guard from
 scratch and therefore shares no literal with it. But a developer who deliberately
 bypassed a shared abstraction often **says so in a comment** — *"not using the shared
@@ -351,7 +351,7 @@ using` / `not the shared`, `can't use`, `rather than`, `hand-rolled`, `workaroun
 sitting next to an import or a shared symbol's name — because each hit is worth **two**
 findings at once: (1) this call site has drifted from the shared abstraction and may
 have shed whatever correctness the shared version bakes in — an a11y behavior, a guard,
-a dedup — the exact regression `frontend-a11y.md`'s bypass-the-shared-component family
+a dedup — the exact regression `a11y-live.md`'s bypass-the-shared-component family
 names; and (2) the shared abstraction has a **real gap** its author already hit, so the
 root-cause fix (principle 9) is usually to close that gap at the source rather than
 bless the workaround. It is higher-confidence than a cold duplicate search because the
@@ -360,7 +360,7 @@ that the shared path did not fit. **Opposite polarity from the two other
 comment-as-claim rules in this method** — the carried-forward suppression-reason (Phase
 1) and the incident-narrating comment (Phase 4) warn you *not to over-trust* a comment
 as still-true; this *harvests* a class of comment that **is** a finding you would
-otherwise miss. And distinct from `product-ux-quality.md`'s adoption-is-total move,
+otherwise miss. And distinct from `ux-components.md`'s adoption-is-total move,
 which reads the **shared component's own** doc-comment (it names the call sites it
 fixed) to hunt stragglers — this reads the **call site's** comment to find the bespoke
 bypass that never touched the shared component at all. Treat a match as a finding to
@@ -404,7 +404,7 @@ on the **fields the canonical predicate reads**.
 review of a product UI, enumerate every route and rule domain P on each across the
 render matrix, reporting coverage as a ledger — the domain-P analogue of Phase 3's
 anonymous-GET sweep, and the step that turns per-route rules into whole-product
-coverage. Procedure and the matrix: `references/product-ux-quality.md` (*Rendered
+coverage. Procedure and the matrix: `references/ux-sweep.md` (*Rendered
 route sweep*). A route not rendered is `unverified`, not clean.
 
 **Rewritten browser spec → account for the retired coverage.** When a `DIFF` rewrites an
@@ -465,7 +465,7 @@ the idiom across the tree in the same pass**: the search result *is* the blast r
 reported as one class-finding with its full instance set (how many sites, and where),
 never the first callsite alone. Stopping at one site under-scopes the finding and leaks a
 second fix into a later increment — the review analogue of the *one component per concept*
-duplicate-twin sweep (`product-ux-quality.md`), for a bug pattern rather than a duplicated
+duplicate-twin sweep (`ux-components.md`), for a bug pattern rather than a duplicated
 component; after the fix, a re-grep of the idiom confirms none remain (the class is closed
 only when that search returns clean — a zero-survivor check, principle 2). `scripts/fix_class_gate.py` gates only a pinned test per fix commit (or a `No-Test-Reason:` trailer), never class completeness. **A fix that already scoped itself to an
 enumerated list is judged against that list — but a green test pinning the list proves

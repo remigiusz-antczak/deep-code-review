@@ -23,13 +23,13 @@ enforced review axis in `deep-code-review`'s `product-ux-quality.md`. Build to
 those; do not copy them here (a second copy is the duplication this suite
 exists to condemn). The pairing — build default → the axis that verifies it:
 
-| Build to this default | Verified by (`product-ux-quality.md`) |
+| Build to this default | Verified by (`product-ux-quality.md` and its routed sub-files) |
 |---|---|
-| Every primary unit carries a *derived* why-it-matters signal — what changed, why it matters, the next step — never fabricated | *Actionability* |
-| The default order serves the user's job; signal over recency; each sort mode is self-evident and measured-distinct | *Ranking & sort-mode legibility* |
+| Every primary unit carries a *derived* why-it-matters signal — what changed, why it matters, the next step — never fabricated | *Actionability* (`ux-lists.md`) |
+| The default order serves the user's job; signal over recency; each sort mode is self-evident and measured-distinct | *Ranking & sort-mode legibility* (`ux-lists.md`) |
 | Progressive disclosure — the summary is self-evident, depth is one interaction away | *Self-evident over explained* |
-| One component per concept across modules; scope-aware copy for single-vs-aggregate | *Unified across modules*; *One component at two scopes* |
-| Every interaction loop closes — loading, empty, error, success, and a focus/keyboard sibling for every action | *Interaction-completeness*; *Every data state* |
+| One component per concept across modules; scope-aware copy for single-vs-aggregate | *Unified across modules*; *One component at two scopes* (`ux-components.md`) |
+| Every interaction loop closes — loading, empty, error, success, and a focus/keyboard sibling for every action | *Interaction-completeness* (`ux-interaction.md`); *Every data state* |
 
 If a pattern you need is in that table, build it and move on — its home is
 domain P, not this file.
