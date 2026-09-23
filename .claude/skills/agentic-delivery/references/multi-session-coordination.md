@@ -565,9 +565,9 @@ by having its own logic execute a workaround that achieves the same effect
 through a path the classifier never evaluated (permission-laundering is
 forbidden whether the router is a sub-agent, as in the single-session case
 above, or a peer session, as here). Where a classifier-safe in-repo
-alternative exists for the action itself — committing evidence into the
-repo and linking it, instead of an external publish call the classifier
-blocks — prefer that over routing at all. **🚩 tell:** a peer re-attempting
+alternative exists — committing app-only evidence (fictional data, never a
+design composite) and linking it instead of the blocked external publish —
+prefer that over routing at all. **🚩 tell:** a peer re-attempting
 an already-denied action across a cadence with no change in verdict, while
 a sibling peer performs the identical action successfully — a persistent
 asymmetry being treated as a retryable flake.

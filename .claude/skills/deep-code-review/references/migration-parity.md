@@ -110,17 +110,24 @@ surface first, not whichever view the app happens to default to.
 **Seed through real write paths, never a hand-edited store.** A committed, idempotent,
 dev-only seed command (invocation named in the lane brief) writes each sample row through the
 app's own creation flow, labelled sample, never production (chrome-vs-data rule below).
+Seed identities are fictional, never the prototype's sample names; in-repo evidence is the app
+alone on that data, and design-vs-app composites stay out of the repo. Text privacy gates can't
+read pixels: a `binaries_gate.py` allowlist entry for a screenshot is a privacy review.
 For the differ's matched-state diff of gated sections, render both sides past sign-in (one
 dev identity), or its `missing` list is an auth gap, not a build order (the MISMATCH
 precondition line); the signed-out default surface stays its own required check
 (`rendered-parity.md`). Disclose the comparison state beside the verdict (goalpost rule, `product-ux-quality.md`).
 Only on matched states is a gross-dimension delta parity evidence, not a volume notice (below).
 
+**Pin the target export first.** When a design package holds several exports of one prototype,
+grep each for distinctive UI strings from the newest change-log entries; the one holding all is
+the target (record it where every lane reads it), never the largest or best-named. None matches →
+ask the design owner (`method.md`'s stale-input rule).
+
 **Check order: cheap and deterministic first — an earlier mismatch stops the rest.** Diff
 design-token **values** (below) before the structural differ, and run the differ before any
-screenshot pass: a token mismatch or a `MISMATCH`/`CANNOT_COMPARE` verdict is usually the root
-cause of a later pixel diff — fix and re-run before chasing a screenshot the structural gap
-already explains.
+screenshot pass: a token mismatch or a `MISMATCH`/`CANNOT_COMPARE` verdict usually explains a
+later pixel diff — fix and re-run first.
 
 ## Scope a parity claim to the correspondence table — one screen verified is not the product
 

@@ -3,6 +3,18 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.437.0] — 2026-09-23
+
+### Added — verified token/model levers; lane isolation guard; issue folds
+- `deep-code-review/references/model-tiering.md` (sources fetched and dated in `docs/standards-index.md`): the prompt cache is model-scoped, so a multi-model cascade forfeits cache reads — try one model at lower effort before tiering down; cache write/read multipliers and minimum cacheable prompt sizes; context editing (`clear_tool_uses`); the Batch API discount stacks with caching for non-interactive runs. `agentic-delivery/references/host-enforcement.md`: host-level subagent model pin (`CLAUDE_CODE_SUBAGENT_MODEL`, `_FORCE`) and prompt-cache TTL settings. +2 deep-code-review evals.
+- `agentic-delivery/scripts/lane_guard.py`: run at lane start; refuses unless the cwd is a linked worktree on a non-default branch (optionally the expected one) and prints one refusal line to quote. Doctrine names the dodge forms (absolute path, wrapper, subshell) as out of bounds and makes orchestrator-created worktrees the fallback. Selftest 12/12, 7/7 mutants killed. Closes #1087.
+- Folds: split-first before a per-section fan-out when 2+ lanes would write one file (#1082); fictional seed names, app-only evidence in the repo, and newest-export selection for design comparison (#1083, #1085); atomic updates to a human-watched dev surface (#1086). +4 evals.
+- size-budget-raise: .claude/skills/agentic-delivery/references/dev-env-ownership.md 25172→25648 atomic human-watched surface update (#1086)
+- size-budget-raise: .claude/skills/agentic-delivery/references/fanout-host-sizing.md 35536→36033 split-first before per-section fan-out (#1082)
+- size-budget-raise: .claude/skills/agentic-delivery/references/host-enforcement.md 6320→8902 lane_guard section (#1087) and host model-pin / cache-TTL settings
+- size-budget-raise: .claude/skills/deep-code-review/references/migration-parity.md 24956→25512 seed naming, app-only evidence, export selection (#1083, #1085)
+- size-budget-raise: .claude/skills/deep-code-review/references/model-tiering.md 10662→12529 verified cache/context/batch levers
+
 ## [1.436.0] — 2026-09-23
 
 ### Added — lessons must land as mechanisms; churn and priority gates

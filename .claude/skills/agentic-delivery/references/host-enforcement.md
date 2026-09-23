@@ -1,12 +1,12 @@
 # Host capability & enforcement contract
 
 **Read this when** claiming that state, permissions, or spend are *enforced*
-rather than merely followed, or when designing a host adapter for this overlay.
-This file is a claim-honesty framework and an optional interface; **no hook,
-sandbox, budget service, or durable runtime ships with these instructions.** It
-applies `SKILL.md` principle 3 (evidence and permission are separate; a check
-that could not run is `UNVERIFIED`, never a pass) to the coordination layer
-itself.
+rather than merely followed, briefing a worktree-isolated write-lane, or
+designing a host adapter for this overlay.
+A claim-honesty framework plus an optional interface: **no sandbox, budget
+service, or durable runtime ships here** (only the two scripts named below). It
+applies `SKILL.md` principle 3 (a check that could not run is `UNVERIFIED`,
+never a pass) to the coordination layer itself.
 
 ## Claim only the level you observed
 
@@ -28,12 +28,25 @@ inherited or unavailable controls as such, and **fail or narrow the dependent
 action when a required control is absent** — never convert an unavailable check
 into a pass or into authority.
 
-A prompt-level "do not use tool X" is a **protocol** control only — model instructions are not a
-sandbox, so the worker can still call X; the **host-enforced** form is spawning the worker with an
-allowed-tools set that excludes X (or denying the tool at the real execution boundary), with a
-protocol-level fallback of auditing the tool calls in the receipt after the fact. Declare
-tool/capability access at the level you can actually enforce, and narrow the dependent action when
-only the prompt-level control exists.
+A prompt-level "do not use tool X" is a **protocol** control only — instructions are not a sandbox.
+The **host-enforced** form spawns the worker with an allowed-tools set that excludes X (or denies it
+at the execution boundary); the protocol fallback audits the receipt's tool calls afterward. Declare
+tool access at the level you can enforce; narrow the dependent action when only the prompt exists.
+
+## Isolated write-lanes: guard first, stop at the first refusal
+
+Isolation is a control too: a lane that lost it writes a shared tree. A write-lane brief's first
+command is `git rev-parse HEAD && python3 .claude/skills/agentic-delivery/scripts/lane_guard.py
+--expect-branch <branch>` — the direct read probes any command-wrapping hook; `lane_guard.py`
+(`--selftest`) prints one quotable `LANE_GUARD REFUSE:` line and exits non-zero unless the cwd is a
+linked worktree on the expected, non-default branch. At that or any later refusal the lane stops and
+hands back the line plus its changed files. The brief names the dodges as out of bounds, own branch
+included: an absolute binary path, a wrapper (`env`, `sh -c`, a script), a subshell — all
+permission-laundering (`multi-session-coordination.md`). The orchestrator audits live processes
+(`pgrep -fl 'git push'`), not only lane reports. Without host isolation, the orchestrator makes each
+worktree (`git worktree add`) and spawns the lane there, confined by the brief; blocked work is
+re-shipped by a fresh lane in a fresh worktree, never salvaged via git in the blocked tree. Each
+receipt records its isolation mode (host / orchestrator-worktree).
 
 ## Optional adapter interface (proposed, not shipped)
 

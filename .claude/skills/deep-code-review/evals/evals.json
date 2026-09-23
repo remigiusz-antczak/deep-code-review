@@ -5921,6 +5921,18 @@
         "Names the version gate (Claude Code v2.1.257+) as a precondition to check before claiming this control is available",
         "Identifies the cache-TTL settings (promptCacheTtl/subagentPromptCacheTtl or their env-var equivalents) as the sibling host-level spend control, distinct from the per-agent experimental.cacheTtl frontmatter opt-in"
       ]
+    },
+    {
+      "id": "parity-evidence-composite-leaks-prototype-names",
+      "prompt": "Review this design-parity PR. It adds a seed script whose sample people are copied from the prototype (the prototype shows real-looking names and emails), and commits `docs/parity/dashboard-side-by-side.png`, a design-versus-app composite, with a new binaries-allowlist entry for it. The lane matched the design package's largest export file; a smaller export in the same package contains the 'Pinned' label that the newest change-log entry introduced, and the largest one does not. The text privacy gate is green and the PR says 'dashboard now matches the design'. Findings?",
+      "expected_output": "Two findings. (1) Privacy (S1 PII, blocks merge until removed): the seed copies the prototype's sample identities, and the committed composite puts the prototype's names into git history as pixels. The text privacy gate being green proves nothing here because text gates cannot read pixels, and the new binaries_gate.py allowlist entry for a screenshot is the privacy review point that was skipped. Fix: seed fictional placeholders only, keep in-repo evidence app-only (the app rendering fictional data), and keep design-versus-app composites outside the repo (scratch dir or ephemeral artifact); the composite stays in history until rewritten, so flag that as an owner decision. (2) Wrong target: file size is not evidence of which export is current. Grep each export for distinctive UI strings from the newest change-log entries; the one containing all of them ('Pinned' here) is the target, recorded where every lane reads it, and if none matches ask the design owner. Every earlier 'matches the design' result was checked against the wrong export and is void until re-run against the pinned one. (migration-parity.md, seed and pin-the-target-export paragraphs; method.md stale-input rule.)",
+      "expectations": [
+        "Flags the copied seed names and the committed composite image as a PII/privacy finding",
+        "Explains that the green text privacy gate cannot see names rendered in pixels, and treats the binaries allowlist entry as a privacy review point",
+        "Requires fictional seed identities, app-only in-repo evidence, and composites kept outside the repo",
+        "Selects the design export by the newest change-log UI strings, not by file size, and asks the design owner if no export matches",
+        "Voids the 'matches the design' claim because it was checked against the wrong export"
+      ]
     }
   ]
 }

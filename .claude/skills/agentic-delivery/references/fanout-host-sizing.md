@@ -89,8 +89,14 @@ fan-out-sizing rule. Ranked levers:
   lockfile, a compiled bundle, an aggregated registry/index), which serializes them however disjoint their
   source edits are. Cut it by making that surface **smaller** (slice the work so fewer lanes touch it, or
   generate per-slice and aggregate once) and giving the chokepoint a **single owner** or a
-  **read-through cache** — not by adding lanes, which only lengthens the queue for the same artifact. (The
-  invisible-ceiling cousin of the shared-quota section below: the box reads healthy while throughput stalls.)
+  **read-through cache** — not by adding lanes (a longer queue). (Invisible-ceiling cousin of the shared-quota
+  section below.)
+- **Split a shared hand-edited file before fanning out** — when 2+ planned lanes would write one source file
+  (one lane per section of a big page), don't serialize them: dispatch one **pure-move** lane first (a module
+  per section, a shared module for helpers 2+ sections use, the old path kept as a transitional re-export
+  whose importers move to direct paths — `deep-code-review`'s `frontend-a11y.md` barrel rule). No logic,
+  markup, or style change; gate it on type check, lint, an **unchanged test count**, and a smoke render.
+  Merge it, then fan out one lane per module.
 
 **🚩** an orchestrator raising lane concurrency past the probed CPU/RAM cap to "go faster" while per-lane
 cycle-time (setup + gate) is untouched — that lowers throughput, not raises it.

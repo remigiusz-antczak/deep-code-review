@@ -48,12 +48,17 @@ gate itself fails.
 The mirror of the serve-vs-commit deadlock above: a background loop that **`git reset --hard`** (or `checkout`)
 a worktree **while a dev server is serving from it** yanks the files out from under the running process. Many
 dev servers (or their file-watchers) **exit cleanly** when their entry file vanishes or is rewritten mid-run —
-so the server just stops, with a **zero exit code and no error**, and the next browser / UX gate hits a dead
-port (`connection refused`), a **false failure** that reads as a code defect. Don't hard-reset a served tree on
+**exit 0, no error** — and the next UX gate hits a dead port (`connection refused`), a **false failure** that
+reads as a code defect. Don't hard-reset a served tree on
 a sync loop: **serve from a tree the sync loop never touches** (the separate-tree rule above), prefer a
 **fast-forward-only** update over a hard reset on any served tree, and put the dev server under a
-**health-checked supervisor** that restarts it after a sync (with the UX gate waiting on that health check) so a
-legitimate resync does not read as a broken build.
+**health-checked supervisor** that restarts it after a sync (the UX gate waits on that health check) so a
+legitimate resync does not read as a broken build. A surface a **human** watches never restarts per sync: the gap
+(connection refused, then a cold compile) reads as "feature gone", and debouncing only shortens it. Update it
+atomically — a deployed preview, or a warmed standby (a second tree behind a small proxy on the public port,
+switched once its main routes answer, both backends on one shared local data store); restart in place only when
+the active backend fails its health check. Check a "feature X is gone" report against the restart log before
+treating it as a regression.
 
 ## Re-running the generator after the commit re-stamps its own output — a one-shot dirty tree that hangs the push
 
