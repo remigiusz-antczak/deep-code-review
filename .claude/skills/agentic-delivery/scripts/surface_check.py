@@ -36,18 +36,25 @@ Modes (stdlib only, no third-party dependency):
       Git runs with GIT_TERMINAL_PROMPT=0 and no terminal; a call past
       --timeout seconds is killed and reported as COULD_NOT_CHECK.
       --require-clean also FAILs when --repo has any tracked change (staged
-      or not) that is not committed: a commit a hook rejected leaves the edit
-      staged while the already-pushed HEAD still passes — edit done is not
+      or not) or any untracked, non-ignored file that is not committed
+      (`git status --untracked-files=normal`): a commit a hook rejected
+      leaves the edit staged, and a new file never added is left behind,
+      while the already-pushed HEAD still passes — edit done is not
       committed, and committed is not pushed. Pass HEAD's sha with it.
 
   checks --gh-repo OWNER/NAME --sha S [--require NAME ...] [--timeout 60]
       Read the forge's check-runs for S (`gh api`, filter=latest, every
       page) and judge each check NAME by its own latest run — never a
       combined status rollup, which can carry stale or empty entries and
-      undercount a green head. Per name: any run not completed is PENDING
-      (a live rerun supersedes an older result); otherwise the run with the
-      latest completion time decides: success / neutral / skipped is PASS,
+      undercount a green head. Runs are grouped by producer (app id, check
+      suite id) and name. Per group: any run not completed is PENDING (a live
+      rerun supersedes an older result); otherwise the run with the latest
+      completion time decides: success / neutral / skipped is PASS,
       cancelled is PENDING (transient, never red), anything else is FAIL.
+      When several producers emit one name (two workflows or apps both
+      reporting `test`) and their latest verdicts disagree, the name is FAIL
+      as ambiguous: a newer green from one producer never hides another's
+      red. Re-run the failed producer's own run to resolve it.
       With --require, only those names count and a missing one is NO-RUN.
       Exit 1 on any FAIL; exit 2 on any PENDING / NO-RUN, no runs at all,
       a page count short of total_count, or a `gh` error; else PASS. Legacy
@@ -336,21 +343,24 @@ def _git(repo, *args, timeout=DEFAULT_GIT_TIMEOUT):
 def check_ref(repo, remote, branch, expect, timeout=DEFAULT_GIT_TIMEOUT, require_clean=False):
     """Return (code, observed-remote-head, reason) for the reachability check.
 
-    With `require_clean`, any uncommitted tracked change in `repo` is a FAIL
-    before anything is fetched. Every git call is bounded by `timeout`
+    With `require_clean`, any uncommitted tracked change or untracked,
+    non-ignored file in `repo` is a FAIL before anything is fetched. Every git call is bounded by `timeout`
     seconds; a timeout raises CheckError (exit 2).
     """
     git = lambda *a: _git(repo, *a, timeout=timeout)  # noqa: E731  (one bound runner for this check)
     expected = _sha(expect, "--expect-sha")
     if require_clean:
-        st = git("status", "--porcelain=v1", "--untracked-files=no")
+        # --untracked-files=normal: a new file the lane never added is as
+        # uncommitted as a staged edit; ignored files stay out (.gitignore).
+        st = git("status", "--porcelain=v1", "--untracked-files=normal")
         if st.returncode != 0:
             raise CheckError(f"git status failed in {repo}: {st.stderr.strip()[:300]}")
         dirty = [ln for ln in st.stdout.splitlines() if ln.strip()]
+        new = sum(1 for ln in dirty if ln.startswith("??"))
         if dirty:
-            return FAIL, None, (f"{len(dirty)} tracked path(s) in {repo} changed but not committed (staged or not): "
-                                "a hook-rejected commit leaves the edit uncommitted; edit done is not committed "
-                                "is not pushed")
+            return FAIL, None, (f"{len(dirty) - new} tracked path(s) changed and {new} untracked path(s) in {repo}, "
+                                "not committed (staged or not): a hook-rejected commit leaves the edit uncommitted; "
+                                "edit done is not committed is not pushed")
     shown = redact_url(remote)  # a URL remote can carry credentials
     if remote.startswith("-") or not remote:
         raise CheckError(f"bad --remote {shown!r}")
@@ -416,6 +426,27 @@ def _decode_objects(text):
         out.append(page)
 
 
+def _producer(run):
+    """The (app id, check suite id) that produced a check run; None where the forge omitted one. Pure.
+
+    A rerun inside one workflow run stays in the same check suite, so it
+    still supersedes its older attempt; a second workflow or app emitting the
+    same name is a separate producer.
+    """
+    app, suite = run.get("app"), run.get("check_suite")
+    return (app.get("id") if isinstance(app, dict) else None, suite.get("id") if isinstance(suite, dict) else None)
+
+
+def _latest_verdict(runs):
+    """(state, detail) for one producer's runs of one name: live is PENDING, else its latest completion decides. Pure."""
+    live = [r for r in runs if r.get("status") != "completed"]
+    if live:
+        return "PENDING", str(live[0].get("status"))
+    last = max(runs, key=lambda r: (str(r.get("completed_at") or ""), r.get("id") or 0))
+    concl = str(last.get("conclusion"))
+    return ("PASS" if concl in CHECK_PASS else "PENDING" if concl == "cancelled" else "FAIL"), concl
+
+
 def check_checks(slug, sha, required, timeout):
     """Return (code, summary, reason) for the per-name latest check-run verdict (see `checks`)."""
     expected = _sha(sha, "--sha")
@@ -443,13 +474,17 @@ def check_checks(slug, sha, required, timeout):
         if not group:
             states[name] = ("NO-RUN", "no run")
             continue
-        live = [r for r in group if r.get("status") != "completed"]
-        if live:
-            states[name] = ("PENDING", str(live[0].get("status")))
-            continue
-        last = max(group, key=lambda r: (str(r.get("completed_at") or ""), r.get("id") or 0))
-        concl = str(last.get("conclusion"))
-        states[name] = ("PASS" if concl in CHECK_PASS else "PENDING" if concl == "cancelled" else "FAIL", concl)
+        producers = {}
+        for r in group:
+            producers.setdefault(_producer(r), []).append(r)
+        verdicts = {key: _latest_verdict(runs) for key, runs in sorted(producers.items(), key=lambda kv: str(kv[0]))}
+        if len({st for st, _ in verdicts.values()}) == 1:
+            states[name] = next(iter(verdicts.values()))
+        else:
+            # Several producers emit this name and their latest runs disagree:
+            # no run is authoritative, so never let the newest one win.
+            seen = ", ".join(f"app {a} suite {s}: {concl}" for (a, s), (_, concl) in verdicts.items())
+            states[name] = ("FAIL", f"ambiguous: {len(verdicts)} latest runs disagree ({seen})")
     tally = {k: sorted(n for n, (st, _) in states.items() if st == k) for k in ("PASS", "FAIL", "PENDING", "NO-RUN")}
     summary = ", ".join(f"{len(v)} {k}" for k, v in tally.items())
     detail = "; ".join(f"{k}: " + ", ".join(f"{n} ({states[n][1]})" if k != "NO-RUN" else n for n in v)
@@ -485,7 +520,7 @@ def _parser():
     r.add_argument("--expect-sha", required=True)
     r.add_argument("--timeout", type=float, default=DEFAULT_GIT_TIMEOUT, help="seconds per git call")
     r.add_argument("--require-clean", action="store_true",
-                   help="also FAIL when --repo has an uncommitted tracked change (a hook-rejected commit)")
+                   help="also FAIL when --repo has an uncommitted change or untracked file (a hook-rejected commit)")
     c = sub.add_parser("checks", parents=[common], help="judge each check name by its latest run at a sha")
     c.add_argument("--gh-repo", required=True, help="OWNER/NAME on the forge")
     c.add_argument("--sha", required=True)
@@ -750,6 +785,13 @@ def _selftest():
         case("ref --require-clean: unstaged edit FIRES", ref(clean_head) + ["--require-clean"], FAIL,
              "1 tracked path")
         g("-C", work, "checkout", "--quiet", "--", "app.txt")
+        # A new file the lane wrote but never added is also edit-done-not-committed.
+        with open(os.path.join(work, "new_module.py"), "w") as fh:
+            fh.write("x = 1\n")
+        case("ref --require-clean: untracked new file FIRES", ref(clean_head) + ["--require-clean"], FAIL,
+             "untracked")
+        os.remove(os.path.join(work, "new_module.py"))
+        case("ref --require-clean: clean again after removal passes", ref(clean_head) + ["--require-clean"], PASS)
 
         g("-C", work, "push", "--quiet", "origin", "HEAD:refs/heads/dev")
         shallow = os.path.join(tmp, "shallow")
@@ -788,9 +830,15 @@ def _selftest_checks():
     sha = "0123456789abcdef0123456789abcdef01234567"
     passed = failed = 0
 
-    def cr(i, name, status="completed", conclusion="success", done="2026-09-23T10:00:00Z", head=sha):
-        return {"id": i, "name": name, "status": status, "conclusion": conclusion if status == "completed" else None,
-                "completed_at": done if status == "completed" else None, "head_sha": head}
+    def cr(i, name, status="completed", conclusion="success", done="2026-09-23T10:00:00Z", head=sha, app=None,
+           suite=None):
+        run = {"id": i, "name": name, "status": status, "conclusion": conclusion if status == "completed" else None,
+               "completed_at": done if status == "completed" else None, "head_sha": head}
+        if app is not None:
+            run["app"] = {"id": app, "slug": f"app{app}"}
+        if suite is not None:
+            run["check_suite"] = {"id": suite}
+        return run
 
     def pages(*page_runs, total=None):
         n = sum(len(r) for r in page_runs) if total is None else total
@@ -845,6 +893,23 @@ def _selftest_checks():
     case("completion time decides, not creation order",
          pages([cr(2, "test", conclusion="cancelled", done="2026-09-23T10:00:00Z"),
                 cr(1, "test", done="2026-09-23T10:05:00Z")]), [], PASS, "1 PASS")
+    # One name, several producers (two workflows or apps both emit "test"):
+    # each (app, check suite, name) group has its own latest run, and when
+    # those latest runs disagree the name is ambiguous, never "the newest
+    # wins" — a later green from workflow B must not hide a red from A.
+    case("same name from two suites that disagree is ambiguous, not newest-wins",
+         pages([cr(1, "test", conclusion="failure", done="2026-09-23T10:00:00Z", app=1, suite=11),
+                cr(2, "test", done="2026-09-23T10:05:00Z", app=1, suite=22)]), [], FAIL,
+         "ambiguous: 2 latest runs disagree")
+    case("same name from two apps that disagree is ambiguous",
+         pages([cr(1, "test", conclusion="failure", done="2026-09-23T10:00:00Z", app=1, suite=5),
+                cr(2, "test", done="2026-09-23T10:05:00Z", app=2, suite=6)]), ["--require", "test"], FAIL,
+         "ambiguous")
+    case("same name from two suites that agree passes",
+         pages([cr(1, "test", app=1, suite=11), cr(2, "test", app=1, suite=22)]), [], PASS, "1 PASS")
+    case("a rerun inside one suite still supersedes its older red",
+         pages([cr(1, "test", conclusion="failure", done="2026-09-23T10:00:00Z", app=1, suite=11),
+                cr(2, "test", done="2026-09-23T10:05:00Z", app=1, suite=11)]), [], PASS, "1 PASS")
     with contextlib.redirect_stdout(io.StringIO()):
         rc = main(["checks", "--gh-repo", "not a slug", "--sha", sha])
     ok = rc == COULD_NOT_CHECK

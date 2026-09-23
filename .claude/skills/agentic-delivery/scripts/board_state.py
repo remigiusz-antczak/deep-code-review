@@ -28,19 +28,20 @@ WHAT THE RECORD HOLDS
   DECISION or ANSWER cites it with `of:<comment id>`. Plus open (ungated)
   questions and the last RECENT_DECISIONS decisions.
 - Audit verdicts: an AUDIT post records one peer's measured `verdict:`
-  (gap / done / na) per ref at `sha:`; the latest AUDIT on a ref wins, so a
-  fresh measurement supersedes a stale one.
+  (gap / done / na) per ref at `sha:`; the latest posted AUDIT on a ref wins
+  (comment order, not commit age), so a fresh post supersedes an older one.
 
 THE BACKLOG VIEW (--backlog --head SHA)
 ---------------------------------------
 One agent measures, every agent consumes: before spawning a worker, print the
 audited refs as a dispatch list instead of re-measuring them. Each ref is
 exactly one of DISPATCH (gap, measured at --head, unclaimed or claim
-expired), REVERIFY (gap measured at another sha: spot-check that it is still
-open at head before dispatching; do not re-measure from scratch), CLAIMED
-(gap under a live claim), or SKIP (done / na: nothing to build; a live claim
-on it is flagged as a likely duplicate dispatch). --head is required, since
-an audit row is only as current as the commit it measured. Sha comparison is
+expired), REVERIFY (any verdict measured at another sha: spot-check that it
+still holds at head before acting; do not re-measure from scratch), CLAIMED
+(gap under a live claim), or SKIP (done / na measured at head: nothing to
+build; a live claim on it is flagged as a likely duplicate dispatch). --head
+is required and must be a lowercase hex sha of 7-40 chars, since an audit row
+is only as current as the commit it measured. Sha comparison is
 by prefix, so REVERIFY means "not measured at this exact head", never a
 judgement of how far behind. A ref no AUDIT names is not listed: the view is
 the audited backlog, not every open item.
@@ -244,17 +245,29 @@ def backlog(st: dict, head: str) -> list:
 
     Returns a summary line then one line per audited ref, ordered DISPATCH,
     REVERIFY, CLAIMED, SKIP and by ref within each. A claim counts only while
-    unexpired, exactly as the Claims section reads it.
+    unexpired, exactly as the Claims section reads it. Raises ValueError when
+    `head` (or a folded audit sha) is not a lowercase hex sha of 7-40 chars:
+    an empty or garbage head would otherwise prefix-match every audit.
     """
+    if not bc.FIELD_RULES["sha"].match(head or ""):
+        raise ValueError(f"--head {head!r} is not a lowercase hex sha of 7-40 chars")
     rows = {kind: [] for kind, _ in BACKLOG_ORDER}
     for ref, a in sorted(st["audits"].items()):
         cl = st["claims"].get(ref)
         held = cl if cl and not cl["expired"] else None
         src = f"(agent:{a['agent']}, comment {a['id']})"
+        if not bc.FIELD_RULES["sha"].match(a["sha"]):
+            raise ValueError(f"audit of {ref} carries a malformed sha {a['sha']!r}")
         if a["verdict"] != "gap":
             note = (f"; claimed by agent:{held['agent']}: an audited-{a['verdict']} item under a live claim is "
                     "likely a duplicate dispatch" if held else "")
-            rows["SKIP"].append(f"SKIP `{ref}` {a['verdict']} at {a['sha']} {src}: nothing to build{note}")
+            if _same_sha(a["sha"], head):
+                rows["SKIP"].append(f"SKIP `{ref}` {a['verdict']} at {a['sha']} {src}: nothing to build{note}")
+            else:
+                # A done/na verdict dates to the commit it measured: a later
+                # merge can revert or reopen it, so it is not a SKIP at head.
+                rows["REVERIFY"].append(f"REVERIFY `{ref}` {a['verdict']} measured at {a['sha']}, not head {head} "
+                                        f"{src}: spot-check it still holds at head; post a fresh AUDIT if not{note}")
         elif held:
             rows["CLAIMED"].append(f"CLAIMED `{ref}` gap, held by agent:{held['agent']} until "
                                    f"{bc.format_ts(held['expires'])} {src}")
@@ -561,6 +574,31 @@ def _selftest() -> int:
             sys.stderr = saved
         return rc1 == rc2 == rc3 == ERROR, f"rc={rc1},{rc2},{rc3}"
 
+    def stale_done_or_na_reverify():
+        comments = [
+            _c(1, 0, f"[agent:alpha] AUDIT refs:#8 sha:{old} verdict:done\nshipped three merges ago"),
+            _c(2, 1, f"[agent:alpha] AUDIT refs:#9 sha:{old} verdict:na\nno counterpart then"),
+            _c(3, 2, f"[agent:alpha] AUDIT refs:#10 sha:{head} verdict:done\nshipped at head"),
+        ]
+        lines = backlog(fold(comments, now), head)
+        text = "\n".join(lines)
+        ok = ("REVERIFY `#8` done measured at 2222222bbbb" in text and "REVERIFY `#9` na measured at 2222222bbbb" in text
+              and "SKIP `#10` done at 1111111aaaa" in text and "SKIP `#8`" not in text and "SKIP `#9`" not in text
+              and lines[0].endswith("0 dispatch, 2 re-verify, 0 claimed, 1 skip"))
+        return ok, text
+
+    def backlog_rejects_bad_head():
+        st = fold(audit_fixture(), now)
+        refused = []
+        for bad in ("", "abc", "ZZZZZZZ1", "1111111AAAA", "1111111aaaa;rm"):
+            try:
+                backlog(st, bad)
+                refused.append(False)
+            except ValueError:
+                refused.append(True)
+        rc = run_backlog("acme/board", 7, now, "", bc.FakeGh(audit_fixture()), _Sink())
+        return all(refused) and rc == ERROR, f"refused={refused} rc={rc}"
+
     def backlog_run_reads_forge():
         sink = _Sink()
         rc = run_backlog("acme/board", 7, now, head, bc.FakeGh(audit_fixture()), sink)
@@ -571,6 +609,8 @@ def _selftest() -> int:
         ("backlog-dispatch-reverify-claimed-skip", backlog_view),
         ("backlog-requires-hex-head-and-no-write", backlog_needs_head),
         ("backlog-reads-forge", backlog_run_reads_forge),
+        ("backlog-stale-done-or-na-reverify", stale_done_or_na_reverify),
+        ("backlog-rejects-bad-head", backlog_rejects_bad_head),
         ("claims-ttl-contested-handoff-ignored", claims_ttl_contested_handoff),
         ("changed-body-before-patch-conflicts", body_changed_before_patch_not_overwritten),
         ("new-comment-before-patch-conflicts", comment_added_before_patch_not_overwritten),

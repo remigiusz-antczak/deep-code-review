@@ -38,9 +38,9 @@ replace hand-reading and hand-posting a board issue:
   FIX-CLAIM lacking a default-branch `sha:` plus a `test:`; AUDIT posts
   `verdict:gap|done|na` per ref at such a `sha:`.
 - `scripts/board_state.py` — run after any CLAIM, RELEASE, HANDOFF, BLOCKER,
-  FIX-CLAIM, or DECISION: renders claims with TTL, known issues, and
-  owner-gated items into the issue body between markers; `--backlog --head
-  <sha>` is the audit as a dispatch list: spawn from it, never re-measure (#1071).
+  FIX-CLAIM, or DECISION: renders claims (TTL), issues, owner gates in the
+  issue body; `--backlog --head <sha>` is the audit as a dispatch queue: spawn
+  from it; re-verify REVERIFY rows, don't re-audit from scratch (#1071).
 - `scripts/claim_probe.py` — run before any claim or write: GO/NO-GO (below);
   audited `done`/`na` is NO-GO.
 
