@@ -74,13 +74,26 @@ COMMANDS
       Records the OWNER's answer verbatim. The agent asks; it never decides.
       `design` declines the item; `other` closes it (ingest the owner's
       instruction as a new item).
-  accept-file [--out F]
-      Emits parity_differ's owner-accepted deviations TSV
-      (`section<TAB>item<TAB>reason<TAB>owner-quote-or-commit`) for every
-      IMPLEMENTED item that intentionally deviates from the design
-      (NOT_IN_DESIGN, or CONFLICTS_WITH_DESIGN decided `feedback`). Passing
-      it to the parity differ is the override guard: re-aligning to the
-      design can no longer undo decided feedback.
+  accept-file --design D --app A [--out F]
+      Drafts parity_differ's 7-field accepted-deviations TSV
+      (`section status item app-value count reason owner-quote-or-commit`)
+      for every IMPLEMENTED item that intentionally deviates from the design
+      (NOT_IN_DESIGN, or CONFLICTS_WITH_DESIGN decided `feedback`). D and A
+      must be the HTML renders `delta` and `status` last read (sha256
+      checked). The rows are the parity differ's own printed differences
+      (its public `compare` result, the same dict `--json` prints), so
+      section, item, and app-value are exact and `count` is the number of
+      identical rows. A row is emitted only when an eligible item in its
+      section covers it: EXTRA_IN_APP of the item's `expect` (add, keep,
+      change); MISSING_IN_APP of its `expect` (remove) or `was` (change);
+      CHANGED from `was` to `expect` (change). Every other difference stays
+      open — the differ's work queue. The file is INERT until the OWNER
+      reviews and commits it: parity_differ reads `--accept` from a
+      committed blob whose every commit is owner-authored (no
+      `Co-authored-by:` trailer). The ledger never self-authorizes: `decide`
+      records the owner's words, and the owner commits the accept file.
+      Once committed, it is the override guard: re-aligning to the design
+      can no longer undo decided feedback.
 
 INVENTORY INPUT (`--design` / `--app`)
 --------------------------------------
@@ -88,9 +101,11 @@ INVENTORY INPUT (`--design` / `--app`)
           {"sections": [...]}) where each section also carries `inventory`,
           a list of item keys in parity_differ's `kind:role:label` form.
   HTML  : a rendered export read through the sibling
-          `deep-code-review/scripts/parity_differ.py` extractor (imported,
-          never copied). An extractor without element inventory yields
-          sections only; an item on such a section fails closed (exit 2).
+          `deep-code-review/scripts/parity_differ.py` public
+          `inventory_keys` (imported, never copied; no private helper). An
+          older sibling without it yields sections only; an item on such a
+          section fails closed (exit 2), as does a class-based hiding token
+          with no computed-visibility marker (presence is not guessed).
 
 FILES
 -----
@@ -103,8 +118,11 @@ EXIT CODES (fail closed)
   0  clean for the command run
   1  open owner conflicts (delta, conflicts, accept-file), pending or
      regressed items (status), or an accept file that may be incomplete
+     (an eligible item with no covering parity row)
   2  input error: missing/unreadable/malformed file, bad row, unknown id,
-     empty owner quote, missing ledger, or an inventory with no element data
+     empty owner quote, missing ledger, an inventory with no element data,
+     or accept-file renders that differ from the ones delta/status read or
+     that the parity differ cannot compare
 
 USAGE
 -----
@@ -123,6 +141,7 @@ import io
 import json
 import os
 import re
+import subprocess
 import sys
 import tempfile
 from datetime import date as _date
@@ -135,6 +154,7 @@ sys.dont_write_bytecode = True
 
 CLEAN, OPEN, INPUT_ERROR = 0, 1, 2
 DEFAULT_LEDGER = ".claude/feedback-ledger.json"
+PARITY_DIFFER = Path(__file__).resolve().parents[2] / "deep-code-review" / "scripts" / "parity_differ.py"
 SCHEMA = 1
 SOURCES = ("csv", "doc", "transcript", "design")
 KINDS = ("add", "change", "remove", "keep")
@@ -506,7 +526,7 @@ def load_parity_differ():
     `<skills-root>/deep-code-review/scripts/parity_differ.py`, the same host
     root this script was installed into. No side effect beyond the import.
     """
-    path = Path(__file__).resolve().parents[2] / "deep-code-review" / "scripts" / "parity_differ.py"
+    path = PARITY_DIFFER
     if not path.is_file():
         return None
     spec = importlib.util.spec_from_file_location("parity_differ", path)
@@ -545,12 +565,15 @@ def load_inventory(path: str, label: str, ids: dict | None = None) -> dict:
         pd = load_parity_differ()
         if pd is None:
             raise InputError("sibling deep-code-review/scripts/parity_differ.py not found (fail closed)")
-        if hasattr(pd, "extract_side") and hasattr(pd, "_prepare"):
-            side = pd.extract_side(path)
+        if hasattr(pd, "inventory_keys"):
+            side = pd.inventory_keys(path)
             if side is None:
                 raise InputError(f"{label} export unreadable or has no data-section markers: {path}")
-            out = {norm_key(s["id"]): (None if s["inventory"] is None
-                                       else {norm_key(it["key"]) for it in pd._prepare(s["inventory"], False)})
+            hidden = [f"{s['id']}: {u}" for s in side for u in s["unresolved"]]
+            if hidden:
+                raise InputError(f"{label} export hides elements by class with no data-visible marker "
+                                 f"({'; '.join(hidden[:3])}); re-export with computed visibility")
+            out = {norm_key(s["id"]): None if s["items"] is None else {norm_key(k) for k in s["items"]}
                    for s in side}
             if ids is not None:
                 ids.update({norm_key(s["id"]): s["id"] for s in side})
@@ -744,15 +767,14 @@ def cmd_decide(ledger_path: str, ident: str, choose: str, quote: str, when: str)
     return CLEAN
 
 
-def accept_rows(ledger: dict) -> list[list[str]]:
-    """Accepted-deviation rows for IMPLEMENTED items that deviate from the design.
+def _deviating(ledger: dict) -> list[tuple[dict, dict | None]]:
+    """(item, owner decision) for IMPLEMENTED items that deliberately deviate from the design.
 
-    Row = [section, item key, reason, owner-quote-or-source]. A `change`
-    item yields rows for both its `was` and `expect` keys so the parity
-    differ accepts either a CHANGED pairing or a MISSING + EXTRA pair.
+    Eligible: ACTIVE with no peer conflict, and NOT_IN_DESIGN or
+    CONFLICTS_WITH_DESIGN decided `feedback` (decision None otherwise).
     """
     life = resolve(ledger)
-    rows = []
+    out = []
     for item in ledger["items"]:
         dec = effective_decision(item)
         if life[item["id"]]["state"] != "ACTIVE" or life[item["id"]]["peers"]:
@@ -760,41 +782,120 @@ def accept_rows(ledger: dict) -> list[list[str]]:
         if item.get("app_state") != IMPLEMENTED:
             continue
         decided = item.get("design_state") == CONFLICTS and dec and dec["choose"] == "feedback"
-        if item.get("design_state") != NOT_IN_DESIGN and not decided:
-            continue
-        section = item.get("section") or item["target"].split("/")[0].strip()
-        reason = one_line(f"feedback {item['id']}: {item['kind']} — {item['text']} ({_ref(item)})", 200)
-        owner = (one_line(f"owner {dec['date']}: \"{dec['quote']}\"") if decided
-                 else one_line(f"requirement source {_ref(item)}; the design never captured it"))
-        keys = [item["was"], item["expect"]] if item["kind"] == "change" and item["was"] else [item["expect"]]
-        rows += [[section, one_line(k), reason, owner] for k in keys]
-    return rows
+        if item.get("design_state") == NOT_IN_DESIGN or decided:
+            out.append((item, dec if decided else None))
+    return out
 
 
-def cmd_accept_file(ledger_path: str, out: str | None) -> int:
-    """Emit parity_differ's accepted-deviations TSV (the override guard)."""
-    ledger = load_ledger(ledger_path)
-    if not ledger.get("design") or not ledger.get("app"):
+def _covers(item: dict, row: dict) -> bool:
+    """True when parity row `row` is exactly the deviation `item` asks for (see accept-file)."""
+    status, exp, was = row["status"], norm_key(item["expect"]), norm_key(item["was"] or "")
+    if status == "EXTRA_IN_APP":
+        return item["kind"] != "remove" and norm_key(row["item"]) == exp
+    if status == "MISSING_IN_APP":
+        return norm_key(row["item"]) == (exp if item["kind"] == "remove" else
+                                         was if item["kind"] == "change" and was else None)
+    return (status == "CHANGED" and item["kind"] == "change" and bool(was)
+            and norm_key(row["design"] or "") == was and norm_key(row["app"] or "") == exp)
+
+
+def accept_rows(ledger: dict, result: dict) -> tuple[list[list[str]], list[str], int]:
+    """7-field accept rows from a parity result; plus uncovered items and open-row count.
+
+    `result` is parity_differ's public `compare` dict (what `--json` prints).
+    Only rows it printed are emitted, so section, item, and app-value are
+    exact; identical rows (keyed as the differ keys them: item case-folded,
+    app-value whitespace-collapsed) fold into one row with their count.
+    Returns (rows, ids of eligible items no row matched, rows left open).
+    Pure: reads the ledger and result, writes nothing.
+    """
+    by_section: dict = {}
+    for item, dec in _deviating(ledger):
+        by_section.setdefault(norm_target(item["target"]).split("/")[0], []).append((item, dec))
+    groups: dict = {}
+    covered_ids, open_rows = set(), 0
+    for sec in result.get("sections") or []:
+        for row in sec.get("rows") or []:
+            hit = next(((it, dec) for it, dec in by_section.get(norm_key(sec["id"]), ())
+                        if _covers(it, row)), None)
+            if hit is None:
+                open_rows += 1
+                continue
+            item, dec = hit
+            covered_ids.add(item["id"])
+            app = row["app"] or "-"
+            key = (sec["id"], row["status"], norm_key(row["item"]), one_line(app))
+            if key in groups:
+                groups[key][4] += 1
+                continue
+            reason = one_line(f"feedback {item['id']}: {item['kind']} — {item['text']} ({_ref(item)})", 200)
+            owner = (one_line(f"owner {dec['date']}: \"{dec['quote']}\"") if dec
+                     else one_line(f"requirement source {_ref(item)}; the design never captured it"))
+            groups[key] = [sec["id"], row["status"], row["item"], app, 1, reason, owner]
+    rows = [[str(v) for v in g] for g in groups.values()]
+    uncovered = [it["id"] for group in by_section.values() for it, _ in group if it["id"] not in covered_ids]
+    return rows, uncovered, open_rows
+
+
+def _check_render(ledger: dict, which: str, path: str) -> None:
+    """Fail closed unless `path` is the exact render the last delta/status read."""
+    meta = ledger.get(which)
+    if not meta:
         raise InputError("run delta (design) and status (app) before accept-file")
-    rows = accept_rows(ledger)
+    if not os.path.isfile(path):
+        raise InputError(f"{which} render not found: {path}")
+    if _file_meta(path, None)["sha256"] != meta["sha256"]:
+        raise InputError(f"--{which} {path} is not the render the last "
+                         f"{'delta' if which == 'design' else 'status'} read "
+                         f"(sha256 {meta['sha256'][:12]}); re-run it on this file first")
+
+
+def cmd_accept_file(ledger_path: str, design: str, app: str, out: str | None) -> int:
+    """Draft parity_differ's 7-field accept TSV; inert until the owner commits it."""
+    ledger = load_ledger(ledger_path)
+    _check_render(ledger, "design", design)
+    _check_render(ledger, "app", app)
+    pd = load_parity_differ()
+    if pd is None or not hasattr(pd, "compare"):
+        raise InputError("sibling deep-code-review/scripts/parity_differ.py with compare() not found (fail closed)")
+    result = pd.compare(design, app)
+    if result.get("verdict") not in ("MATCH", "MISMATCH") or "sections" not in result:
+        first = (result.get("report") or "").splitlines()[:1]
+        raise InputError(f"parity differ could not compare the renders ({result.get('verdict')}): "
+                         f"{first[0] if first else 'no report'}")
+    blind = [sec["id"] for sec in result["sections"] if sec.get("design_items") is None]
+    if blind:
+        raise InputError(f"no element inventory for section(s) {', '.join(blind)} (a .json side); "
+                         "accept-file needs both HTML renders")
+    rows, uncovered, open_rows = accept_rows(ledger, result)
     text = io.StringIO()
-    text.write("# Owner-accepted deviations generated by feedback_ledger.py accept-file.\n")
+    text.write("# Owner-accepted deviations drafted by feedback_ledger.py accept-file.\n")
     text.write(f"# design {ledger['design']['file']} {ledger['design']['sha256'][:12]}; "
                f"app {ledger['app']['file']} {ledger['app']['sha256'][:12]}.\n")
-    text.write("section\titem\treason\towner\n")
+    text.write("# INERT until the owner reviews and commits it: parity_differ reads --accept from a\n"
+               "# committed blob whose every commit is owner-authored (no Co-authored-by trailer).\n")
+    text.write("section\tstatus\titem\tapp-value\tcount\treason\towner\n")
     for row in rows:
         text.write("\t".join(row) + "\n")
     if out:
         _atomic_write(out, text.getvalue())
-        print(f"accept-file: wrote {len(rows)} row(s) to {out}")
+        print(f"accept-file: wrote {len(rows)} row(s) to {out} — inert until the OWNER commits it "
+              "(then: parity_differ.py --accept <file> --accept-rev <that commit>).")
     else:
         sys.stdout.write(text.getvalue())
+    gaps = result.get("section_gaps") or {}
+    n_gaps = len(gaps.get("missing") or []) + len(gaps.get("empty") or [])
+    if open_rows or n_gaps:
+        print(f"accept-file: {open_rows} parity difference(s) and {n_gaps} section gap(s) no decided "
+              "item covers stay open — the parity differ's work queue.", file=sys.stderr)
     lines, unclassified = conflict_questions(ledger)
     life = resolve(ledger)
     unchecked = sum(1 for i in ledger["items"] if life[i["id"]]["state"] == "ACTIVE" and i.get("app_state") is None)
-    if lines or unclassified or unchecked:
+    if lines or unclassified or unchecked or uncovered:
         print(f"accept-file: may be incomplete — {len(lines) // 2} open owner decision(s), "
-              f"{unclassified} item(s) without delta, {unchecked} without status.", file=sys.stderr)
+              f"{unclassified} item(s) without delta, {unchecked} without status, "
+              f"{len(uncovered)} deviating item(s) with no matching parity row"
+              f"{' (' + ', '.join(uncovered) + ')' if uncovered else ''}.", file=sys.stderr)
         return OPEN
     return CLEAN
 
@@ -835,12 +936,77 @@ def render_markdown(ledger: dict) -> str:
 
 # ------------------------------------------------------------------ selftest
 
+def _selftest_owner_commit(tmp: str, design: str, app: str, tsv: str) -> dict:
+    """Run parity_differ's CLI (`--json`) on an accept draft in a throwaway git repo.
+
+    Returns {case: (exit code, verdict, "accepted_n=N")} for: no accept file;
+    the draft uncommitted; the draft committed with a `Co-authored-by:`
+    trailer (agent-assisted); the draft committed by the owner. Global/system
+    git config is masked and DCR_OWNER_EMAIL is set only for the duration.
+    Local, read-only apart from the temp repo; no network.
+    """
+    owner = "owner@example.com"
+    repo = os.path.join(tmp, "owner-repo")
+    os.makedirs(repo)
+    keys = ("DCR_OWNER_EMAIL", "GIT_CONFIG_GLOBAL", "GIT_CONFIG_NOSYSTEM")
+    saved = {k: os.environ.get(k) for k in keys}
+    os.environ.update(GIT_CONFIG_GLOBAL=os.devnull, GIT_CONFIG_NOSYSTEM="1", DCR_OWNER_EMAIL=owner)
+    out: dict = {}
+
+    def git(*args: str) -> None:
+        """Run one git command in the temp repo; raise on failure."""
+        subprocess.run(["git", "-C", repo, "-c", f"user.email={owner}", "-c", "user.name=Jane Smith",
+                        "-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null", *args],
+                       check=True, capture_output=True, text=True)
+
+    def differ(label: str, accept: str | None) -> None:
+        """Record the differ's exit code, verdict, and accepted count for one case."""
+        cmd = [sys.executable, "-B", str(PARITY_DIFFER), "--design", design, "--app", app, "--json"]
+        if accept:
+            cmd += ["--accept", accept, "--accept-rev", "HEAD"]
+        proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        try:
+            res = json.loads(proc.stdout)
+        except json.JSONDecodeError:
+            res = {"verdict": None, "report": proc.stdout + proc.stderr}
+        out[label] = (proc.returncode, res.get("verdict"),
+                      f"accepted_n={res['accepted_n']}" if "accepted_n" in res else res.get("report", "")[:200])
+
+    try:
+        git("init", "-q")
+        differ("e2e-no-accept", None)
+        for name, msg in (("agent.tsv", "chore: accept\n\nCo-authored-by: Assistant <bot@example.com>"),
+                          ("owner.tsv", "chore: accept owner-reviewed deviations")):
+            with open(os.path.join(repo, name), "w", encoding="utf-8") as fh:
+                fh.write(tsv)
+            git("add", name)
+            git("commit", "-q", "-m", msg)
+        with open(os.path.join(repo, "loose.tsv"), "w", encoding="utf-8") as fh:
+            fh.write(tsv)
+        differ("e2e-uncommitted", os.path.join(repo, "loose.tsv"))
+        differ("e2e-agent-coauthored", os.path.join(repo, "agent.tsv"))
+        differ("e2e-owner-committed", os.path.join(repo, "owner.tsv"))
+    except (OSError, subprocess.CalledProcessError) as exc:
+        out["error"] = (None, None, str(exc))
+    finally:
+        for key, val in saved.items():
+            if val is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = val
+    return out
+
+
 def _selftest() -> int:
     """Prove each rule FIRES on neutral offline fixtures; exit 0 only if all hold.
 
     Cases: cross-source dedupe + idempotent re-ingest; design-lag conflict and
-    NOT_IN_DESIGN; owner decision recorded then accept-file includes it (and
-    parses with parity_differ's own accept loader when that exists);
+    NOT_IN_DESIGN; JSON and HTML inventories classify alike; owner decision
+    recorded then accept-file drafts the exact 7-field rows (parsed by
+    parity_differ's own `parse_accept`), refuses a stale render, and never
+    accepts an unrelated pairing; end to end, parity_differ's CLI reads the
+    draft as MISMATCH -> inert (uncommitted or agent-attributed) -> an owner
+    commit -> MATCH_WITH_ACCEPTED;
     regression detection; superseded ordering by date (ingest order reversed)
     plus a same-date feedback-vs-feedback conflict; a post-decision item
     re-opening the question; a declined item re-raised later being asked
@@ -998,32 +1164,103 @@ def _selftest() -> int:
         ])
         code, out = run("status", "--app", app, "--date", "2026-09-13")
         expect("status-one-pending", code == OPEN and "1 PENDING, 0 REGRESSED" in out, out)
+        # 4b. the same design and app as HTML renders, read through parity_differ's public
+        # inventory_keys; the states must equal the JSON-inventory run above.
+        design_html = write("design-render.html", (
+            '<main><section data-section="Reports"><h1>Monthly reports</h1><button>Download</button>'
+            '<table><tr data-item><td>Totals</td></tr></table><p>Legend above</p>'
+            '<p>Promo banner</p><p>Promo banner</p></section></main>'))
+        app_html = write("app-render.html", (
+            '<main><section data-section="Reports"><h1>Monthly reports</h1><button>Export CSV</button>'
+            '<table><tr data-item><td>Totals</td></tr></table><label for="d">Date range</label>'
+            '<select id="d"></select><p>Legend above</p><button>Sort By Date</button></section></main>'))
+        run("delta", "--design", design, "--design-date", "2026-09-08")   # re-classify after decisions
+        json_states = {i["id"]: (i["design_state"], i["app_state"]) for i in items()}
+        run("delta", "--design", design_html, "--design-date", "2026-09-08")
+        code, out = run("status", "--app", app_html, "--date", "2026-09-13")
+        expect("html-status-one-pending", code == OPEN and "1 PENDING, 0 REGRESSED" in out, out)
+        html_states = {i["id"]: (i["design_state"], i["app_state"]) for i in items()}
+        expect("html-states-equal-json", html_states == json_states, f"{json_states} vs {html_states}")
+
+        # 4c. accept-file drafts the differ's 7-field rows from the differ's own printed rows.
         accept = path("accept.tsv")
-        code, out = run("accept-file", "--out", accept)
+        code, out = run("accept-file", "--design", design_html, "--app", app_html, "--out", accept)
         expect("accept-exit", code == CLEAN, out)
+        expect("accept-inert-notice", "inert until the OWNER commits it" in out, out)
         tsv = read(accept)
         rows = [ln.split("\t") for ln in tsv.splitlines() if ln and not ln.startswith("#")][1:]
-        keys = {r[1] for r in rows}
-        expect("accept-decided-included", {"control:button:Download", "control:button:Export CSV"} <= keys, tsv)
-        expect("accept-owner-quote", any("Go with Export CSV" in r[3] for r in rows), tsv)
-        expect("accept-section-as-exported", rows and all(r[0] == "Reports" for r in rows), tsv)
-        expect("accept-design-lag-included", "control:combobox:Date range" in keys, tsv)
-        expect("accept-remove-included", "text:Promo banner" in keys, tsv)
-        expect("accept-pending-excluded", "control:link:Help" not in keys, tsv)
-        expect("accept-in-design-excluded", "table-row:Totals" not in keys and "text:Legend above" not in keys, tsv)
-        expect("accept-four-fields", rows and all(len(r) == 4 and all(r) for r in rows), tsv)
+        got = {tuple(r[:5]) for r in rows}
+        want = {("Reports", "CHANGED", "control:button:Download", "control:button:Export CSV", "1"),
+                ("Reports", "MISSING_IN_APP", "text:Promo banner", "-", "2"),
+                ("Reports", "EXTRA_IN_APP", "control:combobox:Date range", "control:combobox:Date range", "1"),
+                ("Reports", "EXTRA_IN_APP", "control:button:Sort By Date", "control:button:Sort By Date", "1")}
+        expect("accept-rows-exact", got == want and len(rows) == len(want), tsv)
+        expect("accept-seven-fields", rows and all(len(r) == 7 and all(r) for r in rows), tsv)
+        expect("accept-owner-quote", any(r[1] == "CHANGED" and "Go with Export CSV" in r[6] for r in rows), tsv)
+        expect("accept-inert-header", "INERT until the owner reviews and commits it" in tsv, tsv)
         pd = load_parity_differ()
-        if pd is not None and hasattr(pd, "load_accept"):
-            parsed, err = pd.load_accept(accept)
+        if pd is None or not hasattr(pd, "parse_accept"):
+            failures.append("accept: sibling parity_differ.py with parse_accept not found")
+        else:
+            parsed, err = pd.parse_accept(tsv)
             expect("accept-parses-in-parity-differ", parsed is not None and len(parsed) == len(rows), str(err))
+        # pure accept_rows: an eligible item no row covers is reported; a CHANGED row pairing
+        # an item's key with an unrelated design element is never accepted.
+        snap = json.loads(read(ledger))
+        rws, unc, opn = accept_rows(snap, {"sections": []})
+        expect("accept-rows-uncovered", rws == [] and len(unc) == 4 and opn == 0, f"{rws} {unc} {opn}")
+        stray = {"sections": [{"id": "Reports", "rows": [
+            {"status": "CHANGED", "item": "control:button:Share", "design": "control:button:Share",
+             "app": "control:button:Export CSV"}]}]}
+        rws, unc, opn = accept_rows(snap, stray)
+        expect("accept-rows-unrelated-changed-open", rws == [] and opn == 1, f"{rws} {opn}")
+        # stale or wrong renders fail closed
+        code, out = run("accept-file", "--design", design_html, "--app", app, "--out", path("stale.tsv"))
+        expect("accept-stale-render", code == INPUT_ERROR and not os.path.exists(path("stale.tsv")), out)
+
+        # 4d. end to end: MISMATCH -> the owner commits the draft -> MATCH_WITH_ACCEPTED.
+        # An agent-attributed or uncommitted copy of the same draft stays inert.
+        e2e = _selftest_owner_commit(tmp, design_html, app_html, tsv)
+        for label, (want_code, want_verdict) in (
+                ("e2e-no-accept", (1, "MISMATCH")),
+                ("e2e-uncommitted", (3, "COULD_NOT_CHECK")),
+                ("e2e-agent-coauthored", (3, "COULD_NOT_CHECK")),
+                ("e2e-owner-committed", (0, "MATCH_WITH_ACCEPTED"))):
+            code, verdict, extra = e2e.get(label, (None, None, ""))
+            expect(label, (code, verdict) == (want_code, want_verdict), f"{code} {verdict} {extra}")
+        expect("e2e-accepted-n", e2e.get("e2e-owner-committed", (0, 0, ""))[2] == "accepted_n=5",
+               str(e2e.get("e2e-owner-committed")))
+
         # an owner "design" answer removes an item at once, even before status re-runs
         sort_id = [i for i in items() if i["target"] == "reports/sort"][0]["id"]
-        expect("accept-sort-included", "control:button:Sort by date" in keys, tsv)
         run("decide", "--id", sort_id, "--choose", "design", "--quote", "No sorting yet.", "--date", "2026-09-14")
         run("decide", "--id", eid, "--choose", "design", "--quote", "Keep Download after all.", "--date", "2026-09-14")
-        run("accept-file", "--out", accept)
+        code, out = run("accept-file", "--design", design_html, "--app", app_html, "--out", accept)
         tsv = read(accept)
-        expect("accept-declined-excluded", "Export CSV" not in tsv and "Sort by date" not in tsv, tsv)
+        expect("accept-declined-excluded", code == CLEAN and "Export CSV" not in tsv
+               and "Sort By Date" not in tsv and "2 parity difference(s)" in out, out + tsv)
+        # a JSON render carries no element inventory for the differ: accept-file refuses rather
+        # than drafting blind — whether the differ says COULD_NOT_CHECK or MISMATCH (a missing
+        # section) with an inventory-less section beside it.
+        json_app = write("json-app.json", [{"id": "Reports", "populated": True,
+                                            "inventory": json.loads(read(app))[0]["inventory"]}])
+        run("status", "--app", json_app, "--date", "2026-09-14")
+        code, out = run("accept-file", "--design", design_html, "--app", json_app, "--out", path("blind.tsv"))
+        expect("accept-json-side-could-not-check", code == INPUT_ERROR and "could not compare" in out
+               and not os.path.exists(path("blind.tsv")), out)
+        ledger_saved, ledger = ledger, path("blind-ledger.json")
+        write("blind-items.json", [{"target": "a", "kind": "add", "date": "2026-09-01", "text": "Add Save",
+                                    "expect": "control:button:Save"}])
+        run("ingest", "--source", "doc", "--file", path("blind-items.json"))
+        blind_design = write("blind-design.html", '<section data-section="a"><p data-item>x</p></section>'
+                                                  '<section data-section="b"><p data-item>y</p></section>')
+        blind_app = write("blind-app.json", [{"id": "a", "populated": True, "inventory": ["control:button:Save"]}])
+        run("delta", "--design", blind_design)
+        run("status", "--app", blind_app)
+        code, out = run("accept-file", "--design", blind_design, "--app", blind_app, "--out", path("blind.tsv"))
+        expect("accept-json-side-mismatch-refused", code == INPUT_ERROR and "both HTML renders" in out
+               and not os.path.exists(path("blind.tsv")), out)
+        ledger = ledger_saved
 
         # 5. regression: the filter disappears from the app after being implemented.
         app2 = write("app2.json", [
@@ -1109,7 +1346,7 @@ def _selftest() -> int:
         else:
             try:
                 inv = load_inventory(html, "design")
-                capable = hasattr(pd, "extract_side")
+                capable = hasattr(pd, "inventory_keys")
                 expect("html-inventory", (not capable and inv == {"reports": None})
                        or (capable and "control:button:download" in (inv.get("reports") or set())), str(inv))
                 if not capable:
@@ -1117,6 +1354,11 @@ def _selftest() -> int:
                     expect("html-no-inventory-fails-closed", code == INPUT_ERROR, out)
             except InputError as exc:
                 failures.append(f"html: {exc}")
+            if capable:
+                hid = write("hidden.html", '<section data-section="reports"><button class="d-none">Help</button>'
+                                           '</section>')
+                code, out = run("status", "--app", hid)
+                expect("html-unmarked-hiding-class-fails-closed", code == INPUT_ERROR and "data-visible" in out, out)
 
     if failures:
         print("SELFTEST FAILED:")
@@ -1124,7 +1366,8 @@ def _selftest() -> int:
             print(f"  - {failure}")
         return 1
     print("SELFTEST OK: dedupe=linked(3 sources) idempotent=ok superseded=by-date peer-conflict=ok "
-          "design-lag=CONFLICTS/NOT_IN_DESIGN decide->accept-file=ok regression=1 malformed=2")
+          "design-lag=CONFLICTS/NOT_IN_DESIGN decide->accept-file(7-field,exact)=ok "
+          "owner-commit(MISMATCH->MATCH_WITH_ACCEPTED)=ok regression=1 malformed=2")
     return 0
 
 
@@ -1152,7 +1395,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--choose", required=True, choices=CHOICES)
     p.add_argument("--quote", required=True)
     p.add_argument("--date", required=True)
-    p = sub.add_parser("accept-file", help="emit parity_differ's accepted-deviations TSV")
+    p = sub.add_parser("accept-file", help="draft parity_differ's accepted-deviations TSV (owner commits it)")
+    p.add_argument("--design", required=True, help="the HTML design render delta last read")
+    p.add_argument("--app", required=True, help="the HTML app render status last read")
     p.add_argument("--out")
     args = parser.parse_args(argv)
 
@@ -1170,7 +1415,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.cmd == "decide":
             return cmd_decide(args.ledger, args.id, args.choose, args.quote, args.date)
         if args.cmd == "accept-file":
-            return cmd_accept_file(args.ledger, args.out)
+            return cmd_accept_file(args.ledger, args.design, args.app, args.out)
     except InputError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return INPUT_ERROR
