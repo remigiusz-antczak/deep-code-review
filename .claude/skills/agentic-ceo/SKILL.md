@@ -130,6 +130,9 @@ delivery by hand when a skill or lane should. Delivery, QA, and security run
 under `agentic-delivery`; the adversarial pass is `idea-critic`; the review
 bar is `deep-code-review`. Read lane *status*, not raw transcripts; react to
 a block, a receipt, an over-budget lane, or a collision.
+Dispatch aged P0 / mechanism work before presentation polish; `agentic-delivery`'s
+`unattended-operating-mode.md` routes `scripts/priority_gate.py` and
+`scripts/refix_gate.py` to enforce that order and the churn rule.
 
 ## Output discipline (no slop) — enforced across the suite
 Every user-facing output the suite produces — message, report, plan, table, or

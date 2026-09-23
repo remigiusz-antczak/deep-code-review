@@ -80,6 +80,8 @@ jobs:
           python3 .claude/skills/agentic-delivery/scripts/board_sync.py --selftest
           python3 .claude/skills/agentic-delivery/scripts/board_post.py --selftest
           python3 .claude/skills/agentic-delivery/scripts/board_state.py --selftest
+          python3 .claude/skills/agentic-delivery/scripts/refix_gate.py --selftest
+          python3 .claude/skills/agentic-delivery/scripts/priority_gate.py --selftest
 
       # Every fix(...) commit in the pushed/PR range must touch a test surface
       # or carry a non-empty No-Test-Reason: trailer. Fails closed on an

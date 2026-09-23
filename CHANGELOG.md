@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.436.0] — 2026-09-23
+
+### Added — lessons must land as mechanisms; churn and priority gates
+- `fix_class_gate.py --trigger-glob`: a commit touching a trigger path (here: any skill `SKILL.md` or `references/*.md`) must also touch a mechanism path (an `evals.json`, a skill script, or `scripts/test-ci-gates.sh`) or carry a non-empty `No-Mechanism-Reason:` trailer. Wired into CI as "Prose lessons carry a mechanism" and into `templates/dcr-gates.sh` (`DCR_TRIGGER_GLOBS`, fail-closed). It proves a mechanism file was touched, not that it pins the lesson; merge commits are skipped. `contribution` and `retrospective.md` now require a fail-before/pass-after eval or a gate for any correctness lesson. Selftest 22/22.
+- `agentic-delivery/scripts/refix_gate.py`: a range that modifies a file touched by a `fix(...)` commit within the window (default 72h) must add a class artifact (test/eval) or carry `Refix-Reason:`. Forces a class-level artifact on churn; cannot judge class completeness. Selftest 18/18.
+- `agentic-delivery/scripts/priority_gate.py`: fails a presentation/cosmetic PR while a P0/mechanism issue older than N hours has no citing PR; optional 24h presentation-share budget. Pure function over JSON, `--repo` fetches via `gh api`. Selftest 31/31. Both gates are opt-in in `dcr-gates.sh` (`DCR_REFIX_GATE`, `DCR_PRIORITY_GATE`) and routed from `unattended-operating-mode.md`; `agentic-ceo` points dispatch ordering at them. +2 agentic-delivery evals.
+
 ## [1.435.0] — 2026-09-23
 
 ### Added — cursor-based coordination on a shared GitHub issue

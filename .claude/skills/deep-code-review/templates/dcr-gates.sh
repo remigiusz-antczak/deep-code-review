@@ -35,10 +35,27 @@
 #   DCR_BINARIES_ALLOWLIST path to the binaries-gate allowlist file. Unset ->
 #                           <repo-root>/scripts/binaries-allowlist.tsv if it
 #                           exists, else no exemptions.
-#   BASE_SHA / HEAD_SHA     the commit range fix_class_gate.py checks. In CI,
-#                           set these from the event (see the shipped
-#                           workflow template). Locally, defaults to
-#                           HEAD~1..HEAD when both are unset.
+#   BASE_SHA / HEAD_SHA     the commit range fix_class_gate.py (and the
+#                           opt-in refix_gate.py) checks. In CI, set these
+#                           from the event (see the shipped workflow
+#                           template). Locally, defaults to HEAD~1..HEAD when
+#                           both are unset.
+#
+# OPT-IN gates (off unless the flag is exactly 1; any value other than unset,
+# 0, or 1 fails closed). Both need the agentic-delivery skill installed; a set
+# flag with that skill or its script missing is a failure, never a skip.
+#   DCR_REFIX_GATE=1        run agentic-delivery's refix_gate.py over the same
+#                           range: re-touching a file a fix: commit touched
+#                           within DCR_REFIX_WINDOW_HOURS (default 72) needs a
+#                           DCR_TEST_GLOBS-matching test/eval change or a
+#                           Refix-Reason: trailer.
+#   DCR_PRIORITY_GATE=1     run agentic-delivery's priority_gate.py on the PR
+#                           under review, from DCR_PRIORITY_JSON (a JSON file)
+#                           or DCR_PRIORITY_REPO=owner/repo + DCR_PRIORITY_PR=N
+#                           (`gh api`; the job needs GH_TOKEN). Optional
+#                           DCR_PRIORITY_BUDGET (0..1) and DCR_PRIORITY_ARGS
+#                           (extra options, whitespace-split, never
+#                           glob-expanded, e.g. "--priority-label sev1").
 #
 # Exit code: 0 iff every gate below passed. Fails closed — an unresolvable
 # skill install, a gate or selftest script missing from that install, or any
@@ -79,43 +96,55 @@ fi
 FAIL=0
 
 # ---------------------------------------------------------------------------
+# The commit range the range-based gates check. RANGE_STATE is one of:
+#   ok      BASE_SHA and HEAD_SHA are both set
+#   partial the caller supplied half a range (a misconfiguration, never a pass)
+#   none    nothing supplied and HEAD~1 unresolvable (single-commit repo)
+# ---------------------------------------------------------------------------
+BASE_SHA="${BASE_SHA:-}"
+HEAD_SHA="${HEAD_SHA:-}"
+CALLER_RANGE="${BASE_SHA}${HEAD_SHA}"
+if [ -z "${BASE_SHA}" ] && [ -z "${HEAD_SHA}" ]; then
+  # `--verify` (not a bare `rev-parse <ref>`): on an unresolvable ref, plain
+  # `git rev-parse HEAD~1` still prints the literal ref text to STDOUT
+  # (alongside the fatal error on stderr) despite its non-zero exit — a
+  # known git quirk. `--verify` never does that, so a failure here is
+  # reliably empty, not the poisoned literal string "HEAD~1".
+  HEAD_SHA="$(git -C "${REPO_ROOT}" rev-parse --verify -q HEAD 2>/dev/null || true)"
+  BASE_SHA="$(git -C "${REPO_ROOT}" rev-parse --verify -q 'HEAD~1' 2>/dev/null || true)"
+fi
+if [ -n "${BASE_SHA}" ] && [ -n "${HEAD_SHA}" ]; then
+  RANGE_STATE=ok
+elif [ -n "${CALLER_RANGE}" ]; then
+  RANGE_STATE=partial
+else
+  RANGE_STATE=none
+fi
+
+# DCR_TEST_GLOBS as an array. `read -ra` splits on whitespace WITHOUT pathname
+# expansion, so a glob like `tests/*` reaches a gate script as a pattern, not
+# as whatever files it happens to match in the current directory.
+test_globs=()
+if [ -n "${DCR_TEST_GLOBS:-}" ]; then
+  read -r -a test_globs <<<"${DCR_TEST_GLOBS}"
+fi
+
+# ---------------------------------------------------------------------------
 # 1) fix_class_gate — every fix(...) commit in range touches a pinned test,
 #    or carries a non-empty No-Test-Reason: trailer.
 # ---------------------------------------------------------------------------
 FIX_CLASS_GATE="${REVIEW_ROOT}/scripts/fix_class_gate.py"
 if [ -f "${FIX_CLASS_GATE}" ]; then
-  BASE_SHA="${BASE_SHA:-}"
-  HEAD_SHA="${HEAD_SHA:-}"
-  CALLER_RANGE="${BASE_SHA}${HEAD_SHA}"
-  if [ -z "${BASE_SHA}" ] && [ -z "${HEAD_SHA}" ]; then
-    # `--verify` (not a bare `rev-parse <ref>`): on an unresolvable ref, plain
-    # `git rev-parse HEAD~1` still prints the literal ref text to STDOUT
-    # (alongside the fatal error on stderr) despite its non-zero exit — a
-    # known git quirk. `--verify` never does that, so a failure here is
-    # reliably empty, not the poisoned literal string "HEAD~1".
-    HEAD_SHA="$(git -C "${REPO_ROOT}" rev-parse --verify -q HEAD 2>/dev/null || true)"
-    BASE_SHA="$(git -C "${REPO_ROOT}" rev-parse --verify -q 'HEAD~1' 2>/dev/null || true)"
-  fi
-  if [ -z "${BASE_SHA}" ] || [ -z "${HEAD_SHA}" ]; then
-    if [ -n "${CALLER_RANGE}" ]; then
-      # The caller (the CI workflow) supplied half a range: a misconfiguration,
-      # never a pass.
-      printf 'dcr-gates: FAIL fix_class_gate (caller supplied an incomplete BASE_SHA/HEAD_SHA range)\n'
-      FAIL=1
-    else
-      printf 'dcr-gates: fix_class_gate skipped (no range supplied and HEAD~1 unresolvable: single-commit repo?)\n'
-    fi
+  if [ "${RANGE_STATE}" = partial ]; then
+    printf 'dcr-gates: FAIL fix_class_gate (caller supplied an incomplete BASE_SHA/HEAD_SHA range)\n'
+    FAIL=1
+  elif [ "${RANGE_STATE}" = none ]; then
+    printf 'dcr-gates: fix_class_gate skipped (no range supplied and HEAD~1 unresolvable: single-commit repo?)\n'
   else
     glob_args=()
-    if [ -n "${DCR_TEST_GLOBS:-}" ]; then
-      # `read -ra` splits on whitespace WITHOUT pathname expansion, so a glob
-      # like `tests/*` reaches fix_class_gate.py as a pattern, not as whatever
-      # files it happens to match in the current directory.
-      read -r -a test_globs <<<"${DCR_TEST_GLOBS}"
-      for g in "${test_globs[@]+"${test_globs[@]}"}"; do
-        glob_args+=(--test-glob "$g")
-      done
-    fi
+    for g in "${test_globs[@]+"${test_globs[@]}"}"; do
+      glob_args+=(--test-glob "$g")
+    done
     # fix_class_gate.py resolves the range against its OWN process cwd (it
     # takes no --repo flag), so this must run with cwd == REPO_ROOT — never
     # wherever dcr-gates.sh itself happened to be invoked from.
@@ -202,6 +231,93 @@ for script in "${SELFTEST_SCRIPTS[@]}"; do
     FAIL=1
   fi
 done
+
+# ---------------------------------------------------------------------------
+# 4-5) OPT-IN delivery gates. Each runs its own --selftest first (a gate that
+#      cannot prove it fires is not trusted), then the real check.
+# ---------------------------------------------------------------------------
+
+# opt_in <FLAG_NAME> — succeed iff the flag is exactly 1; unset or 0 is off;
+# any other value is a misconfiguration and fails closed.
+opt_in() {
+  local value="${!1:-0}"
+  case "${value}" in
+    0) return 1 ;;
+    1) return 0 ;;
+    *) printf 'dcr-gates: FAIL %s=%s (want unset, 0, or 1)\n' "$1" "${value}" >&2; FAIL=1; return 1 ;;
+  esac
+}
+
+# delivery_script <name> — print the installed agentic-delivery script's path
+# once its selftest passes; exit non-zero (caller sets FAIL) when it is
+# missing or its selftest fails. Runs in a command substitution, so it
+# reports failure by exit code, never by setting FAIL itself.
+delivery_script() {
+  local path="${DELIVERY_ROOT:+${DELIVERY_ROOT}/scripts/$1}"
+  if [ -z "${path}" ] || [ ! -f "${path}" ]; then
+    printf 'dcr-gates: %s not found (agentic-delivery not installed?) (FAIL, fail closed)\n' "$1" >&2
+    return 1
+  fi
+  if ! python3 "${path}" --selftest >&2; then
+    printf 'dcr-gates: selftest FAILED for %s\n' "${path}" >&2
+    return 1
+  fi
+  printf '%s' "${path}"
+}
+
+if opt_in DCR_REFIX_GATE; then
+  if ! REFIX_GATE="$(delivery_script refix_gate.py)"; then
+    FAIL=1
+  elif [ "${RANGE_STATE}" = partial ]; then
+    printf 'dcr-gates: FAIL refix_gate (caller supplied an incomplete BASE_SHA/HEAD_SHA range)\n'
+    FAIL=1
+  elif [ "${RANGE_STATE}" = none ]; then
+    printf 'dcr-gates: refix_gate skipped (no range supplied and HEAD~1 unresolvable: single-commit repo?)\n'
+  else
+    class_args=()
+    for g in "${test_globs[@]+"${test_globs[@]}"}"; do
+      class_args+=(--class-glob "$g")
+    done
+    # Like fix_class_gate.py, refix_gate.py resolves the range against its own
+    # cwd, so it runs with cwd == REPO_ROOT.
+    if (cd "${REPO_ROOT}" && python3 "${REFIX_GATE}" --base "${BASE_SHA}" --head "${HEAD_SHA}" \
+        --window-hours "${DCR_REFIX_WINDOW_HOURS:-72}" "${class_args[@]+"${class_args[@]}"}"); then
+      printf 'dcr-gates: refix_gate PASS\n'
+    else
+      printf 'dcr-gates: refix_gate FAIL\n' >&2
+      FAIL=1
+    fi
+  fi
+fi
+
+if opt_in DCR_PRIORITY_GATE; then
+  prio_args=()
+  if [ -n "${DCR_PRIORITY_JSON:-}" ]; then
+    prio_args=(--labels-json "${DCR_PRIORITY_JSON}")
+  elif [ -n "${DCR_PRIORITY_REPO:-}" ] && [ -n "${DCR_PRIORITY_PR:-}" ]; then
+    prio_args=(--repo "${DCR_PRIORITY_REPO}" --pr "${DCR_PRIORITY_PR}")
+  fi
+  if ! PRIORITY_GATE="$(delivery_script priority_gate.py)"; then
+    FAIL=1
+  elif [ "${#prio_args[@]}" -eq 0 ]; then
+    printf 'dcr-gates: FAIL priority_gate (DCR_PRIORITY_GATE=1 needs DCR_PRIORITY_JSON, or DCR_PRIORITY_REPO + DCR_PRIORITY_PR)\n'
+    FAIL=1
+  else
+    if [ -n "${DCR_PRIORITY_BUDGET:-}" ]; then
+      prio_args+=(--budget "${DCR_PRIORITY_BUDGET}")
+    fi
+    extra_prio=()
+    if [ -n "${DCR_PRIORITY_ARGS:-}" ]; then
+      read -r -a extra_prio <<<"${DCR_PRIORITY_ARGS}"
+    fi
+    if python3 "${PRIORITY_GATE}" "${prio_args[@]}" "${extra_prio[@]+"${extra_prio[@]}"}"; then
+      printf 'dcr-gates: priority_gate PASS\n'
+    else
+      printf 'dcr-gates: priority_gate FAIL\n' >&2
+      FAIL=1
+    fi
+  fi
+fi
 
 [ "${FAIL}" -eq 0 ] || die "one or more gates failed (see above)"
 printf 'dcr-gates: all gates passed\n'
