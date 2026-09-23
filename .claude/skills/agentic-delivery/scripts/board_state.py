@@ -224,6 +224,22 @@ def splice(body: str, block: str) -> str:
     return f"{head}{block}{tail}"
 
 
+def read_board(repo: str, issue: int, runner):
+    """Read a board issue and every comment; return `(issue_obj, comments)`.
+
+    Side-effects: two `gh api` reads through `runner`. Raises bc.ForgeError on
+    a failed call, undecodable output, or a comment list shorter than the
+    issue's own `comments` count (truncated pagination), so no caller ever
+    folds a partial stream as if it were complete. Shared with claim_probe.py.
+    """
+    issue_obj = bc.gh_object(runner, f"repos/{repo}/issues/{issue}")
+    comments = bc.gh_list(runner, bc.comments_path(repo, issue))
+    total = issue_obj.get("comments")
+    if not isinstance(total, int) or len({c.get("id") for c in comments}) < total:
+        raise bc.ForgeError(f"read {len(comments)} comments, issue reports {total}: truncated, refusing to fold")
+    return issue_obj, comments
+
+
 def run(repo: str, issue: int, now: datetime, write: bool, runner, out) -> int:
     """Fetch, fold, render; print the record or write it into the body. Returns an exit code.
 
@@ -234,11 +250,8 @@ def run(repo: str, issue: int, now: datetime, write: bool, runner, out) -> int:
     through a shell or argv.
     """
     try:
-        issue_obj = bc.gh_object(runner, f"repos/{repo}/issues/{issue}")
-        comments = bc.gh_list(runner, bc.comments_path(repo, issue))
-        total = issue_obj.get("comments")
-        if not isinstance(total, int) or len({c.get("id") for c in comments}) < total:
-            raise bc.ForgeError(f"read {len(comments)} comments, issue reports {total}: truncated, refusing to render")
+        issue_obj, comments = read_board(repo, issue, runner)
+        total = issue_obj["comments"]
         block = render(fold(comments, now))
         if not write:
             out.write(block + "\n")

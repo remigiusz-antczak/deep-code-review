@@ -160,9 +160,9 @@ printf 'literal depth\n' >"$literal/references/literal.md"
 gate "$GATES" routing "$literal"
 if [ "$GATE_RC" -ne 0 ]; then record 0 "routing: reject reference matched only via regex-meta basename"; else record 1 "routing: reject reference matched only via regex-meta basename"; fi
 
-# Oversized, well-routed, NON-allowlisted SKILL.md: the size ratchet now FAILS on
-# bloat (it used to only warn). The fixture basename (skill-big) is not on the
-# reasoned allowlist, so it must fail with a SIZE FAIL diagnostic.
+# Oversized, well-routed SKILL.md: the size ratchet FAILS on bloat (it used to
+# only warn), and there is no per-skill allowlist, so it must fail with a SIZE
+# FAIL diagnostic.
 big="$WORK/skill-big"
 mkdir -p "$big/references"
 printf '# Skill\n\nSee references/routed.md for depth.\n' >"$big/SKILL.md"
@@ -171,14 +171,14 @@ printf 'routed depth\n' >"$big/references/routed.md"
 
 gate "$GATES" routing --max-bytes "$SKILL_BUDGET" "$big"
 if [ "$GATE_RC" -ne 0 ] && grep -q 'SIZE FAIL' "$WORK/last.log"; then
-  record 0 "routing: FAIL (not warn) when a non-allowlisted SKILL.md exceeds the budget"
+  record 0 "routing: FAIL (not warn) when a SKILL.md exceeds the budget"
 else
-  record 1 "routing: FAIL (not warn) when a non-allowlisted SKILL.md exceeds the budget"
+  record 1 "routing: FAIL (not warn) when a SKILL.md exceeds the budget"
 fi
 
-# An allowlisted skill (agentic-delivery) may exceed the budget: it emits SIZE
-# ALLOWED and PASSES. Same oversized body; only the dir basename differs, and the
-# allowlist keys on that basename. Proves the allowlist is real, not a blanket skip.
+# The former size allowlist is gone: a skill dir named agentic-delivery (the one
+# name the allowlist used to exempt) with the same oversized body now FAILS with
+# SIZE FAIL and never prints SIZE ALLOWED. Planted RED against a re-added pin.
 allow="$WORK/agentic-delivery"
 mkdir -p "$allow/references"
 printf '# Skill\n\nSee references/routed.md for depth.\n' >"$allow/SKILL.md"
@@ -186,10 +186,20 @@ head -c $((SKILL_BUDGET * 4)) </dev/zero | tr '\0' 'x' >>"$allow/SKILL.md"
 printf 'routed depth\n' >"$allow/references/routed.md"
 
 gate "$GATES" routing --max-bytes "$SKILL_BUDGET" "$allow"
-if [ "$GATE_RC" -eq 0 ] && grep -q 'SIZE ALLOWED' "$WORK/last.log"; then
-  record 0 "routing: allowlisted skill (agentic-delivery) may exceed the size budget"
+if [ "$GATE_RC" -ne 0 ] && grep -q 'SIZE FAIL' "$WORK/last.log" \
+  && ! grep -q 'SIZE ALLOWED' "$WORK/last.log"; then
+  record 0 "routing: agentic-delivery is not size-allowlisted (oversized fixture FAILS)"
 else
-  record 1 "routing: allowlisted skill (agentic-delivery) may exceed the size budget"
+  record 1 "routing: agentic-delivery is not size-allowlisted (oversized fixture FAILS)"
+fi
+
+# The real agentic-delivery skill fits the CI cap on its own (routing ok, no
+# SIZE ALLOWED escape hatch), so ci.yml's routing line enforces the cap on it.
+gate "$GATES" routing --max-bytes 24000 "$ROOT/.claude/skills/agentic-delivery"
+if [ "$GATE_RC" -eq 0 ] && ! grep -q 'SIZE' "$WORK/last.log"; then
+  record 0 "routing: real agentic-delivery SKILL.md is within the 24000-byte cap"
+else
+  record 1 "routing: real agentic-delivery SKILL.md is within the 24000-byte cap"
 fi
 
 # ---------------------------------------------------------------------------
@@ -2683,6 +2693,222 @@ else
   record 1 "dcr-gates opt-in: whitespace-only DCR_REAPER_LINT_PATHS fails closed"
 fi
 rm -rf "$og/ops"
+
+# ===========================================================================
+# AppSec must-load isolation (own lane; APPENDED AT THE END by convention).
+# security-appsec.md is must-load for web, mobile, api / service, and
+# agent / LLM / MCP; its conditional depth lives in routed appsec-*.md
+# sub-files, each indexed in the parent with a trigger. Pin, structurally,
+# that an API review with no file handling and no runtime-compiled template --
+# the LIGHT floor parsed live from SKILL.md's phase table, plus the
+# `api / service` row's must-load refs parsed live from the load map, plus
+# domain-b.md and domain-i.md -- loads neither appsec-files.md nor
+# appsec-ssti.md: neither is in that load set, and no content line of either
+# appears verbatim in it. Also pin that every appsec-*.md is routed from the
+# parent's index AND from SKILL.md, and that the files / template index rows
+# name their trigger. Planted RED: pasting one files line back into the
+# parent must FIRE, and dropping the appsec-ssti.md index row must FIRE.
+# ===========================================================================
+
+# archetype_mustload_refs <skill_dir> <archetype> — print the backticked refs
+# in the load map's row for <archetype> (an independent re-derivation of
+# cmd_mustload's parse).
+archetype_mustload_refs() {
+  awk -F'|' -v want="$2" '
+    $0 == "| Archetype | Default domains | Must-load refs |" { on = 1; next }
+    on && /^\|---/ { next }
+    on && !/^\|/ { on = 0 }
+    on {
+      a = $2; gsub(/^[[:space:]]+|[[:space:]]+$/, "", a)
+      if (a != want) next
+      cell = $4
+      while (match(cell, /`[A-Za-z0-9._-]+\.md`/)) {
+        print substr(cell, RSTART + 1, RLENGTH - 2)
+        cell = substr(cell, RSTART + RLENGTH)
+      }
+    }
+  ' "$1/SKILL.md" | sort -u
+}
+
+# appsec_plain_leaks <skill_dir> — print every content line (>= 25 chars,
+# after the 4-line title / blank / trigger / blank header) of appsec-files.md
+# or appsec-ssti.md found verbatim in the no-files, no-template API load set,
+# plus either sub-file if the load set names it outright. Empty == isolated.
+appsec_plain_leaks() {
+  local sd="$1" f
+  local set_list="$WORK/appsec-plain-set.txt" pats="$WORK/appsec-plain-pats.txt"
+  : >"$set_list"
+  : >"$pats"
+  while IFS= read -r f; do
+    case "$f" in
+      appsec-files.md|appsec-ssti.md) printf 'LOAD SET NAMES A FILES/TEMPLATE FILE: %s\n' "$f" ;;
+    esac
+    printf '%s\n' "$sd/references/$f" >>"$set_list"
+  done < <({ floor_light_refs "$sd"; archetype_mustload_refs "$sd" "api / service"; } | sort -u)
+  printf '%s\n' "$sd/SKILL.md" "$sd/references/domain-b.md" "$sd/references/domain-i.md" >>"$set_list"
+  for f in appsec-files.md appsec-ssti.md; do
+    [ -f "$sd/references/$f" ] || { printf 'MISSING SUB-FILE: %s (fail closed)\n' "$f"; continue; }
+    awk 'NR > 4 && length($0) >= 25' "$sd/references/$f" >>"$pats"
+  done
+  [ -s "$pats" ] || { printf 'NO FILES/TEMPLATE PATTERNS (fail closed)\n'; return 0; }
+  while IFS= read -r f; do
+    grep -Fxf "$pats" "$f" | sed "s|^|LEAK $(basename "$f"): |" || true
+  done <"$set_list"
+}
+
+# appsec_index_unrouted <skill_dir> — print every appsec-*.md not named in a
+# `| \`<file>\` |` row of security-appsec.md's index or (backticked) in
+# SKILL.md, and a files / template index row that does not name its trigger.
+# Empty output == fully routed.
+appsec_index_unrouted() {
+  local sd="$1" f b
+  for f in "$sd"/references/appsec-*.md; do
+    [ -e "$f" ] || continue
+    b="$(basename "$f")"
+    grep -qF "| \`$b\` |" "$sd/references/security-appsec.md" || printf 'UNROUTED %s (parent security-appsec.md)\n' "$b"
+    grep -qF "\`$b\`" "$sd/SKILL.md" || printf 'UNROUTED %s (SKILL.md)\n' "$b"
+  done
+  grep -E '^\| `appsec-files\.md` \|' "$sd/references/security-appsec.md" | grep -qi 'upload' \
+    || printf 'TRIGGERLESS appsec-files.md index row\n'
+  grep -E '^\| `appsec-ssti\.md` \|' "$sd/references/security-appsec.md" | grep -qi 'template' \
+    || printf 'TRIGGERLESS appsec-ssti.md index row\n'
+}
+
+api_set="$({ floor_light_refs "$dcr_sd"; archetype_mustload_refs "$dcr_sd" "api / service"; } | sort -u | tr '\n' ' ')"
+appsec_leaks="$(appsec_plain_leaks "$dcr_sd")"
+appsec_unrouted="$(appsec_index_unrouted "$dcr_sd")"
+appsec_subs="$(ls "$dcr_sd"/references/appsec-*.md 2>/dev/null | wc -l | tr -d ' ')"
+if [ -n "$api_set" ] && [ -z "$appsec_leaks" ] \
+  && printf '%s' "$api_set" | grep -qF 'security-appsec.md' \
+  && printf '%s' "$api_set" | grep -qF 'security-api.md'; then
+  record 0 "appsec isolation: a no-files, no-template API review (${api_set}+ domain-b.md, domain-i.md) loads neither appsec-files.md nor appsec-ssti.md"
+else
+  printf '%s\n' "$appsec_leaks" | head -5
+  record 1 "appsec isolation: a no-files, no-template API review (${api_set}+ domain-b.md, domain-i.md) loads neither appsec-files.md nor appsec-ssti.md"
+fi
+
+if [ -z "$appsec_unrouted" ] && [ "$appsec_subs" -ge 11 ]; then
+  record 0 "appsec isolation: every appsec-*.md sub-file ($appsec_subs) is routed from security-appsec.md's index and SKILL.md; files/template rows name their trigger"
+else
+  printf '%s\n' "$appsec_unrouted" | head -5
+  record 1 "appsec isolation: every appsec-*.md sub-file ($appsec_subs) is routed from security-appsec.md's index and SKILL.md; files/template rows name their trigger"
+fi
+
+# Planted RED: a copy of the skill whose appsec parent re-absorbs one files
+# line must be flagged as a leak into the no-files API load set.
+aiso_sd="$WORK/appsec-iso/deep-code-review"
+rm -rf "$WORK/appsec-iso"
+mkdir -p "$WORK/appsec-iso"
+cp -R "$dcr_sd" "$aiso_sd"
+awk 'NR > 6 && length($0) >= 25 { print; exit }' "$aiso_sd/references/appsec-files.md" \
+  >>"$aiso_sd/references/security-appsec.md"
+aiso_leaks="$(appsec_plain_leaks "$aiso_sd")"
+if printf '%s\n' "$aiso_leaks" | grep -q '^LEAK security-appsec.md: '; then
+  record 0 "appsec isolation: FIRES when files depth leaks back into the API must-load set (planted RED)"
+else
+  record 1 "appsec isolation: FIRES when files depth leaks back into the API must-load set (planted RED)"
+fi
+
+# Planted RED: a parent index that drops the appsec-ssti.md row leaves the
+# template sub-file unrouted from its parent -- the routing check must FIRE.
+grep -vF '| `appsec-ssti.md` |' "$dcr_sd/references/security-appsec.md" \
+  >"$aiso_sd/references/security-appsec.md" || true
+# Capture first: piping straight into `grep -q` can SIGPIPE the producer under
+# `set -o pipefail` and read as a non-match.
+aiso_unrouted="$(appsec_index_unrouted "$aiso_sd")"
+if printf '%s\n' "$aiso_unrouted" | grep -qF 'UNROUTED appsec-ssti.md (parent security-appsec.md)' \
+  && printf '%s\n' "$aiso_unrouted" | grep -qF 'TRIGGERLESS appsec-ssti.md index row'; then
+  record 0 "appsec isolation: FIRES when the parent index drops a sub-file's row (planted RED)"
+else
+  record 1 "appsec isolation: FIRES when the parent index drops a sub-file's row (planted RED)"
+fi
+
+# ---------------------------------------------------------------------------
+
+# ===========================================================================
+# AppSec supply/traversal pointer pins (own lane; APPENDED AT THE END by
+# convention). A FULL review of an app that ships a dependency manifest,
+# lockfile, or CI workflow -- even absent a diff touching any of them -- must
+# still load appsec-supply.md (A03): pin that the trigger row names that
+# presence-based condition, and structurally pin it against a fixture app
+# that carries only a `.github/workflows/` directory (no manifest, no
+# lockfile). Also pin that the A05 grep block names a path-traversal (CWE-22)
+# sink line pointing at appsec-files.md, so a traversal sink is not left as
+# an A05 finding with no routed depth.
+# ===========================================================================
+
+supply_trigger_row="$(grep -E '^\| `appsec-supply\.md` \|' "$dcr_sd/references/security-appsec.md")"
+if printf '%s' "$supply_trigger_row" | grep -qi 'dependency manifest, lockfile, or CI workflow'; then
+  record 0 "appsec pointer: appsec-supply.md's trigger row fires on target-has-manifest/lockfile/CI-workflow, not diff-touch alone"
+else
+  record 1 "appsec pointer: appsec-supply.md's trigger row fires on target-has-manifest/lockfile/CI-workflow, not diff-touch alone"
+fi
+
+# Fixture: an app with only a CI workflow (no lockfile, no dependency
+# manifest) -- structurally confirm the trigger's file-presence language
+# covers a CI-workflow-only target so a FULL review still loads
+# appsec-supply.md.
+supply_fixture="$WORK/appsec-supply-fixture"
+rm -rf "$supply_fixture"
+mkdir -p "$supply_fixture/.github/workflows"
+printf 'name: ci\n' >"$supply_fixture/.github/workflows/ci.yml"
+if [ -f "$supply_fixture/.github/workflows/ci.yml" ] \
+  && printf '%s' "$supply_trigger_row" | grep -qi 'CI workflow'; then
+  record 0 "appsec pointer: a CI-workflow-only app fixture matches the appsec-supply.md trigger's CI-workflow clause"
+else
+  record 1 "appsec pointer: a CI-workflow-only app fixture matches the appsec-supply.md trigger's CI-workflow clause"
+fi
+
+traversal_block="$(sed -n '/^## A05:2025/,/^## A06:2025/p' "$dcr_sd/references/security-appsec.md")"
+if printf '%s' "$traversal_block" | grep -qi 'path traversal' \
+  && printf '%s' "$traversal_block" | grep -qF 'appsec-files.md' \
+  && printf '%s' "$traversal_block" | grep -qi 'CWE-22'; then
+  record 0 "appsec pointer: A05 grep block names a path-traversal (CWE-22) sink line pointing to appsec-files.md"
+else
+  record 1 "appsec pointer: A05 grep block names a path-traversal (CWE-22) sink line pointing to appsec-files.md"
+fi
+
+# dcr-gates opt-in source_scan_tests (own lane; APPENDED AT THE END by
+# convention), on the optin-gates target above. Relative
+# DCR_SOURCE_SCAN_LINT_PATHS entries resolve against the target's repo root
+# even when the runner is started from another directory, and a
+# whitespace-only value fails closed with a named message instead of
+# aborting on an empty-array expansion.
+# ===========================================================================
+
+mkdir -p "$og/uitests"
+cat >"$og/uitests/Disclosure.test.tsx" <<'FIXTURE'
+import fs from 'fs';
+test('collapses on click', () => {
+  const src = fs.readFileSync('./Disclosure.tsx', 'utf8');
+  expect(src.includes('aria-expanded')).toBe(true);
+});
+FIXTURE
+ssl_run() {  # <log> [VAR=value ...] — run the runner from $WORK; sets SSL_RC
+  local log="$1"
+  shift
+  if (cd "$WORK" && env DCR_SOURCE_SCAN_LINT=1 "$@" bash "$og_runner") >"$log" 2>&1; then SSL_RC=0; else SSL_RC=$?; fi
+}
+ssl_run "$WORK/ssl-red.log" DCR_SOURCE_SCAN_LINT_PATHS=uitests
+if [ "$SSL_RC" -ne 0 ] && grep -q 'Disclosure.test.tsx:3:' "$WORK/ssl-red.log" \
+  && grep -q 'dcr-gates: source_scan_tests FAIL' "$WORK/ssl-red.log"; then
+  record 0 "dcr-gates opt-in: source_scan_tests resolves a relative path against the repo root and FIRES (planted RED)"
+else
+  record 1 "dcr-gates opt-in: source_scan_tests resolves a relative path against the repo root and FIRES (planted RED)"
+fi
+ssl_run "$WORK/ssl-green.log" DCR_SOURCE_SCAN_LINT_PATHS=src
+if [ "$SSL_RC" -eq 0 ] && grep -q 'dcr-gates: source_scan_tests PASS' "$WORK/ssl-green.log"; then
+  record 0 "dcr-gates opt-in: source_scan_tests passes a clean relative path"
+else
+  record 1 "dcr-gates opt-in: source_scan_tests passes a clean relative path"
+fi
+ssl_run "$WORK/ssl-blank.log" DCR_SOURCE_SCAN_LINT_PATHS='   '
+if [ "$SSL_RC" -ne 0 ] && grep -q 'FAIL source_scan_tests (DCR_SOURCE_SCAN_LINT_PATHS names no path)' "$WORK/ssl-blank.log"; then
+  record 0 "dcr-gates opt-in: whitespace-only DCR_SOURCE_SCAN_LINT_PATHS fails closed"
+else
+  record 1 "dcr-gates opt-in: whitespace-only DCR_SOURCE_SCAN_LINT_PATHS fails closed"
+fi
+rm -rf "$og/uitests"
 
 # ---------------------------------------------------------------------------
 

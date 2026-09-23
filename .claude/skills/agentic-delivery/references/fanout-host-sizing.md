@@ -130,6 +130,20 @@ lanes doing the identical task costing differently for no difference in delivere
 
 ## Gate on free RAM and the swap trend — `load1` is not a reliable signal alone
 
+The predicate with its probe commands, as `SKILL.md` **Environment probe** routes it here:
+
+- **Free RAM and the swap *trend* are the primary gate — `load1` is not a
+  reliable term.** Spawn another heavy lane only while free RAM >15% AND swap
+  is not actively climbing (`sysctl vm.swapusage` on macOS — read it twice, a
+  beat apart, for the trend, not only the level). CPU idle >25% (`top -l 1 -n
+  0` on macOS, `mpstat`/`top` elsewhere) is a useful **secondary**
+  confirmation. `load1` (`sysctl -n vm.loadavg`/`uptime` vs. `nproc`/`sysctl -n
+  hw.ncpu`) is at most a **weak corroborating signal, never the deciding
+  term** — it counts disk-I/O-wait, not only CPU. Throttle the instant free RAM
+  or the swap trend trips; the numbers are a rule of thumb to recalibrate on
+  the host in front of you. Why `load1` misleads, the worked example, and the
+  swap-blowout case: the paragraphs below.
+
 `SKILL.md`'s environment probe states the act-on predicate — free RAM and the swap trend primary, CPU idle
 secondary, `load1` a weak corroborating signal at most. This section is the mechanism and the worked example
 behind it. Linux/macOS load averages count threads in uninterruptible I/O-wait, not only CPU-runnable ones —

@@ -3,7 +3,7 @@
 Read this when: delegating visual/parity work by measured number, running or finalizing verification, writing a
 lane's definition of done, recovering a stranded PR, judging a lane's liveness or a plugin's forks, timeboxing an
 open brief, verifying a release head or a delegated green, carrying a `Verify:` line, joining a fan-out review,
-relaying a subagent's findings, or checking a brief's prohibition against its effect. Part of the
+relaying a subagent's findings, checking a brief's prohibition against its effect, or briefing a context-inheriting fork. Part of the
 `fast-agentic-delivery.md` lesson ledger — its index, sources, and cross-references live there; an "above"/"below"
 pointer to a section not in this file resolves through that index.
 
@@ -207,7 +207,10 @@ equally "recent" for an agent that has already exited. Acting on the stat cuts b
 **ping it answers** — never from the transcript file's size or age. Killing a lane is a
 **destructive, shared-state action** (principle 9 — closing or deleting shared state needs evidence, not
 presumption): confirm the agent is genuinely idle by a *positive* signal before terminating. If nothing but the
-transcript is observable, the honest state is **`UNVERIFIED`**, not "dead." Distinct from the Conductor's
+transcript is observable, the honest state is **`UNVERIFIED`**, not "dead." **`scripts/lane_liveness.py
+--worktree <path> [--pid N]`** computes this positive-signal read offline — ALIVE/QUIET/UNVERIFIED/DEAD from a
+live process, file/git-state mtimes, and a CPU-time sample, never a kill verdict — so "slow, not stuck" is a
+checkable report instead of prose alone (#1070). Distinct from the Conductor's
 context-isolation rule ("read status, not the raw transcript" — do not consume the transcript as *context*):
 this is not reading its **file stat** as *liveness*. And distinct from the idle-before-duplicate section above:
 that is a false-**positive** "completed" leading to a duplicate dispatch; this is a false-**negative** liveness
@@ -291,6 +294,15 @@ across several pings while its own reports keep saying "done, background work st
 queuing behind a self-poll that will never read them, and the trivial remaining step could have been finished
 directly turns ago.
 
+From `SKILL.md` **Failure** — the converse of *a running lane is not a finished one*, which that section keeps:
+
+- **The converse: a lane's scope ends at its own finish line, not at the
+  merge.** Once a lane's PR is open with its gates green, its job is done — it
+  does not loop re-checking CI for a merge that is the Conductor's (or a merge
+  guard's) job. Re-polling a green PR burns turns on unchanged news; report
+  once, then stop — the "event-driven, not polled" discipline applied by a lane
+  to itself.
+
 ## An open-ended brief gives the judge nothing to judge — timebox it and require an interim checkpoint
 
 The section above says how to **judge** a lane once you're looking at it — from its actual product, never the
@@ -341,6 +353,10 @@ Two activities run the same commands but are different contracts — do not conf
   discovery pass surfaces, but **re-confirm each at the new head before acting on it** — a finding carried
   forward without a re-run is `unverified`, not still-open (`deep-code-review` `method.md`) — and
   **discard the pass/fail**, never filing it as certification.
+- **A returning reviewer re-confirming at the new head reads a digest, not the whole tree.** Run
+  **`scripts/review_digest.py --since <last-seen-sha>`** for commits, per-directory +/- counts, flagged
+  test/CI/config paths, and the diff stat since their last pass; review the flagged hunks the digest names, not
+  a full re-read (#1080).
 
 This composes with *a worktree assignment is a path… an integrator on a shared branch detaches* above: that
 fixes **where** the integrator merges (a detached tree at the tip), this fixes **when** release verification
@@ -405,15 +421,14 @@ control is the forge run pinned to the reviewed SHA (`deep-code-review` `merge-o
 a delegated lane's bare `verify: green` is only a lead (above). What makes the claim **auditable** is a line
 naming **how** it was checked — a `Verify:` line: the exact command run, the surface / URL exercised, the
 two-principal or anon probe, the evidence link. Without it a reviewer or the next agent cannot tell a real check
-from a hallucinated one, and a false "done" is the most expensive rerun there is — it is trusted, built on, and
-surfaces late, far from its cause.
+from a hallucinated one, and a false "done" is the costliest rerun — trusted, built on, surfacing late, far
+from its cause.
 
 So a delivery artifact that claims a verified result
 **and carries no `Verify:` line stating the method is treated as `unverified`** — the reviewer asks for the
-method, not the adjective. This is the constructive form of the over-claim rule (**name the evidence surface**,
-`deep-code-review`) applied to the delivery artifact, and it is a **claim-quality** requirement, **not** a
-trusted control: a typed `Verify:` line is still self-reported — it makes the claim checkable, it does not
-replace the forge run.
+method, not the adjective. This is the over-claim rule (**name the evidence surface**, `deep-code-review`) applied
+to the delivery artifact — a **claim-quality** requirement, **not** a trusted control: a typed `Verify:` line
+makes the claim checkable, it does not replace the forge run.
 
 - Especially when PRs are **agent-authored and reviewed by people who weren't watching**, "the gates are green"
   is a claim about the *code*; the `Verify:` line is a claim about how the *interface* was actually exercised.
@@ -424,7 +439,12 @@ replace the forge run.
   co-evolve-a-body-gate-with-its-producers rule, `deep-code-review` `merge-operations.md`).
 - **🚩 tell:** a PR body / handback asserting "tested," "verified," "it works," or "confirmed" with no `Verify:`
   line naming the command, the surface, and the evidence — an unbacked completion claim, `unverified` until the
-  method is stated (and still self-reported after — the forge run is the control).
+  method is stated (still self-reported after).
+- **Mechanize the surface half:** `scripts/surface_check.py` — **use this when** a done / fixed / deployed claim
+  rests on a served app or a remote branch. `served --url U --expect-sha S --probe header:NAME` passes only on the
+  serving process's own build id — none found, a payload timestamp, a redirect, or a non-200 exits 2;
+  `ref --branch B --expect-sha S` fetches and checks reachability on the branch the reviewer uses, never a stale
+  local tree. Its `--json` is the `Verify:` evidence; it proves that build is served, not that the feature works.
 
 ## A fan-out review is not complete until every worker has joined — a partial aggregate can drop the tail's top-severity finding
 
@@ -525,7 +545,7 @@ The catch that makes this its own discipline: a refrained-action claim has an
 gate. "It did nothing forbidden" has none; it is a **union of effect surfaces**, and a clean check of one clears
 none of the others. `git status`/`git diff` in the worktree proves only that no *tracked file there* changed —
 nothing about a branch or tag pushed to the remote, a PR opened, an issue filed, a comment or message sent, or a
-paid tool called (the context-inheriting-fork rule in `SKILL.md` makes the same point for the narrow-brief
+paid tool called (the context-inheriting-fork section below makes the same point for the narrow-brief
 fork). So enumerate the surfaces the brief actually named and check each: the **per-agent tool-call record**
 where the harness exposes one; **remote refs** (`git ls-remote`) for a pushed branch or tag; **open PRs**; and
 the **diff scope** — did `VERSION`/`CHANGELOG`/`SHA256SUMS` move when the brief said "build only, stamps later"?
@@ -539,3 +559,22 @@ since that is where the reach happens; and weight the post-hoc effect-surface ch
 lanes, re-checking on resume after an idle gap. This is a different use of "idle" from
 *confirm a subagent is idle before dispatching a duplicate* above — there idleness is a
 **precondition to check before acting**; here it is a **predictor of when a delegate drifts past its brief**.
+
+## A context-inheriting fork is not a blank slate — a narrow brief does not erase the inherited wider one
+
+Moved from `SKILL.md` **Worktrees and occupancy**; "the tree-sharing risk above" in the rule below is that section's first bullet (a subagent or fork is not automatically a separate worktree).
+
+- **A context-inheriting fork is not a blank slate — a narrow instruction to
+  it is ambiguous by construction.** Distinct from the tree-sharing risk
+  above: a fork hands a subagent every prior instruction, not only the newest.
+  A lane earlier told "file an issue for anything you find" and later forked
+  with "return a table, create or change nothing" inherits both — the narrower
+  ask does not erase the wider one still in its context, and it can act on the
+  old brief. Two mitigations, both required for narrow or research-only work:
+  prefer a **fresh, non-forked** unit (no inherited brief to fall back on);
+  when a fork genuinely needs the parent's context, state the prohibition
+  explicitly *and* verify compliance from what the lane actually called, not
+  its own summary — `git status`/`git diff` proves no tracked file changed and
+  proves nothing about an issue filed, a comment posted, or a message sent
+  (`parallel-audit.md` §2 covers the read-only fan-out case; this is the
+  general-lane case).

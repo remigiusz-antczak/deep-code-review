@@ -2,6 +2,58 @@
 
 Read this when the target renders a UI or ships browser / E2E specs. Split from `testing-and-evals.md`; the general test taxonomy and smells there apply to every review.
 
+## A conditional-render behaviour needs a rendered-DOM assertion, not a source scan
+
+A "show more" disclosure that never actually collapsed shipped through
+thousands of green unit tests (issue #1105). The tests were **source
+scans**: a regular expression over the component's source *text*, pinning
+that certain strings appear in a certain order. A source scan proves the
+author typed certain characters; it cannot observe conditional rendering —
+the bug was a list sliced by a live count sitting next to a *second*,
+unconditionally-mapped list of the same rows, so every row always rendered
+regardless of what the "collapsed" string check asserted. A single
+screenshot caught it.
+
+**The rule.** Any conditional-render behaviour — collapse/expand, a gated
+section, an empty state, a disabled state — needs **at least one test that
+renders the component and asserts what is and is not in the DOM**, before
+and after the interaction. A test that reads the component's source as text
+(`fs.readFileSync`/`open()` plus a regex or `.includes()` over `.tsx` /
+`.jsx` / `.vue` / `.svelte` content) is fine as a **lint-shaped invariant**
+(an import-ban, a banned-pattern check) but is **never behaviour evidence**
+— it cannot fail when the markup renders correctly in source and wrong at
+runtime, which is exactly the bug class above. Review flags a **behaviour
+claim** whose only test is a source scan:
+
+```js
+// NOT evidence the disclosure collapses — proves only that the string
+// "hidden" appears somewhere in the component's source text.
+const src = fs.readFileSync('./Disclosure.tsx', 'utf8');
+expect(src.includes('hidden')).toBe(true);
+
+// Evidence: render it, drive the interaction, assert presence/absence.
+render(<Disclosure items={rows} />);
+expect(screen.queryByText(rows[5].label)).not.toBeInTheDocument(); // collapsed
+fireEvent.click(screen.getByRole('button', { name: /show more/i }));
+expect(screen.getByText(rows[5].label)).toBeInTheDocument();       // expanded
+```
+
+**Mechanism.** `scripts/source_scan_tests.py` (opt-in via
+`DCR_SOURCE_SCAN_LINT=1` in `templates/dcr-gates.sh`) is a heuristic lint,
+not a parser: it lists test files (`*.test.*`, `*.spec.*`, `__tests__/`,
+pytest's `test_*.py`/`*_test.py`) that read a UI source file (`readFileSync`,
+`fs.promises.readFile`, a `?raw` import, Python `open()`/`Path().read_text()`,
+or a path via a variable) and check it with a regex/`.includes()`/Jest
+matcher (`.toMatch(`/`.toContain(`/`.toMatchSnapshot(` count too), with
+**no** render/mount/`screen.` call anywhere in the file, printing
+`path:line` for each. A file carrying both a check and real render coverage
+is exempt (under-flag is the safe direction) — so is a comment/string
+mentioning `render(`/`mount(`, and so is a plain `.ts`/`.js` or other
+(`.astro`) component: only `.tsx`/`.jsx`/`.vue`/`.svelte` are seen. Fails
+closed (exit 2) on an unreadable test file or zero files found, unless
+`--allow-empty`. A flagged test is a lead for a human to add the missing
+rendered-DOM assertion, not an automatic defect.
+
 ## Prove a rendered-layout claim with geometry, not class names
 
 A UI test that asserts **the class that is supposed to produce a layout** —

@@ -10,15 +10,14 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.440.0"
+  version: "1.441.0"
 ---
 
 # Agentic delivery
 
 Public-safe delivery overlay for any coding agent — a **pattern**, not a
 runtime or a standing swarm. Not installed by default; add it with
-`./install.sh --with-delivery` or `--full` after the owner says yes (or after
-`./install.sh --recommend` names it).
+`./install.sh --with-delivery` or `--full` after the owner says yes.
 
 It does **not** replace `deep-code-review` — review is the bar, this is how work
 reaches it. Do not run a second delivery OS (Superpowers, gstack `/ship`, a
@@ -172,12 +171,11 @@ reset, or deciding what keeps an unattended run alive.
 *enforced* rather than merely followed (or when designing a host adapter), grade
 the claim against `references/host-enforcement.md` — **read it when** you would
 otherwise write "the gate / budget / permission is enforced," or brief a
-write-lane. Model-tier selection: `deep-code-review`'s `model-tiering.md`.
+write-lane.
 
 **A subagent's handback narration is capped by a host hook, not only asked to
-be short** — `references/host-enforcement.md` routes `scripts/handback_cap.py`,
-the `SubagentStop` hook that mechanically enforces the Output contract's
-fields-only shape below.
+be short** — `scripts/handback_cap.py` (`SubagentStop`) enforces the Output
+contract's fields-only shape; `references/host-enforcement.md`.
 
 **Operational readiness — incidents and continuity (bus factor = 1).** The
 binder that must exist *before* the system is on fire or the solo operator is
@@ -200,19 +198,9 @@ conductor).** Two or more agent sessions coordinating over a shared async
 channel instead of one orchestrator's own lanes:
 `references/multi-session-coordination.md` — **read it when** designing a
 claim/lock registry, a pre-write collision probe, a peer-liveness check, a
-shared-board reader, deduplicating a broadcast ask that reached every peer at
-once, reconciling two peers' crossed work-splits, coordinating
-a shared machine-wide resource budget across peers, routing an action one peer
-is persistently denied, vetting a peer's correction before acting on it, or breaking a
-mutual pause where two peers each wait on the other, routing backlog items to the machine whose
-resources fit, relaying a shared gate's accepted format to a peer, classifying who merged a PR
-that landed under a peer's merge-hold before calling it a violation, attributing a PR or
-branch's edit/rebase-ownership to a peer under one shared VCS identity, enforcing a standing
-house comms or review-method default so it reaches every spawned subagent and not only the
-main loop, retracting your own in-flight lane before offering that same work to a peer,
-re-verifying a peer-handed work-partition against the governing branch head before
-building its items, backing off a fixed-cadence status post to a peer confirmed
-silent past a missed-cycle threshold, or trusting cross-peer convergence as a backlog-exhausted signal.
+shared-board reader, pushing a house comms/review default down to spawned
+subagents, retracting your own in-flight lane, or any peer trigger in that
+file's **Routed triggers** (broadcast asks, crossed splits, merge-holds, shared budgets).
 
 **Unattended / autonomous operating mode (an overnight or multi-hour autonomous
 run).** When this skill runs as a **continuous loop over a backlog** rather than
@@ -227,7 +215,7 @@ offset recurring loops runs it. A **loop, not a standing swarm**.
 integrated (G7), the work item it closes is done; G8 Release is a separate,
 later, **owner-gated** action on a different clock, often batched across many
 G7s. Never park a G7-complete item as "blocked on deploy" — land it, close it,
-and name G8 as downstream and pending, not as a reason the item isn't done.
+and name G8 as downstream and pending.
 
 ---
 
@@ -255,20 +243,7 @@ throwaway integration SHA plus one aggregate gate before a merge train (G7).
   work (a draft PR or assigned issue) before starting. Never spawn a duplicate
   of a running lane, and never start on a branch that already carries commits
   without reading them first. One writer per file.
-- **A context-inheriting fork is not a blank slate — a narrow instruction to
-  it is ambiguous by construction.** Distinct from the tree-sharing risk
-  above: a fork hands a subagent every prior instruction, not only the newest.
-  A lane earlier told "file an issue for anything you find" and later forked
-  with "return a table, create or change nothing" inherits both — the narrower
-  ask does not erase the wider one still in its context, and it can act on the
-  old brief. Two mitigations, both required for narrow or research-only work:
-  prefer a **fresh, non-forked** unit (no inherited brief to fall back on);
-  when a fork genuinely needs the parent's context, state the prohibition
-  explicitly *and* verify compliance from what the lane actually called, not
-  its own summary — `git status`/`git diff` proves no tracked file changed and
-  proves nothing about an issue filed, a comment posted, or a message sent
-  (`parallel-audit.md` §2 covers the read-only fan-out case; this is the
-  general-lane case).
+- **A forked lane with a narrower brief than its inherited context** (research-only, "change nothing"): prefer a fresh unit; verify from effects — `references/verification-handback.md` **A context-inheriting fork is not a blank slate**.
 - Serialize shared-state edits, migrations, generated files, and the
   integration branch — lanes sharing a host: `scripts/serial_gate.py`.
 - Occupancy is **visibility, not a lock**. Say what is live or stale; do not
@@ -288,35 +263,13 @@ check (`branch-and-merge-hygiene.md` §6), the contention-vs-defect rule
 (`parallel-audit.md` §0): `references/fanout-host-sizing.md`; CI-offload:
 `references/merge-queue-worktrees.md`.
 
-- **Free RAM and the swap *trend* are the primary gate — `load1` is not a
-  reliable term.** Spawn another heavy lane only while free RAM >15% AND swap
-  is not actively climbing (`sysctl vm.swapusage` on macOS — read it twice, a
-  beat apart, for the trend, not only the level). CPU idle >25% (`top -l 1 -n
-  0` on macOS, `mpstat`/`top` elsewhere) is a useful **secondary**
-  confirmation. `load1` (`sysctl -n vm.loadavg`/`uptime` vs. `nproc`/`sysctl -n
-  hw.ncpu`) is at most a **weak corroborating signal, never the deciding
-  term** — it counts disk-I/O-wait, not only CPU. Throttle the instant free RAM
-  or the swap trend trips; the numbers are a rule of thumb to recalibrate on
-  the host in front of you. Why `load1` misleads, the worked example, and the
-  swap-blowout case: `references/fanout-host-sizing.md`.
+- **Act-on predicate:** spawn another heavy lane only while free RAM >15% AND swap is not climbing (read it twice); CPU idle is secondary, `load1` never decides — commands and why: `references/fanout-host-sizing.md` **Gate on free RAM and the swap trend**.
 
 ## Local environment (own it)
 
 Delivery owns the running stack, not only the diff.
 
-1. **Discover** the project's one-command path (`README` / `package.json` /
-   `compose.yaml` / `.devcontainer` / `Makefile`) — prefer what the repo
-   documents; do not invent a second stack.
-2. **Bring it up** in the writer's worktree; record the command, URL/port, and
-   the health probe that returned 200. A missing prerequisite's `doctor` output
-   is the receipt — do not skip to "tests passed on the host."
-3. **Verify against the running process**, not only the repository: served
-   smoke, empty/error UI states where a UI exists, the project's own
-   `verify:served` if it has one.
-4. **Tear down** with the matching command; leave no orphan listener.
-5. **Never** `npm run build` (or equivalent) against a directory a running
-   server is serving — that stale-asset bug is a known ship failure; use the
-   project's isolated verify dir.
+Five steps — discover the documented one-command path, bring it up in the writer's worktree, **(3) verify against the running process**, tear down, never build into a served dir: `references/dev-env-ownership.md` **Local environment — the five-step stack procedure**; read it before any G5 run.
 
 G5 is not green until step 3 ran or is `UNVERIFIED` with the missing
 prerequisite named; for a change that can alter a rendered page, step 3's receipt
@@ -375,18 +328,7 @@ Copied as principles, not as anyone's private playbook:
 2. **Banlist split.** Committed `.banlist.txt` = generic secret shapes.
    Gitignored local file = real identifiers. Fail closed if the committed
    list is missing or malformed. Report `file:line`, never echo the match.
-3. **A gate can be wrong about why.** Real defect → fail closed. Check could
-   not run → `UNVERIFIED` — neither a defect nor a pass; a *required* missing
-   check still blocks its gated action even when authorization exists (evidence
-   and permission are separate decisions). Applied to a red pipeline: identify
-   the failing job **and step** before blaming the newest merge, and if the
-   shape matches a known-flaky browser/probe/hydration check, rerun and recheck
-   **before** reverting — a revert is warranted only once the failure
-   reproduces and is causally tied to the change, not merely adjacent in time. And **a
-   conclusion that surprises you** — a gate that flips, a count that jumps — **is the signal
-   to re-fetch the specific state at decision time**, not to act on a snapshot remembered from
-   earlier in the run (principles 9 and 11 apply the same discipline to a close and to the
-   owner's rendered surface).
+3. **A gate can be wrong about why.** Real defect fails closed; a check that could not run is `UNVERIFIED`, and a required one still blocks even when authorization exists (evidence and permission are separate decisions); on a red pipeline find the failing step, rerun a known-flaky check; revert only once the failure reproduces and is tied to the change; re-fetch state when a result surprises you.
 4. **Prove the gate can fail.** Plant, watch red, revert. Required for
    every new gate this project adds.
 5. **Skip loudly over absent input.** Missing fixture ≠ pass.
@@ -394,37 +336,14 @@ Copied as principles, not as anyone's private playbook:
 7. **Test the failure, not only the feature.** Schema reject, authz deny,
    monotonic-quality overwrite.
 8. **Definitions, not live values**, in any public or compiled artifact.
-9. **Closing or deleting shared state needs evidence, not presumption** — the
-   "skip rather than guess" bar (principle 5) applied to removal. A ticket
-   closed as duplicate/invalid needs a reproducible reason (not "looks like the
-   others"), and any unique context it carried migrates to the canonical item
-   **before** it closes. A batch of presumed-junk items is a batch of
-   `UNVERIFIED` closures until each is checked — a plausible pattern across many
-   is not evidence for any one.
+9. **Closing or deleting shared state needs evidence, not presumption** — a reproducible reason, unique context migrated first.
 10. **A fleet-wide external advisory is a third case for principle 3, and an
     independent-queue merge cascade is a cadence choice subordinate to
-    principle 6** — neither restated here; depth and the honest limits of
-    each: `references/merge-queue-worktrees.md`.
-11. **"Visible/done" is measured on the owner's own surface, never a proxy.**
-    Integrated to the mainline (G7), a green branch build, a passing test, an
-    insert/row count, a grep count are engineering states — real, but none is
-    "the owner can see it." Before reporting a change as *visible*, fetch the
-    specific rendered thing from the surface the owner actually uses (a running
-    app, the deployed page — which may lag a pinned or cached serve *behind*
-    the integrated code), confirm it, and report only what you observed. Keep
-    the states distinct in words: **wired / defined / rendered ≠ has a real
-    value**; "queryable" ≠ "query written"; "the code path exists" ≠ "it was
-    proven to run" (principle 3's `UNVERIFIED`, stated for the liveness case;
-    it is what G9 verifies against a deployed SHA).
-12. **A fork a ratified invariant already decides is not an owner gate.** Before shaping a
-    choice as a human gate, check whether a ratified invariant — no-data-loss, a security or
-    accessibility floor, a monotonic-quality rule — already mandates the answer; if it does,
-    applying it is a lane's **mechanical** job, and escalating spends an owner decision on a
-    settled question while the lane stalls. Gate only the genuine forks the invariants leave open.
-    Conversely, a change that would **reverse** a ratified invariant or decision is not a lane's
-    mechanical call either — stop and queue it to the owner rather than silently applying it (the
-    code-level instance — never loosening a ratified assert-absent test to ship a conflicting
-    feature — is `deep-code-review`'s `testing-and-evals.md`).
+    principle 6** — depth and honest limits: `references/merge-queue-worktrees.md`.
+11. **"Visible/done" is measured on the owner's own surface, never a proxy** — wired ≠ rendered ≠ has a real value.
+12. **A fork a ratified invariant already decides is not an owner gate**; a change that would reverse one is queued to the owner, never applied silently.
+
+Full statements of 3, 9, 11, 12: `references/gate-epistemology.md` — **read it when** a result surprises you, a check could not run, or on a red pipeline / about to revert (3), closing or deleting shared state (9), reporting visible/done (11), or raising a fork an invariant may decide (12).
 
 ---
 
@@ -450,12 +369,7 @@ started.
   in progress; report what is *running*, and a lane's output as done only once
   verified — a green gate at the exact SHA, or a change confirmed in the running
   product. Never present "N lanes attacking it" as progress.
-- **The converse: a lane's scope ends at its own finish line, not at the
-  merge.** Once a lane's PR is open with its gates green, its job is done — it
-  does not loop re-checking CI for a merge that is the Conductor's (or a merge
-  guard's) job. Re-polling a green PR burns turns on unchanged news; report
-  once, then stop — the "event-driven, not polled" discipline applied by a lane
-  to itself.
+- **A lane's scope ends at its own finish line** (PR open, gates green): report once, stop re-polling — `references/verification-handback.md` **A lane looping in its own self-poll**.
 - After two equivalent failures, change approach; never a silent drop.
 - Provider/model unavailable: fail that lane closed; no silent fallback.
 - Owner-session end: no uncommitted writer work without a recovery
@@ -485,8 +399,6 @@ repo that already has another delivery pack without saying so.
 
 - Default `./install.sh` does not copy this skill; `--with-delivery` / `--full`
   copies it next to `deep-code-review`.
-- `references/roles.md` ships with the skill (whole-directory copy), routed from
-  this file.
 - A planted defect makes G5/G6 fail; a denied outward action remains blocked.
 - `evals/evals.json` names `recommend-must-not-write` and
   `default-install-omits-delivery`.

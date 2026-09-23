@@ -29,6 +29,24 @@ every other PR in the batch to retrofit a gate that didn't exist when it was aut
 no benefit. When triaging several ready branches at once, check whether any changes required-CI/gate
 configuration and put it at the back of the landing order.
 
+**A union that fails a numeric ratchet/cap: attribute the overshoot to the member that owns it, never raise the
+cap to pass.** When the aggregate gate above is a numeric ratchet/cap (a disallowed-pattern count, not a
+build/test pass-fail) and the union is red on it, failing on the total alone costs whoever investigates a manual
+bisect across every member. Attribute per member instead, using the same own-merge-base delta
+`dev-env-ownership.md`'s *gate on the delta, not the tree total* rule already computes for a single PR: for each
+member M, `delta(M) = count(M's head) − count(M's merge-base with the target)`. Print one line per member —
+`#N +D marker=[present|none]` (`#N` the PR/change number, `D` the delta, `marker` whether that member's own
+commit range carries an explicit `<ratchet>-raise: <path> <old>→<new> <reason>` annotation, the same
+`size-budget-raise` convention this repo's own size-ratchet gate uses) — and route the fix to every member with
+`D > 0` and `marker=none`; a member with `D > 0` and `marker=present` raised the count deliberately and on
+record. **State the scanner's counting rule explicitly** — a match inside a comment or string counts, or only a
+live occurrence does — so `count()` is reproducible across members; an implicit rule makes deltas incomparable
+and the attribution untrustworthy. This is attribution, not a new admission path: it names which member to fix,
+never licenses a member merging *because* it carries a marker, and is not a per-change fragment file that
+pre-splits the cap to dodge a merge conflict — that remedy was rejected (`dev-env-ownership.md`'s *never raise
+the ceiling to pass*). The union still owes the same gate everything else does: pass the ratchet/cap, or don't
+merge.
+
 ### Mergeable is a snapshot against a moving base head — re-check before each merge; freeze the sweep while a resolver runs
 
 "Green + mergeable" is a **snapshot against the current base head, not a durable property**. Landing PR A can

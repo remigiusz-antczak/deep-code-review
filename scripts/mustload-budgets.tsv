@@ -130,13 +130,40 @@
 # product-ux-quality.md's pre-ship checklist box points to its
 # ux-components.md procedure; re-pinned web 38039->38083.
 #
-web	38083
-mobile	28772
-api / service	33563
-data / ETL	29571
-agent / LLM / MCP	33702
-IaC / platform	4339
-lib / SDK	10909
-phase-floor-light	35846
-phase-floor-full	47440
+# APPSEC SPLIT (security-appsec.md must-load cut): security-appsec.md, the
+# largest ref in the web, mobile, api / service, and agent / LLM / MCP rows,
+# kept the per-category checks every application review needs (access
+# control, SSRF, the anonymous GET sweep, the two-principal matrix, core
+# misconfiguration, core crypto and TLS validation, injection basics, business
+# logic limits, authentication, session cookies and timeouts, CSRF, A08-A10,
+# secrets, deterministic corroboration) plus an index of routed sub-files,
+# each with a concrete trigger: appsec-edge.md (gate proposals, proxy chains,
+# caches, isolation headers), appsec-scan-tests.md, appsec-links.md,
+# appsec-approvals.md, appsec-supply.md (all A03 depth), appsec-crypto.md,
+# appsec-ssti.md, appsec-files.md, appsec-tokens.md, appsec-login.md, and
+# appsec-design.md. SKILL.md routes them from the domain B row and paid for
+# the names by folding its duplicate "Skills as targets" paragraph into the
+# domain H row (23941 -> 23916 bytes). Repointed cross-references shrank the
+# other rows slightly. Re-pinned: web 38083->23293 (the WEB NOTE above now
+# reads 23293 + 5510 + 1722 = 30525 for a typical dashboard), mobile 28772->13981,
+# api / service 33563->18772, agent / LLM / MCP 33702->18911, data / ETL
+# 29571->29569, IaC / platform 4339->4338, lib / SDK 10909->10907. Floors:
+# phase-floor-light 35846->35839, phase-floor-full 47440->47433.
+#
+# fix13/appsec: security-appsec.md grew a supply-chain trigger clause and an
+# A05 traversal-sink grep line; method.md, domain-b.md, mobile-appsec.md grew
+# routing pointers to appsec-tokens.md / appsec-edge.md / appsec-files.md.
+# Re-pinned: web 23293->23350, mobile 13981->14046, api / service
+# 18772->18829, agent / LLM / MCP 18911->18981, IaC / platform 4338->4342.
+# Floors: phase-floor-light 35839->35854, phase-floor-full 47433->47448.
+#
+web	23350
+mobile	14046
+api / service	18829
+data / ETL	29569
+agent / LLM / MCP	18981
+IaC / platform	4342
+lib / SDK	10907
+phase-floor-light	35854
+phase-floor-full	47448
 phase-conditional	method-situational.md

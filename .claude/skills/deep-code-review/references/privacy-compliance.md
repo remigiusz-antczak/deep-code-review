@@ -92,7 +92,7 @@ re-identification finding — the same tier as a raw-identifier leak, one join a
 (NIST Privacy Framework **CT.DP-P "Disassociated Processing"** carves this out as its
 own control family — limit observability / linkability, identification, and
 inference; LINDDUN's *Linkability* / *Identifiability* threats, named in
-`security-appsec.md`, are the threat-model side. This gate measures and surfaces; a
+`appsec-design.md`, are the threat-model side. This gate measures and surfaces; a
 legal adequacy / anonymity determination routes to counsel.)
 
 ---

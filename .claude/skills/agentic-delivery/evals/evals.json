@@ -461,6 +461,17 @@
       ]
     },
     {
+      "id": "reproduce-a-peer-defect-claim-before-dispatching-fix-lanes",
+      "prompt": "An orchestrator already treats a peer session's measured gap audit (what is missing, with screenshots) as the shared backlog without re-measuring it. The same peer's handoff now also says 'intermittent render loop on the integration branch' and 'the highlight never paints because two providers are split'. The orchestrator is about to claim both and dispatch two fix lanes right away. Anything to do first?",
+      "expected_output": "Yes -- reproduce each defect claim once before dispatching. Consuming a peer's gap audit as backlog is sound; a defect claim ('X loops', 'Y never renders') is different: it is a claim about a past build and environment, so the orchestrator runs one cheap reproduction on the current integration branch first (unattended-trackers.md, reproduce before writing a fix). Use a fresh production build or server, not a hot-reloaded dev server (a dev-only symptom is not a finding until it reproduces on a production build, deep-code-review method-situational.md), exercise both the default and the expanded UI states, and follow the claimant's exact interaction path. Treat 'the providers are split' as a hypothesis from file layout until the rendered tree confirms it. If it does not reproduce, ask the claimant for reproduction steps instead of dispatching; two lanes on an unreproduced claim are spend with nothing to fix. If the claimant later withdraws, stop the dependent lanes at once and post the withdrawal on the same channel.",
+      "expectations": [
+        "Distinguishes a gap audit (consume as backlog) from a defect claim (reproduce once before dispatching a fix lane)",
+        "Specifies the reproduction: current integration branch, a fresh production build rather than a hot-reloaded dev server, default and expanded UI states, the exact interaction path",
+        "On a non-reproduction, asks the claimant for steps instead of dispatching, and treats structural inferences (file layout, line order) as hypotheses",
+        "Stops dependent lanes and posts the withdrawal on the same channel when the claim is withdrawn"
+      ]
+    },
+    {
       "id": "re-run-the-formatter-after-applying-a-captured-diff-before-the-land-gate",
       "prompt": "An agent adopts a fix captured as a diff from another lane, applies it with a 3-way merge, runs the changed-files tests (green), and lands — but the repo-wide `prettier --check` fails at integration on the very files it touched, even though the original author's tree was formatted. Why, and what's the missing step?",
       "expected_output": "The apply itself shifted bytes — reindented context lines, whitespace/newline normalization, a relocated hunk (a fuzzy/3-way apply, not a clean apply against the exact base) — so a diff whose ORIGIN was correctly formatted can still land unformatted. The changed-files test pass didn't run the formatter; the authoritative repo-wide prettier --check at land did, and caught it. Missing step: after applying a captured diff (3-way / context / cherry-pick), re-run the formatter on the changed files (don't trust the source was clean) before the land gate; and brief the lane up front with the root gate it will be judged by, not a workspace-local subset.",
@@ -644,7 +655,7 @@
     {
       "id": "mechanical-collision-probe-before-write",
       "prompt": "Two peer sessions, \"Session Atlas\" and \"Session Borealis\", each about to start new work on a shared repo. Today, each one decides whether it's safe to start by reading the coordination issue's comments and eyeballing the diffs of currently open PRs by hand. Is that sufficient?",
-      "expected_output": "Not sufficient -- manual thread-reading and eyeballing PR diffs before every claim is easy to skip and easy to get wrong once claim volume grows. Fold it into one deterministic pre-write probe, run before opening any write-lane or exclusive step: glob-match the planned paths against the claim registry's active entries, diff the live open-PR file lists against those same paths (a claim can lag its own PR), and check the one well-known exclusive-role field for whether another peer already holds it and is still live. The probe's output is a mechanical go/no-go plus the exact colliding file, issue, or PR -- never a prose inference a peer might miss. (multi-session-coordination.md)",
+      "expected_output": "Not sufficient -- manual thread-reading and eyeballing PR diffs before every claim is easy to skip and easy to get wrong once claim volume grows. Fold it into one deterministic pre-write probe, run before opening any write-lane or exclusive step: glob-match the planned paths against the claim registry's active entries, diff the live open-PR file lists against those same paths (a claim can lag its own PR), and check the one well-known exclusive-role field for whether another peer already holds it and is still live. The probe's output is a mechanical go/no-go plus the exact colliding file, issue, or PR -- never a prose inference a peer might miss. The shipped form is `scripts/claim_probe.py`: GO exits 0, NO-GO exits 1 with evidence, and a gh error exits 2, which is not GO. (multi-session-coordination.md)",
       "expectations": [
         "Says manual thread-reading plus eyeballing PR diffs before every claim is inadequate / easy to skip under volume",
         "Describes one deterministic pre-write probe combining a claim-registry glob-match, a live open-PR file-list diff, and an exclusive-role-field check",
@@ -1476,6 +1487,39 @@
         "Names the conflict-resolution commit as unverified code needing its own lint+test run",
         "Runs the check after `git rebase --continue` (or a merge) and before `git push`, not relying on the pre-commit hook having already run",
         "Treats a local pre-push hook as advisory / self-report, not a substitute for the CI check on the reviewed SHA"
+      ]
+    },
+    {
+      "id": "deployed-claim-verified-on-served-build-id-not-merge",
+      "prompt": "A lane hands back: 'Fixed and deployed -- PR merged, CI green, the preview is updated.' The owner opens the preview and says nothing changed. The preview's /version.json has a `data_as_of` timestamp from this morning but no commit field; the lane's fix is commit 3f2a9c1e. The lane wants to spawn another fix lane. What should happen first, and what counts as proof?",
+      "expected_output": "Before spawning more work, check the surface the owner actually opens: a merge and a green CI run are proxies, and a preview can be silently stale behind HEAD, so a stale surface may be the entire complaint. Proof is the build id the serving process itself reports matching the claimed sha -- run `scripts/surface_check.py served --url <preview> --expect-sha 3f2a9c1e --probe header:<name> | meta:<name> | path:/version.json:<key>`. Here the only signal is a data_as_of timestamp, which dates the payload, not the running code, so the honest verdict is COULD_NOT_CHECK (exit 2): report 'data as of X; running code unconfirmed', never 'deployed'. Also confirm with `surface_check.py ref --branch <branch the preview builds from> --expect-sha 3f2a9c1e` that the fix is reachable from the remote branch, not only a local tree. Even a PASS proves that build is served, not that the fix works -- pair it with the functional check, and put the command output in the handback's Verify: line. (verification-handback.md, project-state.md.)",
+      "expectations": [
+        "Checks the served surface's own build id against the claimed sha before spawning another lane, naming merged/CI-green as proxies",
+        "Refuses to treat the data_as_of payload timestamp as a build id -- the verdict is could-not-check / 'running code unconfirmed', never 'deployed'",
+        "Verifies the sha is reachable from the remote branch the surface builds from (fetch, then ancestry), not a local tree",
+        "States that a matching build id proves the build is served, not that the fix works"
+      ]
+    },
+    {
+      "id": "slow-lane-not-stuck-without-positive-liveness-signal",
+      "prompt": "A background lane has produced no commit in an hour under heavy multi-agent load, where commits routinely take 3-5 minutes and QA is slow. The orchestrator is about to kill it as stuck and resume it later. What should it check first?",
+      "expected_output": "Elapsed time with no PR is not evidence of a hang -- under heavy load a lane can simply be slow. Before killing anything, get a positive liveness signal: a live process (or one whose cwd is inside the lane's worktree), a recent file/git-state mtime, or moving CPU time (`scripts/lane_liveness.py --worktree <path>` reports exactly this as ALIVE/QUIET/DEAD). Killing on 'no commit yet' alone discards uncommitted work irreversibly and then pays for the stop, the resume, and the re-work. QUIET (a live process with no recent product signal) means look closer, never kill; only DEAD (no process AND no activity for the quiet window) is grounds to escalate toward a kill, and even DEAD is not itself authorization -- it is evidence for a human/owner-gated decision.",
+      "expectations": [
+        "Says elapsed time / no-PR alone is not evidence of a hang",
+        "Calls for a positive liveness signal (live process, cwd-owning process, recent file/git mtime, or CPU-time movement) before any kill",
+        "Names `lane_liveness.py` or the ALIVE/QUIET/DEAD framing and that QUIET is not a kill signal",
+        "Does not treat DEAD alone as authorization to kill"
+      ]
+    },
+    {
+      "id": "returning-reviewer-reads-digest-not-whole-tree",
+      "prompt": "A reviewer who approved a PR at commit `abc123` is asked to look at it again two days later after several more commits landed. They open the whole diff from the PR's base branch and start reading top to bottom. Good approach?",
+      "expected_output": "No -- that re-reads everything already approved, wasting effort and risking both a missed real change (buried among unchanged surroundings) and a re-flagged non-issue (something already resolved). Scope the second pass to what moved since the reviewer's own last-seen sha, `abc123`, not the PR's base: run `scripts/review_digest.py --since abc123` for the commit list, per-directory +/- counts, flagged test/CI/config paths, and the diff stat, then review only the flagged hunks the digest names. Anything not listed is implicitly unchanged since it was last approved.",
+      "expectations": [
+        "Says scoping to the reviewer's own last-seen sha (not the PR base) is correct, not a full re-read",
+        "Names `review_digest.py` or the since-sha digest mechanism",
+        "States that unlisted files are implicitly unchanged since the last approved pass",
+        "Notes the full-re-read risk: missed real changes and re-flagged already-resolved issues"
       ]
     }
   ]

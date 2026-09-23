@@ -5,7 +5,8 @@ Read this when domain B (Security — application (OWASP Top 10:2025)) is applic
 ### B. Security — application (OWASP Top 10:2025) → `references/security-appsec.md`
 **If the target has a network surface or accepts untrusted input, load
 `references/security-appsec.md` before Phase 3** — the probe procedures, payloads,
-and the blocked-range list live there. **AppSec is not marked "done" (or clean, or
+and the blocked-range list live there — **plus any sub-file whose trigger matches**
+(its routing table names each one). **AppSec is not marked "done" (or clean, or
 N/A) on a networked target without that load**; an unloaded reference is an
 unwalked domain.
 
@@ -14,7 +15,7 @@ unwalked domain.
   allowlist, resolve-validate-**pin** the IP, `redirect: manual` and re-validate
   each hop; the full **blocked-range list** is maintained canonically in
   `security-appsec.md` (A01), not re-enumerated here (a second copy drifts). Complete the **Identity
-  Arrival Map** (document / XHR / bare curl) before proposing any gate —
+  Arrival Map** (document / XHR / bare curl — procedure: `appsec-edge.md`) before proposing any gate —
   especially for iframe / portal embeds. **Dual surface:** for every sensitive
   loader, check API handler **and** every RSC/SSR page that calls it; API redacts
   while page does not = Critical when world-reachable. Open with the **anonymous

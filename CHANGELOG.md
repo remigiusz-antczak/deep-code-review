@@ -3,6 +3,20 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.441.0] — 2026-09-23
+
+### Changed — AppSec load cut; delivery map under its cap
+- `security-appsec.md` 89 KB → 30 KB: checks every app review needs stay in the parent (access control/IDOR, authn/session, injection, SSRF, secrets, XSS, CSRF, misconfiguration, deserialization, sensitive logging, a path-traversal sink grep); depth moves into 11 routed sub-files (`appsec-edge`, `-scan-tests`, `-links`, `-approvals`, `-supply`, `-crypto`, `-ssti`, `-files`, `-tokens`, `-login`, `-design`). The supply-chain sub-file fires whenever the target has a manifest, lockfile, or CI workflow. Must-load: web 38,083 → ~23.3K, api/service 33,563 → ~18.8K, agent 33,702 → ~18.9K, mobile 28,772 → ~14K estimated tokens. 785 lines conserved, 0 duplicated.
+- `agentic-delivery/SKILL.md` 29,153 → under 24,000 bytes; depth moved to references (new `gate-epistemology.md`), and its routing-cap allowlist entry is removed, so the 24 KB cap now applies to every skill map.
+
+### Added
+- `agentic-delivery/scripts/claim_probe.py`: collision probe before starting an item — open/draft PRs and branches on overlapping paths (globs vs directories both ways) and live board claims → GO / NO-GO with evidence; gh errors exit 2; without `--ref`, live item claims give NO-GO. Closes #1102.
+- `agentic-delivery/scripts/surface_check.py`: verifies a done/deployed claim on the authoritative surface — the running app's reported build id matches the sha, or the sha is reachable from the reviewer's branch; missing id or failed fetch is COULD_NOT_CHECK, never a pass; output never echoes header values, credentials, or query tokens. Closes #1065, #1068.
+- `agentic-delivery/scripts/lane_liveness.py`: ALIVE / QUIET / UNVERIFIED / DEAD from positive signals only; a blind detector gives UNVERIFIED, never DEAD; no verdict is a kill license on its own. `review_digest.py`: what changed since a reviewer's last-seen sha, flagged CI/test/config/lockfile paths first; a diverged `--since` fails closed. Closes #1070, #1080.
+- `deep-code-review/scripts/source_scan_tests.py` (heuristic, opt-in): flags tests that read UI component source as text (incl. `toMatch`/`toContain`) with no render/mount; `testing-ui.md` requires one rendered-DOM assertion per conditional-render path. Closes #1105.
+- A dev-only symptom (HMR, strict-mode double invoke) is not a finding until reproduced on a production build — unless it traces to a missing cleanup or non-idempotent effect (#1096); a union that fails a numeric cap is attributed per member against its own merge-base, never fixed by raising the cap (#1106). +evals.
+- size-budget-raise: .claude/skills/agentic-delivery/references/verification-handback.md 46577→49536 surface_check, lane_liveness, review_digest routes + depth moved from SKILL.md
+
 ## [1.440.0] — 2026-09-23
 
 ### Changed — web review load cut 56%
