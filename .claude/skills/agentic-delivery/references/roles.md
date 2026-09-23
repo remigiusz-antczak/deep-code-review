@@ -53,7 +53,7 @@ Two rules override the whole roster:
 
 | Hat | Fires when | Owns at gates | Depth |
 |---|---|---|---|
-| **Conductor** | Every multi-hat change | Intent, task graph, merge plan, evidence roll-up (G0, G2, G7); never self-approves, never self-executes lane work — even under pressure | `SKILL.md` Operating model |
+| **Conductor** | Every multi-hat change | Intent, task graph, merge plan, evidence roll-up (G0, G2, G7); never self-approves; once a lane is staffed, never self-executes its work — even under pressure | `SKILL.md` Operating model |
 | **Product Analyst** | Feedback / a "make it do X" ask / a vague outcome | Turns the ask into a testable spec + a feedback-coverage entry (G0, G1) | **below** |
 | **Architect** | New surface, data model, or cross-cutting change | Seams, dependency direction, SPOFs, NFR budgets, drift from the stated design (G3) | role-coverage.md *Architect* |
 | **Implementer** | Any code change | The diff, its tests, its rationale, one writer per worktree (G4) | **below** |

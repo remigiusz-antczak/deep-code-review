@@ -2950,6 +2950,41 @@ fi
 rm -rf "$og/uitests"
 
 # ---------------------------------------------------------------------------
+# Doctrine pins: prose that must agree with the shipped mechanism it routes to
+# (task_ledger.py, surface_check.py) and with agentic-ceo's small-project
+# one-agent mode. Whitespace is collapsed so a re-wrap never trips a pin; a
+# pinned phrase changing is a deliberate doctrine edit that updates this block.
+flat() { tr '\n' ' ' <"$1" | tr -s ' '; }
+ceo_flat="$(flat "$ROOT/.claude/skills/agentic-ceo/SKILL.md")"
+pin_ok=1
+for phrase in 'Split a multi-ask message into one `add --ask` per ask' \
+  'TodoWrite may be a per-session view of the ledger, never a second source' \
+  'exit 1 = open asks exist, informational' \
+  '`next` returns `doing` first, then `.claude/PRIORITY.md`, then the oldest open' \
+  'answer `--same T-###` or `--new`'; do
+  case "$ceo_flat" in *"$phrase"*) ;; *) printf 'PIN: agentic-ceo SKILL.md lacks: %s\n' "$phrase" >&2; pin_ok=0 ;; esac
+done
+case "$ceo_flat" in *'near-duplicate ask is refused'*)
+  printf 'PIN: agentic-ceo SKILL.md still says a near-duplicate is refused (task_ledger.py asks --same/--new)\n' >&2; pin_ok=0 ;;
+esac
+if [ "$pin_ok" -eq 1 ]; then
+  record 0 "doctrine pin: agentic-ceo ledger doctrine matches task_ledger.py (split asks, TodoWrite view, status exit 1, next order, --same/--new)"
+else
+  record 1 "doctrine pin: agentic-ceo ledger doctrine matches task_ledger.py (split asks, TodoWrite view, status exit 1, next order, --same/--new)"
+fi
+case "$(flat "$ROOT/.claude/skills/agentic-delivery/references/roles.md")" in
+  *'once a lane is staffed, never self-executes its work'*)
+    record 0 "doctrine pin: roles.md Conductor self-execution ban is scoped to a staffed lane (agentic-ceo one-agent mode)" ;;
+  *) record 1 "doctrine pin: roles.md Conductor self-execution ban is scoped to a staffed lane (agentic-ceo one-agent mode)" ;;
+esac
+dev_flat="$(flat "$ROOT/.claude/skills/agentic-delivery/references/dev-env-ownership.md")"
+case "$dev_flat" in
+  *'it cannot know how a `/version` endpoint derives that id'*'baked in at build time'*)
+    record 0 "doctrine pin: dev-env-ownership.md does not over-claim what surface_check can know about a /version id" ;;
+  *) record 1 "doctrine pin: dev-env-ownership.md does not over-claim what surface_check can know about a /version id" ;;
+esac
+
+# ---------------------------------------------------------------------------
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
