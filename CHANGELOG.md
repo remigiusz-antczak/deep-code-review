@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.438.0] — 2026-09-23
+
+### Added — design-token value differ; must-load floor ceilings
+- `deep-code-review/scripts/token_differ.py`: tier 1 of the design-check order — compares RESOLVED design-token values (not names) between a design source (W3C DTCG JSON, aliases resolved with cycle detection) and the app (CSS custom properties, `var()` resolved), normalizing colors (hex/rgb/hsl/srgb), dimensions (px/rem), and font values. Per token: MATCH / MISMATCH / MISSING_IN_APP / UNRESOLVED; exit 0 only when every mapped token matches; a missing or unreadable side is COULD_NOT_CHECK (exit 2), never a pass. Verifies token values only, not their use in components. Selftest 14/14; runs in CI and in `templates/dcr-gates.sh`. `migration-parity.md` names the command. +1 eval. Sources (DTCG 2025.10 format, CSS Color 4) logged in `docs/standards-index.md`.
+- `ci-gates.sh mustload` now also parses SKILL.md's phase table and ratchets the Phase 0–2 mandatory load every task pays: `phase-floor-light` 65,903 and `phase-floor-full` 87,137 estimated tokens in `scripts/mustload-budgets.tsv`; fails closed if the table can't be parsed or a named reference is missing.
+
 ## [1.437.0] — 2026-09-23
 
 ### Added — verified token/model levers; lane isolation guard; issue folds
