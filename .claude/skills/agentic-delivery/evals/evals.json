@@ -1612,6 +1612,18 @@
         "Runs `accept-file` and passes it to the parity differ before re-aligning, so decided feedback cannot be overridden",
         "Mentions regression detection (implemented then missing) via the ledger's status check"
       ]
+    },
+    {
+      "id": "lane-guard-refuses-reuse-into-still-occupied-worktree",
+      "prompt": "After a usage-limit outage, several lanes went silent. The orchestrator wants to relaunch a \"resume\" agent into one of those lanes' worktrees. One of those worktrees turns out to still have its original agent finishing up, unseen by the orchestrator. What must happen at lane start before the new agent writes anything there, and what if the check itself can't tell either way?",
+      "expected_output": "Silence is not termination -- confirm the previous agent is actually gone before handing its worktree to a new writer; two writers in one worktree corrupt each other's state and the collision surfaces only when a hook fails (#1116). `scripts/lane_guard.py` runs as the FIRST step of lane start and now enforces this: it reuses `lane_liveness.py`'s cwd-occupancy scan by import (one implementation, not a second copy) to check whether any OTHER live process -- excluding the calling agent's own process and its ancestor chain, since the invoking shell can itself have its cwd inside the worktree -- has its cwd inside that worktree. If it finds one, lane_guard refuses outright; the new agent never starts writing. If the scan itself is blind (no lsof, no /proc, or a scan that can't even see its own process), that is never read as \"no foreign process\" -- lane_guard refuses as UNVERIFIED unless the owner explicitly passes --allow-unverified, an owner-only escape hatch, never a default. Only a scan that actually ran, succeeded, and found nothing lets lane start proceed. This is the reuse-side mirror of the liveness doctrine: resuming or re-assigning into a lane's worktree requires lane_liveness's verdict to be DEAD, never QUIET or UNVERIFIED.",
+      "expectations": [
+        "States that silence/no-response is not proof of termination, and that two writers in one worktree is the actual failure mode from #1116",
+        "Names `lane_guard.py` running at lane start (not sometime later) as the enforcement point",
+        "Says it reuses `lane_liveness.py`'s cwd-occupancy detection by import rather than a second implementation",
+        "Excludes the calling agent's own process and its ancestor chain from the occupancy check, not just its own pid",
+        "Treats a blind occupancy scan as a refusal (UNVERIFIED), never as silent proof of \"no foreign process\", unless an explicit owner-only --allow-unverified override is passed"
+      ]
     }
   ]
 }

@@ -18,6 +18,16 @@ Exit 0 (one `LANE_GUARD OK:` line) only when ALL hold:
      is exactly the escape this guard exists to catch.
   4. HEAD is on a named branch (not detached) that is not a default branch.
   5. HEAD's branch equals --expect-branch exactly.
+  6. No OTHER live process — excluding this process and its own ancestor
+     chain (the calling shell/orchestrator, which can itself have its cwd
+     inside the worktree) — has its cwd inside the worktree. Reuses
+     `lane_liveness.py`'s cwd-occupancy scan by import
+     (`lane_liveness.foreign_cwd_pids`), never a second implementation. When
+     that scan itself is blind (no lsof, no /proc, or a scan that can't see
+     its own process), this refuses as UNVERIFIED — a blind scan is never
+     read as "no foreign process" — unless --allow-unverified is passed
+     (owner-only escape hatch, documented here, never a default: it trades a
+     confirmed absence of a live writer for an explicit human call).
 
 Otherwise exit 1 with exactly one `LANE_GUARD REFUSE: <reason>` line on stdout,
 written to be quoted verbatim in the lane's handback. The lane stops at that
@@ -81,6 +91,9 @@ import shutil
 import subprocess
 import sys
 import tempfile
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import lane_liveness  # noqa: E402  (sibling module, path set above)
 
 OK = 0
 REFUSED = 1
@@ -168,12 +181,19 @@ def _default_branches(cwd, explicit, git):
     return defaults, None
 
 
-def check(cwd, expect_branch=None, default_branch=None, git="git", allow_any_branch=False):
+def check(cwd, expect_branch=None, default_branch=None, git="git", allow_any_branch=False,
+          allow_unverified=False, occupancy_scanner=None):
     """Evaluate the lane at `cwd`; return (exit_code, one-line message).
 
     Refuses when `expect_branch` is None unless `allow_any_branch` is True
     (then the OK line proves only a non-default linked worktree, not which
     lane). Side-effect free: runs read-only git commands only.
+
+    `occupancy_scanner` defaults to `lane_liveness.foreign_cwd_pids` (a root
+    -> (pids_or_None, detail) callable, same contract as that function); a
+    test injects a stub here instead of depending on the host's real lsof/proc
+    availability. `allow_unverified` waives a blind occupancy scan (see item 6
+    of the module docstring) — owner-only, never a default.
     """
     if expect_branch is None and not allow_any_branch:
         return REFUSED, (
@@ -207,6 +227,23 @@ def check(cwd, expect_branch=None, default_branch=None, git="git", allow_any_bra
         return REFUSED, f"LANE_GUARD REFUSE: HEAD is on default branch '{branch}' in {top}"
     if expect_branch is not None and branch != expect_branch:
         return REFUSED, f"LANE_GUARD REFUSE: HEAD is on '{branch}', expected '{expect_branch}' in {top}"
+    scanner = occupancy_scanner or lane_liveness.foreign_cwd_pids
+    occ_pids, occ_detail = scanner(top)
+    if occ_pids is None:
+        if not allow_unverified:
+            return REFUSED, (
+                f"LANE_GUARD REFUSE: UNVERIFIED — cannot confirm previous agent terminated in {top} "
+                f"({occ_detail}); pass --allow-unverified (owner-only) to proceed anyway"
+            )
+        return OK, (
+            f"LANE_GUARD OK: linked worktree {top} on branch '{branch}' "
+            "(occupancy UNVERIFIED, proceeding on --allow-unverified)"
+        )
+    if occ_pids:
+        return REFUSED, (
+            f"LANE_GUARD REFUSE: live process(es) {sorted(occ_pids)} have cwd inside {top}; "
+            "confirm the previous agent terminated before reusing this worktree"
+        )
     return OK, f"LANE_GUARD OK: linked worktree {top} on branch '{branch}'"
 
 
@@ -312,12 +349,15 @@ def main(argv=None):
                         help="waive --expect-branch (non-lane probes only; proves less)")
     parser.add_argument("--default-branch",
                         help="add a default branch name (joins main, master, origin/HEAD, main checkout)")
+    parser.add_argument("--allow-unverified", action="store_true",
+                        help="owner-only: proceed when the occupancy scan cannot rule out a live foreign "
+                             "process (no lsof, no /proc, or a blind scan); never pass this by default")
     parser.add_argument("--selftest", action="store_true", help="prove every refusal fires")
     args = parser.parse_args(raw)
     if args.selftest:
         return _selftest()
     code, line = check(os.getcwd(), args.expect_branch, args.default_branch,
-                       allow_any_branch=args.allow_any_branch)
+                       allow_any_branch=args.allow_any_branch, allow_unverified=args.allow_unverified)
     print(line)
     return code
 
@@ -338,6 +378,13 @@ def _selftest():
     # temp dir itself sits inside some checkout.
     saved_ceiling = os.environ.get("GIT_CEILING_DIRECTORIES")
     os.environ["GIT_CEILING_DIRECTORIES"] = tmp
+    # The structural cases below (branch/default-branch/git-dir plumbing) are
+    # independent of occupancy; stub it to (empty set, "ok") so they do not
+    # depend on the host actually having lsof or /proc. The dedicated
+    # occupancy cases further down pass their own `occupancy_scanner` and so
+    # bypass this stub entirely.
+    saved_default_scanner = lane_liveness.foreign_cwd_pids
+    lane_liveness.foreign_cwd_pids = lambda root: (set(), "selftest stub: occupancy check disabled")
     try:
         repo = os.path.join(tmp, "repo")
         os.makedirs(repo)
@@ -400,6 +447,47 @@ def _selftest():
                 os.environ.pop("GIT_DIR", None)
             else:
                 os.environ["GIT_DIR"] = saved
+
+        # --- occupancy check (#1116): lane-start refuses when another live
+        # process (not this one or its ancestors) has cwd inside the
+        # worktree; passes when none does; and refuses rather than silently
+        # proceeding when the scan is blind, unless --allow-unverified.
+        def _occ_found(_root):
+            return {999999}, "stub: foreign pid 999999"
+
+        def _occ_none(_root):
+            return set(), "stub: no foreign process"
+
+        def _occ_blind(_root):
+            return None, "BLIND (stub: simulated blind occupancy scan)"
+
+        expect("occupancy-foreign-process-refused",
+               check(wt_lane, expect_branch=lane, occupancy_scanner=_occ_found),
+               REFUSED, "live process(es)")
+        expect("occupancy-none-ok",
+               check(wt_lane, expect_branch=lane, occupancy_scanner=_occ_none),
+               OK, "LANE_GUARD OK")
+        expect("occupancy-blind-refused-unverified",
+               check(wt_lane, expect_branch=lane, occupancy_scanner=_occ_blind),
+               REFUSED, "UNVERIFIED")
+        expect("occupancy-blind-allow-unverified-ok",
+               check(wt_lane, expect_branch=lane, occupancy_scanner=_occ_blind, allow_unverified=True),
+               OK, "UNVERIFIED")
+
+        # Prove the WIRING, not just the parameter: with the real
+        # lane_liveness.foreign_cwd_pids restored (no occupancy_scanner
+        # override) and a genuine foreign process planted with its cwd inside
+        # the worktree, lane-start refuses with no stub anywhere in the loop —
+        # this is what closes #1116, not the injectable param alone.
+        lane_liveness.foreign_cwd_pids = saved_default_scanner
+        foreign = subprocess.Popen(["sleep", "5"], cwd=wt_lane)
+        try:
+            expect("occupancy-real-wiring-refused", check(wt_lane, expect_branch=lane),
+                   REFUSED, "live process(es)")
+        finally:
+            foreign.terminate()
+            foreign.wait(timeout=5)
+        lane_liveness.foreign_cwd_pids = lambda root: (set(), "selftest stub: occupancy check disabled")
 
         # No origin/HEAD, main checkout moved to trunk: main stays default via
         # the always-default names, and a lane force-added onto the main
@@ -544,6 +632,7 @@ def _selftest():
         expect("handback-missing-args-refused",
                check_handback(repo2, "", "main"), REFUSED, "needs both --sha and --base")
     finally:
+        lane_liveness.foreign_cwd_pids = saved_default_scanner
         if saved_ceiling is None:
             os.environ.pop("GIT_CEILING_DIRECTORIES", None)
         else:
