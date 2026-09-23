@@ -39,6 +39,30 @@ the cwd. Read-only: the guard never writes to the repository.
 
     lane_guard.py --selftest    builds throwaway repos and proves every
                                 refusal fires (and that the OK case passes).
+
+HANDBACK MODE. Run as the LAST step before the orchestrator relays a lane's PR
+onward (merges it, or hands it to a human/reviewer), from a checkout that can
+resolve both refs:
+
+    python3 .claude/skills/agentic-delivery/scripts/lane_guard.py handback \
+        --sha <lane-head-sha> --base <integration-ref>
+
+Catches a root/orphan commit: a lane that committed in an unusual state (an
+orphan or unborn HEAD, or plumbing commands) can produce a head whose tree is
+the whole repository, yet a tree-diff PR view and CI both look normal — the
+defect surfaces only on rebase, as a full-tree conflict. Exit 0 (one
+`LANE_GUARD OK:` line) only when BOTH hold:
+  1. `git log -1 --format=%P <sha>` succeeds and is non-empty (the head has at
+     least one parent — a root/orphan commit's is empty).
+  2. `git merge-base <sha> <base>` succeeds (the head shares history with the
+     integration ref; an unresolvable ref or an unrelated history both fail
+     this).
+Otherwise exit 1 with exactly one `LANE_GUARD REFUSE:` line, fail closed on any
+git failure at either step (never a pass). Recovery: check out a fresh branch
+from `<base>`, take the lane's files from the bad commit
+(`git checkout <bad-sha> -- <paths>`), commit normally, and force-push with an
+explicit lease on the old head (force-push stays owner/standing-grant gated,
+same as any other force-push in this repo).
 """
 import argparse
 import os
@@ -159,7 +183,57 @@ def check(cwd, expect_branch=None, default_branch=None, git="git", allow_any_bra
     return OK, f"LANE_GUARD OK: linked worktree {top} on branch '{branch}'"
 
 
+def check_handback(cwd, sha, base, git="git"):
+    """Evaluate a lane's head commit right before it is relayed onward (merged,
+    or handed to a human/reviewer); return (exit_code, one-line message).
+
+    Refuses when `sha` has no parent (a root/orphan commit — its tree replays
+    as a full-repo diff on rebase even though a tree-diff PR view and CI both
+    look normal) or when `sha` shares no `git merge-base` with `base` (an
+    unresolvable ref, or a history unrelated to the integration branch — both
+    would explode the same way on rebase/merge). Fails closed: a git failure
+    at either step is a refusal, never a pass. Side-effect free: runs
+    read-only git commands only.
+    """
+    if not sha or not base:
+        return REFUSED, "LANE_GUARD REFUSE: handback needs both --sha and --base"
+    code, parents = _git(["log", "-1", "--format=%P", sha, "--"], cwd, git)
+    if code != 0:
+        return REFUSED, f"LANE_GUARD REFUSE: cannot resolve head {sha!r} in {cwd}"
+    if not parents:
+        return REFUSED, (
+            f"LANE_GUARD REFUSE: head {sha} has no parent (root/orphan commit); "
+            "recover via a fresh branch from the integration ref, not a rebase in place"
+        )
+    code, merge_base = _git(["merge-base", sha, base], cwd, git)
+    if code != 0 or not merge_base:
+        return REFUSED, (
+            f"LANE_GUARD REFUSE: no merge-base between {sha} and {base!r} "
+            "(unrelated history, or base does not resolve)"
+        )
+    return OK, (
+        f"LANE_GUARD OK: head {sha} has parent(s) {parents}, "
+        f"merge-base with {base} is {merge_base}"
+    )
+
+
+def _main_handback(argv):
+    parser = argparse.ArgumentParser(
+        prog="lane_guard.py handback",
+        description="Refuse a parentless head or one with no merge-base to the integration ref.",
+    )
+    parser.add_argument("--sha", required=True, help="the lane's head commit to check")
+    parser.add_argument("--base", required=True, help="the integration ref/branch the head will land on")
+    args = parser.parse_args(argv)
+    code, line = check_handback(os.getcwd(), args.sha, args.base)
+    print(line)
+    return code
+
+
 def main(argv=None):
+    raw = list(sys.argv[1:] if argv is None else argv)
+    if raw[:1] == ["handback"]:
+        return _main_handback(raw[1:])
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--expect-branch", help="required: refuse unless HEAD is on exactly this branch")
     parser.add_argument("--allow-any-branch", action="store_true",
@@ -167,7 +241,7 @@ def main(argv=None):
     parser.add_argument("--default-branch",
                         help="add a default branch name (joins main, master, origin/HEAD, main checkout)")
     parser.add_argument("--selftest", action="store_true", help="prove every refusal fires")
-    args = parser.parse_args(argv)
+    args = parser.parse_args(raw)
     if args.selftest:
         return _selftest()
     code, line = check(os.getcwd(), args.expect_branch, args.default_branch,
@@ -290,6 +364,56 @@ def _selftest():
         expect("default-unknown-explicit-ok",
                check(wt_lane, expect_branch=lane, default_branch="trunk"),
                OK, "LANE_GUARD OK")
+
+        # --- handback mode: a dedicated repo, independent of the lane-start
+        # fixtures above (which end mid-test with a detached main checkout).
+        repo2 = os.path.join(tmp, "repo2")
+        os.makedirs(repo2)
+        commit_args = ["-c", "user.name=Test", "-c", "user.email=test@example.com",
+                       "-c", "commit.gpgsign=false", "-c", "core.hooksPath=" + os.devnull,
+                       "commit", "-q", "--allow-empty", "-m"]
+        for setup_args in (
+            ["init", "-q"],
+            ["symbolic-ref", "HEAD", "refs/heads/main"],
+            [*commit_args, "base"],
+        ):
+            code, _ = _git(setup_args, repo2)
+            if code != 0:
+                print(f"SELFTEST FAILED: setup git {' '.join(setup_args)} exited {code}")
+                return 1
+
+        # Normal commit: a real parent on a branch descended from main.
+        _git(["checkout", "-q", "-b", "lane-normal"], repo2)
+        _git([*commit_args, "lane work"], repo2)
+        _, normal_sha = _git(["rev-parse", "HEAD"], repo2)
+        expect("handback-normal-ok", check_handback(repo2, normal_sha, "main"),
+               OK, "LANE_GUARD OK")
+
+        # Root/orphan commit: no parent at all.
+        _git(["checkout", "-q", "--orphan", "lane-orphan"], repo2)
+        _git([*commit_args, "orphan root"], repo2)
+        _, orphan_sha = _git(["rev-parse", "HEAD"], repo2)
+        expect("handback-orphan-refused", check_handback(repo2, orphan_sha, "main"),
+               REFUSED, "no parent")
+
+        # Unrelated history: a second independent orphan lineage, never
+        # sharing an ancestor with main; its own commit has a parent, so only
+        # the merge-base step (not the parent check) can catch this one.
+        _git(["checkout", "-q", "--orphan", "lane-unrelated"], repo2)
+        _git([*commit_args, "unrelated root"], repo2)
+        _git([*commit_args, "unrelated child"], repo2)
+        _, unrelated_sha = _git(["rev-parse", "HEAD"], repo2)
+        expect("handback-unrelated-refused", check_handback(repo2, unrelated_sha, "main"),
+               REFUSED, "no merge-base")
+
+        # Unresolvable refs: neither a bad sha nor a bad base is allowed to
+        # pass by falling through — fail closed on both.
+        expect("handback-unresolvable-sha-refused",
+               check_handback(repo2, "0" * 40, "main"), REFUSED, "cannot resolve head")
+        expect("handback-unresolvable-base-refused",
+               check_handback(repo2, normal_sha, "no-such-branch"), REFUSED, "no merge-base")
+        expect("handback-missing-args-refused",
+               check_handback(repo2, "", "main"), REFUSED, "needs both --sha and --base")
     finally:
         if saved_ceiling is None:
             os.environ.pop("GIT_CEILING_DIRECTORIES", None)

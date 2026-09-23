@@ -1436,6 +1436,16 @@
       ]
     },
     {
+      "id": "handback-root-commit-check-before-relay",
+      "prompt": "A lane's PR diffs clean (only the two files it was asked to touch) and CI is green, but the lane committed in an unusual git state before pushing. The orchestrator is about to relay this PR for merge.",
+      "expected_output": "Run `lane_guard.py handback --sha <head> --base <integration-ref>` before relaying. It refuses when `git log -1 --format=%P <head>` is empty (a root/orphan commit whose tree is the whole repository -- a tree-diff PR view and CI both look normal, and the defect only explodes into a full-tree conflict on rebase) or when `git merge-base <head> <base>` fails (unrelated history, or `base` does not resolve) -- fail closed on either. On a refusal: check out a fresh branch from the integration ref, `git checkout <bad-sha> -- <paths>`, commit normally, then force-push with an explicit lease on the old head -- never rebase or merge the bad commit in place.",
+      "expectations": [
+        "Names the mechanical check (git log -1 --format=%P for an empty/root parent, git merge-base against the integration ref) rather than trusting the clean PR diff or green CI alone",
+        "States the check runs before the orchestrator relays the PR onward, not only at lane-start",
+        "Gives the recovery as a fresh branch from the integration ref plus a targeted checkout and a leased force-push -- never an in-place rebase of the bad commit"
+      ]
+    },
+    {
       "id": "per-section-fanout-on-one-file-split-first",
       "prompt": "The plan: four parallel lanes restyle the four sections (header, filters, table, footer) of one 3,000-line page component to a new design. Each lane gets its own worktree. Since all four lanes write the same file, the plan says to run them one after another to avoid merge conflicts. Is that the right plan?",
       "expected_output": "No. Serializing throws away the fan-out. The shared hand-edited file is the collision surface, so shrink it first: dispatch one pure-move split lane before the fan-out. It moves each section into its own module, puts helpers used by two or more sections in a shared module, and keeps the original path as a transitional re-export whose importers move to direct paths (a lasting barrel drags every section into one bundle chunk). It changes no logic, markup, or style, and it is gated on type check, lint, an unchanged test count, and a smoke render. Merge it first, then fan out one lane per module, each writing a file no other lane touches. (fanout-host-sizing.md, split a shared hand-edited file before fanning out.)",
