@@ -44,11 +44,11 @@ cc52f678848b814373757b460383bf61960e4943c203735adde0a350b3e50989  .claude/skills
 bb541f96bd7d0c3bb4adff8dcaac0f50efa2493b8215b6aa671805bfbb89c42b  .claude/skills/contribution/references/contribution-procedure.md
 205cf68d78352b6c3fdd051390bb6ca336152357b55661c1f576558280bd0652  .claude/skills/deep-code-review/SKILL.md
 743d45db5347993f6fedec320ab49e51992904e68cc69af5f1179b0460c043f8  .claude/skills/deep-code-review/VERSION
-17788e7025f786a2c03887d2d9b4e45c48e68c1097bc9462a31bfeeb241543e9  .claude/skills/deep-code-review/evals/evals.json
+2e877848bbfb1720cf590963ac56833c55151b5349b2786d6f94c371812d1bdf  .claude/skills/deep-code-review/evals/evals.json
 307834fc2befeebefbf50e99923b0fc4a01622a24c68800d8d1744f2ecf45dd8  .claude/skills/deep-code-review/references/api-contracts.md
 cb8988398c43112a115f52fa1e602a58267beb29fa662c20ba62a309c5d95852  .claude/skills/deep-code-review/references/billing-correctness.md
 7ce576898ae02c2c8d7adc20957de4d25cb32648ca8912bdb468a146a44caaa2  .claude/skills/deep-code-review/references/branch-and-merge-hygiene.md
-cbb54b400e6a7dd7c1a1d42a06d55710a021785237d284a4053e16bfa16cbb5e  .claude/skills/deep-code-review/references/concurrency-shared-state.md
+12d277c8531e48a8784b25e5b6df96f613f967d710fa658e728fa8b8b10e11c4  .claude/skills/deep-code-review/references/concurrency-shared-state.md
 f59334e027dcea9d29b8661289b01dc44239f2e9e0d54d8226a02f93fa7be834  .claude/skills/deep-code-review/references/data-quality.md
 cf3d8dd4ccfcb6395c625fe8d7f9b06a4c37da574d88b8b04a6dddafa633db51  .claude/skills/deep-code-review/references/dependency-currency-and-upgrades.md
 c4d8f304363d1ec328a672743352def4ece20047d9073cd2e9e42a4dae295007  .claude/skills/deep-code-review/references/docs-and-dx.md
@@ -129,9 +129,10 @@ de270db043b761ce236c9c80197c514b89a5db4d2965de76321383927623bd1c  .claude/skills
 5a8cc3aadf5a95f7872572f223a5f5eeb5537192be25c7ec988330e8422cea7c  .claude/skills/deep-code-review/scripts/fixtures/tokens/design.tokens.json
 97ad0860bb3ee1b0f14f8fb9e55519dc9d0a8f1ece7e5dfc8734420c6475e045  .claude/skills/deep-code-review/scripts/fixtures/tokens/map_match.tsv
 d5606abd5b9ec08d6d4bf98e0e51b1c52d430040bb1a957e4b545bff816ae2cf  .claude/skills/deep-code-review/scripts/parity_differ.py
+54c6aae4a39909d92a7cd30df72fbc0119dc7a1635f41ff9a766d96a9ecd6a76  .claude/skills/deep-code-review/scripts/reaper_lint.py
 3f8ef47cb8b458a0b6709d5594ff541287dfca295be07996214fe71832088817  .claude/skills/deep-code-review/scripts/token_differ.py
 317acae212ed73279df66eb7b419b8426733bb1be05345b0e1c8b2c6790ad8a1  .claude/skills/deep-code-review/scripts/validate_status_claims.py
-20c9c131848f08fbf7bdfcd9a84224da7fe69e7e68ad65c2228911380c7b77a3  .claude/skills/deep-code-review/templates/dcr-gates.sh
+562202c71aa7e38d212475c1e8b8fdc7462589c469de750621ce660efba3489e  .claude/skills/deep-code-review/templates/dcr-gates.sh
 e9df3483336d6470072f8b7d7bfd5e93e281da2b5a892590101b4cb3ed89e419  .claude/skills/deep-code-review/templates/dcr-gates.yml
 ada343e2d9fd79411b10007911243184cdd8c46cef858343ea56405302166700  .claude/skills/deep-code-review/templates/pre-push-verify.sh
 5068e60f9615684c8d8bf8fbd7896748267cf6688895a701bdd25cd945181cb8  .claude/skills/growth-analytics/SKILL.md

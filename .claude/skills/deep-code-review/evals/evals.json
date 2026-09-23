@@ -5946,6 +5946,18 @@
         "States the fail-closed contract: exit 0 only when every compared token matches; a missing or unreadable side is COULD_NOT_CHECK (exit 2), never a pass",
         "States that a token MATCH verifies values only, not that components use the tokens, so it cannot by itself support an 'aligned' claim"
       ]
+    },
+    {
+      "id": "bulk-port-range-reaper-is-a-fleet-wide-kill-switch",
+      "prompt": "A repo's 'reclaim memory' helper for agents runs: `for port in $(seq 3110 3200); do kill -9 $(lsof -ti :$port); done` followed by `pkill -f 'chromium.*headless'`, excluding only a hard-coded list of three 'owner' ports. An agent is asked to review this cleanup script before it ships. Is it safe for a fleet of parallel agent lanes sharing one host, and what should the review flag?",
+      "expected_output": "Not safe -- it is a fleet-wide kill switch, not a scoped cleanup. Four independent defects: (1) the seq-driven range kill hits every parallel lane's own dev server inside 3110-3200, not just the caller's; (2) `lsof -ti :$port` with no `-sTCP:LISTEN` matches any process connected to the port (a reverse proxy, a test client), not only the listener, so a kill meant for 'the server on 3112' can take an excluded port's fronting proxy with it; (3) `pkill -f 'chromium.*headless'` matches every lane's headless test browser, not only orphans; (4) the hard-coded three-port exclusion list goes stale the instant the operator adds a new backend, and the default when a port isn't recognized should be to NOT kill, not to kill. The fix: reap only what is provably the caller's own or orphaned (parent PID 1, a cwd inside the caller's own worktree, or a PID file the caller wrote), select the listener only (`lsof -t -iTCP:PORT -sTCP:LISTEN`), source protected ports from operator config rather than a script literal, and default to a dry run requiring an explicit `--apply` to act. `scripts/reaper_lint.py` statically flags exactly these four shapes (RANGE_KILL, LSOF_NO_LISTEN, BROAD_PKILL, HARDCODED_PORTS) before the script ships. (concurrency-shared-state.md, \"Terminating work you own\".)",
+      "expectations": [
+        "Rejects the script as safe for a multi-lane host; identifies it as a fleet-wide kill switch, not scoped cleanup",
+        "Names the range kill (seq over the whole port range) as hitting every parallel lane's own port, not only the caller's",
+        "Names the bare `lsof -ti` (no `-sTCP:LISTEN`) as matching a connected client/proxy, not only the listener",
+        "Names `pkill -f` on a browser pattern as reaping every lane's test browser, not only orphans",
+        "Names the hard-coded protected-port list as going stale and states the fix: reap only PID-1/own-worktree/PID-file-provable processes, filter to the listener, source exclusions from operator config, and default to dry-run with an explicit apply flag"
+      ]
     }
   ]
 }
