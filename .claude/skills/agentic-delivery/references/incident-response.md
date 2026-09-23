@@ -129,6 +129,77 @@ What belongs here is the **schedule**:
   verify integrity), on a cadence the owner sets and records.
 - The drill result is logged; a failed drill is an incident.
 
+## VCS history-rewrite incident (a forced-update lands on a protected branch)
+
+**Read this when** a fetch or ref-watcher reports a forced-update on a
+protected/integration branch, or before running any destructive VCS operation
+(history rewrite, mass force-push, bulk delete).
+
+**Before ANY destructive VCS operation:** name the exact target out loud —
+repository `owner/name` (never "the project," never inferred from a vague
+brief) and the full ref list being touched — and require a confirmation input
+that matches those exact coordinates before running anything. A brief naming
+only a vague target ("purge content from version control") is not
+authorization to guess which repository or refs it means; a purge meant for
+one repo landing on another (#1138) is exactly this gap.
+
+1. **Detect.** A forced-update on a protected or integration branch (a fetch,
+   a ref-watcher, or a merge-base that jumped backward) is an incident signal,
+   not a normal update — enter this runbook at Triage.
+2. **Freeze — ALL pushes, not just merge/rebase.** Broadcast a HOLD before
+   investigating: no push, rebase, merge, force-push, or new branch cut from
+   the integration branch, **including a lane's own branch**. A HOLD that
+   forbids only the integration branch still lets an own-branch push land
+   after the rewrite, and that branch falls outside the pre-rewrite mirror
+   step 4 restores from — own-branch pushes are exactly what the first
+   broadcast of this kind got wrong once already. Lanes keep committing
+   locally; pushes resume per branch only after the restore owner's GO.
+   Mechanize the freeze rather than trust the broadcast alone: a pre-push hook
+   refuses every push while a HOLD marker file sits in the git common dir
+   (`git rev-parse --git-common-dir`), naming the reason. That hook is
+   `.claude/skills/deep-code-review/templates/pre-push-verify.sh` (tracked and
+   extended separately from this file).
+3. **Attribute with local evidence, not the host.** A shared hosting account
+   makes the host's event log useless for attribution. On each machine: check
+   the reflog for `update by push` on the protected refs, and look for
+   rewrite-tool traces (`.git/filter-repo/`, an installed rewrite binary).
+4. **Backup mirror, before restoring anything.** `git clone --mirror` the
+   current (post-incident) state of every affected repo to a scratch path —
+   even though it may hold the bad rewrite, it is the only complete record of
+   what the forge served at incident time, and a later well-meant push can
+   overwrite objects a subsequent step needs.
+5. **Restore per branch — a ledger, not a blanket rebase.** Classify every
+   branch by its base against a pre-rewrite mirror (a `--mirror` clone taken
+   *before* the incident, or the last trusted backup):
+   - **PRE** — base is still an ancestor of the branch: `git rebase
+     <restored-base> <branch>` (plain).
+   - **REWRITTEN** — the branch's base was rewritten under it: `git rebase
+     --onto <restored-base> <rewritten-base> <branch>`.
+   - **TIP-REWRITTEN** — an open PR's own head was rewritten server-side:
+     `git rebase --onto <restored-remote-tip> <rewritten-tip> <branch>`.
+
+   Skip any branch an active lane still owns — restoring under a running lane
+   corrupts its worktree; wait for it to park first. For every branch actually
+   restored: `git push --force-with-lease=<branch>:<fetched-bad-sha> <remote>
+   <restored-sha>:<branch>`, then verify the ref (`surface_check.py ref`,
+   above). On a `--force-with-lease` rejection, abort that branch, report it,
+   and move to the next — never retry with a plain `--force`.
+   `.claude/skills/agentic-delivery/scripts/restore_ledger.py` classifies refs
+   mechanically from a mirror plus the current remote state and prints each
+   row with its suggested command; it never pushes.
+6. **Forge objects often survive the rewrite.** Before re-uploading anything
+   from the mirror, check whether the forge's own object store still holds the
+   pre-rewrite commits (a rewrite that only moved refs, not one that
+   garbage-collected — common in a short window); a ref-update API call
+   restoring the old sha can then skip a full re-push entirely.
+7. **Prevent it.**
+   - A destructive history tool confirms repository identity (remote URL
+     **and** a repo-specific marker, not name alone) before running — the
+     `owner/name` + full-ref-list confirmation above, made mechanical.
+   - Server-side branch protection against force-push on every integration
+     branch, wherever the plan allows it; where it doesn't, the pre-push
+     HOLD-marker hook in step 2 is the only defence.
+
 ## Solo-operator succession note
 
 The "if the operator is gone" half of the binder. Drafting it is in scope;
@@ -152,3 +223,9 @@ the legal/estate dimension is the owner's, with a professional.
 - Breach notification timing is **routed** to G2 + counsel — never asserted as
   a specific deadline here.
 - The review phase reuses `template-postmortem.md` rather than a second format.
+- A forced-update on a protected branch runs Detect → Freeze (ALL pushes,
+  including own-branch) → Attribute → Backup mirror → per-branch Restore
+  ledger, in that order — never a restore attempted before the freeze lands.
+- A destructive VCS operation names `owner/name` and the full ref list, and
+  waits on a confirmation input matching those exact coordinates, before
+  running.

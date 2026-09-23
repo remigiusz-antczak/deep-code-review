@@ -271,6 +271,14 @@ rate-limit-error and stall, wasting the tokens their partial work already spent 
   token budget is exhausted. Prefer **fewer, higher-yield lanes** over many thin ones, and
   **checkpoint partial work to a durable artifact** (a pushed branch, a saved file) before a lane can die, so a
   rate-limit stop is resumable rather than tokens spent for zero delivery.
+- **Respawn by priority, not wholesale — and never move the fleet onto the orchestrator's own tier.** A quota
+  death (#1132) takes every lane on the exhausted model down within minutes, mid-commit and mid-PR; respawning
+  all of them onto the next tier up can exhaust *that* one too, especially when the orchestrator itself already
+  depends on it — the same single-point-of-failure shape, one tier up. Respawn in priority order instead: P0 /
+  user-facing lanes go to the next capable tier; mechanical finishing (a PR-body fix, a changelog fragment, a
+  rerun) goes to the cheapest tier; everything else waits for the reset. Brief a respawned lane from its
+  worktree (`git status`, the unpushed log) plus its queue entry in the orchestrator's own state file, never only
+  from the dead lane's context — the durable-artifact checkpoint above is what makes that briefing possible.
 
 **🚩 tell:** an orchestrator widening lane count because the local probe reads healthy — free RAM, idle cores,
 flat swap — while a rising fraction of lanes fail to start or die seconds in; the fan-out was sized to the
