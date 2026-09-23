@@ -48,7 +48,7 @@ say so.
   health). Platform docs that call something "personalization" or "member
   context" (or similar) are **not** authorization unless the app proves it. For
   embedded / iframe / portal-hosted apps, also complete the **Identity Arrival Map**
-  in `references/security-appsec.md` (document vs XHR vs bare curl) **before**
+  in `references/appsec-edge.md` (document vs XHR vs bare curl) **before**
   proposing any gate.
 - **Abuse row (optional, high-yield).** For trust-boundary rows that reach
   **money, writes, or secrets** — and only those — add six cells naming who could

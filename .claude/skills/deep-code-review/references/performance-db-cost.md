@@ -372,7 +372,7 @@ Every billable or slow call must map to value delivered.
 - **Authoritative vs advisory — state which.** A cache treated as **source of
   truth** (write-only-to-cache, no durable store behind it) turns an eviction into
   **data loss**. (Identity-keyed caching as an authorization surface —
-  `private`/`no-store`, per-principal keys — is `security-appsec.md` A01.)
+  `private`/`no-store`, per-principal keys — is `appsec-edge.md` A01.)
 - **A shared cache must key on whatever varies the representation.** When a response differs by
   request header — `Accept-Language`, `Accept-Encoding`, a currency/tenant negotiated from a
   header — a shared or CDN cache that ignores it serves one visitor's variant to another
@@ -381,7 +381,7 @@ Every billable or slow call must map to value delivered.
   request header fields nominated by that Vary field value match" (RFC 9111 §4.1), and `Vary: *`
   never matches. Include every representation-varying dimension in the cache key (a correct
   `Vary`, or explicit key dimensions). Distinct from the identity/authz `Vary` rule in
-  `security-appsec.md` (threat: a cross-user *auth* leak) — this is content-negotiation
+  `appsec-edge.md` (threat: a cross-user *auth* leak) — this is content-negotiation
   correctness.
 
 ## Concurrency, memory & payloads

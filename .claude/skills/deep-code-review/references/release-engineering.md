@@ -229,7 +229,7 @@ artifact — cosign / keyless Sigstore (`*.sigstore` / `*.sigstore.json`), `npm 
 as a release asset. OpenSSF Scorecard's Signed-Releases check is **"Risk: `High` (possibility of installing
 malicious releases)"** and "tries to determine if the project cryptographically signs release artifacts"
 ("Signed releases attest to the provenance of the artifact"). A project can have SLSA build provenance
-internally yet attach **no** consumer-verifiable signature to what it ships — that gap is the finding. (`security-appsec.md` A03 poses the same producer-side question in one line — *is a released artifact signed, or only checksummed over the same channel it ships on?* — this section is its depth.)
+internally yet attach **no** consumer-verifiable signature to what it ships — that gap is the finding. (`appsec-supply.md` A03 poses the same producer-side question in one line — *is a released artifact signed, or only checksummed over the same channel it ships on?* — this section is its depth.)
 
 - **Find the signature artifact next to the release**, and confirm the publish job actually runs the signing
   step — a documented "we sign our releases" with no signing step in the actual `release` / `publish` workflow
@@ -242,7 +242,7 @@ internally yet attach **no** consumer-verifiable signature to what it ships — 
   maintainer's own laptop rather than a hosted build platform — the check observes the identity that signed,
   never the machine the artifact was built on. A stolen publish credential or a compromised workstation
   produces an artifact that still tags, signs, and verifies cleanly, because the compromise sits upstream of
-  the cryptography the check re-derives. This is the producer-side half of the question `security-appsec.md`
+  the cryptography the check re-derives. This is the producer-side half of the question `appsec-supply.md`
   poses on the verify side — its L1/L2/L3 build-provenance ladder (depth there, not restated here)
   presupposes an answer to *where the build ran*, which a bare signature check never asks. Before crediting a
   release with any level above the trivial-to-forge provenance-exists floor, confirm the publish/release job

@@ -210,7 +210,7 @@ be **claimed by any app** (scheme hijacking), so it must never carry a secret
 `apple-app-site-association`), which are domain-verified. A deeplink that lands on
 an authenticated action must still require the **session** — the link is not the
 credential. (Where a deeplink reflects a `next` / `returnTo`-style parameter, the
-open-redirect class is `security-appsec.md` A01 CWE-601 — link it.)
+open-redirect class is `appsec-links.md` A01 CWE-601 — link it.)
 
 **Fix.** `exported="false"` unless the component is deliberately cross-app;
 require a **signature-level** permission for cross-app entry points you own;
@@ -386,7 +386,7 @@ its attack surface and its privacy exposure. A bundled **third-party SDK**
 and **inherits every permission the user granted** — so an over-broad permission
 set plus an opaque SDK is a data-exfiltration path (contacts, precise location,
 clipboard, device identifiers) that the app's **own** code never shows.
-`security-appsec.md` A03 covers dependency provenance / pinning — **link it** for
+`appsec-supply.md` A03 covers dependency provenance / pinning — **link it** for
 the supply-chain base; the mobile / privacy delta is:
 
 - **Least permission.** Request the minimum; prefer scoped / one-time grants and

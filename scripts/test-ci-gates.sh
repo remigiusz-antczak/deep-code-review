@@ -2684,6 +2684,135 @@ else
 fi
 rm -rf "$og/ops"
 
+# ===========================================================================
+# AppSec must-load isolation (own lane; APPENDED AT THE END by convention).
+# security-appsec.md is must-load for web, mobile, api / service, and
+# agent / LLM / MCP; its conditional depth lives in routed appsec-*.md
+# sub-files, each indexed in the parent with a trigger. Pin, structurally,
+# that an API review with no file handling and no runtime-compiled template --
+# the LIGHT floor parsed live from SKILL.md's phase table, plus the
+# `api / service` row's must-load refs parsed live from the load map, plus
+# domain-b.md and domain-i.md -- loads neither appsec-files.md nor
+# appsec-ssti.md: neither is in that load set, and no content line of either
+# appears verbatim in it. Also pin that every appsec-*.md is routed from the
+# parent's index AND from SKILL.md, and that the files / template index rows
+# name their trigger. Planted RED: pasting one files line back into the
+# parent must FIRE, and dropping the appsec-ssti.md index row must FIRE.
+# ===========================================================================
+
+# archetype_mustload_refs <skill_dir> <archetype> — print the backticked refs
+# in the load map's row for <archetype> (an independent re-derivation of
+# cmd_mustload's parse).
+archetype_mustload_refs() {
+  awk -F'|' -v want="$2" '
+    $0 == "| Archetype | Default domains | Must-load refs |" { on = 1; next }
+    on && /^\|---/ { next }
+    on && !/^\|/ { on = 0 }
+    on {
+      a = $2; gsub(/^[[:space:]]+|[[:space:]]+$/, "", a)
+      if (a != want) next
+      cell = $4
+      while (match(cell, /`[A-Za-z0-9._-]+\.md`/)) {
+        print substr(cell, RSTART + 1, RLENGTH - 2)
+        cell = substr(cell, RSTART + RLENGTH)
+      }
+    }
+  ' "$1/SKILL.md" | sort -u
+}
+
+# appsec_plain_leaks <skill_dir> — print every content line (>= 25 chars,
+# after the 4-line title / blank / trigger / blank header) of appsec-files.md
+# or appsec-ssti.md found verbatim in the no-files, no-template API load set,
+# plus either sub-file if the load set names it outright. Empty == isolated.
+appsec_plain_leaks() {
+  local sd="$1" f
+  local set_list="$WORK/appsec-plain-set.txt" pats="$WORK/appsec-plain-pats.txt"
+  : >"$set_list"
+  : >"$pats"
+  while IFS= read -r f; do
+    case "$f" in
+      appsec-files.md|appsec-ssti.md) printf 'LOAD SET NAMES A FILES/TEMPLATE FILE: %s\n' "$f" ;;
+    esac
+    printf '%s\n' "$sd/references/$f" >>"$set_list"
+  done < <({ floor_light_refs "$sd"; archetype_mustload_refs "$sd" "api / service"; } | sort -u)
+  printf '%s\n' "$sd/SKILL.md" "$sd/references/domain-b.md" "$sd/references/domain-i.md" >>"$set_list"
+  for f in appsec-files.md appsec-ssti.md; do
+    [ -f "$sd/references/$f" ] || { printf 'MISSING SUB-FILE: %s (fail closed)\n' "$f"; continue; }
+    awk 'NR > 4 && length($0) >= 25' "$sd/references/$f" >>"$pats"
+  done
+  [ -s "$pats" ] || { printf 'NO FILES/TEMPLATE PATTERNS (fail closed)\n'; return 0; }
+  while IFS= read -r f; do
+    grep -Fxf "$pats" "$f" | sed "s|^|LEAK $(basename "$f"): |" || true
+  done <"$set_list"
+}
+
+# appsec_index_unrouted <skill_dir> — print every appsec-*.md not named in a
+# `| \`<file>\` |` row of security-appsec.md's index or (backticked) in
+# SKILL.md, and a files / template index row that does not name its trigger.
+# Empty output == fully routed.
+appsec_index_unrouted() {
+  local sd="$1" f b
+  for f in "$sd"/references/appsec-*.md; do
+    [ -e "$f" ] || continue
+    b="$(basename "$f")"
+    grep -qF "| \`$b\` |" "$sd/references/security-appsec.md" || printf 'UNROUTED %s (parent security-appsec.md)\n' "$b"
+    grep -qF "\`$b\`" "$sd/SKILL.md" || printf 'UNROUTED %s (SKILL.md)\n' "$b"
+  done
+  grep -E '^\| `appsec-files\.md` \|' "$sd/references/security-appsec.md" | grep -qi 'upload' \
+    || printf 'TRIGGERLESS appsec-files.md index row\n'
+  grep -E '^\| `appsec-ssti\.md` \|' "$sd/references/security-appsec.md" | grep -qi 'template' \
+    || printf 'TRIGGERLESS appsec-ssti.md index row\n'
+}
+
+api_set="$({ floor_light_refs "$dcr_sd"; archetype_mustload_refs "$dcr_sd" "api / service"; } | sort -u | tr '\n' ' ')"
+appsec_leaks="$(appsec_plain_leaks "$dcr_sd")"
+appsec_unrouted="$(appsec_index_unrouted "$dcr_sd")"
+appsec_subs="$(ls "$dcr_sd"/references/appsec-*.md 2>/dev/null | wc -l | tr -d ' ')"
+if [ -n "$api_set" ] && [ -z "$appsec_leaks" ] \
+  && printf '%s' "$api_set" | grep -qF 'security-appsec.md' \
+  && printf '%s' "$api_set" | grep -qF 'security-api.md'; then
+  record 0 "appsec isolation: a no-files, no-template API review (${api_set}+ domain-b.md, domain-i.md) loads neither appsec-files.md nor appsec-ssti.md"
+else
+  printf '%s\n' "$appsec_leaks" | head -5
+  record 1 "appsec isolation: a no-files, no-template API review (${api_set}+ domain-b.md, domain-i.md) loads neither appsec-files.md nor appsec-ssti.md"
+fi
+
+if [ -z "$appsec_unrouted" ] && [ "$appsec_subs" -ge 11 ]; then
+  record 0 "appsec isolation: every appsec-*.md sub-file ($appsec_subs) is routed from security-appsec.md's index and SKILL.md; files/template rows name their trigger"
+else
+  printf '%s\n' "$appsec_unrouted" | head -5
+  record 1 "appsec isolation: every appsec-*.md sub-file ($appsec_subs) is routed from security-appsec.md's index and SKILL.md; files/template rows name their trigger"
+fi
+
+# Planted RED: a copy of the skill whose appsec parent re-absorbs one files
+# line must be flagged as a leak into the no-files API load set.
+aiso_sd="$WORK/appsec-iso/deep-code-review"
+rm -rf "$WORK/appsec-iso"
+mkdir -p "$WORK/appsec-iso"
+cp -R "$dcr_sd" "$aiso_sd"
+awk 'NR > 6 && length($0) >= 25 { print; exit }' "$aiso_sd/references/appsec-files.md" \
+  >>"$aiso_sd/references/security-appsec.md"
+aiso_leaks="$(appsec_plain_leaks "$aiso_sd")"
+if printf '%s\n' "$aiso_leaks" | grep -q '^LEAK security-appsec.md: '; then
+  record 0 "appsec isolation: FIRES when files depth leaks back into the API must-load set (planted RED)"
+else
+  record 1 "appsec isolation: FIRES when files depth leaks back into the API must-load set (planted RED)"
+fi
+
+# Planted RED: a parent index that drops the appsec-ssti.md row leaves the
+# template sub-file unrouted from its parent -- the routing check must FIRE.
+grep -vF '| `appsec-ssti.md` |' "$dcr_sd/references/security-appsec.md" \
+  >"$aiso_sd/references/security-appsec.md" || true
+# Capture first: piping straight into `grep -q` can SIGPIPE the producer under
+# `set -o pipefail` and read as a non-match.
+aiso_unrouted="$(appsec_index_unrouted "$aiso_sd")"
+if printf '%s\n' "$aiso_unrouted" | grep -qF 'UNROUTED appsec-ssti.md (parent security-appsec.md)' \
+  && printf '%s\n' "$aiso_unrouted" | grep -qF 'TRIGGERLESS appsec-ssti.md index row'; then
+  record 0 "appsec isolation: FIRES when the parent index drops a sub-file's row (planted RED)"
+else
+  record 1 "appsec isolation: FIRES when the parent index drops a sub-file's row (planted RED)"
+fi
+
 # ---------------------------------------------------------------------------
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"

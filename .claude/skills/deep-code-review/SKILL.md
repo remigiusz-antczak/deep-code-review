@@ -190,13 +190,13 @@ applicable domains. Language footguns:
 | | Domain | Depth |
 |---|---|---|
 | A | Correctness & logic | `domain-a.md`, `time-date-correctness.md` (timestamps, durations, recurring/scheduled times, time zones) |
-| B | AppSec (OWASP Top 10:2025) | `domain-b.md`, `security-appsec.md`; `security-api.md` — **read when** the target serves its own HTTP / GraphQL / gRPC / WebSocket API (any archetype); `mobile-appsec.md` — **read when** the target ships an iOS / Android / native mobile client (MASVS/MASTG deltas) |
+| B | AppSec (OWASP Top 10:2025) | `domain-b.md`, `security-appsec.md` → `appsec-edge.md`, `appsec-scan-tests.md`, `appsec-links.md`, `appsec-approvals.md`, `appsec-supply.md`, `appsec-crypto.md`, `appsec-ssti.md`, `appsec-files.md`, `appsec-tokens.md`, `appsec-login.md`, `appsec-design.md`; `security-api.md` (serves its own HTTP / GraphQL / gRPC / WebSocket API, any archetype), `mobile-appsec.md` (ships an iOS / Android / native mobile client; MASVS/MASTG deltas) |
 | C | AI / LLM / agents | `domain-c.md`, `security-ai-agents.md`, `security-agent-skills.md` |
 | D | Data integrity | `domain-d.md`, `data-quality.md` |
 | E | Performance, efficiency & cost | `domain-e.md`, `performance-db-cost.md`, `model-tiering.md`, `billing-correctness.md` (when the target meters, subscribes, or charges) |
 | F | Reliability & error handling | `domain-f.md`, `reliability-error-handling.md` |
 | G | Concurrency & shared state | `domain-g.md`, `concurrency-shared-state.md` |
-| H | Tech debt, dead code, maintainability | `domain-h.md`, `skill-authoring-and-size.md` (when the target ships/installs skills) |
+| H | Tech debt, dead code, maintainability | `domain-h.md`, `skill-authoring-and-size.md` (when the target ships/installs skills or has `**/SKILL.md`: leanness, progressive disclosure, a size ratchet that fails on bloat) |
 | I | API, contracts, integration | `domain-i.md`, `api-contracts.md` |
 | J | Testing & evaluation | `domain-j.md`, `testing-and-evals.md`; `testing-ui.md` (UI, browser specs), `testing-ai-evals.md` (model output), `testing-ml.md` (ML, notebooks) |
 | K | Build, CI, supply chain, release | `domain-k.md`, `dependency-currency-and-upgrades.md`, `release-engineering.md` |
@@ -210,11 +210,6 @@ applicable domains. Language footguns:
 | S | Branches, merges, open-work triage | `domain-s.md`, `branch-and-merge-hygiene.md`; `merge-operations.md` (landing PRs, merge gates) |
 | T | Multi-tenancy & isolation | `domain-t.md` (when one deployment serves multiple tenants) |
 | W | Workflows, jobs & scheduling | `domain-w.md` (when the target runs cron, queues, or multi-step workflows) |
-
-**Skills as targets.** When the repo ships or installs agent skills, review them
-for leanness and progressive disclosure (a thin core + routed `references/` + a
-size ratchet that fails on bloat): `skill-authoring-and-size.md` —
-**read it when** the target contains `**/SKILL.md`.
 
 ---
 

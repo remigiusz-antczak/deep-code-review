@@ -46,7 +46,7 @@ where the downstream call need not be billed per use and the damage **is** avail
 deliberately-**unauthenticated** endpoint that makes a server-side outbound call per request — the canonical case is
 an "exchange an identity-provider token for a local session" handler that must run
 **before any session cookie exists** — is, by that necessity, on the list of paths the auth middleware is configured
-to **skip** (A01 § Identity Arrival Map, the no-cookie request class). That skip-list entry is the trap: an
+to **skip** (`appsec-edge.md` § Identity Arrival Map, the no-cookie request class). That skip-list entry is the trap: an
 *authenticated* endpoint carries an **implicit throttle**, because a caller must first hold a session — itself a
 scarce, rate-limited-to-mint credential (A06 § Rate-limit key, burst, and failure mode) — so exempting the endpoint
 from the auth gate **removes that implicit throttle along with the auth**, leaving the outbound leg reachable by
@@ -94,7 +94,7 @@ the client declares or omits. 🚩 grep raw-body reads (`.arrayBuffer()`, `.blob
 no-`limit` `body-parser`) in any handler and trace whether the app's size check runs before that call (safe) or only
 after (vulnerable — the memory is already committed). Test with a chunked, `Content-Length`-omitting oversized body
 and assert both the rejection and that the handler never buffers past the cap. Distinct from the upload
-allow-list/magic-bytes checks above (`Files, archives & parsers`) — those gate *type*, not the order size is enforced
+allow-list/magic-bytes checks (`appsec-files.md`) — those gate *type*, not the order size is enforced
 relative to buffering — and from `language-stack-redflags.md`'s CWE-789 "declared/untrusted size value" fold: CWE-789
 is a size/count/dimension field read *from inside* an already-received payload driving a derived allocation (a
 declared width×height, a record count); this fold is about the raw body's *own byte count* and whether the cap runs

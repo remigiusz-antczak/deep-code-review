@@ -9,7 +9,7 @@ detection procedures and the **upgrade discipline** — how to reach latest-stab
 *without* regressing working code. It is the currency-and-modernization half of
 supply-chain review; the **integrity** half (pinning, lockfiles, typosquat,
 `postinstall`, SHA-pinned actions, SBOM, provenance/SLSA) lives in A03 of
-`security-appsec.md` — cross-link, do not restate.
+`appsec-supply.md` — cross-link, do not restate.
 
 Standards this file tracks (verified URLs + dates in `docs/standards-index.md`):
 OWASP Top 10:2025 **A03 Software Supply Chain Failures** (which absorbed the
@@ -126,7 +126,7 @@ tests, performance, or another axis.
    confirm provenance/signature and that the package is not typosquatted,
    **slopsquatted** (a hallucinated name an attacker pre-registered — verify a
    newly-added dep resolves to an *established* package with real history, not just
-   that it isn't a typo), or maintainer-hijacked (A03 in `security-appsec.md`). The
+   that it isn't a typo), or maintainer-hijacked (A03 in `appsec-supply.md`). The
    release-age cooldown below also catches a slopsquat name: it has no established
    history to clear the window. "Newer" is not "safer" by
    itself. Do **not** auto-merge bot update PRs without this + the green gate.
@@ -252,7 +252,7 @@ once approved — that it resolves to an **established, non-slopsquatted** packa
 
 ## Cross-references
 
-- **A03 (`security-appsec.md`)** — pinning, lockfile integrity, typosquat/
+- **A03 (`appsec-supply.md`)** — pinning, lockfile integrity, typosquat/
   dependency-confusion, `postinstall`, SHA-pinned actions, SBOM, provenance. The
   integrity half; this file is the currency half.
 - **`SKILL.md` Phase 1** — the aggregate gate every bump must pass, and proving

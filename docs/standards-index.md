@@ -220,7 +220,7 @@ scheduling-, and merge-cadence reference in the `agentic-delivery` skill.
 
 Verification date for the rows below: **2026-09-10**. Added for the
 release-age-cooldown control (`references/dependency-currency-and-upgrades.md`)
-and the CI/CD trigger-and-token hardening instrument (`references/security-appsec.md`
+and the CI/CD trigger-and-token hardening instrument (`references/appsec-supply.md`
 A03, cross-referenced from `references/security-agent-skills.md` AST02).
 
 | Standard / source | URL | What was confirmed |
@@ -274,7 +274,7 @@ design-quality checklist in `references/migration-parity.md` (#124).
   range itself is corroborated by RFC 8259 §6 in the table above). Named by name only — not
   fetched this session (paywalled ANSI/IEEE standard).
 - **MITRE ATLAS** — adversarial-ML and agent-tool attack techniques.
-- **Threat-modeling methods** (named by `security-appsec.md` A06 and
+- **Threat-modeling methods** (named by `appsec-design.md` A06 and
   `security-ai-agents.md`): **STRIDE** (per-element spoofing / tampering / repudiation /
   info-disclosure / DoS / elevation), **PASTA** (risk/impact-centric), **attack trees**,
   **LINDDUN** (privacy threats), and **MAESTRO** (agentic-AI threat modeling,
@@ -455,7 +455,7 @@ faithfulness/relevancy + agent trajectory).
 ## Verified by direct fetch (2026-09-19) — post-quantum cryptography (A04)
 
 Verification date for the rows below: **2026-09-19**. Added for the deep-code-review
-`security-appsec.md` A04 crypto-agility / post-quantum-readiness dimension. Names are
+`appsec-crypto.md` A04 crypto-agility / post-quantum-readiness dimension. Names are
 the NIST standards' own; no compliance deadline is encoded (the review finding is a
 non-agile primitive on long-lived data, not a date-driven mandate).
 
@@ -468,7 +468,7 @@ non-agile primitive on long-lived data, not a date-driven mandate).
 ## Verified by direct fetch (2026-09-19) — EU CRA & VEX (supply-chain regulation)
 
 Verification date for the rows below: **2026-09-19**. Added for the `business-ops`
-regulated-domain-triage (CRA name-and-route) and the deep-code-review `security-appsec.md`
+regulated-domain-triage (CRA name-and-route) and the deep-code-review `appsec-supply.md`
 A03 (VEX). Named as regimes/artifacts; no compliance deadline or conformity conclusion is
 encoded (business-ops routes applicability to counsel).
 
@@ -784,7 +784,7 @@ exclusivity" subsection.
 
 Verification date for the rows below: **2026-09-20**. Added for the nonce/IV-reuse,
 constant-time-compare-generalization, and password-KDF-cost-floor fold into
-`references/security-appsec.md` A04 (after the crypto-agility paragraph, before A05).
+`references/appsec-crypto.md` A04 (after the crypto-agility paragraph).
 The two NIST PDFs were fetched and converted with `pdftotext -layout`; titles
 cross-checked with `pdfinfo`. The CWE and OWASP pages were fetched as HTML and
 tag-stripped for quote matching.
@@ -852,7 +852,7 @@ Verification date for the row below: **2026-09-20**. Added for the deep-code-rev
 ## Verified by direct fetch (2026-09-20) — WebAuthn / passkey credential-layer
 
 Verification date for the rows below: **2026-09-20**. Added for the deep-code-review
-`security-appsec.md` passkey/WebAuthn fold: RP ID origin-scoping, the signature counter as a
+`appsec-login.md` passkey/WebAuthn fold: RP ID origin-scoping, the signature counter as a
 clone-detection signal, and NIST's phishing-resistance requirements (no silent downgrade to a
 weaker factor). Both fetched via `curl` (raw HTML), not a summarizer.
 
@@ -875,7 +875,7 @@ well-established mechanisms, so they carry no separate row here.)
 ## Verified by direct fetch (2026-09-20) — NIST 800-63-4 password policy
 
 Verification date for the row below: **2026-09-20**. Added for the deep-code-review
-`security-appsec.md` password-policy deepen (current NIST reverses forced rotation / composition
+`appsec-login.md` password-policy deepen (current NIST reverses forced rotation / composition
 rules). Fetched via `curl` (raw HTML).
 
 | Standard / source | URL | What was confirmed |
@@ -970,7 +970,7 @@ is sourced to this 2026-09-20 re-fetch.
 ## Verified by direct fetch (2026-09-20) — HTTP response-header census, XS-Leaks isolation headers, MFA push/OTP hardening, and transaction authorization (WYSIWYS)
 
 Verification date for the rows below: **2026-09-20**. Added for three `deep-code-review`
-`security-appsec.md` folds: the A02 security-header census gaining `Permissions-Policy`
+`security-appsec.md` folds (now in `appsec-edge.md`, `appsec-login.md`, and `appsec-approvals.md`): the A02 security-header census gaining `Permissions-Policy`
 and the `Cross-Origin-Opener-Policy`/`Cross-Origin-Embedder-Policy`/
 `Cross-Origin-Resource-Policy` trio; the A07 authentication-failures section gaining
 push-notification MFA fatigue (push-bombing) and OTP handling-and-storage discipline; and
@@ -1059,7 +1059,7 @@ trusted one." That citation is sourced to this 2026-09-20 re-fetch, not a new ro
 ## Verified by direct fetch (2026-09-21) — OWASP CI/CD Top 10 (CICD-SEC-4 Poisoned Pipeline Execution, SEC-5 Insufficient PBAC, SEC-6 Insufficient Credential Hygiene, SEC-7 Insecure System Configuration, SEC-9 Improper Artifact Integrity Validation)
 
 Verification date for the rows below: **2026-09-21**. Added for the `deep-code-review`
-CI/CD security folds across `security-appsec.md` and `infra-iac-containers.md`:
+CI/CD security folds across `appsec-supply.md` and `infra-iac-containers.md`:
 poisoned-pipeline / executed-file review gates (SEC-4), secret and credential
 blast-radius scoping — repo/org secrets bounded to the job/deployment environment that
 needs them (SEC-5/6), self-hosted-runner isolation and single-job runners (SEC-7), and
@@ -1120,7 +1120,7 @@ execution-time (inbound request-execution timeout) axes.
 ## Verified by direct fetch (2026-09-21) — WHATWG URL Standard (backslash normalized to slash for special schemes)
 
 Verification date for the row below: **2026-09-21**. Added for a `deep-code-review`
-`security-appsec.md` A01 fold on a client-side open-redirect guard that rejects the
+`appsec-links.md` A01 fold on a client-side open-redirect guard that rejects the
 protocol-relative `//host` form but not its backslash equivalent (`/\host`), which a
 browser resolves to the same off-origin target.
 

@@ -224,7 +224,7 @@ hard-coded `access_key`/`secret`/`password` in `.tf`.
   bounds *where* a job runs; the least-privilege-token bullet above bounds *what* it may
   reach; CIS hardening of the *deployed* app runtime is the separate axis at this file's
   opening (and `security-appsec.md` A05). Untrusted fork-PR **checkout/trigger** risk
-  (`pull_request_target`, script injection) is in `security-appsec.md`.
+  (`pull_request_target`, script injection) is in `appsec-supply.md`.
 - **Package-signature verification is a blocking gate** (a signature mismatch
   means the artifact is not what the registry signed); transitive-CVE audit is a
   useful **advisory** signal — schedule high/critical, don't block on every
@@ -234,7 +234,7 @@ hard-coded `access_key`/`secret`/`password` in `.tf`.
   trusted, canonical source repo matches, fail closed on a missing/mismatched attestation
   (the same bar as package-signature verification above; a named SLSA level, not a bare
   "SLSA compliant" — depth in
-  `security-appsec.md` A03); SBOM published.
+  `appsec-supply.md` A03); SBOM published.
 - **Verify identifier ownership before deploy**: deploying under a slug /
   app-id / project name another service already owns can silently clobber it.
 - A credentialed integration must degrade to a clean no-op without its key

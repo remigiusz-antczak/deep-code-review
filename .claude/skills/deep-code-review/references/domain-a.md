@@ -24,7 +24,7 @@ Read this when domain A (Correctness & logic) is applicable in Phase 2 — the c
   architecture leads the review.
 - **AI-authored code: a call into a *real* dependency must actually exist on the *pinned* version
   — not just the package.** Beyond package-name hallucination (a whole invented dependency —
-  `security-appsec.md`, `dependency-currency-and-upgrades.md`), an LLM invents a **nonexistent
+  `appsec-supply.md`, `dependency-currency-and-upgrades.md`), an LLM invents a **nonexistent
   method/function/parameter on a real, already-installed dependency**, or misuses a real one with
   plausible-but-wrong arguments ("API hallucination, including invoking non-existent APIs and misusing
   existing ones," `docs/standards-index.md`). The exposure concentrates exactly where a type-checker

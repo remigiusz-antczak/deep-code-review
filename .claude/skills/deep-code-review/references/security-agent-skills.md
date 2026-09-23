@@ -35,7 +35,7 @@ Titles below are the official names. Severity labels are the project's.
   checksum fetched from the **same origin** as the payload is integrity
   (corruption / CDN), not **authenticity** (origin compromise) — grade a
   `curl | bash` install by whether that origin is the sole documented path for
-  every user (depth: A03 in `security-appsec.md`). A filename read out of a
+  every user (depth: A03 in `appsec-supply.md`). A filename read out of a
   downloaded manifest is validated against path traversal (`*/*`, `*..*`) before
   use. **CI workflow files are executable config too** — `pull_request_target`
   untrusted checkout, token `permissions`, and `${{ github.event.* }}` injection
