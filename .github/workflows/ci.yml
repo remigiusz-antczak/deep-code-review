@@ -154,6 +154,26 @@ jobs:
             --test-glob '.claude/skills/*/scripts/*' \
             --test-glob 'scripts/test-ci-gates.sh'
 
+      # Lesson replay (ADVISORY signal, not proof): the step above proves a
+      # mechanism path was touched; this one looks for a tie between the
+      # mechanism and the lesson. Each prose-lesson commit prints REPLAYS (a
+      # changed eval case names a term the lesson newly added, or reverting a
+      # changed script hunk fails an assertion in its selftest), VACUOUS (no
+      # tie found), or COULD_NOT_CHECK with a reason. Token overlap is
+      # gameable; a reviewer judges every line. It exits 0 on VACUOUS and
+      # fails closed (exit 2) only on an unresolvable range, like the gate
+      # above. Adding `--gate` makes VACUOUS (only VACUOUS) exit 1;
+      # COULD_NOT_CHECK never blocks.
+      - name: Lesson mechanisms replay (advisory)
+        timeout-minutes: 15
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          python3 scripts/lesson_replay.py --selftest
+          python3 scripts/lesson_replay.py --base "$BASE_SHA" --head "$HEAD_SHA"
+
       # A size-budget row may only rise with a `size-budget-raise:` marker
       # (commit range or CHANGELOG) — budgets ratchet down by default.
       - name: Size budgets ratchet down

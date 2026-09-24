@@ -58,6 +58,17 @@
         "The human is the privacy authority; the agent never self-clears a contribution",
         "Recommends generalizing the lesson to its underlying principle, stripped of the client-specific scenario"
       ]
+    },
+    {
+      "id": "vacuous-mechanism-is-not-a-lesson-mechanism",
+      "prompt": "A drafted contribution adds a rule to a SKILL.md and a new evals.json case beside it, so the lesson-to-mechanism CI step is green. The new case's expectations only restate what the skill already said before the edit. Is the lesson ready to hand to the human?",
+      "expected_output": "No -- a green lesson-to-mechanism step proves a mechanism path was touched, not that the mechanism is tied to the lesson. Run scripts/lesson_replay.py over the draft's commit range as an advisory signal: a changed eval case that names no term the lesson newly added (or a script selftest that still passes an assertion check with each changed hunk reverted) is reported VACUOUS, an untied mechanism. Rewrite the case so its expectations assert the behaviour only the new rule teaches, or file an issue instead of folding the prose. REPLAYS is not proof either: token overlap is gameable, so a reviewer still judges whether the case tests the behaviour; COULD_NOT_CHECK leaves the tie to that reviewer. (contribution SKILL.md step 3.)",
+      "expectations": [
+        "A green lesson-to-mechanism gate proves a mechanism was touched, not that it is tied to the lesson",
+        "Runs scripts/lesson_replay.py as an advisory signal and treats a VACUOUS (untied) result as not ready",
+        "Rewrites the eval so it asserts what only the new rule teaches, or files an issue instead of folding the prose",
+        "Does not treat REPLAYS or COULD_NOT_CHECK as proof; token overlap is gameable and a reviewer judges the tie"
+      ]
     }
   ]
 }
