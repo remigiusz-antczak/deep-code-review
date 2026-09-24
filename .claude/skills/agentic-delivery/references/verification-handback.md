@@ -86,6 +86,10 @@ forbidden one taken — so naming the steps in the brief is necessary and **not*
   `changelog.d/$(git branch --show-current | tr / -).md`, and any fragment check keys off the head branch.
 - **Host blocks "ready on green" as unreviewed?** `surface_check.py attested … && gh pr ready …` passes only on a
   non-author `board_post.py --type REVIEW` at the exact head (a push voids it); the host's decision stays final.
+- **Once CI skips drafts and runs only on `ready_for_review`, gate the ready-flip on `attested` (review + finish
+  criteria), never on green checks** — a draft sitting at zero check suites is the expected state under that CI
+  config, not a platform anomaly to escalate; pass `--draft-skip-ci` to say so explicitly in the reason, and keep
+  requiring green at the merge step (`checks`/`--wait`) regardless.
 - **A draft red only on a missing changelog fragment is a stranded-by-contract signal, not a defect.** Read it
   as this pattern — the fix is sound, the process tail was truncated — and complete the tail (fold-in for future
   lanes, finish it now for this one), rather than re-reviewing the code for a fault that is not there.

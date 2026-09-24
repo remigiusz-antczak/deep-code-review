@@ -18,6 +18,7 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    timeout-minutes: 10 # bound a hung run instead of paying for GitHub's own unset-job default ceiling
     permissions:
       contents: write # only this job may create the release/tag object
     steps:

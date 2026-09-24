@@ -87,7 +87,11 @@ there) + styles; progress = `sections passed k/n`; `--report` is the visual pass
 The orchestrator spot-checks a harness's pair count before trusting its verdict (`--min-pairs N`, your
 floor, on either differ; `--style-min-pairs N` for style): too few pairs = an empty or wrong page, never a pass. Size, height, width, or bounding boxes are never
 completeness or "aligned" evidence; geometry proves only layout defects (overlap, clipping, viewport fit
-— `testing-ui.md`). Then do a **full side-by-side of the whole surface**, list every styling / placement
+— `testing-ui.md`). A hand-tuned, structurally complex visual (a diagram, a chart with a legend) marked
+`data-protected` gets its own 100%-independent section plus ordinal (order/containment/overlap, never size)
+assertions, so a page-aggregate score staying "close enough" can never hide it rendering mounted but wrong
+(`data-protected`/`data-protected-node`/`data-prect` in `parity_differ.py`'s own docstring). Then do a **full
+side-by-side of the whole surface**, list every styling / placement
 delta at once, and fix against that list; the claim is made only when every row is closed or owner-accepted
 (accept file: owner-authored only).
 

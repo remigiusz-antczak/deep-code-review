@@ -1931,6 +1931,27 @@
         "Does not accept 'it passes on my branch' as proof the gate works",
         "Treats a gate that cannot read its input as a loud skip or UNVERIFIED, never a pass (principle 5)"
       ]
+    },
+    {
+      "id": "draft-skip-ci-ready-gate-not-green-checks",
+      "prompt": "CI is configured to skip draft PRs and run only on ready_for_review. A lane's draft PR has zero check suites and the orchestrator is deciding whether to flip it ready. Old rule was 'ready only when checks are green.' What should gate the flip now, and is zero check suites a problem?",
+      "expected_output": "Once CI skips drafts, readiness gates on review/finish criteria (a non-author REVIEW attestation via surface_check.py attested, a finished branch, no conflicts), not on green checks - checks only run after the ready flip. A draft PR with zero check suites is the expected state under draft-skip CI, not an anomaly to escalate to an admin. Pass --draft-skip-ci to surface_check.py attested so the reason says checks were not required for the ready decision. Merging still requires green afterwards.",
+      "expectations": [
+        "Gates the ready-flip on attested review/finish criteria, not on green checks",
+        "States a draft with zero check suites is expected under draft-skip CI, not a platform anomaly",
+        "Names surface_check.py attested --draft-skip-ci as the mechanism that says so explicitly",
+        "States merge still requires green regardless of the ready decision"
+      ]
+    },
+    {
+      "id": "draft-skip-ci-note-scoped-to-draft-branch",
+      "prompt": "surface_check.py attested --draft-skip-ci is run against a PR that is already ready (not a draft) and already approved. Should the reason line mention --draft-skip-ci?",
+      "expected_output": "No. The --draft-skip-ci note only applies to the draft/ready-flip decision -- an already-ready PR already ran checks under draft-skip CI (checks run on ready_for_review), so there is nothing for the note to explain. The reason line for an already-ready PR omits the note entirely; it appears only on the draft branch's reason (the one naming the gh pr ready command).",
+      "expectations": [
+        "States the --draft-skip-ci note is scoped to the draft branch only",
+        "States an already-ready (non-draft) PR's reason omits the note",
+        "Explains why: an already-ready PR already ran checks, so there is nothing to explain"
+      ]
     }
   ]
 }

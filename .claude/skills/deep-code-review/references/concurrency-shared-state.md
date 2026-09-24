@@ -94,6 +94,16 @@ paths. Expands section G of `SKILL.md`. Cross-ref J /
   **prevention**; the `40001`/deadlock-victim retry in *DB / store TOCTOU* below is
   the **recovery** — PostgreSQL names that retry only as the fallback "if it is not
   feasible to verify this in advance," so the two are complementary, not competing.
+- **One lock/semaphore per independently-schedulable resource — reusing one for a second, unrelated
+  critical section silently serializes every caller of either.** A "finish"/cleanup step extended to
+  do a second thing (capture evidence via a fixed-port tool) inside a lock/semaphore that already
+  protects something unrelated (a push-queue slot) couples two resources with no real dependency: every
+  caller now queues behind both, even though neither needed the other. Each individual use reviews as
+  correct in isolation, so this passes review; the tell is queue **wait time growing superlinearly with
+  fleet size** on a resource that "shouldn't" be contended. Before extending a lock's critical section,
+  name the resource it already protects and check whether the new work touches a *different* one — if
+  so, give it its own lock (or, for a fixed port, a pool / ephemeral port instead of serializing on it
+  at all) sized to its own constraint, and measure hold time per resource to catch a reused lock early.
 - Missing `await` / fire-and-forget: the caller returns success while work
   fails later; unhandled rejection may crash the process or vanish.
 

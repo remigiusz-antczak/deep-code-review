@@ -3,6 +3,19 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.456.0] — 2026-09-24
+
+### Added — protected-visual, draft-skip-CI, and shared-lock fixes from the field
+- `parity_differ.py`: a component marked `data-protected="<id>"` (instead of `data-section`) scores to 100% inventory completeness independently of the page aggregate, and every `data-protected-node`/`data-prect` pair inside it is checked for ordinal (left/right/above/below/containment/overlap) relations derived from the design capture's rects — never sizes/dimensions as a pass/fail input. A missing protected component or node, or a broken ordinal relation, is MISMATCH, never a silent pass diluted by the rest of the page (#1164). Hardening: a repeated `data-protected-node` id on either side, or a zero/negative-area `data-prect` on the design side, is COULD_NOT_CHECK naming the id, never silently overwritten or guessed; the same zero/negative-area defect on the app side instead reads as that node MISSING_IN_APP; `data-protected`/`-node`/`-prect` under `--bands` is COULD_NOT_CHECK (SECTION BANDS does not recognize it), never a silent drop.
+- `surface_check.py attested --draft-skip-ci`: once CI is configured to skip drafts and run only on `ready_for_review`, this says explicitly that checks were not required for the ready decision, so a draft PR sitting at zero check suites reads as expected under that config, not a platform anomaly — the verdict itself never changes, and merging still requires green (#1162). The note prints only on the draft/ready-flip branch; an already-ready PR already ran checks, so there is nothing for it to explain.
+- `concurrency-shared-state.md` + `serial_gate.py`: one lock/semaphore per independently-schedulable resource — a "finish" step must not run a second, unrelated critical section (e.g. a fixed-port evidence capture) inside a lock that already guards something else (e.g. a push-queue slot), which silently serializes every caller of either; give the second resource its own pool or lock (#1159).
+- `deep-code-review/scripts/ci_cost_lint.py`: flags GitHub Actions runner-minute waste per workflow — no `concurrency` with `cancel-in-progress` on PR workflows, no job `timeout-minutes`, a push-to-default-branch run duplicating the PR run under strict branch protection, schedules more frequent than hourly (ranges included), matrices over a size cap (includes/excludes counted), and missing path filters (advisory). Unsupported YAML is reported as PARSE-ERROR, never guessed; a missing root fails closed. `templates/dcr-gates.yml` ships with concurrency cancel and a job timeout; this repo's release workflow gained a timeout. Sources logged in `docs/standards-index.md`.
+- `scripts/test-ci-gates.sh` is hermetic: each run gets its own temp root, HOME, and disabled global git config, and a final case fails if any case wrote into the checkout; three concurrent runs of the same commit pass 201/201 each.
+- size-budget-raise: .claude/skills/deep-code-review/references/domain-k.md 2812→4095 CI runner-cost levers and ci_cost_lint routing
+- size-budget-raise: .claude/skills/agentic-delivery/references/verification-handback.md 52027→52436 draft-skip-CI ready-gate doctrine
+- size-budget-raise: .claude/skills/deep-code-review/references/concurrency-shared-state.md 31966→32992 one-lock-one-resource review rule
+- size-budget-raise: .claude/skills/deep-code-review/references/rendered-parity.md 10222→10611 routed line for data-protected components
+
 ## [1.455.0] — 2026-09-24
 
 ### Changed — lower load for delivery and CEO skills
