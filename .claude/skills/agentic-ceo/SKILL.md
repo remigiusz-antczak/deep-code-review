@@ -25,8 +25,10 @@ small build is not drowned in subagents; and when the owner is under
 pressure it keeps the work legible instead of freelancing. It **routes and
 decides**; it never re-implements what a specialist skill already does.
 
-Persisted artifacts stay normal English. Chat may be terse. Lookup table:
-`INDEX.md`; read it instead of opening references blindly.
+Persisted artifacts stay normal English. Chat may be terse.
+
+**Read `INDEX.md` first** (delivery references: `agentic-delivery`'s `INDEX.md`);
+open a reference only when its row's trigger matches, never blindly.
 
 ---
 
@@ -93,37 +95,10 @@ model: prototype / mvp / growth / mature), the **area** of the ask, and the
 
 ## The chaos playbook — the owner under pressure
 
-When the owner floods the conductor with many rapid, conflicting asks under
-real pressure, the failure is to freelance (obey the last thing, drop the
-rest, act on colliding orders) or to patronise ("calm down"). Support is
-**by action, not affect** — six moves, in order:
-
-1. **Capture losslessly** — every request and aside becomes a numbered,
-   logged item before any judgement; tag request vs. context; nothing
-   filtered or merged.
-2. **Reflect the full list back** — the played-back numbered list *is* the
-   acknowledgement; name any collision between items as its own finding.
-3. **Triage to the vital few** — a first-hit-wins chain: blocks-others or
-   irreversible → Now; failing on the live surface → Now; time-critical but
-   reversible → Next; else → Held (visible, not dropped).
-4. **One highest-leverage next action** — the lead domino + a one-line why;
-   start it if reversible and in scope, offer an A/B only when it needs the owner
-   (a Human gate always does, absent an owner-authored grant — `agentic-delivery`).
-5. **Hold the rest as a tracked backlog** — each item has a visible state
-   (in-flight / next / held / dropped-with-reason); WIP-limit to one primary
-   action.
-6. **Support by action** — acknowledge the stakes as legitimate, show the
-   list, name the move.
-
-**Forbidden:** "calm down" / "relax" (reactance + invalidation), toxic
-positivity, minimising, narrating the owner's feelings, "on it!" with
-nothing captured, silently absorbing conflicting orders.
-
-Boundary: the conductor is an **organiser, not a therapist** — the calm
-comes from the system being visibly under control. Capture-mode is **not**
-yes-mode: it still surfaces real disagreement (a collision, a quality-bar
-breach, spread-thin mediocrity) in one line with the standard cited, then
-the owner decides.
+**Read `references/chaos-playbook.md` when** the owner floods you with many rapid,
+conflicting asks under pressure: six moves (capture, reflect back, triage, one next
+action, hold the rest visibly, support by action), forbidden phrases, boundary,
+and the suite's named standards (read them there before citing one).
 
 ## The task ledger — the ONE durable todo list
 
@@ -148,6 +123,10 @@ delivery by hand when a skill or lane should. Delivery, QA, and security run
 under `agentic-delivery`; the adversarial pass is `idea-critic`; the review
 bar is `deep-code-review`. Read lane *status*, not raw transcripts; react to
 a block, a receipt, an over-budget lane, or a collision.
+**Owner-gated actions never self-authorize** — a force-push, a rename, a
+delete, or a shared/external send needs an owner-authored grant, urgent or
+not; `agentic-delivery`'s **Human gates** names which actions gate and what
+counts as a grant.
 Run `scripts/token_report.py --budget [caps.tsv]` at wave end and in the morning
 handoff; each breach line names its lever. Dispatch to that budget:
 - **Cap every lane** — the brief carries a tool-call cap (`lane-preamble.md`).
@@ -157,10 +136,9 @@ handoff; each breach line names its lever. Dispatch to that budget:
   task ledger; `/compact` re-reads the whole context, a fresh start does not.
 - **A read-only reviewer moves to a smaller model only when its eval shows no
   quality loss**; otherwise it keeps its tier.
-Dispatch aged P0 / mechanism work before presentation polish; `agentic-delivery`'s
-`unattended-operating-mode.md` routes two opt-in gates: `scripts/priority_gate.py`
-blocks a presentation PR while aged P0/mechanism work is uncited, and
-`scripts/refix_gate.py` blocks churn without a class artifact.
+Dispatch aged P0 / mechanism work before presentation polish (opt-in gates
+`scripts/priority_gate.py`, `scripts/refix_gate.py`: `agentic-delivery`'s
+`unattended-operating-mode.md`).
 An OPEN owner priority outranks both: dispatch nothing outside it until DONE or BLOCKED
 (same file, **An open owner priority outranks every other item**; `scripts/focus_gate.py`).
 Paste `agentic-delivery`'s `templates/lane-preamble.md` into every lane brief before dispatch.
@@ -187,16 +165,10 @@ human, no status essays — `agentic-delivery`'s `unattended-operating-mode.md`
   truth: every owner ask is in it, `status` (not a paraphrase) reports
   progress, and no second list was ever created.
 
-## Anti-rationalization (excuse → rebuttal)
-
-| Excuse | Rebuttal |
-|---|---|
-| "Spin up subagents to look fast." | On a small or write-heavy job a swarm burns tokens and collides. One agent, several skill-hats; fan out only read-mostly work. |
-| "Just answer the market-size question." | It is outside the model. Route to the owner or real research; never fabricate it. |
-| "The owner is stressed — tell them it's fine." | Affect-management invalidates and provokes reactance. Show the captured list and the one next action instead. |
-| "Do the fix myself, briefing is slower." | Small project: yes, one agent does it. With lanes in flight, doing it yourself means you stopped routing — dispatch and oversee. |
-| "Restate the skill's steps here so it's handy." | That makes the registry a bundle and duplicates the skill. Point to the skill; let it hold the method. |
-| "I'll just remember the list, no need for the ledger file." | Memory is exactly what a compaction or a lost context erases. `add` every ask to `scripts/task_ledger.py` before starting; `status` reports from the file, never from memory. |
+**Anti-rationalization (excuse → rebuttal)** — tempted to swarm a small job,
+answer a market-size question inline, do a lane's work yourself, restate a
+skill's method here, or trust memory over the ledger: `references/chaos-playbook.md`
+**Anti-rationalization**.
 
 ## Related skills (this repository)
 - `agentic-delivery` — gated multi-role delivery; the delivery mechanics the
@@ -208,13 +180,6 @@ human, no status essays — `agentic-delivery`'s `unattended-operating-mode.md`
   on).
 - `product-discovery`, `communication-structure`, `contribution` — see the
   registry above.
-
-## Standards (by name; verify a figure/URL before citing one)
-GTD capture/clarify; incident command (single commander, unity-of-command,
-activity log); emergency-severity triage; WIP limits; "the ONE thing";
-psychological reactance; motivational-interviewing reflective listening;
-orchestrator–worker delegation and its token-cost trade-offs. Named leads —
-fetch and log a source before citing a specific figure (repo convention).
 
 ## Verification
 - A small/early project gets one agent with several skill-hats, never a

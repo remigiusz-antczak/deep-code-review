@@ -45,7 +45,10 @@ replace hand-reading and hand-posting a board issue:
   issue body; `--backlog --head <sha>` is the audit as a dispatch queue: spawn
   from it; re-verify REVERIFY rows, don't re-audit from scratch (#1071).
 - `scripts/claim_probe.py` — run before any claim or write: GO/NO-GO (below);
-  audited `done`/`na` is NO-GO.
+  audited `done`/`na` is NO-GO. `--claim --post` makes it the mandatory first
+  dispatch step, one call: probe, and only on GO, post the CLAIM through
+  `board_post.py` — an open PR and a local worktree check both miss another
+  machine's unpushed claim, which this closes.
 
 A coordination lesson closes only when a script or gate enforcing it lands
 with an eval exercising it; prose alone leaves it open.

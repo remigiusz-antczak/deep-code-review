@@ -1,5 +1,8 @@
 # Postmortem template
 
+Read this when G10 or an incident meets `retrospective.md`'s mandatory-trigger
+criteria and you must write the blameless postmortem (impact, root cause, actions).
+
 Routed from G10 (`SKILL.md`) and `retrospective.md`. Copy this into the
 target repo for any incident meeting the mandatory-trigger criteria in
 `retrospective.md`. Blameless: assumes everyone involved had good intentions

@@ -78,7 +78,30 @@ USAGE
                  [--ignore-pr 7] [--ignore-branch my-branch] [--max-branches 50]
   claim_probe.py --selftest
 
-Exit codes: 0 GO; 1 NO-GO (evidence printed); 2 error / not verified.
+ONE-SHOT CHECK-THEN-CLAIM (--claim)
+------------------------------------
+Reading the collision check and hand-running `board_post.py --type CLAIM` as two
+separate steps is exactly the kind of step that gets skipped under volume — the
+same failure mode this whole script exists to close. `--claim` (with `--agent`
+and `--ref`) runs the check above, and **only on GO** composes and, with
+`--post`, sends the CLAIM through `board_post.py` (dry-run — prints the `gh`
+command — without `--post`, same default as `board_post.py` itself). NO-GO or
+a crossed-claim YIELD never claims — a YIELD ref is always also NO-GO evidence
+(both come from the same branch in `probe()`), so this adds no second decision.
+`--post`/`--ttl`/`--claim-body` without `--claim` is a usage error (exit 2) —
+they have no effect on the check alone. `--ttl 0` is forwarded and rejected by
+`board_post.py`, never silently dropped. **GO prints only once the post itself
+succeeds** — a rejected or failed post is `NO-GO (claim post failed: ...)`,
+never a GO that never happened. After a successful post, one re-probe (a
+brief bounded pause first) re-applies the earliest-claim KEEP/YIELD tie-break
+to the just-claimed ref, catching a peer's CLAIM that crossed with ours after
+the pre-post check already passed — a post-hoc YIELD prints NO-GO and stands
+down with a RELEASE (`rule:earliest-claim`) instead of quietly holding a
+claim already lost.
+  claim_probe.py --repo O/N --issue 7 --ref '#123' --agent my-id --claim --ttl 90 --post
+
+Exit codes: 0 GO (posted and held, if --claim); 1 NO-GO (evidence, a failed
+post, or a post-hoc YIELD); 2 error / not verified / usage.
 """
 from __future__ import annotations
 
@@ -86,9 +109,13 @@ import argparse
 import json
 import os
 import re
+import subprocess
 import sys
+import tempfile
+import time
 from datetime import datetime, timedelta, timezone
 from fnmatch import fnmatchcase
+from pathlib import Path
 from urllib.parse import quote, urlsplit
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -98,6 +125,7 @@ import board_state as bs  # noqa: E402
 GO = 0
 NOGO = 1
 ERROR = 2
+RECHECK_DELAY_SECONDS = 2  # brief bounded pause before the post-CLAIM re-probe
 
 MAX_PR_FILES = 3000  # GitHub returns at most 3000 files for one pull request
 MAX_COMPARE_FILES = 300  # GitHub's compare endpoint lists at most 300 files
@@ -294,11 +322,98 @@ def probe(repo: str, issue: int, paths, refs, keywords, agent: str, ignore_prs, 
     return evidence, counts, notes
 
 
-def run(args, runner, out, err) -> int:
+def _post_type(args, ptype: str, refs_str: str, fields: dict, body_path: str | None,
+                default_body: str) -> tuple[int, str, str]:
+    """Compose/post one typed `board_post.py` call. Returns (rc, stdout, stderr).
+    `--post` gates the actual send, same default-dry-run as `board_post.py` itself."""
+    board_post = Path(__file__).resolve().parent / "board_post.py"
+    tmp_body = None
+    if not body_path:
+        tmp_body = tempfile.NamedTemporaryFile(  # noqa: SIM115 — closed explicitly below
+            mode="w", suffix=".txt", delete=False, encoding="utf-8")
+        tmp_body.write(default_body)
+        tmp_body.close()
+        body_path = tmp_body.name
+    try:
+        cmd = [sys.executable, str(board_post), "--repo", args.repo, "--issue", str(args.issue),
+               "--agent", args.agent, "--type", ptype, "--refs", refs_str, "--body-file", body_path]
+        for k, v in fields.items():
+            cmd += [f"--{k}", str(v)]
+        if args.post:
+            cmd += ["--post"]
+        proc = subprocess.run(cmd, capture_output=True, text=True)
+        return proc.returncode, proc.stdout, proc.stderr
+    finally:
+        if tmp_body:
+            os.unlink(tmp_body.name)
+
+
+def maybe_claim(args, refs, runner, seen: str, out, err,
+                 sleep=time.sleep, recheck_now: datetime | None = None) -> int:
+    """One-shot check-then-claim: on GO (only, called from `run()`), compose
+    and post a CLAIM through `board_post.py`. Prints GO only once the post
+    itself succeeds — a post failure is `NO-GO (claim post failed: ...)`, not
+    a silently-swallowed GO. Never posts on NO-GO or a crossed-claim YIELD
+    readout, since a YIELD ref is always also NO-GO evidence (the same
+    `named(ref)` branch in `probe()` appends both).
+
+    After a successful post, a peer's own CLAIM on the same ref may have
+    landed at nearly the same time and missed the pre-post probe entirely
+    (posted concurrently, before either side saw the other's). A brief
+    bounded pause (`RECHECK_DELAY_SECONDS`) then one re-probe applies the
+    existing earliest-claim KEEP/YIELD tie-break (`probe()`'s `notes`) to
+    this ref: KEEP confirms the hold; YIELD means a peer's earlier CLAIM
+    already won, so this stands down with a RELEASE (`rule:earliest-claim`)
+    rather than silently keeping a claim it already lost.
+    """
+    if not args.agent:
+        err.write("claim_probe: --claim requires --agent (the CLAIM's identity)\n")
+        return ERROR
+    if not refs:
+        err.write("claim_probe: --claim requires at least one --ref (CLAIM must name its item)\n")
+        return ERROR
+    refs_str = ",".join(sorted(refs))
+    ttl_field = {"ttl": args.ttl} if args.ttl is not None else {}
+    rc, stdout, stderr = _post_type(args, "CLAIM", refs_str, ttl_field, args.claim_body,
+                                     f"claiming {refs_str}\n")
+    if rc != 0:
+        out.write(stdout)
+        detail = (stderr.strip() or stdout.strip() or f"exit {rc}")[:300]
+        out.write(f"claim_probe: NO-GO (claim post failed: {detail})\n")
+        return NOGO
+
+    sleep(RECHECK_DELAY_SECONDS)
+    now2 = recheck_now if recheck_now is not None else datetime.now(timezone.utc).replace(microsecond=0)
+    try:
+        _, _, notes2 = probe(args.repo, args.issue, [], refs, [], args.agent,
+                              set(), set(), args.max_branches, now2, runner)
+    except (bc.ForgeError, KeyError, TypeError, ValueError, AttributeError) as exc:
+        out.write(stdout)
+        err.write(f"claim_probe: posted but could not re-verify ({exc})\n")
+        return ERROR
+    yielded = [n for n in notes2 if n.startswith("YIELD")]
+    if yielded:
+        rrc, rout, rerr = _post_type(args, "RELEASE", refs_str, {"rule": "earliest-claim"}, None,
+                                      f"standing down on {refs_str}: earliest-claim\n")
+        out.write(rout)
+        out.write(f"claim_probe: NO-GO (crossed claim — {yielded[0].strip()})\n")
+        if rrc != 0:
+            err.write(f"claim_probe: stand-down RELEASE also failed: {(rerr or rout).strip()[:300]}\n")
+        return NOGO
+
+    out.write(stdout)
+    out.write(f"claim_probe: GO — claim posted ({seen})\n")
+    return GO
+
+
+def run(args, runner, out, err, sleep=time.sleep, recheck_now: datetime | None = None) -> int:
     """Validate inputs, run the probe, print the verdict. Returns the exit code."""
     paths = [norm(p) for p in args.paths if norm(p)]
     refs = {_item_ref(r) or r.strip() for r in args.ref if r.strip()}  # `1102` and `#1102` name one item
     keywords = [k.strip() for k in args.keyword if k.strip()]  # an empty keyword would match everything
+    if not args.claim and (args.post or args.ttl is not None or args.claim_body):
+        err.write("claim_probe: --post/--ttl/--claim-body require --claim\n")
+        return ERROR
     if not (args.repo and bc.validate_repo(args.repo) and args.issue and args.issue > 0):
         err.write("claim_probe: --repo OWNER/NAME and --issue N (>0, the board) are required\n")
         return ERROR
@@ -322,6 +437,8 @@ def run(args, runner, out, err) -> int:
         out.write("".join(f"  {line}\n" for line in evidence))
         out.write("".join(f"  {line}\n" for line in notes))
         return NOGO
+    if args.claim:
+        return maybe_claim(args, refs, runner, seen, out, err, sleep=sleep, recheck_now=recheck_now)
     out.write(f"claim_probe: GO — nothing collides ({seen})\n")
     out.write("".join(f"  {line}\n" for line in notes))
     return GO
@@ -342,6 +459,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--ignore-branch", action="append", default=[], help="your own branch (repeatable)")
     p.add_argument("--max-branches", type=int, default=DEFAULT_MAX_BRANCHES)
     p.add_argument("--now", help="evaluate claim expiry at this UTC time; default: now")
+    p.add_argument("--claim", action="store_true",
+                   help="one-shot check-then-claim: on GO only, compose/post a CLAIM via board_post.py "
+                        "(requires --agent and --ref); never on NO-GO or a YIELD readout")
+    p.add_argument("--ttl", type=int, help="--claim only: forwarded to board_post.py --ttl")
+    p.add_argument("--claim-body", metavar="FILE", help="--claim only: body file; default a one-line auto body")
+    p.add_argument("--post", action="store_true", help="--claim only: send it (an external write); default dry-run")
     p.add_argument("--selftest", action="store_true")
     return p
 
@@ -411,12 +534,16 @@ def _forge(**kw) -> FakeForge:
                      kw.pop("compare", {"feat-lib": ["lib/z.py"]}))
 
 
-def _probe(forge, *argv, now_min: int = 10):
-    """Run the CLI against `forge`; return (rc, stdout, stderr)."""
+def _probe(forge, *argv, now_min: int = 10, recheck_min: int | None = None):
+    """Run the CLI against `forge`; return (rc, stdout, stderr). No real sleep
+    (--claim's re-probe pause is a no-op here); `recheck_min` controls the
+    re-probe's clock (default: same instant as the initial probe) so a
+    crossed-claim scenario can be staged deterministically."""
     out, err = bs._Sink(), bs._Sink()
-    args = build_parser().parse_args(["--repo", REPO, "--issue", "1", "--now",
-                                      bc.format_ts(bc.parse_ts(T0) + timedelta(minutes=now_min)), *argv])
-    return run(args, forge, out, err), out.text, err.text
+    now = bc.parse_ts(T0) + timedelta(minutes=now_min)
+    recheck_now = bc.parse_ts(T0) + timedelta(minutes=recheck_min) if recheck_min is not None else now
+    args = build_parser().parse_args(["--repo", REPO, "--issue", "1", "--now", bc.format_ts(now), *argv])
+    return run(args, forge, out, err, sleep=lambda s: None, recheck_now=recheck_now), out.text, err.text
 
 
 def _selftest() -> int:
@@ -617,6 +744,73 @@ def _selftest() -> int:
                 and na[0] == NOGO and "audit  #6 verdict:na" in na[1]
                 and gap[0] == GO and superseded[0] == GO), (done, na, gap, superseded)
 
+    def claim_on_go_composes_via_board_post():
+        # A disjoint ref: GO, and --claim (no --post) dry-runs board_post.py —
+        # composes the CLAIM and prints its `gh issue comment` command, never
+        # sends it (same default-dry-run gate board_post.py itself uses).
+        rc, out, _ = _probe(_forge(), "--ref", "#999", "--agent", "me", "--claim")
+        return rc == GO and "GO" in out and "gh issue comment 1 --repo o/r" in out, (rc, out)
+
+    def claim_requires_agent_and_ref():
+        no_agent = _probe(_forge(), "--ref", "#999", "--claim")
+        no_ref = _probe(_forge(), "--paths", "docs/z.md", "--agent", "me", "--claim")
+        return (no_agent[0] == ERROR and "requires --agent" in no_agent[2]
+                and no_ref[0] == ERROR and "requires at least one --ref" in no_ref[2]), (no_agent, no_ref)
+
+    def claim_ttl_zero_forwarded_and_rejected():
+        # `if args.ttl:` would drop a real `--ttl 0` (falsy); board_post.py must
+        # see it and reject it, not silently claim with board_post's own default.
+        rc, out, _ = _probe(_forge(), "--ref", "#999", "--agent", "me", "--claim", "--ttl", "0")
+        return (rc == NOGO and "claim post failed" in out and "ttl must be 1.." in out
+                and "claim_probe: GO" not in out), (rc, out)
+
+    def claim_flags_without_claim_are_usage_errors():
+        post = _probe(_forge(), "--ref", "#999", "--post")
+        ttl = _probe(_forge(), "--ref", "#999", "--ttl", "5")
+        body = _probe(_forge(), "--ref", "#999", "--claim-body", "x.txt")
+        return all(r[0] == ERROR and "require --claim" in r[2] for r in (post, ttl, body)), (post, ttl, body)
+
+    def claim_post_failure_never_prints_go():
+        # A rejected post (empty --agent body would chatter-reject; force it
+        # via a too-long refs list is fragile, so drive it through --ttl 0
+        # again but assert the ordering invariant explicitly: no GO line
+        # appears anywhere in stdout once the post itself failed.
+        rc, out, err = _probe(_forge(), "--ref", "#999", "--agent", "me", "--claim", "--ttl", "99999")
+        return rc == NOGO and "NO-GO (claim post failed" in out and "\nclaim_probe: GO" not in out, (rc, out, err)
+
+    def claim_post_hoc_crossed_claim_yields_and_stands_down():
+        # The race this closes: our own initial probe (before posting) is
+        # clean (GO) because a peer's earlier CLAIM crossed with ours only
+        # after we'd already checked. Calling `maybe_claim` directly (as
+        # `run()` would, having just seen GO) with a board state that already
+        # holds the crossed pair simulates exactly that: the mandatory
+        # re-probe must catch it, print NO-GO, and stand down with a RELEASE
+        # (rule:earliest-claim) rather than silently keeping a lost claim.
+        comments = [_c(1, 0, "[agent:alpha] CLAIM refs:#61 ttl:60\ntaking it"),
+                    _c(2, 1, "[agent:beta] CLAIM refs:#61 ttl:60\ntaking it too")]
+        forge = _forge(comments=comments, prs=[])
+        out, err = bs._Sink(), bs._Sink()
+        args = build_parser().parse_args(["--repo", REPO, "--issue", "1", "--ref", "#61",
+                                          "--agent", "beta", "--claim"])
+        rc = maybe_claim(args, {"#61"}, forge, "0 live claims", out, err,
+                          sleep=lambda s: None, recheck_now=bc.parse_ts(T0) + timedelta(minutes=10))
+        return (rc == NOGO and "NO-GO (crossed claim" in out.text and "YIELD" in out.text
+                and "gh issue comment" in out.text and not err.text), (rc, out.text, err.text)
+
+    def claim_never_fires_on_no_go_or_yield():
+        # A live collision: NO-GO, and --claim never composes/posts anything.
+        no_go = _probe(_forge(), "--paths", "web/a.ts", "--agent", "me", "--claim")
+        # The crossed-claim case: beta's YIELD is *always* also NO-GO (same
+        # `named(ref)` branch in `probe()` appends both) — confirming that
+        # invariant is what makes "abort on YIELD" free, not a second check.
+        comments = [_c(1, 0, "[agent:alpha] CLAIM refs:#55 ttl:60\ntaking it"),
+                    _c(2, 1, "[agent:beta] CLAIM refs:#55 ttl:60\ntaking it too")]
+        forge = _forge(comments=comments, prs=[])
+        yielded = _probe(forge, "--ref", "#55", "--agent", "beta", "--claim")
+        return (no_go[0] == NOGO and "gh issue comment" not in no_go[1]
+                and yielded[0] == NOGO and "YIELD" in yielded[1] and "gh issue comment" not in yielded[1]
+                ), (no_go, yielded)
+
     cases = [
         ("audited-done-or-na-no-go", audited_done_or_na_no_go),
         ("crossed-claim-keep-and-yield-consistent", crossed_claim_keep_and_yield_consistent),
@@ -645,6 +839,13 @@ def _selftest() -> int:
         ("overlap-matrix", overlap_matrix),
         ("claim-item-ref-matches-keyword-and-ref", claim_item_ref_matches_keyword_and_ref),
         ("live-item-claim-without-ref-no-go", live_item_claim_without_ref_no_go),
+        ("claim-on-go-composes-via-board-post", claim_on_go_composes_via_board_post),
+        ("claim-requires-agent-and-ref", claim_requires_agent_and_ref),
+        ("claim-never-fires-on-no-go-or-yield", claim_never_fires_on_no_go_or_yield),
+        ("claim-ttl-zero-forwarded-and-rejected", claim_ttl_zero_forwarded_and_rejected),
+        ("claim-flags-without-claim-are-usage-errors", claim_flags_without_claim_are_usage_errors),
+        ("claim-post-failure-never-prints-go", claim_post_failure_never_prints_go),
+        ("claim-post-hoc-crossed-claim-yields-and-stands-down", claim_post_hoc_crossed_claim_yields_and_stands_down),
     ]
     return bc.run_checks("claim_probe", cases)
 

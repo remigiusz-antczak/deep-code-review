@@ -164,7 +164,12 @@ Read this when `method.md` routes here: a gate verdict is disputed, a green, CI 
   intervening commits (a false positive that spends the owner's trust), and — worse —
   repeating one that **changed or worsened** as if unchanged, which over-claims a
   **trust-critical** status (rate that *claim*, not the staleness). A "still open"
-  status holds only at the current SHA.
+  status holds only at the current SHA. **Mandatory before acting on or closing any
+  carried-forward finding or tracked issue:** re-check the fix's landmark reference or
+  changed symbol against the target branch's current HEAD, then re-run the repro —
+  `scripts/closes_lint.py --reverify <issue#|sha|symbol> --branch origin/main` fetches
+  `origin` first, confirms the fix is present **and not later reverted**, and prints
+  `STILL_OPEN` / `FIXED_AT <sha>` / `COULD_NOT_CHECK`.
 - **A justification carried forward inside the *target's own* suppression list
   is a claim to re-verify, not a fact — and a green ratchet proves only that
   nothing was *added*.** Distinct from re-validating your own carried-forward

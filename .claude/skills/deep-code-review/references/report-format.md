@@ -8,7 +8,10 @@ Read this when writing Phase 5 artifacts (chat BLUF, full technical table, plain
 # Code Review — <target> (<FULL|DIFF|FILE>, base <ref>)
 
 ## Verdict
-<Approve | Approve-with-nits | Changes-requested | Blocked> — one-line reason.
+<Approve | Approve-with-nits | Changes-requested | Blocked | Partial> — one-line reason.
+(`Partial` — a FULL-mode budget checkpoint (`method.md` Phase 0): the coverage
+ledger below names which areas are reviewed vs. unreviewed; hand back cleanly
+rather than run the lane dry.)
 (When the repo has distinct risk surfaces — e.g. a live service plus a disabled
 subsystem — give a **two-status verdict**, each scoped: e.g. "🟡 running system ·
 🔴 enabling <subsystem>".)
@@ -44,6 +47,8 @@ Counts: Blocker N · Critical N · High N · Medium N · Low N · Nit N
 - Parity coverage: <N/M screens verified · unverified: …, or N/A> (UI/parity target;
   the correspondence table's row states, `migration-parity.md`)
 - Pipeline/app run: <before-state metrics, or N/A>
+- Coverage ledger (`Partial` verdict only): <reviewed: domains done · unreviewed:
+  domains + budget spent at stop, e.g. `75%/80% cap` — required non-empty on `Partial`>
 
 ## Findings
 | ID | Sev | Area | Location | Issue | Impact | Fix |

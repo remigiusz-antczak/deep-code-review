@@ -6319,6 +6319,28 @@
         "Explains that bands run from one heading or data-anchor top y to the next (data-anchor wins, a page-header band above the first start), and that y decides membership only, never pass or fail",
         "States that a missing design band start makes only that band COULD_NOT_CHECK_CROP and that a moved sub-heading is a MOVED row"
       ]
+    },
+    {
+      "id": "dependency-bulk-mixed-majors-postinstall",
+      "prompt": "A bot opened one PR bumping 40 npm packages in one repo: most are patch/minor, but six are major version bumps, all mixed into the same diff against the same lockfile. Reviewing the lockfile diff, one previously-transitive dependency now appears with a postinstall script it did not have before. What should the reviewer do?",
+      "expected_output": "Send the PR back to be split before reviewing content: one ecosystem per PR already holds (single npm lockfile) but the tiers do not — majors must not ride in the same PR as patch/minor bumps (Dependabot's documented grouping pattern keeps majors as individual PRs; Renovate's separateMajorMinor does the same). Ask for the 34 patch/minor bumps to land as one grouped PR and each of the six majors to land as its own PR with its own changelog/breaking-change read, gate run, and cooldown check. Separately and regardless of the split, flag the new postinstall script on the transitive dependency as a supply-chain finding on its own — a lifecycle script appearing where none existed before runs arbitrary code at install time and must be confirmed (what it does, why it is there) before any part of this PR is approved, even the low-risk patch/minor slice.",
+      "expectations": [
+        "Requires the PR be split by risk tier before review: majors separated out of the patch/minor group, matching Dependabot's documented grouping pattern and Renovate's separateMajorMinor",
+        "Does not treat the single-ecosystem framing as sufficient on its own — tier mixing is still a blocking issue even though the PR is already scoped to one lockfile/ecosystem",
+        "Independently flags the new postinstall script on the transitive dependency as a supply-chain concern requiring confirmation, not waved through because the rest of the bump looks routine"
+      ]
+    },
+    {
+      "id": "full-mode-budget-checkpoint",
+      "prompt": "A FULL-scope review target is a 400k-line monorepo. The lane has no ranking, no stated budget, and plans to hold every finding until one final report at the end. Two-thirds of the way through domain audits, the lane hits its host's rate limit and the session ends with nothing written. What should the lane have done differently, and what should a fresh lane starting the same FULL review do from the first response onward?",
+      "expected_output": "A solo FULL lane on a large target ranks the coverage ledger's domains by blast radius before reading a line — money/billing paths first, then auth/authz, then data-loss (deletes, migrations, unbacked writes), then secrets/config, then the rest — instead of walking A–W in listed order. It states a per-run budget in the first-response block (tool-calls or tokens, a cap N) so it can track spend against a known ceiling. It appends each area's findings to the out-of-tree report file as that area finishes, never holding everything to Phase 5, so a lane killed mid-run still leaves written findings instead of nothing. At 80% of budget it stops starting new domains, writes the partial report with its coverage ledger split into reviewed vs. unreviewed areas, sets the verdict to Partial, and hands back cleanly rather than continuing until the host kills it.",
+      "expectations": [
+        "States the blast-radius ranking order explicitly: money/billing, then auth/authz, then data-loss, then secrets/config, before the rest",
+        "Requires a stated per-run budget (tool-calls or tokens) in the first-response block, not an open-ended run",
+        "Requires findings to be appended to the report file per area as the review proceeds, not held until one final write",
+        "Names the 80%-budget checkpoint: stop new domain work, write a partial report with a reviewed/unreviewed coverage ledger, and hand back cleanly instead of running until killed",
+        "States the verdict at the checkpoint is the literal word Partial, not Approve/Changes-requested/Blocked with a caveat"
+      ]
     }
   ]
 }

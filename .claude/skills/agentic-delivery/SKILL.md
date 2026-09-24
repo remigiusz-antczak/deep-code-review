@@ -10,14 +10,14 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.454.0"
+  version: "1.455.0"
 ---
 
 # Agentic delivery
 
 Public-safe delivery overlay for any coding agent — a **pattern**, not a
-runtime or a standing swarm. Not installed by default; add it with
-`./install.sh --with-delivery` or `--full` after the owner says yes.
+runtime or a standing swarm. Installing, recommending, or self-verifying this
+overlay: `references/install.md`.
 
 It does **not** replace `deep-code-review` — review is the bar, this is how work
 reaches it. Do not run a second delivery OS (Superpowers, gstack `/ship`, a
@@ -25,9 +25,10 @@ private factory) on the same repo; compose those packs for TDD/brainstorm *or*
 this pack for gated multi-role work, always `deep-code-review` for audit.
 
 Persisted artifacts (code, PR bodies, ADRs, commits) are **normal English**;
-chat may be terse. Don't vendor a chat-voice skill here — if compressed prose
-is wanted, add [JuliusBrussee/caveman](https://github.com/JuliusBrussee/caveman)
-separately. Lookup table: `INDEX.md`; read it instead of opening references blindly.
+chat may be terse.
+
+**Read `INDEX.md` first** — every reference/script's trigger; open one only
+when its row matches, never blindly.
 
 ---
 
@@ -92,18 +93,9 @@ and **pilot before full fan-out** on a wide, mechanical batch. Default tiers,
 the duplicated-work failure mode, and the pilot procedure:
 `references/fanout-host-sizing.md`.
 
-**Escalate a lane, don't just retry it.** After two equivalent failures on the
-same lane, change approach — not the same fix again (*Failure*, below). In order
-of cost: reframe the task boundary, decorrelate (fresh context or a different
-model), or move to a stronger model tier (`model-tiering.md`) — start at the
-stronger tier only when blast radius already calls for decorrelation
-(`idea-critic`'s high-blast rule), not by default; a cheaper tier that clears the
-gate is preferred.
-
-**Empirical check:** Cemri et al. (2025), 1600+ multi-agent traces: failures
-cluster into system design (→ G0/G1), inter-agent misalignment (→ G2, worktree
-preflight), and task verification (→ G5/G6) — already covered, not an
-eleventh gate.
+**Escalate a lane, don't just retry it** — after two equivalent failures on the
+same lane, change approach; the cost-ordered ladder (reframe, decorrelate,
+stronger tier): `references/fanout-host-sizing.md` **Escalate a lane**.
 
 **Sweeping the whole ready queue on every trigger** — a completeness fix to
 this event-driven model, not a change to it: `references/merge-queue-worktrees.md`.
@@ -116,16 +108,10 @@ dev server, re-runs a generator or ratchet, or shares files under an ownership
 map; `references/unattended-trackers.md` when closing tracker issues or running
 a multi-hour work loop. Paste `templates/lane-preamble.md` into every lane brief.
 
-**Catch and reverse your own drift into a lane's work** — the completeness
-fix applied to *action*, not only attention. Scope: only while the Conductor
-role is active **and** at least one lane is in flight; in single-agent mode
-(`agentic-ceo` **Size effort to the project**) the agent does the work itself.
-The tell: two consecutive Conductor turns that query, build, edit, or mutate
-the target instead of dispatching, reading a receipt, or deciding. On the
-signal: **stop**, **package** a lane brief (goal, scope, acceptance check,
-output contract), **dispatch** it (*Worktrees and occupancy*), **resume**
-status-reading. Exception: a step only the Conductor's session can perform (a
-connector, credential, or surface no lane holds), done minimally.
+**Drifting into a lane's work** — while a lane is in flight, two consecutive
+Conductor turns that query, build, edit, or mutate the target instead of
+dispatching: stop, package a lane brief, dispatch it, resume status-reading —
+`references/roles.md` **Catch and reverse your own drift** (scope, exception).
 
 ---
 
@@ -172,11 +158,8 @@ what keeps an unattended run alive.
 *enforced* rather than merely followed (or when designing a host adapter), grade
 the claim against `references/host-enforcement.md` — **read it when** you would
 otherwise write "the gate / budget / permission is enforced," or brief a
-write-lane.
-
-**A subagent's handback narration is capped by a host hook, not only asked to
-be short** — `scripts/handback_cap.py` (`SubagentStop`) enforces the Output
-contract's fields-only shape; `references/host-enforcement.md`.
+write-lane. A subagent handback's fields-only shape is capped by a host hook,
+`scripts/handback_cap.py` (`SubagentStop`), not only asked for.
 
 **Operational readiness — incidents and continuity (bus factor = 1).** The
 binder that must exist *before* the system is on fire or the solo operator is
@@ -252,16 +235,11 @@ throwaway integration SHA plus one aggregate gate before a merge train (G7).
 
 ## Environment probe (before you size anything)
 
-Probe the host before deciding lane count, the heavy/light split, or model
-tier — a stated ceiling with no live check behind it is a guess, and
-yesterday's number may not hold today. Probe free RAM, CPU cores, disk, and
-which tools/connectors this session actually has usable auth for (a lane
-dispatched against a connector it cannot authenticate fails after it already
-holds a worktree slot). Decide HEAVY-lane count and model tier
-(`model-tiering.md` in the `deep-code-review` sibling) from that, not from
-habit. The probe commands, the decide-from-probe rules, the shell-semantics
-check (`merge-operations.md`), the contention-vs-defect rule
-(`parallel-audit.md` §0): `references/fanout-host-sizing.md`; CI-offload:
+Probe free RAM, CPU cores, disk, and usable connector auth before deciding lane
+count, the heavy/light split, or model tier — never from habit or a remembered
+ceiling. Commands and
+decide-from-probe rules: `references/fanout-host-sizing.md` **Environment probe
+procedure** (read it before sizing any fan-out); CI-offload:
 `references/merge-queue-worktrees.md`.
 
 - **Act-on predicate:** spawn another heavy lane only while free RAM >15% AND swap is not climbing (read it twice); CPU idle is secondary, `load1` never decides — commands and why: `references/fanout-host-sizing.md` **Gate on free RAM and the swap trend**.
@@ -314,37 +292,18 @@ B: <approach> — <why, ≤12 words>
 
 Never a list of questions. An agent-originated A is attacked by `idea-critic`
 before it is marked recommended; confirming already-reviewed work is exempt
-(`idea-critic` **Don't use for**). Before raising a gate, apply gate epistemology principle 12 below — a fork a ratified invariant already decides is not a human gate.
+(`idea-critic` **Don't use for**). Before raising a gate, apply gate epistemology principle 12 (`references/gate-epistemology.md`) — a fork a ratified invariant already decides is not a human gate.
 
 ---
 
 ## Gate epistemology (public principles)
 
-Copied as principles, not as anyone's private playbook:
-
-1. **Publish boundary is the gate.** Private data may exist in a private
-   checkout; the failure is *escape* into a public artifact, PR title,
-   changelog, compiled bundle, or example. Scan those surfaces, not only
-   file bodies.
-2. **Banlist split.** Committed `.banlist.txt` = generic secret shapes.
-   Gitignored local file = real identifiers. Fail closed if the committed
-   list is missing or malformed. Report `file:line`, never echo the match.
-3. **A gate can be wrong about why.** Real defect fails closed; a check that could not run is `UNVERIFIED`, and a required one still blocks even when authorization exists (evidence and permission are separate decisions); on a red pipeline find the failing step, rerun a known-flaky check; revert only once the failure reproduces and is tied to the change; re-fetch state when a result surprises you.
-4. **Prove the gate can fail.** Plant, watch red, revert. Required for
-   every new gate this project adds.
-5. **Skip loudly over absent input.** Missing fixture ≠ pass.
-6. **Union proof before a merge train.** G7.
-7. **Test the failure, not only the feature.** Schema reject, authz deny,
-   monotonic-quality overwrite.
-8. **Definitions, not live values**, in any public or compiled artifact.
-9. **Closing or deleting shared state needs evidence, not presumption** — a reproducible reason, unique context migrated first.
-10. **A fleet-wide external advisory is a third case for principle 3, and an
-    independent-queue merge cascade is a cadence choice subordinate to
-    principle 6** — depth and honest limits: `references/merge-queue-worktrees.md`.
-11. **"Visible/done" is measured on the owner's own surface, never a proxy** — wired ≠ rendered ≠ has a real value.
-12. **A fork a ratified invariant already decides is not an owner gate**; a change that would reverse one is queued to the owner, never applied silently.
-
-Full statements of 3, 9, 11, 12: `references/gate-epistemology.md` — **read it when** a result surprises you, a check could not run, or on a red pipeline / about to revert (3), closing or deleting shared state (9), reporting visible/done (11), or raising a fork an invariant may decide (12).
+Twelve public gate principles: `references/gate-epistemology.md` — **read it when**
+you add a gate (4), scan a publish boundary or banlist (1, 2), a result
+surprises you, a check could not run, input is absent, or a pipeline is red /
+about to revert (3, 5, 10), before a merge train (6), choosing what to test (7),
+writing a public or compiled artifact (8), closing or deleting shared state (9),
+reporting visible/done (11), or raising a fork an invariant may decide (12).
 
 ---
 
@@ -376,32 +335,11 @@ started.
 - Owner-session end: no uncommitted writer work without a recovery
   record.
 
-## Anti-rationalization (G4 / G5)
-
-| Excuse | Rebuttal |
-|---|---|
-| "I'll add tests later." | Later is the load-bearing word. Tests before or with the change (G4). |
-| "Too simple to spec." | Five lines of acceptance is a spec. Zero is not. |
-| "Unit tests cover the UI." | Domain P needs headed-browser evidence on the route that renders. |
-| "Green locally is green in CI." | Different OS, browser, secrets. Exact SHA in CI is the receipt. |
-| "The stack didn't start; tests still passed." | G5 is `UNVERIFIED`, not pass. |
-
----
-
-## Recommend vs install
-
-`./install.sh --recommend <project>` inspects the target and prints a pack; the
-agent may recommend `--full`, the owner decides. Never install delivery into a
-repo that already has another delivery pack without saying so.
-
----
+**Anti-rationalization (G4 / G5)** — tempted to defer tests, skip a spec, let
+unit tests stand in for the UI, trust local green, or pass a stack that never
+started: `references/roles.md` **Anti-rationalization (G4 / G5)**.
 
 ## Verification
 
-- Default `./install.sh` does not copy this skill; `--with-delivery` / `--full`
-  copies it next to `deep-code-review`.
-- A planted defect makes G5/G6 fail; a denied outward action remains blocked.
-- `evals/evals.json` names `recommend-must-not-write` and
-  `default-install-omits-delivery`.
-- No third-party identifier, private intake, or operator preference appears in
-  this file.
+Install/recommend contract, planted-defect proof, privacy check:
+`references/install.md` **Verification**.

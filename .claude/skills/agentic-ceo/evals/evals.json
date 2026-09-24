@@ -166,6 +166,18 @@
         "Keeps the rest of the run going via task_ledger.py next, which skips the parked item",
         "Surfaces the question in the owner batch (task_ledger.py questions) and names answer + unblock to resume the item"
       ]
+    },
+    {
+      "id": "chaos-playbook-reached-via-trigger",
+      "prompt": "Owner, in one burst: fix the login bug NOW, also the pricing page looks off, and why is the deploy red?? Forget the pricing page. No wait, do pricing first, investors see it tomorrow. And rename the repo.",
+      "expected_output": "A flood of rapid, conflicting asks is the trigger SKILL.md names for references/chaos-playbook.md, so load it (its INDEX.md row routes the same way) and run the six moves from it: capture every ask as a numbered item (login bug, pricing page, red deploy, the pricing retraction and reversal, repo rename), reflect the full list back naming the pricing collision, triage with the first-hit-wins chain (the red deploy blocks other work and the login bug fails on the live surface, so both are Now; the pricing fix is time-critical but reversible, so it is Next; the rename carries no stated urgency and hits none of the earlier clauses, so it falls to Held by elimination), name one next action from the Now items, and hold the rest with visible state. No 'calm down', no affect-management; the rename is a shared/external action, so whenever it is executed it still needs an owner-authored grant (agentic-delivery's Human gates) — its Held priority does not waive that.",
+      "expectations": [
+        "Loads references/chaos-playbook.md via the SKILL.md trigger (or its INDEX.md row) rather than improvising",
+        "Captures every ask, including the retracted-then-reinstated pricing item, as a numbered list and names the collision",
+        "Applies the first-hit-wins triage chain and names exactly one next action",
+        "Holds the remaining items with a visible state instead of dropping them",
+        "Uses no 'calm down' / 'relax' or narration of the owner's feelings"
+      ]
     }
   ]
 }

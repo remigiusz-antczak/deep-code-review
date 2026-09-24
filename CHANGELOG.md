@@ -3,6 +3,27 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.455.0] — 2026-09-24
+
+### Changed — lower load for delivery and CEO skills
+- `agentic-delivery/SKILL.md` 27,431 → 23,281 bytes (−15.1%) and `agentic-ceo/SKILL.md` 14,524 → 11,928 bytes (−17.9%): conditional depth moved behind routed triggers (new `agentic-ceo/references/chaos-playbook.md`, `agentic-delivery/references/install.md`); the owner-gated-actions line and a Verification stub stay always-loaded. `size-ratchet` now fails when a budget row present at the base disappears while its file still exists.
+- CI runs on pull requests only (branch protection is strict), cancels superseded runs, and times out at 25 minutes — one runner job per release instead of two.
+
+### Added
+- FULL-scope reviews rank areas by blast radius (money, auth, data loss, secrets first), append findings per area as they go, and at 80% of the run budget write a `Partial` report with a coverage ledger of unreviewed areas. Must-load floors +153 estimated tokens (LIGHT 28,178, FULL 36,249).
+- `closes_lint.py --reverify <issue#|sha|symbol>`: mandatory re-check against HEAD before acting on or closing a finding — FIXED_AT only when the fix is present at HEAD (not reverted, symbol still present, issue key including repo), STILL_OPEN with the revert sha otherwise, COULD_NOT_CHECK when a branch fetch fails.
+- `claim_probe.py --claim [--post]`: check-then-claim in one step, the lane preamble's first step; GO prints only after the claim post succeeds, then a bounded re-probe applies the earliest-claim tie-break and a YIELD posts a stand-down.
+- `deep-code-review/references/dependency-bulk-upgrades.md`: batched upgrades by risk tier and one ecosystem per PR with each group revertible, security patches in their own fast PR, a cooldown before adopting fresh releases, and a reviewer checklist for bump PRs (lockfile sanity, new transitive dependencies, install scripts, license changes); sources logged in `docs/standards-index.md`.
+- size-budget-raise: .claude/skills/agentic-delivery/references/fanout-host-sizing.md 40355→40890 conditional depth moved out of agentic-delivery SKILL.md
+- size-budget-raise: .claude/skills/agentic-delivery/references/gate-epistemology.md 3957→6114 conditional depth moved out of agentic-delivery SKILL.md
+- size-budget-raise: .claude/skills/agentic-delivery/references/multi-session-coordination.md 56999→57243 check-then-claim as the mandatory first step
+- size-budget-raise: .claude/skills/agentic-delivery/references/roles.md 22237→23942 conditional depth moved out of agentic-delivery SKILL.md
+- size-budget-raise: .claude/skills/agentic-delivery/references/template-adr.md 2481→2641 moved content from agentic-ceo SKILL.md
+- size-budget-raise: .claude/skills/agentic-delivery/references/template-postmortem.md 3223→3387 moved content from agentic-ceo SKILL.md
+- size-budget-raise: .claude/skills/deep-code-review/references/method-situational.md 20361→20804 mandatory re-verify against HEAD before acting on or closing a finding
+- size-budget-raise: .claude/skills/deep-code-review/references/method.md 49915→50527 FULL-mode blast-radius order, per-area append, 80% budget checkpoint
+- size-budget-raise: .claude/skills/deep-code-review/references/report-format.md 20300→20673 Partial verdict and coverage ledger
+
 ## [1.454.0] — 2026-09-24
 
 ### Added — fleet frictions from the field

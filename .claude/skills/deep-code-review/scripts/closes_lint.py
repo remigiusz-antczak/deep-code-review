@@ -75,6 +75,31 @@ EXIT CODES (fail-closed; every branch below is load-bearing)
      or the working directory is not a git repository. Never a silent skip.
 
 Stdlib only (subprocess + git; no network, no third-party parser).
+
+--reverify SPEC (re-verify-against-HEAD, not a closing-keyword lint)
+---------------------------------------------------------------------
+A findings/triage doc that names an item as "confirmed unfixed" goes stale the
+moment a fix merges — nothing re-checks it before the next agent acts on it.
+`--reverify SPEC [--branch REF]` (default REF `HEAD`) answers "is SPEC already
+on REF, present and un-reverted?" and prints exactly one of `FIXED_AT <sha>`
+(exit 0), `STILL_OPEN` (exit 1, naming a revert sha or a removal commit where
+known), or `COULD_NOT_CHECK: <reason>` (exit 2) — never a bare guess. When
+REF is shaped `<remote>/<ref>` and `<remote>` is a configured remote, this
+mode fetches it first — a fetch failure is `COULD_NOT_CHECK`, never
+`STILL_OPEN`; a local-only branch is read as-is, no network. SPEC is
+classified: `N`, `#N`, or `owner/repo#N` is an **issue reference** — keyed on
+the full `(repo, number)` pair exactly like the closing-keyword lint above,
+so `other/repo#42` never matches a local `#42` — found by scanning REF's own
+log for a closing-keyword commit, then confirming no *later* ancestor's
+message reads `This reverts commit <that sha>` (a reverted fix is
+`STILL_OPEN`, not `FIXED_AT`); a 7-40 character hex string not shaped like an
+issue reference is a **sha** (checked with `git merge-base --is-ancestor`);
+anything else is a **symbol** — `git log -S<symbol>` (pickaxe) finds where it
+was ever touched, then `git grep` at REF confirms it is still literally
+present in the tree, since pickaxe alone can't tell a reverted introduction
+from a standing fix. An unresolvable sha, a spec that resolves to nothing
+checkable, a failed fetch, or a non-git directory is `COULD_NOT_CHECK`, never
+`STILL_OPEN` — silence is not evidence of absence.
 """
 from __future__ import annotations
 
@@ -249,6 +274,132 @@ def run_lint(repo: str, base: str, head: str, allowed: set[RefKey],
     return OK, [f"closes_lint: ok ({len(shas)} commit(s) checked, 0 out-of-set closing reference(s))"]
 
 
+_SHA_RE = re.compile(r"^[0-9a-fA-F]{7,40}$")
+
+
+def _classify_reverify_spec(spec: str) -> tuple[str, tuple[str | None, int] | str]:
+    """Classify a --reverify SPEC by shape alone (pure): `N`, `#N`, or
+    `owner/repo#N` is ('issue', (repo-or-None, N)) — the same `_ALLOW_RE`
+    shape `--allow` uses, so the caller can key it with `ref_key` exactly
+    like a closing reference (`other/repo#42` must never match a local
+    `#42`). A 7-40 char hex string not shaped like an issue ref is
+    ('sha', spec) — resolved by the caller, never silently re-classified as
+    a symbol on failure (that would search the wrong thing and could
+    misreport `STILL_OPEN`); anything else is ('symbol', spec)."""
+    m = _ALLOW_RE.match(spec)
+    if m:
+        return ("issue", (m.group("repo"), int(m.group("num"))))
+    if _SHA_RE.match(spec):
+        return ("sha", spec)
+    return ("symbol", spec)
+
+
+def _fetch_remote_ref(repo: str, branch: str) -> str | None:
+    """If `branch` is shaped `<remote>/<ref>` and `<remote>` is a configured
+    remote, fetch it first so `--branch` reads live state, not a stale local
+    tracking ref. Returns None on success or when no fetch applies (a local
+    branch name, `HEAD`, or an unknown remote-looking prefix), else an error
+    string — the caller reports `COULD_NOT_CHECK` on it, never `STILL_OPEN`;
+    a network hiccup is not evidence the fix is absent."""
+    remote, sep, _rest = branch.partition("/")
+    if not sep or not remote:
+        return None
+    try:
+        remotes = _run_git(repo, ["remote"]).split()
+    except GitError as exc:
+        return f"cannot list remotes: {exc}"
+    if remote not in remotes:
+        return None
+    proc = subprocess.run(["git", "-C", repo, "fetch", remote], capture_output=True, text=True)
+    if proc.returncode != 0:
+        return f"git fetch {remote} failed: {proc.stderr.strip()[:200]}"
+    return None
+
+
+def reverify(repo: str, spec: str, branch: str,
+             local_repo: str | None = None) -> tuple[int, str]:
+    """Is `spec` (issue #, sha, or symbol) PRESENT and un-reverted at
+    `branch`'s HEAD? Returns (exit_code, one-line verdict) —
+    `FIXED_AT <sha>` (0), `STILL_OPEN` (1, naming a revert sha when the fix
+    was reverted), or `COULD_NOT_CHECK: <reason>` (2). Fetches `branch`'s
+    remote first when it names one; reads git otherwise, writes nothing."""
+    if not _is_git_repo(repo):
+        return ERROR, "COULD_NOT_CHECK: not a git repository"
+    fetch_err = _fetch_remote_ref(repo, branch)
+    if fetch_err:
+        return ERROR, f"COULD_NOT_CHECK: {fetch_err}"
+    head_sha = _resolve_commit(repo, branch)
+    if head_sha is None:
+        return ERROR, f"COULD_NOT_CHECK: --branch {branch!r} does not resolve"
+
+    kind, value = _classify_reverify_spec(spec)
+
+    if kind == "sha":
+        resolved = _resolve_commit(repo, value)
+        if resolved is None:
+            return ERROR, f"COULD_NOT_CHECK: sha {value!r} does not resolve"
+        proc = subprocess.run(
+            ["git", "-C", repo, "merge-base", "--is-ancestor", resolved, head_sha],
+            capture_output=True, text=True,
+        )
+        if proc.returncode == 0:
+            return OK, f"FIXED_AT {resolved[:7]}"
+        if proc.returncode == 1:
+            return FAIL, "STILL_OPEN"
+        return ERROR, f"COULD_NOT_CHECK: merge-base failed: {proc.stderr.strip()}"
+
+    if kind == "issue":
+        try:
+            log = _run_git(repo, ["log", head_sha, "--format=%H%x01%B%x02"])
+        except GitError as exc:
+            return ERROR, f"COULD_NOT_CHECK: cannot read log: {exc}"
+        repo_raw, num = value
+        want_key = ref_key(repo_raw, num, local_repo)
+        fix_sha = None
+        for entry in log.split("\x02"):
+            sha, sep, body = entry.partition("\x01")
+            if not sep:
+                continue
+            if any(key == want_key for _, _, key in find_refs(body, local_repo)):
+                fix_sha = sha.strip()
+                break
+        if fix_sha is None:
+            return FAIL, "STILL_OPEN"
+        # The closing commit is an ancestor of HEAD by construction (found in
+        # head_sha's own log) — but a *later* ancestor may have reverted it.
+        try:
+            revert_log = _run_git(
+                repo, ["log", head_sha, "-F", f"--grep=This reverts commit {fix_sha}", "--format=%H"])
+        except GitError as exc:
+            return ERROR, f"COULD_NOT_CHECK: cannot check revert status: {exc}"
+        reverts = [s for s in revert_log.splitlines() if s.strip()]
+        if reverts:
+            return FAIL, f"STILL_OPEN (reverted at {reverts[0][:7]})"
+        return OK, f"FIXED_AT {fix_sha[:7]}"
+
+    # symbol: present at HEAD, not merely ever touched — pickaxe alone can't
+    # tell a reverted introduction from a standing fix, so gate on a literal
+    # `git grep` at head_sha before reporting FIXED_AT.
+    try:
+        touch_log = _run_git(repo, ["log", head_sha, "-S", value, "--format=%H"])
+    except GitError as exc:
+        return ERROR, f"COULD_NOT_CHECK: cannot search symbol: {exc}"
+    touched = [s for s in touch_log.splitlines() if s.strip()]
+    if not touched:
+        return FAIL, "STILL_OPEN"
+    proc = subprocess.run(["git", "-C", repo, "grep", "-q", "-F", "-e", value, head_sha, "--"],
+                          capture_output=True, text=True)
+    if proc.returncode == 0:
+        return OK, f"FIXED_AT {touched[0][:7]}"
+    if proc.returncode == 1:
+        # `-S` flags the commit whose diff changed the occurrence count —
+        # that is the removal itself as often as the introduction (pickaxe
+        # doesn't distinguish direction), so name it as "touched", not
+        # "removed after" (a wrong causal claim would be its own fabrication).
+        return FAIL, f"STILL_OPEN (touched at {touched[0][:7]}, absent at HEAD)"
+    return ERROR, f"COULD_NOT_CHECK: git grep failed: {proc.stderr.strip()[:200]}"
+
+
 def _parse_allow(spec: str, local_repo: str | None = None) -> set[RefKey]:
     """Parse `--allow` (entries `N`, `#N`, or `owner/repo#N`) into keys; exit 2 on a malformed entry."""
     out: set[RefKey] = set()
@@ -279,11 +430,21 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--repo", metavar="OWNER/REPO",
                         help="the local repository; a qualified reference or URL to it keys as unqualified #N")
+    parser.add_argument("--reverify", metavar="SPEC",
+                        help="re-verify-against-HEAD: is issue #N / a sha / a symbol already on --branch? "
+                             "(run `git fetch` yourself first)")
+    parser.add_argument("--branch", default="HEAD", help="--reverify only: ref to check against (default HEAD)")
     parser.add_argument("--selftest", action="store_true", help="run the built-in selftest and exit")
     args = parser.parse_args(argv)
 
     if args.selftest:
         return _selftest()
+
+    if args.reverify:
+        local_repo = args.repo.casefold() if args.repo else None
+        code, line = reverify(".", args.reverify, args.branch, local_repo)
+        print(line)
+        return code
 
     if not args.base or not args.head:
         parser.error("--base and --head are both required")
@@ -364,12 +525,24 @@ def _run_tool(repo: Path, base: str, head: str, allow: str | None = None,
     return proc.returncode, (proc.stdout + proc.stderr)
 
 
+def _run_reverify(repo: Path, spec: str, branch: str = "HEAD",
+                   local: str | None = None) -> tuple[int, str]:
+    args = [sys.executable, __file__, "--reverify", spec, "--branch", branch]
+    if local is not None:
+        args += ["--repo", local]
+    proc = subprocess.run(args, cwd=str(repo), capture_output=True, text=True)
+    return proc.returncode, (proc.stdout + proc.stderr)
+
+
 def _selftest() -> int:
     """Build throwaway git repos and assert every mandatory case's exact (rc, evidence)."""
     failures: list[str] = []
+    total = 0
 
     def check(label: str, rc: int, out: str, want_rc: int,
               must_have: tuple[str, ...] = (), must_not: tuple[str, ...] = ()) -> None:
+        nonlocal total
+        total += 1
         if rc != want_rc:
             failures.append(f"{label}: rc={rc}, want {want_rc} (output: {out!r})")
         for needle in must_have:
@@ -414,6 +587,7 @@ def _selftest() -> int:
             ("Closes https://github.com/o/r", []),  # no /issues/N or /pull/N path
         ]
         for text, want in cases:
+            total += 1
             got = [(n, key) for n, _, key in find_refs(text)]
             if got != want:
                 failures.append(f"find_refs({text!r}): got {got}, want {want}")
@@ -425,6 +599,7 @@ def _selftest() -> int:
             ("Closes other/r#4", [(1, ("other/r", 4))]),
         ]
         for text, want in local_cases:
+            total += 1
             got = [(n, key) for n, _, key in find_refs(text, "o/r")]
             if got != want:
                 failures.append(f"find_refs({text!r}, 'o/r'): got {got}, want {want}")
@@ -597,12 +772,130 @@ def _selftest() -> int:
         rc, out = _run_tool(repo, mid, head, pr_body=pr_url, local="acme/app")
         check("pr-body-url-local", rc, out, OK, must_have=("ok",))
 
+        # 20) --reverify: an issue with no closing-keyword commit yet on HEAD
+        # is STILL_OPEN (checked first — the not-yet-fixed case, before the
+        # fixed one below).
+        repo = tmp_path / "case_reverify"
+        _init_repo(repo)
+        _commit(repo, "chore: init", {"a.txt": "1"})
+        rc, out = _run_reverify(repo, "#42")
+        check("reverify-issue-still-open", rc, out, FAIL, must_have=("STILL_OPEN",))
+
+        # 21) once a commit on HEAD carries the closing keyword, FIXED_AT <sha>.
+        fix_sha = _commit(repo, "fix: widget\n\nFixes #42", {"a.txt": "2"})
+        rc, out = _run_reverify(repo, "42")
+        check("reverify-issue-fixed", rc, out, OK, must_have=(f"FIXED_AT {fix_sha[:7]}",))
+
+        # 22) a sha reachable from HEAD (an ancestor) -> FIXED_AT <sha>.
+        base_sha = _sh(repo, "rev-parse", "HEAD~1")
+        rc, out = _run_reverify(repo, base_sha)
+        check("reverify-sha-ancestor", rc, out, OK, must_have=(f"FIXED_AT {base_sha[:7]}",))
+
+        # 23) a sha that exists but sits on an unmerged branch -> STILL_OPEN.
+        _sh(repo, "checkout", "-b", "unmerged")
+        stray_sha = _commit(repo, "feat: not yet merged", {"c.txt": "1"})
+        _sh(repo, "checkout", "-")
+        rc, out = _run_reverify(repo, stray_sha)
+        check("reverify-sha-not-ancestor", rc, out, FAIL, must_have=("STILL_OPEN",))
+
+        # 24) a symbol absent from HEAD -> STILL_OPEN; once a commit introduces
+        # it, FIXED_AT <sha> (pickaxe search, checked not-yet-present first).
+        rc, out = _run_reverify(repo, "UniqueTokenXYZ")
+        check("reverify-symbol-still-open", rc, out, FAIL, must_have=("STILL_OPEN",))
+        symbol_sha = _commit(repo, "feat: add token", {"d.txt": "UniqueTokenXYZ"})
+        rc, out = _run_reverify(repo, "UniqueTokenXYZ")
+        check("reverify-symbol-fixed", rc, out, OK, must_have=(f"FIXED_AT {symbol_sha[:7]}",))
+
+        # 25) an unresolvable sha-shaped spec and an unresolvable --branch both
+        # fail closed as COULD_NOT_CHECK, never STILL_OPEN (silence isn't proof).
+        rc, out = _run_reverify(repo, "abc1234")
+        check("reverify-unresolvable-sha", rc, out, ERROR, must_have=("COULD_NOT_CHECK",))
+        rc, out = _run_reverify(repo, "#42", branch="not-a-real-branch")
+        check("reverify-bad-branch", rc, out, ERROR, must_have=("COULD_NOT_CHECK", "does not resolve"))
+
+        # 26) --reverify against a non-git directory fails closed too.
+        rc, out = _run_reverify(not_repo, "#1")
+        check("reverify-not-a-git-repo", rc, out, ERROR, must_have=("COULD_NOT_CHECK", "not a git repository"))
+
+        # 27) issue mode keys on the FULL (repo, number) pair, not the bare
+        # number: a same-numbered issue in ANOTHER repository must not read
+        # as fixed locally (checked first — the cross-repo miss), and the
+        # qualified spec or a matching --repo must each find it.
+        repo = tmp_path / "case_reverify_repo_key"
+        _init_repo(repo)
+        _commit(repo, "chore: init", {"a.txt": "1"})
+        cross_sha = _commit(repo, "fix: upstream thing\n\nFixes other/repo#42", {"a.txt": "2"})
+        rc, out = _run_reverify(repo, "42")
+        check("reverify-issue-cross-repo-miss", rc, out, FAIL, must_have=("STILL_OPEN",))
+        rc, out = _run_reverify(repo, "#42")
+        check("reverify-issue-cross-repo-miss-hash", rc, out, FAIL, must_have=("STILL_OPEN",))
+        rc, out = _run_reverify(repo, "other/repo#42")
+        check("reverify-issue-qualified-spec-matches", rc, out, OK, must_have=(f"FIXED_AT {cross_sha[:7]}",))
+        rc, out = _run_reverify(repo, "#42", local="other/repo")
+        check("reverify-issue-local-repo-folds-match", rc, out, OK, must_have=(f"FIXED_AT {cross_sha[:7]}",))
+
+        # 28) issue mode: the closing commit is an ancestor of HEAD but a
+        # later commit reverted it — STILL_OPEN, naming the revert sha
+        # (checked first: the reverted case, before the standing-fix case
+        # covered by case 21 above).
+        repo = tmp_path / "case_reverify_revert"
+        _init_repo(repo)
+        _commit(repo, "chore: init", {"x.txt": "1"})
+        revert_fix_sha = _commit(repo, "fix: thing\n\nFixes #77", {"x.txt": "2"})
+        revert_sha = _commit(repo, f"Revert \"fix: thing\"\n\nThis reverts commit {revert_fix_sha}.",
+                             {"x.txt": "1"})
+        rc, out = _run_reverify(repo, "77")
+        check("reverify-issue-reverted-still-open", rc, out, FAIL,
+              must_have=("STILL_OPEN", f"reverted at {revert_sha[:7]}"))
+        # a standing (non-reverted) fix on the same repo is unaffected.
+        standing_sha = _commit(repo, "fix: other\n\nFixes #78", {"x.txt": "3"})
+        rc, out = _run_reverify(repo, "78")
+        check("reverify-issue-not-reverted-still-fixed", rc, out, OK, must_have=(f"FIXED_AT {standing_sha[:7]}",))
+
+        # 29) symbol mode: pickaxe finds where a symbol was touched (its
+        # removal counts as a touch, same as its introduction), but it is
+        # absent from HEAD's tree — STILL_OPEN, not the FIXED_AT a bare
+        # pickaxe hit would wrongly report (checked first, before case 24's
+        # standing-fix).
+        repo = tmp_path / "case_reverify_symbol_revert"
+        _init_repo(repo)
+        _commit(repo, "chore: init", {"m.txt": "1"})
+        _commit(repo, "feat: add marker", {"m.txt": "MarkerABC"})
+        remove_sha = _commit(repo, "revert: remove marker", {"m.txt": "gone"})
+        rc, out = _run_reverify(repo, "MarkerABC")
+        check("reverify-symbol-reverted-still-open", rc, out, FAIL,
+              must_have=("STILL_OPEN", f"touched at {remove_sha[:7]}", "absent at HEAD"))
+
+        # 30) --branch <remote>/<ref>: fetches that remote first so a stale
+        # local tracking ref can't hide a fix that already landed upstream
+        # (checked first: the fetch-succeeds case), and a fetch failure is
+        # COULD_NOT_CHECK, never STILL_OPEN — silence isn't proof of absence.
+        remote_repo = tmp_path / "case_reverify_remote"
+        _init_repo(remote_repo)
+        _sh(remote_repo, "symbolic-ref", "HEAD", "refs/heads/main")
+        _commit(remote_repo, "chore: init", {"r.txt": "1"})
+        remote_fix_sha = _commit(remote_repo, "fix: remote thing\n\nFixes #88", {"r.txt": "2"})
+        local_dir = tmp_path / "case_reverify_fetch"
+        _init_repo(local_dir)
+        _commit(local_dir, "chore: init", {"a.txt": "1"})
+        _sh(local_dir, "remote", "add", "origin", str(remote_repo))
+        rc, out = _run_reverify(local_dir, "88", branch="origin/main")
+        check("reverify-branch-fetches-remote", rc, out, OK, must_have=(f"FIXED_AT {remote_fix_sha[:7]}",))
+
+        fail_dir = tmp_path / "case_reverify_fetch_fail"
+        _init_repo(fail_dir)
+        _commit(fail_dir, "chore: init", {"a.txt": "1"})
+        _sh(fail_dir, "remote", "add", "origin", str(tmp_path / "does-not-exist-remote"))
+        rc, out = _run_reverify(fail_dir, "1", branch="origin/main")
+        check("reverify-branch-fetch-failure-could-not-check", rc, out, ERROR,
+              must_have=("COULD_NOT_CHECK", "git fetch origin failed"), must_not=("STILL_OPEN",))
+
     if failures:
         print("SELFTEST FAILED:")
         for f in failures:
             print(f"  - {f}")
         return 1
-    print("SELFTEST OK: 26/26 cases passed")
+    print(f"SELFTEST OK: {total}/{total} cases passed")
     return 0
 
 
