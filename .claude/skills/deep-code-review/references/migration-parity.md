@@ -141,7 +141,7 @@ A section's style bar relaxes only through an owner-committed `threshold<TAB><se
 Style output gives identity %, mismatch count per property, and top diffs `text | prop | design | app` (COMPUTED STYLE).
 Rows wrapping differently fail: capture `data-lines` (a line-box count, never a height) on both sides (LINE COUNTS).
 Mark each section's anchor `data-anchor`; an app crop missing it or holding a neighbour's is UNVERIFIED, exit COULD_NOT_CHECK_CROP (9) (SAME-CROP GUARD).
-Once a page passes, `--baseline F --write-baseline`; later runs exit REGRESSION (8) listing only new deltas (BASELINE).
+Once a page passes, `--baseline F --write-baseline`; later runs exit REGRESSION (8) listing only new deltas (BASELINE). A relabeled control (same `href`/`data-testid`, new text) reports CHANGED_LABEL, not a removal — an owner `relabel<TAB><old>→<new>` row tags it (ACCEPTED) (#1168, BASELINE).
 
 ## Scope a parity claim to the correspondence table — one screen verified is not the product
 

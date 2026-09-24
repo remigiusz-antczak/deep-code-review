@@ -316,6 +316,9 @@ STYLE_MATCH_WITH_ACCEPTED; below it they stay open. A threshold never waives
 a FOUNDATION or PRIMITIVE row; one on a section with no open row is stale.
   ignore  <section id, or - outside every section>  <data-parity-ignore id>
 authorizes one design-side ignore (IGNORED); an unused one is stale info.
+  relabel  <old>→<new>  <reason>  <owner>
+tags a `--baseline` CHANGED_LABEL delta (#1168) (ACCEPTED) instead of a bare
+informational rename; `<old>`/`<new>` compare case-folded, whitespace-collapsed.
 
 COMPUTED STYLE (`--style`) — reported separately, never a completeness input
 ------------------------------------------------------------------------------
@@ -390,9 +393,15 @@ report path (usage error). Without `--write-baseline`, F is read: unreadable, ma
 `--style` is COULD_NOT_CHECK; a section or item REMOVED, an item ADDED inside a
 baseline section, or a STYLE_CHANGED value is REGRESSION (8), listing only
 those deltas plus the design comparison's one-line verdict. A section new
-since the baseline is info. No delta keeps the comparison's own exit (a design
-change the app never had stays MISMATCH) and prints `baseline: 0 new delta(s)`;
-under COULD_NOT_CHECK_CROP the deltas are appended and exit 9 stands.
+since the baseline is info. A control keyed by a stable identity
+(`data-testid`, else `href` for a link) present on both sides under a new
+label is CHANGED_LABEL, never REMOVED (#1168, a relabel is not a removal) —
+always informational, printed alongside any blocking deltas but never itself
+gating REGRESSION; an owner `relabel` accept-file row (`--accept`, ACCEPTED
+DEVIATIONS below) tags it (ACCEPTED). No blocking delta keeps the comparison's
+own exit (a design change the app never had stays MISMATCH) and prints
+`baseline: 0 new delta(s)`; under COULD_NOT_CHECK_CROP the deltas are
+appended and exit 9 stands.
 
 USAGE
 -----
@@ -1074,8 +1083,14 @@ class _SectionExtractor(HTMLParser):
             candidates.append(("title", attrs.get("title")))
             source, name = next(((s, n) for s, n in candidates if n and n.strip()), ("none", ""))
             if item is not None:
+                tid = attrs.get("data-testid")
+                href = attrs.get("href") or ""
+                ident = (f"testid:{_norm(tid)}" if tid
+                         else f"href:{_norm(href)}" if item["role"] == "link" and href
+                         and not _is_placeholder_href(href)
+                         else None)
                 item.update(label=visible or "", name=name, source=source,
-                            placeholder=attrs.get("placeholder"), icons=ctrl["icons"])
+                            placeholder=attrs.get("placeholder"), icons=ctrl["icons"], ident=ident)
         for lb in self._labels:   # an orphan <label> is still visible text
             if not lb["used"] and lb["text"].strip():
                 self._emit(lb["section"], "text", "", lb["text"])
@@ -1366,7 +1381,7 @@ def _prepare(inventory: list[dict], mask: bool) -> list[dict]:
         role = raw["role"]
         key = f"{raw['kind']}:{role}:{disp}" if role else f"{raw['kind']}:{disp}"
         out.append({"kind": raw["kind"], "role": role, "disp": disp, "cmp": disp.casefold(),
-                    "count": raw["count"], "key": key})
+                    "count": raw["count"], "key": key, "ident": raw.get("ident")})
     return out
 
 
@@ -1705,7 +1720,7 @@ def diff_styles(design: list[dict], app: list[dict], min_pairs: int | None = Non
     acc = Counter((r["property"], r["design"], r["app"], r["reason"], r["owner"]) for r in rows if r["accepted"])
     lines += [f"ACCEPTED {p}: {d} -> {a} on {k} pair(s)  [{why}; {who}]" for (p, d, a, why, who), k in acc.items()]
     stale = [" ".join(k) for k, row in accept.items()
-             if len(k) != 4 and k[0] not in ("visual-reviewed", "ignore") and not row["used"]]
+             if len(k) != 4 and k[0] not in ("visual-reviewed", "ignore", "relabel") and not row["used"]]
     if stale:
         lines.append(f"info: style accept row(s)/rule(s) matching no difference (stale): {', '.join(stale)}")
     return {"verdict": verdict, "pairs": n, "identical": identical, "identity": ident, "unpaired": unpaired,
@@ -1759,6 +1774,16 @@ def _norm(text: str | None) -> str:
     return " ".join((text or "").split())
 
 
+def _is_placeholder_href(href: str) -> bool:
+    """True for a href identifying no real target: empty, bare `#`, or `javascript:` (#1168 relabel identity —
+
+    a placeholder href is shared by every "do nothing" or JS-driven control on a page, so treating it as a
+    stable identity would pair unrelated controls into a false relabel; fall back to the label key instead).
+    """
+    h = href.strip()
+    return h in ("", "#") or h.lower().startswith("javascript:")
+
+
 def parse_accept(text: str) -> tuple[dict | None, str | None]:
     """Parse accept-file text into `{(section, status, item_cf, app_value): row}`.
 
@@ -1775,7 +1800,9 @@ def parse_accept(text: str) -> tuple[dict | None, str | None]:
     property or rule, or a malformed value, fails closed. `visual-reviewed
     section reason owner` is keyed `("visual-reviewed", section)`;
     `threshold section pct` (exactly 3 fields, 0 < pct <= 100, optional `%`)
-    is keyed `("threshold", section)` with a `Fraction` `pct`.
+    is keyed `("threshold", section)` with a `Fraction` `pct`. `relabel
+    old→new reason owner` tags a `--baseline` CHANGED_LABEL delta (#1168)
+    (ACCEPTED), keyed `("relabel", old_cf, new_cf)`.
     """
     rows: dict = {}
     first = True
@@ -1786,7 +1813,7 @@ def parse_accept(text: str) -> tuple[dict | None, str | None]:
         header, first = first and fields[0].lower() == "section", False
         if header:   # the first non-comment row may be a column header
             continue
-        kind = fields[0] if fields[0] in ("style", "rule", "visual-reviewed", "threshold", "ignore") \
+        kind = fields[0] if fields[0] in ("style", "rule", "visual-reviewed", "threshold", "ignore", "relabel") \
             and fields[1:2] != [] and fields[1] not in _ROW_STATUSES else None
         if kind == "ignore":
             if len(fields) != 3 or not all(fields):
@@ -1812,6 +1839,12 @@ def parse_accept(text: str) -> tuple[dict | None, str | None]:
                 return None, (f"accept file row {n}: a visual-reviewed row needs 4 non-empty fields "
                               "(visual-reviewed, section, reason, owner)")
             key, entry = ("visual-reviewed", fields[1]), {}
+        elif kind == "relabel":
+            old, sep, new = fields[1].partition("→") if len(fields) > 1 else ("", "", "")
+            if len(fields) != 4 or not all(fields) or not sep or not old.strip() or not new.strip():
+                return None, (f"accept file row {n}: a relabel row needs 4 non-empty fields (relabel, "
+                              "<old>→<new>, reason, owner)")
+            key, entry = ("relabel", _norm(old).casefold(), _norm(new).casefold()), {}
         elif kind == "rule":
             prop = fields[1][4:] if fields[1].startswith("min-") else ""
             if len(fields) != 5 or not all(fields) or prop not in _STYLE_PROPS or _px(fields[2]) is None:
@@ -2317,8 +2350,16 @@ def fingerprint(app_path: str | None, style: bool) -> dict | None:
     it (containers with their row count), masked where the app section
     carries `data-sample`/`data-value` markers so sample values never read
     as drift; with `style`, `styles` = `[element, {property: normalized
-    value}]` per text-bearing `data-cs` element in document order.
-    `data-parity-ignore` subtrees are already excluded by the parser.
+    value}]` per text-bearing `data-cs` element in document order. `idents`
+    maps an item key to its stable identity (`data-testid`, else `href` for a
+    link) where one exists AND is unique within this section on this side —
+    a control's own record/target, independent of its label, so
+    `diff_baseline` can tell a relabel from a removal. A href/data-testid
+    repeated on two or more controls in the same section is dropped from
+    `idents` entirely (never guessed which one it identifies): e.g. two
+    design-system nav links sharing one placeholder-free `href` would
+    otherwise let an unrelated pair of controls read as a "relabel" of each
+    other. `data-parity-ignore` subtrees are already excluded by the parser.
     """
     side = extract_side(app_path)
     if side is None or any(s["inventory"] is None for s in side):
@@ -2328,7 +2369,11 @@ def fingerprint(app_path: str | None, style: bool) -> dict | None:
         mask = s["marked"]
         styles = [[f"{r['role']}:{_clean(r['text'], mask)}", {p: _style_norm(v) for p, v in r["props"].items()}]
                   for r in s["styles"] if style and _clean(r["text"], mask)]
-        secs.append({"id": s["id"], "items": sorted(_show(i) for i in _prepare(s["inventory"], mask)),
+        prepared = _prepare(s["inventory"], mask)
+        ident_counts = Counter(i["ident"] for i in prepared if i.get("ident"))
+        secs.append({"id": s["id"], "items": sorted(_show(i) for i in prepared),
+                     "idents": {_show(i): i["ident"] for i in prepared
+                                if i.get("ident") and ident_counts[i["ident"]] == 1},
                      "styles": styles})
     return {"format": _BASELINE_FORMAT, "style": style, "sections": secs}
 
@@ -2340,9 +2385,10 @@ def _load_baseline(path: str) -> tuple[dict | None, str | None]:
             data = json.load(fh)
         ok = (data["format"] == _BASELINE_FORMAT and isinstance(data["style"], bool)
               and all(isinstance(s["id"], str) and all(isinstance(i, str) for i in s["items"])
+                      and all(isinstance(k, str) and isinstance(v, str) for k, v in s.get("idents", {}).items())
                       and all(isinstance(el, str) and isinstance(props, dict) for el, props in s["styles"])
                       for s in data["sections"]))
-    except (OSError, UnicodeDecodeError, ValueError, KeyError, TypeError) as exc:
+    except (OSError, UnicodeDecodeError, ValueError, KeyError, TypeError, AttributeError) as exc:
         return None, f"unreadable or malformed ({type(exc).__name__})"
     return (data, None) if ok else (None, f"not a {_BASELINE_FORMAT} file")
 
@@ -2352,10 +2398,13 @@ def diff_baseline(base: dict, cur: dict) -> tuple[list[dict], list[str]]:
 
     Pure. Rows are `{"status", "section", "detail"}`: REMOVED (a baseline
     section or item gone; items compare case-folded as a multiset), ADDED (an
-    item not in the baseline, inside a baseline section), STYLE_CHANGED (the
-    same element — role + text, duplicates in order — with a different
-    normalized value). A section new since the baseline is returned apart
-    (info, like an extra app section in the design comparison).
+    item not in the baseline, inside a baseline section), CHANGED_LABEL (a
+    control whose stable identity — `idents`, `data-testid`/`href` — is
+    present on both sides under a different label: reported, never REMOVED —
+    #1168, a relabel is not a removal), STYLE_CHANGED (the same element —
+    role + text, duplicates in order — with a different normalized value). A
+    section new since the baseline is returned apart (info, like an extra app
+    section in the design comparison).
     """
     cur_map = {s["id"]: s for s in cur["sections"]}
     rows = []
@@ -2365,9 +2414,32 @@ def diff_baseline(base: dict, cur: dict) -> tuple[list[dict], list[str]]:
             rows.append({"status": "REMOVED", "section": sid, "detail": "(whole section)"})
             continue
         shown = {i.casefold(): i for i in b["items"] + c["items"]}
-        bi, ci = Counter(i.casefold() for i in b["items"]), Counter(i.casefold() for i in c["items"])
-        rows += [{"status": "REMOVED", "section": sid, "detail": shown[k]} for k in (bi - ci).elements()]
-        rows += [{"status": "ADDED", "section": sid, "detail": shown[k]} for k in (ci - bi).elements()]
+        b_shown = {i.casefold(): i for i in b["items"]}
+        c_shown = {i.casefold(): i for i in c["items"]}
+        removed_delta = Counter(i.casefold() for i in b["items"]) - Counter(i.casefold() for i in c["items"])
+        added_delta = Counter(i.casefold() for i in c["items"]) - Counter(i.casefold() for i in b["items"])
+        b_idents, c_idents = b.get("idents", {}), c.get("idents", {})
+        removed_by_ident, added_by_ident = {}, {}
+        for k in removed_delta:
+            ident = b_idents.get(b_shown[k])
+            if ident:
+                removed_by_ident.setdefault(ident, k)
+        for k in added_delta:
+            ident = c_idents.get(c_shown[k])
+            if ident:
+                added_by_ident.setdefault(ident, k)
+        for ident in removed_by_ident.keys() & added_by_ident.keys():
+            rk, ak = removed_by_ident[ident], added_by_ident[ident]
+            n = min(removed_delta[rk], added_delta[ak])
+            if n <= 0:
+                continue
+            old_label, new_label = b_shown[rk], c_shown[ak]
+            rows += [{"status": "CHANGED_LABEL", "section": sid, "detail": f"{old_label} -> {new_label}",
+                      "old": old_label, "new": new_label}] * n
+            removed_delta[rk] -= n
+            added_delta[ak] -= n
+        rows += [{"status": "REMOVED", "section": sid, "detail": shown[k]} for k in removed_delta.elements()]
+        rows += [{"status": "ADDED", "section": sid, "detail": shown[k]} for k in added_delta.elements()]
         pool: dict = {}
         for el, props in c["styles"]:
             pool.setdefault(el.casefold(), []).append(props)
@@ -2381,12 +2453,37 @@ def diff_baseline(base: dict, cur: dict) -> tuple[list[dict], list[str]]:
 
 
 def _delta_lines(rows: list[dict]) -> list[str]:
-    """One indented report line per baseline delta row."""
-    return [f"  {r['status']:<14} section '{r['section']}' {r['detail']}" for r in rows]
+    """One indented report line per baseline delta row (ACCEPTED relabels tagged)."""
+    return [f"  {r['status']:<14} section '{r['section']}' {r['detail']}"
+            f"{' (ACCEPTED)' if r.get('accepted') else ''}" for r in rows]
+
+
+def _mark_relabel_accepted(rows: list[dict], accept_path: str | None, accept_rev: str | None,
+                           use_focus_gate: bool | None) -> list[dict]:
+    """Tag each CHANGED_LABEL row accepted by an owner `relabel` accept-file row.
+
+    A relabel row is keyed `("relabel", old_cf, new_cf)` (#1168) — same
+    owner-commit gate as every other accept row (`load_accept`). No
+    CHANGED_LABEL rows, or a load failure (already surfaced by `compare()`
+    for the same file), is a no-op.
+    """
+    if not any(r["status"] == "CHANGED_LABEL" for r in rows):
+        return rows
+    accept, err, _ = load_accept(accept_path, accept_rev, use_focus_gate)
+    if err is not None or not accept:
+        return rows
+    for r in rows:
+        if r["status"] == "CHANGED_LABEL":
+            key = ("relabel", _norm(r["old"]).casefold(), _norm(r["new"]).casefold())
+            if key in accept:
+                accept[key]["used"] += 1
+                r["accepted"] = True
+    return rows
 
 
 def apply_baseline(result: dict, app_path: str, path: str, style: bool, write: bool,
-                   accept_regression: bool = False) -> dict:
+                   accept_regression: bool = False, accept_path: str | None = None,
+                   accept_rev: str | None = None, use_focus_gate: bool | None = None) -> dict:
     """Write or check a `--baseline` regression net on `compare`'s result; return it.
 
     Write (`write`): only a passing run (exit 0) is recorded — a failing run
@@ -2396,11 +2493,15 @@ def apply_baseline(result: dict, app_path: str, path: str, style: bool, write: b
     overwritten only with `accept_regression`, else it stays as is and the
     exit is REGRESSION (8). The write is a side effect; OSError propagates.
     Check: COULD_NOT_CHECK / CANNOT_COMPARE stand unchecked; an unreadable,
-    malformed, or other-`--style` baseline is COULD_NOT_CHECK; any new delta
-    (`diff_baseline`) is REGRESSION (8) and the report lists ONLY those
-    deltas plus a one-line design-comparison verdict — except under
-    COULD_NOT_CHECK_CROP, which keeps its exit and appends the deltas; no
-    delta keeps the comparison's own exit and appends `baseline: 0 new delta(s)`.
+    malformed, or other-`--style` baseline is COULD_NOT_CHECK; any new
+    REMOVED/ADDED/STYLE_CHANGED delta (`diff_baseline`) is REGRESSION (8) and
+    the report lists ONLY those deltas plus a one-line design-comparison
+    verdict — except under COULD_NOT_CHECK_CROP, which keeps its exit and
+    appends the deltas; no blocking delta keeps the comparison's own exit and
+    appends `baseline: 0 new delta(s)`. A CHANGED_LABEL delta (#1168, same
+    stable identity — `data-testid`/`href` — new label) never blocks by
+    itself: it always prints as an informational rename, and an owner
+    `relabel` accept-file row (`accept_path`/`accept_rev`) tags it (ACCEPTED).
     """
     code = result["exit_code"]
     result["baseline"] = {"path": path, "written": False, "regressions": []}
@@ -2453,20 +2554,23 @@ def apply_baseline(result: dict, app_path: str, path: str, style: bool, write: b
                             "checked.\n" + result["report"])
         return result
     rows, new_ids = diff_baseline(base, cur)
+    rows = _mark_relabel_accepted(rows, accept_path, accept_rev, use_focus_gate)
     result["baseline"]["regressions"] = rows
     info = ([f"info: section(s) new since the baseline (not a regression): {', '.join(new_ids)}"]
             if new_ids else [])
-    if not rows or code == COULD_NOT_CHECK_CROP:
+    blocking = [r for r in rows if r["status"] != "CHANGED_LABEL"]
+    if not blocking or code == COULD_NOT_CHECK_CROP:
         result["report"] += "\n" + "\n".join([f"baseline: {len(rows)} new delta(s) vs {path}.",
                                               *_delta_lines(rows), *info])
         return result
+    renames = [r for r in rows if r["status"] == "CHANGED_LABEL"]
     ign = result.get("ignored") or {}
     was = result["verdict"] if code == MATCH else _VERDICT_NAMES[code]
     result.update(exit_code=REGRESSION, verdict="REGRESSION")
     result["report"] = "\n".join([
-        (f"REGRESSION: {len(rows)} new delta(s) vs baseline {path} (recorded from a passing run) — "
+        (f"REGRESSION: {len(blocking)} new delta(s) vs baseline {path} (recorded from a passing run) — "
          "something that passed before changed; only these new deltas are listed."),
-        *_delta_lines(rows), *info,
+        *_delta_lines(blocking), *_delta_lines(renames), *info,
         f"design comparison: {was} (exit {code}); rerun without --baseline for its full list.",
         *([_ignored_line(ign.get("design", []), ign.get("app", []))] if ign.get("design") or ign.get("app") else [])])
     return result
@@ -3039,7 +3143,8 @@ def _selftest() -> int:
         "ignore(owner-row,agent,design-missing,app-unpaired,app-cannot-hide,section,style)=ok threshold(met,not-met,scoped,foundation,primitive,malformed,agent)=ok "
         "style-identity(counts,top,accepted-ignored,own-text)=ok lines(rows,heading,size-free,one-sided,invalid)=ok "
         "crop(app-leak-scoped,design-reference,plain-heading,moved-heading,no-anchor,shared-heading,workflow)=ok "
-        "baseline(write,refuse,clean,removed,style,superset,design-change,masked,malformed,overwrite,path-guard,cli)=ok"
+        "baseline(write,refuse,clean,removed,style,superset,design-change,masked,malformed,overwrite,path-guard,cli,"
+        "relabel-vs-removal,relabel-accepted)=ok"
         " bands(nested-vs-flat,starts,anchor-wins,moved,missing-start,renamed,bad-y,basis,no-y,json,cli)=ok"
         " protected(match,order-broken,overlap,missing-node,component-missing,bad-rect,dup-node,"
         "app-zero-area,design-zero-area,under-bands)=ok"
@@ -3878,6 +3983,65 @@ def _selftest_extras(tmp: str, write, check, failures: list, commit) -> None:
         if rc != USAGE_ERROR:
             failures.append(f"{label}: exit {rc}, want {USAGE_ERROR}")
 
+    # 5. #1168: a control's stable identity (href) tells a relabel from a
+    # removal — CHANGED_LABEL is informational (never REGRESSION by itself),
+    # a real removal (no counterpart href) still is, and an owner `relabel`
+    # accept row tags the informational rename (ACCEPTED).
+    def link(text: str) -> str:
+        return f'<section data-section="nav"><p data-item>x</p><a href="/help">{text}</a></section>'
+
+    old_link, new_link = write("bl-link-old.html", link("Help Center")), write("bl-link-new.html", link("Support"))
+    gone_link = write("bl-link-gone.html", '<section data-section="nav"><p data-item>x</p></section>')
+    lbase = os.path.join(tmp, "lbase.json")
+    rc, out = cli(["--design", old_link, "--app", old_link, "--baseline", lbase, "--write-baseline"])
+    check("baseline-write-link", rc, out, MATCH, must_have=("baseline written",))
+    rc, out = cli(["--design", new_link, "--app", new_link, "--baseline", lbase])
+    check("baseline-relabel-informational", rc, out, MATCH,
+          must_have=("CHANGED_LABEL", "control:link:Help Center -> control:link:Support"),
+          must_not=("REGRESSION", "REMOVED"))
+    rc, out = cli(["--design", gone_link, "--app", gone_link, "--baseline", lbase])
+    check("baseline-relabel-vs-real-removal", rc, out, REGRESSION,
+          must_have=("REGRESSION:", "REMOVED", "control:link:Help Center"), must_not=("CHANGED_LABEL",))
+    relabel_acc = commit("relabel.tsv",
+                         "relabel\tcontrol:link:Help Center→control:link:Support\tcopy update\towner\n")
+    rc, out = cli(["--design", new_link, "--app", new_link, "--baseline", lbase,
+                   "--accept", relabel_acc, "--accept-rev", "HEAD"])
+    check("baseline-relabel-accepted", rc, out, MATCH, must_have=("CHANGED_LABEL", "(ACCEPTED)"))
+    # A href shared by two links in the same section is not a stable identity
+    # for either -- it is dropped from `idents` entirely, so a two-links
+    # reshuffle reads as an ordinary REMOVED + ADDED pair, never a relabel.
+    two_links = ('<section data-section="nav2"><p data-item>x</p>'
+                 '<a href="/x">{a}</a><a href="/x">{b}</a></section>')
+    shared_old = write("bl-shared-old.html", two_links.format(a="Docs", b="Pricing"))
+    shared_new = write("bl-shared-new.html", two_links.format(a="Pricing", b="Contact"))
+    sbase = os.path.join(tmp, "sbase.json")
+    cli(["--design", shared_old, "--app", shared_old, "--baseline", sbase, "--write-baseline"])
+    rc, out = cli(["--design", shared_new, "--app", shared_new, "--baseline", sbase])
+    check("baseline-shared-href-not-a-relabel", rc, out, REGRESSION,
+          must_have=("REMOVED", "control:link:Docs", "ADDED", "control:link:Contact"),
+          must_not=("CHANGED_LABEL",))
+    # A placeholder href (#, javascript:, empty) identifies no real target --
+    # it falls back to the label key, so a relabel behind one still reads as
+    # REMOVED + ADDED, never a false CHANGED_LABEL pairing two unrelated
+    # "do nothing" controls.
+    placeholder = '<section data-section="nav3"><p data-item>x</p><a href="{href}">{label}</a></section>'
+    ph_old = write("bl-ph-old.html", placeholder.format(href="#", label="Open"))
+    ph_new = write("bl-ph-new.html", placeholder.format(href="#", label="Close"))
+    pbase = os.path.join(tmp, "pbase.json")
+    cli(["--design", ph_old, "--app", ph_old, "--baseline", pbase, "--write-baseline"])
+    rc, out = cli(["--design", ph_new, "--app", ph_new, "--baseline", pbase])
+    check("baseline-placeholder-href-not-a-relabel", rc, out, REGRESSION,
+          must_have=("REMOVED", "control:link:Open", "ADDED", "control:link:Close"),
+          must_not=("CHANGED_LABEL",))
+    # A relabel accept row is used only by apply_baseline's own re-parse, not
+    # by compare()'s own accept dict -- it must never show up as a "stale"
+    # style-accept row on a --style run over the same accept file (independent
+    # of --baseline, whose own style-flag bookkeeping is not what's under
+    # test here).
+    r = compare(new_link, new_link, relabel_acc, "HEAD", style=True)
+    check("baseline-relabel-row-not-reported-stale-under-style", r["exit_code"], r["report"],
+          STYLE_COULD_NOT_CHECK, must_not=("stale",))
+
 
 def _selftest_bands(write, check, failures: list) -> None:
     """`--bands headings` cases (SECTION BANDS): nesting-free bands, MOVED, one-band crop, fail-closed."""
@@ -4075,7 +4239,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.baseline:
             try:
                 apply_baseline(result, args.app, args.baseline, args.style, args.write_baseline,
-                               args.accept_regression)
+                               args.accept_regression, args.accept, args.accept_rev)
             except OSError as exc:
                 print(f"parity_differ: cannot write --baseline {args.baseline}: {exc}", file=sys.stderr)
                 return USAGE_ERROR

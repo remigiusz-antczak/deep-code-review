@@ -6218,6 +6218,17 @@
       ]
     },
     {
+      "id": "parity-baseline-relabel-vs-removal",
+      "prompt": "A recorded parity baseline had a link with href /help labelled 'Help Center'. The next run's app render still carries that same href, but the link now reads 'Support'. The gate reports a REMOVED row for 'Help Center' and fails the build, and the team is annoyed because nothing was actually removed -- copy was just updated twice in a row, and both times the gate treated it as a regression. What's the actual bug, and what's the fix?",
+      "expected_output": "The baseline diff was keying controls purely by their printed accessible-name/label string, so any relabel looks identical to a removal: the old label vanishes from the fingerprint and a new one appears, and nothing ties them together as the same control. The fix is to key a control by a stable identity first -- href for a link, data-testid otherwise -- and only fall back to the label for controls that carry neither. When the same identity is present on both sides under a different label, that is CHANGED_LABEL, not REMOVED: it prints as an informational rename and never blocks the build by itself, while a control whose identity is genuinely gone from the current fingerprint still reports REMOVED and still fails REGRESSION. An owner-authored `relabel\told-item→new-item\treason\towner` accept row (same owner-commit gate as every other accepted deviation) tags a known intentional relabel (ACCEPTED) instead of leaving it as noise on every run.",
+      "expectations": [
+        "Diagnoses the root cause as keying purely by label/accessible-name, with no stable identity to tell a relabel from a removal",
+        "Names href (links) and data-testid (other controls) as the stable identity, label as the fallback only",
+        "States CHANGED_LABEL is informational and never blocks REGRESSION by itself, while a control with no surviving identity still fails as REMOVED",
+        "Names the owner-authored relabel accept row as tagging a known-intentional rename (ACCEPTED)"
+      ]
+    },
+    {
       "id": "parity-line-count-structural-assertion",
       "prompt": "A port's list rows wrap onto two lines while the design's rows are one line. Coarse pixel diff says 3% different and every row's text matches, so the lane calls it aligned. What does parity_differ.py need to catch this?",
       "expected_output": "The capture sets `data-lines=\"N\"` on each row (and on headings, controls, or text blocks) on both sides. N is the number of rendered line boxes, a count taken from client rects, not a height or any other dimension. The count joins the item key as `[lines: N]`, so a 2-line app row against a 1-line design row is a CHANGED row and the verdict is MISMATCH, even though the coarse diff is small and the text matches. A `data-lines` exported on only one side also shows as CHANGED, so export it on both. Row counts per list or table and the presence of every design element are already compared by the inventory.",

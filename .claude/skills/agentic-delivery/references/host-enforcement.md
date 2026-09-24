@@ -249,6 +249,13 @@ against that exact head SHA, and **never** honors a `[skip ci]` commit
 message on the ref main CI protects (a skip-ci merge into a protected branch
 defeats the backstop main CI is there to be).
 
+**Removing hosted CI from an integration branch, and posting required
+statuses under a separate identity, both need the repo owner's explicit
+authorization and owner-held tokens** — an agent proposes this profile and
+stops to ask; the host's own branch protection may otherwise read the
+change as a CI bypass and block it regardless of what an agent decides
+locally.
+
 A commit **status needs a SHA that already exists on GitHub** — a purely
 local merge has no such SHA, and a required check on a protected branch
 evaluates the PR head, not an unpublished local merge. The gate first

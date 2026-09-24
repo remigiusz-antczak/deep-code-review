@@ -10,7 +10,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.457.0"
+  version: "1.458.0"
 ---
 
 # Agentic delivery
@@ -243,6 +243,13 @@ throwaway integration SHA plus one aggregate gate before a merge train (G7).
   integration branch — lanes sharing a host: `scripts/serial_gate.py`.
 - Occupancy is **visibility, not a lock**. Say what is live or stale; do not
   comment "do not merge" on a peer's PR after you stopped writing.
+- **A stacked/child lane branches off the parent's LOCAL ref, never polls the
+  remote** (#1152). Worktrees sharing one `.git` already see a parent's branch
+  tip the moment it commits (`git rev-parse <parent-branch>`, `git worktree
+  list`) — well before any push; polling `git fetch` or the forge API instead
+  serializes the child on a push queue that has nothing to do with whether the
+  work is ready. Reserve remote-based readiness for cross-machine coordination
+  with no shared local ref (`references/multi-session-coordination.md`).
 
 ## Environment probe (before you size anything)
 

@@ -226,11 +226,11 @@ keeps that load small:
 
 The latest five releases; full detail in [`CHANGELOG.md`](CHANGELOG.md).
 
-- **1.451.0** — Diff-scoped threat modeling for changes adding a trust boundary; value-first README.
-- **1.450.0** — `lesson_replay.py`: an advisory self-improvement signal that reports whether each new lesson's eval or selftest is actually tied to the change.
-- **1.449.0** — Token budget gate: `token_report.py --budget` caps each lane and the orchestrator's share.
-- **1.448.0** — Keystone fix-forward for a red base under an owner grant; verified lane hand-back.
-- **1.447.0** — Design parity: structure checks, same-crop guard, owner-approved ignores, baseline mode.
+- **1.458.0** — Renamed controls read as relabels, not removals; pre-push reuses a verified result for the same commit; stacked lanes branch from the local ref.
+- **1.457.0** — Minimum-cost CI & token profile: integration branches skip hosted CI for a local deterministic gate; cost-vs-quality guardrails (tier gate, lane cap, escaped-defect trailers).
+- **1.456.0** — Protected-visual components scored on ordinal relations, never size; a draft-skip-CI note; a one-lock-one-resource concurrency fix; `ci_cost_lint.py` runner-cost checks.
+- **1.455.0** — Lower must-load floor for delivery/CEO skills; FULL-scope reviews rank by blast radius with a partial-report checkpoint; check-then-claim in one step.
+- **1.454.0** — Reviewed-attestation ready gate; `lane_guard.py wait` before hand-back; `merge_train.py refresh`/`dupes`.
 ---
 
 ## FAQ

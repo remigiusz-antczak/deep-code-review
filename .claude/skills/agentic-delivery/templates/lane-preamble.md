@@ -6,6 +6,7 @@ default for this lane, not a suggestion.
 ## Identity & isolation
 - First command: `python3 .claude/skills/agentic-delivery/scripts/lane_guard.py --expect-branch <branch>`. Refusal → stop; hand back the `LANE_GUARD REFUSE:` line plus changed files.
 - One writer per worktree. Never bare `git stash` (stack is shared — use a WIP commit instead). Never `--no-verify`. Never force-push without an owner-authored grant on file.
+- Stacked on a parent lane not yet pushed: branch off its LOCAL ref (`git rev-parse <parent-branch>`), never poll the remote — the shared `.git` already sees it (#1152).
 
 ## Scope
 - Before starting: `python3 .claude/skills/agentic-delivery/scripts/focus_gate.py check --item <issue>`, then `python3 .claude/skills/agentic-delivery/scripts/claim_probe.py --repo <owner/name> --issue <issue> --ref '#<issue>' --paths <glob> --agent <agent-id> --claim --post` (checks and, only on GO, posts the CLAIM in one call) — abort if it prints NO-GO (a YIELD readout is always also NO-GO).

@@ -2038,6 +2038,28 @@
         "Recommends a separate reviewer account or bot and tier_gate.py --github requiring an APPROVED review from another login",
         "Does not claim independent review on this evidence"
       ]
+    },
+    {
+      "id": "adaptive-throttle-must-not-shrink-the-bottleneck-stage",
+      "prompt": "The push queue is the pipeline's identified throughput constraint -- everything else waits on it. As measured load rises, an adaptive throttle cuts the push queue's own concurrency down to 2 slots to protect the system from overload. Work that finished building now has less room to get through, right when load and throughput both matter most. Raising the throttle's load thresholds is proposed as a fix. Is that the right fix, and if not, what is?",
+      "expected_output": "No -- raising the thresholds only delays the same mistake at a higher load level; it does not fix the throttle's direction. The throttle is shrinking the capacity of the one stage already identified as the bottleneck, which starves the pipeline harder at exactly the moment load is highest. Backpressure belongs at the feeders: when load rises, slow the rate at which upstream stages (the build lanes) hand new work to the push queue, never cut the queue's own concurrency. If the bottleneck's own capacity has to move under load at all, growing it is the only direction that helps -- shrinking it compounds the exact constraint it exists to protect. This is the same shape as the WIP-admission cap on in-flight write lanes: throttle intake, never the constrained stage doing the work.",
+      "expectations": [
+        "Rejects raising the load threshold as a real fix -- names it as delaying the same mistake, not fixing its direction",
+        "States the throttle is cutting the identified bottleneck's own capacity, which is backwards",
+        "States backpressure belongs at the feeder/upstream stages -- slow intake, not the constrained stage's concurrency",
+        "States growing (never shrinking) the bottleneck's own capacity is the only helpful direction if it must move at all"
+      ]
+    },
+    {
+      "id": "stacked-lane-branches-off-parent-local-ref-not-remote-poll",
+      "prompt": "Eight child lanes are each stacked on a different parent lane's branch. Every parent has already committed its work locally, but a shared push queue is under load, so none of the parent branches have reached the remote yet. Each child lane is polling `git fetch` (and the forge API) waiting for its parent branch to appear there before it starts. They've been idle for 20+ minutes. What's wrong with this, and what should the child lanes do instead?",
+      "expected_output": "The child lanes are treating a purely local, already-available signal as though it required a network round trip. All these lanes run in worktrees that share one `.git` directory, so the parent's branch tip is already a valid local ref the instant the parent commits -- refs are visible across worktrees on the same host. Polling the remote or the forge API instead serializes every child on the push queue, which is a completely different piece of infrastructure from whether the parent's work is actually ready. Each child lane should branch off the parent's LOCAL ref as soon as it exists (`git rev-parse <parent-branch>`, or check `git worktree list`) rather than waiting for it to show up on the remote. Polling the remote is the right move only for cross-machine coordination, where no shared local ref exists at all.",
+      "expectations": [
+        "Identifies the root cause as treating an already-available local ref as if it needed a network round trip",
+        "States worktrees sharing one .git make the parent's branch tip visible locally the moment it commits, before any push",
+        "Recommends branching off the parent's LOCAL ref (git rev-parse / git worktree list), not polling the remote or forge API",
+        "Reserves remote-based readiness checks for cross-machine coordination with no shared local ref"
+      ]
     }
   ]
 }
