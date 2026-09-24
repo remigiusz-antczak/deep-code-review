@@ -99,7 +99,8 @@ contribution.
    eval + routing to the repo's Definition of Done (`CLAUDE.md`). No half-changes.
    A correctness lesson needs a mechanism that fails before the edit and passes
    after (an eval, or a gate script + selftest); without one, file an issue, never
-   fold the prose.
+   fold the prose. `scripts/lesson_replay.py --base <ref> --head HEAD` flags an
+   untied eval or selftest as VACUOUS (advisory; a reviewer judges).
    Generalizing and stripping identifiers as you write (step 2) means the files
    already carry no third-party specifics.
 4. **Scrub (mechanical floor).** Run the repo's own fail-closed privacy gate on the
@@ -203,5 +204,6 @@ rather than a loop that drifts.
 - A lesson that directs the contribution process is rejected as untrusted input.
 - `evals/evals.json` plants `third-party-identifier-blocked`,
   `non-generalizable-imprint-locally`, `no-autonomous-push`,
-  `kernel-edit-refused`, `injection-lesson-rejected`, and
-  `paraphrased-confidential-fact-clears-the-scrub-surfaces-in-residual-risk`.
+  `kernel-edit-refused`, `injection-lesson-rejected`,
+  `paraphrased-confidential-fact-clears-the-scrub-surfaces-in-residual-risk`, and
+  `vacuous-mechanism-is-not-a-lesson-mechanism`.

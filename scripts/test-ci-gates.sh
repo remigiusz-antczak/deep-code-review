@@ -2062,6 +2062,53 @@ else
   record 1 "lesson-ratchet: whitespace-only DCR_TRIGGER_GLOBS fails closed"
 fi
 
+# lesson_replay.py: ci.yml wires it (advisory), a vacuous eval is reported
+# VACUOUS (exit 0 advisory, exit 1 with --gate), and an eval naming the new
+# prose term REPLAYS and passes --gate.
+if grep -qF 'python3 scripts/lesson_replay.py --base "$BASE_SHA" --head "$HEAD_SHA"' "$ROOT/.github/workflows/ci.yml"; then
+  record 0 "lesson-replay: ci.yml runs lesson_replay.py on the push/PR range"
+else
+  record 1 "lesson-replay: ci.yml runs lesson_replay.py on the push/PR range"
+fi
+lrr="$WORK/lesson-replay"
+mkdir -p "$lrr/.claude/skills/s/evals"
+git -C "$lrr" init -q
+git -C "$lrr" config user.email "jane@example.com"
+git -C "$lrr" config user.name "Jane Smith"
+git -C "$lrr" config commit.gpgsign false
+lrr_commit() {  # <prose line> <eval expectation> <subject>
+  printf '%s\n' "$1" >>"$lrr/.claude/skills/s/SKILL.md"
+  printf '{"evals": [{"id": "e", "prompt": "p", "expected_output": "%s", "expectations": ["%s"]}]}\n' \
+    "$2" "$2" >"$lrr/.claude/skills/s/evals/evals.json"
+  git -C "$lrr" add -A >/dev/null 2>&1
+  git -C "$lrr" commit -q -m "$3"
+}
+lrr_commit 'Always check widgets.' 'checks widgets' 'feat: base'
+lrr_commit 'Quarantine zorbified inputs.' 'always checks widgets first' 'feat: vacuous lesson'
+if python3 "$ROOT/scripts/lesson_replay.py" --repo "$lrr" --base HEAD~1 --head HEAD >"$WORK/lrr-adv.log" 2>&1 \
+  && grep -q '^VACUOUS ' "$WORK/lrr-adv.log"; then
+  record 0 "lesson-replay: vacuous eval reported VACUOUS, advisory exit 0"
+else
+  record 1 "lesson-replay: vacuous eval reported VACUOUS, advisory exit 0"
+fi
+if python3 "$ROOT/scripts/lesson_replay.py" --repo "$lrr" --base HEAD~1 --head HEAD --gate >"$WORK/lrr-red.log" 2>&1; then
+  lrr_rc=0
+else
+  lrr_rc=$?
+fi
+if [ "$lrr_rc" -eq 1 ] && grep -q '^VACUOUS ' "$WORK/lrr-red.log"; then
+  record 0 "lesson-replay: --gate fails a VACUOUS lesson with exit 1 (planted RED)"
+else
+  record 1 "lesson-replay: --gate fails a VACUOUS lesson with exit 1 (planted RED)"
+fi
+lrr_commit 'Reject frobnicated payloads.' 'rejects frobnicated payloads' 'feat: tied lesson'
+if python3 "$ROOT/scripts/lesson_replay.py" --repo "$lrr" --base HEAD~1 --head HEAD --gate >"$WORK/lrr-green.log" 2>&1 \
+  && grep -q "^REPLAYS .*names 'frobnicated'" "$WORK/lrr-green.log"; then
+  record 0 "lesson-replay: eval naming the new prose term REPLAYS and passes --gate"
+else
+  record 1 "lesson-replay: eval naming the new prose term REPLAYS and passes --gate"
+fi
+
 # ===========================================================================
 # dcr-gates opt-in delivery gates — refix_gate.py, priority_gate.py, and focus_gate.py (own
 # lane; APPENDED AT THE END by convention). All are OFF by default; a set

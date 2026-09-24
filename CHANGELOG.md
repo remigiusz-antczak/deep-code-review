@@ -3,6 +3,12 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.450.0] — 2026-09-24
+
+### Added — self-improvement signal
+- `scripts/lesson_replay.py`: for each lesson in a commit range, reports whether its mechanism is tied to the change — an eval case whose assertion newly names a term the new prose adds (path stems and flags excluded; reported as tied n/m per case), or a script selftest that fails an assertion when a changed hunk is reverted. Output per lesson: REPLAYS / VACUOUS / COULD_NOT_CHECK (crashes, timeouts, new scripts, and an exceeded run budget are COULD_NOT_CHECK, never VACUOUS). It is an advisory signal, not proof: a token overlap can be gamed, and a reviewer judges. The CI step is advisory with a timeout; `--gate` blocks only VACUOUS. It reuses `fix_class_gate` helpers for globs, frontmatter version detection, and diffs. Routed from the contribution skill.
+- size-budget-raise: .claude/skills/contribution/SKILL.md 11477→11660 lesson-replay routing in step 3
+
 ## [1.449.0] — 2026-09-24
 
 ### Added — token budget gate
