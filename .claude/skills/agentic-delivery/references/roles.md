@@ -1,8 +1,9 @@
 # Software-house roles — hats over the delivery gates
 
 Read this when standing up (or running) the full delivery team on a repo: who
-does what, when a hat fires, which gate it owns, and the discipline each hat
-carries that the review lens does not. Expands the **Operating model** in
+does what, when a hat fires, which gate it owns; when the Conductor drifts into a
+lane's work; or when tempted to skip a G4/G5 step (anti-rationalization table).
+Each hat's discipline is one the review lens does not carry. Expands the **Operating model** in
 `SKILL.md`. Depth only where the delivery role adds something the review side
 does not already hold — for the rest it **points** to the `deep-code-review`
 skill's `role-coverage.md` (see **Cross-references** below), the review-time lens
@@ -71,6 +72,21 @@ seat; the delivery hat adds *when the hat fires in the gate flow and what it mus
 produce there*. The four with **below** carry delivery discipline the review
 lens does not hold; the rest are one-line pointers on purpose — restating
 `role-coverage.md` here would be the duplication this framework forbids.
+
+---
+
+## Catch and reverse your own drift (Conductor)
+
+**Catch and reverse your own drift into a lane's work** — the completeness
+fix applied to *action*, not only attention. Scope: only while the Conductor
+role is active **and** at least one lane is in flight; in single-agent mode
+(`agentic-ceo` **Size effort to the project**) the agent does the work itself.
+The tell: two consecutive Conductor turns that query, build, edit, or mutate
+the target instead of dispatching, reading a receipt, or deciding. On the
+signal: **stop**, **package** a lane brief (goal, scope, acceptance check,
+output contract), **dispatch** it (`SKILL.md` *Worktrees and occupancy*), **resume**
+status-reading. Exception: a step only the Conductor's session can perform (a
+connector, credential, or surface no lane holds), done minimally.
 
 ---
 
@@ -237,6 +253,16 @@ what already works. It is a generic engineering standard; a project's own
 The Implementer hands QA and Security the **final reviewed SHA**, never its own
 narrative, and never reviews its own build.
 
+### Anti-rationalization (G4 / G5)
+
+| Excuse | Rebuttal |
+|---|---|
+| "I'll add tests later." | Later is the load-bearing word. Tests before or with the change (G4). |
+| "Too simple to spec." | Five lines of acceptance is a spec. Zero is not. |
+| "Unit tests cover the UI." | Domain P needs headed-browser evidence on the route that renders. |
+| "Green locally is green in CI." | Different OS, browser, secrets. Exact SHA in CI is the receipt. |
+| "The stack didn't start; tests still passed." | G5 is `UNVERIFIED`, not pass. |
+
 ---
 
 ## Release — the discipline behind a shippable change
@@ -304,6 +330,11 @@ the standard it implements** (an over-strict gate produces a fix that regresses
 another axis). A gate that reaches an external service retries a transient error
 a bounded number of times and fails open on a persistent outage — a
 can't-check is not a finding.
+
+**Empirical check:** Cemri et al. (2025), 1600+ multi-agent traces: failures
+cluster into system design (→ G0/G1), inter-agent misalignment (→ G2, worktree
+preflight), and task verification (→ G5/G6) — already covered, not an
+eleventh gate.
 
 ---
 

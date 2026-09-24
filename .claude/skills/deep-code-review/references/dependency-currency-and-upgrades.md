@@ -99,7 +99,10 @@ tests, performance, or another axis.
    goes red tells you exactly what broke; a 40-package sweep does not. Group only
    deps that *must* move together (a framework and its plugins). This dovetails
    with `SKILL.md` Phase 5's "split by risk surface" — a security patch rides its
-   own small PR, never buried in a bulk bump.
+   own small PR, never buried in a bulk bump. **At bulk scale**
+   (`dependency-bulk-upgrades.md` §1), tier+ecosystem batching is the exception —
+   never a security-advisory update (own fast-lane PR, §2.6) — and only if the
+   batch reverts as one group.
 2. **Size the risk by the version delta (Semantic Versioning).** PATCH =
    "backward compatible bug fixes", MINOR = "backward compatible" new
    functionality — low-risk, fast-track. MAJOR = "incompatible API changes" —
@@ -125,11 +128,11 @@ tests, performance, or another axis.
    Before trusting a jump — especially a large one or a just-published release —
    confirm provenance/signature and that the package is not typosquatted,
    **slopsquatted** (a hallucinated name an attacker pre-registered — verify a
-   newly-added dep resolves to an *established* package with real history, not just
-   that it isn't a typo), or maintainer-hijacked (A03 in `appsec-supply.md`). The
+   newly-added dep resolves to an *established* package with real history),
+   or maintainer-hijacked (A03 in `appsec-supply.md`). The
    release-age cooldown below also catches a slopsquat name: it has no established
-   history to clear the window. "Newer" is not "safer" by
-   itself. Do **not** auto-merge bot update PRs without this + the green gate.
+   history to clear the window. Do **not** auto-merge bot update PRs without
+   this + the green gate.
    **Prefer a release-age cooldown**: refuse to resolve a version until it has
    been public for a set window (e.g. 7 days), so a compromised or broken
    just-published release is caught before it reaches you. Update bots support
@@ -210,8 +213,8 @@ commits the project to a bundle-size / perf cost, a **supply-chain and security 
 whole transitive tree, §1), a **license** obligation, and ongoing maintenance. That is an
 **owner/maintainer decision**, not one an agent (or a feature PR) can unilaterally own.
 - **Report "this needs a new dependency" as BLOCKED-ON-OWNER** — with the exact dep(s) / approach
-  and the tradeoff (size, license, transitive surface, alternatives) — never an already-committed
-  `npm install` shipped as a fait accompli.
+  and the tradeoff (size, license, transitive surface, alternatives) — never a committed
+  `npm install`.
 - **First check for a lighter path** — an existing in-repo capability, an already-bundled lib, or
   a native platform API; often the new dep is avoidable.
 - **Calibrate by weight, not reflex.** A tiny, ubiquitous, well-audited dep may be routine; a
@@ -221,9 +224,8 @@ whole transitive tree, §1), a **license** obligation, and ongoing maintenance. 
   license-compatible, and **approved**?
 
 This is the global *confirm before a lasting / shared-state commitment* rule applied to the
-dependency manifest — especially in automated/agent work, where no human chose to take on the
-liability. (This is the *governance* decision — whether to take it on; the added dep's **integrity**
-once approved — that it resolves to an **established, non-slopsquatted** package — is verified per §2.)
+dependency manifest. (Governance is the decision to take it on; integrity, once approved, is
+verified per §2.)
 
 ---
 
@@ -234,7 +236,8 @@ once approved — that it resolves to an **established, non-slopsquatted** packa
 - No dependency/vulnerability scan wired into CI; audit run manually or never.
 - No update-bot config (`dependabot.yml` / `renovate.json`) **and** a long tail
   of outdated deps — currency has no owner.
-- A single mega "update all dependencies" commit with no per-dep test evidence.
+- A single mega "update all dependencies" commit with no per-dep test evidence —
+  not the scoped tier+ecosystem batches in `dependency-bulk-upgrades.md` §1.
 - An **agent- or feature-PR-added new runtime dependency with no recorded owner/maintainer
   decision** (heavy / novel / broad-surface especially) — adding a dep is a governance call (§4),
   not an implementation detail.

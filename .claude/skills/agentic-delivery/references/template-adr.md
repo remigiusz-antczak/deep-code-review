@@ -1,5 +1,8 @@
 # ADR template
 
+Read this when G3 Design must record a decision — an interface, NFR budget,
+or data/security choice — as an ADR (context, options, outcome, consequences).
+
 Routed from G3 (`SKILL.md`: "ADRs / contracts... data/security decisions
 explicit"). G3 has always required an ADR as *output*; this is the shape,
 so a Design gate has something concrete to produce rather than a prose

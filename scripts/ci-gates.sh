@@ -648,6 +648,16 @@ cmd_size() {
 # own local bash is 3.2, which has neither associative arrays nor namerefs —
 # so the base-ref and working-tree configs are parsed with two separate
 # inline loops into their own arrays, mirroring cmd_size's style.
+#
+# Silent row deletion is caught too: a row present at base but absent at HEAD
+# is only legitimate when the file it names is actually gone from the working
+# tree (a real deletion, nothing to budget any more). If the file still
+# exists on disk, dropping its row would let it grow unbounded and unbudgeted
+# forever without a single ratchet failure — so a row that just vanishes
+# while its file survives is a hard fail, no marker can approve it (this
+# isn't a raise, there is nothing to document). Covers hand-kept rows outside
+# `cmd_size`'s `.claude/skills` glob (e.g. `README.md`), not only auto-scanned
+# ones.
 # ---------------------------------------------------------------------------
 cmd_size_ratchet() {
   local base="" config="" root=""
@@ -771,8 +781,25 @@ cmd_size_ratchet() {
     fi
   done
 
+  # A row present at base but missing at HEAD is only legitimate when its
+  # file is actually gone from the working tree; if the file still exists,
+  # the row was dropped silently and the gate must fail closed.
+  for j in "${!old_paths[@]}"; do
+    p="${old_paths[$j]}"
+    found=0
+    for i in "${!new_paths[@]}"; do
+      if [ "${new_paths[$i]}" = "$p" ]; then found=1; break; fi
+    done
+    [ "$found" -eq 0 ] || continue
+    if [ -f "$root/$p" ]; then
+      printf 'RATCHET FAIL: %s had a budget row at %s with no row at HEAD, but the file still exists (silent row deletion; fail closed)\n' \
+        "$p" "$base" >&2
+      fail=1
+    fi
+  done
+
   [ "$fail" -eq 0 ] \
-    || die "size-ratchet: one or more budget rows increased vs $base with no documented size-budget-raise marker"
+    || die "size-ratchet: one or more budget rows increased vs $base with no documented size-budget-raise marker, or a row was silently dropped for a file that still exists"
   printf 'size-ratchet: ok (no undocumented budget increases vs %s)\n' "$base"
 }
 

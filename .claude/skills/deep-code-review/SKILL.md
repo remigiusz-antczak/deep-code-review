@@ -11,7 +11,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.454.0"
+  version: "1.455.0"
 ---
 
 # Deep Code Review
@@ -196,10 +196,10 @@ applicable domains. Language footguns:
 | E | Performance, efficiency & cost | `domain-e.md`, `performance-db-cost.md`, `model-tiering.md`, `billing-correctness.md` (when the target meters, subscribes, or charges) |
 | F | Reliability & error handling | `domain-f.md`, `reliability-error-handling.md` |
 | G | Concurrency & shared state | `domain-g.md`, `concurrency-shared-state.md` |
-| H | Tech debt, dead code, maintainability | `domain-h.md`, `skill-authoring-and-size.md` (when the target ships/installs skills or has `**/SKILL.md`: leanness, progressive disclosure, size ratchet) |
+| H | Tech debt, dead code, maintainability | `domain-h.md`, `skill-authoring-and-size.md` (when the target ships/installs skills or has `**/SKILL.md`: size ratchet) |
 | I | API, contracts, integration | `domain-i.md`, `api-contracts.md` |
 | J | Testing & evaluation | `domain-j.md`, `testing-and-evals.md`; `testing-ui.md` (UI, E2E), `testing-ai-evals.md` (model output), `testing-ml.md` (ML, notebooks), `testing-situational.md` (flaky, fuzz, mutation) |
-| K | Build, CI, supply chain, release | `domain-k.md`, `dependency-currency-and-upgrades.md`, `release-engineering.md` |
+| K | Build, CI, supply chain, release | `domain-k.md`, `dependency-currency-and-upgrades.md` → `dependency-bulk-upgrades.md`, `release-engineering.md` |
 | L | Infra / IaC / containers / cloud / serverless | `domain-l.md`, `infra-iac-containers.md` (how-to-secure existing), `infra-evolution-by-stage.md` (when-to-add, by stage) |
 | M | Observability | `domain-m.md`, `observability.md` |
 | N | Config, secrets, environments | `domain-n.md` |

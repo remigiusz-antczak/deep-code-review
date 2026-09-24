@@ -149,7 +149,10 @@ def _extract_section(doc_lines: list[str], header_re: re.Pattern[str]) -> str | 
     return None
 
 
-_USAGE_RE = re.compile(r"^usage(?![-\w])\s*:?\s*(?P<inline>.*)$", re.IGNORECASE)
+# "usage" must stand alone as a heading word: followed by a colon, whitespace, or
+# end of line. Prose that merely starts a docstring line with "usage)." or
+# "usage," is not a CLI section (it leaked a sentence fragment into a CLI cell).
+_USAGE_RE = re.compile(r"^usage(?=:|\s|$)\s*:?\s*(?P<inline>.*)$", re.IGNORECASE)
 _EXIT_RE = re.compile(
     r"^(?:exit codes?\b[^:]*|.+\(\s*exit codes?\s*\))\s*:?\s*(?P<inline>.*)$",
     re.IGNORECASE,
@@ -436,6 +439,9 @@ def run_selftest() -> int:
         case(_USAGE_RE.match("Usage:") is not None, "usage regex: 'Usage:' matches")
         case(_USAGE_RE.match("Usages of this tool") is None, "usage regex: 'Usages' does not false-positive")
         case(_USAGE_RE.match("usage-notes") is None, "usage regex: 'usage-notes' does not false-positive")
+        case(_USAGE_RE.match("usage). Exit 2 is never a pass.") is None, "usage regex: prose 'usage).' is not a CLI heading")
+        case(_USAGE_RE.match("usage, then exits.") is None, "usage regex: prose 'usage,' is not a CLI heading")
+        case(_USAGE_RE.match("USAGE  python3 x.py") is not None, "usage regex: 'USAGE <cmd>' inline still matches")
         case(_EXIT_RE.match("EXIT CODES (fail closed)") is not None, "exit regex: leading 'EXIT CODES (...)' still matches")
         case(_EXIT_RE.match("CONTRACT (exit codes)") is not None, "exit regex: trailing '(exit codes)' heading matches")
         case(_EXIT_RE.match("Exit codes: 0 ok; 1 bad.") is not None, "exit regex: 'Exit codes: ...' inline still matches")

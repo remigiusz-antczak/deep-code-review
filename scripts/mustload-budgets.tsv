@@ -189,6 +189,12 @@
 # Floors: phase-floor-light 35866->28025 (-21.9%), phase-floor-full
 # 47460->36096 (-23.9%). Archetype rows unchanged (none load these files).
 #
+# method.md gained the FULL-mode rank/append/checkpoint bullet (w63/field-c):
+# a solo FULL lane needs a blast-radius read order, a per-run budget, and an
+# 80%-checkpoint partial report so a rate-limited lane leaves written findings
+# instead of nothing (field friction #1). Floors: phase-floor-light
+# 28025->28178 (+153), phase-floor-full 36096->36249 (+153).
+#
 web	23349
 mobile	14046
 api / service	18829
@@ -196,6 +202,6 @@ data / ETL	19548
 agent / LLM / MCP	18981
 IaC / platform	4342
 lib / SDK	10907
-phase-floor-light	28025
-phase-floor-full	36096
+phase-floor-light	28178
+phase-floor-full	36249
 phase-conditional	method-situational.md

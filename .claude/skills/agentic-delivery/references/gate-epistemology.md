@@ -1,6 +1,34 @@
-# Gate epistemology — full statements of the principles `SKILL.md` indexes in one line
+# Gate epistemology — the twelve public principles, with full statements of 3, 9, 11, 12
 
-Read this when: a gate flips, a count jumps, or a check could not run and you must call it defect, flake, or `UNVERIFIED` (3); before closing, deduplicating, or deleting shared state (9); before reporting a change as visible or done (11); before shaping a choice as an owner gate when a ratified invariant may already decide it (12). `SKILL.md` **Gate epistemology** keeps the numbered one-line index and the short principles in full; the numbering is shared, so "principle N" resolves in either file.
+Read this when: adding a gate (4); a publish boundary (1, 2); a check flips, can't run, or lacks input (3, 5); a merge train or revert (6, 10); tests (7); public artifacts (8); closing shared state (9); done (11); invariant forks (12). In detail: a gate flips, a count jumps, or a check could not run and you must call it defect, flake, or `UNVERIFIED` (3); before closing, deduplicating, or deleting shared state (9); before reporting a change as visible or done (11); before shaping a choice as an owner gate when a ratified invariant may already decide it (12). `SKILL.md` **Gate epistemology** routes here; the numbering is shared, so "principle N" resolves in either file.
+
+---
+
+## The twelve principles
+
+Copied as principles, not as anyone's private playbook:
+
+1. **Publish boundary is the gate.** Private data may exist in a private
+   checkout; the failure is *escape* into a public artifact, PR title,
+   changelog, compiled bundle, or example. Scan those surfaces, not only
+   file bodies.
+2. **Banlist split.** Committed `.banlist.txt` = generic secret shapes.
+   Gitignored local file = real identifiers. Fail closed if the committed
+   list is missing or malformed. Report `file:line`, never echo the match.
+3. **A gate can be wrong about why.** Real defect fails closed; a check that could not run is `UNVERIFIED`, and a required one still blocks even when authorization exists (evidence and permission are separate decisions); on a red pipeline find the failing step, rerun a known-flaky check; revert only once the failure reproduces and is tied to the change; re-fetch state when a result surprises you.
+4. **Prove the gate can fail.** Plant, watch red, revert. Required for
+   every new gate this project adds.
+5. **Skip loudly over absent input.** Missing fixture ≠ pass.
+6. **Union proof before a merge train.** G7.
+7. **Test the failure, not only the feature.** Schema reject, authz deny,
+   monotonic-quality overwrite.
+8. **Definitions, not live values**, in any public or compiled artifact.
+9. **Closing or deleting shared state needs evidence, not presumption** — a reproducible reason, unique context migrated first.
+10. **A fleet-wide external advisory is a third case for principle 3, and an
+    independent-queue merge cascade is a cadence choice subordinate to
+    principle 6** — depth and honest limits: `references/merge-queue-worktrees.md`.
+11. **"Visible/done" is measured on the owner's own surface, never a proxy** — wired ≠ rendered ≠ has a real value.
+12. **A fork a ratified invariant already decides is not an owner gate**; a change that would reverse one is queued to the owner, never applied silently.
 
 ---
 

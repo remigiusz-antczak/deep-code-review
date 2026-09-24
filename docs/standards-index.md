@@ -1253,3 +1253,17 @@ row fetched 2026-09-24.
 | OWASP Top 10 for LLM Applications (2025 page) | https://genai.owasp.org/llm-top-10/ | Re-fetched: the page still presents the 2025 edition (LLM01:2025 Prompt Injection, LLM02:2025 Sensitive Information Disclosure, LLM05:2025 Improper Output Handling, LLM06:2025 Excessive Agency). `threat-modeling.md` cites the 2026 IDs used by `security-ai-agents.md`, verified from the 2026 PDF in the 2026-09-08 verification addendum above. |
 
 The OWASP Threat Modeling Cheat Sheet and Threat Modeling Manifesto quotes above were re-confirmed verbatim by a second fetch on 2026-09-24. The cheat sheet attributes the four questions to the Manifesto.
+
+## Verified by direct fetch (2026-09-24) — bulk/agent dependency-upgrade procedure (`dependency-bulk-upgrades.md`)
+
+Sourced for the "reaching latest-stable at scale" batching procedure: grouping, scheduling,
+automerge scope, lockfile provenance verification, and grouped-update tier separation. Each
+row fetched 2026-09-24.
+
+| Standard / source | URL | What was confirmed |
+|---|---|---|
+| Renovate — Automerge | https://docs.renovatebot.com/key-concepts/automerge/ | "Renovate will wait for the required tests to pass before it automerges." Non-major automerge example uses `"matchUpdateTypes": ["minor", "patch"]` restricted to `"matchCurrentVersion": "!/^0/"` because pre-1.0 versions "can make breaking changes at _any_ time." Guidance: "we recommend you enable automerge for any dependency update where you would select 'merge' anyway" — majors are excluded by default practice. |
+| Renovate — `packageRules` (`separateMajorMinor`) | https://docs.renovatebot.com/configuration-options/#packagerules | "Usually you won't want to automerge _all_ PRs, for example most people would want to leave major dependency updates to a human to review first." `separateMajorMinor` isolates major updates into their own PRs; `separateMinorPatch` further splits minor from patch. |
+| Renovate — Scheduling | https://docs.renovatebot.com/key-concepts/scheduling/ | "Because Renovate defaults to 'always on' and 'open PRs right away' it can overwhelm you with 'new PR' notifications. Use the schedule to control when Renovate looks for updates." |
+| GitHub Docs — Optimizing PR creation for Dependabot version updates (grouping) | https://docs.github.com/en/code-security/tutorials/secure-your-dependencies/optimizing-pr-creation-version-updates | "You can use `groups` to consolidate updates for multiple dependencies into a single pull request." Example: a group scoped to `update-types: ["minor", "patch"]` for one dependency family, where "All major updates will continue to be raised as individual pull requests" — the documented pattern for keeping majors out of a bulk group. |
+| npm Docs — `npm audit` (`audit signatures`) | https://docs.npmjs.com/cli/v11/commands/npm-audit | "Registry signatures can be verified using the following `audit` command: $ npm audit signatures." "The `audit signatures` command will also verify the provenance attestations of downloaded packages." Caveat: "Because provenance attestations are such a new feature, security features may be added to (or changed in) the attestation format over time." |

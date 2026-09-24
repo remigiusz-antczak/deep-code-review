@@ -1920,6 +1920,17 @@
         "Names the earliest (lowest-numbered) PR as canonical",
         "Directs the other lanes to drop their copy and rebase on the canonical PR rather than resolving the conflicts by hand or landing every copy"
       ]
+    },
+    {
+      "id": "gate-principle-reached-via-trigger",
+      "prompt": "I'm adding a new CI gate that fails a PR when a generated file is stale. It passes on my branch. Can I mark it required now?",
+      "expected_output": "Adding a gate is a trigger in SKILL.md's Gate epistemology router ('you add a gate (4)'), so read references/gate-epistemology.md (or find its INDEX.md row) instead of answering from memory. Principle 4 applies: prove the gate can fail \u2014 plant a stale generated file, watch the gate go red, revert \u2014 before trusting or requiring it; a gate that only ever ran green is unproven. If the gate cannot read its input it must skip loudly (principle 5), never pass.",
+      "expectations": [
+        "Routes through the Gate epistemology trigger in SKILL.md (or the INDEX.md row) to references/gate-epistemology.md rather than relying on a principle list in SKILL.md",
+        "States principle 4: plant a defect, watch the gate go red, revert, before the gate is trusted or made required",
+        "Does not accept 'it passes on my branch' as proof the gate works",
+        "Treats a gate that cannot read its input as a loud skip or UNVERIFIED, never a pass (principle 5)"
+      ]
     }
   ]
 }

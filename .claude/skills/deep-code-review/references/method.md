@@ -95,6 +95,15 @@ say so.
   unit manifest). **Phase 5 reconciles the report against this ledger** — a domain
   the ledger called applicable but the report never rules on, or a fan-out unit
   whose finder never completed, is `unverified`, not a silent omission.
+- **FULL on a large target: rank, append, checkpoint.** Before reading a line,
+  rank the coverage ledger's domains by **blast radius**: money/billing, then
+  auth/authz, then data-loss (deletes, migrations, unbacked writes), then
+  secrets/config, then the rest. State a **per-run budget** in the
+  first-response block (`BUDGET: <tool-calls|tokens> cap N`). **Append each
+  area's findings to the out-of-tree report file as it finishes**
+  (`report-format.md`) — never hold to Phase 5. **At 80% of budget**, stop new
+  domains, write the partial report's reviewed/unreviewed ledger, and hand
+  back cleanly.
 
 **Phase 1 — Establish ground truth.** Install/build with the documented steps;
 record every deviation (a broken "one-command setup" is a finding). **Run the

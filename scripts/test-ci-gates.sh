@@ -449,6 +449,47 @@ else
   record 1 "size-ratchet: skips only when the base config predates byte adoption"
 fi
 
+# Case J: a row is dropped, but its file was ALSO deleted -> legitimate, passes.
+git -C "$ratchetroot" reset --hard "$ratchet_base" -q >/dev/null 2>&1
+git -C "$ratchetroot" rm -q "$ratchetroot/.claude/skills/demo/references/ref.md" >/dev/null 2>&1
+printf '# unit: bytes\n.claude/skills/demo/SKILL.md\t12\n' \
+  >"$ratchetroot/scripts/size-budgets.tsv"
+git -C "$ratchetroot" add -A >/dev/null 2>&1
+git -C "$ratchetroot" commit -qm "drop row for a file that was deleted" >/dev/null 2>&1
+
+gate "$GATES" size-ratchet --base "$ratchet_base" --config "$ratchetroot/scripts/size-budgets.tsv" "$ratchetroot"
+if [ "$GATE_RC" -eq 0 ]; then
+  record 0 "size-ratchet: dropping a row for a file also deleted needs no marker and passes"
+else
+  record 1 "size-ratchet: dropping a row for a file also deleted needs no marker and passes"
+fi
+
+# Case K: planted RED — a row is dropped while its file STILL exists (the
+# README.md-row regression this case guards against). No marker can approve a
+# silent deletion; it must FAIL and name the row.
+git -C "$ratchetroot" reset --hard "$ratchet_base" -q >/dev/null 2>&1
+printf '# unit: bytes\n.claude/skills/demo/SKILL.md\t12\n' \
+  >"$ratchetroot/scripts/size-budgets.tsv"
+git -C "$ratchetroot" add -A >/dev/null 2>&1
+git -C "$ratchetroot" commit -qm "silently drop row for a file that still exists" >/dev/null 2>&1
+
+gate "$GATES" size-ratchet --base "$ratchet_base" --config "$ratchetroot/scripts/size-budgets.tsv" "$ratchetroot"
+if [ "$GATE_RC" -ne 0 ] && grep -q 'RATCHET FAIL: .claude/skills/demo/references/ref.md had a budget row' "$WORK/last.log"; then
+  record 0 "size-ratchet: FIRES when a row is silently dropped for a file that still exists (planted RED)"
+else
+  record 1 "size-ratchet: FIRES when a row is silently dropped for a file that still exists (planted RED)"
+fi
+
+# The real repo's config carries every row it had at origin/main's tip that
+# this branch's base still ships (proves the README.md-row regression can't
+# recur silently in the real config, not only the synthetic fixture above).
+gate "$GATES" size-ratchet --base "origin/main" --config "$ROOT/scripts/size-budgets.tsv" "$ROOT"
+if [ "$GATE_RC" -eq 0 ]; then
+  record 0 "size-ratchet: the real repo config drops no row for a file that still exists vs origin/main"
+else
+  record 1 "size-ratchet: the real repo config drops no row for a file that still exists vs origin/main"
+fi
+
 # Every overlay flag that ADDS a skill (a WITH_* var guarding a SKILLS+= block)
 # must also appear in the AGENTS.md overlay-stamp guard, or a standalone
 # --with-<x> install lands the skill but writes no stamp — the guard-omission bug

@@ -44,6 +44,16 @@ query is a named failure mode, not a hypothetical one. **Pilot before full fan-o
 batch, run a handful of lanes first, fix what the pilot exposes, then commit the rest of the width — cheaper
 than discovering a bad task boundary after the full width is already running.
 
+## Escalate a lane, don't just retry it
+
+**Escalate a lane, don't just retry it.** After two equivalent failures on the
+same lane, change approach — not the same fix again (`SKILL.md` *Failure*). In order
+of cost: reframe the task boundary, decorrelate (fresh context or a different
+model), or move to a stronger model tier (`model-tiering.md`) — start at the
+stronger tier only when blast radius already calls for decorrelation
+(`idea-critic`'s high-blast rule), not by default; a cheaper tier that clears the
+gate is preferred.
+
 ## Cap in-flight write lanes by landed artifacts, not lane count or headroom
 
 The decomposition rule above sizes the *total* lanes against objectives; this caps the *in-flight* write lanes

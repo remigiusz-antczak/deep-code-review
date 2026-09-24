@@ -8,7 +8,7 @@ default for this lane, not a suggestion.
 - One writer per worktree. Never bare `git stash` (stack is shared — use a WIP commit instead). Never `--no-verify`. Never force-push without an owner-authored grant on file.
 
 ## Scope
-- Before editing: `python3 .claude/skills/agentic-delivery/scripts/focus_gate.py check --item <issue>` and `python3 .claude/skills/agentic-delivery/scripts/claim_probe.py --repo <owner/name> --issue <issue> --ref '#<issue>' --paths <glob>`.
+- Before starting: `python3 .claude/skills/agentic-delivery/scripts/focus_gate.py check --item <issue>`, then `python3 .claude/skills/agentic-delivery/scripts/claim_probe.py --repo <owner/name> --issue <issue> --ref '#<issue>' --paths <glob> --agent <agent-id> --claim --post` (checks and, only on GO, posts the CLAIM in one call) — abort if it prints NO-GO (a YIELD readout is always also NO-GO).
 - Any ask outside this brief's scope: `python3 .claude/skills/agentic-ceo/scripts/task_ledger.py add --ask "<text>"` — never a private note or a silent scope-creep edit.
 
 ## Communication
