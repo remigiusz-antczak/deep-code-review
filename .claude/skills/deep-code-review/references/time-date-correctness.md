@@ -202,6 +202,23 @@ compare, compared with the wrong operator." The adversarial input is 2+ records 
 engineered identical timestamp, in the stable-sort order the code produces — not the 0/1-record
 empty boundary a reviewer usually tests.
 
+## A pinned test `NOW` fed to code that reads the real clock is a dated failure
+
+The general clock-seam rule lives in `testing-and-evals.md` (*Deterministic & hermetic*); this is its dated failure.
+
+A test pins `NOW = datetime(<fixed date>)` and derives fixtures from it (`released = NOW - 1h`), then
+passes them to an entry point that takes no injected clock and measures age against the **real** clock.
+The margin argued relative to `NOW` holds only while `real_now - NOW < threshold`; on the day it closes,
+every branch goes red at once with no diff to blame, which reads as a flaky gate. For each fixture time,
+check **which clock the code compares it against**: a pinned `NOW` is safe only when every clock read in
+the exercised path uses that same injected value; otherwise derive the fixture from the real clock at test
+time or inject the clock into that entry point too. A test mixing a pinned constant with an un-injected
+entry point is a finding even when a comment argues the margin is large. With the clock injected, pin the
+threshold itself: one fixture just before, one exactly at, and one just after the boundary. Cheap catch: a CI job that runs
+the suite with the clock advanced (+30 and +365 days via a faketime-style shim). When it fires fleet-wide,
+treat it as agentic-delivery's `merge-queue-worktrees.md` *fleet-wide finding*: one owner lands one fix while
+other lanes hold pushes, then they resync (issues #1140, #1141).
+
 **🚩 red flags**: a recurring wall-clock event stored as one fixed UTC instant; a
 future local time whose offset is frozen at creation; a local↔instant conversion with
 no fold/gap (ambiguous/missing) handling; `now()`/`datetime.now()` naive (no tz);
@@ -211,4 +228,5 @@ renders a day early for viewers behind UTC); a timestamp **ingested** with no of
 all-day event) stored in a `TIMESTAMP`/epoch column instead of a date-only type;
 wall-clock subtraction for a duration or timeout; a hard-coded `86400` / `3600*24`;
 tzdata/ICU with no version pin or no update path; a blanket "store everything in UTC"
-applied to a wall-clock-anchored recurrence.
+applied to a wall-clock-anchored recurrence; a test fixture built from a pinned `NOW` passed to
+an entry point that reads the real clock.

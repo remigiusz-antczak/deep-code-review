@@ -3,6 +3,16 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.446.0] — 2026-09-24
+
+### Fixed
+- `merge_train.py` never compares against stale fetched refs: forced refspecs into per-run namespaces, `ls-remote` before and after fetch with bounded retry, a drifted member is skipped instead of aborting the cycle, crashed runs' ref namespaces are swept (live runs untouched), cleanup never raises, and a post-merge base mismatch halts with "landed; base unverified" (#1139).
+
+### Added
+- Review rule for time-bomb tests: a fixture derived from a pinned `NOW` fed to code that reads the real clock passes only until the calendar crosses a threshold, then fails every branch at once; inject the clock or derive fixtures from the real clock, and test boundary behaviour before/at/after the threshold (#1140, #1141).
+- size-budget-raise: .claude/skills/deep-code-review/references/merge-operations.md 44438→44836 merge-train fetch-freshness rule and member-skip clause (#1139)
+- size-budget-raise: .claude/skills/deep-code-review/references/time-date-correctness.md 17098→18635 pinned-NOW vs real-clock test rule with cross-link (#1140 #1141)
+
 ## [1.445.0] — 2026-09-24
 
 ### Added — navigation, measurement, fleet resilience

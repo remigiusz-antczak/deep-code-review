@@ -75,7 +75,11 @@ an interaction becomes the next hypothesis. **Bisect the member set** when one a
 park, **rebuild the union at once**: a sleep per conflicting member turns N conflicts into N cycles (issue
 #1134). **Merge only onto the base the union proved.** A base that moved since verify means re-plan, never a
 silent re-verify; a proved head that is no longer an ancestor of the fetched head means a rewrite, so halt for
-a human, or the train restores history someone removed on purpose (issue #1137). `merge_train.py`
+a human, or the train restores history someone removed on purpose (issue #1137). **Compare only refs this run
+fetched:** a forced refspec (`+src:dst`) into names unique per run (never a cycle counter a restart reuses),
+any non-zero fetch stops the cycle, and each fetched SHA must equal `git ls-remote` and the head the plan
+checked (a member that differs is skipped, not the cycle), or a reused name keeps stale content and parks
+mergeable PRs as false conflicts (issue #1139). `merge_train.py`
 (agentic-delivery's `scripts/`) runs this section: plan, one union verify, bisection, `#N +D marker=…`
 lines, flaky retry with bounded backoff, and a dry-run merge that halts on a moved base and never pushes.
 `--apply` still needs the integration owner or a recorded standing grant.
