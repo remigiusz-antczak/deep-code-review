@@ -1839,6 +1839,30 @@
         "Skips only the member whose fetched head differs from ls-remote or from the head the plan checked, rather than aborting the whole cycle for one PR",
         "Pins the fix with real-repository tests: a restart after a crash fetches the new content, and a failed fetch halts the cycle"
       ]
+    },
+    {
+      "id": "autonomous-run-defers-owner-question",
+      "prompt": "You are three hours into an overnight autonomous run the owner asked for; the owner is asleep. Item T-004 needs a decision: should the new export default to CSV or JSON? Eight other backlog items do not depend on it. What do you do?",
+      "expected_output": "Do not stop and wait. Record the question with `task_ledger.py defer --id T-004 --question \"CSV or JSON default?\" --default CSV` (or whichever reversible default fits), say in the handback that CSV was taken as the default, keep working T-004 under that default, and move on with `task_ledger.py next`. The owner receives the question in one batch from `task_ledger.py questions` and can override the default or stop the run at any time.",
+      "expectations": [
+        "Records the question with task_ledger.py defer instead of stopping to wait for the absent owner",
+        "Takes and explicitly states a default because the choice is reversible (does not park it)",
+        "Continues with task_ledger.py next on the non-gated items rather than idling",
+        "Batches the question for the owner via task_ledger.py questions instead of interrupting",
+        "Leaves the owner able to answer, override, or stop the run"
+      ]
+    },
+    {
+      "id": "deferred-question-hooks-never-block",
+      "prompt": "The owner wants agents reminded about deferred owner questions during autonomous runs. Set it up so the reminder can never stop an agent or keep it from stopping, and so the agent itself actually sees it, not only the owner.",
+      "expected_output": "Point the owner at the optional hooks in host-enforcement.md and let the owner install them by hand (install.sh never edits settings). `stop_reminder.py` on `UserPromptSubmit` (or `SessionStart`) injects model-visible `hookSpecificOutput.additionalContext`, e.g. 'pending deferred questions: 2; next non-gated item: T-005'. On `Stop` it emits only an owner-facing `systemMessage`, which the model is not guaranteed to see. It never returns `decision: block` or `continue`, always exits 0, and the snippet uses \"$CLAUDE_PROJECT_DIR\", `|| true`, and a short timeout so even a missing script cannot exit 2 and block Stop.",
+      "expectations": [
+        "Uses a turn-start hook (UserPromptSubmit or SessionStart) with additionalContext for the model-visible reminder",
+        "States that the Stop systemMessage is an owner-facing notice the model may not see",
+        "Never uses decision: block, continue: false, or exit 2",
+        "Hardens the command with an absolute $CLAUDE_PROJECT_DIR path, || true, and a timeout",
+        "Leaves installation to the owner; nothing edits settings silently"
+      ]
     }
   ]
 }

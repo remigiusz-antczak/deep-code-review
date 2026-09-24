@@ -198,3 +198,37 @@ see "Subagent model + cache-TTL pin" above; not restated here.
   "subagentPromptCacheTtl": "5m"
 }
 ```
+
+## Deferred-question hooks (optional, advisory)
+
+**Advisory, not Host-enforced:** they never block and never continue a turn.
+`agentic-ceo/scripts/stop_reminder.py` — **use this when** an autonomous run
+has stalled on a question the absent owner could not answer while other work
+remained. A notice is due when a `task_ledger.py defer` question is pending and
+an open or doing row exists. The hook event picks the output (hooks reference,
+`docs/standards-index.md`, 2026-09-24):
+
+- `SessionStart` / `UserPromptSubmit`: **model-visible** —
+  `hookSpecificOutput.additionalContext` says "pending deferred questions: N;
+  next non-gated item: T-###" at turn start.
+- `Stop`: an **owner-facing** notice via `systemMessage` ("Warning message shown
+  to the user"); the model is not guaranteed to see it.
+
+Any failure (missing module, bad input, malformed file, crash) prints nothing
+and exits 0. The snippet adds `|| true` and a short `timeout`, so even a missing
+script cannot exit 2, which would block `Stop`. The owner can still stop the
+agent or answer. `--selftest` proves each branch. The owner installs it by
+hand; `install.sh` never edits settings:
+
+```json
+"hooks": {
+  "UserPromptSubmit": [
+    { "hooks": [{ "type": "command", "timeout": 5,
+        "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/skills/agentic-ceo/scripts/stop_reminder.py || true" }] }
+  ],
+  "Stop": [
+    { "hooks": [{ "type": "command", "timeout": 5,
+        "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/skills/agentic-ceo/scripts/stop_reminder.py || true" }] }
+  ]
+}
+```

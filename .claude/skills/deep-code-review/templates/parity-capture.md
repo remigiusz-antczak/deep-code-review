@@ -20,6 +20,12 @@ For every page in the correspondence table, at every viewport in the list below,
    `checkVisibility()`.
 4. Optional section screenshots: `<out>/<side>-shots/<page>@<width>/<section id>.png`. Pass that folder
    to `--design-shots` / `--app-shots` together with `--report`.
+5. **Band markers (only with `BANDS=1`, for `parity_differ.py --bands headings`).** Use this when the design
+   and the app nest a section differently, so `data-section` ancestors would crop different regions. Every
+   element under `<body>` carries `data-y`, its integer top y in page coordinates. Section titles that are
+   not h1/h2 carry `data-anchor` on both sides. The screenshots become heading y-band clips named by band
+   id. The top y only places an element in a band; it is never a parity signal (SECTION BANDS in
+   `parity_differ.py`).
 
 ## Same state on both sides (the precondition)
 
@@ -42,6 +48,7 @@ import { execSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 
 const [side, url, page] = process.argv.slice(2);
+const BANDS = Boolean(process.env.BANDS);
 const PROPS = ["font-family", "font-size", "font-weight", "line-height", "letter-spacing", "color",
   "background-color", "padding", "border-radius", "box-shadow"];
 if (side === "app" && process.env.SEED_CMD) execSync(process.env.SEED_CMD, { stdio: "inherit" });
@@ -56,8 +63,9 @@ for (const vp of (process.env.VIEWPORTS || "1440x900").split(",")) {
   }
   const tab = await ctx.newPage();
   await tab.goto(url, { waitUntil: "networkidle" });
-  await tab.evaluate((props) => {
-    for (const el of document.querySelectorAll("[data-section] *")) {
+  await tab.evaluate(([props, bands]) => {
+    for (const el of document.querySelectorAll(bands ? "body *" : "[data-section] *")) {
+      if (bands) el.setAttribute("data-y", String(Math.round(el.getBoundingClientRect().top + scrollY)));
       if (/\b(hidden|sr-only|invisible|d-none|visually-hidden)\b/.test(el.getAttribute("class") || "")) {
         el.setAttribute("data-visible", String(el.checkVisibility()));
       }
@@ -67,13 +75,39 @@ for (const vp of (process.env.VIEWPORTS || "1440x900").split(",")) {
         el.setAttribute("data-cs", JSON.stringify(Object.fromEntries(props.map((p) => [p, cs.getPropertyValue(p)]))));
       }
     }
-  }, PROPS);
+  }, [PROPS, BANDS]);
   mkdirSync(`out/${side}`, { recursive: true });
   writeFileSync(`out/${side}/${page}@${width}.html`, await tab.content());
   const shots = `out/${side}-shots/${page}@${width}`;
   mkdirSync(shots, { recursive: true });
-  for (const sec of await tab.locator("[data-section]").all()) {
-    await sec.screenshot({ path: `${shots}/${await sec.getAttribute("data-section")}.png` });
+  if (BANDS) {
+    // Band starts as the differ computes them: data-anchor elements win, else h1/h2; same top y folds.
+    const bands = await tab.evaluate(() => {
+      const top = (el) => Math.round(el.getBoundingClientRect().top + scrollY);
+      const text = (el) => el.textContent.replace(/\s+/g, " ").trim().toLowerCase();
+      let cands = [...document.querySelectorAll("[data-anchor]")].filter((el) => el.checkVisibility() && text(el));
+      const level = (el) => el.getAttribute("role") === "heading" ? Number(el.getAttribute("aria-level") || 2)
+        : Number(el.tagName[1]);
+      if (!cands.length) cands = [...document.querySelectorAll("h1, h2, [role=heading]")].filter((el) =>
+        el.checkVisibility() && text(el) && level(el) <= 2);
+      const seen = new Set(), count = {}, out = [{ id: "(page header)", y: 0 }];
+      for (const el of cands.sort((a, b) => top(a) - top(b))) {
+        if (seen.has(top(el))) continue;
+        seen.add(top(el));
+        count[text(el)] = (count[text(el)] || 0) + 1;
+        out.push({ id: text(el) + (count[text(el)] > 1 ? ` #${count[text(el)]}` : ""), y: top(el) });
+      }
+      return out.map((b, i) => ({ ...b, end: out[i + 1]?.y ?? document.documentElement.scrollHeight }));
+    });
+    for (const b of bands.filter((b) => b.end > b.y)) {
+      if (b.id.includes("/")) { console.error(`band shot skipped (id contains "/"): ${b.id}`); continue; }
+      await tab.screenshot({ path: `${shots}/${b.id}.png`, fullPage: true,
+        clip: { x: 0, y: b.y, width, height: b.end - b.y } });
+    }
+  } else {
+    for (const sec of await tab.locator("[data-section]").all()) {
+      await sec.screenshot({ path: `${shots}/${await sec.getAttribute("data-section")}.png` });
+    }
   }
   await ctx.close();
 }
@@ -81,7 +115,8 @@ await browser.close();
 ```
 
 Screenshots are evidence for the orchestrator's HTML report. Keep them outside the repo, or gitignore them;
-a committed screenshot needs a privacy review because text gates cannot read pixels.
+a committed screenshot needs a privacy review because text gates cannot read pixels. A band clip's height
+only frames the picture. With `BANDS=1`, add `--bands headings` to the gate command below.
 
 ## Run the gate
 

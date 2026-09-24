@@ -137,7 +137,10 @@ near-duplicate prints both texts; answer `--same T-###` or `--new`. Report
 from `status` (exit 1 = open asks exist, informational), never memory.
 `next` returns `doing` first, then `.claude/PRIORITY.md`, then the oldest
 open; `reconcile` catches a dropped ask. `done` needs a sha/URL/`#N`/test
-id; `block` needs `--party`; `drop` needs the owner's `--quote`.
+id; `block` needs `--party`; `drop` needs the owner's `--quote`. A question
+for an absent owner goes to `defer` (a stated default, or `--park` for that
+item only), then `next`; `questions` is the owner's batch (rule:
+`agentic-delivery`'s `unattended-operating-mode.md`).
 
 ## Stay strategic
 The conductor routes, decides, and oversees; it does not do a specialist's

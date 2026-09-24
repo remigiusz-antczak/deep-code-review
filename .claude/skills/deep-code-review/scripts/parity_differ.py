@@ -31,7 +31,9 @@ or denser app with an equal inventory is a MATCH; a same-size app missing one
 button is a MISMATCH. Geometry belongs only to layout-defect checks (overlap,
 clipping, viewport fit), never to a "complete" or "matches" verdict. A
 `data-lines` count (LINE COUNTS below) is a count of rendered line boxes set by
-the capture, not a measurement: the parser never sees a height.
+the capture, not a measurement: the parser never sees a height. Under
+`--bands` a capture-set top y (`data-y`) decides only WHICH band an element
+belongs to (SECTION BANDS); it never reaches a verdict, a score, or a row.
 
 CONTRACT (fail-closed; every branch below is load-bearing, not cosmetic)
 -------------------------------------------------------------------------
@@ -152,6 +154,33 @@ header or KPI card leaked into the crop). A failing section alone is
 UNVERIFIED and unscored (`crop_problems`); the others are still scored and
 listed, and the exit is 9. A heading missing from one section and extra in
 another is a MOVED row (an open difference), not a crop problem.
+
+SECTION BANDS (`--bands headings`) — crops that match across DOM nesting
+-------------------------------------------------------------------------
+A design export often lays a section out as flat siblings (a heading, then
+its body) while the app nests it in wrappers, so `data-section` ancestors
+crop different regions on the two sides. With `--bands headings` a section
+is instead a vertical band of each capture's own layout: from one band
+start's top y to the next one's. Band starts are the visible `data-anchor`
+elements when the side has any (they win), else its visible h1/h2 headings
+(role=heading with aria-level <= 2 included). Every element carries its
+top y as an integer `data-y` (an element without one inherits its
+parent's); an element belongs to the last band start at or above it, and
+everything above the first start is the band `(page header)`. A band id is
+the start's whitespace-normalized, case-folded text (` #2`, ` #3` for a
+repeated text, in y order); starts sharing one top y fold into the first in
+document order, so mark stacked titles with `data-anchor` when a row holds
+several headings. `data-section` is ignored, and a band with nothing
+inventoried is dropped. Only starts whose id both sides share cut bands, so
+the two crops cover the same regions: a design-only start's content is
+compared inside the band before it (the heading is a MISSING_IN_APP row, a
+renamed one a CHANGED row) and that band alone is COULD_NOT_CHECK_CROP; an
+app-only start's content likewise joins the app band before it (listed as
+info, its items EXTRA_IN_APP rows, never a silent superset). COULD_NOT_CHECK:
+a `.json` side, an invalid `data-y`, a side with no `data-y`, or one side
+banded by anchors and the other by headings. Not with
+`--baseline`; `--report` then shows screenshots only (no srcdoc crop). The
+capture template exports `data-y` and clips band screenshots.
 
 ELEMENT INVENTORY (per section, HTML sides only)
 ------------------------------------------------
@@ -337,20 +366,21 @@ USAGE
 -----
   parity_differ.py --design <file> --app <file> [--accept <tsv> [--accept-rev REV]]
                    [--min-pairs N] [--style [--style-min-pairs N]] [--json]
-                   [--baseline F [--write-baseline [--accept-regression]]]
+                   [--baseline F [--write-baseline [--accept-regression]]] [--bands headings]
                    [--workflow --design-tokens F --app-tokens F [--token-map F]
                     [--token-min-pairs N]] [--report F [--design-shots D] [--app-shots D]]
   parity_differ.py --selftest
 Public API for sibling scripts: `compare()` (the dict `--json` prints),
 `run_workflow()` (the same dict plus `workflow`), `write_report()`,
 `inventory_keys()` and `read_side()` (one side, never a verdict),
-`crop_problems()`, and `fingerprint()` / `diff_baseline()` /
-`apply_baseline()` (BASELINE).
+`crop_problems()`, `band_starts()` (SECTION BANDS), and `fingerprint()` /
+`diff_baseline()` / `apply_baseline()` (BASELINE).
 """
 from __future__ import annotations
 
 import argparse
 import base64
+import bisect
 import contextlib
 import functools
 import html
@@ -470,6 +500,7 @@ class _Frame:
         "section",
         "sid",
         "tag",
+        "ysec",
     )
 
     def __init__(self, tag: str, sid: str | None) -> None:
@@ -492,6 +523,7 @@ class _Frame:
         self.lines: str | None = None           # its data-lines (rendered line-box count)
         self.cscap: list[str] | None = None     # passive: its full visible text
         self.csown: list[str] | None = None     # its OWN text nodes (field-B pairing)
+        self.ysec: str | None = None            # --bands: the band its own data-y falls in
 
 
 class _SectionExtractor(HTMLParser):
@@ -507,9 +539,18 @@ class _SectionExtractor(HTMLParser):
     end of input are finalized by `finish()`.
     """
 
-    def __init__(self) -> None:
-        """Set up the ordered section list, id lookup, and open-tag stack."""
+    def __init__(self, band_fn=None) -> None:
+        """Set up the ordered section list, id lookup, and open-tag stack.
+
+        `band_fn` (SECTION BANDS): when given, `data-section` is ignored and a
+        section is the band `band_fn(top y)` returns for an element's own
+        integer `data-y` (descendants without one inherit it); an invalid
+        `data-y` is logged to `bad_y` (the caller fails closed).
+        """
         super().__init__(convert_charrefs=True)
+        self._band_fn = band_fn
+        self._last_ysec: str | None = None
+        self.bad_y: list[str] = []
         self.sections: list[dict] = []
         self._by_id: dict[str, dict] = {}
         self._stack: list[_Frame] = []
@@ -527,9 +568,11 @@ class _SectionExtractor(HTMLParser):
         for frame in reversed(self._stack):
             if frame.sid is not None:
                 return frame.sid
+            if frame.ysec is not None:
+                return frame.ysec
         return None
 
-    def _record(self, attrs: list[tuple[str, str | None]]) -> str | None:
+    def _record(self, attrs: list[tuple[str, str | None]], tag: str = "") -> str | None:
         """Apply one tag's section markers to the section they belong to.
 
         Registers a new section on `data-section`, and — fail-closed, never
@@ -537,18 +580,28 @@ class _SectionExtractor(HTMLParser):
         `data-item` / `data-empty` marker against the innermost open section
         (preferring a section this same tag just opened). Returns the tag's
         own `data-section` id, if any, so the caller knows whether to push it.
+        In band mode the section is the band of the tag's own `data-y`
+        (stored for `_inventory_start`) and the return value is always None.
         """
         attr_map = dict(attrs)
+        self._last_ysec = None
         if "data-parity-ignore" in attr_map or (self._stack and self._stack[-1].ignored):
             return None   # an ignored subtree registers no section and counts no marker
-        sid = attr_map.get("data-section")
-        if sid is not None and sid not in self._by_id:
-            record = {"id": sid, "items": 0, "empties": 0, "inv": [], "marked": False, "anchors": [], "bad_lines": [],
+        sid = attr_map.get("data-section") if self._band_fn is None else None
+        raw_y = attr_map.get("data-y") if self._band_fn is not None else None
+        if raw_y is not None:
+            if re.fullmatch(r"-?[0-9]+", raw_y.strip()):
+                self._last_ysec = self._band_fn(int(raw_y))
+            else:   # fail closed: a band is never guessed
+                self.bad_y.append(f'<{tag} data-y="{raw_y}">')
+        new = sid if sid is not None else self._last_ysec
+        if new is not None and new not in self._by_id:
+            record = {"id": new, "items": 0, "empties": 0, "inv": [], "marked": False, "anchors": [], "bad_lines": [],
                       "unresolved": [], "styles": [], "cs_bad": []}
             self.sections.append(record)
-            self._by_id[sid] = record
+            self._by_id[new] = record
 
-        target = sid if sid is not None else self._innermost_section()
+        target = new if new is not None else self._innermost_section()
         if target is not None and target in self._by_id:
             if "data-item" in attr_map:
                 self._by_id[target]["items"] += 1
@@ -589,7 +642,8 @@ class _SectionExtractor(HTMLParser):
         """Classify one start tag into an inventory role; return its frame."""
         parent = self._stack[-1] if self._stack else None
         frame = _Frame(tag, sid)
-        frame.section = sid if sid is not None else self._innermost_section()
+        frame.ysec = self._last_ysec
+        frame.section = sid if sid is not None else frame.ysec or self._innermost_section()
         classes = (attr_map.get("class") or "").split()
         marker = (attr_map.get("data-visible") or "").strip().lower()
         frame.ignored = bool(parent and parent.ignored)
@@ -848,7 +902,7 @@ class _SectionExtractor(HTMLParser):
 
     def handle_starttag(self, tag: str, attrs: list) -> None:
         """Open tag: record its markers, then push it unless it is void."""
-        sid = self._record(attrs)
+        sid = self._record(attrs, tag)
         frame = self._inventory_start(tag, dict(attrs), sid)
         if tag not in _VOID_TAGS:
             self._stack.append(frame)
@@ -857,7 +911,7 @@ class _SectionExtractor(HTMLParser):
 
     def handle_startendtag(self, tag: str, attrs: list) -> None:
         """Self-closed tag (`<x/>`): record markers; never push (no body)."""
-        sid = self._record(attrs)
+        sid = self._record(attrs, tag)
         self._finalize(self._inventory_start(tag, dict(attrs), sid))
 
     def handle_endtag(self, tag: str) -> None:
@@ -892,6 +946,8 @@ class _SectionExtractor(HTMLParser):
         if top.csown is not None:
             top.csown.append(text)
         if not self._feed_captures(text):
+            if self._band_fn is not None and self._buf and self._innermost_section() != self._buf_section:
+                self._flush()   # a text run never spans two bands
             if self._buf_section is None:
                 self._buf_section = self._innermost_section()
                 block = next((f for f in reversed(self._stack) if f.tag in _BLOCK_TAGS or f.sid is not None), None)
@@ -950,8 +1006,126 @@ def extract_side(path: str | None) -> list[dict] | None:
     return read_side(path)[0]
 
 
-def read_side(path: str | None) -> tuple[list[dict] | None, list[dict]]:
+def _load_raw(path: str | None) -> str | None:
+    """One side's text, or None when absent, unreadable, or whitespace-only."""
+    if not path or not os.path.isfile(path):
+        return None
+    try:
+        with open(path, encoding="utf-8") as fh:
+            raw = fh.read()
+    except (OSError, UnicodeDecodeError):
+        return None
+    return raw if raw.strip() else None
+
+
+def _parse(raw: str, band_fn=None) -> _SectionExtractor:
+    """Run the extractor over one HTML render (band mode when `band_fn` is given)."""
+    parser = _SectionExtractor(band_fn)
+    parser.feed(raw)
+    parser.close()
+    parser.finish()
+    return parser
+
+
+PAGE_HEADER_BAND = "(page header)"   # the band above the first band start (SECTION BANDS)
+
+
+def _band_fn(starts: list[tuple[int, str]]):
+    """`y -> band id` for `(top y, id)` band starts: the last start at or above y, else the page header."""
+    ys, names = [y for y, _ in starts], [n for _, n in starts]
+
+    def band(y: int) -> str:
+        """The band id element top `y` falls in."""
+        i = bisect.bisect_right(ys, y) - 1
+        return names[i] if i >= 0 else PAGE_HEADER_BAND
+    return band
+
+
+def band_starts(path: str | None) -> tuple[str, list[tuple[int, str]]] | str:
+    """One side's band starts `(basis, [(top y, band id), ...])` sorted by y, or a refusal reason.
+
+    Pure read (SECTION BANDS). Candidates are visible `data-anchor` elements
+    (basis "anchors") when the side has any, else visible h1/h2 headings
+    (role=heading with aria-level <= 2 included; basis "headings"), each at
+    its own or inherited `data-y`. A band id is the candidate's whitespace-
+    normalized, case-folded text; a repeated id gets ` #2`, ` #3` in y
+    order; candidates sharing one top y fold into the first in document
+    order. The reason string (never a guess) covers a `.json` side, an
+    unreadable side, an invalid `data-y`, a side with no `data-y`, and a side
+    with no visible anchor or h1/h2 heading.
+    """
+    if path and path.lower().endswith(".json"):
+        return f"a .json side has no layout to band ({path!r}); --bands needs HTML captures with data-y"
+    raw = _load_raw(path)
+    if raw is None:
+        return f"side unreadable or empty ({path!r})"
+    parser = _parse(raw, str)   # one micro-section per distinct top y
+    if parser.bad_y:
+        return f"data-y must be an integer top y — {'; '.join(parser.bad_y[:5])}; re-export it, it is never guessed"
+    if not parser.sections:
+        return f"no element carries data-y ({path!r}); re-capture with the template's data-y export"
+    found = {"anchors": [], "headings": []}
+    for sec in parser.sections:   # (y, document order within that y, text)
+        y = int(sec["id"])
+        heads = [i["label"] for i in sec["inv"] if i["kind"] == "heading" and i["role"] in ("h1", "h2")]
+        found["anchors"] += [(y, k, _clean(t, False)) for k, t in enumerate(sec["anchors"])]
+        found["headings"] += [(y, k, _clean(t, False)) for k, t in enumerate(heads)]
+    basis = "anchors" if any(t for _, _, t in found["anchors"]) else "headings"
+    starts, seen, count = [], set(), Counter()
+    for y, _, text in sorted(found[basis]):
+        if not text or y in seen:
+            continue
+        seen.add(y)
+        count[text.casefold()] += 1
+        n = count[text.casefold()]
+        starts.append((y, text.casefold() + (f" #{n}" if n > 1 else "")))
+    if not starts:
+        return (f"no visible data-anchor or h1/h2 heading to band on ({path!r}); "
+                "--bands never scores a whole page as one band")
+    return basis, starts
+
+
+def _band_plan(design_path: str | None, app_path: str | None):
+    """Two-sided band plan: `(design band_fn, app band_fn, dropped, app_dropped)`, or a refusal reason.
+
+    Only band starts whose id both sides share cut bands, so both sides crop
+    the same regions. `dropped` maps each design-only start to the band its
+    content joins (`host`); the caller reports that band as
+    COULD_NOT_CHECK_CROP. `app_dropped` does the same for app-only starts
+    (their content joins the app's host band, so a renamed heading is one
+    CHANGED row there). Both sides must use the same basis.
+    """
+    sides = []
+    for name, path in (("design", design_path), ("app", app_path)):
+        got = band_starts(path)
+        if isinstance(got, str):
+            return f"{name} side: {got}"
+        sides.append(got)
+    (d_basis, d_starts), (a_basis, a_starts) = sides
+    if d_basis != a_basis:
+        return (f"the design bands by {d_basis} and the app by {a_basis} — export data-anchor on both "
+                "captures or on neither")
+    def keep(starts: list, other: set) -> tuple[list, dict]:
+        """Starts whose id `other` shares, plus `{dropped id: host band}` for the rest."""
+        kept, dropped, host = [], {}, PAGE_HEADER_BAND
+        for y, n in starts:
+            if n in other:
+                kept.append((y, n))
+                host = n
+            else:
+                dropped[n] = host
+        return kept, dropped
+    d_kept, dropped = keep(d_starts, {n for _, n in a_starts})
+    a_kept, a_dropped = keep(a_starts, {n for _, n in d_starts})
+    return _band_fn(d_kept), _band_fn(a_kept), dropped, a_dropped
+
+
+def read_side(path: str | None, band_fn=None) -> tuple[list[dict] | None, list[dict]]:
     """Return `(sections, ignored)` for one side; `sections` is None if it cannot compare.
+
+    With `band_fn` (`y -> band id`, SECTION BANDS) sections are the bands
+    of each element's `data-y` instead of `data-section` ancestors; a band
+    with no inventory or marker is dropped, and a `.json` side is None.
 
     `ignored` lists every `data-parity-ignore` root as `{"section", "id"}`
     (`section` None outside every section): excluded from inventory,
@@ -971,14 +1145,8 @@ def read_side(path: str | None) -> tuple[list[dict] | None, list[dict]]:
     empty/whitespace-only, invalid JSON, or zero sections. A caller must
     treat None as COULD_NOT_CHECK, never as an empty-but-valid side.
     """
-    if not path or not os.path.isfile(path):
-        return None, []
-    try:
-        with open(path, encoding="utf-8") as fh:
-            raw = fh.read()
-    except (OSError, UnicodeDecodeError):
-        return None, []
-    if not raw.strip():
+    raw = _load_raw(path)
+    if raw is None or (band_fn is not None and path.lower().endswith(".json")):
         return None, []
 
     if path.lower().endswith(".json"):
@@ -994,16 +1162,15 @@ def read_side(path: str | None) -> tuple[list[dict] | None, list[dict]]:
                 for row in data if isinstance(row, dict) and "id" in row]
         return rows or None, []
 
-    parser = _SectionExtractor()
-    parser.feed(raw)
-    parser.close()
-    parser.finish()
-    if not parser.sections:
+    parser = _parse(raw, band_fn)
+    secs = [s for s in parser.sections
+            if band_fn is None or s["inv"] or s["items"] or s["empties"] or s["unresolved"] or s["bad_lines"]]
+    if not secs:
         return None, parser.ignored
     return [{"id": s["id"], "populated": s["items"] > 0, "inventory": s["inv"],
              "marked": s["marked"], "unresolved": s["unresolved"], "styles": s["styles"],
              "cs_bad": s["cs_bad"], "anchors": s["anchors"], "bad_lines": s["bad_lines"]}
-            for s in parser.sections], parser.ignored
+            for s in secs], parser.ignored
 
 
 def extract_sections(path: str | None) -> list[tuple[str, bool]] | None:
@@ -1612,8 +1779,14 @@ _BASIS = ("basis: element inventory (headings, visible text, controls by role + 
 def compare(design_path: str | None, app_path: str | None, accept_path: str | None = None,
             accept_rev: str | None = None, use_focus_gate: bool | None = None,
             min_pairs: int | None = None, style: bool = False,
-            style_min_pairs: int | None = None) -> dict:
+            style_min_pairs: int | None = None, bands: str | None = None) -> dict:
     """Compare a design render against an app render; return the full result.
+
+    `bands="headings"` crops sections by heading y-bands (SECTION BANDS)
+    instead of `data-section` ancestors; a band plan that cannot be built
+    is COULD_NOT_CHECK, and a design band whose start the app lacks is a
+    crop problem (UNVERIFIED) listed after the design's own bands; an
+    app-only start is an info line (its content joins the band before it).
 
     The result dict carries `exit_code`, `verdict`, `report` (human text) and,
     once both sides load, `sections` / `overall` completeness, `accepted_n`,
@@ -1636,13 +1809,21 @@ def compare(design_path: str | None, app_path: str | None, accept_path: str | No
         """Result for a verdict reached before any inventory comparison."""
         return {"exit_code": code, "verdict": _VERDICT_NAMES[code], "report": report}
 
-    design, d_ignored = read_side(design_path)
+    d_band = a_band = None
+    dropped: dict = {}
+    a_dropped: dict = {}
+    if bands is not None:
+        plan = _band_plan(design_path, app_path)
+        if isinstance(plan, str):
+            return early(COULD_NOT_CHECK, f"COULD_NOT_CHECK: --bands {bands}: {plan}.")
+        d_band, a_band, dropped, a_dropped = plan
+    design, d_ignored = read_side(design_path, d_band)
     if design is None:
         return early(COULD_NOT_CHECK, (
             f"COULD_NOT_CHECK: design side unreadable, empty, or has no "
             f"sections ({design_path!r}). Two-sided input is required — a "
             "one-sided read cannot certify parity."))
-    app, a_ignored = read_side(app_path)
+    app, a_ignored = read_side(app_path, a_band)
     if app is None:
         return early(COULD_NOT_CHECK, (
             f"COULD_NOT_CHECK: app side unreadable, empty, or has no "
@@ -1724,6 +1905,11 @@ def compare(design_path: str | None, app_path: str | None, accept_path: str | No
         entry.update(design_items=diff["total"], matched=diff["matched"],
                      completeness_pct=_pct(diff["matched"], diff["total"]), rows=diff["rows"])
     _fold_moves(sections)
+    for bid, host in dropped.items():   # --bands: no same crop exists for this band alone
+        crop[bid] = [f"band start '{bid}' is absent from the app capture (heading or anchor missing or "
+                     f"renamed); its design content is compared inside band '{host}'"]
+        sections.append({"id": bid, "state": "no-band-start", "rows": [], "design_items": None,
+                         "matched": None, "completeness_pct": None, "crop": crop[bid]})
 
     tot_matched = tot_items = open_rows = accepted_n = 0
     for entry in sections:
@@ -1779,6 +1965,9 @@ def compare(design_path: str | None, app_path: str | None, accept_path: str | No
     stale = [f"{k[1]}/{k[2]}" for k, row in accept.items() if k[0] == "ignore" and len(k) == 3 and not row["used"]]
     if stale:
         info.append(f"info: ignore row(s) matching no design-side data-parity-ignore (stale): {', '.join(stale)}")
+    if a_dropped:
+        info.append("info: app band start(s) with no design counterpart, compared inside the band before them: "
+                    + ", ".join(f"'{b}' in '{h}'" for b, h in a_dropped.items()))
     n_ignored = len(d_ignored) + len(a_ignored)
     if n_ignored:
         info.append(_ignored_line(d_ignored, a_ignored))
@@ -2185,8 +2374,10 @@ def run_workflow(design_path: str | None, app_path: str | None, design_tokens: s
                  app_tokens: str | None, token_map: str | None = None, accept_path: str | None = None,
                  accept_rev: str | None = None, use_focus_gate: bool | None = None,
                  min_pairs: int | None = None, style_min_pairs: int | None = None,
-                 token_min_pairs: int | None = None) -> dict:
+                 token_min_pairs: int | None = None, bands: str | None = None) -> dict:
     """Foundation-first parity: tokens -> primitives -> sections; return `compare`'s dict + `workflow`.
+
+    `bands` is passed to `compare` (SECTION BANDS).
 
     Stage 1 runs `token_differ.compare` on the token exports; stage 2 is the
     open FOUNDATION properties and PRIMITIVE (role, property) rows of
@@ -2206,7 +2397,7 @@ def run_workflow(design_path: str | None, app_path: str | None, design_tokens: s
         t_code, _, t_report = td.compare(design_tokens, app_tokens, token_map, min_pairs=token_min_pairs)
     t_name = "MATCH" if td and t_code == td.MATCH else "MISMATCH" if td and t_code == td.MISMATCH else "COULD_NOT_CHECK"
     res = compare(design_path, app_path, accept_path, accept_rev, use_focus_gate, min_pairs,
-                  style=True, style_min_pairs=style_min_pairs)
+                  style=True, style_min_pairs=style_min_pairs, bands=bands)
     st = res.get("style") or {"verdict": "STYLE_COULD_NOT_CHECK", "foundation": [], "primitives": []}
     prim_cnc = st["verdict"] == "STYLE_COULD_NOT_CHECK"   # no usable style pair: stage 2 checked nothing
     prims = [f"PRIMITIVE {p['role']} {p['property']}: differs on {p['pairs']}/{p['of']} {p['role']} pair(s) "
@@ -2593,6 +2784,7 @@ def _selftest() -> int:
         "style-identity(counts,top,accepted-ignored,own-text)=ok lines(rows,heading,size-free,one-sided,invalid)=ok "
         "crop(app-leak-scoped,design-reference,plain-heading,moved-heading,no-anchor,shared-heading,workflow)=ok "
         "baseline(write,refuse,clean,removed,style,superset,design-change,masked,malformed,overwrite,path-guard,cli)=ok"
+        " bands(nested-vs-flat,starts,anchor-wins,moved,missing-start,renamed,bad-y,basis,no-y,json,cli)=ok"
     )
     return 0
 
@@ -2810,6 +3002,10 @@ def _selftest_accept(tmp: str, write, check, failures: list, inv_design: str, fx
         _selftest_workflow(tmp, write, check, failures,
                            lambda rel, body, email=owner: commit(email, rel, body))
         # 6. data-parity-ignore, per-section thresholds, style identity, --baseline.
+        try:
+            _selftest_bands(write, check, failures)
+        except Exception as exc:   # noqa: BLE001 — a crash in one block is a failure, not an abort
+            failures.append(f"bands: {type(exc).__name__}: {exc}")
         _selftest_extras(tmp, write, check, failures,
                          lambda rel, body, email=owner: commit(email, rel, body))
     finally:
@@ -3282,6 +3478,114 @@ def _selftest_extras(tmp: str, write, check, failures: list, commit) -> None:
             failures.append(f"{label}: exit {rc}, want {USAGE_ERROR}")
 
 
+def _selftest_bands(write, check, failures: list) -> None:
+    """`--bands headings` cases (SECTION BANDS): nesting-free bands, MOVED, one-band crop, fail-closed."""
+    def ids(res: dict) -> list:
+        """Section ids of a result, in order."""
+        return [s["id"] for s in res.get("sections", [])]
+
+    def rows_of(res: dict) -> set:
+        """Every inventory row as (section, status, item)."""
+        return {(s["id"], r["status"], r["item"]) for s in res.get("sections", []) for r in s["rows"]}
+
+    # 1. The issue's pattern: the design lays a section out as flat siblings
+    # (its data-section sits on the heading alone), the app nests it in
+    # wrappers. Ancestor crops differ; heading y-bands are identical.
+    flat = ('<header data-y="0"><a href="/" data-y="0">Home</a></header>'
+            '<h1 data-y="40">Dashboard</h1>'
+            '<h2 data-section="usage" data-y="100">Usage</h2>'
+            '<p data-y="140" data-item>Requests this month</p><button data-y="180">Export</button>'
+            '<h2 data-section="billing" data-y="300">Billing</h2>'
+            '<p data-y="340" data-item>Next invoice</p><button data-y="380">Pay now</button>')
+    nested = ('<div data-y="0"><nav data-y="0"><a href="/" data-y="0">Home</a></nav>'
+              '<main data-y="40"><h1 data-y="40">Dashboard</h1>'
+              '<section data-section="usage" data-y="100"><div data-y="100"><h2 data-y="100">Usage</h2></div>'
+              '<div data-y="140"><p data-y="150" data-item>Requests this month</p>'
+              '<button data-y="190">Export</button></div></section>'
+              '<section data-section="billing" data-y="310"><h2 data-y="310">Billing</h2>'
+              '<p data-y="350" data-item>Next invoice</p><div data-y="390"><button data-y="390">Pay now</button>'
+              '</div></section></main></div>')
+    d_flat, a_nested = write("band-flat.html", flat), write("band-nested.html", nested)
+    res = compare(d_flat, a_nested)
+    if res["exit_code"] == MATCH:
+        failures.append("bands-ancestor-baseline: ancestor crops of flat vs nested DOM must differ")
+    res = compare(d_flat, a_nested, bands="headings")
+    check("bands-nested-vs-flat", res["exit_code"], res["report"], MATCH, must_have=("100.0%",))
+    if ids(res) != ["(page header)", "dashboard", "usage", "billing"]:
+        failures.append(f"bands-nested-vs-flat: sections {ids(res)}")
+    got = (band_starts(d_flat), band_starts(write("band-dup.html", '<h2 data-y="0">B</h2><h2 data-y="0">A</h2>'
+                                                                 '<h2 data-y="50">b</h2>')))
+    if got != (("headings", [(40, "dashboard"), (100, "usage"), (300, "billing")]),
+               ("headings", [(0, "b"), (50, "b #2")])):
+        failures.append(f"bands-starts(order,same-y-fold,repeat-suffix): {got}")
+    d_bands, _ = read_side(d_flat, band_fn=_band_fn([(40, "dashboard"), (100, "usage"), (300, "billing")]))
+    a_bands, _ = read_side(a_nested, band_fn=_band_fn([(40, "dashboard"), (100, "usage"), (310, "billing")]))
+    keys = [[sorted(i["key"] for i in _prepare(s["inventory"], False)) for s in side]
+            for side in (d_bands or [], a_bands or [])]
+    if not keys[0] or keys[0] != keys[1]:
+        failures.append(f"bands-nested-vs-flat: band inventories differ {keys}")
+
+    # 2. data-anchor wins over headings (the plain h2 "Aside" starts no band);
+    # an h3 moved to another band is one MOVED row, never a page-wide refusal.
+    anc = ('<h2 data-anchor data-y="0">Usage</h2><h2 data-y="40">Aside</h2>{u}'
+           '<p data-y="80" data-item>Requests</p><h2 data-anchor data-y="200">Billing</h2>'
+           '<p data-y="240" data-item>Invoice</p>{b}')
+    note = '<h3 data-y="{}">Notes</h3>'
+    res = compare(write("band-anc-d.html", anc.format(u=note.format(60), b="")),
+                  write("band-anc-a.html", anc.format(u="", b=note.format(260))), bands="headings")
+    check("bands-moved-heading", res["exit_code"], res["report"], MISMATCH,
+          must_not=("COULD_NOT_CHECK",))
+    if ids(res) != ["usage", "billing"] or rows_of(res) != {("usage", "MOVED", "heading:h3:Notes")}:
+        failures.append(f"bands-moved-heading: sections {ids(res)} rows {sorted(rows_of(res))}")
+
+    # 3. A band-start heading missing in the app: that band alone is
+    # COULD_NOT_CHECK_CROP (UNVERIFIED); its design content is compared in
+    # the band before it, the other bands are scored.
+    three = ('<h2 data-y="0">Usage</h2><p data-y="40" data-item>Requests</p>{}'
+             '<p data-y="240" data-item>Invoice</p><h2 data-y="400">Plans</h2><p data-y="440" data-item>Pro</p>')
+    res = compare(write("band-miss-d.html", three.format('<h2 data-y="200">Billing</h2>')),
+                  write("band-miss-a.html", three.format("")), bands="headings")
+    check("bands-missing-heading", res["exit_code"], res["report"], COULD_NOT_CHECK_CROP,
+          must_have=("band start 'billing'", "compared inside band 'usage'"))
+    verdicts = {s["id"]: s["verdict"] for s in res.get("sections", [])}
+    if verdicts != {"usage": "FAIL", "billing": "UNVERIFIED", "plans": "PASS"} \
+            or rows_of(res) != {("usage", "MISSING_IN_APP", "heading:h2:Billing")}:
+        failures.append(f"bands-missing-heading: verdicts {verdicts} rows {sorted(rows_of(res))}")
+    # A renamed band start: only shared starts cut bands, so the app-only
+    # 'payments' start joins 'usage' too and the rename is one CHANGED row.
+    res = compare(write("band-ren-d.html", three.format('<h2 data-y="200">Billing</h2>')),
+                  write("band-ren-a.html", three.format('<h2 data-y="200">Payments</h2>')), bands="headings")
+    check("bands-renamed-heading", res["exit_code"], res["report"], COULD_NOT_CHECK_CROP,
+          must_have=("'payments' in 'usage'",), must_not=("kept as superset",))
+    if rows_of(res) != {("usage", "CHANGED", "heading:h2:Billing")}:
+        failures.append(f"bands-renamed-heading: rows {sorted(rows_of(res))}")
+
+    # 4. Fail closed: an invalid data-y, one side banded by anchors and the
+    # other by headings, a capture with no data-y, and a .json side.
+    for label, d_body, a_body in (
+            ("bands-bad-y", '<h2 data-y="0">A</h2><p data-y="1e2">x</p>', '<h2 data-y="0">A</h2><p data-y="9">x</p>'),
+            ("bands-basis-differs", '<h2 data-anchor data-y="0">A</h2><p data-y="9">x</p>',
+             '<h2 data-y="0">A</h2><p data-y="9">x</p>'),
+            ("bands-no-y", '<h2>A</h2><p>x</p>', '<h2>A</h2><p>x</p>'),
+            ("bands-no-headings", '<p data-y="0">x</p><span data-y="10">y</span>',
+             '<p data-y="0">x</p><span data-y="10">y</span>')):
+        res = compare(write(f"{label}-d.html", d_body), write(f"{label}-a.html", a_body), bands="headings")
+        check(label, res["exit_code"], res["report"], COULD_NOT_CHECK, must_have=("--bands",))
+    res = compare(write("bands-json.json", '[{"id": "a", "populated": true}]'), a_nested, bands="headings")
+    check("bands-json-side", res["exit_code"], res["report"], COULD_NOT_CHECK, must_have=("--bands",))
+
+    # 5. CLI: --bands reaches compare; --baseline (keyed by data-section) is refused.
+    for label, extra, want in (("bands-cli", [], MATCH),
+                               ("bands-cli-no-baseline", ["--baseline", write("bands-bl.json", "{}")], USAGE_ERROR)):
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            try:
+                rc = main(["--design", d_flat, "--app", a_nested, "--bands", "headings", *extra])
+            except SystemExit as exc:
+                rc = exc.code
+        if rc != want:
+            failures.append(f"{label}: exit {rc}, want {want}")
+
+
 def _min_pairs(text: str) -> int:
     """argparse type for `--min-pairs` / `--style-min-pairs`: an integer >= 1 (a floor of 0 checks nothing)."""
     if not re.fullmatch(r"[1-9][0-9]*", text.strip()):
@@ -3321,6 +3625,8 @@ def main(argv: list[str] | None = None) -> int:
                         "fingerprint there, only when the run passes")
     parser.add_argument("--accept-regression", action="store_true", help="with --write-baseline: overwrite an "
                         "existing baseline even though this run shows new deltas vs it")
+    parser.add_argument("--bands", choices=("headings",), help="crop sections by heading y-bands "
+                        "(data-y; data-anchor wins) instead of data-section ancestors; see SECTION BANDS")
     parser.add_argument("--json", action="store_true", help="print the full result as JSON (board posts)")
     parser.add_argument("--selftest", action="store_true", help="run the committed-fixture self-test")
     args = parser.parse_args(argv)
@@ -3345,6 +3651,8 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--write-baseline needs --baseline <file> (a baseline is only written explicitly)")
     if args.baseline and args.workflow:
         parser.error("--baseline is not supported with --workflow")
+    if args.baseline and args.bands:
+        parser.error("--baseline is not supported with --bands (the fingerprint is keyed by data-section)")
     if args.accept_regression and not args.write_baseline:
         parser.error("--accept-regression needs --write-baseline")
     if args.baseline and os.path.realpath(args.baseline) in {
@@ -3354,10 +3662,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.workflow:
         result = run_workflow(args.design, args.app, args.design_tokens, args.app_tokens, args.token_map,
                               args.accept, args.accept_rev, min_pairs=args.min_pairs,
-                              style_min_pairs=args.style_min_pairs, token_min_pairs=args.token_min_pairs)
+                              style_min_pairs=args.style_min_pairs, token_min_pairs=args.token_min_pairs,
+                              bands=args.bands)
     else:
         result = compare(args.design, args.app, args.accept, args.accept_rev,
-                         min_pairs=args.min_pairs, style=args.style, style_min_pairs=args.style_min_pairs)
+                         min_pairs=args.min_pairs, style=args.style, style_min_pairs=args.style_min_pairs,
+                         bands=args.bands)
         if args.baseline:
             try:
                 apply_baseline(result, args.app, args.baseline, args.style, args.write_baseline,
@@ -3367,7 +3677,9 @@ def main(argv: list[str] | None = None) -> int:
                 return USAGE_ERROR
     if args.report:
         try:
-            write_report(result, args.report, args.design, args.app, args.design_shots, args.app_shots)
+            # A band has no data-section to isolate in a srcdoc, so --bands shows screenshots only.
+            renders = (None, None) if args.bands else (args.design, args.app)
+            write_report(result, args.report, *renders, args.design_shots, args.app_shots)
         except OSError as exc:
             print(f"parity_differ: cannot write --report {args.report}: {exc}", file=sys.stderr)
             return USAGE_ERROR

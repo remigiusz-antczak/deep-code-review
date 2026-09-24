@@ -48,7 +48,9 @@ TRANSITIONS (explicit table; anything else is refused with exit 1)
   start    open                     -> doing   (repeat on `doing` is a no-op)
   done     open | doing             -> done    (evidence pattern required)
   block    open | doing             -> blocked (--party and --evidence)
-  unblock  blocked                  -> open    (clears the block evidence)
+  unblock  blocked                  -> open    (clears the block evidence;
+                                                refused while a parked question
+                                                on the row is unanswered)
   drop     open | doing | blocked   -> dropped-by-owner (--quote required)
   reopen   done | dropped-by-owner  -> open    (clears the old evidence)
 So `done -> doing` is refused until `reopen`, and a blocked row must be
@@ -99,10 +101,11 @@ EXIT CODES (fail closed)
   0  the command's normal-success verdict
   1  a business-rule stop that is not a bug: a near-duplicate `add` awaiting
      `--same`/`--new`, missing or mis-shaped evidence, a transition the table
-     refuses, `status` finding open asks (informational), or `reconcile`
-     finding an owner ask missing from the ledger
-  2  a hard error: an unreadable/malformed ledger file, an unknown `--id`,
-     malformed `--transcript-asks` input, or bad CLI usage
+     refuses, `status` finding open asks (informational), `reconcile`
+     finding an owner ask missing from the ledger, `questions` finding
+     pending questions (informational), or a question already answered
+  2  a hard error: an unreadable/malformed ledger or questions file, an
+     unknown `--id`/`--qid`, malformed `--transcript-asks` input, or bad CLI usage
 
 USAGE
 -----
@@ -116,6 +119,9 @@ USAGE
   task_ledger.py [--file PATH] next
   task_ledger.py [--file PATH] status
   task_ledger.py [--file PATH] reconcile --transcript-asks FILE
+  task_ledger.py [--file PATH] defer   --id T-### --question "<q>" (--default "<choice taken>" | --park)
+  task_ledger.py [--file PATH] questions
+  task_ledger.py [--file PATH] answer  --qid Q-### --text "<owner answer>"
   task_ledger.py --selftest
 
 `--file` defaults to `.claude/TASKS.md` (relative to the current directory).
@@ -124,6 +130,17 @@ when nothing is `doing` does it read `.claude/PRIORITY.md` (same directory as
 the ledger) READ-ONLY, if present — one priority per line (an id or free
 text), first line wins by id match then by normalized-text similarity —
 and otherwise falls back to the oldest open row.
+`next` also prints how many deferred owner questions are pending.
+`defer` records a question for an absent owner in `QUESTIONS.jsonl` (same
+directory as the ledger; one JSON object per line: id, item, question,
+default, ts, answer) so the run never stalls on it: `--default` names the
+choice the agent took and keeps working under; `--park` (for a destructive or
+irreversible choice no standing grant covers) also blocks only that item on
+the owner, so `next` skips it. `questions` prints the pending batch for the
+owner (exit 1 = questions waiting, informational); `answer` records the
+owner's reply and names `unblock` for a parked item. `defer` is refused
+on a done/dropped row; `unblock` is refused while a parked question on the
+row is unanswered.
 `reconcile` reads `--transcript-asks` as JSON Lines, one `{"ask": "..."}`
 object per line (extra keys ignored), and uses the same duplicate rule as
 `add` (auto-distinct asks count as missing).
@@ -152,6 +169,8 @@ STATUSES = ("open", "doing", "blocked", "done", "dropped-by-owner")
 RESOLVED_STATUSES = {"done", "dropped-by-owner"}
 
 ID_RE = re.compile(r"^T-(\d{3,})$")
+QID_RE = re.compile(r"^Q-\d{3,}$")
+QUESTION_KEYS = ("id", "item", "question", "default", "ts", "answer")
 _PUNCT_RE = re.compile(r"[^\w\s]", re.UNICODE)
 
 # Auto-distinct signals: two asks that differ in any of these are different
@@ -561,6 +580,115 @@ def reconcile_missing(rows: list, asks: list) -> list:
     return [ask for ask in asks if find_duplicate(rows, ask) is None]
 
 
+def parse_questions_text(text: str) -> list:
+    """Parse the questions file (JSON Lines, one question object per line). Pure.
+
+    Raises LedgerError on any line that is not an object carrying exactly the
+    QUESTION_KEYS with a Q-### id, so a hand-edit fails closed instead of
+    silently dropping a question the owner has not seen.
+    """
+    questions = []
+    for i, line in enumerate((text or "").splitlines(), 1):
+        if not line.strip():
+            continue
+        try:
+            obj = json.loads(line)
+        except json.JSONDecodeError as exc:
+            raise LedgerError(f"questions line {i}: not valid JSON: {exc}") from None
+        if not isinstance(obj, dict) or set(obj) != set(QUESTION_KEYS) or not QID_RE.match(str(obj["id"])):
+            raise LedgerError(f"questions line {i}: expected keys {', '.join(QUESTION_KEYS)} with a Q-### id")
+        questions.append(obj)
+    return questions
+
+
+def render_questions_text(questions: list) -> str:
+    """Serialize questions to JSON Lines (the inverse of parse_questions_text). Pure."""
+    return "".join(json.dumps({k: q[k] for k in QUESTION_KEYS}, ensure_ascii=False) + "\n" for q in questions)
+
+
+def pending_questions(questions: list) -> list:
+    """Questions the owner has not answered yet. Pure."""
+    return [q for q in questions if q["answer"] is None]
+
+
+def do_defer(rows: list, questions: list, task_id: str, question: str, default: str = None, park: bool = False,
+             now: datetime = None):
+    """Record a question for an absent owner without stalling the run. Pure.
+
+    Returns (exit_code, message, new_rows, new_questions). Exactly one of
+    `default` (the choice the agent took and keeps working under) or `park`
+    is required. `park` blocks only this item on the owner (the `block`
+    transition, so `next` skips it); the rest of the backlog stays workable.
+    Refusals return the inputs unchanged: ERROR for bad input or an unknown
+    id, WARN when the item is resolved (done/dropped). Parking an already
+    blocked row records the question without another transition.
+    """
+    question = (question or "").strip()
+    default = (default or "").strip()
+    if not question:
+        return ERROR, "error: --question is required", rows, questions
+    if bool(default) == bool(park):
+        return ERROR, "error: give exactly one of --default \"<choice taken>\" or --park", rows, questions
+    idx = _find_row(rows, task_id)
+    if idx is None:
+        return ERROR, f"error: no such id {task_id}", rows, questions
+    status = rows[idx]["status"]
+    if status in RESOLVED_STATUSES:
+        return WARN, f"REFUSED: {task_id} is {status}; `reopen --id {task_id}` first if it is live again", rows, questions
+    qid = f"Q-{max((int(q['id'][2:]) for q in questions), default=0) + 1:03d}"
+    new_rows = rows
+    if park and status != "blocked":  # an already-blocked row stays as it is; the question is still recorded
+        code, msg, new_rows = do_transition(rows, task_id, "block", evidence=f"{qid} parked: {question}", party="owner")
+        if code != OK:
+            return code, msg, rows, questions
+    record = {"id": qid, "item": task_id, "question": question, "default": "parked" if park else default,
+              "ts": _now_iso(now), "answer": None}
+    tail = f"parked {task_id} (blocked on owner)" if park else f"default taken: {default}"
+    return OK, f"deferred {qid} on {task_id}: {tail}; continue with `next`", new_rows, questions + [record]
+
+
+def parked_question(questions: list, task_id: str):
+    """Id of an unanswered parked question on `task_id`, or None. Pure; gates `unblock`."""
+    return next((q["id"] for q in pending_questions(questions)
+                 if q["item"] == task_id and q["default"] == "parked"), None)
+
+
+def do_answer(questions: list, qid: str, text: str, rows: list = None):
+    """Record the owner's answer to a pending question. Pure; returns (exit_code, message, new_questions).
+
+    A parked question's item stays blocked until the caller runs `unblock`.
+    The message names `unblock` only when `rows` shows the row still blocked
+    by this question, so answering never silently restarts work and never
+    nudges past another party's block.
+    """
+    text = (text or "").strip()
+    if not text:
+        return ERROR, "error: --text \"<owner answer>\" is required", questions
+    idx = next((i for i, q in enumerate(questions) if q["id"] == qid), None)
+    if idx is None:
+        return ERROR, f"error: no such question {qid}", questions
+    q = questions[idx]
+    if q["answer"] is not None:
+        return WARN, f"REFUSED: {qid} is already answered", questions
+    new_questions = list(questions)
+    new_questions[idx] = dict(q, answer=text)
+    row = next((r for r in rows or [] if r["id"] == q["item"]), None)
+    own_block = row is not None and row["status"] == "blocked" and f"{qid} parked" in row["evidence"]
+    hint = f"; then unblock --id {q['item']}" if own_block else ""
+    return OK, f"answered {qid} ({q['item']}){hint}", new_questions
+
+
+def questions_summary(questions: list):
+    """The owner's batch: a count line + one line per pending question. Pure; returns (exit_code, lines).
+
+    WARN (exit 1) means "questions are waiting" — informational, like `status`.
+    """
+    pending = pending_questions(questions)
+    lines = [f"questions: {len(pending)} pending"]
+    lines += [f"{q['id']} {q['item']} ({q['ts']}) {q['question']} -- default: {q['default']}" for q in pending]
+    return (WARN if pending else OK), lines
+
+
 # ---------------------------------------------------------------------------
 # I/O: locking, atomic writes, file reads. Everything above this line is pure.
 # ---------------------------------------------------------------------------
@@ -623,6 +751,19 @@ def _read_priority_lines(path: str) -> list:
         return [ln for ln in fh.read().splitlines() if ln.strip()]
 
 
+def _questions_path(path: str) -> str:
+    return os.path.join(os.path.dirname(os.path.abspath(path)), "QUESTIONS.jsonl")
+
+
+def _read_questions(path: str) -> list:
+    """Questions stored beside the ledger `path`; absent file -> []. Raises LedgerError when malformed."""
+    qfile = _questions_path(path)
+    if not os.path.isfile(qfile):
+        return []
+    with open(qfile, encoding="utf-8") as fh:
+        return parse_questions_text(fh.read())
+
+
 def _read_transcript_asks(file: str) -> list:
     """Parse `--transcript-asks` JSON Lines (`{"ask": "..."}` per line). Raises ValueError on malformed input."""
     asks = []
@@ -675,6 +816,16 @@ def main(argv: list = None) -> int:
 
     sub.add_parser("next", help="print the single next row: doing first, then priority, then oldest open")
     sub.add_parser("status", help="print counts + unresolved rows")
+    p = sub.add_parser("defer", help="record a question for an absent owner; keep working (default) or park the item")
+    p.add_argument("--id", required=True)
+    p.add_argument("--question", required=True)
+    choice = p.add_mutually_exclusive_group(required=True)
+    choice.add_argument("--default", default=None, help="the choice taken; work continues under it")
+    choice.add_argument("--park", action="store_true", help="block only this item on the owner")
+    sub.add_parser("questions", help="print the pending owner questions as one batch")
+    p = sub.add_parser("answer", help="record the owner's answer to a deferred question")
+    p.add_argument("--qid", required=True)
+    p.add_argument("--text", required=True)
 
     p_rec = sub.add_parser("reconcile", help="find owner asks missing from the ledger")
     p_rec.add_argument("--transcript-asks", required=True, metavar="FILE")
@@ -699,6 +850,11 @@ def main(argv: list = None) -> int:
 
         if args.cmd in TRANSITIONS:
             with _locked(path, exclusive=True):
+                gate = parked_question(_read_questions(path), args.id) if args.cmd == "unblock" else None
+                if gate:
+                    print(f"REFUSED: {args.id} waits on parked question {gate}; "
+                          f"record the owner's reply with `answer --qid {gate}` first")
+                    return WARN
                 rows = _read_rows(path)
                 code, msg, new_rows = do_transition(
                     rows, args.id, args.cmd,
@@ -715,13 +871,48 @@ def main(argv: list = None) -> int:
             with _locked(path, exclusive=False):
                 rows = _read_rows(path)
                 priority_lines = _read_priority_lines(path)
+                pending = pending_questions(_read_questions(path))
             row = pick_next(rows, priority_lines)
             if row is None:
                 print("next: none (nothing doing or open)")
             else:
                 print(f"next: {row['id']} [{row['status']}] {row['ask']}")
                 print(f"created: {row['created']} source: {row['source']}")
+            if pending:
+                print(f"questions pending: {len(pending)} (batch for the owner: `questions`)")
             return OK
+
+        if args.cmd == "defer":
+            with _locked(path, exclusive=True):
+                rows = _read_rows(path)
+                questions = _read_questions(path)
+                code, msg, new_rows, new_questions = do_defer(rows, questions, args.id, args.question,
+                                                              default=args.default, park=args.park)
+                if code == OK:
+                    # Ledger first: a crash between the two writes leaves a blocked
+                    # row whose evidence still carries the question text.
+                    if new_rows is not rows:
+                        _atomic_write(path, render_ledger_text(new_rows))
+                    _atomic_write(_questions_path(path), render_questions_text(new_questions))
+            print(msg)
+            return code
+
+        if args.cmd == "questions":
+            with _locked(path, exclusive=False):
+                questions = _read_questions(path)
+            code, lines = questions_summary(questions)
+            for line in lines:
+                print(line)
+            return code
+
+        if args.cmd == "answer":
+            with _locked(path, exclusive=True):
+                questions = _read_questions(path)
+                code, msg, new_questions = do_answer(questions, args.qid, args.text, _read_rows(path))
+                if code == OK:
+                    _atomic_write(_questions_path(path), render_questions_text(new_questions))
+            print(msg)
+            return code
 
         if args.cmd == "status":
             with _locked(path, exclusive=False):
@@ -745,7 +936,7 @@ def main(argv: list = None) -> int:
             print(f"reconcile: {len(missing)} missing of {len(asks)} asks")
             return OK if not missing else WARN
     except LedgerError as exc:
-        print(f"error: malformed ledger file {path}: {exc}")
+        print(f"error: malformed ledger or questions file beside {path}: {exc}")
         return ERROR
 
     ap.print_usage()
@@ -880,8 +1071,67 @@ def _selftest() -> int:
     check("next-doing-beats-priority-and-oldest", pick_next(doing_rows, ["T-001"])["id"] == "T-003")
     check("next-skips-blocked", pick_next([dict(ordered_rows[1], status="blocked"), ordered_rows[0]], [])["id"] == "T-001")
 
+    # -- defer / questions / answer: a question for an absent owner never stalls the run
+    q_now = datetime(2026, 1, 3, tzinfo=timezone.utc)
+    code_qd, msg_qd, rows_qd, qs_qd = do_defer(ordered_rows, [], "T-002", "Which date format?", default="ISO-8601",
+                                               now=q_now)
+    check("defer-default-records-question", code_qd == OK and len(qs_qd) == 1 and qs_qd[0]["id"] == "Q-001"
+          and qs_qd[0]["item"] == "T-002" and qs_qd[0]["default"] == "ISO-8601"
+          and qs_qd[0]["ts"] == "2026-01-03T00:00:00Z" and qs_qd[0]["answer"] is None, str(qs_qd))
+    check("defer-default-keeps-item-workable", rows_qd is ordered_rows and pick_next(rows_qd, [])["id"] == "T-002",
+          str(rows_qd))
+    check("defer-default-says-continue-with-next", "ISO-8601" in msg_qd and "next" in msg_qd, msg_qd)
+    code_qp, msg_qp, rows_qp, qs_qp = do_defer(ordered_rows, qs_qd, "T-002", "Drop the legacy table?", park=True)
+    check("defer-park-blocks-item-on-owner", code_qp == OK and rows_qp[1]["status"] == "blocked"
+          and rows_qp[1]["evidence"].startswith("owner: ") and "Q-002" in rows_qp[1]["evidence"], str(rows_qp))
+    check("defer-park-records-parked", qs_qp[-1]["id"] == "Q-002" and qs_qp[-1]["default"] == "parked", str(qs_qp))
+    _, _, _, qs_gap = do_defer(ordered_rows, [dict(qs_qd[0], id="Q-007")], "T-001", "Q?", default="x")
+    check("defer-id-never-reused-after-hand-delete", qs_gap[-1]["id"] == "Q-008", str(qs_gap))
+    check("next-skips-parked-item", pick_next(rows_qp, [])["id"] == "T-001", str(pick_next(rows_qp, [])))
+    doing_parked = [dict(ordered_rows[1], status="doing"), ordered_rows[0]]
+    _, _, rows_dp, _ = do_defer(doing_parked, [], "T-002", "Rename the bucket?", park=True)
+    check("next-skips-parked-doing-item", pick_next(rows_dp, [])["id"] == "T-001", str(rows_dp))
+    for label, kwargs in (("no-default-no-park", {}), ("both", {"default": "x", "park": True}),
+                          ("empty-question", {"default": "x", "question": "  "}),
+                          ("unknown-id", {"default": "x", "task_id": "T-404"})):
+        args = {"task_id": "T-001", "question": "Q?"} | kwargs
+        code_bad, _, rows_bad, qs_bad = do_defer(ordered_rows, [], args.pop("task_id"), args.pop("question"), **args)
+        check(f"defer-refused[{label}]", code_bad == ERROR and rows_bad is ordered_rows and qs_bad == [], str(code_bad))
+    code_pd, _, rows_pd, qs_pd = do_defer([dict(ordered_rows[0], status="done")], [], "T-001", "Q?", park=True)
+    check("defer-park-on-done-refused-records-nothing", code_pd == WARN and qs_pd == [], str(code_pd))
+    code_dd3, _, _, qs_dd3 = do_defer([dict(ordered_rows[0], status="done")], [], "T-001", "Q?", default="x")
+    check("defer-default-on-resolved-refused", code_dd3 == WARN and qs_dd3 == [], str(code_dd3))
+    vendor_blocked = [dict(ordered_rows[0], status="blocked", evidence="vendor: API key pending")]
+    code_pb, msg_pb, rows_pb, qs_pb = do_defer(vendor_blocked, [], "T-001", "Delete the cache?", park=True)
+    check("defer-park-on-blocked-records-without-transition", code_pb == OK and rows_pb is vendor_blocked
+          and qs_pb[0]["default"] == "parked", msg_pb)
+    check("answer-on-already-blocked-no-unblock-nudge",
+          "unblock" not in do_answer(qs_pb, "Q-001", "yes", vendor_blocked)[1], do_answer(qs_pb, "Q-001", "yes", vendor_blocked)[1])
+    check("parked-question-gates-item", parked_question(qs_qp, "T-002") == "Q-002" and parked_question(qs_qp, "T-001") is None)
+    code_ql, lines_ql = questions_summary(qs_qp)
+    check("questions-pending-exits-warn", code_ql == WARN and lines_ql[0] == "questions: 2 pending", str(lines_ql))
+    check("questions-lists-default-and-item", "T-002" in lines_ql[1] and "ISO-8601" in lines_ql[1]
+          and "parked" in lines_ql[2], str(lines_ql))
+    code_ans, msg_ans, qs_ans = do_answer(qs_qp, "Q-002", "yes, drop it", rows_qp)
+    check("answer-resolves-and-names-unblock", code_ans == OK and qs_ans[1]["answer"] == "yes, drop it"
+          and "unblock --id T-002" in msg_ans, msg_ans)
+    check("questions-after-answer", questions_summary(qs_ans)[1][0] == "questions: 1 pending")
+    check("parked-question-cleared-by-answer", parked_question(qs_ans, "T-002") is None)
+    check("answer-twice-refused", do_answer(qs_ans, "Q-002", "again")[0] == WARN)
+    check("answer-needs-text", do_answer(qs_qp, "Q-001", " ")[0] == ERROR)
+    check("answer-unknown-id-errors", do_answer(qs_qp, "Q-404", "x")[0] == ERROR)
+    check("questions-none-exits-ok", questions_summary([])[0] == OK)
+    check("questions-jsonl-round-trip", parse_questions_text(render_questions_text(qs_ans)) == qs_ans)
+    for bad in ("not json", '{"id": "Q-001"}', '[1, 2]'):
+        try:
+            parse_questions_text(bad)
+            failures.append(f"questions-malformed-detected[{bad}]: no LedgerError raised")
+        except LedgerError:
+            pass
+        ran[0] += 1
+
     # -- status ---------------------------------------------------------------
-    mixed = ordered_rows + [dict(ordered_rows[0], id="T-003", status="done", ask="Ship the release")]
+    mixed =ordered_rows + [dict(ordered_rows[0], id="T-003", status="done", ask="Ship the release")]
     code_status, lines_status = status_summary(mixed)
     check("status-unresolved-exits-warn", code_status == WARN, str(lines_status))
     check("status-line-count-bounded", len(lines_status) <= 15, str(len(lines_status)))
@@ -950,6 +1200,30 @@ def _selftest() -> int:
         with contextlib.redirect_stdout(buf):
             rc = main(["--file", bad_path, "status"])
         check("malformed-file-cli-exits-2", rc == ERROR, f"rc={rc} out={buf.getvalue()!r}")
+
+        # -- I/O: defer --park via the CLI writes both files; `next` skips the
+        #    parked item and reports the pending count; `questions` exits 1.
+        q_path = os.path.join(tmpdir, "Q.md")
+        with contextlib.redirect_stdout(io.StringIO()):
+            main(["--file", q_path, "add", "--ask", "Migrate the billing database"])
+            main(["--file", q_path, "add", "--ask", "Write the onboarding guide"])
+            rc_defer = main(["--file", q_path, "defer", "--id", "T-001", "--question", "Drop old table?", "--park"])
+        next_buf = io.StringIO()
+        with contextlib.redirect_stdout(next_buf):
+            main(["--file", q_path, "next"])
+            rc_q = main(["--file", q_path, "questions"])
+        out = next_buf.getvalue()
+        check("cli-defer-park-ok", rc_defer == OK and os.path.isfile(os.path.join(tmpdir, "QUESTIONS.jsonl")), str(rc_defer))
+        check("cli-next-skips-parked-and-counts", "next: T-002" in out and "questions pending: 1" in out, out)
+        check("cli-questions-exits-warn", rc_q == WARN and "Q-001 T-001" in out, out)
+        ub_buf = io.StringIO()
+        with contextlib.redirect_stdout(ub_buf):
+            rc_ub_early = main(["--file", q_path, "unblock", "--id", "T-001"])
+            main(["--file", q_path, "answer", "--qid", "Q-001", "--text", "archive it instead"])
+            rc_ub_late = main(["--file", q_path, "unblock", "--id", "T-001"])
+        check("cli-unblock-refused-while-parked-question-pending", rc_ub_early == WARN and "answer --qid Q-001"
+              in ub_buf.getvalue(), ub_buf.getvalue())
+        check("cli-unblock-ok-after-answer", rc_ub_late == OK, ub_buf.getvalue())
 
         # -- I/O: concurrent `add` from multiple threads is safe (real fcntl lock,
         #    real atomic write) -- distinct asks must all land, once each, with
