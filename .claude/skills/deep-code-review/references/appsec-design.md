@@ -7,14 +7,15 @@ Read this when the review asks for or relies on a threat model, the diff adds a 
 **Which threat-model method — name the one that fits, don't hand-wave "a threat model."** **STRIDE** (per element:
 Spoofing / Tampering / Repudiation / Info-disclosure / DoS / Elevation) for a component or data flow; **PASTA** when
 the model must tie threats to business impact; **attack trees** to decompose one attacker goal; **LINDDUN** for
-*privacy* threats (STRIDE's privacy counterpart — its **Linkability** / **Identifiability** threats have a concrete
-lens in `privacy-compliance.md` § Linkability & re-identification, its **Detectability** threat in A07
+*privacy* threats (STRIDE's privacy counterpart — its **Linking** / **Identifying** threats have a concrete
+lens in `privacy-compliance.md` § Linkability & re-identification, its **Detecting** threat in A07
 account-enumeration in `security-appsec.md`); **MAESTRO** for an *agentic-AI* system — the agentic threat-modeling method, complementary
 to the OWASP ASI / MITRE ATLAS catalogs in `security-ai-agents.md`. The review lens is **coverage, not ceremony**: a
 change that introduces a new trust boundary, principal, or state transition the existing model never considered is a
 finding — the model went **stale relative to the diff** — and an agentic surface with no agent-specific
 (MAESTRO-shaped) model is the common miss. (Maturity frames — NIST SSDF, OWASP SAMM, BSIMM — measure the org's
-*program*, not this diff; name, don't score.)
+*program*, not this diff; name, don't score.) To run a diff-sized model (data-flow table, per-boundary STRIDE or
+LINDDUN, mapping to existing checks, residual risk and owner decision), follow `threat-modeling.md`.
 
 - **A producer crossing a publish / trust boundary invalidates guards scoped to the old side — re-audit them.** A
   guard's *sufficiency* is often conditioned on a precondition — "internal only," "never published," "not

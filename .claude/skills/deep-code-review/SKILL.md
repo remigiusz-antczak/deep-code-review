@@ -11,7 +11,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.450.0"
+  version: "1.451.0"
 ---
 
 # Deep Code Review
@@ -83,10 +83,10 @@ delivery role or security-team colour.
 **Security-team colours** re-package the same evidence (no new rules); the
 Red/Blue/Purple/Yellow/Green/Orange/White model is tabulated in
 `role-coverage.md`. **Black Team — the agent boundary is absolute:**
-plan / tabletop / analyse owner-supplied evidence only; never perform or direct
+plan/tabletop/analyse owner-supplied evidence only; never perform or direct
 physical or social-engineering action.
 
-**Host-neutral tools.** Read files, `rg`, `git show` / `git log`, run the
+**Host-neutral tools.** Read files, `rg`, `git show`/`git log`, run the
 project's scripts. Fan-out contract: `parallel-audit.md`.
 
 **First response before reviewing** — a review that never printed this block
@@ -190,23 +190,23 @@ applicable domains. Language footguns:
 | | Domain | Depth |
 |---|---|---|
 | A | Correctness & logic | `domain-a.md`, `time-date-correctness.md` (timestamps, durations, recurring/scheduled times, time zones) |
-| B | AppSec (OWASP Top 10:2025) | `domain-b.md`, `security-appsec.md` → `appsec-edge.md`, `appsec-scan-tests.md`, `appsec-links.md`, `appsec-approvals.md`, `appsec-supply.md`, `appsec-crypto.md`, `appsec-ssti.md`, `appsec-files.md`, `appsec-tokens.md`, `appsec-login.md`, `appsec-design.md`; `security-api.md` (serves its own HTTP / GraphQL / gRPC / WebSocket API, any archetype), `mobile-appsec.md` (ships an iOS / Android / native mobile client; MASVS/MASTG deltas) |
+| B | AppSec (OWASP Top 10:2025) | `domain-b.md`, `security-appsec.md` → `appsec-edge.md`, `appsec-scan-tests.md`, `appsec-links.md`, `appsec-approvals.md`, `appsec-supply.md`, `appsec-crypto.md`, `appsec-ssti.md`, `appsec-files.md`, `appsec-tokens.md`, `appsec-login.md`, `appsec-design.md`, `threat-modeling.md` (new boundary); `security-api.md` (serves its own HTTP/GraphQL/gRPC/WebSocket API, any archetype), `mobile-appsec.md` (ships an iOS/Android/native mobile client; MASVS/MASTG deltas) |
 | C | AI / LLM / agents | `domain-c.md`, `security-ai-agents.md`, `security-agent-skills.md` |
 | D | Data integrity | `domain-d.md`, `data-quality.md` → `data-identity.md`, `data-scoring.md`, `data-metrics.md`, `data-freshness.md`, `data-ml.md`, `data-contracts.md`, `data-shapes.md`, `data-graph.md` |
 | E | Performance, efficiency & cost | `domain-e.md`, `performance-db-cost.md`, `model-tiering.md`, `billing-correctness.md` (when the target meters, subscribes, or charges) |
 | F | Reliability & error handling | `domain-f.md`, `reliability-error-handling.md` |
 | G | Concurrency & shared state | `domain-g.md`, `concurrency-shared-state.md` |
-| H | Tech debt, dead code, maintainability | `domain-h.md`, `skill-authoring-and-size.md` (when the target ships/installs skills or has `**/SKILL.md`: leanness, progressive disclosure, a size ratchet that fails on bloat) |
+| H | Tech debt, dead code, maintainability | `domain-h.md`, `skill-authoring-and-size.md` (when the target ships/installs skills or has `**/SKILL.md`: leanness, progressive disclosure, a bloat-failing size ratchet) |
 | I | API, contracts, integration | `domain-i.md`, `api-contracts.md` |
 | J | Testing & evaluation | `domain-j.md`, `testing-and-evals.md`; `testing-ui.md` (UI, browser specs), `testing-ai-evals.md` (model output), `testing-ml.md` (ML, notebooks) |
 | K | Build, CI, supply chain, release | `domain-k.md`, `dependency-currency-and-upgrades.md`, `release-engineering.md` |
 | L | Infra / IaC / containers / cloud / serverless | `domain-l.md`, `infra-iac-containers.md` (how-to-secure existing), `infra-evolution-by-stage.md` (when-to-add, by stage) |
 | M | Observability | `domain-m.md`, `observability.md` |
 | N | Config, secrets, environments | `domain-n.md` |
-| O | Docs & DX | `domain-o.md`, `docs-and-dx.md`, `docs-evolution-by-stage.md` (which-docs-when, by stage), `readme-authoring.md` (writing/reviewing a README for onboarding) |
-| P | Frontend / UI / a11y | `domain-p.md`, `frontend-a11y.md` → `a11y-aria.md`, `a11y-live.md`, `a11y-focus.md`, `a11y-color-motion.md`, `a11y-forms.md`, `web-fetch.md`, `web-render.md`; `product-ux-quality.md` (design half) → `ux-writes.md`, `ux-dataviz.md`, `ux-lists.md`, `ux-components.md`, `ux-interaction.md`, `ux-sweep.md`, `ux-gates.md`; `rendered-parity.md` (rendered-appearance / design-parity — "make X look like Y", a port/restyle), `migration-parity.md` (matching a prototype / mockup / design-export) |
+| O | Docs & DX | `domain-o.md`, `docs-and-dx.md`, `docs-evolution-by-stage.md` (which-docs-when, by stage), `readme-authoring.md` (writing/reviewing an onboarding README) |
+| P | Frontend / UI / a11y | `domain-p.md`, `frontend-a11y.md` → `a11y-aria.md`, `a11y-live.md`, `a11y-focus.md`, `a11y-color-motion.md`, `a11y-forms.md`, `web-fetch.md`, `web-render.md`; `product-ux-quality.md` (design half) → `ux-writes.md`, `ux-dataviz.md`, `ux-lists.md`, `ux-components.md`, `ux-interaction.md`, `ux-sweep.md`, `ux-gates.md`; `rendered-parity.md` (rendered-appearance/design-parity — "make X look like Y", a port/restyle), `migration-parity.md` (matching a prototype/mockup/design-export) |
 | Q | Privacy, compliance, licensing | `domain-q.md`, `privacy-compliance.md` (code layer), `privacy-by-design.md` (pre-code product artifacts) |
-| R | i18n, encoding, localization | `domain-r.md`, `i18n-l10n.md` (depth: bidi/RTL, Unicode normalization, CLDR plurals) |
+| R | i18n, encoding, localization | `domain-r.md`, `i18n-l10n.md` (bidi/RTL, Unicode normalization, CLDR plurals) |
 | S | Branches, merges, open-work triage | `domain-s.md`, `branch-and-merge-hygiene.md`; `merge-operations.md` (landing PRs, merge gates) |
 | T | Multi-tenancy & isolation | `domain-t.md` (when one deployment serves multiple tenants) |
 | W | Workflows, jobs & scheduling | `domain-w.md` (when the target runs cron, queues, or multi-step workflows) |

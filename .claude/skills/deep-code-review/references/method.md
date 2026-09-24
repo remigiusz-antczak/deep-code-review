@@ -55,8 +55,8 @@ say so.
   **Spoof / Tamper / Repudiate / Leak / Flood / Elevate** through that row, one
   short phrase each or `—`. Six cells on three rows beats a full threat model
   nobody finishes; the empty cells are the questions Phase 3 answers. Depth on
-  the design-level version of this lives under **A06 Insecure Design** in
-  `references/security-appsec.md`.
+  the design-level version (the full STRIDE walk, residual risk) lives in
+  `references/threat-modeling.md`.
 - **Banned remedies from recent reverts.** Scan recent history for auth /
   middleware / gate outages that were rolled back, e.g.
   `git log --oneline --grep='Revert' -i -20` and subject matches for
