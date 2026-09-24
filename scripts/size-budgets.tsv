@@ -52,7 +52,7 @@
 .claude/skills/communication-structure/SKILL.md	5269
 .claude/skills/contribution/SKILL.md	11660
 .claude/skills/contribution/references/contribution-procedure.md	7018
-.claude/skills/deep-code-review/SKILL.md	23962
+.claude/skills/deep-code-review/SKILL.md	23961
 .claude/skills/deep-code-review/references/a11y-aria.md	26603
 .claude/skills/deep-code-review/references/a11y-color-motion.md	8435
 .claude/skills/deep-code-review/references/a11y-focus.md	20838
@@ -61,7 +61,7 @@
 .claude/skills/deep-code-review/references/api-contracts.md	27601
 .claude/skills/deep-code-review/references/appsec-approvals.md	3905
 .claude/skills/deep-code-review/references/appsec-crypto.md	9664
-.claude/skills/deep-code-review/references/appsec-design.md	3844
+.claude/skills/deep-code-review/references/appsec-design.md	4000
 .claude/skills/deep-code-review/references/appsec-edge.md	10509
 .claude/skills/deep-code-review/references/appsec-files.md	4408
 .claude/skills/deep-code-review/references/appsec-links.md	8126
@@ -130,18 +130,19 @@
 .claude/skills/deep-code-review/references/release-engineering.md	20792
 .claude/skills/deep-code-review/references/reliability-error-handling.md	41344
 .claude/skills/deep-code-review/references/rendered-parity.md	10222
-.claude/skills/deep-code-review/references/report-format.md	20158
+.claude/skills/deep-code-review/references/report-format.md	20300
 .claude/skills/deep-code-review/references/role-coverage.md	19668
 .claude/skills/deep-code-review/references/security-agent-skills.md	6509
 .claude/skills/deep-code-review/references/security-ai-agents.md	39145
 .claude/skills/deep-code-review/references/security-api.md	17447
-.claude/skills/deep-code-review/references/security-appsec.md	30272
+.claude/skills/deep-code-review/references/security-appsec.md	30268
 .claude/skills/deep-code-review/references/skill-authoring-and-size.md	3677
 .claude/skills/deep-code-review/references/standards-index.md	470
 .claude/skills/deep-code-review/references/testing-ai-evals.md	6901
 .claude/skills/deep-code-review/references/testing-and-evals.md	38258
 .claude/skills/deep-code-review/references/testing-ml.md	10979
 .claude/skills/deep-code-review/references/testing-ui.md	12815
+.claude/skills/deep-code-review/references/threat-modeling.md	10297
 .claude/skills/deep-code-review/references/time-date-correctness.md	18635
 .claude/skills/deep-code-review/references/ux-components.md	27305
 .claude/skills/deep-code-review/references/ux-dataviz.md	9904
@@ -166,3 +167,6 @@
 .claude/skills/deep-code-review/references/data-ml.md	4775
 .claude/skills/deep-code-review/references/data-scoring.md	9578
 .claude/skills/deep-code-review/references/data-shapes.md	4920
+# README.md is not a skill file; its row is kept by hand (the regenerate
+# command above covers .claude/skills only).
+README.md	16233

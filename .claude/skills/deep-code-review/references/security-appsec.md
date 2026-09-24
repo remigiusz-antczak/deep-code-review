@@ -228,7 +228,7 @@ change, `password == input` (plaintext compare), reset tokens from a non-CSPRNG.
 **Account enumeration is a detectability leak (CWE-203 Observable Discrepancy).** On signup, login, and
 password-reset, diff the response — status code, body / error text, redirect target, **and response time** — between
 *subject exists* and *subject does not exist*. A distinguishable response on any of those axes lets an unauthenticated
-outsider enumerate valid accounts (LINDDUN's *Detectability* threat): a different string for "invalid username" vs
+outsider enumerate valid accounts (LINDDUN's *Detecting* threat): a different string for "invalid username" vs
 "invalid password"; a `409`/`422` on signup revealing "email taken"; a reset endpoint that emails-or-not based on
 existence. Fix: one **generic response** for the exists/not-exists pair and a **constant-time** path so existence
 isn't observable — not the removal of per-field validation.

@@ -40,6 +40,7 @@ Counts: Blocker N · Critical N · High N · Medium N · Low N · Nit N
   `unverified`/skipped with reason — skip caps self-test only>
 - Lint/type/scan: <results>
 - Authz posture: <N entry points · anon probed N · cross-account M · untested: …>
+- Threat model: <sensitive rows N · open threats N · residual lines N, or `no new boundary (evidence: …)`, or N/A> (`threat-modeling.md`)
 - Parity coverage: <N/M screens verified · unverified: …, or N/A> (UI/parity target;
   the correspondence table's row states, `migration-parity.md`)
 - Pipeline/app run: <before-state metrics, or N/A>

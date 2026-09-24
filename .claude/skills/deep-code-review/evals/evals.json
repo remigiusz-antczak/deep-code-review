@@ -6238,6 +6238,30 @@
         "Asks for boundary cases just before, exactly at, and just after the threshold once the clock is injected",
         "Mentions a clock-advanced (time-travel) CI run or equivalent as a cheap way to catch the class"
       ]
+    },
+    {
+      "id": "new-webhook-receiver-gets-a-diff-scoped-threat-model",
+      "prompt": "Threat-model this diff for the review. It adds `POST /webhooks/payments`: a third-party payment provider calls it with a JSON event and a signature header, the handler sets the matching order's `status` from the event body and writes it to the `orders` table, then enqueues a receipt email containing the customer's email address and the amount. The handler parses the body with `JSON.parse` before any other check. There is no rate limit on the route.",
+      "expected_output": "A diff-scoped threat model, not a system model (threat-modeling.md). Step 1, a data-flow table with one row per boundary crossing: provider (internet) to the webhook route (internet to app, control: none visible before parsing); handler to the orders table (app to data store); handler to the email queue (app to a downstream party, carrying personal data). Step 2, STRIDE on each row, one phrase per category or a dash with a reason. On the inbound row: Spoofing, a forged sender, because no signature check is shown before `JSON.parse`; Tampering and replay, a modified or re-sent body, because there is no raw-body signature check, timestamp window, or unique delivery id; Repudiation, a disputed delivery unless the event id and signature verdict are logged; Information disclosure, error responses that echo internals; Denial of service, a flood or oversized body with no rate limit or body ceiling; Elevation, the body sets `status` and the handler trusts it instead of re-deriving it from the provider or server state. The email row carries personal data, so walk LINDDUN (data disclosure: send only the fields the receipt needs). Step 3, map each threat to an existing check instead of restating it: api-contracts.md Webhooks consuming, appsec-crypto.md constant-time compare, security-appsec.md A06/A09/A10, security-api.md body ceiling, privacy-compliance.md minimization. Step 4, a disposition for each threat (mitigate with file:line and a test, eliminate, transfer, or accept) and at least one residual-risk line naming the threat, severity, an owner role, and a decision, for example the missing rate limit.",
+      "expectations": [
+        "Produces a data-flow table whose rows name source, sink, data, and the trust boundary each hop crosses, including the inbound internet-to-app row",
+        "Walks STRIDE per boundary row, and on the inbound row flags at least spoofing (no signature check before parsing), tampering or replay, denial of service (no rate limit), and elevation (trusting `status` from the body)",
+        "Maps threats to existing checks by reference (for example api-contracts.md Webhooks consuming, appsec-crypto.md, security-appsec.md A06) rather than restating a generic checklist",
+        "Treats the email hop as a personal-data flow and applies a privacy (LINDDUN or minimization) lens to it",
+        "Ends with at least one residual-risk line that names the threat, a severity, an owner, and a decision (accept, mitigate by a date, or block)",
+        "Does not mark any threat as mitigated without citing a control that the diff actually contains"
+      ]
+    },
+    {
+      "id": "refactor-behind-unchanged-interface-gets-one-line-no-threat-table",
+      "prompt": "Threat-model this diff for the review. It extracts the body of `calculate_invoice_total()` into two private helpers in the same module (`_sum_line_items` and `_apply_discounts`). The public function's signature, its route `POST /invoices/total`, its auth decorator, and its request schema are unchanged, and no new input, store, network call, or third party is added. The existing tests pass unchanged.",
+      "expected_output": "No new trust boundary, so no table (threat-modeling.md skip rule). The review records one line in the form `Threat model: no new boundary (evidence: <file:line of the unchanged entry point>)`, citing the unchanged route handler or auth decorator for `POST /invoices/total` as the evidence. It does not produce a data-flow table, STRIDE rows, or residual-risk lines for a refactor behind an unchanged interface. Correctness review of the extracted helpers still applies; that is not a threat model.",
+      "expectations": [
+        "Records a single line of the form `Threat model: no new boundary (evidence: ...)`",
+        "Cites concrete evidence that the entry point is unchanged (the route handler, auth decorator, or signature at a file:line)",
+        "Does not produce a data-flow table, STRIDE rows, or residual-risk lines",
+        "Does not invent threats for a change that crosses no new boundary"
+      ]
     }
   ]
 }

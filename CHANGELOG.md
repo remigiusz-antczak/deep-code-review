@@ -3,6 +3,16 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.451.0] — 2026-09-24
+
+### Added
+- `deep-code-review/references/threat-modeling.md`: a diff-scoped threat model a reviewer runs in minutes when a change adds a trust boundary, auth path, data flow to a new party, agent/tool capability, or file/network input — a text data-flow table, STRIDE (LINDDUN for personal data) on rows that reach money, writes, secrets, or personal data, each threat mapped to an existing Perun check, and a residual-risk line with an owner decision; a change with no new boundary gets one evidence line. Routed conditionally, so must-load floors are unchanged (35,866 / 47,460). Sources logged in `docs/standards-index.md` (fetched 2026-09-24).
+
+### Changed
+- README leads with what Perun does for you, a problems-it-solves table tied to CHANGELOG versions, and a "What's new" list; every number re-derived from the repository; README now has a size budget row.
+- size-budget-raise: .claude/skills/deep-code-review/references/appsec-design.md 3844→4000 pointer to the threat-modeling procedure
+- size-budget-raise: .claude/skills/deep-code-review/references/report-format.md 20158→20300 threat-model slot in the report
+
 ## [1.450.0] — 2026-09-24
 
 ### Added — self-improvement signal

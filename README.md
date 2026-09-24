@@ -1,21 +1,64 @@
 # Perun
 
-**A code-review and quality bar your AI coding agent follows: every finding
-carries `file:line` evidence and a concrete fix, and anything the evidence
-can't confirm is marked `unverified` instead of guessed.**
+[![gates](https://github.com/remigiusz-antczak/deep-code-review/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/remigiusz-antczak/deep-code-review/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+**Perun makes your AI coding agent review code the same careful way every
+time. Each problem it reports points to the exact file and line and comes with
+a fix. Anything it can't prove is marked `unverified` instead of guessed.**
 
 Perun is a set of skills: plain-text instruction files that an AI coding agent
 reads when a task matches. The default skill, `deep-code-review`, turns "look
-this over" into a fixed, repeatable audit of correctness, security, AI/LLM
-safety, data quality, performance and cost, reliability, testing,
-infrastructure, docs, and accessibility. It ends in a severity-ranked report.
-It works on any language or stack, on any agent that can read files, and as a
-one-shot prompt or a human checklist. Ten opt-in skills extend it to gated
-delivery, planning, and product work. MIT-licensed, runs fully local.
+this over" into a fixed audit of correctness, security, AI/LLM safety, data
+quality, performance and cost, reliability, testing, infrastructure, docs, and
+accessibility, and ends in a report ranked by severity. It works on any
+language, on any agent that can read files, and as a one-shot prompt or a human
+checklist. Ten opt-in skills extend it to gated delivery, planning, and product
+work. Free (MIT), runs fully local; you pay only for your agent's model usage.
 
-**Start here:** [New to AI agents](#new-to-ai-agents) ·
+**Start here:** [Quick start](#quick-start) ·
+[New to AI agents](#new-to-ai-agents) ·
 [Already using an agent](#already-using-claude-code-cursor-or-codex) ·
-[Running agent fleets](#running-agent-fleets) · [FAQ](#faq)
+[Running agent fleets](#running-agent-fleets) · [What's new](#whats-new) ·
+[FAQ](#faq)
+
+## Quick start
+
+**No install (any AI chat):** copy
+[`.claude/skills/deep-code-review/SKILL.md`](.claude/skills/deep-code-review/SKILL.md)
+into the chat, paste one file you care about, and ask
+`Review this with scope FILE.`
+
+**Install into a project (three commands, from a pinned release):**
+
+```bash
+git clone --branch vX.Y.Z --depth 1 https://github.com/remigiusz-antczak/deep-code-review.git
+cd deep-code-review && shasum -a 256 -c SHA256SUMS   # Linux: sha256sum -c SHA256SUMS
+./install.sh /path/to/your/project                   # review only (the default)
+```
+
+> [!IMPORTANT]
+> Replace `vX.Y.Z` with the latest tag on the Releases page and keep the
+> checksum step. Don't `curl | bash` an unpinned `HEAD`; the review itself flags
+> that as a supply-chain risk.
+
+Then ask your agent `run a deep code review DIFF origin/main`.
+
+---
+
+## What problems it solves
+
+Each row is a shipped mechanism; the version is where
+[`CHANGELOG.md`](CHANGELOG.md) records it.
+
+| Problem | Without Perun | With Perun | Since |
+|---|---|---|---|
+| A design port looks right but is incomplete | A pixel or size diff passes a page with a missing button or row. | `parity_differ.py` compares each section's element inventory (headings, text, controls, images, list rows) between design and app. Sizes are never inputs; one missing element shows completeness below 100%. A structurally wrong port fails even when the pixel difference is tiny. | 1.442.0, 1.447.0 |
+| Subagents flood the chat | Every helper agent returns a long report, multiplied across a fleet. | A `SubagentStop` hook blocks a final message over 800 characters or 10 lines; the deliverable goes in a file. | 1.434.0 |
+| Lessons stay advice | A lesson is written into the instructions and an agent skips it. | Perun's CI fails a commit that edits skill instructions without also touching a test, eval, or script, unless it states a `No-Mechanism-Reason:`. | 1.436.0 |
+| "Deployed" is taken on faith | A green CI badge counts as proof the change is live. | `surface_check.py` compares the running app's build id with the commit; a missing id reports `COULD_NOT_CHECK`, never a pass. | 1.441.0 |
+| Owner requests get lost | Asks disappear when an agent's context is compacted. | `task_ledger.py` keeps every ask verbatim; "done" needs evidence (a commit, URL, issue, or test id). | 1.442.0 |
+| Tests pass until a date | A fixture built from a fixed "now" passes until the calendar crosses a threshold, then fails every branch at once. | The review flags the pattern and asks for an injected clock (or fixtures derived from the real clock) plus tests before, at, and after the threshold. | 1.446.0 |
 
 ---
 
@@ -27,11 +70,16 @@ delivery, planning, and product work. MIT-licensed, runs fully local.
 | A summary for non-coders | A traffic-light health scorecard, the top risks in plain terms, and the decisions that need an owner. |
 | Broad, fixed coverage | 21 audit domains (lettered A–W), an adversarial red-team pass, and a check for costly work that adds no value (repeated identical API/LLM/DB calls, over-fetching). |
 | Lower context cost | The method files every review must read dropped from 65,903 to 35,866 estimated tokens (a FULL repo review: 87,137 to 47,460), about 46% less. A web review's must-read set dropped from 86,820 to at most 23,349. CI blocks either number from growing. |
-| Checks that run, not just advice | 25 shipped gate scripts carry a `--selftest` that proves they catch a planted violation, run in CI on every change. `--with-gates` wires the review's own gates into your repo's CI. |
+| Checks that run, not just advice | 26 shipped scripts carry a `--selftest` that proves they catch a planted violation; CI runs every one on each change. `--with-gates` wires the review's own gates into your repo's CI. |
 | A bar that stays | An optional final phase writes an `AGENTS.md` and pre-commit/CI gates into your repo, so the next contributor or agent, from any vendor, is held to the same bar. |
 
-Token figures are characters ÷ 4, from [`CHANGELOG.md`](CHANGELOG.md) and the CI ceilings in
-[`scripts/mustload-budgets.tsv`](scripts/mustload-budgets.tsv).
+Where the numbers come from: token figures are characters ÷ 4, from
+[`CHANGELOG.md`](CHANGELOG.md) and the CI ceilings in
+[`scripts/mustload-budgets.tsv`](scripts/mustload-budgets.tsv); the domain count
+is the domain map in
+[`SKILL.md`](.claude/skills/deep-code-review/SKILL.md); the script count is the
+`.claude/skills/*/scripts/*.py` files with a `--selftest`, each invoked in
+[`ci.yml`](.github/workflows/ci.yml).
 
 ---
 
@@ -45,31 +93,14 @@ in plain words. A **skill** is a folder of written instructions the agent loads
 when your request matches it. Think of it as handing a new colleague the team's
 review checklist.
 
-The quickest way to try Perun, with no install:
-
-1. Open [`.claude/skills/deep-code-review/SKILL.md`](.claude/skills/deep-code-review/SKILL.md) and copy it.
-2. Paste it into any AI chat, then paste one file you care about.
-3. Ask: `Review this with scope FILE.`
-
-Step-by-step, including installing into a real project:
+Start with the no-install option in [Quick start](#quick-start): it needs only
+a chat window. Step-by-step, including installing into a real project:
 [`docs/getting-started.md`](docs/getting-started.md).
 
 ### Already using Claude Code, Cursor, or Codex
 
-Install into your project with three commands, from a pinned release:
-
-```bash
-git clone --branch vX.Y.Z --depth 1 https://github.com/remigiusz-antczak/deep-code-review.git
-cd deep-code-review && shasum -a 256 -c SHA256SUMS   # Linux: sha256sum -c SHA256SUMS
-./install.sh /path/to/your/project                   # review only (the default)
-```
-
-> [!IMPORTANT]
-> Replace `vX.Y.Z` with the latest tag on the Releases page and keep the
-> checksum step. Don't `curl | bash` an unpinned `HEAD`; the review itself flags
-> that as a supply-chain risk.
-
-Then ask your agent `run a deep code review DIFF origin/main`, or use
+Install with the three commands in [Quick start](#quick-start). Then ask your
+agent `run a deep code review DIFF origin/main`, or use
 `/deep-code-review FULL`, `/deep-code-review FILE src/auth.ts` on hosts with
 slash commands.
 
@@ -95,8 +126,11 @@ non-zero instead of prose an agent may skip:
   none is lost when context compacts.
 - **Coordination:** isolation checks at lane start, claim tie-breaks, a
   cross-lane test lock, and a typed coordination board.
-- **Proof of done:** `surface_check.py` checks a "deployed" claim against the
-  running build, not a green CI badge.
+- **Merge train:** `merge_train.py` compares against freshly fetched refs and
+  fixes a red base forward only under an owner-authored grant.
+- **Proof of done:** `lane_guard.py handback` accepts a lane's claim only when
+  the cited commit is the branch head and every cited file is committed at it;
+  `surface_check.py` checks a "deployed" claim against the running build.
 
 Every mechanism, what it blocks, and how to switch it on:
 [`docs/for-fleets.md`](docs/for-fleets.md).
@@ -172,9 +206,10 @@ keeps that load small:
   file instead of scanning references. CI fails when an index goes stale.
 - **Short handbacks.** The handback cap and one-line reporting default stop
   per-lane narration multiplying across a fleet.
-- **Measure it.** `agentic-ceo/scripts/token_report.py --session <transcript>`
-  reports main-agent vs subagent tokens, each subagent's startup and output
-  cost, and flags an orchestration share above 20%.
+- **Measure and cap it.** `agentic-ceo/scripts/token_report.py --session <transcript>`
+  reports main-agent vs subagent tokens and each subagent's startup and output
+  cost. `--budget` adds per-lane caps (tool calls, tokens, startup overhead)
+  and an orchestration-share ceiling (default 20%); each breach names the fix.
 - **Host settings.** The verified Claude Code settings that cut per-turn tokens
   are documented in
   [`host-enforcement.md`](.claude/skills/agentic-delivery/references/host-enforcement.md).
@@ -185,6 +220,17 @@ keeps that load small:
   exempt design-port work, where exact fidelity and required tests beat minimal
   code). Neither is bundled. Code, PR bodies, and docs stay in normal English.
 
+---
+
+## What's new
+
+The latest five releases; full detail in [`CHANGELOG.md`](CHANGELOG.md).
+
+- **1.451.0** — Diff-scoped threat modeling for changes adding a trust boundary; value-first README.
+- **1.450.0** — `lesson_replay.py`: an advisory self-improvement signal that reports whether each new lesson's eval or selftest is actually tied to the change.
+- **1.449.0** — Token budget gate: `token_report.py --budget` caps each lane and the orchestrator's share.
+- **1.448.0** — Keystone fix-forward for a red base under an owner grant; verified lane hand-back.
+- **1.447.0** — Design parity: structure checks, same-crop guard, owner-approved ignores, baseline mode.
 ---
 
 ## FAQ
