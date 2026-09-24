@@ -60,6 +60,45 @@ SUBCOMMANDS
           base mid-train (HALT). A member that fails deterministically is parked
           with its reason and the rest HALT, because the remaining combination
           was never verified.
+  keystone  The owner's pre-ratified red-base exception for ONE fix PR (issue
+          #1142; deep-code-review `merge-operations.md` *Red base*). Needs
+          --only globs naming the files the fix may touch; every glob must
+          start with a literal directory (`src/clock*.py`, never `*.py`, `s*`
+          or `**`), and `*`/`?` never cross `/` (fix_class_gate's grammar).
+          Refuses (HALT) unless, in order: the PR is open, targets --base, and
+          passes plan's eligibility (non-draft, same-repo, MERGEABLE, checks
+          green); every changed file (`git diff --name-only --no-renames`, so a
+          file renamed in from elsewhere shows its source) matches --only; the
+          grants file (fixed path `.claude/KEYSTONE-GRANTS`, never chosen by the
+          caller), committed on the fetched base, holds a grant line blamed to
+          an owner email with no Co-authored-by trailer (focus_gate's
+          standing-grant check; owners from --owner-email, DCR_OWNER_EMAIL, or
+          git config dcr.owner, none = HALT; --require-signed also needs a good
+          signature). Grant lines:
+            keystone: #<pr> @<sha>                                 pins the PR's head
+            keystone: #<pr> | <globs> | expires=D | max-files=N    the PR, within limits
+            keystone-class: <globs> | expires=D | max-files=N      one keystone of a shape
+          A bare `keystone: #<pr>` is refused. Limits need an unexpired date at
+          most 30 days after the line's commit, globs covering every changed
+          file, and at most N files. The PR's own lines are tried before
+          classes, and the first grant that passes wins, so a spent or
+          non-covering class never blocks a usable one. Then --verify-cmd must
+          FAIL on the base alone after every retry (a red no open branch
+          introduced; a flake is not a red base) and PASS on base + PR in a
+          throwaway union. It records the keystone in --state and parks every
+          sibling carrying a copy: a shared `git patch-id --stable`
+          (cherry-pick), the keystone diff reverse-applying to the sibling's
+          tree (squash or amend), or another edit to a keystone file (possible
+          partial copy). `verify` re-screens members on every run (a re-push
+          cannot slip a copy in) until the keystone lands: its head is an
+          ancestor of the base, its PR is MERGED, or the base contains its
+          change. Dry-run by default, and a dry run spends nothing. --apply
+          merges the keystone alone (same same-base, still-ready, and
+          another-writer checks as `merge`) with `Keystone-Grant:
+          <commit>:<line-key>` in the merge commit body. That trailer spends
+          the grant: one already in the base's history is refused until the
+          owner commits the line again. Grant reads run with
+          --no-replace-objects and an empty blame.ignoreRevsFile.
 
 FLAKY VS DETERMINISTIC
 ----------------------
@@ -72,23 +111,29 @@ Parking a member never sleeps.
 AUTHORITY AND SAFETY
 --------------------
 Merging needs the integration owner or a standing grant the owner recorded.
-`--apply` requires `--grant <ref>` naming that decision (a link or record id);
-this script only checks that it is present and echoes it on every MERGED line.
-It cannot verify the grant. The script never pushes: any `git push` it is
-asked to run raises HALT, so it cannot force-push a shared branch. --verify-cmd
+For `merge`, `--apply` requires `--grant <ref>` naming that decision (a link
+or record id); this script only checks that it is present and echoes it on
+every MERGED line, so it cannot verify that grant. `keystone` checks its
+grant's git authorship, which is only as strong as commit metadata: without
+signing (--require-signed, with a key the agent cannot use), an author identity
+is spoofable by anyone who can write commits locally. Branch protection on the
+grants file (owner-only review or push) is the real control; this check
+catches mistakes and agent-written grants, not a determined forger. The
+script never pushes: any `git push` it is asked to run raises HALT, so it cannot force-push a shared branch. --verify-cmd
 runs PR code on this machine, which is why fork PRs are skipped by default.
 
 OUTPUT AND EXIT CODES
 ---------------------
 One line per action (ELIGIBLE, SKIP, PLAN, FAIL, FLAKY, PARK, GREEN, RED,
-WOULD-MERGE, MERGED, NOOP, HALT, ERROR, DROP-FAILED). Untrusted text (check names, file
+KEYSTONE, WOULD-MERGE, MERGED, NOOP, HALT, ERROR, DROP-FAILED). Untrusted text (check names, file
 names, forge errors) is stripped of control characters and truncated.
   0  plan listed; union green; dry-run printed; members merged; nothing to do
   1  verify found no green union (every member parked)
   2  usage or forge/git error (fail closed; nothing is guessed)
   3  HALT: base moved or rewritten, base red, another writer mid-train, a
      member failed at merge time, a member landed but the new base could
-     not be verified, or a refused push
+     not be verified, a refused push, or a keystone condition that does
+     not hold
 
 USAGE
 -----
@@ -97,12 +142,15 @@ USAGE
                         [--count-cmd CMD --cap N --marker-key size-budget-raise]
                         [--retries 2] [--backoff 30] [--timeout 3600]
   merge_train.py merge  --base main [--apply --grant REF]
+  merge_train.py keystone --base main --pr N --verify-cmd CMD --only GLOB
+                        [--only GLOB ...] [--owner-email E ...] [--require-signed] [--apply]
   merge_train.py --selftest
 Common: --remote origin, --state PATH (default <git-common-dir>/merge-train.json).
 """
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -113,15 +161,23 @@ import tempfile
 import time
 import uuid
 from contextlib import contextmanager
+from datetime import date, datetime, timedelta, timezone
 
 sys.dont_write_bytecode = True  # never litter __pycache__ into a checksummed skill tree
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import board_common as bc  # noqa: E402  (validate_repo, run_checks)
+import focus_gate as fg  # noqa: E402  (resolve_owners, _owner_problem: the standing-grant owner check)
+from refix_gate import load_fix_class_gate  # noqa: E402  (fix_class_gate's glob grammar)
+
+_FCG = load_fix_class_gate()
 
 OK, RED, ERROR, HALT = 0, 1, 2, 3
 GREEN_CONCLUSIONS = {"success", "neutral", "skipped"}
 PR_LIMIT = 200
 MAX_BACKOFF = 300
+MAX_GRANT_DAYS = 30  # a class keystone grant may run at most this long
+GRANTS_PATH = ".claude/KEYSTONE-GRANTS"  # the only file keystone grants are read from
+TRUST_GIT = ["--no-replace-objects", "-c", "blame.ignoreRevsFile="]  # grant reads: no rewritten history
 GIT_ID = ["-c", "user.name=merge-train", "-c", "user.email=merge-train@example.invalid"]
 
 
@@ -192,6 +248,7 @@ class Train:
         self.refs = set()  # refs this run fetched into; dropped when the run ends
         self.state_path = args.state or self._default_state()
         self.state = self._load()
+        self.grants_path = GRANTS_PATH
 
     # ---- plumbing -------------------------------------------------------
     def say(self, line):
@@ -475,6 +532,7 @@ class Train:
         """The `verify` subcommand: find the largest green union, parking culprits; record it."""
         members = self.eligible()
         self.base_sha, members = self.fetch(members)
+        members = self.screen(members)  # a recorded, unlanded keystone parks its copies (#1142)
         parked_any = False
         while members:
             try:
@@ -529,14 +587,18 @@ class Train:
                 return f"mergeable={clean(pr.get('mergeable'))}"
         return f"mergeable=UNKNOWN after {attempts} polls"
 
-    def merge_one(self, m):
-        """Merge one member at its recorded head with bounded retries; '' on success, else why not."""
+    def merge_one(self, m, body=""):
+        """Merge one member at its recorded head with bounded retries; '' on success, else why not.
+
+        `body`, when given, becomes the merge commit's message body (the keystone grant trailer).
+        """
         attempts, err = self.a.retries + 1, ""
         for i in range(attempts):
             if i:
                 self.sleep(self.delay(i))
             rc, _, err = self.run(["gh", "pr", "merge", str(m["number"]), *self.repo_flag, "--merge",
-                                   "--match-head-commit", m["head"]], ok=False)
+                                   "--match-head-commit", m["head"], *(["--body", body] if body else [])],
+                                  ok=False)
             if rc == 0:
                 if i:
                     self.say(f"FLAKY merge #{m['number']} landed on attempt {i + 1}/{attempts}")
@@ -586,6 +648,315 @@ class Train:
             prev = new
         return OK
 
+    # ---- keystone -------------------------------------------------------
+    def patch_ids(self, head):
+        """Stable patch-ids of the non-merge commits in base..head (identical diffs share one id)."""
+        # No bare pipe: a failed `git log` must fail the call, not feed patch-id nothing.
+        script = 'log=$(git log -p --no-color --no-merges "$1") || exit 1; printf "%s\\n" "$log" | git patch-id --stable'
+        out = self.run(["sh", "-c", script, "patch-id", f"{self.base_sha}..{head}"])[1]
+        return {line.split()[0] for line in out.splitlines() if line.strip()}
+
+    def changed(self, base, head):
+        """Files changed in base...head, renames split into delete + add so a moved-in file shows its source."""
+        return self.run(["git", "diff", "--name-only", "--no-renames", f"{base}...{head}"])[1].splitlines()
+
+    def diff_patch(self, base, head):
+        """The base...head diff as an applicable patch (renames split, binary hunks included)."""
+        return self.run(["git", "diff", "--no-renames", "--binary", f"{base}...{head}"])[1]
+
+    def contains(self, patch, tree):
+        """True when `patch` reverse-applies to commit `tree` (the change is already in it); False when not.
+
+        Uses a throwaway index, never the working tree. A setup failure raises ForgeError.
+        """
+        script = ('d=$(mktemp -d) || exit 3; trap \'rm -rf "$d"\' EXIT; '
+                  'GIT_INDEX_FILE="$d/index" git read-tree "$1" || exit 3; '
+                  'GIT_INDEX_FILE="$d/index" git apply --cached --check -R "$2" 2>/dev/null')
+        fd, path = tempfile.mkstemp(prefix="keystone-", suffix=".patch")
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                fh.write(patch)
+            rc = self.run(["sh", "-c", script, "keystone-contains", tree, path], ok=False)[0]
+        finally:
+            os.remove(path)
+        if rc not in (0, 1):
+            raise ForgeError(f"cannot test {tree[:7]} for the keystone change (rc={rc})")
+        return rc == 0
+
+    def carries(self, rec, head):
+        """'' when `head` holds no copy of keystone `rec`, else the park reason.
+
+        A shared patch-id is a cherry-pick; a keystone diff that reverse-applies
+        to the sibling's tree is a squashed or amended copy; any other edit to a
+        keystone file may be a partial copy and waits for the keystone as well.
+        """
+        n = rec["pr"]
+        if set(rec["patch_ids"]) & self.patch_ids(head):
+            return f"carries a cherry-pick of keystone #{n}; rebase onto the base after it lands"
+        touched = sorted(set(self.changed(self.base_sha, head)) & set(rec["files"]))
+        if not touched:
+            return ""
+        if self.contains(rec["patch"], head):
+            return f"carries a copy of keystone #{n}; drop it and rebase after it lands"
+        return f"touches keystone #{n} file {clean(touched[0], 60)} (possible partial copy); rebase after it lands"
+
+    def screen(self, members):
+        """Park members carrying a copy of the recorded keystone until that keystone lands.
+
+        Re-run on every verify, so a sibling that re-pushes (a new head un-parks
+        it) is checked again. The record clears once the keystone has landed by
+        any route: its head is an ancestor of the base, its PR is MERGED, or the
+        base itself contains the keystone change (a squash or a hand-applied fix).
+        """
+        rec = self.state.get("keystone")
+        if not rec:
+            return members
+        landed = (self.run(["git", "merge-base", "--is-ancestor", rec["head"], self.base_sha], ok=False)[0] == 0
+                  or json.loads(self.run(["gh", "pr", "view", str(rec["pr"]), *self.repo_flag,
+                                          "--json", "state"])[1]).get("state") == "MERGED"
+                  or self.contains(rec["patch"], self.base_sha))
+        if landed:
+            self.state.pop("keystone")
+            self.save()
+            self.say(f"KEYSTONE #{rec['pr']} landed on {self.a.base}; sibling screen cleared")
+            return members
+        kept = []
+        for m in members:
+            why = m["number"] != rec["pr"] and self.carries(rec, m["head"])
+            if why:
+                self.park(m, why)
+            else:
+                kept.append(m)
+        return kept
+
+    def tgit(self, args, ok=True):
+        """Run a trust-bearing git read: no replace refs, no blame ignore-revs file (as lane_guard does)."""
+        return self.run(["git", *TRUST_GIT, *args], ok=ok)
+
+    def git_fn(self):
+        """A focus_gate GitRunner over `tgit` (raises focus_gate.GitError on failure)."""
+        def call(args):
+            rc, out, err = self.tgit(args, ok=False)
+            if rc:
+                raise fg.GitError(clean(err.strip(), 160) or f"git {args[0]} rc={rc}")
+            return out
+        return call
+
+    def _line_owner(self, path, line, owners):
+        """(blamed commit sha, problem) for line `line` of `path` at the base; problem '' when owner-authored."""
+        blame = self.tgit(["blame", "--porcelain", "-L", f"{line},{line}", self.base_sha, "--", path])[1]
+        sha = blame.split(" ", 1)[0]
+        if not re.fullmatch(r"[0-9a-f]{40}", sha):
+            return sha, f"cannot attribute {clean(path)}:{line}"
+        try:
+            return sha, fg._owner_problem(self.git_fn(), sha, owners, getattr(self.a, "require_signed", False))
+        except fg.GitError as exc:
+            return sha, f"cannot read {sha[:7]}: {exc}"
+
+    def _class_problem(self, cls, sha):
+        """'' when a class grant's expiry is set, not past, and at most MAX_GRANT_DAYS after its commit."""
+        if not cls.get("expires"):
+            return "class grant needs expires=YYYY-MM-DD"
+        try:
+            expires = date.fromisoformat(cls["expires"])
+        except ValueError:
+            return f"bad expires={clean(cls['expires'])}"
+        if datetime.now(timezone.utc).date() > expires:
+            return f"class grant expired on {expires}"
+        stamp = self.tgit(["show", "-s", "--format=%cI", sha])[1].strip()[:10]
+        try:
+            made = date.fromisoformat(stamp)
+        except ValueError:
+            return f"cannot date {sha[:7]}"
+        if (expires - made).days > MAX_GRANT_DAYS:
+            return f"class grant runs more than {MAX_GRANT_DAYS} days ({made} to {expires})"
+        return ""
+
+    @staticmethod
+    def parse_class(body):
+        """(limits dict, problem) for `<glob> ... | expires=YYYY-MM-DD | max-files=N`. Pure."""
+        parts = [p.strip() for p in body.split("|")]
+        globs = [g for g in re.split(r"[\s,]+", parts[0]) if g]
+        opts = dict(p.split("=", 1) for p in parts[1:] if "=" in p)
+        if not globs:
+            return None, "class limits name no globs"
+        bad = next((glob_problem(g) for g in globs if glob_problem(g)), "")
+        if bad:
+            return None, bad
+        if not re.fullmatch(r"[1-9]\d*", opts.get("max-files", "").strip()):
+            return None, "class grant needs max-files=N (N >= 1)"
+        return {"globs": globs, "max_files": int(opts["max-files"]), "expires": opts.get("expires", "").strip()}, ""
+
+    def _candidate(self, path, line, row, rest, named, owners, head, files):
+        """(problem, grant) for one grant line; grant = {"key", "kind", "desc"} when it authorises this keystone."""
+        pin = re.fullmatch(r"@([0-9a-f]{7,40})", rest) if named else None
+        limits = None
+        if pin:
+            if not head.startswith(pin.group(1)):
+                return f"pinned to {pin.group(1)[:12]}, not head {head[:12]}", None
+        elif named and not rest.startswith("|"):
+            return "a named grant must pin @<sha> or carry class limits (| <globs> | expires= | max-files=)", None
+        else:
+            limits, why = self.parse_class(rest.lstrip("|").strip())
+            if why:
+                return why, None
+        sha, why = self._line_owner(path, line, owners)
+        if not why and limits:
+            why = self._class_problem(limits, sha)
+        if not why and limits:
+            stray = [f for f in files if not glob_match(f, limits["globs"])]
+            why = (f"{clean(stray[0])} outside the grant's globs" if stray else
+                   f"{len(files)} files > max-files={limits['max_files']}" if len(files) > limits["max_files"] else "")
+        if why:
+            return why, None
+        key = f"{sha}:{hashlib.sha256(row.strip().encode()).hexdigest()[:16]}"
+        spent = self.tgit(["log", self.base_sha, "-F", f"--grep=Keystone-Grant: {key}", "--format=%H", "-n", "1"])[1]
+        if spent.strip():
+            return f"grant already used by merge {spent.strip()[:7]}; the owner must commit it again", None
+        kind = "class" if limits and not named else "named"
+        desc = (f"expires={limits['expires']} globs={','.join(limits['globs'])}" if limits else f"pin={pin.group(1)}")
+        return "", {"key": key, "kind": kind, "desc": desc}
+
+    def grant(self, n, owners, head, files):
+        """('', grant) when the pinned grants file on the fetched base authorises keystone #n at `head`.
+
+        Lines of GRANTS_PATH (never an agent-chosen path), each blamed to an
+        owner email with no Co-authored-by trailer (focus_gate's check):
+          keystone: #<n> @<sha>                                pins this PR's head
+          keystone: #<n> | <globs> | expires=D | max-files=N   this PR, within limits
+          keystone-class: <globs> | expires=D | max-files=N    one keystone of this shape
+        Limits need an unexpired date at most MAX_GRANT_DAYS after the line's
+        commit, globs with a literal directory prefix covering every changed
+        file, and at most N files. Every grant is single-use: it is spent by
+        the `Keystone-Grant: <commit>:<line-key>` trailer `--apply` writes into
+        the merge commit, and a grant whose trailer is already in the base's
+        history is refused until the owner commits the line again. Candidates
+        for this PR are tried before classes; the first that passes wins, so a
+        spent or non-covering class never blocks a usable one. Read-only.
+        """
+        if not owners:
+            return "no owner identity (--owner-email, DCR_OWNER_EMAIL, or git config dcr.owner)", None
+        path = self.grants_path
+        rc, text, _ = self.tgit(["show", f"{self.base_sha}:{path}"], ok=False)
+        if rc:
+            return f"{clean(path)} is not committed on {self.a.base}@{self.base_sha[:7]}", None
+        rows = text.splitlines()
+        named = re.compile(rf"^\s*[-*]?\s*keystone:\s*#?{int(n)}(?!\d)\s*(.*)$", re.I)
+        klass = re.compile(r"^\s*[-*]?\s*keystone-class:\s*(.*)$", re.I)
+        cands = [(i, row, m.group(1).strip(), True) for i, row in enumerate(rows, 1) if (m := named.match(row))]
+        cands += [(i, row, m.group(1).strip(), False) for i, row in enumerate(rows, 1) if (m := klass.match(row))]
+        problems = []
+        for i, row, rest, is_named in cands:
+            why, found = self._candidate(path, i, row, rest, is_named, owners, head, files)
+            if found:
+                return "", found
+            problems.append(f"{clean(path)}:{i}: {why}")
+        return (problems[0] if problems else f"{clean(path)} has no 'keystone: #{n}' or 'keystone-class:' line"), None
+
+    def keystone(self):
+        """The `keystone` subcommand: prove the owner's pre-ratified red-base exception for one PR.
+
+        Proves, in order: the PR is an open PR into --base that passes plan's own
+        eligibility (non-draft, same-repo, MERGEABLE, checks green); every
+        changed file matches --only; the pinned grants file authorises it
+        (`grant`); the base fails --verify-cmd on its own (after retries, so a
+        flake is not a red base); base + PR passes it. Then records the
+        keystone for `verify` to screen against and parks every sibling that
+        carries a copy (`carries`). A dry run spends nothing. With --apply it
+        merges the keystone alone, writing the grant's trailer into the merge
+        commit (which spends it), and clears any recorded union.
+        """
+        n = self.a.pr
+        pr = json.loads(self.run(["gh", "pr", "view", str(n), *self.repo_flag, "--json",
+                                  "state,headRefOid,mergeable,isDraft,isCrossRepository,baseRefName"])[1])
+        why = ("state=" + clean(pr.get("state")) if pr.get("state") != "OPEN" else
+               f"targets {clean(pr.get('baseRefName'))}, not {self.a.base}"
+               if pr.get("baseRefName") != self.a.base else self._ineligible({**pr, "number": n}, {}))
+        if why:
+            raise Halt(f"keystone #{n} refused: {why}")
+        k = {"number": n, "head": pr["headRefOid"]}
+        _, out, _ = self.run(["gh", "pr", "list", *self.repo_flag, "--base", self.a.base, "--state", "open",
+                              "--limit", str(PR_LIMIT), "--json", "number,headRefOid"])
+        rows = json.loads(out or "[]")
+        if len(rows) >= PR_LIMIT:
+            raise ForgeError(f"pr list hit the {PR_LIMIT} limit; refusing a truncated sibling scan")
+        siblings = [{"number": r["number"], "head": r["headRefOid"]} for r in rows if r["number"] != n]
+        self.base_sha, kept = self.fetch([k, *siblings])
+        if k not in kept:
+            raise Halt(f"keystone #{n} refused: its head could not be fetched as planned")
+        siblings = [s for s in kept if s is not k]
+        files = self.changed(self.base_sha, k["head"])
+        stray = [f for f in files if not glob_match(f, self.a.only)]
+        if not files or stray:
+            raise Halt(f"keystone #{n} refused: " + (f"{clean(stray[0])} outside --only" if stray else "empty diff"))
+        owners, warning = fg.resolve_owners(self.a.owner_email, self.git_fn())
+        if warning:
+            self.say(f"WARN {warning}")
+        why, grant = self.grant(n, owners, k["head"], files)
+        if why:
+            raise Halt(f"keystone #{n} refused: grant {why}")
+        self.say(f"GRANT {grant['kind']} {grant['key'][:7]} {grant['desc']}")
+        if not self.fails([], "base"):
+            raise Halt(f"keystone #{n} refused: base {self.base_sha[:7]} is green; no exception needed, "
+                       "use the normal merge path")
+        try:
+            still_red = self.fails([k], f"keystone #{n}")
+        except Conflict as c:
+            raise Halt(f"keystone #{n} conflicts with the base ({clean(c.files[0], 60)}); rebase it") from c
+        if still_red:
+            raise Halt(f"keystone #{n} does not green the base in a union run; not a keystone")
+        self.say(f"KEYSTONE #{n} base={self.base_sha[:7]} red alone, green with #{n}; files={len(files)}")
+        rec = {"pr": n, "head": k["head"], "files": files, "patch_ids": sorted(self.patch_ids(k["head"])),
+               "patch": self.diff_patch(self.base_sha, k["head"])}
+        self.state["keystone"] = rec
+        self.save()
+        for s in siblings:
+            why = self.carries(rec, s["head"])
+            if why:
+                self.park(s, why)
+        if not self.a.apply:
+            self.say(f"WOULD-MERGE #{n} {k['head'][:7]} alone onto {self.a.base}@{self.base_sha[:7]}")
+            self.say("DRY-RUN nothing merged, grant not spent; --apply merges the keystone alone")
+            return OK
+        prev = self.fetch()[0]
+        self.same_base(self.base_sha, prev)
+        why = self.still_ready(k) or self.merge_one(k, body=f"Keystone-Grant: {grant['key']}")
+        if why:
+            raise Halt(f"keystone #{n} not merged ({why})")
+        self.state["members"] = []  # the base is about to move: any recorded union is void
+        self.save()
+        try:
+            new = self.fetch()[0]
+        except ForgeError as exc:  # the keystone already landed: say so, then stop
+            self.say(f"MERGED #{n} {k['head'][:7]} -> {self.a.base}@unverified grant={grant['key'][:7]}")
+            raise Halt(f"keystone #{n} landed; base unverified ({exc}); siblings re-plan") from exc
+        if self.run(["git", "rev-list", "--parents", "-n", "1", new])[1].split()[1:] != [prev, k["head"]]:
+            raise Halt(f"base moved by another writer while merging keystone #{n}")
+        self.state.update(base=self.a.base, base_sha=new, members=[])  # siblings re-plan on the new base
+        self.state.pop("keystone", None)
+        self.save()
+        self.say(f"MERGED #{n} {k['head'][:7]} -> {self.a.base}@{new[:7]} grant={grant['key'][:7]}")
+        return OK
+
+
+def glob_problem(glob):
+    """'' when `glob` starts with a literal directory (`src/clock*.py`); else why not. Pure.
+
+    `*` and `?` never cross `/` (fix_class_gate's grammar), and a glob with no
+    literal directory (`*.py`, `s*`, `**`, `*/x`) could reach any file.
+    """
+    top, sep, _ = glob.partition("/")
+    if not sep or not top or re.search(r"[*?\[]", top):
+        return f"glob {glob!r} needs a literal directory prefix (e.g. src/clock*.py)"
+    return ""
+
+
+def glob_match(path, globs):
+    """True when `path` matches one of `globs` in fix_class_gate's grammar (`*` stays within a segment)."""
+    if _FCG is None:
+        raise ForgeError("deep-code-review scripts/fix_class_gate.py not found; cannot match globs")
+    return any(_FCG._glob_to_regex(g).match(path) for g in globs)
+
 
 def build_parser():
     """Argument parser: plan / verify / merge subcommands plus --selftest."""
@@ -611,6 +982,18 @@ def build_parser():
     m = sub.add_parser("merge", parents=[common])
     m.add_argument("--apply", action="store_true", help="actually merge (default is a dry run)")
     m.add_argument("--grant", default="", help="the owner's decision or recorded standing grant authorising this merge")
+    k = sub.add_parser("keystone", parents=[common])
+    k.add_argument("--pr", type=int, required=True, help="the keystone PR that fixes the red base")
+    k.add_argument("--verify-cmd", required=True, help="the failing gate, run on the base alone and on base + PR")
+    k.add_argument("--only", action="append", required=True,
+                   help="glob of a file the fix may touch (repeatable); any other changed file refuses")
+    k.add_argument("--require-signed", action="store_true",
+                   help="also require a good signature (%%G? = G) on the grant line's commit")
+    k.add_argument("--owner-email", action="append", default=[],
+                   help="owner email (repeatable); else DCR_OWNER_EMAIL, else git config dcr.owner")
+    k.add_argument("--apply", action="store_true", help="actually merge the keystone (default is a dry run)")
+    k.add_argument("--timeout", type=int, default=3600, help="seconds per gate command")
+    k.set_defaults(count_cmd="")
     return p
 
 
@@ -632,6 +1015,8 @@ def run(argv, runner=default_runner, out=sys.stdout, sleep=time.sleep) -> int:
         problems.append("--count-cmd and --cap go together")
     if a.cmd == "merge" and a.apply and not a.grant.strip():
         problems.append("--apply needs --grant naming the integration owner's decision or a recorded standing grant")
+    if a.cmd == "keystone":
+        problems += [glob_problem(g) for g in a.only if glob_problem(g)]
     if problems:
         print("ERROR " + "; ".join(problems), file=out)
         return ERROR
@@ -667,6 +1052,10 @@ class FakeForge:
         self.trees, self.calls, self.sleeps, self.gates = {}, [], [], []
         self.fail_prefix, self.parents, self.remote_override = None, {}, {}
         self.pushed, self.after_merge = {}, {}  # heads pushed after plan; remote refs changed by a merge
+        self.red_base, self.fix, self.pids, self.files = False, set(), {}, {}  # keystone scenario
+        self.contains, self.grant_text, self.grant_meta = set(), None, ""  # trees holding the fix; grant record
+        self.grant_blame, self.grant_date = "a" * 40, datetime.now(timezone.utc).date().isoformat()
+        self.bodies = []  # merge commit bodies written by `gh pr merge --body`
 
     def base(self):
         return self.hist[-1]
@@ -676,6 +1065,7 @@ class FakeForge:
         if self.fail_prefix and args[:len(self.fail_prefix)] == self.fail_prefix:
             return 1, "", "simulated outage"
         a = [args[0], *args[5:]] if args[1:5] == GIT_ID else args
+        a = [a[0], *a[4:]] if a[1:4] == TRUST_GIT else a
         if a[:3] == ["gh", "pr", "list"]:
             rows = [{"number": n, "headRefOid": p["head"], **{k: p[k] for k in ("isDraft", "mergeable", "isCrossRepository")}}
                     for n, p in self.prs.items() if p["state"] == "OPEN"]
@@ -686,11 +1076,14 @@ class FakeForge:
             return 0, json.dumps({"total_count": len(runs), "check_runs": runs}), ""
         if a[:3] == ["gh", "pr", "view"]:
             p = self.prs[int(a[3])]
-            row = {"state": p["state"], "headRefOid": p["head"], "mergeable": p["mergeable"]}
+            row = {"state": p["state"], "headRefOid": p["head"], "mergeable": p["mergeable"],
+                   "isDraft": p["isDraft"], "isCrossRepository": p["isCrossRepository"], "baseRefName": "main"}
             row.update(self.view_override.get(int(a[3]), {}))
             return 0, json.dumps(row), ""
         if a[:3] == ["gh", "pr", "merge"]:
             n = int(a[3])
+            if "--body" in a:
+                self.bodies.append(a[a.index("--body") + 1])
             if n in self.merge_fail:
                 return 1, "", "GraphQL: Pull request is not mergeable"
             if self.intruder:
@@ -717,12 +1110,36 @@ class FakeForge:
             self.trees[a[5]] = {"start": a[6], "merged": []}
             return 0, "", ""
         if a[:2] == ["git", "merge"] and cwd:
-            n = int(a[-1][1:])
+            n = next((k for k, p in self.prs.items() if p["head"] == a[-1]), None) or int(a[-1][1:])
             if n in self.conflicts and self.trees[cwd]["merged"]:
                 self.trees[cwd]["conflict"] = True
                 return 1, "", "CONFLICT"
             self.trees[cwd]["merged"].append(n)
             return 0, "", ""
+        if a[:4] == ["git", "diff", "--name-only", "--no-renames"] and cwd is None:
+            head = a[4].split("...")[1]
+            default = ["src/clock.py"] if head == self.prs[1]["head"] else [f"src/{head}.py"]
+            return 0, "\n".join(self.files.get(head, default)) + "\n", ""
+        if a[:4] == ["git", "diff", "--no-renames", "--binary"]:
+            return 0, "PATCH\n", ""
+        if a[:2] == ["sh", "-c"] and cwd is None and a[3] == "patch-id":
+            head = a[-1].split("..")[1]
+            return 0, "".join(f"{pid} {head}\n" for pid in self.pids.get(head, [])), ""
+        if a[:2] == ["sh", "-c"] and cwd is None and a[3] == "keystone-contains":
+            return (0 if a[4] in self.contains else 1), "", ""
+        if a[:4] == ["git", "show", "-s", "--format=%cI"]:
+            return 0, f"{self.grant_date}T12:00:00+00:00\n", ""
+        if a[:3] == ["git", "show", "-s"]:
+            return 0, self.grant_meta, ""
+        if a[:2] == ["git", "show"]:
+            return (0, self.grant_text, "") if self.grant_text is not None else (128, "", "fatal: path not in tree")
+        if a[:2] == ["git", "log"] and any(x.startswith("--grep=") for x in a):
+            needle = next(x for x in a if x.startswith("--grep="))[len("--grep="):]
+            return 0, ("c" * 40 + "\n" if any(needle in b for b in self.bodies) else ""), ""
+        if a[:2] == ["git", "blame"]:
+            return 0, self.grant_blame + " 1 1 1\n", ""
+        if a[:2] == ["git", "config"]:
+            return 1, "", ""
         if a[:2] == ["git", "diff"]:
             return 0, "src/shared.py\n" if self.trees[cwd].pop("conflict", False) else "", ""
         if a[:3] == ["git", "merge-base", "--is-ancestor"]:
@@ -743,6 +1160,8 @@ class FakeForge:
             self.gates.append(tuple(t["merged"]))
             if self.flaky_left:
                 self.flaky_left -= 1
+                return 1, "", ""
+            if self.red_base and not self.fix & set(t["merged"]):
                 return 1, "", ""
             return (1 if self.bad & set(t["merged"]) else 0), "", ""
         return 99, "", f"fake: unexpected {args}"
@@ -1063,6 +1482,309 @@ def _selftest() -> int:
         except ForgeError:
             return not any(c[:2] == ["git", "fetch"] for c in f.calls), f.calls
 
+    OWNER = "owner@example.com"
+    K1 = "a1b2c3d4e5f60718"  # the keystone PR's head: hex, so a named grant can pin it
+    today = datetime.now(timezone.utc).date()
+
+    def class_body(days=10, globs="src/clock*.py", max_files="1", expires=True):
+        exp = f" | expires={(today + timedelta(days=days)).isoformat()}" if expires else ""
+        return f"{globs}{exp} | max-files={max_files}"
+
+    def class_line(**kw):
+        return f"keystone-class: {class_body(**kw)}\n"
+
+    def line_key(row, blame="a" * 40):
+        return f"{blame}:{hashlib.sha256(row.strip().encode()).hexdigest()[:16]}"
+
+    def keystone_forge():
+        f = FakeForge(3)  # #1 is the keystone; #3 carries a cherry-pick of it
+        f.prs[1]["head"] = K1
+        f.red_base, f.fix = True, {1}
+        f.pids = {K1: ["pk"], "h2": ["p2"], "h3": ["p3", "pk"]}
+        f.grant_text = f"keystone: #1 @{K1[:10]}\n"
+        f.grant_meta = f"{OWNER}\x1fN\x1f"
+        return f
+
+    def ks(f, *extra, state="ks.json", pr="1", keep=False):
+        return go(f, "keystone", "--pr", pr, "--verify-cmd", "t", "--only", "src/clock*.py",
+                  "--owner-email", OWNER, "--retries", "0", *extra, state=state if keep else fresh(state))
+
+    def keystone_proves_parks_cherry_pick_and_dry_runs():
+        f = keystone_forge()
+        rc, out = ks(f)
+        merged = [c for c in f.calls if c[:3] == ["gh", "pr", "merge"]]
+        want = ["KEYSTONE #1 base=B0 red alone, green with #1", "PARK #3 carries a cherry-pick of keystone #1",
+                f"WOULD-MERGE #1 {K1[:7]} alone", "DRY-RUN"]
+        return (rc == OK and all(w in out for w in want) and "PARK #2" not in out and not merged
+                and f.gates == [(), (1,)]), out
+
+    def keystone_apply_merges_alone_spends_grant_in_merge_commit():
+        f = keystone_forge()
+        rc, out = ks(f, "--apply", state="ka.json")
+        merges = [c for c in f.calls if c[:3] == ["gh", "pr", "merge"]]
+        rc2, out2 = go(f, "plan", state="ka.json")
+        f.prs[3]["head"] = "h3b"  # rebased onto the new base: the duplicate patch is gone
+        rc3, out3 = go(f, "plan", state="ka.json")
+        with open(os.path.join(tmp, "ka.json"), encoding="utf-8") as fh:
+            st = json.load(fh)
+        trailer = f"Keystone-Grant: {line_key(f'keystone: #1 @{K1[:10]}')}"
+        return (rc == OK and [c[3] for c in merges] == ["1"] and trailer in merges[0]
+                and f"MERGED #1 {K1[:7]} -> main@M1" in out and "keystone" not in st
+                and "keystone_grants_used" not in st
+                and rc2 == OK and "SKIP #3 parked (carries a cherry-pick" in out2
+                and rc3 == OK and "ELIGIBLE #3 h3b" in out3), (out, out2, out3, merges)
+
+    def keystone_refused_on_green_base():
+        f = keystone_forge()
+        f.red_base = False
+        rc, out = ks(f)
+        return rc == HALT and "base B0 is green" in out, out
+
+    def keystone_refused_when_union_stays_red():
+        f = keystone_forge()
+        f.fix = set()
+        rc, out = ks(f)
+        return rc == HALT and "does not green the base" in out, out
+
+    def keystone_refused_outside_only_before_any_gate():
+        f = keystone_forge()
+        f.files = {K1: ["src/clock.py", "docs/notes.md"]}
+        rc, out = ks(f)
+        g = keystone_forge()
+        g.files = {K1: ["src/sub/clock.py"]}  # `*` never crosses `/`
+        rc2, out2 = ks(g)
+        listed = [c for c in f.calls if c[:3] == ["git", "diff", "--name-only"]]
+        return (rc == HALT and "docs/notes.md outside --only" in out and not f.gates
+                and rc2 == HALT and "src/sub/clock.py outside --only" in out2 and not g.gates
+                and all("--no-renames" in c for c in listed) and listed), (out, out2)
+
+    def keystone_refused_wrong_target_branch():
+        f = keystone_forge()
+        f.view_override = {1: {"baseRefName": "release"}}
+        rc, out = ks(f)
+        return rc == HALT and "targets release" in out and not f.gates, out
+
+    def keystone_runs_eligibility_before_any_gate():
+        f = keystone_forge()
+        f.prs[1]["mergeable"] = "CONFLICTING"
+        rc, out = ks(f)
+        g = keystone_forge()
+        g.prs[1]["runs"] = [_run("ci", "failure")]
+        rc2, out2 = ks(g)
+        return (rc == HALT and "mergeable=CONFLICTING" in out and "WOULD-MERGE" not in out and not f.gates
+                and rc2 == HALT and "check ci=failure" in out2 and not g.gates), (out, out2)
+
+    def keystone_grant_owner_authored_pinned_and_hardened():
+        cases_ = [("grant_meta", "intruder@example.com\x1fN\x1f", "is not the owner", ()),
+                  ("grant_meta", f"{OWNER}\x1fN\x1fAgent <agent@example.com>", "Co-authored-by", ()),
+                  ("grant_text", "keystone: #12 @a1b2c3d\n", "no 'keystone: #1' or 'keystone-class:' line", ()),
+                  ("grant_text", "keystone: #1\n", "must pin @<sha> or carry class limits", ()),
+                  ("grant_text", "keystone: #1 @deadbeef\n", "pinned to deadbeef", ()),
+                  ("grant_text", None, "is not committed on main", ()),
+                  ("grant_meta", f"{OWNER}\x1fN\x1f", "no good signature", ("--require-signed",))]
+        outs, ok = [], True
+        for attr, value, want, extra in cases_:
+            f = keystone_forge()
+            setattr(f, attr, value)
+            rc, out = ks(f, *extra)
+            outs.append(out)
+            ok = ok and rc == HALT and want in out and not f.gates
+        f = keystone_forge()
+        f.grant_meta = f"{OWNER}\x1fG\x1f"
+        rc, out = ks(f, "--require-signed")
+        ok = ok and rc == OK
+        trusted = [c for c in f.calls if c[:1] == ["git"] and ("blame" in c or "show" in c or "--grep" in " ".join(c))]
+        shows = [c for c in f.calls if "show" in c and "-s" not in c]
+        ok = ok and trusted and all(c[1:4] == TRUST_GIT for c in trusted)
+        ok = ok and shows and all(c[-1] == f"B0:{GRANTS_PATH}" for c in shows)
+        saved = os.environ.pop("DCR_OWNER_EMAIL", None)
+        try:
+            g = keystone_forge()
+            rc, out = go(g, "keystone", "--pr", "1", "--verify-cmd", "t", "--only", "src/clock*.py",
+                         "--retries", "0", state=fresh("kn.json"))
+        finally:
+            if saved is not None:
+                os.environ["DCR_OWNER_EMAIL"] = saved
+        outs.append(out)
+        return ok and rc == HALT and "no owner identity" in out and not g.gates, outs
+
+    def keystone_parks_squash_copies_and_touchers():
+        f = keystone_forge()
+        f.files = {"h2": ["src/clock.py", "src/h2.py"], "h3": ["src/clock.py"]}
+        f.pids = {K1: ["pk"], "h2": ["p2"], "h3": ["p3"]}  # no shared patch-id: a squash / edited copy
+        f.contains = {"h2"}  # the keystone diff reverse-applies on #2's tree
+        rc, out = ks(f)
+        return (rc == OK and "PARK #2 carries a copy of keystone #1" in out
+                and "PARK #3 touches keystone #1 file src/clock.py" in out), out
+
+    def keystone_record_screens_repushed_siblings_until_it_lands():
+        f = keystone_forge()
+        rc, out = ks(f, state="kr.json")
+        f.prs[3]["head"], f.pids["h3b"] = "h3b", ["p3", "pk"]  # re-push that still carries the copy
+        rc2, out2 = go(f, "verify", "--verify-cmd", "t", "--retries", "0", state="kr.json")
+        f.hist.append("M1")  # the keystone's change reached the base outside this tool
+        f.red_base, f.contains = False, {"M1"}
+        f.prs[3]["head"], f.pids["h3c"] = "h3c", ["p3", "pk"]
+        rc3, out3 = go(f, "verify", "--verify-cmd", "t", "--retries", "0", state="kr.json")
+        return (rc == OK and rc2 == OK and "PARK #3 carries a cherry-pick of keystone #1" in out2
+                and "GREEN base=B0 members=#1,#2" in out2
+                and rc3 == OK and "KEYSTONE #1 landed" in out3 and "PARK #3" not in out3), (out2, out3)
+
+    def keystone_record_clears_on_merged_state_or_ancestor_head():
+        outs, ok = [], True
+        for how in ("merged", "ancestor"):
+            f = keystone_forge()
+            ks(f, state="kc2.json")
+            if how == "merged":
+                f.prs[1]["state"] = "MERGED"
+            else:
+                f.hist.append(K1)  # the keystone head is now reachable from the base
+            f.red_base = False
+            f.prs[3]["head"], f.pids["h3b"] = "h3b", ["p3", "pk"]
+            rc, out = go(f, "verify", "--verify-cmd", "t", "--retries", "0", state="kc2.json")
+            outs.append(out)
+            ok = ok and rc == OK and "KEYSTONE #1 landed" in out and "PARK #3" not in out
+        return ok, outs
+
+    def keystone_conflict_halts_cleanly():
+        f = keystone_forge()
+        real = f.__call__
+
+        def conflicting(args, cwd=None, timeout=None):
+            if args[1:6] == [*GIT_ID, "merge"] and cwd and args[-1] == K1:
+                f.calls.append(args)
+                f.trees[cwd]["conflict"] = True
+                return 1, "", "CONFLICT"
+            return real(args, cwd=cwd, timeout=timeout)
+        buf = io.StringIO()
+        rc = run(["keystone", "--pr", "1", "--verify-cmd", "t", "--only", "src/clock*.py",
+                  "--owner-email", OWNER, "--retries", "0", "--base", "main",
+                  "--state", os.path.join(tmp, fresh("kc.json"))],
+                 runner=conflicting, out=buf, sleep=f.sleeps.append)
+        return rc == HALT and "conflicts with the base (src/shared.py)" in buf.getvalue(), buf.getvalue()
+
+    def keystone_globs_need_a_literal_directory_prefix():
+        outs, ok = [], True
+        for glob in ("*.py", "s*", "**", "*/clock.py"):
+            rc, out = go(keystone_forge(), "keystone", "--pr", "1", "--verify-cmd", "t", "--only", glob)
+            outs.append(out)
+            ok = ok and rc == ERROR and "needs a literal directory prefix" in out
+        f = keystone_forge()
+        f.grant_text = class_line(globs="*.py")
+        rc, out = ks(f)
+        outs.append(out)
+        return ok and rc == HALT and "needs a literal directory prefix" in out and not f.gates, outs
+
+    def class_grant_spent_only_by_apply_until_a_new_owner_commit():
+        f = keystone_forge()
+        f.grant_text, f.fix = class_line(), {1, 2}
+        f.files = {"h2": ["src/clock.py"]}
+        f.pids = {K1: ["pk"], "h2": ["p2"], "h3": ["p3"]}
+        rc, out = ks(f, state="cg.json")
+        rc2, out2 = ks(f, state="cg2.json", pr="2")  # a dry run spends nothing
+        dry_bodies = list(f.bodies)
+        rc3, out3 = ks(f, "--apply", state="cg3.json")  # --apply spends the grant in the merge commit
+        f.red_base = True  # keep the base red for the second keystone's proof
+        rc4, out4 = ks(f, state="cg4.json", pr="2")
+        f.grant_blame = "b" * 40  # the owner re-commits the class line: a new grant
+        rc5, out5 = ks(f, state="cg5.json", pr="2")
+        return (rc == OK and "GRANT class" in out and rc2 == OK and "KEYSTONE #2" in out2 and dry_bodies == []
+                and rc3 == OK and rc4 == HALT and "grant already used by merge" in out4
+                and rc5 == OK and "KEYSTONE #2" in out5), (out, out2, out3, out4, out5)
+
+    def class_grant_refusals():
+        cases_ = [(class_line(days=-1), None, "expired"),
+                  (class_line(days=31), None, "more than 30 days"),
+                  (class_line(expires=False), None, "needs expires=YYYY-MM-DD"),
+                  (class_line(max_files="0"), None, "needs max-files"),
+                  (class_line(), ["src/clock.py", "src/clock2.py"], "2 files > max-files=1"),
+                  (class_line(globs="lib/*.py"), None, "src/clock.py outside the grant's globs")]
+        outs, ok = [], True
+        for text, files, want in cases_:
+            f = keystone_forge()
+            f.grant_text = text
+            if files:
+                f.files = {K1: files}
+            rc, out = ks(f, state="cr.json")
+            outs.append(out)
+            ok = ok and rc == HALT and want in out and not f.gates
+        return ok, outs
+
+    def class_grant_picks_the_unused_class_that_covers_the_files():
+        f = keystone_forge()
+        spent_row = class_line(globs="src/clock.py")
+        f.grant_text = class_line(globs="lib/x*.py") + spent_row + class_line(globs="src/c*.py")
+        f.bodies = [f"merge\n\nKeystone-Grant: {line_key(spent_row)}"]
+        rc, out = ks(f)
+        return rc == OK and "GRANT class" in out and "globs=src/c*.py" in out, out
+
+    def keystone_git_helpers_on_a_real_repo():
+        repo = tempfile.mkdtemp(dir=tmp)
+
+        def git(*args, who=OWNER):
+            rc, out, err = default_runner(["git", "-c", "user.name=T", "-c", f"user.email={who}",
+                                           "-c", "commit.gpgsign=false", *args], cwd=repo)
+            assert rc == 0, err
+            return out.strip()
+
+        def write(path, text):
+            os.makedirs(os.path.dirname(os.path.join(repo, path)) or repo, exist_ok=True)
+            with open(os.path.join(repo, path), "w", encoding="utf-8") as fh:
+                fh.write(text)
+        git("init", "--quiet", "-b", "main")
+        write("src/clock.py", "a\nb\nold\nc\nd\n")
+        write("docs/old.py", "helper\n")
+        owner_grant = (f"keystone: #1 | {class_body(max_files='2')}\n"
+                       + class_line(globs="docs/*.md"))
+        write(GRANTS_PATH, owner_grant)
+        git("add", "-A")
+        git("commit", "--quiet", "-m", "base with the owner's keystone grants")
+        write(GRANTS_PATH, owner_grant + f"keystone: #2 | {class_body()}\n")
+        git("commit", "--quiet", "-am", "widen\n\nCo-authored-by: Agent <agent@example.com>")
+        base = git("rev-parse", "HEAD")
+
+        def branch(name, *edits):
+            git("checkout", "--quiet", "-B", name, base)
+            for path, text in edits:
+                if text is None:
+                    git("mv", "docs/old.py", path)
+                else:
+                    write(path, text)
+            git("add", "-A")
+            git("commit", "--quiet", "-m", name)
+            return git("rev-parse", "HEAD")
+        k = branch("k", ("src/clock.py", "a\nb\nfixed\nc\nd\n"))
+        ren = branch("ren", ("src/clock_helper.py", None))
+        squash = branch("sq", ("src/clock.py", "a\nb\nfixed\nc\nd\n"), ("other.txt", "x\n"))
+        toucher = branch("touch", ("src/clock.py", "a\nb\nsomething else\nc\nd\n"))
+        clean_ = branch("clean", ("c.txt", "c\n"))
+        t = real_train(lambda args, cwd=None, **kw: default_runner(args, cwd=cwd or repo, **kw))
+        t.base_sha = base
+        patch = t.diff_patch(base, k)
+        rec = {"pr": 1, "head": k, "files": t.changed(base, k), "patch_ids": sorted(t.patch_ids(k)),
+               "patch": patch}
+        files = ["src/clock.py"]
+        class_grant = t.grant(9, [OWNER], k, ["docs/a.md"])
+        results = {
+            "rename-lists-source": "docs/old.py" in t.changed(base, ren),
+            "squash-copy": t.carries(rec, squash).startswith("carries a copy"),
+            "toucher": t.carries(rec, toucher).startswith("touches keystone #1 file src/clock.py"),
+            "clean": t.carries(rec, clean_) == "",
+            "base-lacks-fix": not t.contains(patch, base),
+            "keystone-has-fix": t.contains(patch, k),
+            "named-with-limits-ok": t.grant(1, [OWNER], k, files)[0] == "",
+            "grant-coauthored": "Co-authored-by" in t.grant(2, [OWNER], k, files)[0],
+            "grant-non-owner": "is not the owner" in t.grant(1, ["other@example.com"], k, files)[0],
+            "class-ok": class_grant[0] == "" and class_grant[1]["kind"] == "class",
+        }
+        git("checkout", "--quiet", "-B", "landed", base)
+        git("commit", "--quiet", "--allow-empty", "-m", f"Merge keystone\n\nKeystone-Grant: {class_grant[1]['key']}")
+        t.base_sha = git("rev-parse", "HEAD")
+        results["class-spent-by-trailer"] = "grant already used by merge" in t.grant(9, [OWNER], k, ["docs/a.md"])[0]
+        t.grants_path = "missing.md"
+        results["grants-file-missing"] = "is not committed" in t.grant(1, [OWNER], k, files)[0]
+        return all(results.values()), results
+
     cases = [
         ("plan-filters-latest-check-per-name-and-K", plan_filters),
         ("culprit-among-four-isolated-and-stays-parked", culprit_among_four_is_isolated_and_stays_parked),
@@ -1093,6 +1815,23 @@ def _selftest() -> int:
         ("drop-failure-logged-never-raises", drop_failure_is_logged_and_never_raises),
         ("post-merge-fetch-mismatch-halts-after-merged-line", post_merge_fetch_mismatch_halts_after_merged_line),
         ("non-int-pr-number-rejected", non_int_pr_number_is_rejected),
+        ("keystone-proves-parks-cherry-pick-dry-runs", keystone_proves_parks_cherry_pick_and_dry_runs),
+        ("keystone-apply-spends-grant-in-merge-commit", keystone_apply_merges_alone_spends_grant_in_merge_commit),
+        ("keystone-refused-on-green-base", keystone_refused_on_green_base),
+        ("keystone-refused-when-union-stays-red", keystone_refused_when_union_stays_red),
+        ("keystone-refused-outside-only-before-gate", keystone_refused_outside_only_before_any_gate),
+        ("keystone-refused-wrong-target-branch", keystone_refused_wrong_target_branch),
+        ("keystone-runs-eligibility-before-any-gate", keystone_runs_eligibility_before_any_gate),
+        ("keystone-grant-owner-pinned-hardened", keystone_grant_owner_authored_pinned_and_hardened),
+        ("keystone-parks-squash-copies-and-touchers", keystone_parks_squash_copies_and_touchers),
+        ("keystone-record-screens-repushed-siblings", keystone_record_screens_repushed_siblings_until_it_lands),
+        ("keystone-record-clears-merged-or-ancestor", keystone_record_clears_on_merged_state_or_ancestor_head),
+        ("keystone-conflict-halts-cleanly", keystone_conflict_halts_cleanly),
+        ("keystone-globs-need-literal-directory", keystone_globs_need_a_literal_directory_prefix),
+        ("class-grant-spent-only-by-apply", class_grant_spent_only_by_apply_until_a_new_owner_commit),
+        ("class-grant-refusals", class_grant_refusals),
+        ("class-grant-picks-unused-covering-class", class_grant_picks_the_unused_class_that_covers_the_files),
+        ("keystone-git-helpers-on-a-real-repo", keystone_git_helpers_on_a_real_repo),
     ]
     try:
         return bc.run_checks("merge_train", cases)

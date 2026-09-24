@@ -3,6 +3,18 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.448.0] — 2026-09-24
+
+### Added
+- Keystone fix-forward for a red base no branch caused (`merge_train.py keystone`, #1142): the owner authors grants once in `.claude/KEYSTONE-GRANTS` — either a named PR pinned to a head sha, or a pre-ratified class (directory-anchored path globs, expiry at most 30 days, maximum changed files). The script checks owner authorship (replace objects and blame ignore lists disabled; `--require-signed` opt-in), mergeability and checks, a green union on the red base, `--no-renames` path limits, and merges the keystone alone first. A class grant is single-use: spending is recorded only on `--apply` as a `Keystone-Grant:` trailer in the merge commit, and a grant already in history is refused. Siblings that carry a copy of the keystone (patch-id match or a reverse-applying diff) are parked until they rebase; cherry-picking the keystone into siblings is refused.
+- Verified lane hand-back (`lane_guard.py handback`): a claim counts only when the cited hex sha exists, differs from the dispatch base, equals the branch head, and every relative cited path is a committed blob at that sha; absolute paths need `--artifact-root`.
+
+### Changed — breaking
+- `lane_guard.py handback` now requires `--branch` and a hex `--sha`; relative `--cite` paths must be committed; absolute paths require `--artifact-root`.
+- Without signed commits, author identity is spoofable locally; branch protection on the grants file stays the real control.
+- size-budget-raise: .claude/skills/agentic-delivery/references/verification-handback.md 51289→51573 verified hand-back command and parked-claim rule
+- size-budget-raise: .claude/skills/deep-code-review/references/merge-operations.md 44836→45917 keystone exception with the pre-ratified single-use class grant (#1142)
+
 ## [1.447.0] — 2026-09-24
 
 ### Added — design parity, field-requested

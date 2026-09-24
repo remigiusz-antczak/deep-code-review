@@ -55,7 +55,11 @@ onward (merges it, or hands it to a human/reviewer), from a checkout that can
 resolve both refs:
 
     python3 .claude/skills/agentic-delivery/scripts/lane_guard.py handback \
-        --sha <lane-head-sha> --base <integration-ref>
+        --sha <lane-head-sha> --base <dispatch-base> --branch <lane-branch> \
+        [--cite <path> ...] [--artifact-root <dir>]
+
+<dispatch-base> is the integration ref the lane was dispatched from (and
+will land on).
 
 Catches a root/orphan commit: a lane that committed in an unusual state (an
 orphan or unborn HEAD, or plumbing commands) can produce a head whose tree is
@@ -77,6 +81,19 @@ defect surfaces only on rebase, as a full-tree conflict. Exit 0 (one
      root commit is reachable at all in `<base>..<head>` — catches an
      unrelated-history merge that pulls in a second root even though the
      merge commit itself has parents and a merge-base with `<base>`).
+  4. `git rev-list --count <base>..<sha>` is non-zero: a head already reachable
+     from the base the lane was dispatched from parked nothing (a lane that
+     reports "parked <head>" while HEAD never moved).
+  5. --sha is a 7-40 character lowercase hex id and the resolved commit
+     starts with it (a ref name would always match its own tip), and the tip
+     of --branch (`refs/heads/<branch>`, or a full `refs/...` name) is
+     exactly that commit, so a sha from another branch, or a tip that moved
+     after the claim, is refused.
+  6. Every relative --cite is a file committed at the cited sha (`git
+     cat-file -t <sha>:<path>` is `blob`, repo-root relative; empty and `..`
+     paths refused; a file only on disk does not count). An absolute --cite
+     (an artifact such as a composite image) counts only when it is an
+     existing file inside the explicit --artifact-root.
 Otherwise exit 1 with exactly one `LANE_GUARD REFUSE:` line. Fails closed:
 any nonzero = refuse; pass only when exit 0 AND an OK line is printed — a
 git failure at any step is a refusal, never a pass. Recovery: check out a
@@ -87,6 +104,7 @@ same as any other force-push in this repo).
 """
 import argparse
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -247,7 +265,22 @@ def check(cwd, expect_branch=None, default_branch=None, git="git", allow_any_bra
     return OK, f"LANE_GUARD OK: linked worktree {top} on branch '{branch}'"
 
 
-def check_handback(cwd, sha, base, git="git"):
+def _cite_problem(cwd, full, path, artifact_root, git):
+    """'' when one cited path is backed by evidence (rule 6 of HANDBACK MODE), else why not."""
+    if os.path.isabs(path):
+        if not artifact_root:
+            return f"absolute cited path {path!r} needs --artifact-root"
+        root, real = os.path.realpath(artifact_root), os.path.realpath(path)
+        if os.path.commonpath([root, real]) != root:
+            return f"cited path {path!r} is outside --artifact-root {artifact_root!r}"
+        return "" if os.path.isfile(real) else f"cited path {path!r} is not an existing file"
+    if not path or ".." in path.replace("\\", "/").split("/"):
+        return f"cited path {path!r} is empty or '..'"
+    code, kind = _git_handback(["cat-file", "-t", f"{full}:{path}"], cwd, git)
+    return "" if code == 0 and kind == "blob" else f"cited path {path!r} is not a file committed at {full[:12]}"
+
+
+def check_handback(cwd, sha, base, branch=None, cites=(), git="git", artifact_root=None):
     """Evaluate a lane's head commit right before it is relayed onward (merged,
     or handed to a human/reviewer); return (exit_code, one-line message).
 
@@ -268,15 +301,23 @@ def check_handback(cwd, sha, base, git="git"):
         reachable in `<base>..<head>` — an unrelated-history merge can pull a
         second root in through a merge commit that itself has parents and
         does share a merge-base with `base`, so the merge-base check alone
-        would pass it.
+        would pass it;
+      - `<base>..<sha>` holds no commit (the head parked nothing new);
+      - `sha` is not a 7-40 character lowercase hex id that the resolved
+        commit starts with;
+      - the tip of `branch` does not resolve or is not exactly `sha`;
+      - a relative path in `cites` is not a blob committed at `sha`, or an
+        absolute one is not an existing file inside `artifact_root`.
     Every git call above runs with GIT_NO_REPLACE_OBJECTS=1 (`_git_handback`),
     so a replace ref cannot mask true parentage. Fails closed: any nonzero =
     refuse; pass only when exit 0 AND an OK line is printed — a git failure
     (including a nonzero from the rev-list check itself) is a refusal, never
     a pass. Side-effect free: runs read-only git commands only.
     """
-    if not sha or not base:
-        return REFUSED, "LANE_GUARD REFUSE: handback needs both --sha and --base"
+    if not sha or not base or not branch:
+        return REFUSED, "LANE_GUARD REFUSE: handback needs --sha, --base and --branch"
+    if not re.fullmatch(r"[0-9a-f]{7,40}", sha):
+        return REFUSED, f"LANE_GUARD REFUSE: --sha {sha!r} must be a 7-40 character lowercase hex sha"
 
     code, is_shallow = _git_handback(["rev-parse", "--is-shallow-repository"], cwd, git)
     if code != 0:
@@ -320,21 +361,52 @@ def check_handback(cwd, sha, base, git="git"):
             "an unrelated-history merge pulled in a second root"
         )
 
+    code, full = _git_handback(["rev-parse", "--verify", "--quiet", f"{sha}^{{commit}}"], cwd, git)
+    code2, ahead = _git_handback(["rev-list", "--count", f"{base}..{sha}"], cwd, git)
+    if code != 0 or code2 != 0 or not full.startswith(sha):
+        return REFUSED, f"LANE_GUARD REFUSE: cannot resolve {sha} or count commits in {base}..{sha}"
+    if ahead == "0":
+        return REFUSED, (
+            f"LANE_GUARD REFUSE: head {sha} adds no commits over {base}; "
+            "nothing was parked (HEAD never moved from the dispatch base)"
+        )
+
+    ref = branch if branch.startswith("refs/") else f"refs/heads/{branch}"
+    code, tip = _git_handback(["rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"], cwd, git)
+    if code != 0 or not tip:
+        return REFUSED, f"LANE_GUARD REFUSE: branch {branch!r} does not resolve in {cwd}"
+    if tip != full:
+        return REFUSED, f"LANE_GUARD REFUSE: tip of {branch!r} is {tip}, which is not the cited sha {full}"
+
+    for path in cites:
+        why = _cite_problem(cwd, full, path, artifact_root, git)
+        if why:
+            return REFUSED, f"LANE_GUARD REFUSE: {why}"
+
     return OK, (
         f"LANE_GUARD OK: head {sha} has parent(s) {parents}, "
-        f"merge-base with {base} is {merge_base}, no reachable root commits in {base}..{sha}"
+        f"merge-base with {base} is {merge_base}, no reachable root commits in {base}..{sha}, "
+        f"{ahead} new commit(s), tip of {branch} matches, {len(cites)} cited path(s) exist"
     )
 
 
 def _main_handback(argv):
     parser = argparse.ArgumentParser(
         prog="lane_guard.py handback",
-        description="Refuse a parentless head or one with no merge-base to the integration ref.",
+        description="Refuse a parentless, unrelated, or unmoved head, a branch tip that is not "
+                    "the cited sha, or a cited path that does not exist.",
     )
     parser.add_argument("--sha", required=True, help="the lane's head commit to check")
-    parser.add_argument("--base", required=True, help="the integration ref/branch the head will land on")
+    parser.add_argument("--base", required=True,
+                        help="the integration ref the lane was dispatched from and will land on")
+    parser.add_argument("--branch", required=True, help="the lane branch whose tip must equal --sha")
+    parser.add_argument("--cite", action="append", default=[],
+                        help="a path the handback cites as evidence (repeatable): a file committed at --sha, "
+                             "or an absolute path inside --artifact-root")
+    parser.add_argument("--artifact-root", help="directory that absolute --cite paths must sit inside")
     args = parser.parse_args(argv)
-    code, line = check_handback(os.getcwd(), args.sha, args.base)
+    code, line = check_handback(os.getcwd(), args.sha, args.base, args.branch, args.cite,
+                                artifact_root=args.artifact_root)
     print(line)
     return code
 
@@ -343,7 +415,8 @@ def main(argv=None):
     raw = list(sys.argv[1:] if argv is None else argv)
     if raw[:1] == ["handback"]:
         return _main_handback(raw[1:])
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0],
+                                     epilog="subcommands: {handback} ... (see: lane_guard.py handback --help)")
     parser.add_argument("--expect-branch", help="required: refuse unless HEAD is on exactly this branch")
     parser.add_argument("--allow-any-branch", action="store_true",
                         help="waive --expect-branch (non-lane probes only; proves less)")
@@ -546,14 +619,14 @@ def _selftest():
         _git(["checkout", "-q", "-b", "lane-normal"], repo2)
         _git([*commit_args, "lane work"], repo2)
         _, normal_sha = _git(["rev-parse", "HEAD"], repo2)
-        expect("handback-normal-ok", check_handback(repo2, normal_sha, "main"),
+        expect("handback-normal-ok", check_handback(repo2, normal_sha, "main", branch="lane-normal"),
                OK, "LANE_GUARD OK")
 
         # Root/orphan commit: no parent at all.
         _git(["checkout", "-q", "--orphan", "lane-orphan"], repo2)
         _git([*commit_args, "orphan root"], repo2)
         _, orphan_sha = _git(["rev-parse", "HEAD"], repo2)
-        expect("handback-orphan-refused", check_handback(repo2, orphan_sha, "main"),
+        expect("handback-orphan-refused", check_handback(repo2, orphan_sha, "main", "lane-x"),
                REFUSED, "no parent")
 
         # Unrelated history: a second independent orphan lineage, never
@@ -563,7 +636,7 @@ def _selftest():
         _git([*commit_args, "unrelated root"], repo2)
         _git([*commit_args, "unrelated child"], repo2)
         _, unrelated_sha = _git(["rev-parse", "HEAD"], repo2)
-        expect("handback-unrelated-refused", check_handback(repo2, unrelated_sha, "main"),
+        expect("handback-unrelated-refused", check_handback(repo2, unrelated_sha, "main", "lane-x"),
                REFUSED, "no merge-base")
 
         # A merge that pulls in a second, unrelated root: the merge commit
@@ -581,7 +654,7 @@ def _selftest():
             print(f"SELFTEST FAILED: setup unrelated-histories merge exited {code}")
             return 1
         _, merged_sha = _git(["rev-parse", "HEAD"], repo2)
-        expect("handback-merged-root-refused", check_handback(repo2, merged_sha, "main"),
+        expect("handback-merged-root-refused", check_handback(repo2, merged_sha, "main", "lane-x"),
                REFUSED, "root commit reachable")
 
         # Shallow clone: truncated history can't prove ancestry either way, so
@@ -592,7 +665,7 @@ def _selftest():
         if code != 0:
             print(f"SELFTEST FAILED: setup shallow clone exited {code}")
             return 1
-        expect("handback-shallow-refused", check_handback(shallow, normal_sha, "main"),
+        expect("handback-shallow-refused", check_handback(shallow, normal_sha, "main", "lane-x"),
                REFUSED, "shallow clone")
 
         # Grafts file: parentage can be rewritten underneath these checks, so
@@ -605,7 +678,7 @@ def _selftest():
         with open(grafts_path, "w", encoding="utf-8") as handle:
             handle.write(f"{normal_sha}\n")
         try:
-            expect("handback-grafts-refused", check_handback(repo2, normal_sha, "main"),
+            expect("handback-grafts-refused", check_handback(repo2, normal_sha, "main", "lane-x"),
                    REFUSED, "grafts")
         finally:
             os.remove(grafts_path)
@@ -619,18 +692,85 @@ def _selftest():
         os.chmod(revlist_shim, 0o755)
         expect(
             "handback-revlist-error-refused",
-            check_handback(repo2, normal_sha, "main", git=revlist_shim),
+            check_handback(repo2, normal_sha, "main", "lane-x", git=revlist_shim),
             REFUSED, "cannot check for reachable root commits",
         )
 
         # Unresolvable refs: neither a bad sha nor a bad base is allowed to
         # pass by falling through — fail closed on both.
         expect("handback-unresolvable-sha-refused",
-               check_handback(repo2, "0" * 40, "main"), REFUSED, "cannot resolve head")
+               check_handback(repo2, "0" * 40, "main", "lane-x"), REFUSED, "cannot resolve head")
         expect("handback-unresolvable-base-refused",
-               check_handback(repo2, normal_sha, "no-such-branch"), REFUSED, "no merge-base")
+               check_handback(repo2, normal_sha, "no-such-branch", "lane-x"), REFUSED, "no merge-base")
         expect("handback-missing-args-refused",
-               check_handback(repo2, "", "main"), REFUSED, "needs both --sha and --base")
+               check_handback(repo2, "", "main"), REFUSED, "needs --sha, --base and --branch")
+        expect("handback-missing-branch-refused",
+               check_handback(repo2, normal_sha, "main", branch=""), REFUSED,
+               "needs --sha, --base and --branch")
+
+        # Parked-claim verification (field failure: a lane reported "parked
+        # <head>" while HEAD never moved, or cited evidence files that did not
+        # exist). A sha already reachable from the dispatch base parked nothing.
+        # Here the lane was dispatched from lane-normal's tip and never moved.
+        expect("handback-unmoved-head-refused",
+               check_handback(repo2, normal_sha, "lane-normal", branch="lane-normal"), REFUSED,
+               "adds no commits")
+        # The branch tip must be the cited sha: a lane that commits again after
+        # citing, or cites a sha from another branch, is refused.
+        _git(["checkout", "-q", "-b", "lane-moved", "lane-normal"], repo2)
+        _git([*commit_args, "later work"], repo2)
+        expect("handback-branch-tip-mismatch-refused",
+               check_handback(repo2, normal_sha, "main", branch="lane-moved"), REFUSED,
+               "is not the cited sha")
+        expect("handback-branch-missing-refused",
+               check_handback(repo2, normal_sha, "main", branch="no-such-lane"), REFUSED,
+               "does not resolve")
+        # Cited paths: a file in the tree at the cited sha passes; an on-disk
+        # artifact passes; a path in neither is refused.
+        _git(["checkout", "-q", "-b", "lane-cite", "main"], repo2)
+        with open(os.path.join(repo2, "evidence.txt"), "w", encoding="utf-8") as handle:
+            handle.write("proof\n")
+        _git(["add", "evidence.txt"], repo2)
+        _git([*commit_args, "add evidence"], repo2)
+        _, cite_sha = _git(["rev-parse", "HEAD"], repo2)
+        artifacts = _mkdir(tmp, "artifacts")
+        artifact = os.path.join(artifacts, "composite.png")
+        with open(artifact, "w", encoding="utf-8") as handle:
+            handle.write("png\n")
+
+        def cite(*paths, root=artifacts):
+            return check_handback(repo2, cite_sha, "main", branch="lane-cite", cites=list(paths),
+                                  artifact_root=root)
+        expect("handback-cited-paths-ok", cite("evidence.txt", artifact), OK, "LANE_GUARD OK")
+        expect("handback-cited-path-missing-refused",
+               cite("evidence.txt", os.path.join(artifacts, "no-such-composite.png")), REFUSED, "cited path")
+        # A relative cite must be a blob committed at the sha: an uncommitted
+        # file that exists on disk, a directory (a tree), an empty path, and a
+        # `..` escape are all refused.
+        with open(os.path.join(repo2, "uncommitted.txt"), "w", encoding="utf-8") as handle:
+            handle.write("not in the commit\n")
+        expect("handback-cite-uncommitted-on-disk-refused", cite("uncommitted.txt"), REFUSED,
+               "is not a file committed at")
+        os.makedirs(os.path.join(repo2, "sub"), exist_ok=True)
+        expect("handback-cite-tree-refused", cite("."), REFUSED, "is not a file committed at")
+        expect("handback-cite-empty-refused", cite(""), REFUSED, "empty or '..'")
+        expect("handback-cite-dotdot-refused", cite("sub/../evidence.txt"), REFUSED, "empty or '..'")
+        # An absolute cite counts only under an explicit --artifact-root.
+        expect("handback-cite-absolute-without-root-refused", cite(artifact, root=None), REFUSED,
+               "needs --artifact-root")
+        outside = os.path.join(tmp, "outside.png")
+        with open(outside, "w", encoding="utf-8") as handle:
+            handle.write("png\n")
+        expect("handback-cite-absolute-outside-root-refused", cite(outside), REFUSED,
+               "outside --artifact-root")
+        # --sha must be a hex commit id that the resolved sha starts with, not
+        # a ref name that happens to resolve (a branch name would always match
+        # its own tip).
+        expect("handback-sha-ref-name-refused",
+               check_handback(repo2, "lane-cite", "main", branch="lane-cite"), REFUSED,
+               "must be a 7-40 character lowercase hex sha")
+        expect("handback-sha-short-prefix-ok",
+               check_handback(repo2, cite_sha[:12], "main", branch="lane-cite"), OK, "LANE_GUARD OK")
     finally:
         lane_liveness.foreign_cwd_pids = saved_default_scanner
         if saved_ceiling is None:
