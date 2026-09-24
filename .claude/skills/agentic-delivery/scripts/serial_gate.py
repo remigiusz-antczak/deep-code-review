@@ -98,6 +98,14 @@ run --lock-dir DIR [--timeout SECONDS] [--slots N] [--retry K --backoff S --retr
     serializing it to 1 or leaving it uncapped). Each slot is released the
     same way a single lock is — its holder exiting, including SIGKILL — so
     there is nothing to age out per slot either.
+    ONE LOCK GUARDS ONE RESOURCE: --slots/--lock-dir here guards only the
+    resource its caller names (e.g. a push-queue slot). A "finish" step that
+    also needs a second, unrelated resource (e.g. a fixed local port for an
+    evidence-capture tool) must NOT run that second thing inside this lock's
+    critical section — that couples two independent resources onto one
+    semaphore and serializes every caller of either (#1159). Give evidence
+    capture its own pool (a rotating port range or a second, separately
+    sized `--lock-dir`/`--slots`), not this one.
 
     --retry K --backoff S --retry-on REGEX: retry the WHOLE acquire+run+
     release cycle up to K more times (bounded: at most K+1 attempts, ever)
@@ -1304,7 +1312,11 @@ def _selftest_lock_sigkill(tmp: str, check, script_path: str) -> None:
     ]).returncode
     elapsed = time.monotonic() - t0
     check("sigkill-waiter-acquired", waiter_rc == 0, f"rc={waiter_rc}")
-    check("sigkill-waiter-prompt", elapsed < 3.0, f"elapsed={elapsed:.2f}s")
+    # Bound generous enough for N copies of this selftest to share one CPU
+    # (contended host / concurrent test-ci-gates.sh runs) yet still well
+    # short of the 10s --timeout above, so a real stale-wait regression still
+    # fails this check instead of merely the outer timeout.
+    check("sigkill-waiter-prompt", elapsed < 8.0, f"elapsed={elapsed:.2f}s")
 
 
 def _selftest_lock_timeout(tmp: str, check, script_path: str) -> None:

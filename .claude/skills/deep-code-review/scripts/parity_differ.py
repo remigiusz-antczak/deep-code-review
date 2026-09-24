@@ -238,6 +238,38 @@ against 1-line design rows are CHANGED rows even when every text matches;
 a one-sided `data-lines` is a CHANGED row too (export it on both sides). A
 value that is not a positive integer (`[1-9][0-9]*`) is COULD_NOT_CHECK.
 
+PROTECTED COMPONENTS (`data-protected` / `data-protected-node` / `data-prect`)
+------------------------------------------------------------------------------
+An existence/mount check proves a component is present, not that its internal
+geometry is right — a hand-tuned diagram can stay mounted while a design-
+alignment change scrambles its nodes, and a page-wide pixel/inventory score
+barely moves (the component is a small fraction of the page). A component
+marked `data-protected="<id>"` (instead of `data-section`) on both captures
+opens its OWN section, scored to 100% inventory completeness independently
+of every other section — never diluted into a page aggregate, and a missing
+`data-protected` id on the app side is that section's own MISMATCH (`missing:
+section 'id' — build it`), never a silent pass. Inside it, every element
+carrying `data-protected-node="<id>"` plus `data-prect="x,y,w,h"` (four
+non-negative integers, capture-set from `getBoundingClientRect`) is checked
+for ORDINAL relations only — left-of/right-of/above/below and containment
+(e.g. a legend inside the component's box), plus a newly-overlapping pair
+that was disjoint or contained in the design — derived from the design
+capture's node order/rects and verified to still hold on the app's. SIZE IS
+NEVER AN INPUT here either: the coordinates themselves are never compared or
+reported, only which side of which node each other node falls on. A node
+missing from the app is its own `protected-node:<id>` MISSING_IN_APP row; a
+broken relation is a `protected-order:<a> <rel> <b>` or `protected-overlap:`
+CHANGED row. A malformed `data-prect`, a `data-protected-node` id repeated on
+one side, or a zero/negative-area `data-prect` on the DESIGN side is
+COULD_NOT_CHECK (never a guessed order or a silently-kept-last duplicate); the
+same zero/negative-area defect on the APP side instead drops that node from
+`nodes`, so it reads as an ordinary MISSING_IN_APP node, never a guessed
+geometry. `data-protected`/`-node`/`-prect` are not recognized under `--bands`
+(SECTION BANDS ignores `data-section` too): any occurrence there is
+COULD_NOT_CHECK, never silently dropped. These rows ride the section's normal
+MISMATCH / accept-file / report machinery — an owner-authored `--accept` row
+can still waive a specific one.
+
 ACCEPTED DEVIATIONS (`--accept FILE [--accept-rev REV]`) — OWNER-AUTHORED ONLY
 -----------------------------------------------------------------------------
 Tab-separated rows, 7 non-empty fields:
@@ -472,6 +504,21 @@ _BROKEN_VALUE = re.compile(r"\b(?:undefined|null|NaN|Invalid Date)\b|\[object Ob
 _HIDDEN_STYLE = re.compile(
     r"display\s*:\s*none|visibility\s*:\s*hidden"
     r"|(?<![\w-])opacity\s*:\s*(?:0*\.?0+|0+\.)%?\s*(?:!important\s*)?(?:;|$)", re.IGNORECASE)
+# PROTECTED COMPONENTS: `data-prect="x,y,w,h"` — four non-negative integers,
+# comma-separated. Never a size input to a verdict (SIZE IS NEVER AN INPUT):
+# only used to derive ordinal (left/right/above/below/contains) relations.
+_RECT_RE = re.compile(r"\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*")
+
+
+def _parse_rect(raw: str | None) -> tuple[int, int, int, int] | None:
+    """Parse `data-prect="x,y,w,h"`; None (fail closed) unless it is exactly
+    four non-negative integers. Never a guess: a malformed value is logged
+    by the caller to `bad_rect`, not silently dropped or defaulted to zero.
+    """
+    if raw is None:
+        return None
+    m = re.fullmatch(_RECT_RE, raw)
+    return tuple(int(g) for g in m.groups()) if m else None  # type: ignore[return-value]
 
 
 class _Frame:
@@ -551,6 +598,12 @@ class _SectionExtractor(HTMLParser):
         self._band_fn = band_fn
         self._last_ysec: str | None = None
         self.bad_y: list[str] = []
+        # PROTECTED COMPONENTS under SECTION BANDS: `data-protected`/
+        # `data-protected-node`/`data-prect` are not recognized in band mode
+        # (bands ignore `data-section` too) — every occurrence is logged here
+        # instead of silently dropped, so the caller fails closed rather than
+        # discarding a protected-component export unnoticed.
+        self.band_protected: list[str] = []
         self.sections: list[dict] = []
         self._by_id: dict[str, dict] = {}
         self._stack: list[_Frame] = []
@@ -575,19 +628,36 @@ class _SectionExtractor(HTMLParser):
     def _record(self, attrs: list[tuple[str, str | None]], tag: str = "") -> str | None:
         """Apply one tag's section markers to the section they belong to.
 
-        Registers a new section on `data-section`, and — fail-closed, never
-        guessing which section an unattributed marker belongs to — counts a
-        `data-item` / `data-empty` marker against the innermost open section
-        (preferring a section this same tag just opened). Returns the tag's
-        own `data-section` id, if any, so the caller knows whether to push it.
+        Registers a new section on `data-section` or `data-protected` (the
+        latter also flags the section PROTECTED — PROTECTED COMPONENTS), and
+        — fail-closed, never guessing which section an unattributed marker
+        belongs to — counts a `data-item` / `data-empty` marker against the
+        innermost open section (preferring a section this same tag just
+        opened). Also captures a `data-protected-node` + `data-prect`
+        pair against the innermost section (PROTECTED COMPONENTS): a
+        malformed `data-prect` is logged to `bad_rect`, a zero/negative-area
+        one to `degenerate_node`, and a repeated node id (this side already
+        recorded it) to `dup_node` — none of the three is ever guessed or
+        silently overwritten. Returns the tag's own `data-section`/
+        `data-protected` id, if any, so the caller knows whether to push it.
         In band mode the section is the band of the tag's own `data-y`
-        (stored for `_inventory_start`) and the return value is always None.
+        (stored for `_inventory_start`); `data-protected`/`-node`/`-prect`
+        are not recognized there (the return value is always None) and any
+        occurrence is logged to `band_protected` instead of being dropped.
         """
         attr_map = dict(attrs)
         self._last_ysec = None
         if "data-parity-ignore" in attr_map or (self._stack and self._stack[-1].ignored):
             return None   # an ignored subtree registers no section and counts no marker
-        sid = attr_map.get("data-section") if self._band_fn is None else None
+        if self._band_fn is not None:
+            protected_id, sid = None, None
+            hit = [k for k in ("data-protected", "data-protected-node", "data-prect") if k in attr_map]
+            if hit:
+                self.band_protected.append(
+                    f'<{tag} ' + " ".join(f'{k}="{attr_map[k]}"' for k in hit) + '>')
+        else:
+            protected_id = attr_map.get("data-protected")
+            sid = attr_map.get("data-section") or protected_id
         raw_y = attr_map.get("data-y") if self._band_fn is not None else None
         if raw_y is not None:
             if re.fullmatch(r"-?[0-9]+", raw_y.strip()):
@@ -597,7 +667,8 @@ class _SectionExtractor(HTMLParser):
         new = sid if sid is not None else self._last_ysec
         if new is not None and new not in self._by_id:
             record = {"id": new, "items": 0, "empties": 0, "inv": [], "marked": False, "anchors": [], "bad_lines": [],
-                      "unresolved": [], "styles": [], "cs_bad": []}
+                      "unresolved": [], "styles": [], "cs_bad": [], "protected": protected_id is not None,
+                      "nodes": [], "bad_rect": [], "dup_node": [], "degenerate_node": []}
             self.sections.append(record)
             self._by_id[new] = record
 
@@ -608,6 +679,18 @@ class _SectionExtractor(HTMLParser):
             classes = (attr_map.get("class") or "").split()
             if "data-empty" in attr_map or any("empty" in c for c in classes):
                 self._by_id[target]["empties"] += 1
+            node_id = (attr_map.get("data-protected-node") or "").strip() if self._band_fn is None else ""
+            if node_id:
+                sec = self._by_id[target]
+                rect = _parse_rect(attr_map.get("data-prect"))
+                if rect is None:
+                    sec["bad_rect"].append(f'<{tag} data-prect="{attr_map.get("data-prect")}">')
+                elif rect[2] <= 0 or rect[3] <= 0:   # zero/negative-area: never a usable ordinal input
+                    sec["degenerate_node"].append(node_id)
+                elif any(n["id"] == node_id for n in sec["nodes"]):
+                    sec["dup_node"].append(node_id)
+                else:
+                    sec["nodes"].append({"id": node_id, "rect": rect})
         return sid
 
     # -- inventory helpers -------------------------------------------------
@@ -1120,8 +1203,8 @@ def _band_plan(design_path: str | None, app_path: str | None):
     return _band_fn(d_kept), _band_fn(a_kept), dropped, a_dropped
 
 
-def read_side(path: str | None, band_fn=None) -> tuple[list[dict] | None, list[dict]]:
-    """Return `(sections, ignored)` for one side; `sections` is None if it cannot compare.
+def read_side(path: str | None, band_fn=None) -> tuple[list[dict] | None, list[dict], list[str]]:
+    """Return `(sections, ignored, band_protected)` for one side; `sections` is None if it cannot compare.
 
     With `band_fn` (`y -> band id`, SECTION BANDS) sections are the bands
     of each element's `data-y` instead of `data-section` ancestors; a band
@@ -1140,37 +1223,52 @@ def read_side(path: str | None, band_fn=None) -> tuple[list[dict] | None, list[d
     class-based hiding tokens that carry no `data-visible` marker
     (VISIBILITY); `styles` lists `data-cs` records `{"role", "text", "own",
     "props"}` (`own` = its own text nodes; None for `.json`) and `cs_bad`
-    the malformed ones. None for the whole side covers every fail-closed
+    the malformed ones; `protected` (PROTECTED COMPONENTS) is True for a
+    section opened by `data-protected` instead of `data-section`; `nodes`
+    lists its `{"id", "rect"}` `data-protected-node`/`data-prect` pairs;
+    `bad_rect` the malformed `data-prect` values, `degenerate_node` every
+    node id whose rect has zero/negative width or height (dropped from
+    `nodes`, never a usable ordinal input), and `dup_node` every node id
+    this side repeated (only its first occurrence is kept in `nodes`) — all
+    three fail closed, never guessed or silently overwritten. `band_protected`
+    (module level, not per-section) lists every `data-protected`/
+    `-node`/`-prect` occurrence seen while `band_fn` is set, since PROTECTED
+    COMPONENTS is not recognized under SECTION BANDS — logged instead of
+    silently dropped. None for the whole side covers every fail-closed
     case in one place: no path given, file absent, unreadable,
     empty/whitespace-only, invalid JSON, or zero sections. A caller must
     treat None as COULD_NOT_CHECK, never as an empty-but-valid side.
     """
     raw = _load_raw(path)
     if raw is None or (band_fn is not None and path.lower().endswith(".json")):
-        return None, []
+        return None, [], []
 
     if path.lower().endswith(".json"):
         try:
             data = json.loads(raw)
         except json.JSONDecodeError:
-            return None, []
+            return None, [], []
         if not isinstance(data, list):
-            return None, []
+            return None, [], []
         rows = [{"id": str(row["id"]), "populated": bool(row.get("populated", False)),
                  "inventory": None, "marked": False, "unresolved": [], "styles": None,
-                 "cs_bad": [], "anchors": [], "bad_lines": []}
+                 "cs_bad": [], "anchors": [], "bad_lines": [], "protected": False,
+                 "nodes": [], "bad_rect": [], "dup_node": [], "degenerate_node": []}
                 for row in data if isinstance(row, dict) and "id" in row]
-        return rows or None, []
+        return rows or None, [], []
 
     parser = _parse(raw, band_fn)
     secs = [s for s in parser.sections
             if band_fn is None or s["inv"] or s["items"] or s["empties"] or s["unresolved"] or s["bad_lines"]]
     if not secs:
-        return None, parser.ignored
+        return None, parser.ignored, parser.band_protected
     return [{"id": s["id"], "populated": s["items"] > 0, "inventory": s["inv"],
              "marked": s["marked"], "unresolved": s["unresolved"], "styles": s["styles"],
-             "cs_bad": s["cs_bad"], "anchors": s["anchors"], "bad_lines": s["bad_lines"]}
-            for s in secs], parser.ignored
+             "cs_bad": s["cs_bad"], "anchors": s["anchors"], "bad_lines": s["bad_lines"],
+             "protected": s.get("protected", False), "nodes": s.get("nodes", []),
+             "bad_rect": s.get("bad_rect", []), "dup_node": s.get("dup_node", []),
+             "degenerate_node": s.get("degenerate_node", [])}
+            for s in secs], parser.ignored, parser.band_protected
 
 
 def extract_sections(path: str | None) -> list[tuple[str, bool]] | None:
@@ -1269,6 +1367,74 @@ def inventory_keys(path: str | None) -> list[dict] | None:
     return [{"id": s["id"], "populated": s["populated"], "unresolved": list(s["unresolved"]),
              "items": None if s["inventory"] is None
              else [it["key"] for it in _prepare(s["inventory"], False)]} for s in side]
+
+
+_ORDER_RELS = ("left", "right", "above", "below", "contains", "contained")
+
+
+def _ordinal(r1: tuple[int, int, int, int], r2: tuple[int, int, int, int]) -> set[str]:
+    """Ordinal relations between two `data-prect` rects — never their sizes.
+
+    `left`/`right`/`above`/`below` fire only when the rects are fully
+    separated on that axis (touching edges count as separated); `contains`
+    /`contained` fire when one rect's bounds fully enclose the other's;
+    `overlap` fires when the rects share area and neither contains the
+    other. These are the only facts PROTECTED COMPONENTS reads off a rect —
+    the coordinates themselves are never compared or reported.
+    """
+    x1, y1, w1, h1 = r1
+    x2, y2, w2, h2 = r2
+    rels: set[str] = set()
+    if x1 + w1 <= x2:
+        rels.add("left")
+    if x2 + w2 <= x1:
+        rels.add("right")
+    if y1 + h1 <= y2:
+        rels.add("above")
+    if y2 + h2 <= y1:
+        rels.add("below")
+    if x1 <= x2 and y1 <= y2 and x1 + w1 >= x2 + w2 and y1 + h1 >= y2 + h2:
+        rels.add("contains")
+    if x2 <= x1 and y2 <= y1 and x2 + w2 >= x1 + w1 and y2 + h2 >= y1 + h1:
+        rels.add("contained")
+    disjoint = x1 + w1 <= x2 or x2 + w2 <= x1 or y1 + h1 <= y2 or y2 + h2 <= y1
+    if not disjoint and not rels & {"contains", "contained"}:
+        rels.add("overlap")
+    return rels
+
+
+def _protected_rows(d_nodes: list[dict], a_nodes: list[dict]) -> list[dict]:
+    """Structural rows for one PROTECTED COMPONENTS section (order + containment
+    + non-overlap), appended to its inventory rows so they ride the section's
+    existing MISMATCH / accept-file / report machinery. Never a size input:
+    only the ordinal relations `_ordinal` derives from the design's rects,
+    verified to still hold on the app's — a node missing on the app side is
+    its own MISSING_IN_APP row (a "protected component missing" is a gap,
+    never a silent pass); a broken order/containment relation or a newly
+    overlapping pair (that was disjoint/contained in the design) is CHANGED.
+    """
+    d_by_id = {n["id"]: n["rect"] for n in d_nodes}
+    a_by_id = {n["id"]: n["rect"] for n in a_nodes}
+    rows: list[dict] = []
+    for node_id in d_by_id:
+        if node_id not in a_by_id:
+            rows.append({"status": "MISSING_IN_APP", "item": f"protected-node:{node_id}",
+                         "design": f"protected-node:{node_id}", "app": None})
+    ids = [n["id"] for n in d_nodes if n["id"] in a_by_id]
+    for i, a_id in enumerate(ids):
+        for b_id in ids[i + 1:]:
+            d_rel = _ordinal(d_by_id[a_id], d_by_id[b_id])
+            a_rel = _ordinal(a_by_id[a_id], a_by_id[b_id])
+            for rel in _ORDER_RELS:
+                if rel in d_rel and rel not in a_rel:
+                    label = f"{a_id} {rel} {b_id}"
+                    rows.append({"status": "CHANGED", "item": f"protected-order:{label}",
+                                "design": label, "app": "broken in app"})
+            if not d_rel & {"contains", "contained", "overlap"} and "overlap" in a_rel:
+                label = f"{a_id} overlaps {b_id}"
+                rows.append({"status": "CHANGED", "item": f"protected-overlap:{label}",
+                            "design": f"{a_id} not-overlapping {b_id}", "app": label})
+    return rows
 
 
 def diff_inventory(design: list[dict], app: list[dict], mask: bool) -> dict:
@@ -1817,18 +1983,24 @@ def compare(design_path: str | None, app_path: str | None, accept_path: str | No
         if isinstance(plan, str):
             return early(COULD_NOT_CHECK, f"COULD_NOT_CHECK: --bands {bands}: {plan}.")
         d_band, a_band, dropped, a_dropped = plan
-    design, d_ignored = read_side(design_path, d_band)
+    design, d_ignored, d_band_protected = read_side(design_path, d_band)
     if design is None:
         return early(COULD_NOT_CHECK, (
             f"COULD_NOT_CHECK: design side unreadable, empty, or has no "
             f"sections ({design_path!r}). Two-sided input is required — a "
             "one-sided read cannot certify parity."))
-    app, a_ignored = read_side(app_path, a_band)
+    app, a_ignored, a_band_protected = read_side(app_path, a_band)
     if app is None:
         return early(COULD_NOT_CHECK, (
             f"COULD_NOT_CHECK: app side unreadable, empty, or has no "
             f"sections ({app_path!r}). Two-sided input is required — a "
             "one-sided read cannot certify parity."))
+    band_protected = d_band_protected + a_band_protected
+    if band_protected:
+        return early(COULD_NOT_CHECK, (
+            "COULD_NOT_CHECK: data-protected/data-protected-node/data-prect are not recognized under "
+            f"--bands (SECTION BANDS ignores data-section too) — {'; '.join(band_protected[:5])}. Capture "
+            "this component without --bands, or drop the markers; they are never silently ignored."))
     unresolved = [f"{side} section '{s['id']}': {u}" for side, recs in (("design", design), ("app", app))
                   for s in recs for u in s["unresolved"]]
     if unresolved:
@@ -1843,6 +2015,27 @@ def compare(design_path: str | None, app_path: str | None, accept_path: str | No
         return early(COULD_NOT_CHECK, (
             f"COULD_NOT_CHECK: data-lines must be a positive integer line-box count — {'; '.join(bad_lines[:5])}. "
             "Re-export the count; it is never guessed."))
+    bad_rect = [f"{side} section '{s['id']}': {b}" for side, recs in (("design", design), ("app", app))
+                for s in recs for b in s["bad_rect"]]
+    if bad_rect:
+        return early(COULD_NOT_CHECK, (
+            f"COULD_NOT_CHECK: data-prect must be exactly four non-negative integers "
+            f"\"x,y,w,h\" — {'; '.join(bad_rect[:5])}. Re-export it; an ordinal relation is never guessed."))
+    dup_node = [f"{side} section '{s['id']}': data-protected-node {n!r} repeated"
+                for side, recs in (("design", design), ("app", app)) for s in recs for n in s["dup_node"]]
+    if dup_node:
+        return early(COULD_NOT_CHECK, (
+            f"COULD_NOT_CHECK: a data-protected-node id must be unique within its side — "
+            f"{'; '.join(dup_node[:5])}. Give each node its own id; a duplicate is never guessed apart."))
+    # A zero/negative-area data-prect on the DESIGN side cannot seed any ordinal relation — fail closed.
+    # On the APP side the node is simply excluded from `nodes`, so it reads as MISSING_IN_APP like any
+    # other absent node (PROTECTED COMPONENTS): never a size input, and never a guess either way.
+    degenerate = [f"design section '{s['id']}': data-protected-node {n!r} has zero/negative area"
+                  for s in design for n in s["degenerate_node"]]
+    if degenerate:
+        return early(COULD_NOT_CHECK, (
+            f"COULD_NOT_CHECK: a design-side data-prect must have positive width and height — "
+            f"{'; '.join(degenerate[:5])}. Re-export it; a collapsed rect seeds no ordinal relation."))
     accept, err, accept_source = load_accept(accept_path, accept_rev, use_focus_gate)
     if accept is None:
         return early(COULD_NOT_CHECK, f"COULD_NOT_CHECK: {err} — acceptance cannot be verified.")
@@ -1902,6 +2095,8 @@ def compare(design_path: str | None, app_path: str | None, accept_path: str | No
             # An app-side ignore with no design counterpart hides app content: open row.
             diff["rows"] += [{"status": "EXTRA_IN_APP", "item": f"ignored:{r['id']}", "design": None,
                               "app": f"ignored:{r['id']}"} for r in a_unpaired if r["section"] == sid]
+        if sec.get("protected") and sec.get("nodes"):   # PROTECTED COMPONENTS: independent of the page aggregate
+            diff["rows"] = diff["rows"] + _protected_rows(sec["nodes"], a_sec["nodes"] if a_sec is not None else [])
         entry.update(design_items=diff["total"], matched=diff["matched"],
                      completeness_pct=_pct(diff["matched"], diff["total"]), rows=diff["rows"])
     _fold_moves(sections)
@@ -2763,6 +2958,9 @@ def _selftest() -> int:
         # 5. --min-pairs floor (#1112) and --style computed-style diff (#1108).
         _selftest_floor_style(write, check, failures, design, app_full)
 
+        # 6. PROTECTED COMPONENTS (#1164): independent 100% + ordinal assertions.
+        _selftest_protected(write, check, failures)
+
     if failures:
         print("SELFTEST FAILED:")
         for failure in failures:
@@ -2785,6 +2983,8 @@ def _selftest() -> int:
         "crop(app-leak-scoped,design-reference,plain-heading,moved-heading,no-anchor,shared-heading,workflow)=ok "
         "baseline(write,refuse,clean,removed,style,superset,design-change,masked,malformed,overwrite,path-guard,cli)=ok"
         " bands(nested-vs-flat,starts,anchor-wins,moved,missing-start,renamed,bad-y,basis,no-y,json,cli)=ok"
+        " protected(match,order-broken,overlap,missing-node,component-missing,bad-rect,dup-node,"
+        "app-zero-area,design-zero-area,under-bands)=ok"
     )
     return 0
 
@@ -2813,6 +3013,116 @@ def _st_page(over: dict | None = None, bold: tuple | None = None, attr: str | No
             els.append(f"<{tag} data-cs='{attr if attr is not None else json.dumps(props)}'>{text}</{tag}>")
         out.append(f'<section data-section="{sid}"><div data-item>x</div>{"".join(els)}</section>')
     return "".join(out)
+
+
+def _selftest_protected(write, check, failures: list) -> None:
+    """PROTECTED COMPONENTS (#1164): a `data-protected` component scores 100%
+    independently of the page aggregate, and its ordinal (order/containment/
+    overlap) relations — never sizes — are enforced even when its inventory
+    (labels/roles) is otherwise unchanged.
+    """
+    def rows_of(result: dict) -> set[tuple[str, str, str]]:
+        return {(s["id"], r["status"], r["item"]) for s in result.get("sections", []) for r in s["rows"]}
+
+    def page(diagram: str) -> str:
+        # `content` is a normal, always-matching section: proves the diagram's
+        # own verdict is never diluted by (or hidden behind) the rest of the page.
+        return '<section data-section="content"><p data-item>ok</p></section>' + diagram
+
+    d_diagram = ('<div data-protected="diagram"><span data-item>diagram</span>'
+                 '<i data-protected-node="box" data-prect="0,0,200,150"></i>'
+                 '<i data-protected-node="legend" data-prect="10,10,80,30"></i>'
+                 '<i data-protected-node="node1" data-prect="110,60,40,40"></i></div>')
+    d = write("prot-d.html", page(d_diagram))
+
+    # 1) identical rects on both sides: MATCH, zero protected rows.
+    a_match = write("prot-a-match.html", page(d_diagram))
+    r = compare(d, a_match)
+    check("protected-match", r["exit_code"], r["report"], MATCH)
+    if rows_of(r):
+        failures.append(f"protected-match: expected zero rows, got {sorted(rows_of(r))}")
+
+    # 2) legend moved to overlap node1 (was left-of/disjoint in the design):
+    # order broken AND a new overlap, even though every label/role is unchanged.
+    a_broken = ('<div data-protected="diagram"><span data-item>diagram</span>'
+                '<i data-protected-node="box" data-prect="0,0,200,150"></i>'
+                '<i data-protected-node="legend" data-prect="120,60,80,30"></i>'
+                '<i data-protected-node="node1" data-prect="110,60,40,40"></i></div>')
+    r = compare(d, write("prot-a-broken.html", page(a_broken)))
+    check("protected-order-broken", r["exit_code"], r["report"], MISMATCH)
+    rows = rows_of(r)
+    if not any(item.startswith("protected-order:legend left node1") for _, st, item in rows if st == "CHANGED"):
+        failures.append(f"protected-order-broken: no broken left-of row, got {sorted(rows)}")
+    if not any(item.startswith("protected-overlap:") for _, st, item in rows if st == "CHANGED"):
+        failures.append(f"protected-order-broken: no overlap row, got {sorted(rows)}")
+
+    # 3) a node dropped from the app render: its own MISSING_IN_APP row, not a silent pass.
+    a_missing_node = ('<div data-protected="diagram"><span data-item>diagram</span>'
+                       '<i data-protected-node="box" data-prect="0,0,200,150"></i>'
+                       '<i data-protected-node="legend" data-prect="10,10,80,30"></i></div>')
+    r = compare(d, write("prot-a-missing-node.html", page(a_missing_node)))
+    check("protected-missing-node", r["exit_code"], r["report"], MISMATCH,
+          must_have=("protected-node:node1",))
+    if ("diagram", "MISSING_IN_APP", "protected-node:node1") not in rows_of(r):
+        failures.append(f"protected-missing-node: rows {sorted(rows_of(r))}")
+
+    # 4) the whole protected component missing from the app while the rest of
+    # the page (`content`) fully matches: MISMATCH, never diluted by the aggregate.
+    a_no_diagram = '<section data-section="content"><p data-item>ok</p></section>'
+    r = compare(d, write("prot-a-none.html", a_no_diagram))
+    check("protected-component-missing", r["exit_code"], r["report"], MISMATCH,
+          must_have=("missing", "diagram"))
+
+    # 5) a malformed data-prect fails closed (COULD_NOT_CHECK), never a guessed order.
+    d_bad = write("prot-d-bad.html", page(
+        '<div data-protected="diagram"><span data-item>x</span>'
+        '<i data-protected-node="box" data-prect="0,0,200"></i></div>'))
+    r = compare(d_bad, a_match)
+    check("protected-bad-rect", r["exit_code"], r["report"], COULD_NOT_CHECK,
+          must_have=("data-prect",), must_not=("MATCH:", "MISMATCH:"))
+
+    # 6) a repeated data-protected-node id on one side fails closed, naming the id
+    # (a dict keyed by id would silently keep only the last one).
+    d_dup = write("prot-d-dup.html", page(
+        '<div data-protected="diagram"><span data-item>x</span>'
+        '<i data-protected-node="box" data-prect="0,0,10,10"></i>'
+        '<i data-protected-node="box" data-prect="20,20,10,10"></i></div>'))
+    r = compare(d_dup, a_match)
+    check("protected-dup-node", r["exit_code"], r["report"], COULD_NOT_CHECK,
+          must_have=("'box'",), must_not=("MATCH:", "MISMATCH:"))
+
+    # 7) a zero-area data-prect on the APP side reads as that node missing, not
+    # a guessed geometry (the design side is fine, so this is MISMATCH, never
+    # COULD_NOT_CHECK).
+    a_zero_area = ('<div data-protected="diagram"><span data-item>diagram</span>'
+                   '<i data-protected-node="box" data-prect="0,0,200,150"></i>'
+                   '<i data-protected-node="legend" data-prect="10,10,80,30"></i>'
+                   '<i data-protected-node="node1" data-prect="110,60,0,40"></i></div>')
+    r = compare(d, write("prot-a-zero-area.html", page(a_zero_area)))
+    check("protected-app-zero-area", r["exit_code"], r["report"], MISMATCH)
+    if ("diagram", "MISSING_IN_APP", "protected-node:node1") not in rows_of(r):
+        failures.append(f"protected-app-zero-area: rows {sorted(rows_of(r))}")
+
+    # 8) a zero-area data-prect on the DESIGN side seeds no ordinal relation at
+    # all, so it fails closed instead of comparing against a collapsed rect.
+    d_zero_area = write("prot-d-zero-area.html", page(
+        '<div data-protected="diagram"><span data-item>x</span>'
+        '<i data-protected-node="box" data-prect="0,0,0,10"></i></div>'))
+    r = compare(d_zero_area, a_match)
+    check("protected-design-zero-area", r["exit_code"], r["report"], COULD_NOT_CHECK,
+          must_have=("zero/negative area",), must_not=("MATCH:", "MISMATCH:"))
+
+    # 9) data-protected under --bands is not recognized (bands ignore data-section
+    # too): it must fail closed naming the marker, never silently drop it and
+    # score nothing for the component.
+    d_band_page = ('<h2 data-y="0">Alpha</h2><p data-y="0" data-item>hi</p>'
+                   '<div data-protected="diagram"><i data-protected-node="box" '
+                   'data-prect="0,0,10,10"></i></div>')
+    a_band_page = '<h2 data-y="0">Alpha</h2><p data-y="0" data-item>hi</p>'
+    r = compare(write("prot-band-d.html", d_band_page), write("prot-band-a.html", a_band_page),
+                bands="headings")
+    check("protected-under-bands", r["exit_code"], r["report"], COULD_NOT_CHECK,
+          must_have=("data-protected",), must_not=("MATCH:", "MISMATCH:"))
 
 
 def _selftest_floor_style(write, check, failures: list, design: str, app_full: str) -> None:
@@ -3518,8 +3828,8 @@ def _selftest_bands(write, check, failures: list) -> None:
     if got != (("headings", [(40, "dashboard"), (100, "usage"), (300, "billing")]),
                ("headings", [(0, "b"), (50, "b #2")])):
         failures.append(f"bands-starts(order,same-y-fold,repeat-suffix): {got}")
-    d_bands, _ = read_side(d_flat, band_fn=_band_fn([(40, "dashboard"), (100, "usage"), (300, "billing")]))
-    a_bands, _ = read_side(a_nested, band_fn=_band_fn([(40, "dashboard"), (100, "usage"), (310, "billing")]))
+    d_bands, _, _ = read_side(d_flat, band_fn=_band_fn([(40, "dashboard"), (100, "usage"), (300, "billing")]))
+    a_bands, _, _ = read_side(a_nested, band_fn=_band_fn([(40, "dashboard"), (100, "usage"), (310, "billing")]))
     keys = [[sorted(i["key"] for i in _prepare(s["inventory"], False)) for s in side]
             for side in (d_bands or [], a_bands or [])]
     if not keys[0] or keys[0] != keys[1]:

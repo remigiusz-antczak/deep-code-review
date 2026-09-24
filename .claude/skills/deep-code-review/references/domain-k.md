@@ -8,6 +8,23 @@ lifecycle, canary/blue-green claims vs actual config, DORA-or-`UNMEASURED` —
 `references/release-engineering.md`.
 - One-command reproducible build; lockfiles committed and honored; CI gates
   merge on lint + format + type + tests + security/dependency scan.
+- **Runner-minute cost of the workflow itself** (the staged fan-out remedy for
+  an agent swarm's duplicate-CI shape lives in `references/parallel-audit.md`,
+  not repeated here): a PR-triggered workflow needs `concurrency:` with a
+  truthy `cancel-in-progress` so a superseded push stops burning instead of
+  racing to finish; every job needs `timeout-minutes` (GitHub applies its own
+  large default ceiling per job when it's unset — verify the current number
+  before citing it as fixed); `push` to the default branch stacked with
+  `pull_request` on the same workflow re-runs the same commits on merge only
+  when required-status-checks are **strict** (branch must be up to date before
+  merging) — non-strict repos can keep both; a `schedule:` cron firing more
+  than once an hour, and an oversized `strategy.matrix` (job count grows
+  combinatorially per added axis), both burn minutes without a reviewer ever
+  seeing a duplicate run to object to; a workflow that only runs tests but
+  triggers with no `paths`/`paths-ignore` filter still re-runs on a docs-only
+  change (`.claude/skills/deep-code-review/scripts/ci_cost_lint.py` checks all
+  five deterministically — plus the docs-only-trigger heuristic as advisory —
+  and `--gate` fails a PR on the blocking ones).
 - Third-party CI actions **pinned to a commit SHA** (not `@main`/`@v3`), bumped
   by a bot that passes the same gates; secrets from the CI store, never echoed
   (`set -x` leaks). **Package-signature verification is blocking**; transitive-CVE

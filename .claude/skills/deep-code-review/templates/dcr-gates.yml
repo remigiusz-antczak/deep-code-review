@@ -11,10 +11,23 @@ name: dcr-gates
 # the skill; it will never silently overwrite a file you have since edited
 # (see the installer's note on first run).
 
+# `push` + `pull_request` both trigger this workflow. That is a duplicate run
+# only if the default branch's required-status-checks are STRICT (a PR branch
+# must be up to date before merge) — then the post-merge push re-runs exactly
+# what the PR already ran. If this repo enables strict required-status-checks,
+# drop the `push:` trigger (or scope it with `paths:`) instead of paying for
+# the duplicate run; a non-strict repo can keep both.
 on:
   push:
     branches: [main]
   pull_request:
+
+# Cancels a superseded run instead of letting it burn its full runner-minute
+# budget after a newer push already replaced it (GitHub Actions concurrency:
+# https://docs.github.com/en/actions/using-jobs/using-concurrency).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read # least privilege
@@ -22,6 +35,7 @@ permissions:
 jobs:
   dcr-gates:
     runs-on: ubuntu-latest
+    timeout-minutes: 15 # bound a hung run instead of paying for GitHub's own unset-job default ceiling
     steps:
       # SHA-pinned, not a mutable tag (same pin this skillset's own CI uses).
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

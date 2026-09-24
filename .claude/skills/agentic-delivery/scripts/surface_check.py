@@ -116,6 +116,16 @@ Modes (stdlib only, no third-party dependency):
       needs separate bot identities per lane (recommended), at which point
       the `--author`/`user.login` check above becomes a real binding one.
 
+      --draft-skip-ci
+          Say so when CI is configured to skip drafts and run only on
+          `ready_for_review`: this gate never required checks for the ready
+          decision (it never has — it reads REVIEW posts, not check runs),
+          and the flag makes the PASS/FAIL reason say that explicitly, so a
+          draft PR sitting at zero check suites reads as the expected state
+          under that CI config, not an anomaly needing an admin. Merging
+          still requires green (`checks`/`--wait`) — this flag only concerns
+          the *ready* decision, never the merge one.
+
   --json  print one JSON object (verdict, observed id, surface, reason, UTC
           observation time) for a board post or a handback `Verify:` line.
 
@@ -646,11 +656,16 @@ def _pr_head(slug, pr, timeout):
     return sha, ref, bool(doc.get("draft")), (login if isinstance(login, str) and login else None)
 
 
-def check_attested(slug, pr, issue, author, board_repo=None, timeout=30.0):
+def check_attested(slug, pr, issue, author, board_repo=None, timeout=30.0, draft_skip_ci=False):
     """Gate a ready-flip on a REVIEW attestation for PR `pr`'s exact current head (see module docstring).
 
     Returns (code, head sha, reason). Raises CheckError (exit 2) on bad input or an unreadable forge.
     Side-effects: read-only `gh api` calls only; it never flips the PR (the caller chains `gh pr ready`).
+    `draft_skip_ci` never changes the verdict (this gate never reads check runs) — on the draft/
+    ready-flip branch only, it appends a sentence to the reason saying checks were not required for
+    this decision, so a caller/orchestrator reading a draft PR with zero check suites treats that as
+    the expected state under draft-skip CI, not an anomaly. Omitted on an already-ready (non-draft)
+    PR: it already ran checks, so there is nothing for the note to explain there.
     """
     board_repo = board_repo or slug
     for repo in (slug, board_repo):
@@ -715,8 +730,13 @@ def check_attested(slug, pr, issue, author, board_repo=None, timeout=30.0):
         f"{a} ({reason})" for a, reason in sorted(spoofed.items()))) if spoofed else ""
     if not draft:
         return PASS, sha, f"#{pr} head {sha[:12]} approved by {resolved}; already ready{spoof_note}"
+    # ci_note only applies to the draft/ready-flip branch: an already-ready (non-draft) PR already
+    # ran checks under draft-skip CI, so there is nothing for --draft-skip-ci to explain there.
+    ci_note = ("; --draft-skip-ci: checks are not required for this decision — a draft PR with zero "
+               "check suites is expected under draft-skip CI, not an anomaly" if draft_skip_ci else "")
     return PASS, sha, (f"#{pr} head {sha[:12]} approved by {resolved}; next, as its own command: "
-                       f"gh pr ready {pr} --repo {slug} (the host's permission decision applies){spoof_note}")
+                       f"gh pr ready {pr} --repo {slug} (the host's permission decision applies)"
+                       f"{spoof_note}{ci_note}")
 
 
 def _parser():
@@ -759,6 +779,9 @@ def _parser():
     a.add_argument("--board-repo", help="OWNER/NAME of the board issue (default: --gh-repo)")
     a.add_argument("--author", required=True, help="board id of the lane that wrote the PR (its REVIEW never counts)")
     a.add_argument("--timeout", type=float, default=30.0, help="seconds per gh call")
+    a.add_argument("--draft-skip-ci", action="store_true",
+                   help="CI skips drafts and runs on ready_for_review: never changes the verdict, "
+                        "only says explicitly that checks were not required for this ready decision")
     return p
 
 
@@ -793,7 +816,7 @@ def main(argv=None):
             observed = None
         elif args.mode == "attested":
             code, observed, reason = check_attested(args.gh_repo, args.pr, args.board_issue, args.author,
-                                                    args.board_repo, args.timeout)
+                                                    args.board_repo, args.timeout, args.draft_skip_ci)
         else:
             code, observed, reason = check_checks(args.gh_repo, args.sha, args.require, args.timeout)
     except CheckError as exc:
@@ -1299,7 +1322,8 @@ def _selftest_attested():
         return {"id": cid, "body": body, "created_at": created,
                 "updated_at": "2026-09-24T11:59:00Z" if edited else created, "user": {"login": login}}
 
-    def case(name, comments, want, must, draft=True, board_rc=0, author="builder-1", pr_login=None):
+    def case(name, comments, want, must, draft=True, board_rc=0, author="builder-1", pr_login=None,
+             draft_skip_ci=False, must_not=None):
         global _gh
         nonlocal passed, failed
         calls = []
@@ -1320,6 +1344,8 @@ def _selftest_attested():
         saved, _gh = _gh, fake
         buf = io.StringIO()
         argv = ["attested", "--gh-repo", "acme/app", "--pr", "41", "--board-issue", "7", "--author", author]
+        if draft_skip_ci:
+            argv.append("--draft-skip-ci")
         try:
             with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(io.StringIO()):
                 got = main(argv)
@@ -1329,7 +1355,7 @@ def _selftest_attested():
             _gh = saved
         text = buf.getvalue()
         flipped = any(c[:3] == ["gh", "pr", "ready"] for c in calls)
-        ok = got == want and must in text and not flipped
+        ok = got == want and must in text and not flipped and (must_not is None or must_not not in text)
         passed += ok
         failed += not ok
         print(f"{'PASS' if ok else 'FAIL'}  attested: {name} (rc={got}, want {want}, flipped={flipped})"
@@ -1366,6 +1392,11 @@ def _selftest_attested():
     case("a distinct reviewer login still passes when it differs from both the author's login and the "
          "PR's login", [review(1, "builder-1", login="shared-bot"), review(2, "reviewer-2", login="other-bot")],
          PASS, "approved by reviewer-2")
+    case("--draft-skip-ci says checks were not required, never changes the verdict",
+         [review(1, "reviewer-2")], PASS, "checks are not required for this decision", draft_skip_ci=True)
+    case("--draft-skip-ci on an already-ready (non-draft) PR omits the note: nothing to explain",
+         [review(1, "reviewer-2")], PASS, "already ready", draft=False, draft_skip_ci=True,
+         must_not="draft-skip-ci")
     return passed, failed
 
 

@@ -14,7 +14,28 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 GATES="$ROOT/scripts/ci-gates.sh"
-WORK="$ROOT/.dcr-test-work"
+
+# Hermetic run root: mktemp -d (never a fixed name under $ROOT), so N copies
+# of this suite launched concurrently — same worktree, same host, whatever —
+# each get their own directory and never reuse another run's fixtures. Every
+# subprocess this script or a case shells out to (dcr-gates.sh, a selftest,
+# a git fixture) inherits TMPDIR/HOME pointed at this run's own root and a
+# disabled system/global git config, so no shared /tmp scratch file, no
+# ambient ~/.gitconfig identity or hook, and no cross-run git-config write
+# ever crosses runs. Every fixture below still sets its own repo-local
+# user.email/user.name, so disabling the global config changes nothing they
+# rely on.
+# ${TMPDIR:-/tmp} already ends in / on macOS; strip it (${...%/}) so the
+# template below never doubles up -- a later literal path-string match
+# against a child process's pwd-normalized output would otherwise see //
+# on one side and / on the other and never match.
+_tmp_base="${TMPDIR:-/tmp}"
+WORK="$(mktemp -d "${_tmp_base%/}/dcr-test-ci-gates.XXXXXX")"
+export TMPDIR="$WORK"
+export HOME="$WORK/home"
+mkdir -p "$HOME"
+export GIT_CONFIG_NOSYSTEM=1
+export GIT_CONFIG_GLOBAL=/dev/null
 
 # Documented SKILL.md size budget (bytes). Exceeding it must WARN, not fail.
 SKILL_BUDGET=1024
@@ -22,8 +43,11 @@ SKILL_BUDGET=1024
 cleanup() { rm -rf "$WORK"; }
 trap cleanup EXIT
 
-rm -rf "$WORK"
-mkdir -p "$WORK"
+# Hermeticity sentinel (own lane, asserted at the very end of this file):
+# every case below must write only under $WORK, never into the checkout
+# itself. Snapshot the checkout's status now; the final case compares it
+# unchanged once every other case has run.
+_root_sentinel="$(git -C "$ROOT" status --porcelain=v1 --untracked-files=all)"
 
 pass=0
 fail=0
@@ -3430,6 +3454,20 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+
+# ===========================================================================
+# hermeticity sentinel (own lane, appended at the end by convention): nothing
+# above wrote outside $WORK. A regression here means some case dropped a
+# fixture into the real checkout instead of $WORK — exactly the kind of
+# shared-state leak that makes concurrent copies of this suite (parallel
+# worktrees/lanes on one host) corrupt one another instead of running
+# hermetically side by side.
+# ===========================================================================
+if [ "$(git -C "$ROOT" status --porcelain=v1 --untracked-files=all)" = "$_root_sentinel" ]; then
+  record 0 "hermetic: suite writes nothing outside its run root ($WORK)"
+else
+  record 1 "hermetic: suite writes nothing outside its run root ($WORK)"
+fi
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
