@@ -6153,6 +6153,69 @@
       ]
     },
     {
+      "id": "parity-ignore-attribute-is-listed-not-silent",
+      "prompt": "Every parity run on the dashboard fails because the header clock and a rotating sponsored card differ between the design capture and the app capture. A lane proposes deleting those elements from the app capture before running parity_differ.py. What should it do instead?",
+      "expected_output": "Mark the volatile elements with `data-parity-ignore` (optionally with a short id, for example `data-parity-ignore=\"clock\"`) on both captures instead of editing the captures by hand. parity_differ.py excludes each marked element and its subtree from the inventory, populated-ness, and style diff, and lists every ignored element in the report with its count, section, and id. A design-side ignore removes a requirement, so each one needs an owner-committed accept row `ignore<TAB><section><TAB><id>`, read under the same owner-authorship gate. Without that row the run is COULD_NOT_CHECK. With it the verdict is MATCH_WITH_IGNORED and the section reads PASS_WITH_IGNORED, never a plain MATCH or PASS. An app-side ignore with no design ignore of the same section and id stays an open `EXTRA_IN_APP ignored:<id>` row, and it never hides a design element, which stays MISSING_IN_APP.",
+      "expectations": [
+        "Uses the data-parity-ignore attribute rather than deleting content from a capture",
+        "States that every ignored element is listed in the report (count and ids), so ignoring is never silent",
+        "Requires an owner-authored ignore accept row for any design-side ignore, else COULD_NOT_CHECK, and reports MATCH_WITH_IGNORED rather than a plain MATCH",
+        "States that an unpaired app-side ignore stays an open row and cannot hide a design element"
+      ]
+    },
+    {
+      "id": "parity-section-threshold-owner-authored",
+      "prompt": "The holdings section's style identity is 92% and the owner has said 'anything above 90% on holdings is fine for this release'. A lane wants to pass the section by adding `--style-min-pairs 1` and editing the accept file itself. What is the right mechanism?",
+      "expected_output": "The owner commits a row `threshold<TAB>holdings<TAB>90` to the accept file. It is read from the committed blob under the same owner-authorship check (`--accept-rev`, owner email, no Co-authored-by trailer) as every other accept row, so a lane cannot author it. With that row, holdings passes when its style identity (pairs with no un-accepted difference divided by its pairs) is at least 90%. Its open rows print as tolerated and the style verdict is STYLE_MATCH_WITH_ACCEPTED, not a plain STYLE_MATCH. Below 90% the rows stay open. Every other section stays strict by default. A threshold never waives a FOUNDATION or PRIMITIVE row. `--style-min-pairs` is only a floor on the pair count and does not relax differences.",
+      "expectations": [
+        "Uses an owner-committed threshold accept row for that section, not a lane-authored edit",
+        "States that the same owner-authorship gate applies (a lane-authored row fails closed)",
+        "States that the default stays strict and the result prints as tolerated or accepted, never as a plain match",
+        "States that FOUNDATION or PRIMITIVE rows are never waived by a threshold"
+      ]
+    },
+    {
+      "id": "parity-style-identity-report-reading",
+      "prompt": "parity_differ.py --style printed: 'identity (owner-accepted ignored) 31/40', 'mismatch count per property: line-height=8, color=2', and a top-diffs table. How should the orchestrator turn this into lane work?",
+      "expected_output": "Read the per-property counts first. line-height differs on 8 pairs, so check whether it is a FOUNDATION or PRIMITIVE row, and if so fix it once globally before assigning any per-section work. Then use the top diffs table (text | prop | design | app) as the concrete queue for the remaining color rows. Identity counts pairs with no un-accepted difference, so owner-accepted rows do not lower it, and it is a progress metric, not a pass. The verdict still comes from open style rows and the section table. Pairing is by section, role, and full visible text, and then by identical own text for leftovers, so a pair survives a changed child label.",
+      "expectations": [
+        "Uses the mismatch count per property to spot a global property to fix once",
+        "Uses the top diffs table (text | prop | design | app) as the concrete work list",
+        "Explains that identity ignores owner-accepted rows and is not itself a pass"
+      ]
+    },
+    {
+      "id": "parity-baseline-regression-net",
+      "prompt": "The settings page passed parity last week. Now a refactor landed and the orchestrator wants to know whether it broke anything that used to match, as distinct from design work that was never done. How should it use parity_differ.py?",
+      "expected_output": "On the passing run, record a baseline with `--baseline F --write-baseline`. It writes only when the run exits 0, and a failing run writes nothing. After the refactor, run with `--baseline F` and without `--write-baseline`. New deltas versus that fingerprint (a section or item REMOVED, an item ADDED, or a STYLE_CHANGED value) exit REGRESSION (8) and list only those deltas, which form a bug queue for what the refactor broke. That is distinct from MISMATCH (1), the never-passed work queue: a design change that the app never had stays MISMATCH with 'baseline: 0 new delta(s)'. A missing, malformed, or differently-styled baseline is COULD_NOT_CHECK, never a pass. Re-recording over an existing baseline prints its deltas first and refuses to overwrite when there are any, unless `--accept-regression` is given. The baseline path may not be the design, app, accept, or report file.",
+      "expectations": [
+        "Writes the baseline only explicitly with --write-baseline and only from a passing run",
+        "Reads REGRESSION (exit 8) as new deltas versus the passing run, listed alone, distinct from MISMATCH (exit 1)",
+        "Treats an unreadable or mismatched baseline as COULD_NOT_CHECK",
+        "Does not overwrite an existing baseline that shows deltas without --accept-regression"
+      ]
+    },
+    {
+      "id": "parity-line-count-structural-assertion",
+      "prompt": "A port's list rows wrap onto two lines while the design's rows are one line. Coarse pixel diff says 3% different and every row's text matches, so the lane calls it aligned. What does parity_differ.py need to catch this?",
+      "expected_output": "The capture sets `data-lines=\"N\"` on each row (and on headings, controls, or text blocks) on both sides. N is the number of rendered line boxes, a count taken from client rects, not a height or any other dimension. The count joins the item key as `[lines: N]`, so a 2-line app row against a 1-line design row is a CHANGED row and the verdict is MISMATCH, even though the coarse diff is small and the text matches. A `data-lines` exported on only one side also shows as CHANGED, so export it on both. Row counts per list or table and the presence of every design element are already compared by the inventory.",
+      "expectations": [
+        "Uses data-lines on both captures as a line-box count, not a size or height",
+        "States that differing line counts produce CHANGED rows and a MISMATCH even when the text matches",
+        "Does not accept a small coarse pixel or percentage diff as alignment"
+      ]
+    },
+    {
+      "id": "parity-same-crop-guard",
+      "prompt": "A harness's app capture of the holdings section starts too high and includes the KPI cards above it. The design capture is cropped correctly. What does parity_differ.py do, and what should the lane do?",
+      "expected_output": "The design is the reference, and anchors are only the texts of `data-anchor` elements, so a plain heading is never an anchor. The app crop of holdings carries a `data-anchor` (the KPI card label) that the design places only in the neighbouring kpis section. The guard names that leak, marks holdings UNVERIFIED and unscored, and exits COULD_NOT_CHECK_CROP (9). The other sections are still scored and their rows listed. The same happens when the design section has anchors and the app crop shows none of them. The lane re-captures holdings so it shares its anchor and holds no neighbour's, then re-runs. It never treats the leaked content as build work. A plain heading that sits in the wrong section is a MOVED row under MISMATCH, not a crop failure.",
+      "expectations": [
+        "States that a leaked neighbouring data-anchor or a missing shared anchor makes that section UNVERIFIED and the exit COULD_NOT_CHECK_CROP (9), while the other sections are still scored",
+        "Explains that only data-anchor elements are anchors and that the design is the reference",
+        "Re-captures instead of treating the leaked content as work, and reads a moved plain heading as a MOVED row"
+      ]
+    },
+    {
       "id": "pre-push-hold-file-refuses-every-push",
       "prompt": "An operator needs every lane to stop pushing while the owner reviews a release, but lanes keep 'self-healing' core.hooksPath and pushing. How should the freeze be enforced with the pre-push-verify.sh template?",
       "expected_output": "Create a hold file. Write the reason as the first line of `$(git rev-parse --git-common-dir)/DCR_HOLD` (shared by every linked worktree and not a tracked file), or of a repo-root `.dcr-hold`. While either exists, pre-push-verify.sh refuses every push, including deletes, and prints that reason line. Delete the file to lift the hold. A lane that repoints core.hooksPath to the template cannot escape it, because the check is in the hook and the file is in the common dir. It is still self-report: `git push --no-verify` or a hooksPath without this hook skips it, so server-side protection and CI remain the control.",

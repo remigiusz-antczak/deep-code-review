@@ -136,6 +136,12 @@ BLOCKED_BY_FOUNDATION, exit 7), then per-section inventory (completeness = items
 pixels) + computed styles, then `--report` screenshots: an earlier stage often explains a later
 diff — fix, re-run first.
 A section with no text `data-cs` (image/chart/map) stays UNVERIFIED unless an owner-committed accept row `visual-reviewed<TAB><section><TAB><reason><TAB><owner>` covers it.
+Volatile or harness-only content (clock, ad, dev banner): mark it `data-parity-ignore`; each is listed, a design-side one needs an owner `ignore` row (differ docstring, IGNORED).
+A section's style bar relaxes only through an owner-committed `threshold<TAB><section><TAB><style-identity %>` row; default strict, FOUNDATION/PRIMITIVE never waived (ACCEPTED DEVIATIONS).
+Style output gives identity %, mismatch count per property, and top diffs `text | prop | design | app` (COMPUTED STYLE).
+Rows wrapping differently fail: capture `data-lines` (a line-box count, never a height) on both sides (LINE COUNTS).
+Mark each section's anchor `data-anchor`; an app crop missing it or holding a neighbour's is UNVERIFIED, exit COULD_NOT_CHECK_CROP (9) (SAME-CROP GUARD).
+Once a page passes, `--baseline F --write-baseline`; later runs exit REGRESSION (8) listing only new deltas (BASELINE).
 
 ## Scope a parity claim to the correspondence table — one screen verified is not the product
 

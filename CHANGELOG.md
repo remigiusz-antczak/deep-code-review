@@ -3,6 +3,17 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.447.0] — 2026-09-24
+
+### Added — design parity, field-requested
+- `parity_differ.py` structural assertions: items per group and rendered line count per item (`data-lines`, from line boxes, never dimensions); a structurally wrong port fails even when a coarse pixel difference is tiny.
+- Same-crop guard: a section whose captures leak an explicit `data-anchor` from a neighbouring section is UNVERIFIED (exit 9) while every other section is still scored; a moved heading is a MOVED row under MISMATCH.
+- `data-parity-ignore`: ignored elements are always listed; ignoring a design element needs an owner-authored `ignore` accept row, otherwise COULD_NOT_CHECK, and an ignored section never reads plain PASS; unpaired app-side ignores stay open.
+- Owner-authored per-section style-identity thresholds (inventory completeness is never loosened).
+- `--baseline` regression mode (exit 8 on new deltas); `--write-baseline` shows deltas against the existing file and needs `--accept-regression` to absorb a regression; a baseline path that equals a capture, accept, or report path is refused.
+- Text-paired style identity: identity % over matched pairs, mismatch count per property, top diffs as `text | prop | design | app`.
+- size-budget-raise: .claude/skills/deep-code-review/references/migration-parity.md 26352→27241 six routed lines for the new parity_differ features
+
 ## [1.446.0] — 2026-09-24
 
 ### Fixed
