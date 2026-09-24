@@ -372,7 +372,7 @@ Depth (a shared accessor over polymorphic record shapes): `data-shapes.md`.
   `parse(torn / adversarial input)` **drops or rejects, never emits** an
   invariant-violating object (a generator that bakes in the invariant can't produce
   the violation, so it exercises only round-trip fidelity, never the violation path
-  — `testing-and-evals.md`). This is the
+  — `testing-situational.md`). This is the
   data-integrity face of untrusted deserialization (CWE-502, `security-appsec.md`).
 - **A suppression / allow-list / status match compares an *exact value set*, never
   a substring.** `status.toLowerCase().includes("pass")` matches "passed term sheet

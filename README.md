@@ -69,8 +69,8 @@ Each row is a shipped mechanism; the version is where
 | A report you can act on | Findings ranked Blocker → Critical → High → Medium → Low → Nit, each with `file:line` evidence and a fix. See the [fictional example report](docs/example-review-report.md). |
 | A summary for non-coders | A traffic-light health scorecard, the top risks in plain terms, and the decisions that need an owner. |
 | Broad, fixed coverage | 21 audit domains (lettered A–W), an adversarial red-team pass, and a check for costly work that adds no value (repeated identical API/LLM/DB calls, over-fetching). |
-| Lower context cost | The method files every review must read dropped from 65,903 to 35,866 estimated tokens (a FULL repo review: 87,137 to 47,460), about 46% less. A web review's must-read set dropped from 86,820 to at most 23,349. CI blocks either number from growing. |
-| Checks that run, not just advice | 26 shipped scripts carry a `--selftest` that proves they catch a planted violation; CI runs every one on each change. `--with-gates` wires the review's own gates into your repo's CI. |
+| Lower context cost | The method files every review must read dropped from 65,903 to 28,025 estimated tokens (a FULL repo review: 87,137 to 36,096), about 57% less. A web review's must-read set dropped from 86,820 to at most 23,349. CI blocks either number from growing. |
+| Checks that run, not just advice | 25 shipped gate scripts carry a `--selftest` that proves they catch a planted violation, run in CI on every change. `--with-gates` wires the review's own gates into your repo's CI. |
 | A bar that stays | An optional final phase writes an `AGENTS.md` and pre-commit/CI gates into your repo, so the next contributor or agent, from any vendor, is held to the same bar. |
 
 Where the numbers come from: token figures are characters ÷ 4, from
@@ -236,8 +236,8 @@ The latest five releases; full detail in [`CHANGELOG.md`](CHANGELOG.md).
 ## FAQ
 
 **What does it cost?** Perun is free (MIT). You pay only for your agent's model
-usage. The fixed method load is about 35,800 estimated tokens per review
-(47,400 for a FULL repo review), plus the references that apply and your code.
+usage. The fixed method load is about 28,000 estimated tokens per review
+(36,100 for a FULL repo review), plus the references that apply and your code.
 Start with `DIFF` or `FILE` scope to keep a first run small.
 
 **Is it safe to install?** `install.sh` copies skill folders and writes a

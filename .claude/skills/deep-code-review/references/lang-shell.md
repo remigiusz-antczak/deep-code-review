@@ -9,7 +9,7 @@ Read this when the target runs any shell — CI `run:` steps, hooks, Dockerfile 
   bash word-splits it, zsh (default) does not, so a safety-critical skip/exclusion
   list silently stops excluding under the wrong shell. Use `case` or a line-based
   `grep -qxF`; full mechanism + the merge-guard instance:
-  `branch-and-merge-hygiene.md` §6.
+  `merge-operations.md`.
 - **`set -u` + `"${arr[@]}"` on an *empty* array is a fatal `unbound variable`
   under bash 3.2 — still macOS's default `/bin/bash` (verified `3.2.57`).** A
   script that conditionally builds an array (flags, a discovered file list,

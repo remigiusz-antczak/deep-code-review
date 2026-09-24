@@ -10,7 +10,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.451.0"
+  version: "1.452.0"
 ---
 
 # Agentic delivery
@@ -260,7 +260,7 @@ dispatched against a connector it cannot authenticate fails after it already
 holds a worktree slot). Decide HEAVY-lane count and model tier
 (`model-tiering.md` in the `deep-code-review` sibling) from that, not from
 habit. The probe commands, the decide-from-probe rules, the shell-semantics
-check (`branch-and-merge-hygiene.md` §6), the contention-vs-defect rule
+check (`merge-operations.md`), the contention-vs-defect rule
 (`parallel-audit.md` §0): `references/fanout-host-sizing.md`; CI-offload:
 `references/merge-queue-worktrees.md`.
 

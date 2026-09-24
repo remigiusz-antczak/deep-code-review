@@ -53,4 +53,4 @@ Read this when: a gate flips, a count jumps, or a check could not run and you mu
     Conversely, a change that would **reverse** a ratified invariant or decision is not a lane's
     mechanical call either — stop and queue it to the owner rather than silently applying it (the
     code-level instance — never loosening a ratified assert-absent test to ship a conflicting
-    feature — is `deep-code-review`'s `testing-and-evals.md`).
+    feature — is `deep-code-review`'s `testing-situational.md`).

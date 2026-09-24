@@ -120,7 +120,7 @@ Read this when the target or diff builds a control on a non-semantic element (`<
   render, caught by a one-shot substring check against "the" visible text; here the visible text and the label
   are each *themselves* branch-dependent, agree on most branches by construction, and only one under-tested
   branch carries the drift — the same *things-that-must-stay-in-sync-and-didn't* shape as the sibling-copy
-  guard-parity family (`testing-and-evals.md`), but at the granularity of **branches inside one component's
+  guard-parity family (`testing-situational.md`), but at the granularity of **branches inside one component's
   two parallel expressions**, not **N separate call sites**. Detection: don't stop at a single substring check
   — enumerate every branch the trigger's state machine defines (empty, one selected, many selected, all
   selected) and, for **each**, check whether that branch's computed accessible name contains that same

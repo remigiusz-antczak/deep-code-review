@@ -133,36 +133,6 @@ and any wired security/dependency scanners. Then, before trusting "green":
   are a common silent green. Trace which test files the gate actually invokes;
   tests present but unwired are "decorative" (procedures:
   `references/testing-and-evals.md`).
-- **The matrix above proves a gate fails closed — it says nothing about which
-  rule or query category the gate actually has turned on.** Alongside (a)-(d),
-  read the enabled config itself (not just its presence) and record, by name,
-  the active tier/category set: a linter's baseline config vs. a broader,
-  opt-in one (typescript-eslint's own rule docs name the *exact* config that
-  enables each rule, not just its coarser recommended/strict label — confirmed:
-  `no-floating-promises`, `no-misused-promises`, and `unbound-method` are each
-  enabled by extending `recommended-type-checked`; `no-unnecessary-condition`
-  requires the separately-named `strict-type-checked`. A project extending only
-  `recommended-type-checked` — already type-aware, already catching the
-  promise/unbound-method class — has no guarantee it also carries
-  `strict-type-checked`'s additional checks, `no-unnecessary-condition` among
-  them: verify the actual config name, don't infer coverage from "type-aware
-  rules are on"), a SAST
-  tool's default query suite vs. a broader named one (CodeQL ships three
-  distinct suites — `default`, `security-extended`, `security-and-quality`), or
-  a linter's documented default rule selection vs. an expanded one (ruff's
-  `select` setting docs document a default selection distinct from `select`,
-  and show `extend-select` adding whole categories "on top of the defaults" —
-  e.g. flake8-bugbear `B` — confirming a real default/expanded split without this
-  skill pinning exact counts, which drift across releases). A gate that is
-  present, non-empty, correctly scoped, and not excluding the changed path can
-  still be calibrated to a tier that structurally cannot catch the class in
-  question — that gap is invisible to (a)-(d) because the config isn't missing,
-  empty, wrong, or path-excluding, it is simply narrower than the review needs.
-  When it is, name the omitted class in the report (e.g. "this config's enabled
-  rules don't include the check that would flag a type-proven-unreachable
-  branch") as a fact for the reviewer/owner to weigh — this records what the
-  gate cannot see, it does not mandate raising the tier (principle 5: judge a
-  gate's calibration in context, don't impose a stricter one).
 - **A gate reports only on the scopes that actually ran — a skipped scope is
   `unverified`, not clean.** A pass is evidence only where the enforcing surface
   could **see** the artifact it checks (`SKILL.md` principle 2). A multi-scope gate
@@ -175,63 +145,6 @@ and any wired security/dependency scanners. Then, before trusting "green":
   a status claiming it is over-claims a **trust-critical** surface — rate the
   *claim* **Critical**, not the gate. Same shape as the empty-banlist silent green
   above — the check ran, but not over the thing you needed cleared.
-- **A gate changed in the diff it gates is self-certified — re-run its base
-  version.** When the diff touches an **enforcement artifact** (a gate / CI /
-  privacy / lint / hook / checksum script that decides pass-fail), the green run
-  used the **shipped, possibly-weakened** copy grading itself. Judge the change
-  with the **base** copy instead: `git show <BASE>:path/to/gate.sh >
-  /tmp/base-gate.sh && bash /tmp/base-gate.sh` against the new tree (or diff
-  base-vs-head of the script and read what the change stops catching). A gate
-  that only ever grades its own author is `unverified`; a change that **narrows**
-  what it catches while staying green is a Blocker on the same footing as a
-  planted defect that survives.
-- **A CI re-run certifies the SHA it ran, not the PR head.** "Re-run all jobs" on
-  most forges re-dispatches the **original, frozen payload SHA**, so a re-run that
-  goes green can be certifying a **stale tree** after the head moved on — the
-  moved-tree twin of the self-certifying gate above: a status names the surface it
-  graded, here the **commit**, so a green whose SHA is not the PR's current head is
-  `unverified` for the head. Read the run's commit, not only its colour.
-- **Re-validate a carried-forward finding before repeating it — a finding without a
-  re-run is a hypothesis.** A finding captured at one SHA (the report's `START_SHA`,
-  `report-format.md`) is current only for that tree; before repeating it in a later
-  session, re-check the `file:line` still exists at HEAD **and** re-run the gate or
-  probe that surfaced it. Carried forward unchecked it is `unverified`, not
-  still-open, and the report's `START_SHA` is what tells a follow-up what to re-check
-  against. It prevents two failures: repeating a finding **already fixed** in the
-  intervening commits (a false positive that spends the owner's trust), and — worse —
-  repeating one that **changed or worsened** as if unchanged, which over-claims a
-  **trust-critical** status (rate that *claim*, not the staleness). A "still open"
-  status holds only at the current SHA.
-- **A justification carried forward inside the *target's own* suppression list
-  is a claim to re-verify, not a fact — and a green ratchet proves only that
-  nothing was *added*.** Distinct from re-validating your own carried-forward
-  finding (above): a shrink-only allowlist / ratchet in the target — a
-  `.trivyignore` or audit-allowlist row, a lint-suppression or type-error
-  baseline, a `# nosec` / `// eslint-disable` reason, a CODEOWNERS exception —
-  carries a per-entry comment saying *why* it is still there ("false positive";
-  "upstream fix pending, tracked in TICKET-123"). That comment was once true;
-  when its blocking cause quietly goes away (the fix shipped, the ticket closed,
-  the false positive became real) the entry and its prose are re-emitted verbatim
-  into each regenerated baseline, so a dead rationale reads as current fact and
-  the suppression is never re-examined — a list that only ever loosens. Two
-  moves. **(1) Check the prose like an assertion:** it names something specific —
-  a symbol, a call, a ticket id — so it is as falsifiable as a unit-test
-  expectation; grep the current file for the blamed symbol (zero hits predate a
-  since-landed fix), `git log -S` for when it left, read the linked issue's real
-  state — *before* you repeat it, size work against it, or report it as status. A
-  second reviewer who trusts the prose and restates it in a new issue/report has
-  not corroborated it: that is one unverified claim copied twice, not two
-  confirmations. **(2) Confirm the ratchet tightens:** its passing gate
-  enumerates only "is this entry still present," never "is its reason still true"
-  (the green-gate-clears-only-what-it-enumerated rule below), so diff the entry
-  **set** across baseline revisions and flag a list where entries only ever
-  arrive and none ever leaves. Fix: each entry needs an expiry or re-verification
-  trigger (a date, a linked-issue state check, a periodic sweep) — the lifecycle
-  a grant needs beyond correct-scope-at-creation (`infra-iac-containers.md`) and
-  the *allowed-not-required* discipline a size-pin already carries
-  (`skill-authoring-and-size.md`). **Not** the phantom-contract case
-  (`testing-and-evals.md`: a doc-comment naming a branch the code **never**
-  implemented — never true); here the comment **was** true and drifted.
 - **A green gate clears only the surface it enumerated — not one it never
   visited.** A gate that ran and passed proves something about the routes,
   states, and inputs its coverage set actually reached; a surface it never
@@ -245,21 +158,15 @@ and any wired security/dependency scanners. Then, before trusting "green":
   the **unvisited** surface: distinct from a gate that cannot fail (above) and
   from a probe that observed the wrong thing (detector fidelity, `method-situational.md`) — here
   the gate fails correctly, it was simply never pointed here.
-- **Lanes that pass in isolation do not clear their union.** Per-module,
-  per-lane, or per-flag gates each green on their own say nothing about the
-  integrated path they compose: a regression can live only in the combination —
-  a shared resource, an ordering, a flag interaction — that no single-lane run
-  exercises. Gate the **union that actually ships**, not only the parts; a suite
-  that only ever runs the parts has left the combination surface unenumerated
-  (same principle-2 scope: the union is a positive control no lane fired).
 - **Read the host CI, not only your own shell.** Fetch the base branch's latest
   pipeline conclusion (`gh run list --branch <base> --limit 5`, or the forge
   equivalent); "green locally" is not "green in CI" (different OS image, browser
   binaries, gate set). A red, unexplained base is `unverified` ground truth — say
   whether it is a flake, pre-existing and unrelated, or caused by this work — and
   you cannot show a change "regresses no axis" against a baseline already failing.
+- **A green names the commit it graded.** Before citing any green or CI status, confirm its SHA is the reviewed head; a re-run re-dispatches the original payload SHA, so a green on another commit is `unverified` for the head.
 - **Before trusting a gate, or fixing code to satisfy one:** check the gate against its cited standard, and run it twice (idempotence). Depth for both: `method-situational.md`.
-- **Situational Phase 1 checks — `method-situational.md`.** Load it when a firing gate may be stricter than its standard, a gate-aimed fix or a production-build finding must be reproduced, a no-regressions gate keys on labels or positions, a verify gate writes artifacts a later step reads, local and CI disagree or a failure appears only under a reduced worker config, the target is containerized or serverless (deploy-contract preflight), the task builds against an exported reference, or the target has native C/C++ or `unsafe` Rust.
+- **Situational Phase 1 checks — `method-situational.md`.** Load it when a firing gate may be stricter than its standard, a gate-aimed fix or a production-build finding must be reproduced, a no-regressions gate keys on labels or positions, a verify gate writes artifacts a later step reads, local and CI disagree or a failure appears only under a reduced worker config, the target is containerized or serverless (deploy-contract preflight), the task builds against an exported reference, or the target has native C/C++ or `unsafe` Rust. Also load it before trusting a verdict when a lint/SAST gate's green is cited as clearing a defect class, the diff edits an enforcement artifact (gate, CI, hook, checksum script), any green, CI status, re-run, or coverage figure is cited as evidence, a finding is carried forward from an earlier SHA, the target carries a suppression list / allowlist / baseline ratchet, or gates run per lane, module, or flag.
 
 **How much ground truth the scope owes** (don't run a `FULL` gate ritual to
 review ten lines, and don't skip it on a repo):
@@ -358,7 +265,7 @@ bless the workaround. It is higher-confidence than a cold duplicate search becau
 author **pre-verified** the deviation for you: the comment is a first-party admission
 that the shared path did not fit. **Opposite polarity from the two other
 comment-as-claim rules in this method** — the carried-forward suppression-reason (Phase
-1) and the incident-narrating comment (Phase 4) warn you *not to over-trust* a comment
+1, `method-situational.md`) and the incident-narrating comment (Phase 4) warn you *not to over-trust* a comment
 as still-true; this *harvests* a class of comment that **is** a finding you would
 otherwise miss. And distinct from `ux-components.md`'s adoption-is-total move,
 which reads the **shared component's own** doc-comment (it names the call sites it
@@ -366,7 +273,7 @@ fixed) to hunt stragglers — this reads the **call site's** comment to find the
 bypass that never touched the shared component at all. Treat a match as a finding to
 confirm at source (read the workaround; confirm it still bypasses the shared thing at
 HEAD), not as proof on its face — the comment may itself have drifted, per the Phase 1
-rule.
+rule (`method-situational.md`).
 
 **Diff every ad-hoc re-derivation of a *canonical* predicate against the canonical — a
 partial reimplementation reads real fields yet tests a *subset* of the conditions.** A
@@ -388,7 +295,7 @@ that reads **any** of them in a boolean/count/filter context and diff its condit
 against the canonical's — a site that tests a **proper subset** is the finding. **Fix: call
 the shared predicate; never reimplement a subset of it** — a count over
 `items.filter(isWired)` cannot drift from the gate. **Adjudication vs the nearest rules:**
-distinct from `testing-and-evals.md`'s *diff-the-guard-conditions-across-N-sibling-copies*
+distinct from `testing-situational.md`'s *diff-the-guard-conditions-across-N-sibling-copies*
 (that has **no** canonical — N peer copies drifting from one another, fixed by reconciling or
 extracting them; here a **designated canonical exists** and the bug is one **narrower**
 re-derivation of it, fixed by calling it); distinct from a **value-set** subset (a data set
@@ -525,8 +432,8 @@ issues, dedupe against recently-*closed* issues, not only open ones** — a find
 issue closed in the last few weeks may already be fixed, so re-filing it re-lanes shipped work
 and erodes trust in the tracker; search closed issues for the symbol/symptom (the route, the
 guard name) before filing. But **a `wontfix` / `duplicate` / `stale` / bot-triage close is not
-a fix** — check the close **reason**, and if the finding still reproduces at HEAD (the Phase 1
-re-validate-the-`file:line`-still-exists check above), file it anyway rather than suppress a
+a fix** — check the close **reason**, and if the finding still reproduces at HEAD (`method-situational.md`'s
+re-validate-the-`file:line`-still-exists check), file it anyway rather than suppress a
 live defect. **Distinguish a defect from intended
 behavior a test encodes:** before reporting, check whether the proposed fix would
 break an existing **passing** test **present at the base ref** (`git show <base>:` — not one

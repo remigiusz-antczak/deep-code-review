@@ -3,6 +3,25 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.452.0] — 2026-09-24
+
+### Changed — must-load floor cut
+- The Phase 0–2 files every review loads dropped from 35,866 to 28,025 estimated tokens (LIGHT, −21.9%) and from 47,460 to 36,096 (FULL, −23.9%). Situational depth moved behind observable triggers: verdict-trust rules (`method-situational.md`, loaded whenever a green CI status or re-run is cited), conditional test smells (new `testing-situational.md`, loaded when a coverage figure is cited or the suite has retries/flakes), and branch action rails (`merge-operations.md`, loaded when recommending or executing close/delete/merge). The "green run must be on the reviewed head sha" check stays in the floor. Every moved line lands exactly once; floors in `scripts/mustload-budgets.tsv` are re-pinned.
+
+### Added
+- Review rule: a test double for a stateful backend must round-trip state on read-then-write paths; a fake that returns constant reads gives zero coverage of read-modify-write logic regardless of coverage % (#1149).
+- size-budget-raise: .claude/skills/agentic-delivery/references/gate-epistemology.md 3955→3957 repointed cross-reference after the floor split
+- size-budget-raise: .claude/skills/agentic-delivery/references/unattended-operating-mode.md 19535→19553 repointed merge-operations reference
+- size-budget-raise: .claude/skills/deep-code-review/SKILL.md 23961→23992 verdict-trust and coverage triggers routing the moved content
+- size-budget-raise: .claude/skills/deep-code-review/references/a11y-aria.md 26603→26605 repointed cross-reference after the floor split
+- size-budget-raise: .claude/skills/deep-code-review/references/concurrency-shared-state.md 31964→31966 repointed cross-reference after the floor split
+- size-budget-raise: .claude/skills/deep-code-review/references/data-quality.md 35145→35147 repointed cross-reference after the floor split
+- size-budget-raise: .claude/skills/deep-code-review/references/docs-and-dx.md 22511→22513 repointed cross-reference after the floor split
+- size-budget-raise: .claude/skills/deep-code-review/references/domain-j.md 1910→2823 read-then-write round-trip rule for test doubles (#1149)
+- size-budget-raise: .claude/skills/deep-code-review/references/merge-operations.md 45917→60688 branch action rails moved here from the must-load floor
+- size-budget-raise: .claude/skills/deep-code-review/references/method-situational.md 12822→20361 verdict-trust rules moved here from the must-load floor
+- size-budget-raise: .claude/skills/deep-code-review/references/testing-ui.md 12815→13733 visual receipt rule moved here from the must-load floor
+
 ## [1.451.0] — 2026-09-24
 
 ### Added

@@ -178,6 +178,17 @@
 # Phase 0-2 floor). Floors: phase-floor-light 35848->35866, phase-floor-full
 # 47442->47460.
 #
+# Second floor cut (conditional depth behind routed triggers; every moved line
+# lands exactly once): method.md's trust-a-verdict Phase 1 bullets (rule-tier
+# calibration, self-graded gate, CI re-run SHA, carried-forward finding,
+# suppression-list ratchet, lane union) -> method-situational.md;
+# testing-and-evals.md's target-specific smells -> new testing-situational.md
+# (visual receipt -> testing-ui.md); branch-and-merge-hygiene.md's §6 rails for
+# recommending or executing a triage row -> merge-operations.md ("§6 continued"). Each always-
+# loaded parent names the triggers. SKILL.md 23961 -> 23992 bytes (J-row route, phase-1 trigger).
+# Floors: phase-floor-light 35866->28025 (-21.9%), phase-floor-full
+# 47460->36096 (-23.9%). Archetype rows unchanged (none load these files).
+#
 web	23349
 mobile	14046
 api / service	18829
@@ -185,6 +196,6 @@ data / ETL	19548
 agent / LLM / MCP	18981
 IaC / platform	4342
 lib / SDK	10907
-phase-floor-light	35866
-phase-floor-full	47460
+phase-floor-light	28025
+phase-floor-full	36096
 phase-conditional	method-situational.md

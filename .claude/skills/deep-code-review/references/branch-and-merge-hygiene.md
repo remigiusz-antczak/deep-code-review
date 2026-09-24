@@ -115,7 +115,7 @@ Walk top-down; the first match wins. Every "merge/PR" resolves its **target** fr
    forge merged-PR list) → **delete the branch** (local `git branch -d`; remote
    `git push origin --delete <b>`; local `[gone]` ref → `git fetch --prune` already flagged it). `-d` refuses
    if git thinks it's unmerged — for a confirmed squash-merge use `-D` **only after** the forge confirms the
-   merge. **Before any delete, check for a stacked PR first** (§6) — a branch can be safely merged-away by
+   merge. **Before any delete, check for a stacked PR first** (§6 → `merge-operations.md`) — a branch can be safely merged-away by
    every check above and still be the *base* of another open PR.
 2. **Never pushed and holds unique commits (only copy)** → **push first** (`git push -u origin <b>`) so it's
    recoverable, *then* apply the rest of the tree. Never delete an unpushed unique branch (§6).
@@ -165,98 +165,16 @@ Never recommend a direct push to a protected default branch (`SKILL.md` Phase 5)
 
 Triage is **advice**; carrying it out mutates shared state. Under `SKILL.md` principle 7 and the global
 "confirm before destructive/irreversible/shared-state" rule, produce the recommendation + the exact command,
-and **execute only on explicit approval** — the same opt-in bar as the Phase 6 imprint.
+and **execute only on explicit approval** — the same opt-in bar as the Phase 6 imprint. The rails
+for **recommending or executing** a close / delete / merge row — a stacked-PR base, generated-artifact conflicts, a subset absorbed at a stale SHA,
+closing a duplicate, gating an irreversible or automated step, updating a branch another worktree holds —
+continue in `merge-operations.md` (§6 continued); load it before recommending or acting on any such row.
 
 - **Never delete unique unmerged work.** Deleting a branch whose commits exist nowhere else is irreversible
   data loss. Gate every delete on "content is in the target (§3 confirmed) **or** it's tagged/pushed
   elsewhere." Prefer **tag-then-delete** so any delete is reversible.
-- **A branch can be safely merged-away and still be another PR's base — check before deleting *any* branch,
-  even a confirmed-merged one.** If another open PR uses this branch as its **base** (a stacked PR reviewing
-  changes on top of an unmerged branch), deleting the base auto-closes the stacked PR on most forges, with no
-  reopen/retarget once the base ref is gone — even though the underlying commits may survive a while in
-  reflog/backup. Check first: `gh pr list --state open --base <branch>`. If any exist, retarget them
-  (`gh pr edit <n> --base <new-base>`) or get explicit confirmation that losing that PR's thread is acceptable
-  — every time, not only when a stack is suspected.
-- **Once a stacked PR has already auto-closed this way, pushing more commits to its branch does not revive it
-  — it recreates a bare orphan branch with no PR attached**, so the work must be re-proposed as a new PR
-  (retargeted onto the shared base, or rebased onto the parent's post-merge commits) rather than "fixed" by
-  pushing again. Prevent it instead: retarget the child PR onto the shared base **before** merging the parent
-  (`gh pr edit <n> --base <shared-base>`), or open the child against the shared base from the start and rebase
-  onto the parent's commits rather than branching off the parent's own branch — the check-before-delete
-  mechanics are the bullet above. **Corollary for reading PR state during any triage:** a forge's `closed`
-  state doesn't distinguish "closed via merge" from "closed unmerged" — this orphan-close and a normal
-  squash/merge both read `closed`. Before treating a closed PR as done or its branch as safe to delete, check
-  the `merged` field too (`gh pr view --json state,mergedAt`), never `state` alone.
-- **Never hand-resolve a merge conflict inside a generated/compiled file.** When two branches both regenerate
-  the same derived artifact (a build output, a compiled config, a generated manifest/index) and a merge
-  conflicts inside it, take either side, then **re-run the generator** against the merged source inputs —
-  never hand-splice the two conflicting versions. A hand-merged generated file can be syntactically valid and
-  still contain a combination no run of the generator would ever produce, and the corruption is often silent
-  until a much later read (cross-ref domain H: a generated/source pair needs a parity test or a single
-  generated source so this doesn't drift over time — same failure, at the moment of a merge conflict rather
-  than over time).
-- **Two PRs regenerating the same artifact can both be valid with *no* conflict — a silent regression, not a
-  merge error.** The rule above fires on a conflict; the worse case fires on none. When two open PRs each
-  rebuild a derived artifact (`out/`, a lockfile, a compiled index, `app/data/`) from a shared source tree,
-  each writes a valid file from its **own** base, git merges both cleanly, and whichever lands second
-  **silently drops the first's regeneration** — nothing marks it. Trigger to watch: this PR regenerates an
-  artifact **and another open PR touches the same source** that produces it
-  (`gh pr list --state open --limit 500` — the `--limit` matters, §1). Fix: the second PR **rebases onto the
-  merged first and rebuilds** from the combined source (a superset fold), never layering its own partial
-  build. Flag a generated-artifact PR as **superset-fold-required** while a sibling source PR is open.
-- **A PR whose *only* conflict is a generated/compiled artifact re-conflicts on every same-class merge — a
-  structural loop, not a normal rebase-able conflict.** When the sole conflicting path is a **derived file
-  neither side hand-edited** (a lockfile, a bundled `dist/`, a checksums/manifest file, a generated schema or
-  client) and many open PRs regenerate it from a shared source, "rebase and it's clean" is false **by
-  construction**: each same-class PR that lands **rewrites that serialization**, so a branch you just rebased
-  green re-conflicts before it can merge, and under steady merge volume it re-stales faster than any
-  human/agent can rebase — an unwinnable loop that reads as a perpetually "almost-ready" PR while compute
-  burns on re-rebasing. Distinct from the silent-drop case above, which fires on *no* conflict (last writer
-  wins); this fires on a conflict that **never clears**. Distinct, too, from `merge-operations.md`'s sweep-while-resolving
-  treadmill (a *coordinator* re-dirties a cluster with a concurrent merge sweep): this needs no coordinator —
-  ambient merge cadence alone drives it. **After the second re-conflict whose only path is a generated
-  artifact, stop rebasing** and change strategy: get the PR green + mergeable **once** and land it inside a
-  window where no same-class PR merges (`merge-operations.md`'s freeze-the-merge-step / a single merge-seat holding the class's
-  other merges for the brief handoff), always **taking trunk's copy and re-running the generator** rather than
-  hand-splicing (the regenerate-from-merged-inputs rule above). **Durable fix — stop conflicting at all:**
-  regenerate the artifact as a **post-merge / CI step** (or stop committing it and build it in CI), or
-  serialize the class and regenerate it **last**, so same-class PRs never block each other on it. A local git
-  merge driver looks like the durable fix but only mitigates *your* local merge — see the next bullet. **🚩**
-  rising rebase attempts per merged PR whose only conflicting path is a generated file; treating a
-  generated-only conflict as resolve-by-rebase.
-- **A git merge driver resolves the artifact conflict only on a *local* merge/rebase — the forge's server-side
-  merge never runs it, so the PR still shows CONFLICTING.** Registering a custom driver
-  (`.gitattributes merge=<driver>` + a resolver script set up per-clone) so conflicts in the artifact
-  auto-resolve (take either side + regenerate) fixes only a **local** `git merge`/`rebase` on a clone where
-  the driver is registered. A merge driver is a **client-side** feature — registered per-clone in local git
-  config, run only by git on a clone that has it — so a host computing mergeability and merging on **its own
-  servers** has no reason to run your repo's local resolver and treats the artifact as an ordinary conflict.
-  On **GitHub** this is observable: the "Merge" button / merge API / auto-merge / merge queue and its
-  mergeability computation **ignore custom `.gitattributes merge=` drivers** (should generalize to other
-  forges but is **not independently verified** here, per the async-mergeability note in `merge-operations.md`) — so a PR whose
-  only conflict is the driver-handled artifact still displays **CONFLICTING indefinitely**, the host merge
-  button stays disabled, and auto-merge never fires, even though the conflict is trivially auto-resolvable on
-  any driver-registered clone. Teams then waste effort "rebasing to fix it" through the host UI (which can't),
-  conclude the driver is broken (it isn't), or build a second driver (redundant). **Don't read
-  host-CONFLICTING on a driver-managed path as a real conflict** — confirm whether the *only* conflicting path
-  is the driver-managed artifact. **Land it via a local merge/rebase on a driver-registered clone, then push
-  the resolved head:** the local resolution leaves no conflict, so the push flips the host to MERGEABLE and
-  the normal host merge then works; **document the mechanic next to the driver** ("resolve/land locally; the
-  host won't run this driver"). The rule uniting both bullets: **a merge driver is a client-side convenience
-  for your own merge; it never changes the PR's forge-visible state** — the only host-visible fix is a
-  **pushed commit that carries no conflict** (regenerate-and-push, or don't commit the artifact and build it
-  in CI, previous bullet). **🚩** a PR stuck at host-CONFLICTING whose only conflicting path is a
-  driver-managed generated file.
-- **A subset absorbed at a stale SHA can revert a later fix — no conflict, last writer wins.** Distinct from
-  the superset-fold case above (a *derived* file rebuilt from source): here PR B **absorbed PR A's own source
-  content** at an **older** tip, missing A's later commits (say a disabled-submit guard A fixed in
-  follow-ups). Merge A, then merge B, and B's stale copy of those files silently overwrites A's fix — git sees
-  no conflict, so nothing warns. Before landing: if B's history carries a **subset of A at older SHAs** (same
-  files, earlier commits), don't merge B as-is after A — merge the **fuller tip first** and rebase B onto it,
-  replaying only B's unique commits, **or** fold A's missing commits into B and merge B once. After landing,
-  **grep the live tree for the fixed symbol** (the guard, the hard limit); never trust "B included A."
 - **A long-open PR is reviewed against its own fork point, so its diff cannot reveal a revert of work the base
-  shipped after it branched.** Distinct from the subset-absorb case above (two open PRs, B holding a stale
+  shipped after it branched.** Distinct from the subset-absorb case (`merge-operations.md`; two open PRs, B holding a stale
   subset of A): here **one** PR sat open while the integration branch raced hundreds of commits ahead, and the
   trap is that the **review surface itself is merge-base-relative**. A PR's "Files changed" view is
   **typically** merge-base-relative — as is `git diff <base>...<branch>`, which `git-diff(1)` defines as
@@ -267,7 +185,7 @@ and **execute only on explicit approval** — the same opt-in bar as the Phase 6
   fix, a hardening), merging can drop that newer work. A plain three-way merge would at least **conflict
   loudly** where both sides edited the same lines — but the silent paths don't: a **squash-merge** lands the
   branch's tree for the files it changed (the base's newer content in them goes with it — the §5 squash
-  trade-off / §3 cherry trap), an automated resolution **toward the branch** (`--theirs`, the §6 hazard below)
+  trade-off / §3 cherry trap), an automated resolution **toward the branch** (`--theirs`, the §6 hazard in `merge-operations.md`)
   takes the stale side outright, and even a **textually clean** merge can defeat the fix **semantically** when
   the branch edited a different region (a caller) than the base hardened (the callee). The branch's own green
   proves nothing either — it ran against its fork-point view of the world. **Two-dot
@@ -279,7 +197,7 @@ and **execute only on explicit approval** — the same opt-in bar as the Phase 6
   means the PR's tree predates real work there), and prove the actual effect by **trial-merging onto current
   HEAD** — the throwaway integration branch of `merge-operations.md`'s merge trains, cut off HEAD — and diffing that result against HEAD.
   **Notation follows the question:** merge-base-relative (three-dot) is right for *what did this branch write*
-  and correctly suppresses the two-dot phantom reversions (the duplicate-close bullet below picks notation the
+  and correctly suppresses the two-dot phantom reversions (the duplicate-close bullet in `merge-operations.md` picks notation the
   same way), but it **cannot** answer *would merging undo shipped work* — that needs the base's post-fork
   side, which three-dot excludes. **"Rebase and re-run CI" is necessary, not sufficient:** a rebase can
   silently keep the stale side of exactly those files. If the PR's intent already landed on the base (its
@@ -313,18 +231,6 @@ and **execute only on explicit approval** — the same opt-in bar as the Phase 6
   / stale reconcile PR, as a **release-readiness blocker in its own right**: surface it early — when the
   frontier is genuinely exhausted the honest state is "gated on the promotion / owner," not more
   integration-only work that widens the gap.
-- **Before closing a PR as duplicate or superseded, diff the two tips — title or branch similarity is not
-  patch equality.** Two PRs that look like the same fix can differ in a hunk only one carries (one tip gates a
-  `useReducedMotion` check behind a mount guard — `mounted ? … : false` — the other reads it directly);
-  closing the "duplicate" drops that hunk silently. Compare the heads first: **two-dot**
-  `git diff <tip-A> <tip-B>` when they share a base (the literal difference between the two trees — empty iff
-  the tips are identical), or `git range-diff <base>..<tip-A> <base>..<tip-B>` to compare the two **patch
-  series** when the PRs forked from different points, which a plain two-dot pollutes with mainline drift. (Not
-  three-dot `A...B` — that diffs from the merge-base, the `git log` commit-range idiom, so it can't tell you
-  what B has that A lacks.) If B carries hunks A doesn't, **fold them into A** (rebase or cherry-pick) and
-  *then* close B with a pointer; close-as-duplicate is safe only when that diff is empty or B ⊆ A with no
-  unique lines. Put the **diff result in the close comment** as evidence; "looks the same," a shared branch
-  name, or a shared issue number is never sufficient alone.
 - **Never rewrite shared history.** Rebase/force-push only branches that are personal and undepended-on. When
   a force is genuinely needed, it's **`git push --force-with-lease`** (refuses if the remote moved under you),
   never `--force`. A rebase of a shared branch is a merge instead.
@@ -334,51 +240,6 @@ and **execute only on explicit approval** — the same opt-in bar as the Phase 6
   `git push --delete`. Flag this as its own line, never "delete fixes it."
 - **Remote deletes and history rewrites are confirmed, explicit, one at a time** — no batch `--delete` of a
   list the user hasn't seen and approved.
-- **Gate an irreversible command on the verdict string, not just "ran" — and make sure a list-membership guard
-  actually checks the list.** Two related failure shapes, both "the guard didn't guard because the shell's
-  real semantics differ from the author's mental model":
-  - A preflight/safety script's *contract* is often to print a pass/fail verdict while still exiting 0 (so a
-    human watching sees the message) — or its exit code is checked but the next command runs unconditionally
-    regardless. `./preflight.sh; ./publish.sh` (a bare `;`, or two unconditional steps) fires the irreversible
-    command whether or not the gate passed. Before recommending or running a merge/delete/publish/deploy
-    command, confirm the preceding gate's **documented pass condition** (an exact string and/or exit code
-    checked with `&&`/`if`), not merely that it ran without erroring.
-  - A **safety-critical exclusion list** (a held/blocked/do-not-merge set) is commonly checked with
-    `for x in $LIST; do [ "$x" = "$item" ] && skip; done` — this silently breaks under any shell where an
-    unquoted `$LIST` doesn't word-split (zsh, by default, doesn't; `for x in $LIST` then iterates **once**
-    with `x` bound to the whole string, so the comparison almost never matches and the exclusion never fires).
-    A script meant to run in "the reviewer's shell" can't assume bash's word-splitting semantics. Use a
-    **literal `case`/explicit split** instead — `case "$item" in id1|id2|id3) skip ;; esac`, or a line-based
-    exact match (`printf '%s\n' "$LIST" | grep -qxF "$item"`) — for any exclusion check gating an irreversible
-    or shared-state action (a held-PR exclusion in a merge script is the canonical instance: a silently-broken
-    guard here doesn't fail loud, it just merges the thing supposed to be excluded). Detector: grep scripts/CI
-    config for a for-loop iterating an unquoted variable immediately followed by a merge/delete/publish/deploy
-    call, and confirm the loop actually iterates more than once against a multi-item fixture in the shells the
-    script claims to support.
-- **Automated conflict resolution is gated on a marker-grep, not on `git add` exiting 0.** `git add` stages
-  whatever is on disk — conflict markers and all — so a resolution step whose
-  `git checkout --theirs -- <path>` silently failed can still be staged and committed with `<<<<<<<` /
-  `=======` / `>>>>>>>` in the tree (caught, if at all, only by a later parse error). Two mechanical
-  backstops, both required for agent/automated resolution where no human eyeballs the diff: **quote/escape
-  every path with glob metacharacters** (`git checkout --theirs -- 'app/kpis/[key]/page.tsx'`, or disable
-  globbing with the shell's own switch — `set -f` in bash/POSIX sh, but `setopt noglob` / a `noglob`
-  precommand in **zsh**, where `set -f` is NO_RCS and leaves globbing on — since a `[param]` / `*` / `?` path
-  glob-expands differently per shell, zsh erroring on a no-match while bash may pass the literal, so an
-  unquoted resolution silently no-ops); and **grep the staged tree for conflict markers before every commit,
-  gating on the result** —
-  `git grep --cached -qE '^(<{7}|={7}|>{7})' && { echo 'unresolved markers'; exit 1; }` (exit 0 = a marker was
-  found → block), or git's built-in `git diff --cached --check`. A bare `git diff -G` *prints* the hunk but
-  **exits 0**, so it doesn't gate — and `add` success is never proof of resolution; the gating marker-grep
-  plus a build/parse is.
-- **Update a branch another worktree still holds with a detached-HEAD fast-forward, never a force-push.** When
-  the branch you must update is already checked out in another (often stalled) worktree,
-  `git worktree add <branch>` refuses and force-pushing to escape it **strands** that lane — discards commits
-  the lane had already pushed (orphaned on the remote) and leaves its local ref and unpushed work on a
-  now-diverged branch. The non-destructive primitive: `git worktree add --detach <dir> origin/<branch>`, do
-  the work there (merge the base in, resolve, run gates), then push `HEAD:<branch>` — a **fast-forward** when
-  the remote ref is an ancestor of your new HEAD (verify that first; if diverged, it needs a real merge, not a
-  push). The "already checked out" collision is usually a symptom of stale worktrees never pruned —
-  `git worktree prune` (and removing a merged lane's tree) clears it.
 
 ## 7 — Severity discipline (don't turn cleanup into noise)
 

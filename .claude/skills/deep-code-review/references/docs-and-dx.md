@@ -98,7 +98,7 @@ survives the *next* contributor — see "Standards imprint" below.
   code defect. Record which absence causes which failure so each newcomer
   doesn't rediscover it. A gate that *asserts* real-data-shaped output must also be satisfiable
   from the **committed fixture**, or a "green from a clean clone" DoD claim is false even with the
-  map — `testing-and-evals.md` (a gate's committed fixture is part of its contract).
+  map — `testing-situational.md` (a gate's committed fixture is part of its contract).
 - **An operating-discipline doc for stable environment invariants.** Beyond the
   missing-prerequisite map, an agent-driven review/delivery otherwise re-derives the
   same environment facts every cycle — how to render a reviewable / authenticated
