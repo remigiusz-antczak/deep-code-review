@@ -200,3 +200,17 @@ coincidence, and the coincidence breaks silently:
   (at least one input exercising each branch), so a later edit to either side cannot
   silently make them disagree — the class of bug where a "smart default" hides real
   content or expands an empty container.
+
+## A visual receipt proves the feature only past the auth wall
+
+- **A visual receipt must show the feature, not a wall past it.** When the review
+  needs a screenshot of a changed screen, non-empty is **necessary, not sufficient**
+  — an error, login, or empty-state page is a valid non-empty image that proves
+  nothing about the change. Capture authenticated content through a **dev /
+  identity-bypass render mode**, not a production build that auth-walls every route
+  (which screenshots a login page perfectly). Prefer a **deterministic readiness
+  signal** (a specific selector / text is present) over a network-idle heuristic,
+  which a live hot-reload socket keeps busy so the capture waits forever and yields
+  zero images. (Distinct from reproducing a **build-specific** defect, which must use
+  the production build — `method-situational.md`; this is capturing *feature* evidence past an
+  auth gate.)

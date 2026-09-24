@@ -11,7 +11,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.451.0"
+  version: "1.452.0"
 ---
 
 # Deep Code Review
@@ -166,7 +166,7 @@ review after the first-response block.
 | Phase | Does | Load |
 |---|---|---|
 | 0 Map | Pin `START_SHA`, worktree, history depth, trust boundaries, banned remedies, coverage ledger | `method.md`, `branch-and-merge-hygiene.md` on FULL |
-| 1 Ground truth | Documented setup, aggregate gate by name + exit code, per-subtree coverage, planted-defect probe (missing / empty / wrong / path-excluding config) | `method.md`, `testing-and-evals.md`, `language-stack-redflags.md` + `lang-*.md` per language present; `method-situational.md` when a gate verdict is disputed |
+| 1 Ground truth | Documented setup, aggregate gate by name + exit code, per-subtree coverage, planted-defect probe (missing / empty / wrong / path-excluding config) | `method.md`, `testing-and-evals.md`, `language-stack-redflags.md` + `lang-*.md` per language present; `method-situational.md` when any verdict is cited or disputed |
 | 2 Domain audits | Walk applicable A–W with `file:line`; fan-out under `parallel-audit.md` | `domain-checklists.md` → `domain-<letter>.md` per applicable domain + per-domain refs |
 | 3 Adversarial | Hostile user **and** hostile upstream; networked openers: anon GET, two-principal swap, dual-surface, then injection/SSRF | `security-appsec.md`, `security-ai-agents.md`, `security-agent-skills.md` |
 | 4 Synthesize | Dedup, compounds, snippet-or-drop at `START_SHA`, fail-open vs fail-closed, **anti-slop** | `method.md` |
@@ -196,9 +196,9 @@ applicable domains. Language footguns:
 | E | Performance, efficiency & cost | `domain-e.md`, `performance-db-cost.md`, `model-tiering.md`, `billing-correctness.md` (when the target meters, subscribes, or charges) |
 | F | Reliability & error handling | `domain-f.md`, `reliability-error-handling.md` |
 | G | Concurrency & shared state | `domain-g.md`, `concurrency-shared-state.md` |
-| H | Tech debt, dead code, maintainability | `domain-h.md`, `skill-authoring-and-size.md` (when the target ships/installs skills or has `**/SKILL.md`: leanness, progressive disclosure, a bloat-failing size ratchet) |
+| H | Tech debt, dead code, maintainability | `domain-h.md`, `skill-authoring-and-size.md` (when the target ships/installs skills or has `**/SKILL.md`: leanness, progressive disclosure, size ratchet) |
 | I | API, contracts, integration | `domain-i.md`, `api-contracts.md` |
-| J | Testing & evaluation | `domain-j.md`, `testing-and-evals.md`; `testing-ui.md` (UI, browser specs), `testing-ai-evals.md` (model output), `testing-ml.md` (ML, notebooks) |
+| J | Testing & evaluation | `domain-j.md`, `testing-and-evals.md`; `testing-ui.md` (UI, E2E), `testing-ai-evals.md` (model output), `testing-ml.md` (ML, notebooks), `testing-situational.md` (flaky, fuzz, mutation) |
 | K | Build, CI, supply chain, release | `domain-k.md`, `dependency-currency-and-upgrades.md`, `release-engineering.md` |
 | L | Infra / IaC / containers / cloud / serverless | `domain-l.md`, `infra-iac-containers.md` (how-to-secure existing), `infra-evolution-by-stage.md` (when-to-add, by stage) |
 | M | Observability | `domain-m.md`, `observability.md` |
@@ -207,7 +207,7 @@ applicable domains. Language footguns:
 | P | Frontend / UI / a11y | `domain-p.md`, `frontend-a11y.md` → `a11y-aria.md`, `a11y-live.md`, `a11y-focus.md`, `a11y-color-motion.md`, `a11y-forms.md`, `web-fetch.md`, `web-render.md`; `product-ux-quality.md` (design half) → `ux-writes.md`, `ux-dataviz.md`, `ux-lists.md`, `ux-components.md`, `ux-interaction.md`, `ux-sweep.md`, `ux-gates.md`; `rendered-parity.md` (rendered-appearance/design-parity — "make X look like Y", a port/restyle), `migration-parity.md` (matching a prototype/mockup/design-export) |
 | Q | Privacy, compliance, licensing | `domain-q.md`, `privacy-compliance.md` (code layer), `privacy-by-design.md` (pre-code product artifacts) |
 | R | i18n, encoding, localization | `domain-r.md`, `i18n-l10n.md` (bidi/RTL, Unicode normalization, CLDR plurals) |
-| S | Branches, merges, open-work triage | `domain-s.md`, `branch-and-merge-hygiene.md`; `merge-operations.md` (landing PRs, merge gates) |
+| S | Branches, merges, open-work triage | `domain-s.md`, `branch-and-merge-hygiene.md`; `merge-operations.md` (landing, acting on triage) |
 | T | Multi-tenancy & isolation | `domain-t.md` (when one deployment serves multiple tenants) |
 | W | Workflows, jobs & scheduling | `domain-w.md` (when the target runs cron, queues, or multi-step workflows) |
 

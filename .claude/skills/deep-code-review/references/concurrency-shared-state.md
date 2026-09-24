@@ -72,7 +72,7 @@ paths. Expands section G of `SKILL.md`. Cross-ref J /
   **Go** calls such a program **incorrect**, where a racy read of a multiword value
   (interface, map, slice, string) can observe a **torn** value and lead to memory
   corruption, not just a stale scalar. A green test proves little here — a race can be 1-in-N and
-  CPU-architecture-dependent (weak ARM/POWER vs stronger x86); see `testing-and-evals.md`
+  CPU-architecture-dependent (weak ARM/POWER vs stronger x86); see `testing-situational.md`
   on why a nondeterministic green run is a sample, not a proof.
 - **Lock held across I/O** — latency multiplies; deadlock risk rises when a
   second lock is taken inside. Prefer: lock, copy/mutate small state, unlock,

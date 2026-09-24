@@ -25,7 +25,7 @@ trend. This is the full procedure it points to.
   for decorrelation, not by default; and whether a heavy gate runs locally at all or waits for CI/a shared
   runner when local capacity is short.
 - **Shell semantics belong to the probe, not to guesswork mid-script.** Know which shell will actually run a
-  script before writing a list-membership or exclusion check in it — `branch-and-merge-hygiene.md` §6 has the
+  script before writing a list-membership or exclusion check in it — `merge-operations.md` has the
   concrete failure mode and the portable fix; this step only says *check*, not what to write.
 - A
   **failure that only appears under heavy fan-out concurrency is contention, not a defect, until reproduced at low concurrency**

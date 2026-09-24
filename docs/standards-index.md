@@ -435,7 +435,7 @@ Verification date for the row below: **2026-09-17**. Added for the deep-code-rev
 ## Verified by direct fetch (2026-09-18) — mutation testing
 
 Verification date for the rows below: **2026-09-18**. Added for the deep-code-review
-`testing-and-evals.md` mutation-testing lens (measuring the product suite's
+`testing-situational.md` mutation-testing lens (measuring the product suite's
 fault-detection, not only line coverage).
 
 | Standard / tool | URL | What was confirmed |
@@ -993,7 +993,7 @@ it gets its own row here too. All four OWASP Cheat Sheet Series pages fetched vi
 ## Verified by direct fetch (2026-09-20) — lint/scanner rule-tier verification (typescript-eslint, CodeQL, ruff)
 
 Verification date for the rows below: **2026-09-20**. Added for the deep-code-review
-`method.md` Phase-1 planted-defect-matrix fold: a gate can be present, non-empty,
+`method-situational.md` Phase-1 planted-defect-matrix fold: a gate can be present, non-empty,
 correctly path-scoped, and not excluding the changed path — the matrix's existing
 (a)-(d) checks — while still running only a narrower rule/query category that
 structurally cannot catch a defect class the review otherwise cares about. All
