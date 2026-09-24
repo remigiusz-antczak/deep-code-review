@@ -99,6 +99,40 @@ SUBCOMMANDS
           the grant: one already in the base's history is refused until the
           owner commits the line again. Grant reads run with
           --no-replace-objects and an empty blame.ignoreRevsFile.
+          After an --apply merge it runs `refresh --apply` for the siblings,
+          isolated: the merge already landed, so a refresh error is a WARN
+          (exit still OK), never an ERROR/HALT that would make a landed
+          merge look failed.
+  refresh After a fix lands on the base, a CI re-run on an open PR reuses its
+          OLD merge commit, so every PR opened before the fix stays red until
+          its branch is updated: re-running is not the fix. Lists open PRs whose
+          head lacks --since (default: the base head) and prints the exact
+          `gh pr update-branch <n>` for each; --apply runs them. Always a merge
+          commit, never `--rebase` (a rebase rewrites a branch its lane may be
+          pushing to). A draft or a fork PR is skipped (--include-drafts /
+          --allow-forks admit them). A PR carrying a copy of a keystone is
+          skipped: it must drop the copy and rebase, not merge the fix in twice
+          (the keystone screen parks it, and a PR parked for a keystone is
+          never updated). Calls are throttled (--backoff between each) and a
+          429/secondary-rate-limit response is retried on the existing
+          --retries/--backoff schedule; a failed update is reported and the
+          rest still run. Does not coordinate with a lane mid-push: run it
+          only when no lane is pushing to the PRs it updates, or have lanes
+          rebase afterward, since a lane's later force-push drops the merge
+          commit refresh just made.
+  dupes   Parallel lanes that each carry their own copy of one fix conflict
+          with each other and the train parks all but one. Flags every set of
+          >= 2 open PRs whose `git diff -U0` hunks in the same file overlap
+          (within DUP_PAD lines) on their POST-image (the `+` lines; the
+          pre-image is compared instead only for a pure deletion, which has
+          no `+` lines) — two different fixes to the same line have the same
+          pre-image but a different post-image, so they no longer group as
+          one. An identical (whitespace-normalized) post-image is DUP-FIX
+          (RED), names the lowest PR number canonical, and prints "one fix,
+          one PR: <others> drop their copy and rebase on #<canonical>"; a
+          near-identical one (difflib ratio >= --similarity, default 0.9, but
+          not identical) is SIMILAR-FIX, printed for human review and never
+          grouped or RED. Read-only.
 
 FLAKY VS DETERMINISTIC
 ----------------------
@@ -125,10 +159,14 @@ runs PR code on this machine, which is why fork PRs are skipped by default.
 OUTPUT AND EXIT CODES
 ---------------------
 One line per action (ELIGIBLE, SKIP, PLAN, FAIL, FLAKY, PARK, GREEN, RED,
-KEYSTONE, WOULD-MERGE, MERGED, NOOP, HALT, ERROR, DROP-FAILED). Untrusted text (check names, file
-names, forge errors) is stripped of control characters and truncated.
-  0  plan listed; union green; dry-run printed; members merged; nothing to do
-  1  verify found no green union (every member parked)
+KEYSTONE, WOULD-MERGE, MERGED, WOULD-UPDATE, UPDATED, UPDATE-FAILED, DUP-FIX,
+SIMILAR-FIX, WARN, NOOP, HALT, ERROR, DROP-FAILED). Untrusted text (check
+names, file names, forge errors) is stripped of control characters and
+truncated.
+  0  plan listed; union green; dry-run printed; members merged; nothing to do;
+     a keystone landed even if its post-merge refresh then WARNs
+  1  verify found no green union (every member parked); refresh had an update
+     fail; dupes found a duplicated fix (a SIMILAR-FIX alone does not)
   2  usage or forge/git error (fail closed; nothing is guessed)
   3  HALT: base moved or rewritten, base red, another writer mid-train, a
      member failed at merge time, a member landed but the new base could
@@ -144,12 +182,15 @@ USAGE
   merge_train.py merge  --base main [--apply --grant REF]
   merge_train.py keystone --base main --pr N --verify-cmd CMD --only GLOB
                         [--only GLOB ...] [--owner-email E ...] [--require-signed] [--apply]
+  merge_train.py refresh --base main [--since SHA] [--apply]
+  merge_train.py dupes  --base main [--similarity 0.9]
   merge_train.py --selftest
 Common: --remote origin, --state PATH (default <git-common-dir>/merge-train.json).
 """
 from __future__ import annotations
 
 import argparse
+import difflib
 import hashlib
 import json
 import os
@@ -178,7 +219,9 @@ MAX_BACKOFF = 300
 MAX_GRANT_DAYS = 30  # a class keystone grant may run at most this long
 GRANTS_PATH = ".claude/KEYSTONE-GRANTS"  # the only file keystone grants are read from
 TRUST_GIT = ["--no-replace-objects", "-c", "blame.ignoreRevsFile="]  # grant reads: no rewritten history
+DUP_PAD = 5  # lines two hunks may sit apart and still be "the same region"
 GIT_ID = ["-c", "user.name=merge-train", "-c", "user.email=merge-train@example.invalid"]
+RATE_LIMIT_RE = re.compile(r"\b429\b|rate limit", re.I)  # gh's 429 / secondary-rate-limit wording
 
 
 class Halt(Exception):
@@ -864,7 +907,10 @@ class Train:
         keystone for `verify` to screen against and parks every sibling that
         carries a copy (`carries`). A dry run spends nothing. With --apply it
         merges the keystone alone, writing the grant's trailer into the merge
-        commit (which spends it), and clears any recorded union.
+        commit (which spends it), clears any recorded union, then runs
+        `refresh` for the siblings. The merge has already landed by then, so
+        a `refresh` failure is caught and printed as WARN, never raised: it
+        must not turn a landed merge into an ERROR/HALT exit.
         """
         n = self.a.pr
         pr = json.loads(self.run(["gh", "pr", "view", str(n), *self.repo_flag, "--json",
@@ -875,12 +921,7 @@ class Train:
         if why:
             raise Halt(f"keystone #{n} refused: {why}")
         k = {"number": n, "head": pr["headRefOid"]}
-        _, out, _ = self.run(["gh", "pr", "list", *self.repo_flag, "--base", self.a.base, "--state", "open",
-                              "--limit", str(PR_LIMIT), "--json", "number,headRefOid"])
-        rows = json.loads(out or "[]")
-        if len(rows) >= PR_LIMIT:
-            raise ForgeError(f"pr list hit the {PR_LIMIT} limit; refusing a truncated sibling scan")
-        siblings = [{"number": r["number"], "head": r["headRefOid"]} for r in rows if r["number"] != n]
+        siblings = [m for m in self.open_prs() if m["number"] != n]
         self.base_sha, kept = self.fetch([k, *siblings])
         if k not in kept:
             raise Halt(f"keystone #{n} refused: its head could not be fetched as planned")
@@ -936,7 +977,191 @@ class Train:
         self.state.pop("keystone", None)
         self.save()
         self.say(f"MERGED #{n} {k['head'][:7]} -> {self.a.base}@{new[:7]} grant={grant['key'][:7]}")
+        try:
+            self.refresh()
+        except ForgeError as exc:  # the merge already landed; a refresh error must not look like a failed merge
+            self.say(f"WARN keystone #{n} landed but refresh failed ({clean(exc, 200)}); run refresh separately")
         return OK
+
+    # ---- refresh / dupes --------------------------------------------------
+    def open_prs(self):
+        """Open PRs into --base as [{number, head, isDraft, isCrossRepository}], PR-number order.
+
+        A truncated list fails closed.
+        """
+        _, out, _ = self.run(["gh", "pr", "list", *self.repo_flag, "--base", self.a.base, "--state", "open",
+                              "--limit", str(PR_LIMIT), "--json", "number,headRefOid,isDraft,isCrossRepository"])
+        rows = json.loads(out or "[]")
+        if len(rows) >= PR_LIMIT:
+            raise ForgeError(f"pr list hit the {PR_LIMIT} limit; refusing a truncated scan")
+        return sorted(({"number": r["number"], "head": r["headRefOid"], "isDraft": r["isDraft"],
+                        "isCrossRepository": r["isCrossRepository"]} for r in rows), key=lambda m: m["number"])
+
+    def refresh(self):
+        """The `refresh` subcommand (also keystone --apply's last step): update PRs behind a landed fix.
+
+        A CI re-run reuses the PR's old merge commit, so a PR stays red after the
+        fix lands until its branch is updated. Prints one `gh pr update-branch`
+        per open PR whose head lacks --since (default: the fetched base head);
+        --apply runs them, a merge commit each (never --rebase). A draft PR is
+        skipped (--include-drafts admits it) and a fork PR is skipped
+        (--allow-forks admits it) — update-branch would run on a PR this
+        script never otherwise touches. The keystone screen runs first, and a
+        PR parked for a keystone is skipped: it must drop its copy of the fix,
+        not merge the fix in twice. Applied calls are spaced --backoff apart
+        (gh secondary-rate-limits a burst); a 429/secondary-rate-limit
+        response is retried on the --retries/--backoff schedule, any other
+        failure is not. Returns RED when any update failed (every other PR is
+        still tried), else OK.
+        """
+        self.base_sha, members = self.fetch(self.open_prs())
+        fix = getattr(self.a, "since", "") or self.base_sha
+        if self.run(["git", "merge-base", "--is-ancestor", fix, self.base_sha], ok=False)[0]:
+            raise ForgeError(f"--since {clean(fix)} is not on {self.a.base}@{self.base_sha[:7]}")
+        parked = self.state.get("parked", {})
+        failed = behind = applied = 0
+        for m in self.screen(members):
+            n, why = m["number"], parked.get(str(m["number"]), {})
+            if why.get("head") == m["head"] and "keystone #" in why.get("reason", ""):
+                self.say(f"SKIP #{n} {clean(why['reason'], 120)}")
+                continue
+            if m.get("isDraft") and not getattr(self.a, "include_drafts", False):
+                self.say(f"SKIP #{n} draft (--include-drafts admits it)")
+                continue
+            if m.get("isCrossRepository") and not self.a.allow_forks:
+                self.say(f"SKIP #{n} fork (--allow-forks admits it)")
+                continue
+            rc = self.run(["git", "merge-base", "--is-ancestor", fix, m["head"]], ok=False)[0]
+            if rc not in (0, 1):
+                raise ForgeError(f"cannot tell whether #{n} contains {fix[:7]} (rc={rc})")
+            if rc == 0:
+                self.say(f"SKIP #{n} already contains {self.a.base}@{fix[:7]}")
+                continue
+            behind += 1
+            cmd = ["gh", "pr", "update-branch", str(n), *self.repo_flag]
+            if not self.a.apply:
+                self.say(f"WOULD-UPDATE #{n} behind {self.a.base}@{fix[:7]}: {' '.join(cmd)}")
+                continue
+            if applied:
+                self.sleep(self.a.backoff)  # throttle between calls, not just between retries
+            applied += 1
+            attempts = self.a.retries + 1
+            for i in range(attempts):
+                if i:
+                    self.sleep(self.delay(i))
+                rc, _, err = self.run(cmd, ok=False)
+                if rc == 0 or not RATE_LIMIT_RE.search(err):
+                    break
+            failed += bool(rc)
+            self.say(f"UPDATE-FAILED #{n} rc={rc}: {clean(err.strip(), 160)}" if rc
+                     else f"UPDATED #{n} merged {self.a.base}@{fix[:7]} in; CI now tests a new merge commit")
+        if not behind:
+            self.say(f"NOOP no open PR is behind {self.a.base}@{fix[:7]}")
+        elif not self.a.apply:
+            self.say("DRY-RUN nothing updated; --apply runs each gh pr update-branch (a re-run would reuse the old merge)")
+        return RED if failed else OK
+
+    def dupes(self):
+        """The `dupes` subcommand: flag one fix carried by several open PRs. Read-only; RED on any DUP-FIX
+        (a SIMILAR-FIX is printed for review but never RED by itself)."""
+        self.base_sha, members = self.fetch(self.open_prs())
+        diffs = {m["number"]: self.run(["git", "diff", "-U0", "--no-renames", "--no-color",
+                                        f"{self.base_sha}...{m['head']}"])[1] for m in members}
+        groups, similars = duplicate_fixes(diffs, self.a.similarity)
+        for prs, paths in groups:
+            others = ",".join(f"#{n}" for n in prs[1:])
+            self.say(f"DUP-FIX {','.join(f'#{n}' for n in prs)} canonical=#{prs[0]} "
+                     f"files={','.join(clean(p, 80) for p in paths)}")
+            self.say(f"one fix, one PR: {others} drop their copy and rebase on #{prs[0]}")
+        for a, b, path in similars:
+            self.say(f"SIMILAR-FIX #{a},#{b} file={clean(path, 80)} review manually, not auto-grouped")
+        if not groups and not similars:
+            self.say(f"NOOP no fix is carried by two open PRs into {self.a.base}")
+        return RED if groups else OK
+
+
+def diff_hunks(diff):
+    """{path: [(start, end, plus, minus)]} from `git diff -U0` output. Pure.
+
+    `start`/`end` bound the hunk's pre-image lines; `plus`/`minus` are its
+    `+`/`-` lines (each side joined separately) with whitespace runs
+    collapsed, so a re-indented copy still compares equal. A body line such
+    as a removed `-- note` (printed `--- note`) is never taken for a file
+    header, because headers are read only before a file's first hunk. Binary
+    files have no hunks and are ignored.
+    """
+    out, path, old, body, cur = {}, None, None, False, None
+    for line in diff.splitlines():
+        if line.startswith("diff --git "):
+            path, old, body, cur = None, None, False, None
+        elif not body and line.startswith("--- "):
+            old = line[6:] if line.startswith("--- a/") else None
+        elif not body and line.startswith("+++ "):
+            path = line[6:] if line.startswith("+++ b/") else old
+        elif line.startswith("@@ ") and path:
+            m = re.match(r"@@ -(\d+)(?:,(\d+))? ", line)
+            if m:
+                start = int(m.group(1))
+                body, cur = True, [start, start + max(int(m.group(2) or 1), 1), [], []]
+                out.setdefault(path, []).append(cur)
+        elif body and cur and line[:1] in ("+", "-"):
+            (cur[2] if line[0] == "+" else cur[3]).append(" ".join(line[1:].split()))
+    return {p: [(a, b, "\n".join(pl), "\n".join(ml)) for a, b, pl, ml in hs] for p, hs in out.items()}
+
+
+def duplicate_fixes(diffs, threshold):
+    """(duplicates, similars) among the open PRs' `git diff -U0` texts. Pure.
+
+    `duplicates`: [(PR numbers ascending, [paths])], one entry per set of
+    >= 2 PRs carrying the identical fix; the first number is the canonical
+    (earliest) PR. `similars`: [(pr_a, pr_b, path)] ascending pairs that
+    overlap but are not identical — reported for human review, never grouped
+    or treated as a duplicate.
+
+    Two PRs match on a file when a hunk of each overlaps the other (within
+    DUP_PAD lines) on the same side: their POST-image (`+` lines) for an
+    ordinary edit, or their pre-image (`-` lines) only when both hunks are a
+    pure deletion (no `+` lines) — a deletion and a same-line edit are not
+    the same fix, and comparing the pre-image of an edit would match any two
+    different fixes to the same line (they share the line being fixed, not
+    the fix). A match needs identical (whitespace-normalized) text for
+    `duplicates`; a difflib ratio >= `threshold` but not identical lands in
+    `similars` instead. Duplicate matches are grouped transitively per file;
+    files whose groups hold the same PRs are listed together.
+    """
+    hunks = {n: diff_hunks(d) for n, d in diffs.items()}
+    groups, similars = {}, []
+    for path in sorted({p for h in hunks.values() for p in h}):
+        prs = sorted(n for n in hunks if path in hunks[n])
+        root = {n: n for n in prs}
+
+        def find(n):
+            while root[n] != n:
+                n = root[n]
+            return n
+        for i, a in enumerate(prs):
+            for b in prs[i + 1:]:
+                exact = near = False
+                for x0, x1, xp, xm in hunks[a][path]:
+                    for y0, y1, yp, ym in hunks[b][path]:
+                        if not (x0 - DUP_PAD < y1 and y0 - DUP_PAD < x1) or bool(xp) != bool(yp):
+                            continue
+                        xt, yt = (xp, yp) if xp else (xm, ym)
+                        if xt == yt:
+                            exact = True
+                        elif difflib.SequenceMatcher(None, xt, yt).ratio() >= threshold:
+                            near = True
+                if exact:
+                    root[max(find(a), find(b))] = min(find(a), find(b))
+                elif near:
+                    similars.append((a, b, path))
+        sets = {}
+        for n in prs:
+            sets.setdefault(find(n), []).append(n)
+        for members in sets.values():
+            if len(members) > 1:
+                groups.setdefault(tuple(members), []).append(path)
+    return sorted(groups.items()), sorted(similars)
 
 
 def glob_problem(glob):
@@ -959,7 +1184,7 @@ def glob_match(path, globs):
 
 
 def build_parser():
-    """Argument parser: plan / verify / merge subcommands plus --selftest."""
+    """Argument parser: plan / verify / merge / keystone / refresh / dupes subcommands plus --selftest."""
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--base", required=True, help="target branch the PRs merge into")
     common.add_argument("--repo", default="", help="OWNER/NAME (default: gh infers from the checkout)")
@@ -994,6 +1219,12 @@ def build_parser():
     k.add_argument("--apply", action="store_true", help="actually merge the keystone (default is a dry run)")
     k.add_argument("--timeout", type=int, default=3600, help="seconds per gate command")
     k.set_defaults(count_cmd="")
+    r = sub.add_parser("refresh", parents=[common])
+    r.add_argument("--since", default="", help="the landed fix commit (default: the base head)")
+    r.add_argument("--apply", action="store_true", help="run gh pr update-branch (default prints the commands)")
+    r.add_argument("--include-drafts", action="store_true", help="also update-branch a draft PR (default: skip it)")
+    d = sub.add_parser("dupes", parents=[common])
+    d.add_argument("--similarity", type=float, default=0.9, help="minimum normalized hunk similarity, 0 < s <= 1")
     return p
 
 
@@ -1017,6 +1248,10 @@ def run(argv, runner=default_runner, out=sys.stdout, sleep=time.sleep) -> int:
         problems.append("--apply needs --grant naming the integration owner's decision or a recorded standing grant")
     if a.cmd == "keystone":
         problems += [glob_problem(g) for g in a.only if glob_problem(g)]
+    if a.cmd == "refresh" and a.since.startswith("-"):
+        problems.append("--since must be a commit, not an option")
+    if a.cmd == "dupes" and not 0 < a.similarity <= 1:
+        problems.append("--similarity must be in (0, 1]")
     if problems:
         print("ERROR " + "; ".join(problems), file=out)
         return ERROR
@@ -1056,6 +1291,7 @@ class FakeForge:
         self.contains, self.grant_text, self.grant_meta = set(), None, ""  # trees holding the fix; grant record
         self.grant_blame, self.grant_date = "a" * 40, datetime.now(timezone.utc).date().isoformat()
         self.bodies = []  # merge commit bodies written by `gh pr merge --body`
+        self.based, self.udiffs, self.update_fail = {}, {}, set()  # refresh / dupes scenarios
 
     def base(self):
         return self.hist[-1]
@@ -1093,6 +1329,10 @@ class FakeForge:
             self.prs[n]["state"] = "MERGED"
             self.remote_override.update(self.after_merge)
             return 0, "", ""
+        if a[:3] == ["gh", "pr", "update-branch"]:
+            return (1, "", "GraphQL: merge conflict") if int(a[3]) in self.update_fail else (0, "", "")
+        if a[:3] == ["git", "diff", "-U0"]:
+            return 0, self.udiffs.get(a[-1].split("...")[1], ""), ""
         if a[:2] in (["git", "fetch"], ["git", "update-ref"], ["git", "for-each-ref"]) or a[:3] in (
                 ["git", "worktree", "remove"], ["git", "merge", "--abort"]):
             return 0, "", ""
@@ -1143,6 +1383,9 @@ class FakeForge:
         if a[:2] == ["git", "diff"]:
             return 0, "src/shared.py\n" if self.trees[cwd].pop("conflict", False) else "", ""
         if a[:3] == ["git", "merge-base", "--is-ancestor"]:
+            if a[4] not in self.hist and a[4] in {p["head"] for p in self.prs.values()}:
+                # a PR head holds only the base commits it branched from (or was updated onto)
+                return (0 if a[3] in self.based.get(a[4], {"B0"}) else 1), "", ""
             return (0 if a[3] in self.hist else 1), "", ""
         if a[:2] == ["git", "merge-base"]:
             return 0, f"mb{a[2][1:]}\n", ""
@@ -1785,6 +2028,170 @@ def _selftest() -> int:
         results["grants-file-missing"] = "is not committed" in t.grant(1, [OWNER], k, files)[0]
         return all(results.values()), results
 
+    def refresh_forge():
+        f = FakeForge(3)
+        f.hist.append("F1")  # a fix landed on the base after every PR branched
+        f.based = {"h1": {"B0", "F1"}}  # #1 was already updated onto it
+        return f
+
+    def refresh_dry_run_prints_update_branch_for_behind_prs():
+        f = refresh_forge()
+        rc, out = go(f, "refresh", state=fresh("rf.json"))
+        updates = [c for c in f.calls if c[:3] == ["gh", "pr", "update-branch"]]
+        want = ["SKIP #1 already contains main@F1", "WOULD-UPDATE #2 behind main@F1: gh pr update-branch 2",
+                "WOULD-UPDATE #3 behind main@F1: gh pr update-branch 3", "DRY-RUN"]
+        return rc == OK and all(w in out for w in want) and not updates, out
+
+    def refresh_apply_updates_and_reports_each_failure():
+        f = refresh_forge()
+        f.update_fail = {2}
+        rc, out = go(f, "refresh", "--apply", "--repo", "acme/widgets", state=fresh("rf.json"))
+        updates = [c[3:] for c in f.calls if c[:3] == ["gh", "pr", "update-branch"]]
+        return (rc == RED and updates == [["2", "--repo", "acme/widgets"], ["3", "--repo", "acme/widgets"]]
+                and "UPDATE-FAILED #2" in out and "UPDATED #3" in out), out
+
+    def refresh_since_pins_the_fix_commit():
+        f = refresh_forge()
+        f.hist.append("B2")  # an unrelated commit after the fix
+        rc, out = go(f, "refresh", "--since", "F1", state=fresh("rf.json"))
+        rc2, out2 = go(f, "refresh", "--since", "Z9", state=fresh("rf.json"))
+        rc4, out4 = go(f, "refresh", "--since=--output=x", state=fresh("rf.json"))
+        rc3, out3 = go(f, "refresh", state=fresh("rf.json"))  # default: the base head
+        return (rc == OK and "SKIP #1 already contains main@F1" in out and "WOULD-UPDATE #2" in out
+                and rc2 == ERROR and "not on main" in out2 and rc4 == ERROR and "not an option" in out4
+                and rc3 == OK and "WOULD-UPDATE #1 behind main@B2" in out3), (out, out2, out3)
+
+    def keystone_apply_refreshes_siblings_but_not_copy_carriers():
+        f = keystone_forge()
+        rc, out = ks(f, "--apply", state="kf.json")
+        updates = [c[3] for c in f.calls if c[:3] == ["gh", "pr", "update-branch"]]
+        return (rc == OK and updates == ["2"] and "UPDATED #2" in out
+                and "SKIP #3 carries a cherry-pick of keystone #1" in out), out
+
+    def keystone_apply_refresh_failure_is_warn_not_error():
+        # #1130 a post-merge refresh error (e.g. a truncated PR list) used to
+        # propagate as ERROR, making a keystone that DID land look failed.
+        f = keystone_forge()
+        seen = {"list": 0}
+
+        def runner(args, cwd=None, timeout=None):
+            if args[:3] == ["gh", "pr", "list"]:
+                seen["list"] += 1
+                if seen["list"] > 1:  # refresh's own open_prs(), after the merge landed
+                    return 0, json.dumps([{}] * 210), ""
+            return f(args, cwd=cwd, timeout=timeout)
+        buf = io.StringIO()
+        rc = run(["keystone", "--base", "main", "--pr", "1", "--verify-cmd", "t", "--only", "src/clock*.py",
+                  "--owner-email", OWNER, "--retries", "0", "--apply", "--backoff", "5",
+                  "--state", os.path.join(tmp, fresh("kwarn.json"))],
+                 runner=runner, out=buf, sleep=f.sleeps.append)
+        out = buf.getvalue()
+        return (rc == OK and "MERGED #1" in out
+                and "WARN keystone #1 landed but refresh failed" in out
+                and "pr list hit the 200 limit" in out), out
+
+    def refresh_skips_draft_and_fork_prs():
+        f = refresh_forge()
+        f.prs[2]["isDraft"] = True
+        f.prs[3]["isCrossRepository"] = True
+        rc, out = go(f, "refresh", state=fresh("rfdf.json"))
+        rc2, out2 = go(f, "refresh", "--include-drafts", "--allow-forks", state=fresh("rfdf.json"))
+        return (rc == OK and "SKIP #2 draft" in out and "SKIP #3 fork" in out
+                and "WOULD-UPDATE #2" not in out and "WOULD-UPDATE #3" not in out
+                and "WOULD-UPDATE #2" in out2 and "WOULD-UPDATE #3" in out2), (out, out2)
+
+    def refresh_throttles_and_retries_rate_limit():
+        f = refresh_forge()
+        attempts = {"n": 0}
+
+        def runner(args, cwd=None, timeout=None):
+            if args[:3] == ["gh", "pr", "update-branch"] and args[3] == "2":
+                attempts["n"] += 1
+                if attempts["n"] == 1:
+                    return 1, "", "API rate limit exceeded (429)"
+            return f(args, cwd=cwd, timeout=timeout)
+        buf = io.StringIO()
+        rc = run(["refresh", "--apply", "--base", "main", "--retries", "1", "--backoff", "3",
+                  "--state", os.path.join(tmp, fresh("rtl.json"))], runner=runner, out=buf, sleep=f.sleeps.append)
+        out = buf.getvalue()
+        return (rc == OK and attempts["n"] == 2 and "UPDATED #2" in out and "UPDATED #3" in out
+                and 3 in f.sleeps), (out, f.sleeps)
+
+    def udiff(path, start, old, new):
+        return (f"diff --git a/{path} b/{path}\nindex 1..2 100644\n--- a/{path}\n+++ b/{path}\n"
+                f"@@ -{start} +{start} @@\n-{old}\n+{new}\n")
+
+    CLOCK, OLD, NEW = "tests/test_clock.py", "    assert year == 2025", "    assert year == today().year"
+    DUPES = {
+        2: udiff(CLOCK, 10, OLD, NEW),
+        3: udiff(CLOCK, 10, OLD, "    skip()"),  # same region, a different fix
+        4: udiff(CLOCK, 11, OLD, NEW) + udiff("src/other.py", 3, "a", "b"),  # a copy plus its own work
+        5: udiff(CLOCK, 10, OLD, "    assert  year == today().year "),  # whitespace-only variant
+        6: udiff("tests/test_date.py", 10, OLD, NEW),  # the same text in another file
+        7: udiff(CLOCK, 200, OLD, NEW),  # the same text in a far region
+    }
+
+    def duplicate_fixes_groups_near_identical_hunks():
+        groups, similars = duplicate_fixes(DUPES, 0.9)
+        return groups == [((2, 4, 5), [CLOCK])], (groups, similars)
+
+    def duplicate_fixes_different_fixes_to_same_line_not_grouped():
+        # #1130 the old scorer matched the shared pre-image ("x = 1") too, so two
+        # different one-line fixes to the same line ("-> 2" vs "-> 3") falsely
+        # grouped as one; only the post-image may decide a duplicate.
+        diffs = {1: udiff("x.py", 5, "x = 1", "x = 2"), 2: udiff("x.py", 5, "x = 1", "x = 3")}
+        groups, similars = duplicate_fixes(diffs, 0.9)
+        return groups == [], (groups, similars)
+
+    def duplicate_fixes_pure_deletion_compares_pre_image():
+        deldiff = lambda path, start, old: (  # noqa: E731
+            f"diff --git a/{path} b/{path}\nindex 1..2 100644\n--- a/{path}\n+++ b/{path}\n"
+            f"@@ -{start} @@\n-{old}\n")
+        # two pure deletions of the same line are a duplicate (no post-image to compare)
+        dels = {1: deldiff("x.py", 5, "dead()"), 2: deldiff("x.py", 5, "dead()")}
+        del_groups, _ = duplicate_fixes(dels, 0.9)
+        # a pure deletion and an edit of the same line are different fixes, never grouped
+        mixed = {1: deldiff("x.py", 5, "dead()"), 2: udiff("x.py", 5, "dead()", "live()")}
+        mixed_groups, _ = duplicate_fixes(mixed, 0.9)
+        return del_groups == [((1, 2), ["x.py"])] and mixed_groups == [], (del_groups, mixed_groups)
+
+    def dupes_names_the_earliest_pr_canonical():
+        f = FakeForge(7)
+        f.udiffs = {f"h{n}": d for n, d in DUPES.items()}
+        rc, out = go(f, "dupes", state=fresh("du.json"))
+        g = FakeForge(2)
+        rc2, out2 = go(g, "dupes", state=fresh("du.json"))
+        return (rc == RED and f"DUP-FIX #2,#4,#5 canonical=#2 files={CLOCK}" in out
+                and "one fix, one PR: #4,#5 drop their copy and rebase on #2" in out
+                and rc2 == OK and "NOOP" in out2), (out, out2)
+
+    def duplicate_fixes_parses_real_git_diff():
+        repo = tempfile.mkdtemp(dir=tmp)
+
+        def git(*args):
+            rc, out, err = default_runner(["git", "-c", "user.name=T", "-c", "user.email=t@example.com",
+                                           "-c", "commit.gpgsign=false", *args], cwd=repo)
+            assert rc == 0, err
+            return out
+
+        def branch(name, text):
+            git("checkout", "--quiet", "-B", name, "main")
+            with open(os.path.join(repo, "t.py"), "w", encoding="utf-8") as fh:
+                fh.write(text)
+            git("commit", "--quiet", "-am", name)
+        git("init", "--quiet", "-b", "main")
+        with open(os.path.join(repo, "t.py"), "w", encoding="utf-8") as fh:
+            fh.write("a\n-- note\nold\nz\n")  # a removed "-- note" shows as "--- note" inside the hunk
+        git("add", "-A")
+        git("commit", "--quiet", "-m", "base")
+        branch("one", "a\n-- note fixed\nnew\nz\n")
+        branch("two", "a\n-- note  fixed\nnew \nz\n")
+        branch("three", "a\n-- note\nsomething else entirely\nz\n")
+        diffs = {n: git("diff", "-U0", "--no-renames", "--no-color", f"main...{b}")
+                 for n, b in ((1, "one"), (2, "two"), (3, "three"))}
+        groups, similars = duplicate_fixes(diffs, 0.9)
+        return groups == [((1, 2), ["t.py"])], (groups, similars, diffs)
+
     cases = [
         ("plan-filters-latest-check-per-name-and-K", plan_filters),
         ("culprit-among-four-isolated-and-stays-parked", culprit_among_four_is_isolated_and_stays_parked),
@@ -1832,6 +2239,18 @@ def _selftest() -> int:
         ("class-grant-refusals", class_grant_refusals),
         ("class-grant-picks-unused-covering-class", class_grant_picks_the_unused_class_that_covers_the_files),
         ("keystone-git-helpers-on-a-real-repo", keystone_git_helpers_on_a_real_repo),
+        ("refresh-dry-run-prints-update-branch", refresh_dry_run_prints_update_branch_for_behind_prs),
+        ("refresh-apply-updates-reports-failures", refresh_apply_updates_and_reports_each_failure),
+        ("refresh-since-pins-the-fix-commit", refresh_since_pins_the_fix_commit),
+        ("keystone-apply-refreshes-not-carriers", keystone_apply_refreshes_siblings_but_not_copy_carriers),
+        ("duplicate-fixes-groups-near-identical", duplicate_fixes_groups_near_identical_hunks),
+        ("dupes-names-earliest-canonical", dupes_names_the_earliest_pr_canonical),
+        ("duplicate-fixes-parses-real-git-diff", duplicate_fixes_parses_real_git_diff),
+        ("duplicate-fixes-different-fixes-not-grouped", duplicate_fixes_different_fixes_to_same_line_not_grouped),
+        ("duplicate-fixes-pure-deletion-pre-image", duplicate_fixes_pure_deletion_compares_pre_image),
+        ("keystone-apply-refresh-failure-is-warn-not-error", keystone_apply_refresh_failure_is_warn_not_error),
+        ("refresh-skips-draft-and-fork-prs", refresh_skips_draft_and_fork_prs),
+        ("refresh-throttles-and-retries-rate-limit", refresh_throttles_and_retries_rate_limit),
     ]
     try:
         return bc.run_checks("merge_train", cases)

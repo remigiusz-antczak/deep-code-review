@@ -56,6 +56,13 @@ RULES (each rejection names the rule; exit 1)
   default branch (the same check as FIX-CLAIM's sha). It is the shared
   backlog peers consume instead of re-measuring (`board_state.py --backlog`,
   `claim_probe.py`), so an audit of an unmerged tree is refused.
+- REVIEW is a reviewed-attestation: an independent reviewer lane (its
+  --agent id) records `--sha` (the FULL 40-char PR head it reviewed),
+  `--branch`, `--verdict approve|changes`, and `--resolved N` (findings the
+  author resolved), with refs naming the PR (`#<n>`). It is not checked
+  against git here: `surface_check.py attested` reads it back and accepts it
+  only for the PR's exact current head, from an id other than the author's,
+  so any new push invalidates it.
 
 OUTPUT
 ------
@@ -73,6 +80,8 @@ USAGE
                 --test tests/test_x.py::test_y [--topic ratchet] --body-file fix.md
   board_post.py ... --type AUDIT --refs '#12,web/cart' --sha abc1234 \\
                 --verdict na --body-file audit.md
+  board_post.py ... --agent reviewer-2 --type REVIEW --refs '#41' --sha <40-hex head> \\
+                --branch lane/cart-fix --verdict approve --resolved 3 --body-file review.md
   board_post.py --selftest
 
 Exit codes: 0 composed (and posted with --post); 1 rejected by a rule;
@@ -299,7 +308,8 @@ def compose(args, body: str, rules: list, runner) -> tuple:
     Side-effects: only the read-only git queries a FIX-CLAIM or AUDIT needs,
     and, for a RELEASE with no --rule, the board read in settle_release_rule.
     """
-    fields = {k: str(v) for k, v in (("sha", args.sha), ("test", args.test), ("verdict", args.verdict), ("topic", args.topic),
+    fields = {k: str(v) for k, v in (("sha", args.sha), ("branch", args.branch), ("test", args.test),
+                                     ("verdict", args.verdict), ("resolved", args.resolved), ("topic", args.topic),
                                      ("ttl", args.ttl), ("to", args.to), ("of", args.of), ("gate", args.gate),
                                      ("rule", args.rule)) if v is not None}
     errors = []
@@ -338,7 +348,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--body-file")
     p.add_argument("--sha")
     p.add_argument("--test")
-    p.add_argument("--verdict", help="AUDIT only: gap | done | na")
+    p.add_argument("--verdict", help="AUDIT: gap | done | na; REVIEW: approve | changes")
+    p.add_argument("--branch", help="REVIEW only: the PR head branch the attested --sha was read from")
+    p.add_argument("--resolved", type=int, help="REVIEW only: review findings resolved before the verdict")
     p.add_argument("--topic")
     p.add_argument("--ttl", type=int)
     p.add_argument("--to")
@@ -457,7 +469,15 @@ def _selftest() -> int:
         return ok, f"rc={rc} want={code_want} out={stdout!r} err={stderr!r}"
 
     fix = ["--type", "FIX-CLAIM", "--refs", "#12", "--topic", "ratchet"]
+    review = ["--type", "REVIEW", "--refs", "#12", "--sha", "a" * 40, "--branch", "lane/cart-fix"]
     token = "gh" + "p_" + "A1b2" * 10  # built at runtime so no token-shaped literal is committed
+
+    def review_accepted():
+        (rc, _), stderr, _, path = attempt("Reviewed the full diff; 3 findings fixed and re-checked.", *review,
+                                           "--verdict", "approve", "--resolved", "3")
+        posted = open(path + ".post").read() if rc == OK else ""
+        want = f"[agent:alpha] REVIEW refs:#12 sha:{'a' * 40} branch:lane/cart-fix verdict:approve resolved:3\n"
+        return rc == OK and posted.startswith(want), f"{rc} {stderr!r} {posted!r}"
 
     def valid_claim():
         (rc, stdout), _, gh, path = attempt("Taking the ratchet gate.", "--type", "CLAIM", "--refs", "#12", "--ttl", "90")
@@ -544,6 +564,12 @@ def _selftest() -> int:
         ("audit-bad-verdict-rejected", lambda: expect(REJECTED, "measured", "--type", "AUDIT", "--refs", "#12", "--sha", g["on"], "--verdict", "maybe", needle="verdict: has a malformed")),
         ("audit-off-default-branch-rejected", lambda: expect(REJECTED, "measured", "--type", "AUDIT", "--refs", "#12", "--sha", g["off"], "--verdict", "gap", needle="not reachable")),
         ("audit-verified-accepted", lambda: expect(OK, "Measured at mainline: no counterpart module.", "--type", "AUDIT", "--refs", "#12,web/cart", "--sha", g["on"], "--verdict", "na")),
+        ("review-attestation-accepted", review_accepted),
+        ("review-short-sha-rejected", lambda: expect(REJECTED, "reviewed", "--type", "REVIEW", "--refs", "#12", "--sha", "a" * 12, "--branch", "lane/cart-fix", "--verdict", "approve", "--resolved", "0", needle="full 40-char head sha")),
+        ("review-without-branch-rejected", lambda: expect(REJECTED, "reviewed", "--type", "REVIEW", "--refs", "#12", "--sha", "a" * 40, "--verdict", "approve", "--resolved", "0", needle="requires branch:")),
+        ("review-without-resolved-rejected", lambda: expect(REJECTED, "reviewed", *review, "--verdict", "approve", needle="requires resolved:")),
+        ("review-audit-verdict-rejected", lambda: expect(REJECTED, "reviewed", *review, "--verdict", "gap", "--resolved", "0", needle="verdict: has a malformed")),
+        ("audit-review-verdict-rejected", lambda: expect(REJECTED, "measured", "--type", "AUDIT", "--refs", "#12", "--sha", g["on"], "--verdict", "approve", needle="verdict: has a malformed")),
         ("fix-claim-option-shaped-branch-errors", lambda: expect(ERROR, "fixed", *fix, "--sha", g["on"], "--test", "tests/test_ratchet.py", "--default-branch=--output=x", needle="looks like an option")),
         ("fix-claim-bad-default-branch-errors", lambda: expect(ERROR, "fixed", *fix, "--sha", g["on"], "--test", "tests/test_ratchet.py", "--default-branch", "nope", needle="does not resolve")),
     ]

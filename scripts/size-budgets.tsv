@@ -46,7 +46,7 @@
 .claude/skills/agentic-delivery/references/template-postmortem.md	3223
 .claude/skills/agentic-delivery/references/unattended-operating-mode.md	20389
 .claude/skills/agentic-delivery/references/unattended-trackers.md	43567
-.claude/skills/agentic-delivery/references/verification-handback.md	51573
+.claude/skills/agentic-delivery/references/verification-handback.md	52027
 .claude/skills/business-ops/SKILL.md	10654
 .claude/skills/business-ops/references/regulated-domain-triage.md	8045
 .claude/skills/communication-structure/SKILL.md	5269
@@ -114,7 +114,7 @@
 .claude/skills/deep-code-review/references/lang-sql.md	755
 .claude/skills/deep-code-review/references/language-stack-redflags.md	22791
 .claude/skills/deep-code-review/references/machine-report.md	10061
-.claude/skills/deep-code-review/references/merge-operations.md	60688
+.claude/skills/deep-code-review/references/merge-operations.md	61327
 .claude/skills/deep-code-review/references/method-situational.md	20361
 .claude/skills/deep-code-review/references/method.md	49915
 .claude/skills/deep-code-review/references/migration-parity.md	27241
@@ -140,7 +140,6 @@
 .claude/skills/deep-code-review/references/standards-index.md	470
 .claude/skills/deep-code-review/references/testing-ai-evals.md	6901
 .claude/skills/deep-code-review/references/testing-and-evals.md	13412
-.claude/skills/deep-code-review/references/testing-situational.md	25395
 .claude/skills/deep-code-review/references/testing-ml.md	10979
 .claude/skills/deep-code-review/references/testing-ui.md	13733
 .claude/skills/deep-code-review/references/threat-modeling.md	10297
@@ -171,3 +170,4 @@
 # README.md is not a skill file; its row is kept by hand (the regenerate
 # command above covers .claude/skills only).
 README.md	16233
+.claude/skills/deep-code-review/references/testing-situational.md	25395

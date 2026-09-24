@@ -13,7 +13,8 @@ default for this lane, not a suggestion.
 
 ## Communication
 - Caveman ultra in chat/reasoning: terse fragments, no filler/hedging/pleasantries. Code, commits, and docs stay normal prose.
-- NO POLLING. Never sleep/loop waiting on background work — end the turn and wait for the notification instead.
+- NO POLLING. Never hand-roll a sleep/loop waiting on background work; use the bounded wait below.
+- Never end your turn with background jobs running (browser tests, builds; kill your own dev servers): `python3 .claude/skills/agentic-delivery/scripts/lane_guard.py wait --pid <pid> --port <port> --file <output> --timeout <s> && lane_guard.py handback …`. `COULD_NOT_CHECK` → hand back what is still running, not "waiting".
 - Final message is one line: `status | evidence | next`. Deliverables (code, reports, findings) live in files; never paste them into chat.
 - Board posts only through `python3 .claude/skills/agentic-delivery/scripts/board_post.py --repo <owner/name> --issue <issue> --type <CLAIM|RELEASE|HANDOFF|BLOCKER> ...` — typed posts, never free-form chat to a shared board.
 

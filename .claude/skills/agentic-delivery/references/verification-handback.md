@@ -82,6 +82,10 @@ forbidden one taken — so naming the steps in the brief is necessary and **not*
   changelog fragment + ready-flip the **orchestrator's** named job (the same small, mechanical finalize the
   *stuck self-polling lane* rule, below, has the orchestrator finish directly), assigned to one owner. One of
   the two must own the tail; the failure is when **neither** does.
+- **Key the changelog fragment by branch, not PR number** (unknown until the PR exists → a second push and gate):
+  `changelog.d/$(git branch --show-current | tr / -).md`, and any fragment check keys off the head branch.
+- **Host blocks "ready on green" as unreviewed?** `surface_check.py attested … && gh pr ready …` passes only on a
+  non-author `board_post.py --type REVIEW` at the exact head (a push voids it); the host's decision stays final.
 - **A draft red only on a missing changelog fragment is a stranded-by-contract signal, not a defect.** Read it
   as this pattern — the fix is sound, the process tail was truncated — and complete the tail (fold-in for future
   lanes, finish it now for this one), rather than re-reviewing the code for a fault that is not there.

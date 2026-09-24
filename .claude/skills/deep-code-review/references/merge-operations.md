@@ -73,7 +73,9 @@ tick", which rebuilds the same failing union forever and reads as flaky instead 
 A suspect that fails alone is parked **for real** until its head changes; one that passes clears itself, and
 an interaction becomes the next hypothesis. **Bisect the member set** when one at a time is too slow. After a
 park, **rebuild the union at once**: a sleep per conflicting member turns N conflicts into N cycles (issue
-#1134). **Merge only onto the base the union proved.** A base that moved since verify means re-plan, never a
+#1134). **One fix, one PR:** when members park on conflicts because each lane carries its own copy of the same
+fix, `merge_train.py dupes` names the earliest PR canonical and the rest drop their copy and rebase on it.
+**Merge only onto the base the union proved.** A base that moved since verify means re-plan, never a
 silent re-verify; a proved head that is no longer an ancestor of the fetched head means a rewrite, so halt for
 a human, or the train restores history someone removed on purpose (issue #1137). **Compare only refs this run
 fetched:** a forced refspec (`+src:dst`) into names unique per run (never a cycle counter a restart reuses),
@@ -181,6 +183,10 @@ forever. The escape is the merge train above, used deliberately as the *discharg
    when the base fails the check on its own, the PR touches only the fix's files, base + PR is green in a
    union run, and it merges alone, first. Siblings then **rebase** (which drops a duplicate patch), never carry a
    copy. `merge_train.py keystone` checks each condition and parks any sibling carrying a copy (#1142).
+   A CI re-run reuses a PR's old merge commit, so after any fix lands, update each PR behind it instead:
+   `merge_train.py refresh` prints (`--apply` runs) `gh pr update-branch`, skipping keystone-copy carriers.
+   It does not coordinate with a lane mid-push: run it only when no lane is pushing to the PRs it updates,
+   or have lanes rebase afterward, since a lane's later force-push drops the merge commit refresh just made.
 
 Name this the **red-base discharge** and put the vehicle used on record; an oral-only exception ("we
 just merged past it that once") is itself the finding. A red base is the release pipeline's blocked state, so

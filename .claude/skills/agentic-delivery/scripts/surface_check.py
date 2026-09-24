@@ -75,6 +75,47 @@ Modes (stdlib only, no third-party dependency):
           ALL GREEN; 1 a FAIL is terminal; 2 timed out still PENDING/NO-RUN or
           under --min-checks, or the sha/repo could not be checked at all.
 
+  attested --gh-repo OWNER/NAME --pr N --board-issue M --author ID
+           [--board-repo OWNER/NAME] [--timeout 30]
+      The reviewed-attestation gate for a ready-flip. Read PR N's CURRENT head
+      (sha + branch) and the board issue M's comments (on --board-repo,
+      default --gh-repo), keep only valid `REVIEW` posts (board_post.py
+      --type REVIEW) whose refs name `#N` and whose sha and branch equal that
+      exact head, and take each reviewer id's latest such post. PASS only when
+      at least one reviewer other than --author (the lane that wrote the PR)
+      says `verdict:approve` and none says `verdict:changes`. The author's own
+      REVIEW never counts, and a comment edited after posting is not trusted.
+      A push after the review moves the head, so the old attestation no longer
+      matches: a new push always needs a new review. It never flips the PR
+      itself: chain the flip as its own visible command,
+          surface_check.py attested ... && gh pr ready N --repo OWNER/NAME
+      so a FAIL stops the chain. This makes "reviewed" true and checkable; it
+      does not bypass the host. The host's own permission decision on that
+      `gh pr ready` (an auto-mode classifier, a hook, an allowlist) stays
+      final, and a denial is surfaced to the owner, not retried through
+      another path (a flip hidden inside this script would route around it,
+      which is why there is none). The chain has a check-then-act gap
+      (`gh pr ready` takes no sha), so a push landing between the two commands
+      is not caught here: whatever merges next re-checks the head it merges.
+      Reviewer ids are self-declared, so a REVIEW post's declared `agent:`
+      id is cross-checked against the comment's real forge account
+      (`user.login`) two ways: (1) a REVIEW whose login equals the PR's own
+      `user.login` (when the PR read exposes one) counts as the author's,
+      whatever id it declares; (2) a REVIEW whose login also posted this
+      PR's own `agent:<author>` REVIEW under the matching head counts as
+      the author's too. Either way it is dropped before approve/changes are
+      tallied, and the reason is printed. `--author` is itself checked
+      against the PR's `user.login` when the PR read exposes one: a
+      mismatch refuses (COULD_NOT_CHECK) rather than gate a PR under the
+      wrong claimed identity.
+      REMAINING LIMIT: every lane still shares ONE forge account for board
+      comments, so this proves a distinct DECLARED id was not caught
+      contradicting itself or the PR's own login — not a distinct human or
+      even a distinct process. It cannot catch two lanes on the SAME shared
+      login approving each other's work under different declared ids; that
+      needs separate bot identities per lane (recommended), at which point
+      the `--author`/`user.login` check above becomes a real binding one.
+
   --json  print one JSON object (verdict, observed id, surface, reason, UTC
           observation time) for a board post or a handback `Verify:` line.
 
@@ -89,8 +130,8 @@ usage). Exit 2 is never a pass: an unverifiable claim stays unverified.
 
 Side effects: `served` performs HTTP GETs (proxy env vars are honoured);
 `ref` runs `git fetch` against the named remote (and `git status` with
---require-clean); `checks` runs read-only `gh api` calls. Nothing else is
-written.
+--require-clean); `checks` and `attested` run read-only `gh api` calls.
+Nothing else is written.
 """
 import argparse
 import contextlib
@@ -108,6 +149,9 @@ import urllib.parse
 import urllib.request
 from html.parser import HTMLParser
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import board_common as bc  # noqa: E402  (sibling module: the one typed-post grammar)
+
 PASS, FAIL, COULD_NOT_CHECK = 0, 1, 2
 VERDICT = {PASS: "PASS", FAIL: "FAIL", COULD_NOT_CHECK: "COULD_NOT_CHECK"}
 MIN_SHA = 7
@@ -117,6 +161,7 @@ HEX_RE = re.compile(r"^[0-9a-f]+$")
 PROVES = "the surface serves this build; not that the feature works"
 PROVES_REF = "the remote branch contains this commit; not that it is deployed or works"
 PROVES_CHECKS = "each named check's latest run at this sha; not that the checks cover the change"
+PROVES_ATTESTED = "a non-author reviewer lane approved this exact head; not that the review was thorough"
 CHECK_PASS = ("success", "neutral", "skipped")
 REPO_SLUG_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 # Tests swap this for {} so a local fixture never routes through a proxy.
@@ -571,6 +616,109 @@ def wait_for_checks(slug, sha, required, interval, timeout, min_checks):
 # --------------------------------------------------------------------------
 # CLI
 # --------------------------------------------------------------------------
+# --------------------------------------------------------------------------
+# attested
+# --------------------------------------------------------------------------
+def _gh_out(args, timeout):
+    """Run one `gh` call through `_gh`; return stdout or raise CheckError naming the failure."""
+    rc, out, err = _gh(args, timeout)
+    if rc != 0:
+        raise CheckError(f"{' '.join(args[:3])} failed (rc {rc}): {err.strip()[:300]}")
+    return out
+
+
+def _pr_head(slug, pr, timeout):
+    """Return (head sha, head branch, is draft, author login or None) for PR `pr`.
+
+    `author login` is `doc["user"]["login"]` when the forge response carries one, else None — callers
+    treat None as "not available" and skip login-bound checks rather than guess. Raises CheckError when
+    the read itself is unreadable or the head sha is malformed.
+    """
+    try:
+        doc = json.loads(_gh_out(["gh", "api", f"repos/{slug}/pulls/{pr}"], timeout))
+        sha, ref = doc["head"]["sha"], doc["head"]["ref"]
+    except (ValueError, KeyError, TypeError) as exc:
+        raise CheckError(f"PR #{pr} read returned an unexpected shape: {exc}") from exc
+    if not (isinstance(sha, str) and len(sha) == 40 and HEX_RE.match(sha)):
+        raise CheckError(f"PR #{pr} head sha is not a 40-char hex sha")
+    user = doc.get("user")
+    login = user.get("login") if isinstance(user, dict) else None
+    return sha, ref, bool(doc.get("draft")), (login if isinstance(login, str) and login else None)
+
+
+def check_attested(slug, pr, issue, author, board_repo=None, timeout=30.0):
+    """Gate a ready-flip on a REVIEW attestation for PR `pr`'s exact current head (see module docstring).
+
+    Returns (code, head sha, reason). Raises CheckError (exit 2) on bad input or an unreadable forge.
+    Side-effects: read-only `gh api` calls only; it never flips the PR (the caller chains `gh pr ready`).
+    """
+    board_repo = board_repo or slug
+    for repo in (slug, board_repo):
+        if not REPO_SLUG_RE.match(repo or ""):
+            raise CheckError(f"repo {repo!r} is not OWNER/NAME")
+    if pr < 1 or issue < 1:
+        raise CheckError("--pr and --board-issue must be positive numbers")
+    if not bc.validate_agent(author):
+        raise CheckError("--author must be the authoring lane's board id ([A-Za-z0-9][A-Za-z0-9._-]{0,63})")
+    sha, ref, draft, pr_login = _pr_head(slug, pr, timeout)
+    if pr_login is not None and pr_login != author:
+        raise CheckError(f"--author {author!r} does not match PR #{pr}'s actual login {pr_login!r}; "
+                         f"pass the id that actually opened this PR, not a different lane's")
+    try:
+        comments = bc.decode_pages(_gh_out(["gh", "api", "--paginate", bc.comments_path(board_repo, issue)], timeout))
+    except bc.ForgeError as exc:
+        raise CheckError(f"board read returned an unexpected shape: {exc}") from exc
+    latest, edited, own, author_logins = {}, 0, False, set()
+    for c in sorted(comments, key=lambda c: c.get("id", 0)):
+        post = bc.parse_header(bc.first_line(c.get("body") or ""))
+        if not post or post["errors"] or post["type"] != "REVIEW":
+            continue
+        f = post["fields"]
+        if f["sha"] != sha or f["branch"] != ref or f"#{pr}" not in post["refs"].split(","):
+            continue
+        if c.get("updated_at") != c.get("created_at"):
+            edited += 1
+            continue
+        user = c.get("user")
+        login = user.get("login") if isinstance(user, dict) else None
+        if post["agent"] == author:
+            own = True
+            if login:
+                author_logins.add(login)
+            continue
+        latest[post["agent"]] = dict(f, _login=login)
+    # A declared reviewer id is not trusted when its comment's real login is the PR's own login, or is a
+    # login that also posted this PR's author REVIEW under a different id: either way the same forge
+    # account is claiming two identities, which is exactly the self-declared-id gap this binds shut (see
+    # module docstring REMAINING LIMIT: it still cannot separate two lanes sharing ONE forge account).
+    spoofed = {}
+    for a, f in latest.items():
+        login = f["_login"]
+        if login and pr_login is not None and login == pr_login:
+            spoofed[a] = f"its login matches PR #{pr}'s own author account despite declaring agent:{a}"
+        elif login and login in author_logins:
+            spoofed[a] = f"its login also posted this PR's author:{author} REVIEW under a different declared id"
+    latest = {a: f for a, f in latest.items() if a not in spoofed}
+    changes = sorted(a for a, f in latest.items() if f["verdict"] == "changes")
+    approved = sorted(a for a, f in latest.items() if f["verdict"] == "approve")
+    if changes:
+        return FAIL, sha, f"{', '.join(changes)} requested changes at {sha[:12]}; fix, push, and re-review"
+    if not approved:
+        notes = (["the author's own REVIEW does not count"] if own else []) + (
+            [f"{edited} matching REVIEW(s) edited after posting (not trusted)"] if edited else []) + (
+            [f"{a} not attested ({reason})" for a, reason in sorted(spoofed.items())])
+        return FAIL, sha, (f"no REVIEW verdict:approve from a reviewer other than {author} for #{pr} at the exact "
+                           f"head {sha[:12]} ({ref}); a push after a review needs a new one"
+                           + (f"; {'; '.join(notes)}" if notes else ""))
+    resolved = ", ".join(f"{a} resolved={latest[a]['resolved']}" for a in approved)
+    spoof_note = ("; ignored not-attested REVIEW(s): " + "; ".join(
+        f"{a} ({reason})" for a, reason in sorted(spoofed.items()))) if spoofed else ""
+    if not draft:
+        return PASS, sha, f"#{pr} head {sha[:12]} approved by {resolved}; already ready{spoof_note}"
+    return PASS, sha, (f"#{pr} head {sha[:12]} approved by {resolved}; next, as its own command: "
+                       f"gh pr ready {pr} --repo {slug} (the host's permission decision applies){spoof_note}")
+
+
 def _parser():
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--json", action="store_true", default=argparse.SUPPRESS,
@@ -604,6 +752,13 @@ def _parser():
     c.add_argument("--interval", type=float, default=45.0, help="--wait: seconds between polls")
     c.add_argument("--min-checks", type=int, default=1,
                    help="--wait: require at least this many checks observed before ALL GREEN")
+    a = sub.add_parser("attested", parents=[common], help="gate a ready-flip on a non-author REVIEW of the exact head")
+    a.add_argument("--gh-repo", required=True, help="OWNER/NAME holding the PR")
+    a.add_argument("--pr", type=int, required=True)
+    a.add_argument("--board-issue", type=int, required=True, help="the coordination issue holding REVIEW posts")
+    a.add_argument("--board-repo", help="OWNER/NAME of the board issue (default: --gh-repo)")
+    a.add_argument("--author", required=True, help="board id of the lane that wrote the PR (its REVIEW never counts)")
+    a.add_argument("--timeout", type=float, default=30.0, help="seconds per gh call")
     return p
 
 
@@ -620,6 +775,8 @@ def main(argv=None):
         surface, proves = redact_url(args.url), PROVES
     elif args.mode == "ref":
         surface, proves = f"{redact_url(args.remote)}/{args.branch} in {args.repo}", PROVES_REF
+    elif args.mode == "attested":
+        surface, proves = f"PR #{args.pr} of {args.gh_repo} + board #{args.board_issue}", PROVES_ATTESTED
     else:
         surface, proves = f"check-runs of {args.gh_repo}", PROVES_CHECKS
     waiting = args.mode == "checks" and getattr(args, "wait", False)
@@ -634,6 +791,9 @@ def main(argv=None):
             code, label, reason = wait_for_checks(args.gh_repo, args.sha, args.require, args.interval,
                                                   args.timeout, args.min_checks)
             observed = None
+        elif args.mode == "attested":
+            code, observed, reason = check_attested(args.gh_repo, args.pr, args.board_issue, args.author,
+                                                    args.board_repo, args.timeout)
         else:
             code, observed, reason = check_checks(args.gh_repo, args.sha, args.require, args.timeout)
     except CheckError as exc:
@@ -641,7 +801,7 @@ def main(argv=None):
     if getattr(args, "json", False):
         doc = {
             "mode": args.mode, "verdict": VERDICT[code], "exit": code, "surface": surface,
-            "expect_sha": args.sha if args.mode == "checks" else args.expect_sha, "observed": observed, "reason": reason,
+            "expect_sha": getattr(args, "sha", None) or getattr(args, "expect_sha", None), "observed": observed, "reason": reason,
             "checked_at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "proves": proves,
         }
@@ -913,6 +1073,9 @@ def _selftest():
     p3, f3 = _selftest_wait()
     passed += p3
     failed += f3
+    p4, f4 = _selftest_attested()
+    passed += p4
+    failed += f4
     print(f"\nselftest: {passed}/{passed + failed} passed")
     return 0 if failed == 0 else 1
 
@@ -1118,6 +1281,91 @@ def _selftest_wait():
     passed += ok
     failed += not ok
     print(f"{'PASS' if ok else 'FAIL'}  wait: --interval 0 clamped (gh calls={polls['gh']}, want <=6)")
+    return passed, failed
+
+
+def _selftest_attested():
+    """Offline `attested` cases: a fake `gh` answers the PR read, the board read, and `gh pr ready`.
+
+    Returns (passed, failed). Every negative case proves the gate FIRES; no case may run `gh pr ready`.
+    """
+    head, old = _FAKE_SHA, "f" * 40
+    passed = failed = 0
+
+    def review(cid, agent, sha=head, verdict="approve", branch="lane/cart-fix", refs="#41", edited=False,
+               login="fleet-bot"):
+        created = f"2026-09-24T10:{cid:02d}:00Z"
+        body = f"[agent:{agent}] REVIEW refs:{refs} sha:{sha} branch:{branch} verdict:{verdict} resolved:2\nreviewed"
+        return {"id": cid, "body": body, "created_at": created,
+                "updated_at": "2026-09-24T11:59:00Z" if edited else created, "user": {"login": login}}
+
+    def case(name, comments, want, must, draft=True, board_rc=0, author="builder-1", pr_login=None):
+        global _gh
+        nonlocal passed, failed
+        calls = []
+
+        def fake(args, timeout):
+            calls.append(args)
+            if args[:3] == ["gh", "pr", "ready"]:
+                return 0, "", ""
+            if "/pulls/" in args[-1]:
+                doc = {"draft": draft, "head": {"sha": head, "ref": "lane/cart-fix"}}
+                if pr_login is not None:
+                    doc["user"] = {"login": pr_login}
+                return 0, json.dumps(doc), ""
+            if "/comments" in args[-1]:
+                return board_rc, json.dumps(comments), "HTTP 502" if board_rc else ""
+            return 1, "", f"unexpected call {args}"
+
+        saved, _gh = _gh, fake
+        buf = io.StringIO()
+        argv = ["attested", "--gh-repo", "acme/app", "--pr", "41", "--board-issue", "7", "--author", author]
+        try:
+            with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(io.StringIO()):
+                got = main(argv)
+        except SystemExit as exc:
+            got = f"SystemExit({exc.code})"
+        finally:
+            _gh = saved
+        text = buf.getvalue()
+        flipped = any(c[:3] == ["gh", "pr", "ready"] for c in calls)
+        ok = got == want and must in text and not flipped
+        passed += ok
+        failed += not ok
+        print(f"{'PASS' if ok else 'FAIL'}  attested: {name} (rc={got}, want {want}, flipped={flipped})"
+              + ("" if ok else f"\n      {text.strip()}"))
+
+    case("non-author approval at the exact head passes", [review(1, "reviewer-2")], PASS, "approved by reviewer-2")
+    case("approval of an older head (a push since) FIRES", [review(1, "reviewer-2", sha=old)], FAIL,
+         "no REVIEW verdict:approve")
+    case("author self-approval FIRES", [review(1, "builder-1")], FAIL, "author's own REVIEW does not count")
+    case("a second reviewer's changes verdict at the head FIRES",
+         [review(1, "reviewer-2"), review(2, "reviewer-3", verdict="changes")], FAIL, "reviewer-3 requested changes")
+    case("a reviewer's later approve supersedes its own changes",
+         [review(1, "reviewer-2", verdict="changes"), review(2, "reviewer-2")], PASS, "approved by reviewer-2")
+    case("approval for another branch FIRES", [review(1, "reviewer-2", branch="lane/other")], FAIL,
+         "no REVIEW verdict:approve")
+    case("approval naming another PR FIRES", [review(1, "reviewer-2", refs="#40")], FAIL, "no REVIEW verdict:approve")
+    case("edited attestation is not trusted", [review(1, "reviewer-2", edited=True)], FAIL, "edited after posting")
+    case("short-sha attestation is malformed and ignored", [review(1, "reviewer-2", sha=head[:12])], FAIL,
+         "no REVIEW verdict:approve")
+    case("board read error -> could not check", [], COULD_NOT_CHECK, "failed", board_rc=1)
+    case("a passing draft names the ready command but never runs it", [review(1, "reviewer-2")], PASS,
+         "gh pr ready 41 --repo acme/app")
+    case("an already-ready PR says so", [review(1, "reviewer-2")], PASS, "already ready", draft=False)
+    case("bad --author refused", [review(1, "reviewer-2")], COULD_NOT_CHECK, "--author", author="-bad id")
+    case("--author mismatched against the PR's real login refuses", [review(1, "reviewer-2")],
+         COULD_NOT_CHECK, "does not match", pr_login="someone-else")
+    case("--author matching the PR's real login passes as before", [review(1, "reviewer-2")], PASS,
+         "approved by reviewer-2", pr_login="builder-1")
+    case("reviewer login equal to the PR's own login is not attested despite a different declared id",
+         [review(1, "reviewer-2", login="builder-1")], FAIL, "not attested", pr_login="builder-1")
+    case("reviewer sharing a login with the author's own REVIEW on this PR is not attested",
+         [review(1, "builder-1", login="shared-bot"), review(2, "reviewer-2", login="shared-bot")],
+         FAIL, "not attested")
+    case("a distinct reviewer login still passes when it differs from both the author's login and the "
+         "PR's login", [review(1, "builder-1", login="shared-bot"), review(2, "reviewer-2", login="other-bot")],
+         PASS, "approved by reviewer-2")
     return passed, failed
 
 

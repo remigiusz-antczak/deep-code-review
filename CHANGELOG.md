@@ -3,6 +3,16 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.454.0] — 2026-09-24
+
+### Added — fleet frictions from the field
+- Reviewed-attestation ready gate (`surface_check.py attested`): an independent reviewer records a `REVIEW` board post for the exact 40-character head sha; the check passes only when that reviewer differs from the author, the post's declared agent id is bound to the GitHub login that posted it, and no push landed since. It prints the `gh pr ready` command rather than flipping the PR itself, so the host's own permission decision stays final. A shared forge account for all lanes cannot tell agents apart; separate bot identities are recommended.
+- `lane_guard.py wait`: a bounded wait for background work before hand-back; a process must be running when the wait starts and a port must be seen listening at least once, otherwise COULD_NOT_CHECK; the lane preamble says never to end a turn with background jobs running.
+- Changelog fragments keyed by branch name, so a PR needs one push instead of two.
+- `merge_train.py refresh` (#1151): after a fix lands on the base, update-branch every open PR still on the old base — dry run by default, `--apply` executes, drafts and fork PRs skipped unless allowed, calls throttled with retry on rate limits; after a keystone merge, a refresh failure is a warning, not an error on the landed merge. `merge_train.py dupes`: flags two or more open PRs carrying an identical fix (post-image lines) and names the earliest as canonical — "one fix, one PR; others drop their copy and rebase"; near-identical patches are reported as "similar, review".
+- size-budget-raise: .claude/skills/agentic-delivery/references/verification-handback.md 51573→52027 reviewed-attestation and wait-before-handback rules
+- size-budget-raise: .claude/skills/deep-code-review/references/merge-operations.md 60688→61327 refresh-after-fix-forward and one-fix-one-PR rules (#1151)
+
 ## [1.453.0] — 2026-09-24
 
 ### Added
