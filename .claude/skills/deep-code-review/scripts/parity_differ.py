@@ -29,7 +29,9 @@ measurement are NEVER inputs to the verdict. The parser does not read
 `display:none` / `visibility:hidden` / `opacity:0` subtrees. A taller, wider,
 or denser app with an equal inventory is a MATCH; a same-size app missing one
 button is a MISMATCH. Geometry belongs only to layout-defect checks (overlap,
-clipping, viewport fit), never to a "complete" or "matches" verdict.
+clipping, viewport fit), never to a "complete" or "matches" verdict. A
+`data-lines` count (LINE COUNTS below) is a count of rendered line boxes set by
+the capture, not a measurement: the parser never sees a height.
 
 CONTRACT (fail-closed; every branch below is load-bearing, not cosmetic)
 -------------------------------------------------------------------------
@@ -39,9 +41,12 @@ CONTRACT (fail-closed; every branch below is load-bearing, not cosmetic)
 * MATCH_WITH_ACCEPTED (0, printed distinctly with `accepted_n=N`) — as MATCH,
   except N differences remain, each covered by a row of an OWNER-AUTHORED
   `--accept` file. Never reported as a plain MATCH.
+* MATCH_WITH_IGNORED (0, printed distinctly with `ignored_n=N`) — as MATCH
+  or MATCH_WITH_ACCEPTED, except N design elements are excluded by
+  owner-authored `ignore` rows (IGNORED below). Never a plain MATCH.
 * MISMATCH (1) — lists the gap per section: "missing" (build it) or "empty"
-  (seed it), then per section MISSING_IN_APP / EXTRA_IN_APP / CHANGED
-  inventory rows. That list IS the work queue for a mirror/restyle task. The
+  (seed it), then per section MISSING_IN_APP / EXTRA_IN_APP / CHANGED /
+  MOVED inventory rows. That list IS the work queue for a mirror/restyle task. The
   report carries a fixed precondition line: both renders must share the same
   auth + data state, or a signed-out app render reports every gated section
   as "missing" and points the fix in the wrong direction (build, not sign
@@ -75,6 +80,13 @@ CONTRACT (fail-closed; every branch below is load-bearing, not cosmetic)
 * BLOCKED_BY_FOUNDATION (7) — `--workflow` only: the inventory and tokens
   are comparable, but the token stage mismatches or a FOUNDATION/PRIMITIVE
   style row is un-accepted; every section verdict is withheld (WORKFLOW).
+* REGRESSION (8) — `--baseline` only: a run that passed before (its
+  recorded fingerprint) now shows new deltas; only those are listed
+  (BASELINE). Distinct from MISMATCH (1), the never-passed work queue.
+* COULD_NOT_CHECK_CROP (9) — the design and app captures of a section are
+  not the same crop (SAME-CROP GUARD); that section is UNVERIFIED and
+  unscored while the others are scored and listed. Outranks MISMATCH;
+  `--min-pairs` COULD_NOT_CHECK outranks it.
 * Extra app sections beyond the design are reported as info ("kept as
   superset") and never cause a failure on their own. Extra ITEMS inside a
   matched section are EXTRA_IN_APP rows and do fail until resolved or
@@ -109,6 +121,37 @@ therefore carry COMPUTED visibility: every element with a class token in
 `data-visible="true"` or `data-visible="false"` (e.g. set from
 `getComputedStyle` / `checkVisibility()` when the DOM is snapshotted). Such
 a class with no marker is COULD_NOT_CHECK, never a guess.
+
+IGNORED (`data-parity-ignore`) — visible, never silent
+------------------------------------------------------
+An element carrying `data-parity-ignore` (value optional: a short id such as
+`live-clock`) is excluded with its whole subtree from the inventory, from
+populated-ness, from class-hiding checks, and from `--style`, on the side
+that carries it; a `data-section` carrying it registers no section. Every
+ignored root is listed in the report (`ignored: N element(s) ...`, per side,
+with its section and id — the attribute value, else the tag with its
+`data-section` or `id`, else `<tag>`) and in `--json` as `ignored`.
+A DESIGN-side ignore removes a requirement, so each needs an owner-authored
+accept row `ignore<TAB><section, or - outside every section><TAB><id>`
+(ACCEPTED DEVIATIONS trust); without one the run is COULD_NOT_CHECK. With
+it the verdict is MATCH_WITH_IGNORED (never a plain MATCH) and the
+section reads PASS_WITH_IGNORED. An APP-side ignore pairs with a design
+ignore of the same section + id; unpaired, it is an open `EXTRA_IN_APP
+ignored:<id>` row (acceptable like any row), and it never hides a design
+element, which stays MISSING_IN_APP. Mark volatile or harness-only content
+(clocks, ads, dev banners) on both captures.
+
+SAME-CROP GUARD — COULD_NOT_CHECK_CROP (9)
+------------------------------------------
+The design is the reference; anchors are only the visible texts of
+`data-anchor` elements (a plain heading is never an anchor). For every section
+present on both sides: when the design section has anchors, the app section
+must show at least one of those texts; and the app section may not carry a
+`data-anchor` that the design anchors only in a different section (a page
+header or KPI card leaked into the crop). A failing section alone is
+UNVERIFIED and unscored (`crop_problems`); the others are still scored and
+listed, and the exit is 9. A heading missing from one section and extra in
+another is a MOVED row (an open difference), not a crop problem.
 
 ELEMENT INVENTORY (per section, HTML sides only)
 ------------------------------------------------
@@ -153,15 +196,24 @@ difference — and a slot holding a broken render (empty, undefined, null, NaN,
 Invalid Date, [object Object], or an unrendered `{{...}}` / `${...}`) is
 compared verbatim, never masked. Leftover design/app items are paired into
 CHANGED rows (same kind and label, different role; then same kind and role,
-different label); the rest are MISSING_IN_APP / EXTRA_IN_APP. Completeness =
+different label); the rest are MISSING_IN_APP / EXTRA_IN_APP, except that a
+heading MISSING_IN_APP in one section and EXTRA_IN_APP in another becomes one
+MOVED row (`heading:... -> section 't'`). Completeness =
 matched items / design items, per section and overall — items, never pixels;
 the percentage is floored and any shortfall prints `(<100%)`.
+LINE COUNTS: a heading, control, image, option, list/table row, or the block
+holding a text run may carry `data-lines="N"` — the number of rendered line
+boxes (e.g. distinct line tops of `range.getClientRects()` over its text),
+set by the capture. It joins the item key as `[lines: N]`, so 2-line rows
+against 1-line design rows are CHANGED rows even when every text matches;
+a one-sided `data-lines` is a CHANGED row too (export it on both sides). A
+value that is not a positive integer (`[1-9][0-9]*`) is COULD_NOT_CHECK.
 
 ACCEPTED DEVIATIONS (`--accept FILE [--accept-rev REV]`) — OWNER-AUTHORED ONLY
 -----------------------------------------------------------------------------
 Tab-separated rows, 7 non-empty fields:
   section  status  item  app-value  count  reason  owner-quote-or-commit
-`status` is MISSING_IN_APP / EXTRA_IN_APP / CHANGED; `item` is the row's item
+`status` is MISSING_IN_APP / EXTRA_IN_APP / CHANGED / MOVED; `item` is the row's item
 key as printed (design key for MISSING/CHANGED, app key for EXTRA);
 `app-value` is the exact app side as printed (`-` for MISSING_IN_APP) — so an
 accepted CHANGED row pins the app value and a different one is a new, open
@@ -194,6 +246,15 @@ marks a section with no text-bearing `data-cs` (image, chart, map) as
 owner-reviewed: its style reads `visual-reviewed` instead of `no pairs`, so
 it can PASS. It never rescues a page-wide STYLE_COULD_NOT_CHECK, and on a
 section that has style pairs it prints as info (stale).
+  threshold  <section id>  <style-identity %>
+sets that section's style bar (default strict: any open row fails): when its
+identity — pairs with no un-accepted difference / its pairs — is at least
+the percentage (above 0, at most 100), its open rows print as tolerated
+(`THRESHOLD ... N row(s) tolerated`) and the style verdict is
+STYLE_MATCH_WITH_ACCEPTED; below it they stay open. A threshold never waives
+a FOUNDATION or PRIMITIVE row; one on a section with no open row is stale.
+  ignore  <section id, or - outside every section>  <data-parity-ignore id>
+authorizes one design-side ignore (IGNORED); an unused one is stale info.
 
 COMPUTED STYLE (`--style`) — reported separately, never a completeness input
 ------------------------------------------------------------------------------
@@ -209,7 +270,13 @@ compare as normalized text (case, whitespace, quotes), with no unit
 conversion. A visible `data-cs` element is paired by section + role
 (heading level, control role, explicit `role`, else `text`) + its full
 visible text (masked as in the inventory), duplicates in document order;
-an element with no visible text or no counterpart is not style-checked.
+a design element left unpaired is then paired by its identical OWN text
+nodes (not its children's) within the same section + role, so a style diff
+survives a changed child label; an element with no visible text or no
+counterpart is not style-checked. The report adds identity (pairs with no
+un-accepted difference / pairs, beside raw style-identical), `mismatch
+count per property`, and up to 10 `top style diffs (text | prop | design |
+app)`, most frequent property first.
 Rows print grouped by property. A property is one FOUNDATION row — a global
 type/box mismatch to fix before any per-section work — instead of one row
 per pair only when it differs on more than half of all pairs AND on pairs
@@ -249,16 +316,36 @@ sandboxed srcdoc iframe of that render showing only that section, led by a
 and accepted rows, escaped; no script or network fetch. Evidence for a
 human before "ready", never a verdict.
 
+BASELINE (`--baseline F [--write-baseline]`) — regression net, not `--workflow`
+--------------------------------------------------------------------------------
+`--write-baseline` records the APP side's fingerprint to F — per section its
+inventory keys (masked where the app marks sample values) and, with
+`--style`, each text-bearing `data-cs` element's normalized values — only
+when the run exits 0; a failing run writes nothing (`baseline not written`).
+Over an existing F its deltas vs this run are printed first; any delta (or an
+unreadable / other-`--style` F) leaves F as is and exits REGRESSION unless
+`--accept-regression` is given. F may not be the design, app, accept, or
+report path (usage error). Without `--write-baseline`, F is read: unreadable, malformed, or recorded with a different
+`--style` is COULD_NOT_CHECK; a section or item REMOVED, an item ADDED inside a
+baseline section, or a STYLE_CHANGED value is REGRESSION (8), listing only
+those deltas plus the design comparison's one-line verdict. A section new
+since the baseline is info. No delta keeps the comparison's own exit (a design
+change the app never had stays MISMATCH) and prints `baseline: 0 new delta(s)`;
+under COULD_NOT_CHECK_CROP the deltas are appended and exit 9 stands.
+
 USAGE
 -----
   parity_differ.py --design <file> --app <file> [--accept <tsv> [--accept-rev REV]]
                    [--min-pairs N] [--style [--style-min-pairs N]] [--json]
+                   [--baseline F [--write-baseline [--accept-regression]]]
                    [--workflow --design-tokens F --app-tokens F [--token-map F]
                     [--token-min-pairs N]] [--report F [--design-shots D] [--app-shots D]]
   parity_differ.py --selftest
 Public API for sibling scripts: `compare()` (the dict `--json` prints),
-`run_workflow()` (the same dict plus `workflow`), `write_report()`, and
-`inventory_keys()` (one side's item keys, never a verdict).
+`run_workflow()` (the same dict plus `workflow`), `write_report()`,
+`inventory_keys()` and `read_side()` (one side, never a verdict),
+`crop_problems()`, and `fingerprint()` / `diff_baseline()` /
+`apply_baseline()` (BASELINE).
 """
 from __future__ import annotations
 
@@ -277,6 +364,7 @@ import subprocess
 import sys
 import tempfile
 from collections import Counter
+from fractions import Fraction
 from html.parser import HTMLParser
 from pathlib import Path
 
@@ -294,14 +382,19 @@ CANNOT_COMPARE = 4
 STYLE_DIFF = 5                                # --style only; inventory passed
 STYLE_COULD_NOT_CHECK = 6                     # --style only; inventory passed, style unverifiable
 BLOCKED_BY_FOUNDATION = 7                     # --workflow only; a foundation stage is failing
+REGRESSION = 8                                # --baseline only; a new delta vs a passing run
+COULD_NOT_CHECK_CROP = 9                      # the two captures of a section are not the same crop
 MATCH_WITH_ACCEPTED = "MATCH_WITH_ACCEPTED"   # verdict name; exit code is MATCH
+MATCH_WITH_IGNORED = "MATCH_WITH_IGNORED"     # verdict name; exit code is MATCH (owner ignore rows)
 # FOUNDATION breadth floors (COMPUTED STYLE): pairs and distinct sections.
 _FOUNDATION_MIN_PAIRS = 3
 _FOUNDATION_MIN_SECTIONS = 2
 
 _VERDICT_NAMES = {MATCH: "MATCH", MISMATCH: "MISMATCH", USAGE_ERROR: "USAGE_ERROR",
                   COULD_NOT_CHECK: "COULD_NOT_CHECK", CANNOT_COMPARE: "CANNOT_COMPARE",
-                  BLOCKED_BY_FOUNDATION: "BLOCKED_BY_FOUNDATION"}
+                  BLOCKED_BY_FOUNDATION: "BLOCKED_BY_FOUNDATION", STYLE_DIFF: "STYLE_DIFF",
+                  STYLE_COULD_NOT_CHECK: "STYLE_COULD_NOT_CHECK", REGRESSION: "REGRESSION",
+                  COULD_NOT_CHECK_CROP: "COULD_NOT_CHECK_CROP"}
 # Computed-style properties every `data-cs` export must carry (COMPUTED STYLE).
 _STYLE_PROPS = ("font-family", "font-size", "font-weight", "line-height", "letter-spacing",
                 "color", "background-color", "padding", "border-radius", "box-shadow")
@@ -336,7 +429,7 @@ _MEDIA_TAGS = frozenset({"canvas", "video", "iframe", "object"})
 # Class tokens that hide an element through a stylesheet this parser cannot
 # evaluate; the export must resolve them with `data-visible` (VISIBILITY).
 _HIDING_CLASSES = frozenset({"hidden", "sr-only", "invisible", "d-none", "visually-hidden"})
-_ROW_STATUSES = ("MISSING_IN_APP", "EXTRA_IN_APP", "CHANGED")
+_ROW_STATUSES = ("MISSING_IN_APP", "EXTRA_IN_APP", "CHANGED", "MOVED")
 # Masked text is wrapped per chunk as OPEN <element serial> SEP text CLOSE, so
 # contiguous chunks of one masked element fold into one token while separate
 # elements stay separate tokens (their count is compared).
@@ -355,6 +448,7 @@ class _Frame:
     """One open element on the parser stack plus its inventory role."""
 
     __slots__ = (
+        "anccap",
         "bodyhide",
         "capture",
         "cells",
@@ -362,11 +456,14 @@ class _Frame:
         "control",
         "cs",
         "cscap",
+        "csown",
         "hidden",
         "id",
         "idcap",
+        "ignored",
         "item",
         "kind",
+        "lines",
         "maskid",
         "notext",
         "row",
@@ -379,7 +476,7 @@ class _Frame:
         """Start a frame with no inventory role; the caller fills the rest."""
         self.tag, self.sid = tag, sid
         self.section: str | None = None
-        self.hidden = self.notext = self.bodyhide = False
+        self.hidden = self.notext = self.bodyhide = self.ignored = False
         self.maskid: int | None = None          # serial of the enclosing masked element
         self.kind: str | None = None
         self.item: dict | None = None
@@ -391,7 +488,10 @@ class _Frame:
         self.cells = 0
         self.control: dict | None = None
         self.cs: dict | None = None             # this element's computed-style record
+        self.anccap: list[str] | None = None    # passive: a data-anchor element's text
+        self.lines: str | None = None           # its data-lines (rendered line-box count)
         self.cscap: list[str] | None = None     # passive: its full visible text
+        self.csown: list[str] | None = None     # its OWN text nodes (field-B pairing)
 
 
 class _SectionExtractor(HTMLParser):
@@ -419,6 +519,8 @@ class _SectionExtractor(HTMLParser):
         self._buf: list[str] = []
         self._buf_section: str | None = None
         self._mask_seq = 0
+        self._buf_lines: str | None = None
+        self.ignored: list[dict] = []   # every data-parity-ignore root, never silent
 
     def _innermost_section(self) -> str | None:
         """Return the nearest currently-open `data-section` id, or None."""
@@ -437,9 +539,11 @@ class _SectionExtractor(HTMLParser):
         own `data-section` id, if any, so the caller knows whether to push it.
         """
         attr_map = dict(attrs)
+        if "data-parity-ignore" in attr_map or (self._stack and self._stack[-1].ignored):
+            return None   # an ignored subtree registers no section and counts no marker
         sid = attr_map.get("data-section")
         if sid is not None and sid not in self._by_id:
-            record = {"id": sid, "items": 0, "empties": 0, "inv": [], "marked": False,
+            record = {"id": sid, "items": 0, "empties": 0, "inv": [], "marked": False, "anchors": [], "bad_lines": [],
                       "unresolved": [], "styles": [], "cs_bad": []}
             self.sections.append(record)
             self._by_id[sid] = record
@@ -469,8 +573,10 @@ class _SectionExtractor(HTMLParser):
         if self._buf:
             text = "".join(self._buf)
             if _MASK_SPAN.sub(r"\2", text).strip():
-                self._emit(self._buf_section, "text", "", text)
-        self._buf, self._buf_section = [], None
+                item = self._emit(self._buf_section, "text", "", text)
+                if item is not None and self._buf_lines:
+                    item["lines"] = self._buf_lines
+        self._buf, self._buf_section, self._buf_lines = [], None, None
 
     def _nearest_kind(self, kind: str) -> _Frame | None:
         """Return the innermost open frame of inventory `kind`, or None."""
@@ -486,10 +592,14 @@ class _SectionExtractor(HTMLParser):
         frame.section = sid if sid is not None else self._innermost_section()
         classes = (attr_map.get("class") or "").split()
         marker = (attr_map.get("data-visible") or "").strip().lower()
+        frame.ignored = bool(parent and parent.ignored)
+        if not frame.ignored and "data-parity-ignore" in attr_map:
+            frame.ignored = True
+            self._log_ignored(tag, attr_map, frame.section)
         shown = parent is None or not (parent.hidden or parent.kind == "media"
                                        or (parent.bodyhide and tag != "summary"))
         vis_hidden = bool(
-            not shown or tag in _SKIP_TAGS or "hidden" in attr_map or marker == "false"
+            frame.ignored or not shown or tag in _SKIP_TAGS or "hidden" in attr_map or marker == "false"
             or (tag == "dialog" and "open" not in attr_map)
             or _HIDDEN_STYLE.search(attr_map.get("style") or ""))
         frame.hidden = vis_hidden or (attr_map.get("aria-hidden") or "").lower() == "true"
@@ -558,9 +668,34 @@ class _SectionExtractor(HTMLParser):
                 row_frame.cells += 1
                 if row_frame.cells == 1:
                     frame.kind, frame.capture, frame.row = "cell0", [], row_frame.row
+        raw_lines = attr_map.get("data-lines")
+        if raw_lines is not None and not re.fullmatch(r"[1-9][0-9]*", raw_lines.strip()):
+            if sec in self._by_id:   # fail closed: never a guessed count
+                self._by_id[sec]["bad_lines"].append(f'<{tag} data-lines="{raw_lines}">')
+            raw_lines = None
+        frame.lines = str(int(raw_lines)) if raw_lines is not None else None
+        target = (frame.item if frame.kind in ("heading", "image", "option") else frame.row if frame.kind == "row"
+                  else frame.control["item"] if frame.kind == "control" else None)
+        if frame.lines and target is not None:
+            target["lines"] = frame.lines   # a text run takes its block's count at _flush
+        if "data-anchor" in attr_map and sec in self._by_id:
+            frame.anccap = []
         if "data-cs" in attr_map and sec in self._by_id:
             self._start_style(frame, tag, attr_map["data-cs"], role)
         return frame
+
+    def _log_ignored(self, tag: str, attr_map: dict, section: str | None) -> None:
+        """Record one `data-parity-ignore` root: its section and a printable id.
+
+        The id is the attribute's value when non-empty, else the tag with its
+        `data-section` or `id` attribute (e.g. `<div id="x">`), else `<tag>`.
+        Descendants of an ignored root are not logged separately.
+        """
+        label = (attr_map.get("data-parity-ignore") or "").strip()
+        if not label:
+            extra = next((f' {k}="{attr_map[k]}"' for k in ("data-section", "id") if attr_map.get(k)), "")
+            label = f"<{tag}{extra}>"
+        self.ignored.append({"section": section, "id": label})
 
     def _start_style(self, frame: _Frame, tag: str, raw: str | None, role: str) -> None:
         """Record one visible `data-cs` element for the `--style` pairing.
@@ -586,7 +721,7 @@ class _SectionExtractor(HTMLParser):
             role = frame.control["item"]["role"]
         frame.cs = {"role": role or "text", "text": "",
                     "props": {p: str(props[p]) for p in _STYLE_PROPS}}
-        frame.cscap = []
+        frame.cscap, frame.csown = [], []
         sec["styles"].append(frame.cs)
 
     @staticmethod
@@ -666,6 +801,8 @@ class _SectionExtractor(HTMLParser):
                 f.idcap.append(text)
             if f.cscap is not None:
                 f.cscap.append(text)
+            if f.anccap is not None:
+                f.anccap.append(text)
         return owned
 
     def _finalize(self, frame: _Frame) -> None:
@@ -674,6 +811,9 @@ class _SectionExtractor(HTMLParser):
             self._flush()
         if frame.cs is not None:
             frame.cs["text"] = "".join(frame.cscap)
+            frame.cs["own"] = "".join(frame.csown)
+        if frame.anccap is not None:
+            self._by_id[frame.section]["anchors"].append("".join(frame.anccap))
         if frame.kind == "icon":
             text = " ".join(frame.item["text"].split())
             if not text or frame.hidden:   # a visible text run inside <i> is italic text
@@ -740,7 +880,7 @@ class _SectionExtractor(HTMLParser):
         if top is None:
             return
         icon = self._nearest_kind("icon")
-        if icon is not None:
+        if icon is not None and not top.ignored:
             icon.item["text"] += data
         text = (f"{_MASK_OPEN}{top.maskid}{_MASK_SEP}{data}{_MASK_CLOSE}"
                 if top.maskid is not None else data)
@@ -749,9 +889,13 @@ class _SectionExtractor(HTMLParser):
             return
         if top.hidden or top.notext or top.bodyhide:
             return
+        if top.csown is not None:
+            top.csown.append(text)
         if not self._feed_captures(text):
             if self._buf_section is None:
                 self._buf_section = self._innermost_section()
+                block = next((f for f in reversed(self._stack) if f.tag in _BLOCK_TAGS or f.sid is not None), None)
+                self._buf_lines = block.lines if block is not None else None
             self._buf.append(text)
 
     def finish(self) -> None:
@@ -801,49 +945,65 @@ class _SectionExtractor(HTMLParser):
 def extract_side(path: str | None) -> list[dict] | None:
     """Return this side's ordered section records, or None if it cannot compare.
 
-    Each record is `{"id", "populated", "inventory", "marked", "unresolved",
-    "styles", "cs_bad"}`; `inventory` is a list of raw items for an HTML side
-    and None for a `.json` side (which carries no inventory); `unresolved`
-    lists class-based hiding tokens that carry no `data-visible` marker
-    (VISIBILITY); `styles` lists `data-cs` records `{"role", "text", "props"}`
-    (None for `.json`) and `cs_bad` the malformed ones. None for the
-    whole side covers every fail-closed case in one place: no path given,
-    file absent, unreadable, empty/whitespace-only, invalid JSON, or zero
-    sections. A caller must treat None as COULD_NOT_CHECK, never as an
-    empty-but-valid side.
+    Section view of `read_side` (the same records, without its ignored list).
+    """
+    return read_side(path)[0]
+
+
+def read_side(path: str | None) -> tuple[list[dict] | None, list[dict]]:
+    """Return `(sections, ignored)` for one side; `sections` is None if it cannot compare.
+
+    `ignored` lists every `data-parity-ignore` root as `{"section", "id"}`
+    (`section` None outside every section): excluded from inventory,
+    populated-ness, and style, and reported so ignoring is never silent. A
+    `.json` side has no ignored list. Each section record is `{"id",
+    "populated", "inventory", "marked", "unresolved", "styles", "cs_bad",
+    "anchors", "bad_lines"}` (`anchors`: the visible text of each
+    `data-anchor` element; `bad_lines`: each `data-lines` value that is not
+    a positive integer — the caller fails closed);
+    `inventory` is a list of raw items for an HTML side and None for a
+    `.json` side (which carries no inventory); `unresolved` lists
+    class-based hiding tokens that carry no `data-visible` marker
+    (VISIBILITY); `styles` lists `data-cs` records `{"role", "text", "own",
+    "props"}` (`own` = its own text nodes; None for `.json`) and `cs_bad`
+    the malformed ones. None for the whole side covers every fail-closed
+    case in one place: no path given, file absent, unreadable,
+    empty/whitespace-only, invalid JSON, or zero sections. A caller must
+    treat None as COULD_NOT_CHECK, never as an empty-but-valid side.
     """
     if not path or not os.path.isfile(path):
-        return None
+        return None, []
     try:
         with open(path, encoding="utf-8") as fh:
             raw = fh.read()
     except (OSError, UnicodeDecodeError):
-        return None
+        return None, []
     if not raw.strip():
-        return None
+        return None, []
 
     if path.lower().endswith(".json"):
         try:
             data = json.loads(raw)
         except json.JSONDecodeError:
-            return None
+            return None, []
         if not isinstance(data, list):
-            return None
+            return None, []
         rows = [{"id": str(row["id"]), "populated": bool(row.get("populated", False)),
                  "inventory": None, "marked": False, "unresolved": [], "styles": None,
-                 "cs_bad": []}
+                 "cs_bad": [], "anchors": [], "bad_lines": []}
                 for row in data if isinstance(row, dict) and "id" in row]
-        return rows or None
+        return rows or None, []
 
     parser = _SectionExtractor()
     parser.feed(raw)
     parser.close()
     parser.finish()
     if not parser.sections:
-        return None
+        return None, parser.ignored
     return [{"id": s["id"], "populated": s["items"] > 0, "inventory": s["inv"],
              "marked": s["marked"], "unresolved": s["unresolved"], "styles": s["styles"],
-             "cs_bad": s["cs_bad"]} for s in parser.sections]
+             "cs_bad": s["cs_bad"], "anchors": s["anchors"], "bad_lines": s["bad_lines"]}
+            for s in parser.sections], parser.ignored
 
 
 def extract_sections(path: str | None) -> list[tuple[str, bool]] | None:
@@ -910,6 +1070,8 @@ def _prepare(inventory: list[dict], mask: bool) -> list[dict]:
         notes += [f"icon: {_clean(i, mask)}" for i in raw.get("icons") or ()]
         if (raw.get("placeholder") or "").strip():
             notes.append(f"placeholder: {_clean(raw['placeholder'], mask)}")
+        if raw.get("lines"):
+            notes.append(f"lines: {raw['lines']}")
         disp = " ".join([disp, *(f"[{n}]" for n in notes)]).strip()
         role = raw["role"]
         key = f"{raw['kind']}:{role}:{disp}" if role else f"{raw['kind']}:{disp}"
@@ -1036,10 +1198,15 @@ def diff_styles(design: list[dict], app: list[dict], min_pairs: int | None = Non
     Pure except that it counts `used` on the matching `accept` entries. Pairs
     by (section, role, case-folded visible text), masked as the inventory
     masks when both sections carry value markers; duplicates pair in document
-    order. Returns `{"verdict", "pairs", "identical", "unpaired", "foundation",
-    "primitives", "section_pairs", "accepted", "rows", "lines"}`, each row
-    `{"section", "element", "property", "design", "app", "foundation",
-    "accepted"}` (+ `reason`/`owner` when accepted). A row covered by an owner
+    order; a design element left unpaired is retried on its identical OWN
+    text nodes (same section + role). Returns `{"verdict", "pairs",
+    "identical", "identity", "unpaired", "foundation", "primitives",
+    "section_pairs", "accepted", "tolerated", "per_property", "top", "rows",
+    "lines"}` (`identity` = pairs with no un-accepted difference;
+    `per_property` = differing pairs per property, most first; `top` = up to
+    10 open rows), each row `{"section", "element", "property", "design",
+    "app", "foundation", "accepted", "tolerated"}` (+ `reason`/`owner` when
+    accepted or tolerated by an owner `threshold`, `_apply_thresholds`). A row covered by an owner
     `style`/`rule` accept entry (`_style_accept`) is ACCEPTED and never counts
     toward FOUNDATION or STYLE_DIFF. A property is FOUNDATION only when its
     OPEN rows differ on more than half of all pairs AND on pairs in >= 2
@@ -1060,29 +1227,51 @@ def diff_styles(design: list[dict], app: list[dict], min_pairs: int | None = Non
     for sec in design:
         a_sec = app_map.get(sec["id"]) or {}
         mask = sec["marked"] and a_sec.get("marked", False)
+        a_recs = list(a_sec.get("styles") or ())
         pool: dict = {}
-        for rec in a_sec.get("styles") or ():
+        for rec in a_recs:
             pool.setdefault((rec["role"], _clean(rec["text"], mask).casefold()), []).append(rec)
+        taken, left = set(), []
         for rec in sec["styles"] or ():
             text = _clean(rec["text"], mask)
             hits = pool.get((rec["role"], text.casefold())) if text else None
             if hits:
-                pairs.append((sec["id"], f"{rec['role']}:{text}", rec["props"], hits.pop(0)["props"]))
+                hit = hits.pop(0)
+                taken.add(id(hit))
+                pairs.append((sec["id"], f"{rec['role']}:{text}", rec["props"], hit["props"]))
             elif text:
+                left.append(rec)
+        # Second pass (field-B rule) for leftovers only: identical OWN text nodes.
+        own_pool: dict = {}
+        for rec in a_recs:
+            own = _clean(rec.get("own"), mask)
+            if id(rec) not in taken and own:
+                own_pool.setdefault((rec["role"], own.casefold()), []).append(rec)
+        for rec in left:
+            own = _clean(rec.get("own"), mask)
+            hits = own_pool.get((rec["role"], own.casefold())) if own else None
+            if hits:
+                pairs.append((sec["id"], f"{rec['role']}:{own}", rec["props"], hits.pop(0)["props"]))
+            else:
                 unpaired += 1
     by_prop: dict = {p: [] for p in _STYLE_PROPS}
     identical = 0
+    sec_ident: Counter = Counter()   # per section: pairs with no un-accepted difference
     for sid, element, d, a in pairs:
         diffs = [p for p in _STYLE_PROPS if _style_norm(d[p]) != _style_norm(a[p])]
         identical += not diffs
+        clean = True
         for p in diffs:
-            row = {"section": sid, "element": element, "property": p, "design": d[p], "app": a[p]}
+            row = {"section": sid, "element": element, "property": p, "design": d[p], "app": a[p],
+                   "tolerated": False}
             hit = _style_accept(accept, row)
             row["accepted"] = hit is not None
+            clean = clean and hit is not None
             if hit is not None:
                 hit["used"] += 1
                 row.update(reason=hit["reason"], owner=hit["owner"])
             by_prop[p].append(row)
+        sec_ident[sid] += clean
     n = len(pairs)
     opened = {p: [r for r in by_prop[p] if not r["accepted"]] for p in _STYLE_PROPS}
     # A global type/box claim needs breadth, not just a majority: a majority
@@ -1101,11 +1290,21 @@ def diff_styles(design: list[dict], app: list[dict], min_pairs: int | None = Non
                    "common": Counter((r["design"], r["app"]) for r in g).most_common(1)[0][0]}
                   for (role, p), g in groups.items()
                   if len({r["section"] for r in g}) >= _FOUNDATION_MIN_SECTIONS and 2 * len(g) > role_pairs[role]]
+    sec_pairs = Counter(sid for sid, _, _, _ in pairs)
+    thr_lines = _apply_thresholds(accept, opened, foundation, primitives, sec_pairs, sec_ident)
+    opened = {p: [r for r in g if not r["tolerated"]] for p, g in opened.items()}
     rows = [dict(r, foundation=p in foundation) for p in _STYLE_PROPS for r in by_prop[p]]
     n_open = sum(len(g) for g in opened.values())
-    n_acc = len(rows) - n_open
+    n_tol = sum(r["tolerated"] for r in rows)
+    n_acc = len(rows) - n_open - n_tol
+    ident = sum(sec_ident.values())
     head = (f"style: {n} text-matched pair(s); style-identical {identical}/{n} = {_pct(identical, n)}; "
+            f"identity (owner-accepted ignored) {ident}/{n} = {_pct(ident, n)}; "
             f"{unpaired} design element(s) with no counterpart not style-checked.")
+    per_property = {p: len(by_prop[p]) for p in sorted(_STYLE_PROPS, key=lambda q: (-len(by_prop[q]),
+                                                                                    _STYLE_PROPS.index(q)))
+                    if by_prop[p]}
+    top = sorted((r for p in _STYLE_PROPS for r in opened[p]), key=lambda r: -per_property[r["property"]])[:10]
     if bad or not n or (min_pairs is not None and n < min_pairs):
         verdict = "STYLE_COULD_NOT_CHECK"
         why = (f"malformed data-cs (needs a JSON object with {', '.join(_STYLE_PROPS)}): "
@@ -1119,13 +1318,15 @@ def diff_styles(design: list[dict], app: list[dict], min_pairs: int | None = Non
         lines = [(f"STYLE_DIFF: {n_open} property difference(s) on {n_pairs} of {n} pair(s); "
                  f"{len(foundation)} FOUNDATION propert(ies); {n_acc} owner-accepted. "
                  "Reported apart from completeness."), head]
-    elif n_acc:
+    elif n_acc or n_tol:
         verdict = "STYLE_MATCH_WITH_ACCEPTED"
-        lines = [(f"STYLE_MATCH_WITH_ACCEPTED (accepted={n_acc}): not a plain STYLE_MATCH — every style "
-                 "difference is a row or rule of the owner-authored accept file."), head]
+        lines = [(f"STYLE_MATCH_WITH_ACCEPTED (accepted={n_acc}{f', tolerated={n_tol}' if n_tol else ''}): "
+                 "not a plain STYLE_MATCH — every style difference is a row, rule, or section threshold "
+                 "of the owner-authored accept file."), head]
     else:
         verdict = "STYLE_MATCH"
         lines = ["STYLE_MATCH: every text-matched pair is identical on every compared property.", head]
+    lines += thr_lines
     for p in _STYLE_PROPS:
         group = opened[p]
         if p in foundation:
@@ -1137,15 +1338,62 @@ def diff_styles(design: list[dict], app: list[dict], min_pairs: int | None = Non
             lines.append(f"STYLE_DIFF {p} ({len(group)} pair(s)):")
             lines += [f"  section '{r['section']}' {r['element'][:60]}: {r['design']} -> {r['app']}"
                       for r in group]
+    if per_property:
+        lines.append("mismatch count per property: " + ", ".join(f"{p}={k}" for p, k in per_property.items()))
+    if top:
+        lines.append("top style diffs (text | prop | design | app):")
+        lines += [f"  {r['element'].split(':', 1)[1][:60]} | {r['property']} | {r['design']} | {r['app']}"
+                  for r in top]
     acc = Counter((r["property"], r["design"], r["app"], r["reason"], r["owner"]) for r in rows if r["accepted"])
     lines += [f"ACCEPTED {p}: {d} -> {a} on {k} pair(s)  [{why}; {who}]" for (p, d, a, why, who), k in acc.items()]
     stale = [" ".join(k) for k, row in accept.items()
-             if len(k) != 4 and k[0] != "visual-reviewed" and not row["used"]]
+             if len(k) != 4 and k[0] not in ("visual-reviewed", "ignore") and not row["used"]]
     if stale:
         lines.append(f"info: style accept row(s)/rule(s) matching no difference (stale): {', '.join(stale)}")
-    return {"verdict": verdict, "pairs": n, "identical": identical, "unpaired": unpaired,
-            "foundation": foundation, "primitives": primitives, "accepted": n_acc,
-            "section_pairs": dict(Counter(sid for sid, _, _, _ in pairs)), "rows": rows, "lines": lines}
+    return {"verdict": verdict, "pairs": n, "identical": identical, "identity": ident, "unpaired": unpaired,
+            "foundation": foundation, "primitives": primitives, "accepted": n_acc, "tolerated": n_tol,
+            "per_property": per_property, "top": [{k: r[k] for k in ("section", "element", "property", "design",
+                                                                     "app")} for r in top],
+            "section_pairs": dict(sec_pairs), "rows": rows, "lines": lines}
+
+
+def _apply_thresholds(accept: dict, opened: dict, foundation: list, primitives: list, sec_pairs: Counter,
+                      sec_ident: Counter) -> list[str]:
+    """Apply owner `threshold` accept rows; return their report lines.
+
+    For a section with a `("threshold", section)` entry and >= 1 open style
+    row: when its identity (pairs with no un-accepted difference / its
+    pairs) is at least the threshold, every open row there that is not a
+    FOUNDATION property or a PRIMITIVE (role, property) is marked
+    `tolerated` (side effect on the rows in `opened`; the entry's `used` is
+    counted). Below the threshold, rows stay open. A threshold never waives
+    a FOUNDATION or PRIMITIVE row; an entry for a section with no open row
+    stays unused (reported stale by the caller).
+    """
+    prim = {(p["role"], p["property"]) for p in primitives}
+    lines = []
+    for key, entry in accept.items():
+        if key[0] != "threshold":
+            continue
+        sid = key[1]
+        rows = [r for g in opened.values() for r in g if r["section"] == sid]
+        if not rows:
+            continue
+        entry["used"] += 1
+        k, total = sec_ident[sid], sec_pairs[sid]
+        what = f"THRESHOLD section '{sid}': style identity {k}/{total} = {_pct(k, total)}"
+        if k * 100 < entry["pct"] * total:
+            lines.append(f"{what} < owner threshold {entry['shown']}% — its {len(rows)} row(s) stay open.")
+            continue
+        ok = [r for r in rows if r["property"] not in foundation
+              and (r["element"].split(":", 1)[0], r["property"]) not in prim]
+        for r in ok:
+            r.update(tolerated=True, reason=f"owner threshold {entry['shown']}%", owner="accept file")
+        kept = (f"{len(rows) - len(ok)} FOUNDATION/PRIMITIVE row(s) stay open (never waived by a threshold)"
+                if len(rows) > len(ok) else "")
+        done = f"{len(ok)} row(s) tolerated" if ok else ""
+        lines.append(f"{what} >= owner threshold {entry['shown']}% — {'; '.join(x for x in (done, kept) if x)}.")
+    return lines
 
 
 def _norm(text: str | None) -> str:
@@ -1167,7 +1415,9 @@ def parse_accept(text: str) -> tuple[dict | None, str | None]:
     normalized) keyed `("style", scope, property, design, app)`, or `rule
     min-<property> <N>px reason owner` keyed `("rule", property)`. An unknown
     property or rule, or a malformed value, fails closed. `visual-reviewed
-    section reason owner` is keyed `("visual-reviewed", section)`.
+    section reason owner` is keyed `("visual-reviewed", section)`;
+    `threshold section pct` (exactly 3 fields, 0 < pct <= 100, optional `%`)
+    is keyed `("threshold", section)` with a `Fraction` `pct`.
     """
     rows: dict = {}
     first = True
@@ -1178,8 +1428,27 @@ def parse_accept(text: str) -> tuple[dict | None, str | None]:
         header, first = first and fields[0].lower() == "section", False
         if header:   # the first non-comment row may be a column header
             continue
-        kind = fields[0] if fields[0] in ("style", "rule", "visual-reviewed") and fields[1:2] != [] \
-            and fields[1] not in _ROW_STATUSES else None
+        kind = fields[0] if fields[0] in ("style", "rule", "visual-reviewed", "threshold", "ignore") \
+            and fields[1:2] != [] and fields[1] not in _ROW_STATUSES else None
+        if kind == "ignore":
+            if len(fields) != 3 or not all(fields):
+                return None, (f"accept file row {n}: an ignore row needs 3 non-empty fields (ignore, section "
+                              "or - outside every section, data-parity-ignore id)")
+            key = ("ignore", fields[1], fields[2])
+            if key in rows:
+                return None, f"accept file row {n} duplicates an earlier row"
+            rows[key] = {"used": 0}
+            continue
+        if kind == "threshold":
+            pct = re.fullmatch(r"(\d{1,3}(?:\.\d+)?)%?", fields[2]) if len(fields) == 3 else None
+            if pct is None or not all(fields) or not 0 < Fraction(pct.group(1)) <= 100:
+                return None, (f"accept file row {n}: a threshold row needs 3 non-empty fields (threshold, "
+                              "section, style-identity % above 0 and at most 100)")
+            key = ("threshold", fields[1])
+            if key in rows:
+                return None, f"accept file row {n} duplicates an earlier row"
+            rows[key] = {"pct": Fraction(pct.group(1)), "shown": fields[2].rstrip("%"), "used": 0}
+            continue
         if kind == "visual-reviewed":
             if len(fields) != 4 or not all(fields):
                 return None, (f"accept file row {n}: a visual-reviewed row needs 4 non-empty fields "
@@ -1357,19 +1626,23 @@ def compare(design_path: str | None, app_path: str | None, accept_path: str | No
     `verdict` stays the completeness verdict; a passing inventory takes the
     style exit (STYLE_DIFF / STYLE_COULD_NOT_CHECK). `style_min_pairs` floors
     style pairs only; `min_pairs` never reaches style. `use_focus_gate` is
-    passed to `read_owner_authored`.
+    passed to `read_owner_authored`. A section failing the same-crop guard
+    (`crop_problems`) is UNVERIFIED and unscored while the rest is scored,
+    exit COULD_NOT_CHECK_CROP; a design-side `data-parity-ignore` without an
+    owner `ignore` row is COULD_NOT_CHECK; `ignored` lists each side's
+    ignored roots (also printed in the report).
     """
     def early(code: int, report: str) -> dict:
         """Result for a verdict reached before any inventory comparison."""
         return {"exit_code": code, "verdict": _VERDICT_NAMES[code], "report": report}
 
-    design = extract_side(design_path)
+    design, d_ignored = read_side(design_path)
     if design is None:
         return early(COULD_NOT_CHECK, (
             f"COULD_NOT_CHECK: design side unreadable, empty, or has no "
             f"sections ({design_path!r}). Two-sided input is required — a "
             "one-sided read cannot certify parity."))
-    app = extract_side(app_path)
+    app, a_ignored = read_side(app_path)
     if app is None:
         return early(COULD_NOT_CHECK, (
             f"COULD_NOT_CHECK: app side unreadable, empty, or has no "
@@ -1383,9 +1656,26 @@ def compare(design_path: str | None, app_path: str | None, accept_path: str | No
             f"{'; '.join(unresolved[:5])}. Re-export the DOM with data-visible=\"true\" or "
             "\"false\" on every element carrying hidden, sr-only, invisible, d-none, or "
             "visually-hidden; stylesheet visibility is not guessed."))
+    bad_lines = [f"{side} section '{s['id']}': {b}" for side, recs in (("design", design), ("app", app))
+                 for s in recs for b in s["bad_lines"]]
+    if bad_lines:
+        return early(COULD_NOT_CHECK, (
+            f"COULD_NOT_CHECK: data-lines must be a positive integer line-box count — {'; '.join(bad_lines[:5])}. "
+            "Re-export the count; it is never guessed."))
     accept, err, accept_source = load_accept(accept_path, accept_rev, use_focus_gate)
     if accept is None:
         return early(COULD_NOT_CHECK, f"COULD_NOT_CHECK: {err} — acceptance cannot be verified.")
+    # A design-side ignore removes a requirement: only an owner row may do that.
+    uncovered = [r for r in d_ignored if ("ignore", r["section"] or "-", r["id"]) not in accept]
+    if uncovered:
+        return early(COULD_NOT_CHECK, (
+            "COULD_NOT_CHECK: design-side data-parity-ignore without an owner-authored accept row "
+            "ignore<TAB><section><TAB><id> (section - outside every section): "
+            f"{', '.join(_ignored_label(r) for r in uncovered)} — ignoring a design element removes a "
+            "requirement, so the owner decides it."))
+    for r in d_ignored:
+        accept[("ignore", r["section"] or "-", r["id"])]["used"] += 1
+    crop = crop_problems(design, app)
 
     design_ids = [s["id"] for s in design]
     design_pop = [s["id"] for s in design if s["populated"]]
@@ -1408,23 +1698,39 @@ def compare(design_path: str | None, app_path: str | None, accept_path: str | No
     missing = [sid for sid in design_ids if states[sid] == "missing"]
     empty = [sid for sid in design_pop if states[sid] == "empty"]
     extra = [s["id"] for s in app if s["id"] not in set(design_ids)]
+    d_ign_keys = {(r["section"], r["id"]) for r in d_ignored}
+    a_unpaired = [r for r in a_ignored if r["section"] is not None and (r["section"], r["id"]) not in d_ign_keys]
 
     sections, no_inventory = [], []
-    tot_matched = tot_items = open_rows = accepted_n = 0
     for sec in design:
         sid, d_inv = sec["id"], sec["inventory"]
         entry = {"id": sid, "state": states[sid], "rows": []}
         a_sec = app_map.get(sid)
+        sections.append(entry)
         if d_inv is None or (a_sec is not None and a_sec["inventory"] is None):
             no_inventory.append(sid)
             entry.update(design_items=None, matched=None, completeness_pct=None)
-            sections.append(entry)
+            continue
+        if sid in crop:   # not the same crop: this section alone is unscored (UNVERIFIED)
+            entry.update(design_items=None, matched=None, completeness_pct=None, crop=crop[sid])
             continue
         if a_sec is None:
             diff = {"matched": 0, "total": len(d_inv), "rows": []}
         else:
             diff = diff_inventory(d_inv, a_sec["inventory"], sec["marked"] and a_sec["marked"])
-        for row in diff["rows"]:
+            # An app-side ignore with no design counterpart hides app content: open row.
+            diff["rows"] += [{"status": "EXTRA_IN_APP", "item": f"ignored:{r['id']}", "design": None,
+                              "app": f"ignored:{r['id']}"} for r in a_unpaired if r["section"] == sid]
+        entry.update(design_items=diff["total"], matched=diff["matched"],
+                     completeness_pct=_pct(diff["matched"], diff["total"]), rows=diff["rows"])
+    _fold_moves(sections)
+
+    tot_matched = tot_items = open_rows = accepted_n = 0
+    for entry in sections:
+        if entry["design_items"] is None:
+            continue
+        sid = entry["id"]
+        for row in entry["rows"]:
             hit = accept.get((sid, row["status"], _norm(row["item"]).casefold(), _norm(row["app"]) or "-"))
             row["accepted"] = hit is not None and hit["used"] < hit["count"]
             if row["accepted"]:
@@ -1433,30 +1739,31 @@ def compare(design_path: str | None, app_path: str | None, accept_path: str | No
                 accepted_n += 1
             else:
                 open_rows += 1
-        tot_matched += diff["matched"]
-        tot_items += diff["total"]
-        entry.update(design_items=diff["total"], matched=diff["matched"],
-                     completeness_pct=_pct(diff["matched"], diff["total"]), rows=diff["rows"])
-        sections.append(entry)
+        tot_matched += entry["matched"]
+        tot_items += entry["design_items"]
 
     overall_known = not no_inventory
     overall = {"design_items": tot_items if overall_known else None,
                "matched": tot_matched if overall_known else None,
                "completeness_pct": _pct(tot_matched, tot_items) if overall_known else None}
     completeness = (f"{tot_matched}/{tot_items} design items matched ({_pct(tot_matched, tot_items)})"
+                    + (" in the same-crop sections" if crop else "")
                     if overall_known else "completeness unknown (a side carries no inventory)")
 
     body = []
     body += [f"missing: section '{sid}' — build it (absent from the app)." for sid in missing]
     body += [f"empty:   section '{sid}' — seed it (present but no data-item in the app)." for sid in empty]
     for entry in sections:
+        if entry.get("crop"):
+            body.append(f"section '{entry['id']}': COULD_NOT_CHECK_CROP, not scored — {'; '.join(entry['crop'])}.")
+            continue
         if entry["design_items"] is None:
             body.append(f"section '{entry['id']}': inventory unavailable (a .json side has none).")
             continue
         body.append(f"section '{entry['id']}': {entry['matched']}/{entry['design_items']} design items "
                     f"matched ({entry['completeness_pct']}).")
         for row in entry["rows"]:
-            detail = (f"{row['design']} -> {row['app']}" if row["status"] == "CHANGED"
+            detail = (f"{row['design']} -> {row['app']}" if row["status"] in ("CHANGED", "MOVED")
                       else row["design"] or row["app"])
             tag = "ACCEPTED " + row["status"] if row["accepted"] else row["status"]
             suffix = f"  [{row['reason']}; {row['owner']}]" if row["accepted"] else ""
@@ -1469,6 +1776,12 @@ def compare(design_path: str | None, app_path: str | None, accept_path: str | No
              for k, row in accept.items() if len(k) == 4 and row["used"] < row["count"]]
     if stale:
         info.append(f"info: accept row(s) covering fewer differences than their count (stale): {', '.join(stale)}")
+    stale = [f"{k[1]}/{k[2]}" for k, row in accept.items() if k[0] == "ignore" and len(k) == 3 and not row["used"]]
+    if stale:
+        info.append(f"info: ignore row(s) matching no design-side data-parity-ignore (stale): {', '.join(stale)}")
+    n_ignored = len(d_ignored) + len(a_ignored)
+    if n_ignored:
+        info.append(_ignored_line(d_ignored, a_ignored))
 
     verdict = None
     if min_pairs is not None and tot_matched < min_pairs:
@@ -1479,6 +1792,14 @@ def compare(design_path: str | None, app_path: str | None, accept_path: str | No
              "page. Spot-check the pair list below; no verdict or work queue from this run is "
              "trusted."),
             *body, _BASIS, *info]
+    elif crop:
+        code = COULD_NOT_CHECK_CROP
+        report = [
+            (f"COULD_NOT_CHECK_CROP: {len(crop)} section(s) whose design and app captures are not the same "
+             f"crop ({', '.join(crop)}) are UNVERIFIED and unscored — re-capture them. The other sections are "
+             f"scored below: {len(missing)} missing + {len(empty)} empty; {open_rows} unaccepted inventory "
+             f"difference(s); {completeness}."),
+            _PRECONDITION, *body, _BASIS, *info]
     elif missing or empty or open_rows:
         code = MISMATCH
         report = [
@@ -1499,6 +1820,13 @@ def compare(design_path: str | None, app_path: str | None, accept_path: str | No
             ("COULD_NOT_CHECK: zero design/app element pairs matched — an empty comparison is "
              "never a MATCH; confirm both exports carry visible inventory."),
             *body, _BASIS, *info]
+    elif d_ignored:
+        code, verdict = MATCH, MATCH_WITH_IGNORED
+        report = [
+            (f"MATCH_WITH_IGNORED (ignored_n={len(d_ignored)}, accepted_n={accepted_n}): not a plain MATCH — "
+             f"{len(d_ignored)} design element(s) are excluded by owner-authored ignore rows ({accept_source}); "
+             f"every remaining design item is matched or accepted; element inventory {completeness}."),
+            *body, _BASIS, *info]
     elif accepted_n:
         code, verdict = MATCH, MATCH_WITH_ACCEPTED
         report = [
@@ -1511,7 +1839,8 @@ def compare(design_path: str | None, app_path: str | None, accept_path: str | No
         report = [
             ("MATCH: every design section is present in the app, and every "
              "design-populated section is populated in the app; element inventory "
-             f"{completeness}."),
+             f"{completeness}." + (f" {n_ignored} element(s) excluded by data-parity-ignore (listed below)."
+                                   if n_ignored else "")),
             *body, _BASIS, *info]
     verdict = verdict or _VERDICT_NAMES[code]
     inv_unverified = code == COULD_NOT_CHECK
@@ -1523,7 +1852,8 @@ def compare(design_path: str | None, app_path: str | None, accept_path: str | No
         else:
             report += style_res["lines"]
     visual = {k[1]: row for k, row in accept.items() if k[0] == "visual-reviewed" and len(k) == 2}
-    passed = _section_verdicts(sections, set(missing) | set(empty), inv_unverified, style_res, visual)
+    passed = _section_verdicts(sections, set(missing) | set(empty), inv_unverified, style_res, visual,
+                               {r["section"] for r in d_ignored if r["section"] is not None})
     if style_res is not None:
         report += [f"ACCEPTED visual-reviewed {sid}: no text-bearing data-cs; owner-reviewed  "
                    f"[{row['reason']}; {row['owner']}]" for sid, row in visual.items() if row["used"]]
@@ -1536,12 +1866,253 @@ def compare(design_path: str | None, app_path: str | None, accept_path: str | No
             "min_pairs": min_pairs, "style_min_pairs": style_min_pairs, "style": style_res, "accepted_n": accepted_n, "sections": sections,
             "sections_passed": passed, "sections_total": len(sections),
             "section_gaps": {"missing": missing, "empty": empty},
+            "ignored": {"design": d_ignored, "app": a_ignored},
             "extra_sections": extra, "report": "\n".join(report)}
 
 
+_BASELINE_FORMAT = "parity_differ-baseline/1"
+
+
+def fingerprint(app_path: str | None, style: bool) -> dict | None:
+    """The app side's inventory (+ style) fingerprint for `--baseline`; None without inventory.
+
+    Per section, in order: `items` = every inventory key as a diff row prints
+    it (containers with their row count), masked where the app section
+    carries `data-sample`/`data-value` markers so sample values never read
+    as drift; with `style`, `styles` = `[element, {property: normalized
+    value}]` per text-bearing `data-cs` element in document order.
+    `data-parity-ignore` subtrees are already excluded by the parser.
+    """
+    side = extract_side(app_path)
+    if side is None or any(s["inventory"] is None for s in side):
+        return None
+    secs = []
+    for s in side:
+        mask = s["marked"]
+        styles = [[f"{r['role']}:{_clean(r['text'], mask)}", {p: _style_norm(v) for p, v in r["props"].items()}]
+                  for r in s["styles"] if style and _clean(r["text"], mask)]
+        secs.append({"id": s["id"], "items": sorted(_show(i) for i in _prepare(s["inventory"], mask)),
+                     "styles": styles})
+    return {"format": _BASELINE_FORMAT, "style": style, "sections": secs}
+
+
+def _load_baseline(path: str) -> tuple[dict | None, str | None]:
+    """Read and shape-check a `--baseline` file; `(data, None)` or `(None, reason)`."""
+    try:
+        with open(path, encoding="utf-8") as fh:
+            data = json.load(fh)
+        ok = (data["format"] == _BASELINE_FORMAT and isinstance(data["style"], bool)
+              and all(isinstance(s["id"], str) and all(isinstance(i, str) for i in s["items"])
+                      and all(isinstance(el, str) and isinstance(props, dict) for el, props in s["styles"])
+                      for s in data["sections"]))
+    except (OSError, UnicodeDecodeError, ValueError, KeyError, TypeError) as exc:
+        return None, f"unreadable or malformed ({type(exc).__name__})"
+    return (data, None) if ok else (None, f"not a {_BASELINE_FORMAT} file")
+
+
+def diff_baseline(base: dict, cur: dict) -> tuple[list[dict], list[str]]:
+    """New deltas of a current fingerprint vs a baseline one: `(rows, new_section_ids)`.
+
+    Pure. Rows are `{"status", "section", "detail"}`: REMOVED (a baseline
+    section or item gone; items compare case-folded as a multiset), ADDED (an
+    item not in the baseline, inside a baseline section), STYLE_CHANGED (the
+    same element — role + text, duplicates in order — with a different
+    normalized value). A section new since the baseline is returned apart
+    (info, like an extra app section in the design comparison).
+    """
+    cur_map = {s["id"]: s for s in cur["sections"]}
+    rows = []
+    for b in base["sections"]:
+        sid, c = b["id"], cur_map.get(b["id"])
+        if c is None:
+            rows.append({"status": "REMOVED", "section": sid, "detail": "(whole section)"})
+            continue
+        shown = {i.casefold(): i for i in b["items"] + c["items"]}
+        bi, ci = Counter(i.casefold() for i in b["items"]), Counter(i.casefold() for i in c["items"])
+        rows += [{"status": "REMOVED", "section": sid, "detail": shown[k]} for k in (bi - ci).elements()]
+        rows += [{"status": "ADDED", "section": sid, "detail": shown[k]} for k in (ci - bi).elements()]
+        pool: dict = {}
+        for el, props in c["styles"]:
+            pool.setdefault(el.casefold(), []).append(props)
+        for el, props in b["styles"]:
+            hits = pool.get(el.casefold())
+            now = hits.pop(0) if hits else None
+            rows += [{"status": "STYLE_CHANGED", "section": sid, "detail": f"{el} {p}: {v} -> {now.get(p)}"}
+                     for p, v in props.items() if now is not None and now.get(p) != v]
+    base_ids = {b["id"] for b in base["sections"]}
+    return rows, [s["id"] for s in cur["sections"] if s["id"] not in base_ids]
+
+
+def _delta_lines(rows: list[dict]) -> list[str]:
+    """One indented report line per baseline delta row."""
+    return [f"  {r['status']:<14} section '{r['section']}' {r['detail']}" for r in rows]
+
+
+def apply_baseline(result: dict, app_path: str, path: str, style: bool, write: bool,
+                   accept_regression: bool = False) -> dict:
+    """Write or check a `--baseline` regression net on `compare`'s result; return it.
+
+    Write (`write`): only a passing run (exit 0) is recorded — a failing run
+    leaves the file untouched with a `baseline not written` line. Over an
+    existing file its deltas vs this run are printed first; when there are
+    any (or the old file is unreadable or has another `--style`) the file is
+    overwritten only with `accept_regression`, else it stays as is and the
+    exit is REGRESSION (8). The write is a side effect; OSError propagates.
+    Check: COULD_NOT_CHECK / CANNOT_COMPARE stand unchecked; an unreadable,
+    malformed, or other-`--style` baseline is COULD_NOT_CHECK; any new delta
+    (`diff_baseline`) is REGRESSION (8) and the report lists ONLY those
+    deltas plus a one-line design-comparison verdict — except under
+    COULD_NOT_CHECK_CROP, which keeps its exit and appends the deltas; no
+    delta keeps the comparison's own exit and appends `baseline: 0 new delta(s)`.
+    """
+    code = result["exit_code"]
+    result["baseline"] = {"path": path, "written": False, "regressions": []}
+    if write:
+        if code != MATCH:
+            result["report"] += (f"\nbaseline not written: the run did not pass (exit {code}); a baseline "
+                                 "records a passing run only.")
+            return result
+        fp = fingerprint(app_path, style)
+        lines, gate = [], None
+        if os.path.exists(path):
+            old, err = _load_baseline(path)
+            if old is not None and old["style"] != style:
+                err = f"recorded with style={old['style']}, this run style={style}"
+            if err is not None:
+                gate = f"the existing file is {err}"
+            else:
+                rows, _ = diff_baseline(old, fp)
+                result["baseline"]["regressions"] = rows
+                lines = [f"baseline: {len(rows)} delta(s) vs the existing {path}:", *_delta_lines(rows)] if rows else []
+                gate = f"{len(rows)} new delta(s) vs the existing baseline (listed)" if rows else None
+        if gate is not None and not accept_regression:
+            result.update(exit_code=REGRESSION, verdict="REGRESSION")
+            result["report"] += "\n" + "\n".join([
+                *lines, (f"baseline not overwritten: {gate}; re-recording would hide them — pass "
+                         "--accept-regression to record this run as the new baseline.")])
+            return result
+        with open(path, "w", encoding="utf-8") as fh:
+            json.dump(fp, fh, indent=1, sort_keys=True, ensure_ascii=False)
+            fh.write("\n")
+        result["baseline"]["written"] = True
+        result["report"] += "\n" + "\n".join([
+            *lines, *([f"accepted by --accept-regression: {gate}."] if gate else []),
+            (f"baseline written: {path} ({len(fp['sections'])} section(s), "
+             f"{sum(len(s['items']) for s in fp['sections'])} item(s), "
+             f"{sum(len(s['styles']) for s in fp['sections'])} style element(s)).")])
+        return result
+    if code in (COULD_NOT_CHECK, CANNOT_COMPARE):
+        result["report"] += "\nbaseline: not checked (the comparison itself could not run)."
+        return result
+    base, err = _load_baseline(path)
+    cur = fingerprint(app_path, style)
+    if base is not None and base["style"] != style:
+        err = f"recorded with style={base['style']}, this run style={style}; re-run alike or re-record it"
+    elif base is not None and cur is None:
+        err = "the app side carries no inventory"
+    if err is not None:
+        result.update(exit_code=COULD_NOT_CHECK, verdict="COULD_NOT_CHECK")
+        result["report"] = (f"COULD_NOT_CHECK: baseline {path}: {err} — the regression net cannot be "
+                            "checked.\n" + result["report"])
+        return result
+    rows, new_ids = diff_baseline(base, cur)
+    result["baseline"]["regressions"] = rows
+    info = ([f"info: section(s) new since the baseline (not a regression): {', '.join(new_ids)}"]
+            if new_ids else [])
+    if not rows or code == COULD_NOT_CHECK_CROP:
+        result["report"] += "\n" + "\n".join([f"baseline: {len(rows)} new delta(s) vs {path}.",
+                                              *_delta_lines(rows), *info])
+        return result
+    ign = result.get("ignored") or {}
+    was = result["verdict"] if code == MATCH else _VERDICT_NAMES[code]
+    result.update(exit_code=REGRESSION, verdict="REGRESSION")
+    result["report"] = "\n".join([
+        (f"REGRESSION: {len(rows)} new delta(s) vs baseline {path} (recorded from a passing run) — "
+         "something that passed before changed; only these new deltas are listed."),
+        *_delta_lines(rows), *info,
+        f"design comparison: {was} (exit {code}); rerun without --baseline for its full list.",
+        *([_ignored_line(ign.get("design", []), ign.get("app", []))] if ign.get("design") or ign.get("app") else [])])
+    return result
+
+
+def _ignored_label(r: dict) -> str:
+    """`section 'x' id` or `(outside sections) id` for one ignored root."""
+    return (f"section '{r['section']}'" if r["section"] is not None else "(outside sections)") + f" {r['id']}"
+
+
+def _ignored_line(d_ignored: list[dict], a_ignored: list[dict]) -> str:
+    """One report line listing every `data-parity-ignore` root per side (count + ids)."""
+    def side(label: str, rows: list[dict]) -> str:
+        """`label: section 'x' id, (outside sections) id` or `label: none`."""
+        return f"{label}: {', '.join(_ignored_label(r) for r in rows) if rows else 'none'}"
+    return (f"ignored: {len(d_ignored) + len(a_ignored)} element(s) excluded by data-parity-ignore "
+            f"from inventory and style — {side('design', d_ignored)}; {side('app', a_ignored)}.")
+
+
+def _fold_moves(sections: list[dict]) -> None:
+    """Fold a heading MISSING_IN_APP in one section + the same heading EXTRA_IN_APP in another into MOVED.
+
+    Side effect on the entries' `rows`: the MISSING row becomes `{"status":
+    "MOVED", "item", "design": key, "app": "section '<t>'"}` in the design's
+    section and the matching EXTRA row in section t is removed. Headings
+    only (case-folded key); a MOVED row is an open difference like any other.
+    """
+    for e in sections:
+        for row in e["rows"]:
+            if row["status"] != "MISSING_IN_APP" or not row["item"].startswith("heading:"):
+                continue
+            hit = next(((t, x) for t in sections if t is not e for x in t["rows"]
+                        if x["status"] == "EXTRA_IN_APP" and (x["app"] or "").casefold() == row["item"].casefold()),
+                       None)
+            if hit is not None:
+                hit[0]["rows"].remove(hit[1])
+                row.update(status="MOVED", app=f"section '{hit[0]['id']}'")
+
+
+def crop_problems(design: list[dict], app: list[dict]) -> dict:
+    """Same-crop guard, design as the reference: `{section id: [problem, ...]}` for the app crops.
+
+    Pure. Anchors are only the visible texts of `data-anchor` elements
+    (whitespace-normalized, case-folded); a plain heading is never an
+    anchor. Per section present on both sides with inventory: (1) when the
+    design section has anchors, the app section's item labels or anchors
+    must include at least one; (2) the app section may not carry a
+    `data-anchor` whose text the design anchors only in a different
+    section (a page header or KPI card leaked into the crop). The design
+    side is never checked against the app. Empty dict = every crop is the
+    same; only the listed sections are unscored.
+    """
+    def anchors(sec: dict) -> dict:
+        """Case-folded data-anchor text -> printable text for one section."""
+        return {_clean(t, False).casefold(): _clean(t, False) for t in sec["anchors"] if _clean(t, False)}
+
+    d_anc = {s["id"]: anchors(s) for s in design}
+    app_map = {s["id"]: s for s in app}
+    out: dict = {}
+    for sec in design:
+        sid, a_sec = sec["id"], app_map.get(sec["id"])
+        if a_sec is None or sec["inventory"] is None or a_sec["inventory"] is None:
+            continue
+        own, a_anc = d_anc[sid], anchors(a_sec)
+        seen = {_clean(i["label"], False).casefold() for i in a_sec["inventory"]} | set(a_anc)
+        if own and not set(own) & seen:
+            out.setdefault(sid, []).append(
+                f"app crop of section '{sid}' shares none of its design anchors ({', '.join(own.values())})")
+        for cf, shown in a_anc.items():
+            other = None if cf in own else next((t for t, anc in d_anc.items() if t != sid and cf in anc), None)
+            if other is not None:
+                out.setdefault(sid, []).append(
+                    f"app crop of section '{sid}' holds anchor '{shown}' of neighbouring section '{other}'")
+    return out
+
+
 def _section_verdicts(sections: list[dict], gaps: set, inv_unverified: bool, style_res: dict | None,
-                      visual: dict | None = None) -> int:
+                      visual: dict | None = None, ignored: set | None = None) -> int:
     """Set each section entry's `inventory`, `style`, and `verdict`; return the PASS count.
+
+    A section entry carrying `crop` (same-crop guard) is UNVERIFIED; a
+    passing section id in `ignored` (holds an owner-ignored design element)
+    reads PASS_WITH_IGNORED, never a plain PASS, and still counts as passed.
 
     PASS iff the section is present (and populated where the design is),
     every inventory row is matched or owner-accepted, and — with `--style` —
@@ -1559,8 +2130,9 @@ def _section_verdicts(sections: list[dict], gaps: set, inv_unverified: bool, sty
         n_acc = len(e["rows"]) - n_open
         e["inventory"] = ("n/a" if e["design_items"] is None else e["state"] if e["id"] in gaps
                           else f"{n_open} open" if n_open else f"ACCEPTED({n_acc})" if n_acc else "MATCH")
-        s_open = sum(r["section"] == e["id"] and not r["accepted"] for r in rows)
+        s_open = sum(r["section"] == e["id"] and not r["accepted"] and not r["tolerated"] for r in rows)
         s_acc = sum(r["section"] == e["id"] and r["accepted"] for r in rows)
+        s_tol = sum(r["section"] == e["id"] and r["tolerated"] for r in rows)
         s_unver = style_res is not None and (style_res["verdict"] == "STYLE_COULD_NOT_CHECK"
                                              or not style_res["section_pairs"].get(e["id"]))
         seen = s_unver and style_res["verdict"] != "STYLE_COULD_NOT_CHECK" and e["id"] in visual
@@ -1568,11 +2140,16 @@ def _section_verdicts(sections: list[dict], gaps: set, inv_unverified: bool, sty
             visual[e["id"]]["used"] += 1
             s_unver = False
         e["style"] = ("-" if style_res is None else f"{s_open} open" if s_open else "no pairs" if s_unver
-                      else "visual-reviewed" if seen else f"ok +{s_acc} accepted" if s_acc else "ok")
+                      else "visual-reviewed" if seen else f"ok +{s_acc} acc +{s_tol} tol" if s_acc and s_tol
+                      else f"ok +{s_acc} accepted" if s_acc else f"ok +{s_tol} tolerated" if s_tol else "ok")
         e["verdict"] = ("FAIL" if e["inventory"] not in ("MATCH", "n/a") and not e["inventory"].startswith("ACC")
                         else "UNVERIFIED" if inv_unverified or e["inventory"] == "n/a"
                         else "FAIL" if s_open else "UNVERIFIED" if s_unver else "PASS")
-    return sum(e["verdict"] == "PASS" for e in sections)
+        if e.get("crop"):
+            e["inventory"], e["verdict"] = "crop", "UNVERIFIED"
+        elif e["verdict"] == "PASS" and e["id"] in (ignored or ()):
+            e["verdict"] = "PASS_WITH_IGNORED"   # an owner ignore row removed a design element here
+    return sum(e["verdict"] in ("PASS", "PASS_WITH_IGNORED") for e in sections)
 
 
 def _section_table(sections: list[dict], passed: int, style_res: dict | None) -> list[str]:
@@ -1650,7 +2227,7 @@ def run_workflow(design_path: str | None, app_path: str | None, design_tokens: s
                 "Section verdicts are withheld.")
         for e in res.get("sections", []):
             e["own_verdict"], e["verdict"] = e["verdict"], "UNVERIFIED"
-    elif code in (COULD_NOT_CHECK, CANNOT_COMPARE):
+    elif code in (COULD_NOT_CHECK, CANNOT_COMPARE, COULD_NOT_CHECK_CROP):
         head = f"workflow: stopped at {_VERDICT_NAMES[code]} (see below)."
     elif blocked:
         code = BLOCKED_BY_FOUNDATION
@@ -1760,11 +2337,11 @@ def write_report(result: dict, out: str, design_path: str | None, app_path: str 
         sid = e["id"]
         inv = [(r["status"], r["design"] or "-", r["app"] or "-") for r in e["rows"] if not r["accepted"]]
         sty = [(r["element"], r["property"], r["design"], r["app"], "FOUNDATION" if r["foundation"] else "STYLE_DIFF")
-               for r in style_rows if r["section"] == sid and not r["accepted"]]
+               for r in style_rows if r["section"] == sid and not r["accepted"] and not r["tolerated"]]
         acc = [(r["status"], r["design"] or "-", r["app"] or "-", r["reason"], r["owner"])
                for r in e["rows"] if r["accepted"]]
         acc += [(f"style {r['property']}", r["design"], r["app"], r["reason"], r["owner"])
-                for r in style_rows if r["section"] == sid and r["accepted"]]
+                for r in style_rows if r["section"] == sid and (r["accepted"] or r["tolerated"])]
         parts.append(
             f'<section><h2>{esc(sid)} — {esc(e.get("verdict", "?"))}</h2>'
             f'<div class="sbs">{pane("design", design_shots, d_raw, sid)}{pane("app", app_shots, a_raw, sid)}</div>'
@@ -2011,7 +2588,11 @@ def _selftest() -> int:
         "floor-separate,needs-style)=ok foundation-breadth(one-section,two-pairs,default,style-floor)=ok "
         "style-accept(global,section,pin,rule,malformed)=ok sections(pass,fail,unverified,inventory-only)=ok "
         "workflow(tokens,foundation,primitive,accepted,local,unreadable,withheld,no-style-pairs,cli)=ok "
-        "visual-reviewed(owner,agent,has-pairs,page-could-not-check)=ok report(shots,escape,accepted,csp,css-escape)=ok"
+        "visual-reviewed(owner,agent,has-pairs,page-could-not-check)=ok report(shots,escape,accepted,csp,css-escape)=ok "
+        "ignore(owner-row,agent,design-missing,app-unpaired,app-cannot-hide,section,style)=ok threshold(met,not-met,scoped,foundation,primitive,malformed,agent)=ok "
+        "style-identity(counts,top,accepted-ignored,own-text)=ok lines(rows,heading,size-free,one-sided,invalid)=ok "
+        "crop(app-leak-scoped,design-reference,plain-heading,moved-heading,no-anchor,shared-heading,workflow)=ok "
+        "baseline(write,refuse,clean,removed,style,superset,design-change,masked,malformed,overwrite,path-guard,cli)=ok"
     )
     return 0
 
@@ -2228,6 +2809,9 @@ def _selftest_accept(tmp: str, write, check, failures: list, inv_design: str, fx
         # 5. Style approvals, the per-section table, --workflow, and --report.
         _selftest_workflow(tmp, write, check, failures,
                            lambda rel, body, email=owner: commit(email, rel, body))
+        # 6. data-parity-ignore, per-section thresholds, style identity, --baseline.
+        _selftest_extras(tmp, write, check, failures,
+                         lambda rel, body, email=owner: commit(email, rel, body))
     finally:
         for key, val in saved.items():
             if val is None:
@@ -2426,6 +3010,278 @@ def _selftest_workflow(tmp: str, write, check, failures: list, commit) -> None:
         failures.append(f"report-unwritable: exit {rc}, want {USAGE_ERROR}")
 
 
+def _selftest_extras(tmp: str, write, check, failures: list, commit) -> None:
+    """`data-parity-ignore`, `threshold` accept rows, style identity, and `--baseline` cases.
+
+    `commit(rel, body[, email])` commits one accept file as the owner (see
+    `_selftest_accept`); every accept file is read at HEAD.
+    """
+    page = _st_page
+    wrap = '<section data-section="s"><p data-item>x</p>{}</section>'
+
+    def two(label: str, d_body: str, a_body: str, **kw) -> dict:
+        """Compare one inline design/app section pair."""
+        return compare(write(f"{label}-d.html", wrap.format(d_body)),
+                       write(f"{label}-a.html", wrap.format(a_body)), **kw)
+
+    # 1. data-parity-ignore: excluded from inventory and style, always listed.
+    # A design-side ignore needs an owner `ignore` accept row; an app-side one
+    # with no design counterpart (same section + id) stays an open row.
+    clock_d = '<p>Updated <span data-parity-ignore="clock">10:41</span></p>'
+    clock_a = '<p>Updated <span data-parity-ignore="clock">11:02</span></p>'
+    r = two("ig-both", clock_d, clock_a)
+    check("ignore-design-needs-owner-row", r["exit_code"], r["report"], COULD_NOT_CHECK,
+          must_have=("owner-authored", "ignore<TAB><section><TAB><id>", "section 's' clock"), must_not=("MATCH:",))
+    ig_acc = commit("ig.tsv", "ignore\ts\tclock\n")
+    r = two("ig-both", clock_d, clock_a, accept_path=ig_acc, accept_rev="HEAD")
+    check("ignore-both-sides-owner", r["exit_code"], r["report"], MATCH,
+          must_have=("MATCH_WITH_IGNORED", "2 element(s) excluded", "design: section 's' clock",
+                     "app: section 's' clock", "PASS_WITH_IGNORED"), must_not=("MATCH: every",))
+    if r.get("verdict") != "MATCH_WITH_IGNORED" or \
+            [len(r.get("ignored", {}).get(k, ())) for k in ("design", "app")] != [1, 1]:
+        failures.append(f"ignore-both-sides-owner: {r.get('verdict')} ignored {r.get('ignored')}")
+    r = two("ig-both", clock_d, clock_a, accept_path=commit("ig-a.tsv", "ignore\ts\tclock\n", "lane-bot@example.com"),
+            accept_rev="HEAD")
+    check("ignore-row-agent-authored", r["exit_code"], r["report"], COULD_NOT_CHECK, must_have=("not the owner",))
+    r = two("ig-dmiss", '<button data-parity-ignore="share">Share</button>', "")
+    check("ignore-design-hides-missing", r["exit_code"], r["report"], COULD_NOT_CHECK, must_have=("section 's' share",))
+    banner = '<div data-parity-ignore="dev-banner"><button class="d-none">Reset seed</button></div>'
+    r = two("ig-app", "", banner)
+    check("ignore-app-unpaired-open", r["exit_code"], r["report"], MISMATCH,
+          must_have=("EXTRA_IN_APP", "ignored:dev-banner", "app: section 's' dev-banner"), must_not=("data-visible",))
+    ext = commit("ig-ext.tsv", "s\tEXTRA_IN_APP\tignored:dev-banner\tignored:dev-banner\t1\tharness banner\towner\n")
+    r = two("ig-app", "", banner, accept_path=ext, accept_rev="HEAD")
+    check("ignore-app-unpaired-accepted", r["exit_code"], r["report"], MATCH, must_have=("MATCH_WITH_ACCEPTED",))
+    r = two("ig-hides-design", "<button>Share</button>", "<button data-parity-ignore>Share</button>")
+    check("ignore-cannot-hide-design-item", r["exit_code"], r["report"], MISMATCH,
+          must_have=("MISSING_IN_APP", "control:button:Share", "app: section 's' <button>"))
+    promo = '<section data-section="promo" data-parity-ignore="promo"><p data-item>Sale</p></section>'
+    sec_d, sec_a = write("ig-sec-d.html", wrap.format("") + promo), write("ig-sec-a.html", wrap.format(""))
+    r = compare(sec_d, sec_a)
+    check("ignore-section-needs-owner-row", r["exit_code"], r["report"], COULD_NOT_CHECK,
+          must_have=("(outside sections) promo",))
+    r = compare(sec_d, sec_a, commit("ig-sec.tsv", "ignore\t-\tpromo\n"), "HEAD")
+    check("ignore-section-owner", r["exit_code"], r["report"], MATCH,
+          must_have=("MATCH_WITH_IGNORED", "design: (outside sections) promo"), must_not=("missing:",))
+    bad_cs = "<p data-parity-ignore=\"ad\" data-cs='{\"color\": \"red\"}'>Sponsored</p>"
+    r = compare(write("ig-st-d.html", page()),
+                write("ig-st-a.html", page().replace("</section>", bad_cs + "</section>", 1)), style=True)
+    check("ignore-style", r["exit_code"], r["report"], MISMATCH,
+          must_have=("STYLE_MATCH", "ignored:ad", "app: section 'overview' ad"), must_not=("malformed",))
+
+    # 2. Per-section style-identity thresholds: owner-authored, default strict.
+    sd, bold_h = write("x-d.html", page()), write("x-bh.html", page(bold=("holdings", "button")))
+    r = compare(sd, bold_h, commit("thr60.tsv", "threshold\tholdings\t60\n"), "HEAD", style=True)
+    check("threshold-met", r["exit_code"], r["report"], MATCH,
+          must_have=("STYLE_MATCH_WITH_ACCEPTED",
+                     ("THRESHOLD section 'holdings': style identity 2/3 = 66.6% (<100%) >= owner threshold 60%"),
+                     "1 row(s) tolerated", "sections passed 3/3", "+1 tolerated"),
+          must_not=("STYLE_DIFF font-weight",))
+    r = compare(sd, bold_h, commit("thr70.tsv", "threshold\tholdings\t70%\n"), "HEAD", style=True)
+    check("threshold-not-met", r["exit_code"], r["report"], STYLE_DIFF,
+          must_have=("style identity 2/3 = 66.6% (<100%) < owner threshold 70%", "STYLE_DIFF font-weight"))
+    r = compare(sd, bold_h, commit("thr-other.tsv", "threshold\toverview\t50\n"), "HEAD", style=True)
+    check("threshold-section-scoped", r["exit_code"], r["report"], STYLE_DIFF, must_have=("stale",))
+    found = write("x-f.html", page({"line-height": "24px"}, tags=("h2", "button")))   # 6/9, 3 sections
+    r = compare(sd, found, commit("thr-f.tsv", "threshold\toverview\t30\n"), "HEAD", style=True)
+    check("threshold-never-waives-foundation", r["exit_code"], r["report"], STYLE_DIFF,
+          must_have=("FOUNDATION line-height",), must_not=("tolerated",))
+    prim = write("x-p.html", page({"font-size": "16px"}, tags=("h2",)))   # h2 font-size in 3/3 sections
+    r = compare(sd, prim, commit("thr-p.tsv", "threshold\toverview\t60\n"), "HEAD", style=True)
+    check("threshold-never-waives-primitive", r["exit_code"], r["report"], STYLE_DIFF,
+          must_have=("1 FOUNDATION/PRIMITIVE row(s) stay open",), must_not=("tolerated",))
+    if ((r.get("style") or {}).get("primitives") or [{}])[0].get("property") != "font-size":
+        failures.append(f"threshold-never-waives-primitive: primitives {(r.get('style') or {}).get('primitives')}")
+    for label, body in (("threshold-zero", "threshold\tholdings\t0\n"),
+                        ("threshold-over-100", "threshold\tholdings\t101\n"),
+                        ("threshold-not-number", "threshold\tholdings\tmost\n"),
+                        ("threshold-extra-field", "threshold\tholdings\t90\treason\n")):
+        r = compare(sd, bold_h, commit(f"{label}.tsv", body), "HEAD", style=True)
+        check(label, r["exit_code"], r["report"], COULD_NOT_CHECK, must_have=("accept file row 1",))
+    r = compare(sd, bold_h, commit("thr-agent.tsv", "threshold\tholdings\t60\n", "lane-bot@example.com"),
+                "HEAD", style=True)
+    check("threshold-agent-authored", r["exit_code"], r["report"], COULD_NOT_CHECK, must_have=("not the owner",))
+
+    # 3. Style identity: per-property mismatch counts, top diffs, accepted-ignored
+    # identity, and an own-text second pass for pairs whose full text differs.
+    sa = write("x-sa.html", page({"line-height": "24px"}, bold=("holdings", "button")))
+    r = compare(sd, sa, style=True)
+    st = r.get("style") or {}
+    check("style-identity-report", r["exit_code"], r["report"], STYLE_DIFF,
+          must_have=("mismatch count per property: line-height=9, font-weight=1",
+                     "top style diffs (text | prop | design | app):",
+                     "  Open holdings | font-weight | 400 | 600", "  Holdings | line-height | 20px | 24px"))
+    if st.get("per_property") != {"line-height": 9, "font-weight": 1} or len(st.get("top") or ()) != 10:
+        failures.append(f"style-identity-report: per_property {st.get('per_property')} top {len(st.get('top') or ())}")
+    lh = write("x-lh.html", page({"line-height": "24px"}))
+    glob = commit("x-g.tsv", "style\tglobal\tline-height\t20px\t24px\tlooser rhythm\towner quote: \"keep 24px\"\n")
+    r = compare(sd, lh, glob, "HEAD", style=True)
+    check("style-identity-accepted-ignored", r["exit_code"], r["report"], MATCH,
+          must_have=("style-identical 0/9", "identity (owner-accepted ignored) 9/9 = 100.0%"),
+          must_not=("top style diffs",))
+    cs = json.dumps(_ST_BASE)
+    cs_b = json.dumps({**_ST_BASE, "font-weight": "600"})
+    r = two("own", f"<button data-cs='{cs}'>Open <span>holdings</span></button>",
+            f"<button data-cs='{cs_b}'>Open <span>reports</span></button>", style=True)
+    check("style-own-text-pairing", r["exit_code"], r["report"], MISMATCH,
+          must_have=("section 's' button:Open: 400 -> 600",))
+    if (r.get("style") or {}).get("pairs") != 1:
+        failures.append(f"style-own-text-pairing: pairs {(r.get('style') or {}).get('pairs')}, want 1")
+
+    # 5. Structural line counts: `data-lines` (rendered line boxes, a count,
+    # never a height) joins the item key, so 2-line rows vs 1-line design rows FAIL.
+    rows_d = '<ul><li data-lines="1">Alpha</li><li data-lines="1">Beta</li></ul><p data-lines="1">Caption</p>'
+    r = two("ln-rows", rows_d, rows_d.replace('data-lines="1"', 'data-lines="2"'))
+    check("lines-two-vs-one", r["exit_code"], r["report"], MISMATCH,
+          must_have=("list-item:Alpha [lines: 1] -> list-item:Alpha [lines: 2]", "text:Caption [lines: 1]",
+                     "3 unaccepted"))
+    r = two("ln-h", '<h2 data-lines="1">Totals</h2>', '<h2 data-lines="2">Totals</h2>')
+    check("lines-heading", r["exit_code"], r["report"], MISMATCH, must_have=("heading:h2:Totals [lines: 1]",))
+    r = two("ln-eq", rows_d, rows_d.replace("<ul>", '<ul style="padding:40px" height="900">'))
+    check("lines-equal-size-free", r["exit_code"], r["report"], MATCH)
+    r = two("ln-one", rows_d, rows_d.replace(' data-lines="1"', ""))
+    check("lines-one-sided-surfaces", r["exit_code"], r["report"], MISMATCH, must_have=("[lines: 1]",))
+    for label, bad in (("lines-not-number", "two"), ("lines-zero", "0"), ("lines-leading-zero", "01")):
+        r = two(label, rows_d, rows_d.replace('data-lines="1"', f'data-lines="{bad}"', 1))
+        check(label, r["exit_code"], r["report"], COULD_NOT_CHECK, must_have=(f'data-lines="{bad}"',),
+              must_not=("MISMATCH:",))
+
+    # 6. Same-crop guard (design is the reference): the app crop must share a
+    # design data-anchor and hold no neighbour's data-anchor; only that section
+    # is UNVERIFIED, the rest is still scored. A moved heading is a MOVED row.
+    kpis = ('<section data-section="kpis"><p data-item>x</p><div data-anchor>Total value</div>{}</section>')
+    hold = '<section data-section="holdings"><p data-item>x</p><h2>Holdings</h2>{}</section>'
+    d_crop = write("cr-d.html", kpis.format("<button>Export</button>") + hold.format(""))
+    leak = write("cr-leak.html", kpis.format("") + hold.format("<div data-anchor>Total value</div>"))
+    r = compare(d_crop, leak)
+    check("crop-app-leak-scoped", r["exit_code"], r["report"], COULD_NOT_CHECK_CROP,
+          must_have=("COULD_NOT_CHECK_CROP:",
+                     "app crop of section 'holdings' holds anchor 'Total value' of neighbouring section 'kpis'",
+                     "MISSING_IN_APP", "control:button:Export", "sections passed 0/2"),
+          must_not=("EXTRA_IN_APP", "MATCH:"))
+    if {e["id"]: e["verdict"] for e in r.get("sections", [])} != {"kpis": "FAIL", "holdings": "UNVERIFIED"}:
+        failures.append(f"crop-app-leak-scoped: sections {[(e['id'], e['verdict']) for e in r.get('sections', [])]}")
+    listed = "<p data-anchor>Holdings list</p>"
+    r = compare(write("cr-dleak.html", kpis.format("") + hold.format("<div data-anchor>Total value</div>" + listed)),
+                write("cr-a.html", kpis.format("") + hold.format(listed)))
+    check("crop-design-is-reference", r["exit_code"], r["report"], MISMATCH, must_not=("COULD_NOT_CHECK_CROP",))
+    head = '<section data-section="header"><p data-item>x</p><h1>Dashboard</h1></section>'
+    r = compare(write("cr-hd.html", head + hold.format("")),
+                write("cr-ha.html", head + hold.format("<h3>Dashboard</h3>")))
+    check("crop-plain-heading-is-extra", r["exit_code"], r["report"], MISMATCH,
+          must_have=("EXTRA_IN_APP", "heading:h3:Dashboard"), must_not=("COULD_NOT_CHECK_CROP",))
+    moved_d = hold.format("<h3>Recent</h3>") + '<section data-section="activity"><p data-item>x</p></section>'
+    moved_a = hold.format("") + '<section data-section="activity"><p data-item>x</p><h3>Recent</h3></section>'
+    r = compare(write("cr-md.html", moved_d), write("cr-ma.html", moved_a))
+    check("moved-heading-row", r["exit_code"], r["report"], MISMATCH,
+          must_have=("MOVED", "heading:h3:Recent -> section 'activity'"),
+          must_not=("EXTRA_IN_APP", "MISSING_IN_APP", "COULD_NOT_CHECK_CROP"))
+    moved = {(s["id"], row["status"], row["item"]) for s in r.get("sections", []) for row in s["rows"]}
+    if moved != {("holdings", "MOVED", "heading:h3:Recent")}:
+        failures.append(f"moved-heading-row: rows {sorted(moved)}")
+    anch = '<section data-section="holdings"><p data-item>x</p><h2 data-anchor>Holdings</h2><p>Rows</p></section>'
+    r = compare(write("cr-sd.html", anch), write("cr-sa.html", anch.replace("Holdings", "Activity")))
+    check("crop-no-shared-anchor", r["exit_code"], r["report"], COULD_NOT_CHECK_CROP,
+          must_have=("app crop of section 'holdings' shares none of its design anchors (Holdings)",))
+    dup = ''.join(f'<section data-section="{s}"><p data-item>x</p><h3>Details</h3></section>' for s in ("a", "b"))
+    r = compare(write("cr-dup.html", dup), write("cr-dup2.html", dup))
+    check("crop-shared-heading-not-leak", r["exit_code"], r["report"], MATCH)
+    tok_d = write("cr-t.json", '{"color": {"$type": "color", "brand": {"$value": "#ff0000"}}}')
+    r = run_workflow(d_crop, leak, tok_d, write("cr-bad.css", ":root { --color-brand: #00f; }"))
+    check("crop-outranks-workflow-block", r["exit_code"], r["report"], COULD_NOT_CHECK_CROP,
+          must_not=("BLOCKED_BY_FOUNDATION:",))
+
+    # 4. --baseline regression net: write only from a passing run with
+    # --write-baseline; later runs list only new deltas, exit REGRESSION (8).
+    def cli(argv: list) -> tuple[int, str]:
+        """Run main(argv); return (exit, stdout)."""
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            try:
+                rc = main(argv)
+            except SystemExit as exc:
+                rc = exc.code
+        return rc, out.getvalue()
+
+    base = os.path.join(tmp, "base.json")
+    extra = '<section data-section="promo"><p data-item>Spring sale</p></section>'
+    twin_x = write("bl-twin.html", page() + extra)
+    rc, out = cli(["--design", sd, "--app", twin_x, "--style", "--baseline", base, "--write-baseline"])
+    check("baseline-write", rc, out, MATCH, must_have=("baseline written",))
+    if not os.path.isfile(base):
+        failures.append("baseline-write: no baseline file")
+    refused = os.path.join(tmp, "refused.json")
+    rc, out = cli(["--design", sd, "--app", bold_h, "--style", "--baseline", refused, "--write-baseline"])
+    check("baseline-write-refused", rc, out, STYLE_DIFF, must_have=("baseline not written",))
+    if os.path.exists(refused):
+        failures.append("baseline-write-refused: a failing run wrote a baseline")
+    rc, out = cli(["--design", sd, "--app", twin_x, "--style", "--baseline", base])
+    check("baseline-clean", rc, out, MATCH, must_have=("baseline: 0 new delta(s)",))
+    rc, out = cli(["--design", sd, "--app", write("bl-rm.html", re.sub(
+        r"<button data-cs='[^']*'>Open activity</button>", "", page()) + extra), "--style", "--baseline", base])
+    check("baseline-regression-removed", rc, out, REGRESSION,
+          must_have=("REGRESSION:", "REMOVED", "section 'activity' control:button:Open activity"),
+          must_not=("MISSING_IN_APP",))
+    rc, out = cli(["--design", sd, "--app", write("bl-bh.html", page(bold=("holdings", "button")) + extra),
+                   "--style", "--baseline", base])
+    check("baseline-regression-style", rc, out, REGRESSION,
+          must_have=("STYLE_CHANGED", "section 'holdings' button:Open holdings font-weight: 400 -> 600"))
+    rc, out = cli(["--design", sd, "--app", write("bl-promo.html", page() + extra.replace("Spring", "Summer")),
+                   "--style", "--baseline", base])
+    check("baseline-regression-superset-section", rc, out, REGRESSION,
+          must_have=("section 'promo' text:Spring sale", "ADDED"))
+    rc, out = cli(["--design", write("bl-d2.html", page().replace("</section>", "<p>New copy</p></section>", 1)),
+                   "--app", twin_x, "--style", "--baseline", base])
+    check("baseline-design-change-is-mismatch", rc, out, MISMATCH, must_have=("baseline: 0 new delta(s)",))
+    vd = '<section data-section="s"><p data-item>Balance <span data-value>{}</span></p></section>'
+    vbase = os.path.join(tmp, "vbase.json")
+    rc, out = cli(["--design", write("bl-vd.html", vd.format("$10")), "--app", write("bl-va.html", vd.format("$40")),
+                   "--baseline", vbase, "--write-baseline"])
+    check("baseline-masked-write", rc, out, MATCH)
+    rc, out = cli(["--design", write("bl-vd.html", vd.format("$10")), "--app", write("bl-vb.html", vd.format("$75")),
+                   "--baseline", vbase])
+    check("baseline-masked-value-not-regression", rc, out, MATCH, must_have=("baseline: 0 new delta(s)",))
+    for label, argv in (("baseline-absent", ["--baseline", os.path.join(tmp, "nope.json")]),
+                        ("baseline-malformed", ["--baseline", write("bl-bad.json", "{not json")]),
+                        ("baseline-style-flag-differs", ["--baseline", vbase])):
+        rc, out = cli(["--design", sd, "--app", twin_x, "--style", *argv])
+        check(label, rc, out, COULD_NOT_CHECK, must_have=("baseline",))
+    # Re-recording over an existing baseline shows its deltas and needs
+    # --accept-regression before it overwrites a regression.
+    base2 = os.path.join(tmp, "base2.json")
+    cli(["--design", sd, "--app", twin_x, "--style", "--baseline", base2, "--write-baseline"])
+    with open(base2, encoding="utf-8") as fh:
+        before = fh.read()
+    promo2 = write("bl-promo2.html", page() + extra.replace("Spring", "Summer"))
+    rc, out = cli(["--design", sd, "--app", promo2, "--style", "--baseline", base2, "--write-baseline"])
+    check("baseline-overwrite-refused", rc, out, REGRESSION,
+          must_have=("baseline not overwritten", "REMOVED", "section 'promo' text:Spring sale", "--accept-regression"))
+    with open(base2, encoding="utf-8") as fh:
+        if fh.read() != before:
+            failures.append("baseline-overwrite-refused: the existing baseline changed")
+    rc, out = cli(["--design", sd, "--app", promo2, "--style", "--baseline", base2, "--write-baseline",
+                   "--accept-regression"])
+    check("baseline-overwrite-accepted", rc, out, MATCH,
+          must_have=("baseline written", "accepted by --accept-regression", "ADDED"))
+    rc, out = cli(["--design", sd, "--app", promo2, "--style", "--baseline", base2, "--write-baseline"])
+    check("baseline-rewrite-no-delta", rc, out, MATCH, must_have=("baseline written",))
+    for label, argv in (("accept-regression-needs-write", ["--baseline", base, "--accept-regression"]),
+                        ("baseline-path-is-app", ["--baseline", twin_x]),
+                        ("baseline-path-is-design", ["--baseline", sd, "--write-baseline"])):
+        rc, _ = cli(["--design", sd, "--app", twin_x, "--style", *argv])
+        if rc != USAGE_ERROR:
+            failures.append(f"{label}: exit {rc}, want {USAGE_ERROR}")
+    with open(sd, encoding="utf-8") as fh:
+        if "parity_differ-baseline" in fh.read():
+            failures.append("baseline-path-is-design: the design render was overwritten")
+    for label, argv in (("write-baseline-needs-baseline", ["--write-baseline"]),
+                        ("baseline-not-with-workflow", ["--baseline", base, "--workflow", "--design-tokens", sd,
+                                                        "--app-tokens", sd])):
+        rc, _ = cli(["--design", sd, "--app", twin_x, *argv])
+        if rc != USAGE_ERROR:
+            failures.append(f"{label}: exit {rc}, want {USAGE_ERROR}")
+
+
 def _min_pairs(text: str) -> int:
     """argparse type for `--min-pairs` / `--style-min-pairs`: an integer >= 1 (a floor of 0 checks nothing)."""
     if not re.fullmatch(r"[1-9][0-9]*", text.strip()):
@@ -2459,6 +3315,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--report", help="write a self-contained per-section HTML evidence report here")
     parser.add_argument("--design-shots", help="with --report: dir of design screenshots named <section id>.png")
     parser.add_argument("--app-shots", help="with --report: dir of app screenshots named <section id>.png")
+    parser.add_argument("--baseline", help="regression net: report only new deltas vs this passing-run "
+                        "fingerprint (exit 8 REGRESSION)")
+    parser.add_argument("--write-baseline", action="store_true", help="with --baseline: record this run's "
+                        "fingerprint there, only when the run passes")
+    parser.add_argument("--accept-regression", action="store_true", help="with --write-baseline: overwrite an "
+                        "existing baseline even though this run shows new deltas vs it")
     parser.add_argument("--json", action="store_true", help="print the full result as JSON (board posts)")
     parser.add_argument("--selftest", action="store_true", help="run the committed-fixture self-test")
     args = parser.parse_args(argv)
@@ -2479,6 +3341,15 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--design-tokens/--app-tokens/--token-map/--token-min-pairs need --workflow")
     if (args.design_shots or args.app_shots) and not args.report:
         parser.error("--design-shots/--app-shots need --report")
+    if args.write_baseline and not args.baseline:
+        parser.error("--write-baseline needs --baseline <file> (a baseline is only written explicitly)")
+    if args.baseline and args.workflow:
+        parser.error("--baseline is not supported with --workflow")
+    if args.accept_regression and not args.write_baseline:
+        parser.error("--accept-regression needs --write-baseline")
+    if args.baseline and os.path.realpath(args.baseline) in {
+            os.path.realpath(p) for p in (args.design, args.app, args.accept, args.report) if p}:
+        parser.error("--baseline must not be the --design, --app, --accept, or --report path")
 
     if args.workflow:
         result = run_workflow(args.design, args.app, args.design_tokens, args.app_tokens, args.token_map,
@@ -2487,6 +3358,13 @@ def main(argv: list[str] | None = None) -> int:
     else:
         result = compare(args.design, args.app, args.accept, args.accept_rev,
                          min_pairs=args.min_pairs, style=args.style, style_min_pairs=args.style_min_pairs)
+        if args.baseline:
+            try:
+                apply_baseline(result, args.app, args.baseline, args.style, args.write_baseline,
+                               args.accept_regression)
+            except OSError as exc:
+                print(f"parity_differ: cannot write --baseline {args.baseline}: {exc}", file=sys.stderr)
+                return USAGE_ERROR
     if args.report:
         try:
             write_report(result, args.report, args.design, args.app, args.design_shots, args.app_shots)
