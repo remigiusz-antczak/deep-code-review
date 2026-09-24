@@ -79,8 +79,10 @@ reconfiguring what "default" means is a claim about a surface you wrote, not the
 
 **Enumerate every diff in one pass before fixing any.** Finding diffs one at a time — fix, re-declare
 "done," the user finds the next — is the loop that burns trust and manufactures the repeated false ✅.
-Run one foundation-first gate, `scripts/parity_differ.py --workflow` (capture: `templates/parity-capture.md`;
-DOMs that nest a section differently: `--bands headings`, its SECTION BANDS):
+Run one foundation-first gate, `scripts/parity_differ.py --workflow` (capture: `templates/parity-capture.md`,
+whose settle-signal item is a **data-settled** race distinct from a DOM-**hydration** race — a route's
+serial/waterfall fetch chain can still be loading after hydration, and a capture taken in that gap scores as
+a false mismatch, `--require-settled`; DOMs that nest a section differently: `--bands headings`, its SECTION BANDS):
 tokens, then primitives (a FOUNDATION/PRIMITIVE style row — a property or type role off in 2+ sections
 — blocks every section: fix it once), then per-section inventory (completeness is judged **only**
 there) + styles; progress = `sections passed k/n`; `--report` is the visual pass before "ready".

@@ -1178,6 +1178,7 @@ Sourced for `agentic-delivery/scripts/handback_cap.py` and the handback-cap sect
 |---|---|---|
 | Claude Code — Hooks reference | https://code.claude.com/docs/en/hooks | "Exit code 2 behavior per event" table, `SubagentStop` row verbatim: can block — "Prevents the subagent from stopping, continues the subagent". `SubagentStop` "Fires when a subagent finishes"; hooks needing the final text "should use `last_assistant_message` on Stop and SubagentStop instead of reading the transcript". Inside a subagent the input also carries `agent_id` ("Unique identifier for the subagent") and `agent_type` ("Agent name (for example, `"Explore"` or `"security-reviewer"`)"). Matcher table: the `SubagentStop` matcher filters on **agent type**, same values as `SubagentStart` (`general-purpose`, `Explore`, `Plan`, custom agent names). Fetched + verified 2026-09-23. |
 | Claude Code — Hooks reference (`Stop`, non-blocking output) | https://code.claude.com/docs/en/hooks | JSON output table: `systemMessage` — "Warning message shown to the user"; `continue` defaults to `true`. "Stop decision control": `decision: "block"` "prevents Claude from stopping"; `hookSpecificOutput.additionalContext` keeps "the conversation going". So an advisory `Stop` hook emits only `systemMessage` and exits 0 (backs `agentic-ceo/scripts/stop_reminder.py`). Decision-control table: SessionStart is "Context only" — `hookSpecificOutput.additionalContext` "adds context for Claude"; `UserPromptSubmit` "only injects `additionalContext` alongside" the prompt; `hookSpecificOutput` "requires a `hookEventName` field set to the event name". Handler field `timeout`: "Seconds before canceling" (command default 600, 30 on UserPromptSubmit). Examples reference scripts via `${CLAUDE_PROJECT_DIR}`. `Stop` input carries `stop_hook_active`, `last_assistant_message`, and the common `cwd` field. Fetched + verified 2026-09-24. |
+| Claude Code — Hooks reference (`PostToolUse`, subagent fields) | https://code.claude.com/docs/en/hooks | Sourced for `agentic-delivery/scripts/lane_cap.py` and the status-token check in `handback_cap.py`. `PostToolUse` fires "After a tool call succeeds" and receives `tool_name`, `tool_input`, and `tool_use_id`. "Exit code 2 behavior per event" table, `PostToolUse` row: cannot block — "Exit 2 isn't honored; the tool already completed". `additionalContext` in `hookSpecificOutput` "adds context that Claude should consider"; "Exit 0 means success, and is the intended exit code when you print JSON for structured control". Common input field `session_id`: "Current session identifier"; `agent_id` is "Present only when the hook fires inside a subagent call. Use this to distinguish subagent hook calls from main-thread calls." `SubagentStop` exit 2: can block, the subagent continues. Fetched + verified 2026-09-24. |
 
 ## Verified by direct fetch (2026-09-23) — token/cost levers: model-scoped cache, subagent model pin, context editing, batch discount
 
@@ -1280,3 +1281,49 @@ in `deep-code-review/references/domain-k.md`. Each row fetched 2026-09-24.
 | GitHub — About protected branches | https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches | Verbatim: the **Require branches to be up to date before merging** checkbox is the strict setting; "The branch must be up to date with the base branch before merging"; strict mode means "More builds may be required, as you'll need to bring the head branch up to date after other collaborators update the target branch." Basis for `ci_cost_lint.py`'s DUP-TRIGGER check treating a strict repo's `push`(default branch) + `pull_request` combination as a duplicate-run cost, and a non-strict repo's combination as not. |
 
 **By name only (not fetched this session):** GitHub Actions `jobs.<job_id>.timeout-minutes` — the job-level timeout key defaults to GitHub's own runner ceiling when unset; the exact current default value is asserted in `domain-k.md`/`ci_cost_lint.py`'s docstring from general knowledge, not from a URL verified this session — reconfirm the exact number against the live workflow-syntax page before citing it as a fetched fact.
+
+## Verified by direct fetch/man page (2026-09-24) — GNU-vs-BSD shell flag portability (`reaper_lint.py` GNU_FLAG_SILENCED_STDERR rule, #1158)
+
+Sourced for the new rule flagging a GNU-only flag combined with `2>/dev/null` in a liveness/idle check
+(`find -newermt`, `find -printf`, `stat -c`, `date -d`, `sed -i` used with no argument). The BSD/macOS
+side was read directly from this machine's own man pages (macOS 26.5, `man <tool>`, no network); the GNU
+side from `man7.org`'s mirror of the Linux man-pages project (which packages the GNU coreutils/findutils/
+sed manuals). Each row read 2026-09-24.
+
+| Standard / source | URL | What was confirmed |
+|---|---|---|
+| macOS `find(1)` (BSD find) | local `man find` (macOS 26.5) | STANDARDS section lists `-mmin` and `-delete` as POSIX extensions BSD find implements natively (both portable, so neither is flagged); no `-printf` or `-newermt` token appears anywhere in the page (both absent from BSD find). The `-delete` section states "Depth-first traversal processing is implied by this option" — the same auto-`-depth` behavior GNU documents, so `-delete` carries no verified GNU/BSD divergence and is not flagged either. |
+| `find(1)` — Linux man-pages (GNU findutils) | https://man7.org/linux/man-pages/man1/find.1.html | `-printf format` is documented verbatim ("True; print format on the standard output..."). `-newerXY reference` is documented with X/Y each one of `actBcmt`; "If Y is t, then reference is interpreted directly as a time" — `-newermt` is that primary with X=m, Y=t. "The use of the -delete action on the command line automatically turns on the -depth option" (matches BSD's own implied-depth behavior above). |
+| macOS `stat(1)` (BSD stat) | local `man stat` (macOS 26.5) | SYNOPSIS is `stat [-FLnq] [-f format \| -l \| -r \| -s \| -x] [-t timefmt] [file ...]` — format is `-f`, not `-c`; no `-c` flag exists on this stat at all. |
+| `stat(1)` — Linux man-pages (GNU coreutils) | https://man7.org/linux/man-pages/man1/stat.1.html | `-c, --format=FORMAT` documented verbatim: "use the specified FORMAT instead of the default; output a newline after each use of FORMAT." |
+| macOS `date(1)` (BSD date) | local `man date` (macOS 26.5) | SYNOPSIS (`date [-nRu] ... [-r filename] [-r seconds] ...`, plus the `-j -f input_fmt` parsing form) has no `-d` flag at all. |
+| `date(1)` — Linux man-pages (GNU coreutils) | https://man7.org/linux/man-pages/man1/date.1.html | `-d, --date=STRING` documented verbatim: "display time described by STRING, not 'now'." |
+| macOS `sed(1)` (BSD sed) | local `man sed` (macOS 26.5) | SYNOPSIS is `sed [-EHalnru] command [-I extension] [-i extension] [file ...]` — `-i` takes a mandatory `extension` argument (an empty string for no backup, e.g. `sed -i '' ...`); it cannot be given with zero arguments. |
+| `sed(1)` — Linux man-pages (GNU sed) | https://man7.org/linux/man-pages/man1/sed.1.html | `-i[SUFFIX], --in-place[=SUFFIX]` documented verbatim, with the suffix in brackets — "the suffix can be omitted entirely," so `sed -i 's/a/b/' file` (no argument between `-i` and the script) is valid GNU sed but a BSD-argument error / wrong-file-consumed on macOS. |
+
+**Omitted as unverified (this session):** `find -mmin` and `find ... -delete` — both are documented, portable primaries on BSD/macOS find per the STANDARDS section above, so neither is a GNU-only flag; they are not flagged by the new rule even though the originating incident report suggested checking them.
+
+## Verified by direct fetch (2026-09-24) — GitHub Actions minimum-cost profile (`agentic-delivery/references/host-enforcement.md`, `ci_cost_lint.py` new checks)
+
+Sourced for the "Minimum-cost CI & token profile" doctrine and `ci_cost_lint.py`'s
+PUSH-TRIGGER / INTEGRATION-PR-BRANCH / REQUIRED-PATHS-FILTER / WEEKLY-SCHEDULE /
+CONSOLIDATION checks. Each row fetched 2026-09-24 in a prior session (scratchpad
+research `gha-cost-levers.md` + `gha-cost-evil-twin.md`), reused here per this
+repo's own rule that a same-day, already-fetched source may be cited without a
+redundant re-fetch.
+
+| Standard / source | URL | What was confirmed |
+|---|---|---|
+| GitHub Docs — Billing and usage | https://docs.github.com/en/actions/concepts/billing-and-usage | "GitHub Actions usage is free for standard GitHub-hosted runners in public repositories, and for self-hosted runners." No private-repo carve-out on the self-hosted half — applies regardless of visibility. |
+| GitHub Docs — Actions runner pricing | https://docs.github.com/en/billing/reference/actions-runner-pricing | Verbatim: "GitHub rounds the minutes and partial minutes each job uses up to the nearest whole minute" (ceiling, not round-to-nearest — a 10-second job still bills a full minute). Direct per-minute rates confirmed: Linux 1-core $0.002, Linux 2-core $0.006, Linux 2-core arm64 $0.005, Windows 2-core $0.010, macOS 3-4 core $0.062/min. |
+| GitHub Docs — Secure use reference | https://docs.github.com/en/actions/reference/security/secure-use | Self-hosted runners on private repos: "anyone who can fork the repository and open a pull request … [is] able to compromise the self-hosted runner environment," secrets and `GITHUB_TOKEN` included. Recommended mitigation: ephemeral/JIT runners on a clean environment per job. |
+| GitHub Docs — Managing a merge queue | https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/managing-a-merge-queue | Merge queues are available on any public repository, or a private repository owned by an organization on GitHub Enterprise Cloud — not Team, not Pro, not a personal-account repo. Adding `merge_group:` to `on:` is required or status checks never trigger once a PR enters the queue. |
+| GitHub Docs — Commit statuses (REST) | https://docs.github.com/en/rest/commits/statuses | "Users with push access in a repository can create commit statuses for a given SHA" — any token with push access (or the narrower `repo:status` scope) can post any state for any SHA, with no coupling to whether a gate actually ran. Basis for requiring a separate, non-push-scoped identity before a locally-posted commit status counts as a required check. |
+
+**By name only (not fetched this session):** GitHub Budgets alert thresholds — a
+repo/org owner configures which percentages of a spend cap trigger an alert;
+the profile's "50/80/100%" is this doctrine's own recommended cadence, not a
+claimed GitHub platform default (the platform's own default percentages were
+only confirmed via a search-engine snippet in the prior research session, not
+a direct fetch — reconfirm before citing a specific default number as fetched
+fact).

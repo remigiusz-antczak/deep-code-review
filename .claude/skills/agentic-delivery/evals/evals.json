@@ -1745,6 +1745,18 @@
       ]
     },
     {
+      "id": "suspected-quota-cap-confirm-before-teardown",
+      "prompt": "Five lanes just failed with a usage-limit error within the same minute. Someone proposes: delete the recurring schedules, write resume ledgers, and tell the peer session to stop dispatching new lanes, on the theory this is a multi-day quota cap. Three other lanes have not errored. What should happen before any of that teardown runs?",
+      "expected_output": "A first limit error is SUSPECTED, not CONFIRMED -- a short-lived throttle and a multi-day cap look identical at the moment of the first error. Before deleting any schedule, stopping any lane, or telling the peer session to stop, check two cheap signals: (1) is any lane still completing tool calls (the three lanes that have not errored are exactly this signal -- if they are still producing, the cap is not fleet-wide yet); (2) about 10 minutes after the first error, does one minimal probe agent answer. Declare the long stop only when both fail: no lane progress and the probe itself errors. Probe once, not on a loop -- a minimal probe agent still loads the full agent context, so repeated polling spends the tokens the stop was meant to save. Write the resume ledgers either way since they are cheap and reversible, but do not delete schedules or broadcast a stop to the peer session on the suspicion alone -- that is a destructive, shared-state action gated on confirmation, not a hunch (fanout-host-sizing.md).",
+      "expectations": [
+        "States the first limit error is a suspected cap, not a confirmed one",
+        "Requires checking whether any lane is still completing tool calls before concluding a fleet-wide stop",
+        "Requires one minimal probe agent about 10 minutes after the first error, and only declares the long stop when both checks fail",
+        "States the probe runs once, not on a loop, citing the full-context token cost of a repeated probe",
+        "Forbids deleting schedules or telling the peer session to stop before the confirm checks complete; permits writing resume ledgers regardless"
+      ]
+    },
+    {
       "id": "forced-update-protected-branch-freeze-all-pushes",
       "prompt": "A fetch on the integration branch shows the merge-base jumped back three weeks and thousands of commits are gone -- a sibling session ran a history-rewriting purge meant for a different repository against this one. About twenty lanes are still running. One teammate says: 'broadcast a HOLD telling every lane not to push to the integration branch, but let lanes keep pushing their own feature branches, that part is still safe.' Is that HOLD correct? What should actually happen, in order?",
       "expected_output": "No -- that HOLD is the exact mistake incident-response.md's VCS history-rewrite section calls out: a HOLD that only forbids the integration branch still lets an own-branch push land after the rewrite, and that branch falls outside the pre-rewrite mirror the restore step rebuilds from, so every own-branch push during the hold just adds another branch to the restorer's manual list. The freeze must forbid ALL pushes, rebases, merges, and new branches from the integration branch, own branches included, from the first broadcast -- lanes keep committing locally, and pushes resume per branch only after the restore owner's GO. In order: (1) Detect -- a forced-update on a protected branch is an incident signal, enter the runbook at Triage. (2) Freeze all pushes fleet-wide, ideally mechanized via a pre-push hook that refuses every push while a HOLD marker file sits in the git common dir. (3) Attribute via local reflogs and rewrite-tool traces, since a shared hosting account makes the host's event log useless. (4) Backup-mirror the current (post-incident) state before restoring anything. (5) Build a per-branch restore ledger classifying each branch PRE / REWRITTEN / TIP-REWRITTEN against the pre-rewrite mirror, skip branches an active lane still owns, and restore each with --force-with-lease, verifying the ref afterward.",
@@ -1951,6 +1963,80 @@
         "States the --draft-skip-ci note is scoped to the draft branch only",
         "States an already-ready (non-draft) PR's reason omits the note",
         "Explains why: an already-ready PR already ran checks, so there is nothing to explain"
+      ]
+    },
+    {
+      "id": "refresh-defaults-local-not-update-branch",
+      "prompt": "A fix just landed on main. Three open PRs are behind it. Run merge_train.py refresh --apply with no other flags. What happens, and how would you actually get gh pr update-branch to run?",
+      "expected_output": "refresh --apply alone never calls gh pr update-branch: the default prints one local checkout-plus-fetch-plus-merge-plus-push command per behind PR, for that PR's own owner to run on their next push, spending zero extra CI runs. gh pr update-branch only runs (under --apply) if --use-update-branch is also passed, and that flag's help names its one-CI-run-per-PR cost.",
+      "expectations": [
+        "States refresh --apply alone does not call gh pr update-branch",
+        "States the default prints local commands for the PR owner to run on their next push",
+        "States --use-update-branch is required to get the old gh pr update-branch behavior, and names its CI-run cost"
+      ]
+    },
+    {
+      "id": "cost-profile-rejects-hosted-ci-on-integration-branch",
+      "prompt": "An agent opens a PR proposing a new .github/workflows/lint.yml that runs on pull_request into the `development` integration branch. Per the minimum-cost profile (agentic-delivery/references/host-enforcement.md), should a reviewer approve it?",
+      "expected_output": "No. The minimum-cost profile bans GitHub-hosted CI on integration branches entirely -- development is server-enforced via branch protection/ruleset restricting merge to one integrator identity, who runs the full local gate on the exact merge result before merging. A pull_request-triggered hosted workflow targeting development reintroduces GitHub Actions minutes the profile eliminated; the reviewer rejects it and points the author at the integrator's local gate instead. ci_cost_lint.py's INTEGRATION-PR-BRANCH check flags this exact shape under --gate unless the workflow carries a `# ci-cost: allow <reason>` comment.",
+      "expectations": [
+        "Rejects hosted CI triggered on PRs into a non-default/integration branch",
+        "Names the server-enforced alternative: one integrator identity runs the local gate on the merge result",
+        "References the ci_cost_lint.py check (or its allow-list escape hatch) rather than inventing a different reason"
+      ]
+    },
+    {
+      "id": "commit-status-from-pusher-token-is-theatre",
+      "prompt": "A repo's required check is satisfied by a local gate script that posts a commit status via the GitHub statuses API, using the same access token the pushing agent already holds for its normal push. Per agentic-delivery/references/host-enforcement.md, does this count as a Host-enforced required check?",
+      "expected_output": "No -- it is decorative (Protocol level at best), not Host-enforced. The GitHub commit-statuses endpoint accepts any push-access token for any SHA, so a credential that can push can also mint its own green status with zero coupling to whether the gate actually ran. The minimum-cost profile requires the status-posting identity to be a SEPARATE, low-privilege token from the one that pushed -- verified by comparing the two tokens' `gh api user` logins -- and downgrades the check to advisory-only when no identity separation exists. integrator-gate.sh refuses to post a status when the gate token's login equals the push token's login.",
+      "expectations": [
+        "States a same-token commit status is forgeable / theatre, not a real gate",
+        "Requires a separate gate identity, verified via distinct `gh api user` logins",
+        "Names the fallback: downgrade to advisory (label/comment) rather than treating it as a required check when identity separation is absent"
+      ]
+    },
+    {
+      "id": "cost-cut-tier1-path-needs-strong-model-and-independent-review",
+      "prompt": "To save tokens, the orchestrator dispatched a Sonnet lane to edit a skill's references/*.md file and the gate script it describes, and the same lane self-reviewed because 'it is just docs plus a small script'. The commit has no trailers. Is this acceptable under the cost vs quality guardrails?",
+      "expected_output": "No. Tier comes from paths, not the dispatcher's judgment: templates/review-tiers.tsv puts skill prose (references/*.md) and gate scripts in tier 1, and a commit's strictest path decides. Tier 1 needs the strongest allowed model (a Model: opus trailer) and an independent reviewer (a Reviewed-By: <id> receipt:<sha|path|url> trailer naming someone other than the author and committer, whose receipt exists). tier_gate.py <base>..<head> fails this commit on both counts. Self-review is allowed only for tier-3 docs outside the skill and hook directories. The dispatcher should have run tier_gate.py --classify on the changed paths and used the strictest tier.",
+      "expectations": [
+        "Classifies skill prose and gate scripts as tier 1 via the single templates/review-tiers.tsv file, not by judgment",
+        "Requires both a Model: opus trailer and an independent Reviewed-By: trailer, and says tier_gate.py fails the commit",
+        "States self-review is allowed only for tier-3 docs outside skill/hook directories",
+        "Names tier_gate.py --classify as the dispatch step's input"
+      ]
+    },
+    {
+      "id": "lane-cap-checkpoint-unverified-not-done",
+      "prompt": "A lane running with LANE_TOOL_CAP=100 gets a context line at tool call 80 saying 'checkpoint now'. It ignores it, keeps working, and at call 130 hands back 'done, all fixed' with no status token. What should happen, and what does the orchestrator record?",
+      "expected_output": "lane_cap.py (PostToolUse) only injects context: 'checkpoint now: write handback marked UNVERIFIED with remaining work' at 80% and 'stop: hand back UNVERIFIED' from the cap onward; it never blocks a tool, because PostToolUse cannot block and a stuck counter must not wedge a lane. The enforcement is at the handback: with HANDBACK_REQUIRE_STATUS=1, handback_cap.py (SubagentStop) blocks a handback with no status line (verified, unverified, or 'done | evidence | next') and sends the lane back to add one. 'done, all fixed' is not VERIFIED unless it names a green gate or confirmed effect at the exact SHA; otherwise the lane hands back UNVERIFIED with the remaining work, and the orchestrator never counts UNVERIFIED as done.",
+      "expectations": [
+        "States lane_cap.py injects a checkpoint at 80% and a stop at the cap and never blocks tools",
+        "Names handback_cap.py at SubagentStop as the enforcing half that blocks a handback missing VERIFIED/UNVERIFIED",
+        "Does not count the lane's work as done unless VERIFIED with evidence at the exact SHA",
+        "Does not propose making the PostToolUse hook block tools"
+      ]
+    },
+    {
+      "id": "escaped-blocker-traced-to-cost-cut-reverts",
+      "prompt": "Two weeks ago we moved a must-load security section behind a trigger (commit trailer 'Cost-Cut: moved injection checklist behind trigger'). Yesterday an injection bug shipped; the fix commit has 'Regression-Of: <the cut commit sha>' and 'Severity: Blocker'. Escaped-defect counts overall are flat this month. Keep the cut?",
+      "expected_output": "No: revert the cut. The rule is not a trend: any escaped Blocker traced to a cost cut reverts that cut. escaped_defects.py ties the fix to the cut because its Regression-Of sha is a Cost-Cut: commit, and prints REVERT <cut sha>. Flat monthly counts are irrelevant because the counts are too small to read trends. Also check that this cut was the only cut in its measurement window and landed after the 4-week baseline; and a rule that decides a Blocker verdict belongs in scripts/floor-anchors.tsv so it cannot leave the must-load floor again.",
+      "expectations": [
+        "Reverts the cut on a single escaped Blocker traced to it, without appealing to trends",
+        "Names the Regression-Of: and Cost-Cut: trailers and escaped_defects.py as the attribution mechanism",
+        "Mentions one cut per measurement window and/or the 4-week baseline",
+        "Points to floor anchors so Blocker-deciding rules stay in the must-load floor"
+      ]
+    },
+    {
+      "id": "tier1-shared-account-review-cannot-prove-independence",
+      "prompt": "Every lane and the reviewer lane push from the same GitHub account. A tier-1 commit carries 'Model: opus' and 'Reviewed-By: reviewer-lane receipt:reviews/pr-12.md', the receipt file is committed, and tier_gate.py passes. Can we claim the change was independently reviewed?",
+      "expected_output": "No. tier_gate.py proves only that a named identity different from the author and committer left a receipt that exists (a committed path, a reachable sha, or a PR review/comment URL gh can fetch). It cannot prove the reviewer read the diff, and when every lane shares one account, independence cannot be proven at all. Give the reviewer its own account, such as a reviewer bot, and gate with tier_gate.py --github <PR>, which requires an APPROVED review from a login other than the PR author. Until then report the review as unverified independence, not as independent review.",
+      "expectations": [
+        "States a passing tier_gate.py proves a distinct named identity and an existing receipt, not that the diff was read",
+        "States one shared account cannot prove reviewer independence",
+        "Recommends a separate reviewer account or bot and tier_gate.py --github requiring an APPROVED review from another login",
+        "Does not claim independent review on this evidence"
       ]
     }
   ]

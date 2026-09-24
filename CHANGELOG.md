@@ -3,6 +3,27 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.457.0] — 2026-09-24
+
+### Added — minimum-cost CI and token profile (universal, mandatory)
+- `agentic-delivery/references/host-enforcement.md` "Minimum-cost CI & token profile": integration branches run no GitHub-hosted CI — a deterministic integrator script (not an LLM) gates the exact merge result locally, pushes it to a scratch ref, posts the required status with a separate gate identity lanes never hold, and fast-forwards only the gated sha; main gets one CI run per PR (`opened, reopened, ready_for_review, synchronize`, drafts skipped, cancel-in-progress, job timeouts, no push trigger, no post-merge run, no schedules by default); required checks are never path-filtered; one pinned multi-arch image for local and CI parity; self-hosted runners only inside an isolated VM or container; a soft budget with alerts. Monitoring probes keep their cadence on free infrastructure with a failure issue and a heartbeat. Cost discipline: gates run locally before any push, one final push per PR, no re-runs (one narrow infrastructure-flake carve-out), no `gh pr update-branch`, no polling (`gh pr merge --auto`), `[skip ci]` never on the ref main CI protects.
+- `deep-code-review/templates/integrator-gate.sh` and a minimum-profile `templates/dcr-gates.yml`; `install.sh --with-gates` prints the owner checklist (branch protection, budget alerts) and changes nothing.
+- `ci_cost_lint.py`: flags push triggers, CI on PRs into non-default branches (including a bare `pull_request:`, `branches-ignore`, `pull_request_target`), schedules more frequent than weekly, required checks with path filters, and duplicate triggers; an allow comment needs a reason. `scripts/eval_citation_lint.py` checks every routed sub-file is cited by an eval.
+- Cost-vs-quality guardrails: `templates/review-tiers.tsv` + `tier_gate.py` (tier-1 changes — security, gates, hooks, skill prose — need `Model:` and a `Reviewed-By: … receipt:` trailer; advisory in this repo), `lane_cap.py` (non-blocking per-lane tool-call checkpoint), optional handback status field, `scripts/trigger_lint.py` + `scripts/floor-anchors.tsv` (moved rules keep their triggers; must-stay rules never leave the floor), `escaped_defects.py` (`Regression-Of:` / `Cost-Cut:` trailers; an escaped Blocker traced to a cut reverts it).
+- `merge_train.py refresh` prints local fetch-merge-push commands per PR instead of calling `gh pr update-branch` (opt-in `--use-update-branch` warns it costs one CI run per PR).
+- Web review must-load 23,349 → about 19,300 estimated tokens: frontend security depth moves to `frontend-security.md` (base security rules stay inline; triggers include web storage and URL tokens) and UX data-state depth to `ux-states.md`.
+- Suspected quota caps are confirmed with one delayed probe before any teardown (#1166); parity captures wait for an app-declared settle signal and an unsettled capture is COULD_NOT_CHECK (#1165); `reaper_lint.py` flags GNU-only flags whose error is silenced by `2>/dev/null` on the same command (#1158).
+- size-budget-raise: .claude/skills/agentic-delivery/references/fanout-host-sizing.md 40890→42953 suspected-quota confirm-before-teardown rule (#1166) and cost-vs-quality lane caps
+- size-budget-raise: .claude/skills/agentic-delivery/references/host-enforcement.md 14583→27542 canonical minimum-cost CI and token profile, cost discipline, quality guardrails
+- size-budget-raise: .claude/skills/agentic-delivery/references/roles.md 23942→23958 merge-base-and-one-push wording
+- size-budget-raise: .claude/skills/agentic-delivery/references/unattended-trackers.md 43567→43717 no CI polling; auto-merge
+- size-budget-raise: .claude/skills/deep-code-review/references/domain-k.md 4095→4417 CI runner-cost levers and ci_cost_lint routing
+- size-budget-raise: .claude/skills/deep-code-review/references/domain-m.md 1170→1193 routing names logs/metrics/traces
+- size-budget-raise: .claude/skills/deep-code-review/references/lang-shell.md 5297→7046 GNU-only flags silenced by 2>/dev/null (#1158)
+- size-budget-raise: .claude/skills/deep-code-review/references/merge-operations.md 61327→61648 refresh prints local merge-and-push commands
+- size-budget-raise: .claude/skills/deep-code-review/references/model-tiering.md 12968→13271 review tiers file and tier gate
+- size-budget-raise: .claude/skills/deep-code-review/references/rendered-parity.md 10611→10864 capture settle signal (#1165)
+
 ## [1.456.0] — 2026-09-24
 
 ### Added — protected-visual, draft-skip-CI, and shared-lock fixes from the field

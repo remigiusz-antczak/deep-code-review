@@ -184,7 +184,10 @@ forever. The escape is the merge train above, used deliberately as the *discharg
    union run, and it merges alone, first. Siblings then **rebase** (which drops a duplicate patch), never carry a
    copy. `merge_train.py keystone` checks each condition and parks any sibling carrying a copy (#1142).
    A CI re-run reuses a PR's old merge commit, so after any fix lands, update each PR behind it instead:
-   `merge_train.py refresh` prints (`--apply` runs) `gh pr update-branch`, skipping keystone-copy carriers.
+   `merge_train.py refresh` by default prints local merge-and-push commands per PR (its own owner runs
+   them on their next push, zero extra CI runs); `--use-update-branch` opts into printing (`--apply` runs)
+   `gh pr update-branch` instead, which costs one CI run per PR — see agentic-delivery `host-enforcement.md`
+   **Cost discipline: no push/CI spend to "see if it passes"**. Either way it skips keystone-copy carriers.
    It does not coordinate with a lane mid-push: run it only when no lane is pushing to the PRs it updates,
    or have lanes rebase afterward, since a lane's later force-push drops the merge commit refresh just made.
 

@@ -56,17 +56,44 @@ CHECKS (one line per finding, name + fix)
    steps look test-only (a `pytest`/`go test`/`npm test`/… signal) but whose
    `push`/`pull_request` trigger has no `paths`/`paths-ignore`, so a docs-only
    change still runs it.
+7. PUSH-TRIGGER  — any `push:` trigger at all. The minimum-cost profile
+   (`agentic-delivery/references/host-enforcement.md`) bans push-triggered
+   hosted CI outright: an integration branch gets zero hosted CI, and
+   main/release CI runs only on a PR. Suppressed to ADVISORY on a file
+   carrying a `# ci-cost: allow <reason>` comment anywhere in it.
+8. INTEGRATION-PR-BRANCH — a `pull_request` or `pull_request_target` trigger
+   not safely scoped to the default branch (`--default-branch`, `main`, or
+   `master`): a bare trigger with no `branches`/`branches-ignore` key at all
+   (matches a PR into ANY branch), a `branches-ignore` filter (excludes
+   rather than restricts, so it still matches a non-default branch), or a
+   `branches:` list naming one — each is hosted CI reachable from an
+   integration branch, which the profile bans. Same allow-list suppression
+   as PUSH-TRIGGER.
+9. REQUIRED-PATHS-FILTER — (only checked when `--required` names this file)
+   a required check's own trigger carries a `paths`/`paths-ignore` filter —
+   an unmatched change means the check never reports and the PR blocks
+   forever waiting on a status that will never arrive.
+10. WEEKLY-SCHEDULE — a `schedule:` cron that fires more often than once a
+    week (the profile's cap for probes). Broader than SCHEDULE (check 4,
+    hourly): counts the hour field alongside day-of-month/day-of-week, so a
+    daily cron (`0 2 * * *`), an hour-spanning cron pinned to one weekday
+    (`0 * * * 0`, 24x that day), and a day-of-month step (`0 0 */2 * *`,
+    every other day) are all caught even though none fires more than once
+    an hour.
+11. CONSOLIDATION — (always ADVISORY, never blocks `--gate`) two or more
+    workflow files share byte-identical normalized triggers — a candidate to
+    merge into one workflow (job-count rounding, see domain-k.md).
 
 EXIT CODES
 -----------
 Default mode prints every finding and exits 0 (advisory only — see the repo
 CLAUDE.md owner priority: informational by default, enforced only when a repo
 opts in). `--gate` exits 1 if any BLOCKING finding fired (checks 1, 2, 4, 5,
-a PARSE-ERROR, and check 3 only when strictness is actually known) — an
-ADVISORY finding (check 6, or check 3 with unknown strictness) never trips
-`--gate`. Exit 2 (fail closed, not "no findings") if `root` itself does not
-exist; a root that exists but has no `.github/workflows/` is a legitimate
-clean scan (exit 0, no findings).
+7, 8, 9, 10, a PARSE-ERROR, and check 3 only when strictness is actually
+known) — an ADVISORY finding (check 6, check 11, an allow-listed 7/8, or
+check 3 with unknown strictness) never trips `--gate`. Exit 2 (fail closed,
+not "no findings") if `root` itself does not exist; a root that exists but
+has no `.github/workflows/` is a legitimate clean scan (exit 0, no findings).
 `--selftest` runs the built-in RED/GREEN cases and ignores all other args.
 """
 from __future__ import annotations
@@ -91,6 +118,28 @@ TEST_SIGNAL_RE = re.compile(
     r"\b(pytest|go\s+test|npm\s+test|yarn\s+test|make\s+test|unittest|jest|rspec|cargo\s+test)\b",
     re.IGNORECASE,
 )
+
+# `# ci-cost: allow <reason>` anywhere in a workflow file suppresses
+# PUSH-TRIGGER / INTEGRATION-PR-BRANCH from BLOCKING to ADVISORY for that
+# file — but ONLY with a real, non-empty reason (a bare `# ci-cost: allow`
+# with nothing after it does not suppress anything; see _allow_reason). `$`
+# with MULTILINE anchors the match to one line (comments are stripped before
+# YAML parsing, so this scans the raw text) — write the reason on the same
+# line as the marker, not wrapped onto a following comment line.
+_ALLOW_RE = re.compile(r"#\s*ci-cost:\s*allow\b[ \t]*(\S.*)?$", re.IGNORECASE | re.MULTILINE)
+
+
+def _allow_reason(text: str) -> str | None:
+    """Return the trimmed reason text after `# ci-cost: allow`, or `None` if
+    the file has no such comment OR the comment has no reason after it — an
+    empty/whitespace-only reason must NOT suppress a blocking finding (a
+    silent, unexplained allow-list entry defeats the point of requiring a
+    reason at all)."""
+    m = _ALLOW_RE.search(text)
+    if not m:
+        return None
+    reason = (m.group(1) or "").strip()
+    return reason or None
 
 # A bare anchor (`&name`) or alias (`*name`) reference — not a quoted string,
 # not a flow-collection marker (those are `[`/`{`), not a lone unnamed `*`.
@@ -385,6 +434,30 @@ def _has_paths_filter(trigger_val: Any) -> bool:
     )
 
 
+def _pr_branch_issue(trigger_val: Any, default_branches: set[str]) -> str | None:
+    """Return a short description of why a `pull_request`/`pull_request_target`
+    trigger is not safely scoped to the default branch only, or `None` if it
+    is. Three shapes all mean "can run on a PR into an integration branch":
+    a bare trigger (no `branches`/`branches-ignore` key at all — matches a
+    PR into ANY branch), a `branches-ignore` filter (it EXCLUDES branches
+    rather than restricting TO one, so it still matches non-default branches
+    unless every branch but the default is listed, which this lint does not
+    try to verify), and a `branches` list naming a branch outside
+    `default_branches`."""
+    if not isinstance(trigger_val, dict) or (
+        "branches" not in trigger_val and "branches-ignore" not in trigger_val
+    ):
+        return "no branches filter -- runs on a PR into ANY branch, including an integration branch"
+    if "branches-ignore" in trigger_val:
+        return "uses branches-ignore, which does not restrict runs to the default branch only"
+    branches = trigger_val.get("branches")
+    if isinstance(branches, list):
+        non_default = [b for b in branches if isinstance(b, str) and b not in default_branches]
+        if non_default:
+            return f"targets non-default branch(es) {non_default}"
+    return None
+
+
 def _matrix_size(matrix: dict[Any, Any]) -> int:
     """GitHub Actions matrix combinatorial size, approximated the same way
     GitHub expands it: the cross product of the list-valued axes, minus one
@@ -419,10 +492,70 @@ def _cron_more_than_hourly(cron: str) -> bool:
     return any(ch in minute for ch in ("*", ",", "/", "-"))
 
 
+def _cron_field_unrestricted(field: str) -> bool:
+    """True iff `field` does not pin the cron to a single fixed value —
+    `*`, a list, a range, or a step all mean "more than one" for that
+    field."""
+    return any(ch in field for ch in ("*", ",", "/", "-"))
+
+
+def _cron_field_kind(field: str) -> str:
+    """Classify one cron field: "star" (bare `*`, unconstrained), "multi" (a
+    list/range/step spanning more than one value, e.g. `*/2`, `1,15`,
+    `1-5`), or "single" (one fixed value)."""
+    if field == "*":
+        return "star"
+    if any(ch in field for ch in (",", "/", "-")):
+        return "multi"
+    return "single"
+
+
+def _cron_more_than_weekly(cron: str) -> bool:
+    """True iff `cron` fires more often than once a week. Already
+    more-than-hourly (check 4) is a strict subset and returns True
+    immediately. Otherwise this counts BOTH axes that decide weekly
+    frequency, not just day-of-month/day-of-week: an hour field spanning
+    more than one hour (`*`, or a list/range/step) matters just as much as a
+    day field doing the same — `0 * * * 0` fires 24x on one weekday (every
+    hour, hour="*") and `0 0 */2 * *` fires every other day (dom="*/2", a
+    step) — both more than once a week, and neither is caught by a
+    day-field-only check. Any of the three fields (hour, day-of-month,
+    day-of-week) being a "multi" (list/range/step, not the bare `*`) is
+    treated as unrestricted for this count, same conservative direction as
+    check 4's hourly heuristic. A cron pinned to one day-of-week AND a
+    single hour (`0 2 * * 0`) or one day-of-month with day-of-week `*`
+    (`0 0 1 * *`) runs at most weekly/monthly and is not flagged. Both
+    day-of-month and day-of-week pinned to a single value each (standard
+    cron ORs the two) is a rare shape this lint does not evaluate further —
+    documented approximation, left unflagged."""
+    fields = cron.split()
+    if len(fields) != 5:
+        return False  # malformed cron is not this lint's concern
+    if _cron_more_than_hourly(cron):
+        return True
+    _, hour, dom, _, dow = fields
+    hour_kind, dom_kind, dow_kind = _cron_field_kind(hour), _cron_field_kind(dom), _cron_field_kind(dow)
+    if "multi" in (hour_kind, dom_kind, dow_kind):
+        return True
+    if dom_kind == "star" and dow_kind == "star":
+        return True  # every day
+    if dow_kind == "single" and dom_kind == "star":
+        return hour_kind == "star"  # one weekday -- >weekly only if also >1x that day
+    return False  # dom pinned (at most monthly), or both dom/dow pinned (approximation, above)
+
+
 def lint_workflow(
     path: str, text: str, *, matrix_max: int, strict: bool | None,
+    default_branch: str = "main", required: frozenset[str] = frozenset(),
 ) -> list[tuple[str, bool, str]]:
-    """Return [(CHECK, is_advisory, message)] for one workflow file's text."""
+    """Return [(CHECK, is_advisory, message)] for one workflow file's text.
+
+    `default_branch` widens the "is this a default-branch target" set (see
+    INTEGRATION-PR-BRANCH) alongside the always-included `main`/`master`.
+    `required` is the set of workflow basenames (e.g. `{"ci.yml"}`) passed via
+    `--required`; REQUIRED-PATHS-FILTER only checks a file whose basename is
+    in this set.
+    """
     findings: list[tuple[str, bool, str]] = []
     try:
         wf = parse_workflow_yaml(text)
@@ -517,11 +650,95 @@ def lint_workflow(
                 " filter — a docs-only change still triggers it (ADVISORY)",
             ))
 
+    allow_reason = _allow_reason(text)
+
+    # 7. PUSH-TRIGGER — the minimum-cost profile bans push-triggered hosted
+    # CI outright (host-enforcement.md "Minimum-cost CI & token profile").
+    if has_push:
+        if allow_reason is not None:
+            findings.append((
+                "PUSH-TRIGGER", True,
+                f"{path}: push trigger ALLOWED ({allow_reason}) via `# ci-cost: allow` comment",
+            ))
+        else:
+            findings.append((
+                "PUSH-TRIGGER", False,
+                f"{path}: workflow triggers on push — the minimum-cost profile bans"
+                " push-triggered hosted CI; drop the trigger or add a"
+                " `# ci-cost: allow <reason>` comment",
+            ))
+
+    # 8. INTEGRATION-PR-BRANCH — a pull_request/pull_request_target trigger
+    # not safely scoped to the default branch is hosted CI on an integration
+    # branch, which the profile also bans (that branch gets zero hosted CI,
+    # server-enforced merge restriction instead). Checks both trigger names
+    # the same way: a bare trigger, a branches-ignore filter, or a branches
+    # list naming a non-default branch.
+    default_branches = {default_branch, "main", "master"}
+    for trigger_name in ("pull_request", "pull_request_target"):
+        if trigger_name not in on_norm:
+            continue
+        issue = _pr_branch_issue(on_norm[trigger_name], default_branches)
+        if issue is None:
+            continue
+        if allow_reason is not None:
+            findings.append((
+                "INTEGRATION-PR-BRANCH", True,
+                f"{path}: {trigger_name} {issue} ALLOWED ({allow_reason})"
+                " via `# ci-cost: allow` comment",
+            ))
+        else:
+            findings.append((
+                "INTEGRATION-PR-BRANCH", False,
+                f"{path}: {trigger_name} {issue} —"
+                " the minimum-cost profile bans hosted CI on an integration branch;"
+                " scope to the default branch (use a server-enforced integrator gate"
+                " for any other branch) or add a `# ci-cost: allow <reason>` comment",
+            ))
+
+    # 9. REQUIRED-PATHS-FILTER — only checked when --required names this file.
+    if os.path.basename(path) in required:
+        if _has_paths_filter(push_val) or _has_paths_filter(pr_val):
+            findings.append((
+                "REQUIRED-PATHS-FILTER", False,
+                f"{path}: a required check has a paths/paths-ignore filter — an unmatched"
+                " change means the check never reports, and the PR blocks forever waiting"
+                " on a status that never arrives",
+            ))
+
+    # 10. WEEKLY-SCHEDULE — broader than SCHEDULE (check 4): the profile caps
+    # any schedule at once a week (probes only).
+    if isinstance(schedule, list):
+        for entry in schedule:
+            cron = entry.get("cron") if isinstance(entry, dict) else None
+            if isinstance(cron, str) and _cron_more_than_weekly(cron):
+                findings.append((
+                    "WEEKLY-SCHEDULE", False,
+                    f"{path}: schedule cron '{cron}' fires more than once a week —"
+                    " the minimum-cost profile caps schedules at weekly (probes only)",
+                ))
+
+    return findings
+
+
+def _consolidation_findings(fingerprints: dict[str, list[str]]) -> list[tuple[str, bool, str]]:
+    """11. CONSOLIDATION (always advisory) — two or more workflow files with
+    byte-identical normalized `on:` triggers are a candidate to merge into
+    one workflow (cuts the per-job minute-rounding floor, domain-k.md)."""
+    findings: list[tuple[str, bool, str]] = []
+    for paths in fingerprints.values():
+        if len(paths) > 1:
+            findings.append((
+                "CONSOLIDATION", True,
+                f"{', '.join(sorted(paths))}: identical triggers across {len(paths)}"
+                " workflows — consider consolidating into one (ADVISORY)",
+            ))
     return findings
 
 
 def scan(
     root: str, *, matrix_max: int, strict: bool | None,
+    default_branch: str = "main", required: frozenset[str] = frozenset(),
 ) -> list[tuple[str, bool, str]]:
     """Scan `root`'s `.github/workflows/*.yml(.yaml)`.
 
@@ -536,6 +753,7 @@ def scan(
     findings: list[tuple[str, bool, str]] = []
     if not os.path.isdir(wf_dir):
         return findings
+    fingerprints: dict[str, list[str]] = {}
     for name in sorted(os.listdir(wf_dir)):
         if not name.endswith((".yml", ".yaml")):
             continue
@@ -543,7 +761,16 @@ def scan(
         rel = os.path.join(".github", "workflows", name)
         with open(full, encoding="utf-8", errors="replace") as fh:
             text = fh.read()
-        findings.extend(lint_workflow(rel, text, matrix_max=matrix_max, strict=strict))
+        findings.extend(lint_workflow(
+            rel, text, matrix_max=matrix_max, strict=strict,
+            default_branch=default_branch, required=required,
+        ))
+        try:
+            wf = parse_workflow_yaml(text)
+        except Exception:
+            continue  # already reported as PARSE-ERROR above; excluded from fingerprinting
+        fingerprints.setdefault(json.dumps(_normalize_on(wf.get("on")), sort_keys=True), []).append(rel)
+    findings.extend(_consolidation_findings(fingerprints))
     return findings
 
 
@@ -565,9 +792,8 @@ def _selftest() -> int:
 
     clean = """
 on:
-  push:
-    branches: [main]
   pull_request:
+    branches: [main]
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -580,12 +806,17 @@ jobs:
     steps:
       - run: echo hi
 """
+    # PR-only, no push trigger: the minimum-cost profile's own recommended
+    # shape (main-only hosted CI) is the one fixture that must stay clean
+    # under every check, including the new PUSH-TRIGGER/INTEGRATION-PR-BRANCH
+    # pair — a fixture using `push:` would no longer qualify as "clean".
     findings = lint_workflow("clean.yml", clean, matrix_max=6, strict=False)
     check("clean-workflow-no-findings", findings, set())
 
     no_concurrency = """
 on:
   pull_request:
+    branches: [main]
 jobs:
   build:
     timeout-minutes: 5
@@ -604,13 +835,14 @@ jobs:
       - run: echo hi
 """
     findings = lint_workflow("no-timeout.yml", no_timeout, matrix_max=6, strict=None)
-    check("missing-timeout-fires", findings, {"TIMEOUT"})
+    check("missing-timeout-fires", findings, {"TIMEOUT", "PUSH-TRIGGER"})
 
     dup_strict = """
 on:
   push:
     branches: [main]
   pull_request:
+    branches: [main]
 concurrency:
   cancel-in-progress: true
 jobs:
@@ -620,19 +852,22 @@ jobs:
       - run: echo hi
 """
     findings = lint_workflow("dup-strict.yml", dup_strict, matrix_max=6, strict=True)
-    check("dup-trigger-strict-blocks", findings, {"DUP-TRIGGER"})
+    check("dup-trigger-strict-blocks", findings, {"DUP-TRIGGER", "PUSH-TRIGGER"})
     dup_msg = next(m for c, _a, m in lint_workflow("d.yml", dup_strict, matrix_max=6, strict=True) if c == "DUP-TRIGGER")
     if "ADVISORY" in dup_msg:
         failures.append("dup-trigger-strict-blocks: message wrongly marked ADVISORY")
 
     findings = lint_workflow("dup-unknown.yml", dup_strict, matrix_max=6, strict=None)
-    check("dup-trigger-unknown-advisory", findings, {"DUP-TRIGGER"})
+    check("dup-trigger-unknown-advisory", findings, {"DUP-TRIGGER", "PUSH-TRIGGER"})
     advisory_flag = next(adv for c, adv, _m in findings if c == "DUP-TRIGGER")
     if not advisory_flag:
         failures.append("dup-trigger-unknown-advisory: expected advisory=True")
 
+    # DUP-TRIGGER itself stays silent on a non-strict repo, but the fixture's
+    # plain `push:` trigger still fires the new PUSH-TRIGGER check — the two
+    # checks are independent of each other.
     findings = lint_workflow("dup-not-strict.yml", dup_strict, matrix_max=6, strict=False)
-    check("dup-trigger-not-strict-silent", findings, set())
+    check("dup-trigger-not-strict-silent", findings, {"PUSH-TRIGGER"})
 
     freq_schedule = """
 on:
@@ -645,7 +880,7 @@ jobs:
       - run: echo hi
 """
     findings = lint_workflow("freq.yml", freq_schedule, matrix_max=6, strict=None)
-    check("frequent-cron-fires", findings, {"SCHEDULE"})
+    check("frequent-cron-fires", findings, {"SCHEDULE", "WEEKLY-SCHEDULE"})
 
     hourly_schedule = """
 on:
@@ -657,8 +892,11 @@ jobs:
     steps:
       - run: echo hi
 """
+    # Exactly hourly is clean for SCHEDULE (check 4's own boundary), but the
+    # broader WEEKLY-SCHEDULE (check 10) still fires -- hourly is well past
+    # the profile's weekly cap for schedules.
     findings = lint_workflow("hourly.yml", hourly_schedule, matrix_max=6, strict=None)
-    check("exactly-hourly-cron-clean", findings, set())
+    check("exactly-hourly-clean-for-hourly-check-but-not-weekly", findings, {"WEEKLY-SCHEDULE"})
 
     big_matrix = """
 on:
@@ -675,7 +913,7 @@ jobs:
       - run: echo hi
 """
     findings = lint_workflow("matrix.yml", big_matrix, matrix_max=6, strict=None)
-    check("oversized-matrix-fires", findings, {"MATRIX-SIZE"})
+    check("oversized-matrix-fires", findings, {"MATRIX-SIZE", "PUSH-TRIGGER"})
     size_msg = next(m for c, _a, m in findings if c == "MATRIX-SIZE")
     if "size 12" not in size_msg:
         failures.append(f"oversized-matrix-fires: expected size 12 in message, got {size_msg!r}")
@@ -690,7 +928,7 @@ jobs:
       - run: pytest tests/
 """
     findings = lint_workflow("test.yml", no_paths_test_wf, matrix_max=6, strict=None)
-    check("test-only-no-paths-advisory", findings, {"PATHS-FILTER"})
+    check("test-only-no-paths-advisory", findings, {"PATHS-FILTER", "PUSH-TRIGGER"})
     adv = next(a for c, a, _m in findings if c == "PATHS-FILTER")
     if not adv:
         failures.append("test-only-no-paths-advisory: expected advisory=True")
@@ -706,8 +944,10 @@ jobs:
     steps:
       - run: pytest tests/
 """
+    # A paths filter clears PATHS-FILTER, but the plain `push:` trigger still
+    # fires PUSH-TRIGGER independently -- a paths filter is not an allow-list.
     findings = lint_workflow("test-scoped.yml", with_paths_test_wf, matrix_max=6, strict=None)
-    check("test-only-with-paths-clean", findings, set())
+    check("test-only-with-paths-clears-paths-filter-but-not-push-trigger", findings, {"PUSH-TRIGGER"})
 
     unparseable = "not: [a, b: c: d\n  - broken indent *&^"
     findings = lint_workflow("broken.yml", unparseable, matrix_max=6, strict=None)
@@ -845,7 +1085,7 @@ jobs:
       - run: echo hi
 """
     findings = lint_workflow("matrix-adj.yml", matrix_adj_wf, matrix_max=2, strict=None)
-    check("matrix-size-with-exclude-include-fires-at-lowered-cap", findings, {"MATRIX-SIZE"})
+    check("matrix-size-with-exclude-include-fires-at-lowered-cap", findings, {"MATRIX-SIZE", "PUSH-TRIGGER"})
     adj_msg = next(m for c, _a, m in findings if c == "MATRIX-SIZE")
     if "size 3" not in adj_msg:
         failures.append(f"matrix-size-with-exclude-include: expected size 3 in message, got {adj_msg!r}")
@@ -861,7 +1101,266 @@ jobs:
       - run: echo hi
 """
     findings = lint_workflow("cron-range.yml", cron_range_wf, matrix_max=6, strict=None)
-    check("cron-minute-range-fires", findings, {"SCHEDULE"})
+    check("cron-minute-range-fires", findings, {"SCHEDULE", "WEEKLY-SCHEDULE"})
+
+    daily_schedule = """
+on:
+  schedule:
+    - cron: '0 2 * * *'
+jobs:
+  build:
+    timeout-minutes: 5
+    steps:
+      - run: echo hi
+"""
+    findings = lint_workflow("daily.yml", daily_schedule, matrix_max=6, strict=None)
+    # A plain daily cron never fires SCHEDULE (check 4 is hourly-scoped) but
+    # is well past the profile's weekly cap -- proves WEEKLY-SCHEDULE is
+    # strictly broader, not just a duplicate of the hourly check.
+    check("daily-cron-fires-weekly-not-hourly", findings, {"WEEKLY-SCHEDULE"})
+
+    weekly_schedule = """
+on:
+  schedule:
+    - cron: '0 2 * * 0'
+jobs:
+  build:
+    timeout-minutes: 5
+    steps:
+      - run: echo hi
+"""
+    findings = lint_workflow("weekly.yml", weekly_schedule, matrix_max=6, strict=None)
+    check("exactly-weekly-cron-clean", findings, set())
+
+    monthly_schedule = """
+on:
+  schedule:
+    - cron: '0 0 1 * *'
+jobs:
+  build:
+    timeout-minutes: 5
+    steps:
+      - run: echo hi
+"""
+    findings = lint_workflow("monthly.yml", monthly_schedule, matrix_max=6, strict=None)
+    check("monthly-cron-clean", findings, set())
+
+    push_wf = """
+on:
+  push:
+jobs:
+  build:
+    timeout-minutes: 5
+    steps:
+      - run: echo hi
+"""
+    findings = lint_workflow("push.yml", push_wf, matrix_max=6, strict=None)
+    check("plain-push-trigger-blocks", findings, {"PUSH-TRIGGER"})
+    push_blocking = next(adv for c, adv, _m in findings if c == "PUSH-TRIGGER")
+    if push_blocking:
+        failures.append("plain-push-trigger-blocks: expected advisory=False (blocking)")
+
+    push_allowed_wf = """
+# ci-cost: allow release-tag builds need push
+on:
+  push:
+jobs:
+  build:
+    timeout-minutes: 5
+    steps:
+      - run: echo hi
+"""
+    findings = lint_workflow("push-allowed.yml", push_allowed_wf, matrix_max=6, strict=None)
+    check("allow-listed-push-trigger-is-advisory", findings, {"PUSH-TRIGGER"})
+    push_allowed_adv = next(adv for c, adv, _m in findings if c == "PUSH-TRIGGER")
+    if not push_allowed_adv:
+        failures.append("allow-listed-push-trigger-is-advisory: expected advisory=True")
+    push_allowed_msg = next(m for c, _a, m in findings if c == "PUSH-TRIGGER")
+    if "release-tag builds need push" not in push_allowed_msg:
+        failures.append(f"allow-listed-push-trigger-is-advisory: reason not in message, got {push_allowed_msg!r}")
+
+    integration_pr_wf = """
+on:
+  pull_request:
+    branches: [development]
+jobs:
+  build:
+    timeout-minutes: 5
+    steps:
+      - run: echo hi
+"""
+    findings = lint_workflow("integration.yml", integration_pr_wf, matrix_max=6, strict=None)
+    # CONCURRENCY also fires here (pull_request with no concurrency block) --
+    # this fixture's point is INTEGRATION-PR-BRANCH, not a clean-workflow
+    # example, so both are expected.
+    check("pr-into-integration-branch-blocks", findings, {"INTEGRATION-PR-BRANCH", "CONCURRENCY"})
+    integ_blocking = next(adv for c, adv, _m in findings if c == "INTEGRATION-PR-BRANCH")
+    if integ_blocking:
+        failures.append("pr-into-integration-branch-blocks: expected advisory=False (blocking)")
+
+    # --default-branch widens what counts as "default": naming `development`
+    # as the default branch here must clear INTEGRATION-PR-BRANCH, proving
+    # the arg is actually consulted rather than hardcoded to main/master.
+    findings = lint_workflow(
+        "integration.yml", integration_pr_wf, matrix_max=6, strict=None, default_branch="development",
+    )
+    check("pr-into-integration-branch-respects-default-branch-arg", findings, {"CONCURRENCY"})
+
+    integration_pr_main_wf = """
+on:
+  pull_request:
+    branches: [main]
+jobs:
+  build:
+    timeout-minutes: 5
+    steps:
+      - run: echo hi
+"""
+    findings = lint_workflow("integration-clean.yml", integration_pr_main_wf, matrix_max=6, strict=None)
+    check("pr-into-default-branch-is-clean", findings, {"CONCURRENCY"})
+
+    integration_allowed_wf = """
+# ci-cost: allow shared staging fork, reviewed manually
+on:
+  pull_request:
+    branches: [development]
+jobs:
+  build:
+    timeout-minutes: 5
+    steps:
+      - run: echo hi
+"""
+    findings = lint_workflow("integration-allowed.yml", integration_allowed_wf, matrix_max=6, strict=None)
+    check("allow-listed-integration-pr-is-advisory", findings, {"INTEGRATION-PR-BRANCH", "CONCURRENCY"})
+    integ_allowed_adv = next(adv for c, adv, _m in findings if c == "INTEGRATION-PR-BRANCH")
+    if not integ_allowed_adv:
+        failures.append("allow-listed-integration-pr-is-advisory: expected advisory=True")
+
+    required_wf = """
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/**'
+jobs:
+  build:
+    timeout-minutes: 5
+    steps:
+      - run: echo hi
+"""
+    findings = lint_workflow("ci.yml", required_wf, matrix_max=6, strict=None, required=frozenset())
+    check("paths-filter-on-non-required-workflow-is-silent-for-required-check", findings, {"CONCURRENCY"})
+    findings = lint_workflow("ci.yml", required_wf, matrix_max=6, strict=None, required=frozenset({"ci.yml"}))
+    check("required-workflow-with-paths-filter-blocks", findings, {"REQUIRED-PATHS-FILTER", "CONCURRENCY"})
+    req_blocking = next(adv for c, adv, _m in findings if c == "REQUIRED-PATHS-FILTER")
+    if req_blocking:
+        failures.append("required-workflow-with-paths-filter-blocks: expected advisory=False (blocking)")
+
+    # Bug-fix regression: an empty `# ci-cost: allow` (no reason) must NOT
+    # suppress a blocking finding -- a silent, unexplained allow-list entry
+    # defeats the point of requiring a reason.
+    push_empty_allow_wf = """
+# ci-cost: allow
+on:
+  push:
+jobs:
+  build:
+    timeout-minutes: 5
+    steps:
+      - run: echo hi
+"""
+    findings = lint_workflow("push-empty-allow.yml", push_empty_allow_wf, matrix_max=6, strict=None)
+    check("empty-reason-allow-comment-stays-blocking", findings, {"PUSH-TRIGGER"})
+    empty_allow_blocking = next(adv for c, adv, _m in findings if c == "PUSH-TRIGGER")
+    if empty_allow_blocking:
+        failures.append("empty-reason-allow-comment-stays-blocking: expected advisory=False (blocking)")
+
+    # Bug-fix regression: a bare `pull_request:` (no branches/branches-ignore
+    # at all) matches a PR into ANY branch, integration branches included.
+    bare_pr_wf = """
+on:
+  pull_request:
+jobs:
+  build:
+    timeout-minutes: 5
+    steps:
+      - run: echo hi
+"""
+    findings = lint_workflow("bare-pr.yml", bare_pr_wf, matrix_max=6, strict=None)
+    check("bare-pull-request-fires-integration-pr-branch", findings, {"INTEGRATION-PR-BRANCH", "CONCURRENCY"})
+
+    # Bug-fix regression: branches-ignore EXCLUDES branches, it does not
+    # restrict TO the default branch -- still matches an integration branch.
+    branches_ignore_wf = """
+on:
+  pull_request:
+    branches-ignore: [docs-only]
+jobs:
+  build:
+    timeout-minutes: 5
+    steps:
+      - run: echo hi
+"""
+    findings = lint_workflow("branches-ignore.yml", branches_ignore_wf, matrix_max=6, strict=None)
+    check("branches-ignore-fires-integration-pr-branch", findings, {"INTEGRATION-PR-BRANCH", "CONCURRENCY"})
+
+    # Bug-fix regression: pull_request_target has the identical branch-shape
+    # issue (and runs with base-repo secrets, an even sharper cost/appsec
+    # concern this check does not itself evaluate).
+    pr_target_wf = """
+on:
+  pull_request_target:
+    branches: [development]
+jobs:
+  build:
+    timeout-minutes: 5
+    steps:
+      - run: echo hi
+"""
+    findings = lint_workflow("pr-target.yml", pr_target_wf, matrix_max=6, strict=None)
+    check("pull-request-target-non-default-branch-fires", findings, {"INTEGRATION-PR-BRANCH"})
+
+    pr_target_main_wf = """
+on:
+  pull_request_target:
+    branches: [main]
+jobs:
+  build:
+    timeout-minutes: 5
+    steps:
+      - run: echo hi
+"""
+    findings = lint_workflow("pr-target-clean.yml", pr_target_main_wf, matrix_max=6, strict=None)
+    check("pull-request-target-default-branch-is-clean", findings, set())
+
+    # Bug-fix regression: WEEKLY-SCHEDULE must count the hour field, not just
+    # day-of-month/day-of-week -- an hour-spanning cron pinned to one weekday
+    # still fires many times that week.
+    hour_span_one_weekday_wf = """
+on:
+  schedule:
+    - cron: '0 * * * 0'
+jobs:
+  build:
+    timeout-minutes: 5
+    steps:
+      - run: echo hi
+"""
+    findings = lint_workflow("hour-span-weekday.yml", hour_span_one_weekday_wf, matrix_max=6, strict=None)
+    check("hour-spanning-cron-on-one-weekday-fires-weekly", findings, {"WEEKLY-SCHEDULE"})
+
+    dom_step_wf = """
+on:
+  schedule:
+    - cron: '0 0 */2 * *'
+jobs:
+  build:
+    timeout-minutes: 5
+    steps:
+      - run: echo hi
+"""
+    findings = lint_workflow("dom-step.yml", dom_step_wf, matrix_max=6, strict=None)
+    check("day-of-month-step-fires-weekly", findings, {"WEEKLY-SCHEDULE"})
 
     with tempfile.TemporaryDirectory() as tmp:
         missing_root = os.path.join(tmp, "does-not-exist")
@@ -888,6 +1387,32 @@ jobs:
             rc = main([empty_root])
         if rc != OK:
             failures.append(f"root-without-workflows-dir: main() exit {rc}, want {OK}")
+
+        # 11. CONSOLIDATION: two workflows with byte-identical normalized
+        # triggers are grouped into one advisory finding; a third file with a
+        # different trigger is never pulled into that group.
+        consolidation_root = os.path.join(tmp, "consolidation-repo")
+        wf_dir = os.path.join(consolidation_root, ".github", "workflows")
+        os.makedirs(wf_dir)
+        same_trigger = "on:\n  pull_request:\n    branches: [main]\njobs:\n  build:\n    timeout-minutes: 5\n    steps:\n      - run: echo hi\n"
+        different_trigger = "on:\n  push:\njobs:\n  build:\n    timeout-minutes: 5\n    steps:\n      - run: echo hi\n"
+        for fname, content in (
+            ("a.yml", same_trigger), ("b.yml", same_trigger), ("c.yml", different_trigger),
+        ):
+            with open(os.path.join(wf_dir, fname), "w", encoding="utf-8") as fh:
+                fh.write(content)
+        consolidation_findings = scan(consolidation_root, matrix_max=6, strict=None)
+        consolidation_hits = [f for f in consolidation_findings if f[0] == "CONSOLIDATION"]
+        if len(consolidation_hits) != 1:
+            failures.append(f"consolidation: expected exactly 1 CONSOLIDATION finding, got {consolidation_hits}")
+        else:
+            _, adv, msg = consolidation_hits[0]
+            if not adv:
+                failures.append("consolidation: expected advisory=True")
+            if "a.yml" not in msg or "b.yml" not in msg:
+                failures.append(f"consolidation: expected a.yml and b.yml named, got {msg!r}")
+            if "c.yml" in msg:
+                failures.append(f"consolidation: c.yml has a different trigger, must not be grouped in, got {msg!r}")
     cases += 1
 
     if failures:
@@ -912,7 +1437,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--repo", metavar="OWNER/REPO",
                          help="look up live branch-protection strictness via `gh api` (network + gh auth required)")
     parser.add_argument("--default-branch", default="main", metavar="NAME",
-                         help="default branch name for --repo's protection lookup (default: main)")
+                         help="default branch name for --repo's protection lookup and"
+                              " INTEGRATION-PR-BRANCH's default-branch set (default: main)")
+    parser.add_argument("--required", default="", metavar="FILE[,FILE...]",
+                         help="comma-separated workflow basenames (e.g. ci.yml) treated as"
+                              " required status checks for REQUIRED-PATHS-FILTER")
     parser.add_argument("--selftest", action="store_true", help="run the built-in selftest and exit")
     args = parser.parse_args(argv)
 
@@ -927,8 +1456,13 @@ def main(argv: list[str] | None = None) -> int:
     if strict is None and args.repo:
         strict = _lookup_strict(args.repo, args.default_branch)
 
+    required = frozenset(f.strip() for f in args.required.split(",") if f.strip())
+
     try:
-        findings = scan(args.root, matrix_max=args.matrix_max, strict=strict)
+        findings = scan(
+            args.root, matrix_max=args.matrix_max, strict=strict,
+            default_branch=args.default_branch, required=required,
+        )
     except FileNotFoundError as exc:
         print(str(exc), file=sys.stderr)
         return ERROR

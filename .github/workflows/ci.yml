@@ -13,6 +13,7 @@ name: gates
 # runs on the same PR are cancelled.
 on:
   pull_request:
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -87,6 +88,8 @@ jobs:
           python3 .claude/skills/deep-code-review/scripts/reaper_lint.py --selftest
           python3 .claude/skills/deep-code-review/scripts/source_scan_tests.py --selftest
           python3 .claude/skills/deep-code-review/scripts/ci_cost_lint.py --selftest
+          bash .claude/skills/deep-code-review/templates/integrator-gate.sh --selftest
+          python3 scripts/eval_citation_lint.py --selftest
           python3 .claude/skills/agentic-delivery/scripts/serial_gate.py --selftest
           python3 .claude/skills/agentic-delivery/scripts/handback_cap.py --selftest
           python3 .claude/skills/agentic-delivery/scripts/lane_guard.py --selftest
@@ -107,6 +110,10 @@ jobs:
           python3 .claude/skills/agentic-ceo/scripts/token_report.py --selftest
           python3 .claude/skills/agentic-delivery/scripts/feedback_ledger.py --selftest
           python3 .claude/skills/agentic-delivery/scripts/merge_train.py --selftest
+          python3 .claude/skills/agentic-delivery/scripts/tier_gate.py --selftest
+          python3 .claude/skills/agentic-delivery/scripts/lane_cap.py --selftest
+          python3 .claude/skills/agentic-delivery/scripts/escaped_defects.py --selftest
+          python3 scripts/trigger_lint.py --selftest
 
       # scripts/skill_index.py generates the per-skill and repo-level INDEX.md
       # lookup tables (which file answers which trigger, without opening every
@@ -138,6 +145,19 @@ jobs:
             --base "$BASE_SHA" --head "$HEAD_SHA" \
             --test-glob '.claude/skills/*/evals/evals.json' \
             --test-glob 'scripts/test-ci-gates.sh'
+
+      # Review tiers (agentic-delivery/templates/review-tiers.tsv): a tier-1
+      # commit needs `Model: opus` plus an independent, receipted
+      # `Reviewed-By: <id> receipt:<sha|path|url>` trailer. ADVISORY here: it
+      # prints every finding (merge commits on the first-parent line
+      # included) and never fails the build, because this repo's history
+      # predates the trailers and one shared account cannot prove reviewer
+      # independence. Release squash commits carry both trailers.
+      - name: Review tiers (advisory)
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: python3 .claude/skills/agentic-delivery/scripts/tier_gate.py --advisory "$BASE_SHA..$HEAD_SHA"
 
       # Lesson -> mechanism: a commit that edits skill prose (a SKILL.md or a
       # references/*.md) must also land an executable mechanism (an eval, a

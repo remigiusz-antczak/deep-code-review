@@ -30,11 +30,12 @@
 .claude/skills/agentic-ceo/SKILL.md	14524
 .claude/skills/agentic-ceo/references/chaos-playbook.md	3825
 .claude/skills/agentic-delivery/SKILL.md	23915
+.claude/skills/agentic-delivery/references/cost-quality-guardrails.md	9452
 .claude/skills/agentic-delivery/references/dev-env-ownership.md	28376
-.claude/skills/agentic-delivery/references/fanout-host-sizing.md	40890
+.claude/skills/agentic-delivery/references/fanout-host-sizing.md	42953
 .claude/skills/agentic-delivery/references/fast-agentic-delivery.md	6401
 .claude/skills/agentic-delivery/references/gate-epistemology.md	6114
-.claude/skills/agentic-delivery/references/host-enforcement.md	14583
+.claude/skills/agentic-delivery/references/host-enforcement.md	27542
 .claude/skills/agentic-delivery/references/incident-response.md	12693
 .claude/skills/agentic-delivery/references/install.md	1180
 .claude/skills/agentic-delivery/references/merge-queue-worktrees.md	59144
@@ -42,12 +43,12 @@
 .claude/skills/agentic-delivery/references/production-grade-product-playbook.md	6635
 .claude/skills/agentic-delivery/references/project-state.md	7540
 .claude/skills/agentic-delivery/references/retrospective.md	4577
-.claude/skills/agentic-delivery/references/roles.md	23942
+.claude/skills/agentic-delivery/references/roles.md	23958
 .claude/skills/agentic-delivery/references/support-ops.md	4455
 .claude/skills/agentic-delivery/references/template-adr.md	2641
 .claude/skills/agentic-delivery/references/template-postmortem.md	3387
 .claude/skills/agentic-delivery/references/unattended-operating-mode.md	20389
-.claude/skills/agentic-delivery/references/unattended-trackers.md	43567
+.claude/skills/agentic-delivery/references/unattended-trackers.md	43717
 .claude/skills/agentic-delivery/references/verification-handback.md	52436
 .claude/skills/business-ops/SKILL.md	10654
 .claude/skills/business-ops/references/regulated-domain-triage.md	8045
@@ -99,9 +100,9 @@
 .claude/skills/deep-code-review/references/domain-h.md	7805
 .claude/skills/deep-code-review/references/domain-i.md	1456
 .claude/skills/deep-code-review/references/domain-j.md	2823
-.claude/skills/deep-code-review/references/domain-k.md	4095
+.claude/skills/deep-code-review/references/domain-k.md	4417
 .claude/skills/deep-code-review/references/domain-l.md	1181
-.claude/skills/deep-code-review/references/domain-m.md	1170
+.claude/skills/deep-code-review/references/domain-m.md	1193
 .claude/skills/deep-code-review/references/domain-n.md	858
 .claude/skills/deep-code-review/references/domain-o.md	2398
 .claude/skills/deep-code-review/references/domain-p.md	4747
@@ -121,16 +122,16 @@
 .claude/skills/deep-code-review/references/lang-jvm.md	1708
 .claude/skills/deep-code-review/references/lang-python.md	1556
 .claude/skills/deep-code-review/references/lang-ruby-php.md	751
-.claude/skills/deep-code-review/references/lang-shell.md	5297
+.claude/skills/deep-code-review/references/lang-shell.md	7046
 .claude/skills/deep-code-review/references/lang-sql.md	755
 .claude/skills/deep-code-review/references/language-stack-redflags.md	22791
 .claude/skills/deep-code-review/references/machine-report.md	10061
-.claude/skills/deep-code-review/references/merge-operations.md	61327
+.claude/skills/deep-code-review/references/merge-operations.md	61648
 .claude/skills/deep-code-review/references/method-situational.md	20804
 .claude/skills/deep-code-review/references/method.md	50527
 .claude/skills/deep-code-review/references/migration-parity.md	27241
 .claude/skills/deep-code-review/references/mobile-appsec.md	25914
-.claude/skills/deep-code-review/references/model-tiering.md	12968
+.claude/skills/deep-code-review/references/model-tiering.md	13271
 .claude/skills/deep-code-review/references/observability.md	17984
 .claude/skills/deep-code-review/references/parallel-audit.md	37142
 .claude/skills/deep-code-review/references/performance-db-cost.md	43051
@@ -140,7 +141,7 @@
 .claude/skills/deep-code-review/references/readme-authoring.md	6910
 .claude/skills/deep-code-review/references/release-engineering.md	20792
 .claude/skills/deep-code-review/references/reliability-error-handling.md	41344
-.claude/skills/deep-code-review/references/rendered-parity.md	10611
+.claude/skills/deep-code-review/references/rendered-parity.md	10864
 .claude/skills/deep-code-review/references/report-format.md	20673
 .claude/skills/deep-code-review/references/role-coverage.md	19668
 .claude/skills/deep-code-review/references/security-agent-skills.md	6509
@@ -171,6 +172,8 @@
 .claude/skills/positioning/SKILL.md	7405
 .claude/skills/product-discovery/SKILL.md	10459
 .claude/skills/product-output-safety/SKILL.md	13153
+.claude/skills/deep-code-review/references/frontend-security.md	5656
+.claude/skills/deep-code-review/references/ux-states.md	12588
 # README.md is not a skill file; its row is kept by hand (the regenerate
 # command above covers .claude/skills only).
 README.md	16233

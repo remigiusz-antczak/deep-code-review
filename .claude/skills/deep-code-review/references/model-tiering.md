@@ -153,6 +153,10 @@ provider with an equivalent primitive, even where the exact mechanism differs.
 If the `agentic-delivery` and `idea-critic` overlays are installed, the same
 tiers extend to their units — see `roles.md`'s roster and `idea-critic`'s
 Independence step for where each hat sits; do not restate that mapping here.
+Which *changes* need the frontier tier plus an independent reviewer is decided
+by path, not by the dispatcher: `agentic-delivery`'s one tiers file
+(`templates/review-tiers.tsv`, gated by `tier_gate.py`) — doctrine in its
+`cost-quality-guardrails.md`. Review reads that file; never keep a second list.
 
 ## Did the tiering work? — cost accounting
 

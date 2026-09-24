@@ -1271,6 +1271,31 @@ def read_side(path: str | None, band_fn=None) -> tuple[list[dict] | None, list[d
             for s in secs], parser.ignored, parser.band_protected
 
 
+_SETTLED_READY_RE = re.compile(r'data-parity-ready="(0|1)"')
+_SETTLED_MS_RE = re.compile(r'data-parity-settle-ms="(\d+)"')
+
+
+def read_settled(path: str | None) -> tuple[bool | None, int | None]:
+    """Return `(ready, settle_ms)` for one side's capture (#1165, capture-must-wait-for-data-settle).
+
+    `ready` is True/False from a `data-parity-ready="1"|"0"` marker anywhere in the raw capture
+    (`templates/parity-capture.md`'s app-declared settle signal — not tied to a specific tag, so it
+    reads the same on a full `<html>` document or a bare fixture fragment), or None when the marker is
+    absent (an older capture with no settle signal — never guessed as either ready or not-ready).
+    `settle_ms` is the paired `data-parity-settle-ms="<int>"`, or None when absent. A `.json` side, or
+    one `read_side` already rejects (absent/unreadable/empty), has no markup to search and reads
+    `(None, None)` — `compare()` only turns that into a COULD_NOT_CHECK with `--require-settled`.
+    """
+    raw = _load_raw(path)
+    if raw is None:
+        return None, None
+    ready_m = _SETTLED_READY_RE.search(raw)
+    ready = (ready_m.group(1) == "1") if ready_m else None
+    ms_m = _SETTLED_MS_RE.search(raw)
+    ms = int(ms_m.group(1)) if ms_m else None
+    return ready, ms
+
+
 def extract_sections(path: str | None) -> list[tuple[str, bool]] | None:
     """Return this side's ordered `[(section_id, populated), ...]`, or None.
 
@@ -1945,7 +1970,8 @@ _BASIS = ("basis: element inventory (headings, visible text, controls by role + 
 def compare(design_path: str | None, app_path: str | None, accept_path: str | None = None,
             accept_rev: str | None = None, use_focus_gate: bool | None = None,
             min_pairs: int | None = None, style: bool = False,
-            style_min_pairs: int | None = None, bands: str | None = None) -> dict:
+            style_min_pairs: int | None = None, bands: str | None = None,
+            require_settled: bool = False) -> dict:
     """Compare a design render against an app render; return the full result.
 
     `bands="headings"` crops sections by heading y-bands (SECTION BANDS)
@@ -1970,6 +1996,16 @@ def compare(design_path: str | None, app_path: str | None, accept_path: str | No
     exit COULD_NOT_CHECK_CROP; a design-side `data-parity-ignore` without an
     owner `ignore` row is COULD_NOT_CHECK; `ignored` lists each side's
     ignored roots (also printed in the report).
+
+    CAPTURE SETTLE (#1165): a side whose capture declares `data-parity-ready="0"`
+    (`read_settled`) is COULD_NOT_CHECK before any section is scored — a route
+    whose async data (including a serial/waterfall fetch chain) had not settled
+    when the capture was taken produces a low match score that is capture timing,
+    never real divergence, so it is never scored as a mismatch. With
+    `require_settled=True` a side carrying no `data-parity-ready` marker at all is
+    the same COULD_NOT_CHECK (an older capture with no settle signal cannot certify
+    it settled); without the flag a missing marker is silently permitted, for
+    captures predating this signal.
     """
     def early(code: int, report: str) -> dict:
         """Result for a verdict reached before any inventory comparison."""
@@ -1995,6 +2031,23 @@ def compare(design_path: str | None, app_path: str | None, accept_path: str | No
             f"COULD_NOT_CHECK: app side unreadable, empty, or has no "
             f"sections ({app_path!r}). Two-sided input is required — a "
             "one-sided read cannot certify parity."))
+    unsettled = []
+    for label, path in (("design", design_path), ("app", app_path)):
+        ready, ms = read_settled(path) if path and not path.lower().endswith(".json") else (None, None)
+        if ready is False:
+            unsettled.append(f"{label} ({path}) declared data-parity-ready=\"0\" "
+                             f"(settle ms: {ms if ms is not None else 'unknown'})")
+        elif ready is None and require_settled:
+            unsettled.append(f"{label} ({path}) carries no data-parity-ready marker and "
+                             "--require-settled was given")
+    if unsettled:
+        return early(COULD_NOT_CHECK, (
+            "COULD_NOT_CHECK: capture not settled -- " + "; ".join(unsettled) + ". A capture taken "
+            "before a route's async data (including a serial/waterfall fetch chain) settles produces "
+            "a low match score that reflects capture timing, not real divergence -- it is never scored "
+            "as a mismatch. Re-capture after the app sets data-parity-ready=\"1\" (or after a longer "
+            "network-idle window), then re-run."))
+
     band_protected = d_band_protected + a_band_protected
     if band_protected:
         return early(COULD_NOT_CHECK, (
@@ -2569,7 +2622,8 @@ def run_workflow(design_path: str | None, app_path: str | None, design_tokens: s
                  app_tokens: str | None, token_map: str | None = None, accept_path: str | None = None,
                  accept_rev: str | None = None, use_focus_gate: bool | None = None,
                  min_pairs: int | None = None, style_min_pairs: int | None = None,
-                 token_min_pairs: int | None = None, bands: str | None = None) -> dict:
+                 token_min_pairs: int | None = None, bands: str | None = None,
+                 require_settled: bool = False) -> dict:
     """Foundation-first parity: tokens -> primitives -> sections; return `compare`'s dict + `workflow`.
 
     `bands` is passed to `compare` (SECTION BANDS).
@@ -2592,7 +2646,7 @@ def run_workflow(design_path: str | None, app_path: str | None, design_tokens: s
         t_code, _, t_report = td.compare(design_tokens, app_tokens, token_map, min_pairs=token_min_pairs)
     t_name = "MATCH" if td and t_code == td.MATCH else "MISMATCH" if td and t_code == td.MISMATCH else "COULD_NOT_CHECK"
     res = compare(design_path, app_path, accept_path, accept_rev, use_focus_gate, min_pairs,
-                  style=True, style_min_pairs=style_min_pairs, bands=bands)
+                  style=True, style_min_pairs=style_min_pairs, bands=bands, require_settled=require_settled)
     st = res.get("style") or {"verdict": "STYLE_COULD_NOT_CHECK", "foundation": [], "primitives": []}
     prim_cnc = st["verdict"] == "STYLE_COULD_NOT_CHECK"   # no usable style pair: stage 2 checked nothing
     prims = [f"PRIMITIVE {p['role']} {p['property']}: differs on {p['pairs']}/{p['of']} {p['role']} pair(s) "
@@ -2961,6 +3015,10 @@ def _selftest() -> int:
         # 6. PROTECTED COMPONENTS (#1164): independent 100% + ordinal assertions.
         _selftest_protected(write, check, failures)
 
+        # 7. CAPTURE SETTLE (#1165): an unsettled capture is COULD_NOT_CHECK, never a mismatch score;
+        # a settled one, or a marker-free one without --require-settled, is scored normally.
+        _selftest_settled(write, check, failures)
+
     if failures:
         print("SELFTEST FAILED:")
         for failure in failures:
@@ -2985,6 +3043,7 @@ def _selftest() -> int:
         " bands(nested-vs-flat,starts,anchor-wins,moved,missing-start,renamed,bad-y,basis,no-y,json,cli)=ok"
         " protected(match,order-broken,overlap,missing-node,component-missing,bad-rect,dup-node,"
         "app-zero-area,design-zero-area,under-bands)=ok"
+        " settled(unready-design,unready-app,ready-scored,marker-free-permitted,marker-free-required)=ok"
     )
     return 0
 
@@ -3123,6 +3182,38 @@ def _selftest_protected(write, check, failures: list) -> None:
                 bands="headings")
     check("protected-under-bands", r["exit_code"], r["report"], COULD_NOT_CHECK,
           must_have=("data-protected",), must_not=("MATCH:", "MISMATCH:"))
+
+
+def _selftest_settled(write, check, failures: list) -> None:
+    """CAPTURE SETTLE (#1165): `data-parity-ready="0"` is COULD_NOT_CHECK before any
+    section is scored, never a mismatch score; a marker-free capture is permitted by
+    default (older captures) but rejected under `--require-settled`.
+    """
+    ready = '<html data-parity-ready="1"><section data-section="s"><p data-item>x</p></section></html>'
+    unready = ('<html data-parity-ready="0" data-parity-settle-ms="842">'
+              '<section data-section="s"></section></html>')  # would otherwise score as MISMATCH
+    marker_free = '<section data-section="s"><p data-item>x</p></section>'
+
+    r = compare(write("settled-d.html", ready), write("settled-a-unready.html", unready))
+    check("settled-unready-app", r["exit_code"], r["report"], COULD_NOT_CHECK,
+          must_have=("capture not settled", "842"), must_not=("MISMATCH:",))
+    if "sections" in r:
+        failures.append(f"settled-unready-app: scored sections when capture declared unready: {r}")
+
+    r = compare(write("settled-d-unready.html", unready), write("settled-a.html", ready))
+    check("settled-unready-design", r["exit_code"], r["report"], COULD_NOT_CHECK,
+          must_have=("capture not settled",))
+
+    r = compare(write("settled-d-ready.html", ready), write("settled-a-ready.html", ready))
+    check("settled-ready-scored", r["exit_code"], r["report"], MATCH, must_have=("100.0%",))
+
+    # No marker at all: permitted by default (an older capture), rejected with --require-settled.
+    r = compare(write("settled-d-free.html", marker_free), write("settled-a-free.html", marker_free))
+    check("settled-marker-free-permitted", r["exit_code"], r["report"], MATCH)
+    r = compare(write("settled-d-free2.html", marker_free), write("settled-a-free2.html", marker_free),
+               require_settled=True)
+    check("settled-marker-free-required", r["exit_code"], r["report"], COULD_NOT_CHECK,
+          must_have=("no data-parity-ready marker",))
 
 
 def _selftest_floor_style(write, check, failures: list, design: str, app_full: str) -> None:
@@ -3935,6 +4026,9 @@ def main(argv: list[str] | None = None) -> int:
                         "fingerprint there, only when the run passes")
     parser.add_argument("--accept-regression", action="store_true", help="with --write-baseline: overwrite an "
                         "existing baseline even though this run shows new deltas vs it")
+    parser.add_argument("--require-settled", action="store_true",
+                       help="COULD_NOT_CHECK a side that carries no data-parity-ready marker at all, "
+                            "not only one that declares =\"0\" (#1165, capture-must-wait-for-data-settle)")
     parser.add_argument("--bands", choices=("headings",), help="crop sections by heading y-bands "
                         "(data-y; data-anchor wins) instead of data-section ancestors; see SECTION BANDS")
     parser.add_argument("--json", action="store_true", help="print the full result as JSON (board posts)")
@@ -3973,11 +4067,11 @@ def main(argv: list[str] | None = None) -> int:
         result = run_workflow(args.design, args.app, args.design_tokens, args.app_tokens, args.token_map,
                               args.accept, args.accept_rev, min_pairs=args.min_pairs,
                               style_min_pairs=args.style_min_pairs, token_min_pairs=args.token_min_pairs,
-                              bands=args.bands)
+                              bands=args.bands, require_settled=args.require_settled)
     else:
         result = compare(args.design, args.app, args.accept, args.accept_rev,
                          min_pairs=args.min_pairs, style=args.style, style_min_pairs=args.style_min_pairs,
-                         bands=args.bands)
+                         bands=args.bands, require_settled=args.require_settled)
         if args.baseline:
             try:
                 apply_baseline(result, args.app, args.baseline, args.style, args.write_baseline,

@@ -3455,6 +3455,77 @@ fi
 
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Cost vs quality guardrails (agentic-delivery/references/
+# cost-quality-guardrails.md): a cost cut may move prose behind a trigger, but
+# (1) every anchor in scripts/floor-anchors.tsv stays, as a fixed string, in
+# its must-load file, and (2) every routed reference keeps a trigger that its
+# router line echoes (scripts/trigger_lint.py; free and deterministic, while
+# LLM trigger evals run once per release).
+# ---------------------------------------------------------------------------
+# floor_anchor_misses <manifest>: prints one line per row whose heading or
+# body anchor is empty or absent from its file, or that does not have exactly
+# four tab-separated columns; prints nothing when all hold. An empty anchor is
+# a miss (grep -F "" would match every file). Columns are split by parameter
+# expansion, not `IFS=$'\t' read`, because tab is IFS whitespace and read
+# would collapse an empty column into its neighbour.
+floor_anchor_misses() {
+  local line tabs file heading body why rest a
+  while IFS= read -r line || [ -n "$line" ]; do
+    case "$line" in ''|'#'*) continue ;; esac
+    tabs="${line//[!$'\t']/}"
+    if [ "${#tabs}" -ne 3 ]; then
+      printf 'FLOOR ANCHOR ROW MALFORMED (want 4 tab-separated columns): %s\n' "$line"
+      continue
+    fi
+    file="${line%%$'\t'*}"; rest="${line#*$'\t'}"
+    heading="${rest%%$'\t'*}"; rest="${rest#*$'\t'}"
+    body="${rest%%$'\t'*}"; why="${rest#*$'\t'}"
+    for a in "$heading" "$body"; do
+      if [ -z "$a" ] || ! grep -qF -- "$a" "$ROOT/$file" 2>/dev/null; then
+        printf 'FLOOR ANCHOR MISSING: %s: "%s" (%s)\n' "$file" "$a" "$why"
+      fi
+    done
+  done < "$1"
+}
+fa_rows="$(grep -cvE '^(#|$)' "$ROOT/scripts/floor-anchors.tsv")"
+fa_out="$(floor_anchor_misses "$ROOT/scripts/floor-anchors.tsv")"
+if [ "$fa_rows" -gt 0 ] && [ -z "$fa_out" ]; then
+  record 0 "floor-anchors: every must-load heading+body anchor is still present ($fa_rows rows)"
+else
+  printf '%s\n' "$fa_out" >&2
+  record 1 "floor-anchors: every must-load heading+body anchor is still present ($fa_rows rows)"
+fi
+
+# Planted defects: a body phrase gutted from its rule, and an empty anchor,
+# must each be reported (the check can go red).
+fa_plant="$WORK/floor-anchors-plant.tsv"
+printf '.claude/skills/deep-code-review/SKILL.md\t1. **Evidence over opinion.**\tthis body phrase was cut\tplanted\n' > "$fa_plant"
+if [ -n "$(floor_anchor_misses "$fa_plant")" ]; then
+  record 0 "floor-anchors: a gutted rule body is detected (planted defect)"
+else
+  record 1 "floor-anchors: a gutted rule body is detected (planted defect)"
+fi
+printf '.claude/skills/deep-code-review/SKILL.md\t1. **Evidence over opinion.**\t\tplanted\n' > "$fa_plant"
+if [ -n "$(floor_anchor_misses "$fa_plant")" ]; then
+  record 0 "floor-anchors: an empty anchor is a failure, not a match-everything pass (planted defect)"
+else
+  record 1 "floor-anchors: an empty anchor is a failure, not a match-everything pass (planted defect)"
+fi
+printf '.claude/skills/deep-code-review/SKILL.md\t1. **Evidence over opinion.**\n' > "$fa_plant"
+if [ -n "$(floor_anchor_misses "$fa_plant")" ]; then
+  record 0 "floor-anchors: a row missing its body column is a failure (planted defect)"
+else
+  record 1 "floor-anchors: a row missing its body column is a failure (planted defect)"
+fi
+
+if tl_out="$(python3 "$ROOT/scripts/trigger_lint.py" "$ROOT" 2>&1)"; then
+  record 0 "trigger-lint: every routed reference's trigger is echoed by its router line"
+else
+  printf '%s\n' "$tl_out" >&2
+  record 1 "trigger-lint: every routed reference's trigger is echoed by its router line"
+fi
+
 # ===========================================================================
 # hermeticity sentinel (own lane, appended at the end by convention): nothing
 # above wrote outside $WORK. A regression here means some case dropped a

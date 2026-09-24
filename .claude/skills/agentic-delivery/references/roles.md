@@ -105,8 +105,9 @@ lands on the Conductor anyway, and that context is gone for the run.
   for one worker, or before any event, is the "fifth bot" the anti-patterns
   (below) reject.
 - **Owns the plumbing, not the plan or the merge.** Serializing pushes so two
-  lanes don't race a ref; *finishing* a green PR — rebase, re-run its checks,
-  flip it ready, nothing more: merging stays with the G7 integration owner;
+  lanes don't race a ref; *finishing* a green PR — merge base, run gates
+  locally, one push, flip it ready, nothing more: merging stays with the G7
+  integration owner;
   chasing a flaky pre-push/pre-commit hook; stopping a retry loop that stopped
   making progress — only after identifying its owner (lane, session, or job)
   and getting that owner's confirmation. Known-mechanism work, not a judgment

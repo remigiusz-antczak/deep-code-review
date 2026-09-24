@@ -1,6 +1,6 @@
 # Domain M checklist
 
-Read this when domain M (Observability) is applicable in Phase 2 — the coverage ledger marks it, or a DIFF quick-path touches it. Split from `domain-checklists.md`, whose preamble (the 🚩 convention and the language-grep pointer) applies here.
+Read this when domain M (Observability: logs, metrics, traces) is applicable in Phase 2 — the coverage ledger marks it, or a DIFF quick-path touches it. Split from `domain-checklists.md`, whose preamble (the 🚩 convention and the language-grep pointer) applies here.
 
 ### M. Observability → `references/observability.md`
 Load the reference when the target runs unattended (a service, a scheduled job, a

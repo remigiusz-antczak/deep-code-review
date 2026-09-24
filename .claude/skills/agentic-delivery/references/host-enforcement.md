@@ -121,7 +121,7 @@ work is lost) a chat handback over 800 chars / 10 lines; exempts only agent
 types named in `HANDBACK_EXEMPT_TYPES` (default: 4 built-in types) — it never
 inspects tools, so a custom read-only review lane is capped by default too;
 releases after 3 blocks per agent so it never loops forever. `--selftest`
-proves it fires.
+proves it fires. Its `VERIFIED`/`UNVERIFIED` status check and the `lane_cap.py` tool-call cap: `cost-quality-guardrails.md` §2.
 
 **A harness with no report file** (a review lane's findings ARE its chat
 answer) still needs a cap — never exempt it: exempt means uncapped, which
@@ -198,6 +198,199 @@ see "Subagent model + cache-TTL pin" above; not restated here.
   "subagentPromptCacheTtl": "5m"
 }
 ```
+
+## Cost discipline: no push/CI spend to "see if it passes"
+
+Run every gate locally, once, before pushing: a push, a re-run, or `gh pr
+update-branch` each cost a fresh CI run for zero new signal over what the
+local run already showed. Mechanisms, not just prose: `ci_cost_lint.py`
+(`deep-code-review/scripts/`) flags a rerun-prone workflow; `token_report.py
+--budget` (`agentic-ceo/scripts/`) catches a poll/re-push loop's spend;
+`merge_train.py refresh` (`merge-operations.md`) defaults to printing local
+merge-and-push commands per PR, never `gh pr update-branch`, unless
+`--use-update-branch` opts in (its own help names the one-CI-run-per-PR
+cost). `[skip ci]` is never an option on the ref main CI protects (a
+required check must actually run to satisfy branch protection); prefer `gh
+pr merge --auto` (merges once required checks pass, no polling) over a
+watch/poll loop. The one rerun carve-out: at most one same-commit rerun, and
+only when the failure log matches a known infrastructure-flake signature
+(runner lost, network timeout) — `merge-queue-worktrees.md` **A load-flaky
+required gate is not a confirmed red** and `gate-epistemology.md` principle
+3 own the mechanics; anything else is fixed, not rerun. None of this blocks
+a genuinely new push (a real fix, a rebase after a real conflict) — only the
+reflexive re-push/re-run/poll that re-buys a result a local run already
+gave.
+
+## Minimum-cost CI & token profile (universal, mandatory)
+
+**Read this when** wiring or reviewing GitHub Actions triggers, sizing a
+fleet's per-run spend, or judging whether a "required check" is actually
+enforced rather than self-reported. Every control below is declared at the
+level the ladder above supports — most of this section is Protocol (a repo
+owner configures it; nothing here ships an enforcing adapter), and each
+control says so explicitly rather than implying Host-enforced.
+
+**Integration branches** (a `development`/staging branch that isn't the
+release target): **zero GitHub-hosted CI.** Server-enforced instead of
+trusted — a branch protection rule/ruleset requires PRs and restricts who can
+merge/push to the integration branch to **one integrator identity**. That
+identity is a **deterministic script, never an LLM session** — an LLM
+holding the gate token is a prompt-injection target that can be coaxed into
+minting its own green status. Run it from `launchd` (or an equivalent local
+scheduler), batching the queued PRs into one merge-train gate run per cycle
+and bisecting to find the culprit only when that run is red (one PR at a
+time, waiting in line, is the failure mode this avoids). The gate token lives
+in the OS keychain, never a plain-text file; document a break-glass path
+(the owner runs the same script by hand when the scheduled run can't).
+`scripts/dcr-gates.sh` is the **one tracked entry point** both `ci.yml` and
+the integrator call — no second, undocumented "run every gate locally"
+script. The integrator refuses to push without a passing `dcr-gates.sh` run
+against that exact head SHA, and **never** honors a `[skip ci]` commit
+message on the ref main CI protects (a skip-ci merge into a protected branch
+defeats the backstop main CI is there to be).
+
+A commit **status needs a SHA that already exists on GitHub** — a purely
+local merge has no such SHA, and a required check on a protected branch
+evaluates the PR head, not an unpublished local merge. The gate first
+refuses unless the working tree is exactly the committed HEAD (no unstaged,
+staged, or untracked changes — a `--no-commit` staging area is not a
+committed result), fetches the target branch fresh (never a stale cached
+ref) and fails closed if no base is resolvable. So the flow is: push the
+gated SHA (never a moving `HEAD`) to a scratch ref (`refs/integrator/tmp`,
+force-pushed each cycle — it is disposable), run the gate against that
+pushed SHA, post the status on it, and only then **fast-forward** the
+protected branch to that same SHA (a plain, non-forced push — git itself
+refuses a non-fast-forward, so a stale or diverged integrator run can never
+silently overwrite history). Both pushes are performed AS the push identity
+— authenticated via a credential helper, not read out of an env var and
+merely compared by name — so "separate identity" is a property of the push
+itself, not a second, self-asserted variable. If the branch's protection
+needs a required status, it is posted by a **separate gate identity** from
+the one that pushed — a status minted by the pusher's own token is forgeable
+(any push-access credential can POST any commit status for any SHA) and
+proves nothing about whether a gate ran; `templates/integrator-gate.sh`
+refuses to post when the gate token's `gh api user` login equals the push
+token's. Pre-push hooks (`pre-push-verify.sh`) are convenience, not
+enforcement — they are self-report, bypassable by `--no-verify` or a
+repointed hook.
+**The local gate is not evidence unless it runs in the same OS/toolchain as
+main CI** — GNU vs BSD coreutils, shell built-ins, and line-ending handling
+differ enough that a macOS-only local pass proves nothing about a Linux-runner
+result. `ubuntu-latest` is a VM image, not a published container, so "the
+same image main CI uses" is only true once main CI itself declares a
+`container:`. Pin **one multi-arch image by digest** and use it both as main
+CI's `container:` and locally (`docker run`/`colima`/OrbStack — do not assume
+Docker Desktop's organization licensing applies; verify it for the actual
+operator). Apple Silicon runs an `arm64` pull of that digest natively while
+`ubuntu-latest` is `amd64` — document that arch gap rather than hiding it;
+main CI is what catches an arch-specific bug, the local run is not a
+substitute for that coverage, only for the rest of the gate.
+
+**Main/release:** hosted CI runs only on PRs into the default branch.
+`pull_request` trigger `types: [opened, reopened, ready_for_review,
+synchronize]` — omitting `opened`/`reopened` means a PR opened directly as
+ready (never drafted) gets no initial run at all, only on its next push; a
+job-level `if:` still skips a draft (drafts stay skipped — a draft's checks
+would burn minutes on work not yet ready for review), which is the actual
+gate, not the trigger's `types:` list. Workflow-level `concurrency` with
+`cancel-in-progress: true` (safe
+because a branch gets one final push per PR before merge); every job carries
+`timeout-minutes`. No `push` trigger, no post-merge run, no `schedule:` by
+default (weekly at most, for probes only — a daily-or-more-frequent cron
+burns minutes with no PR for a reviewer to object to). A required check's
+workflow is never `paths`/`paths-ignore`-filtered or workflow-level
+conditional — an unmatched filter means the check never reports, so the PR
+blocks forever "waiting for status"; scope with a job-level `if:` that still
+reports success/skip instead. Consolidate jobs into fewer workflows —
+GitHub rounds every job's minutes **up** to the next whole minute, so five
+10-second jobs bill as five minutes. Linux runners unless a job genuinely
+needs Windows/macOS (macOS bills at roughly 30x a Linux 1-core minute).
+
+**Synthetic probes & uptime checks are monitoring, not CI** — never solve
+their cost by cutting how often they run (that degrades detection time, the
+thing they exist for). Move them to free infrastructure that isn't billed
+runner-minutes: a local `cron`/`launchd` job, or a free tier of a dedicated
+uptime monitor, at their **original** cadence. A local scheduler has no
+dead-man switch of its own — a laptop that sleeps or a probe process that
+dies goes silent with nobody noticing the watcher itself is gone. Using only
+free tools: on a probe failure, `gh issue create` (GitHub's own free email
+notification, zero Actions minutes — an optional `ntfy.sh` push is extra,
+not required); every probe run, pass or fail, writes a heartbeat (a
+timestamp file or an updated issue/gist). A GitHub Actions `schedule:` stays
+at the doctrine's own cap (none, or weekly) and is used **only** to check
+that heartbeat is fresh — failing loudly (a new issue, a red check) when it
+has gone stale — never as the frequent prober itself.
+
+**Self-hosted runners:** compute is free (no included-minute draw, no
+per-minute charge, regardless of repo visibility) — but only inside a
+disposable VM/container with no host secrets and restricted egress, ephemeral
+or JIT (one job, then torn down). Never on the bare host for a job that
+executes untrusted or agent-ingested content (a scraped doc, a dependency
+README, a prompt-injected issue) — GitHub's own guidance that self-hosted
+runners on private repos are compromised by "anyone who can fork the
+repository and open a pull request" describes the fork-PR threat; an
+agent-authored-code threat is broader (the agent itself can be coaxed into
+emitting exfiltrating code) and needs isolation regardless of PR trust level.
+
+**Merge queue:** only available on a public repo, or a private repo **owned
+by an organization on GitHub Enterprise Cloud** — not Team, not Pro, not a
+personal-account repo. Verify plan and ownership before relying on it; where
+unavailable, a merge train (`merge_train.py`) is the mechanized substitute
+(see `references/merge-queue-worktrees.md` — not restated here).
+
+**Spend backstop:** a soft budget (alert-only, never a hard stop that could
+block legitimate CI) — configure alerts at 50/80/100% of the cap so an
+operator sees the trend before it bills out, not just at the limit.
+
+**Tokens:** cheapest model tier that fits the task (`CLAUDE_CODE_SUBAGENT_MODEL`
+above); per-lane tool-call caps; no reminder/poll loop firing more often than
+every 20 minutes; never poll a merge (`gh pr merge --auto` schedules the
+merge server-side instead of a loop re-checking status); `token_report.py
+--budget` before a paid run, not after. **Cost cuts never apply to review
+depth on a security-critical or gate/enforcement change** (anything that
+grants merge/push rights, mints a credential, or changes what a gate checks)
+— that review keeps the strongest available model plus an independent
+reviewer; the cheapest-tier default is for mechanical lanes (formatting,
+boilerplate, a routine dependency bump), not for judging whether a control
+actually holds.
+
+**A lane that hits its tool/token cap mid-task hands back a checkpoint, never
+a "done" claim.** The handback states what ran, what did not, and marks the
+result `UNVERIFIED` for whatever gate it could not complete — the caller
+re-dispatches the remainder instead of trusting a claim the lane had no
+budget left to earn. This is the same claim-honesty rule the top of this file
+applies everywhere else: a check that could not run is `UNVERIFIED`, never a
+pass.
+
+**A rule moved out of a must-load file needs an eval proving its trigger
+fires** — a routed `references/*.md` with zero evals citing it is unproven
+prose, the same gap `docs/standards-index.md`'s routing rule closes for
+"is it findable" but not for "does it work." `scripts/eval_citation_lint.py`
+(repo root, `--selftest`-backed) flags exactly that: a references file this
+skill's `SKILL.md` routes to, that no eval in the skill's `evals/evals.json`
+cites by name. It is advisory today, run per-skill (`eval_citation_lint.py
+<skill-dir> [--gate]`), not yet wired into the repo-wide gate — several
+skills' reference files predate this check and are not yet retrofitted with
+citing evals; that backlog is a deferred, named follow-up, not silently
+closed. Both evals this section itself added
+(`agentic-delivery/evals/evals.json`) cite `host-enforcement.md` by name, so
+this file passes the check today.
+
+Sources (fetched 2026-09-24): GitHub Docs — Billing and usage
+(`docs.github.com/en/actions/concepts/billing-and-usage`, self-hosted runner
+usage is free regardless of repo visibility); GitHub Docs — Actions runner
+pricing (`docs.github.com/en/billing/reference/actions-runner-pricing`,
+per-job minute rounds up, per-minute OS rates); GitHub Docs — Secure use
+reference (`docs.github.com/en/actions/reference/security/secure-use`,
+fork-PR self-hosted-runner compromise risk); GitHub Docs — Managing a merge
+queue (`docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/managing-a-merge-queue`,
+org + GitHub Enterprise Cloud gate on private repos); GitHub Docs — Commit
+statuses (`docs.github.com/en/rest/commits/statuses`, any push-access token
+can post any commit status for any SHA). Full verification detail in
+`docs/standards-index.md`. **By name only, not re-verified this session:**
+`gh issue create`'s email-notification behavior, GitHub Actions `container:`
+digest pinning, and Docker Desktop's organization-licensing terms — confirm
+current behavior/terms before treating any of the three as a fetched fact.
 
 ## Deferred-question hooks (optional, advisory)
 

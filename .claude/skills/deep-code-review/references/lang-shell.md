@@ -53,6 +53,23 @@ Read this when the target runs any shell — CI `run:` steps, hooks, Dockerfile 
   gate sees, not on how one input is interpreted), and from the application-text collation
   rules in `i18n-l10n.md` (sorting / case-folding *user data* for display — this is
   collation inside a *gate's control flow*).
+- **A GNU-only flag piped to `2>/dev/null` in a liveness/idle check fails open, silently, fleet-wide
+  (#1158).** A relative-time `find` probe (`-newermt`, or `-printf`) only GNU findutils accepts; BSD/macOS
+  `find` rejects it as a bad option, and stderr piped to `/dev/null` "to keep output clean" swallows that
+  invalid-option error along with the noise it was meant to suppress. The command then matches nothing,
+  and every worker reads idle — including ones that just wrote output — because the failure looks like "no
+  match," not "the check itself is broken." The same shape recurs with GNU coreutils' `stat -c`/`--format`
+  (BSD/macOS `stat` uses `-f`), `date -d`/`--date` (BSD/macOS `date` has no `-d`; use `-j -f` to parse or
+  `-v` to adjust), and `sed -i` given **no** argument (BSD/macOS `sed -i` requires one, even an empty
+  string, `sed -i '' ...`; GNU's suffix is optional, `-i[SUFFIX]`) — each pair verified from the platform's
+  own man page and the GNU manual (`docs/standards-index.md`, 2026-09-24). **Never suppress the stderr of a
+  check whose result drives an action** (kill, restart, reassign, alert, "report idle"): if the command can
+  fail for a reason other than "no match," that failure must be visible or explicitly handled, not
+  discarded. Prefer the portable form both implementations accept (a numeric "N minutes ago" `find` flag
+  over a relative-date string only one parses) or detect the platform and branch, and smoke-test a
+  liveness/staleness probe against one known-live and one known-idle subject **on the actual target
+  platform**, not only the one it was authored on. Mechanized by `scripts/reaper_lint.py`'s
+  `GNU_FLAG_SILENCED_STDERR` rule (concurrency-shared-state.md routes the rest of that script).
 - **A script that gates on another tool's log, not its exit status.** Gate on
   the tool's exit status, captured to a file — never a pipe (pipe-hides-exit-code
   hazard: `language-stack-redflags.md`'s verification-shell section); the

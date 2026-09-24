@@ -22,9 +22,14 @@ lifecycle, canary/blue-green claims vs actual config, DORA-or-`UNMEASURED` —
   combinatorially per added axis), both burn minutes without a reviewer ever
   seeing a duplicate run to object to; a workflow that only runs tests but
   triggers with no `paths`/`paths-ignore` filter still re-runs on a docs-only
-  change (`.claude/skills/deep-code-review/scripts/ci_cost_lint.py` checks all
-  five deterministically — plus the docs-only-trigger heuristic as advisory —
-  and `--gate` fails a PR on the blocking ones).
+  change (`.claude/skills/deep-code-review/scripts/ci_cost_lint.py` checks
+  these deterministically — plus the docs-only-trigger heuristic as advisory —
+  and `--gate` fails a PR on the blocking ones). The mandatory,
+  universal minimum-cost profile (integration-branch CI ban, main-only hosted
+  CI shape, self-hosted-runner isolation, merge-queue plan gate, spend/token
+  backstops) is the canonical doctrine in
+  `agentic-delivery/references/host-enforcement.md`'s "Minimum-cost CI & token
+  profile" — not restated here.
 - Third-party CI actions **pinned to a commit SHA** (not `@main`/`@v3`), bumped
   by a bot that passes the same gates; secrets from the CI store, never echoed
   (`set -x` leaks). **Package-signature verification is blocking**; transitive-CVE

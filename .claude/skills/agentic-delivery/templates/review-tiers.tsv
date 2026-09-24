@@ -1,0 +1,70 @@
+# review-tiers.tsv — the ONE path-glob -> review-tier list. Both the dispatch
+# step (which model a lane runs on) and the review step (who must review it)
+# read this file; no second list exists anywhere. Doctrine:
+# agentic-delivery/references/cost-quality-guardrails.md. Enforced by
+# agentic-delivery/scripts/tier_gate.py.
+#
+# Tiers:
+#   1 = security, enforcement, gates, hooks, skill prose (it IS behavior),
+#       merge-ready logic, data-loss paths. Strongest allowed model
+#       (`Model: opus` trailer) AND an independent reviewer
+#       (`Reviewed-By:` trailer naming someone other than the author).
+#   2 = feature code (also the default for any unmatched path).
+#       Independent reviewer; default model tier.
+#   3 = docs outside the skill and hook directories. Self-review allowed.
+#
+# Matching: Python fnmatch on the repo-relative path AND on that path with a
+# leading `/`, where `*` also crosses `/` — so `*/auth/*` matches both
+# `src/auth/x.py` and a root-level `auth/x.py`. Anchor short words to a
+# boundary (`/`, `_`, `-`, `.`) so `gate` does not catch `delegate`, `auth`
+# does not catch `author`, and `merge` does not catch `emergency`. A path
+# matching several rows takes the STRICTEST (lowest) tier, so a
+# skill reference that also matches `*.md` stays tier 1. Copy this file into
+# a target repo and tune the globs there; keep the tier numbers' meaning.
+#
+# FORMAT: <glob>\t<tier>\t<why>
+.github/*	1	CI workflows and required checks
+*hooks/*	1	git and agent hooks
+.husky/*	1	git hooks
+.claude/settings*.json	1	host permissions and hook wiring
+.claude/skills/*/SKILL.md	1	skill prose is behavior
+.claude/skills/*/INDEX.md	1	skill routing tables are behavior
+.claude/agents/*.md	1	agent definitions are behavior
+.claude/commands/*.md	1	slash commands are behavior
+.claude/skills/*/references/*	1	skill prose is behavior
+.claude/skills/*/templates/*	1	gate templates and lane preambles
+.claude/skills/*/scripts/*	1	gates and hooks
+.claude/skills/*/evals/*	1	the checks that prove skill behavior
+scripts/*	1	CI gate scripts and their budgets
+*/gate*	1	anything named as a gate
+*_gate*	1	anything named as a gate
+*-gate*	1	anything named as a gate
+*/merge*	1	merge and ready logic
+*_merge*	1	merge and ready logic
+*-merge*	1	merge and ready logic
+*/auth/*	1	authentication and authorization
+*/auth.*	1	authentication and authorization
+*/auth_*	1	authentication and authorization
+*/auth-*	1	authentication and authorization
+*_auth*	1	authentication and authorization
+*-auth*	1	authentication and authorization
+*oauth*	1	authentication and authorization
+*/authn*	1	authentication and authorization
+*/authz*	1	authentication and authorization
+*/authoriz*	1	authentication and authorization
+*/authentic*	1	authentication and authorization
+*secur*	1	security controls
+*secret*	1	secret handling
+*crypt*	1	cryptography
+*permission*	1	permission checks
+*migration*	1	schema and data migrations (data loss)
+*.sql	1	data definitions (data loss)
+*CLAUDE.md	1	agent instructions are behavior
+*AGENTS.md	1	agent instructions are behavior
+CODEOWNERS	1	review routing
+.banlist*	1	privacy gate patterns
+install.sh	1	writes into target repositories
+SHA256SUMS	1	integrity manifest
+*.md	3	documentation
+docs/*	3	documentation
+LICENSE	3	license text

@@ -10,7 +10,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.456.0"
+  version: "1.457.0"
 ---
 
 # Agentic delivery
@@ -159,7 +159,18 @@ what keeps an unattended run alive.
 the claim against `references/host-enforcement.md` — **read it when** you would
 otherwise write "the gate / budget / permission is enforced," or brief a
 write-lane. A subagent handback's fields-only shape is capped by a host hook,
-`scripts/handback_cap.py` (`SubagentStop`), not only asked for.
+`scripts/handback_cap.py` (`SubagentStop`), not only asked for. The same file's
+"Minimum-cost CI & token profile" section is the canonical, mandatory
+GitHub-Actions/token cost doctrine — **read it when** wiring or reviewing a
+workflow trigger, an integration-branch merge path, self-hosted runners, or a
+fleet's spend caps.
+
+**Cost vs quality guardrails** — before shipping any cost cut (cheaper model
+tier, lane cap, must-load section moved behind a trigger, fewer review hats),
+and whenever choosing a lane's model or reviewer by the paths it touches:
+`references/cost-quality-guardrails.md` — **read it when** a change cuts cost,
+a lane needs a cap or a `VERIFIED`/`UNVERIFIED` handback, or an escaped defect
+may trace to a cut. The one path-to-tier list is `templates/review-tiers.tsv`.
 
 **Operational readiness — incidents and continuity (bus factor = 1).** The
 binder that must exist *before* the system is on fire or the solo operator is

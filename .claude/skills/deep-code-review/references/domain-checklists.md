@@ -5,8 +5,7 @@ Read this when walking a domain in Phase 2 (or a DIFF quick-path that touches th
 ## Domain audit checklists (A–W)
 
 > Each item folds in the *why*. A "🚩" line lists patterns to grep/scan for.
-> Load the linked reference for per-item detection procedures. To turn any red
-> flag into a grep for the target's language, see
+> To turn any red flag into a grep for the target's language, see
 > `references/language-stack-redflags.md`.
 
 Each domain's checklist is its own file. Load only the files for the domains the coverage ledger marks applicable; a domain marked N/A (with its one-line reason) loads nothing.
@@ -25,7 +24,7 @@ Each domain's checklist is its own file. Load only the files for the domains the
 | J. Testing & evaluation | `domain-j.md` |
 | K. Build, CI/CD, supply chain & release | `domain-k.md` |
 | L. Infrastructure as code, containers & cloud | `domain-l.md` |
-| M. Observability | `domain-m.md` |
+| M. Observability (logs, metrics, traces) | `domain-m.md` |
 | N. Configuration, secrets & environments | `domain-n.md` |
 | O. Documentation & developer experience | `domain-o.md` |
 | P. Frontend / UI / UX / accessibility | `domain-p.md` |

@@ -317,10 +317,30 @@ rate-limit-error and stall, wasting the tokens their partial work already spent 
   worktree (`git status`, the unpushed log) plus its queue entry in the orchestrator's own state file, never only
   from the dead lane's context — the durable-artifact checkpoint above is what makes that briefing possible.
 
+- **A first limit error is SUSPECTED, not CONFIRMED — one delayed probe before any teardown (#1166).** An
+  orchestrator that sees several lanes fail on a rate limit and immediately declares a multi-day quota stop,
+  deletes its recurring schedules, writes resume ledgers, and tells a peer session to stop dispatching has
+  acted on a snapshot (the *remembered constraint-state* error below, at its most destructive): a short-lived
+  throttle and a multi-day cap look identical at the moment of the first error, and only one of them justifies
+  the teardown. Before any of it — deleting a schedule, stopping a lane, broadcasting a stop to peers — check
+  two cheap signals: (1) is any lane still completing tool calls (`lane_liveness.py`'s ALIVE/QUIET, never its
+  own kill verdict, applied to whether the *fleet*, not one lane, is still producing); (2) does one minimal
+  probe agent answer, about **10 minutes** after the first error (a documented default, not a hard floor —
+  tune it to the provider's own observed reset granularity). Declare the long stop only when **both** fail:
+  no lane progress **and** the probe itself errors. Probe **once**, not on a loop — a minimal probe agent
+  still loads the full agent context (on the order of tens of thousands of tokens), so polling it repeatedly
+  spends the same tokens the stop was meant to conserve. Write the resume ledgers either way; they are cheap
+  and reversible, unlike the teardown. Never delete a schedule or tell a peer to stop on a suspicion alone —
+  that is the destructive, shared-state action principle 9 already gates, and the *is this lane dead* recheck
+  below draws the identical distinction one level down (a lane) that this draws one level up (the fleet).
+
 **🚩 tell:** an orchestrator widening lane count because the local probe reads healthy — free RAM, idle cores,
 flat swap — while a rising fraction of lanes fail to start or die seconds in; the fan-out was sized to the
 machine when the binding ceiling was the shared quota all along. Track the rate-limit-error rate per N lanes
 dispatched — nonzero under healthy local resources is the proof that fan-out is gated on the wrong ceiling.
+A second tell, same family: schedules deleted and peers told to stop within minutes of a first rate-limit
+error, with no record of the two-signal check above — the accompanying **metric** is wall-clock and token
+cost spent rebuilding schedules and restarting lanes that were still completing when the stop fired.
 
 ## A remembered constraint-state is a guess, not a current signal — recheck it before you keep acting on it
 

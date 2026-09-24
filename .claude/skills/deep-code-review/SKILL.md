@@ -11,7 +11,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.456.0"
+  version: "1.457.0"
 ---
 
 # Deep Code Review
@@ -204,7 +204,7 @@ applicable domains. Language footguns:
 | M | Observability | `domain-m.md`, `observability.md` |
 | N | Config, secrets, environments | `domain-n.md` |
 | O | Docs & DX | `domain-o.md`, `docs-and-dx.md`, `docs-evolution-by-stage.md` (which-docs-when, by stage), `readme-authoring.md` (writing/reviewing an onboarding README) |
-| P | Frontend / UI / a11y | `domain-p.md`, `frontend-a11y.md` → `a11y-aria.md`, `a11y-live.md`, `a11y-focus.md`, `a11y-color-motion.md`, `a11y-forms.md`, `web-fetch.md`, `web-render.md`; `product-ux-quality.md` (design half) → `ux-writes.md`, `ux-dataviz.md`, `ux-lists.md`, `ux-components.md`, `ux-interaction.md`, `ux-sweep.md`, `ux-gates.md`; `rendered-parity.md` (rendered-appearance/design-parity — "make X look like Y", a port/restyle), `migration-parity.md` (matching a prototype/mockup/design-export) |
+| P | Frontend / UI / a11y | `domain-p.md`, `frontend-a11y.md` → `a11y-aria.md`, `a11y-live.md`, `a11y-focus.md`, `a11y-color-motion.md`, `a11y-forms.md`, `frontend-security.md` (CSP/Referrer-Policy/URL-token), `web-fetch.md`, `web-render.md`; `product-ux-quality.md` → `ux-writes.md`, `ux-dataviz.md`, `ux-lists.md`, `ux-states.md`, `ux-components.md`, `ux-interaction.md`, `ux-sweep.md`, `ux-gates.md`; `rendered-parity.md` (design-parity port/restyle), `migration-parity.md` (matching a mockup/design-export) |
 | Q | Privacy, compliance, licensing | `domain-q.md`, `privacy-compliance.md` (code layer), `privacy-by-design.md` (pre-code product artifacts) |
 | R | i18n, encoding, localization | `domain-r.md`, `i18n-l10n.md` (bidi/RTL, Unicode normalization, CLDR plurals) |
 | S | Branches, merges, open-work triage | `domain-s.md`, `branch-and-merge-hygiene.md`; `merge-operations.md` (landing, acting on triage) |
