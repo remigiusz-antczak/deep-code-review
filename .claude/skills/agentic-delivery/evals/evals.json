@@ -1803,6 +1803,19 @@
         "Notes that a capture is normalized (target, UTC date, redaction) and idempotent",
         "Does not treat a raw capture as a decided or checkable requirement without the ingest and owner steps"
       ]
+    },
+    {
+      "id": "merge-train-reused-fetch-ref-name-keeps-stale-content",
+      "prompt": "A merge-train daemon fetches each PR head into refs/fetch/cycle-<N>, where N is a per-process cycle counter, and compares the union against those refs. After a restart the counter starts at 1 again, and the train begins reporting conflicts and parking PRs that merge cleanly by hand. The fetch step prints nothing alarming. What is wrong, and what should the fix pin?",
+      "expected_output": "The restart reuses ref names an earlier run already wrote. Without a forced refspec, git fetch does not overwrite an existing ref with non-fast-forward content, and when its exit code is ignored the train compares against the old run's stale refs, so it sees false conflicts and parks mergeable PRs. The fix: fetch with forced refspecs (`+src:dst`) into destination names unique to the run (for example pid plus a UUID or monotonic value, never a counter that a restart resets), check every git fetch exit code and stop the cycle on a non-zero one without comparing anything, and before comparing, confirm that each fetched ref's SHA equals the remote's `git ls-remote` SHA for that PR head (retrying a raced read within a bound) and the head the plan checked. A member that still differs is skipped on its own; one PR's drift must not abort the cycle. Pin it with a test on real temporary repositories: a restart after a crash must fetch the new content, and a failed fetch must halt the cycle. merge_train.py implements this, and merge-operations.md (Merge trains) states the rule.",
+      "expectations": [
+        "Identifies the reused per-process counter names as the cause: an un-forced fetch keeps the old ref content after a restart",
+        "Requires forced refspecs (`+src:dst`) into destination names unique per run, not a cycle counter",
+        "Requires every git fetch exit code to be checked, with a non-zero fetch stopping the cycle before any comparison",
+        "Requires the fetched SHA to equal the `git ls-remote` SHA of the PR head before comparing",
+        "Skips only the member whose fetched head differs from ls-remote or from the head the plan checked, rather than aborting the whole cycle for one PR",
+        "Pins the fix with real-repository tests: a restart after a crash fetches the new content, and a failed fetch halts the cycle"
+      ]
     }
   ]
 }

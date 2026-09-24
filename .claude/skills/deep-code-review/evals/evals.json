@@ -6162,6 +6162,19 @@
         "Explains why a core.hooksPath self-heal does not bypass it",
         "Admits that --no-verify still bypasses a client hook, so it is not the only control"
       ]
+    },
+    {
+      "id": "pinned-test-now-fed-to-a-real-clock-entry-point-is-a-dated-failure",
+      "prompt": "Review this test. It defines `NOW = datetime(2026, 1, 10, tzinfo=timezone.utc)` at module level and builds `release_time = NOW - timedelta(hours=1)`. It then calls `is_stale(release_time)` and asserts False, with a comment: '1h old is well inside the 4-day staleness threshold'. `is_stale(ts)` takes no clock argument and computes `datetime.now(timezone.utc) - ts > timedelta(days=4)`. The test passes in CI today. Is it fine?",
+      "expected_output": "No, this is a finding: a time bomb. The fixture is derived from a pinned NOW, but `is_stale` measures age against the real wall clock because it takes no injected clock. The test passes only while real_now - NOW is under 4 days. On the day that window closes it fails on every branch at the same moment, with no diff that caused it, which looks like a flaky gate or an infrastructure outage. The comment's reasoning is correct relative to NOW, which is why review misses it; the comment does not clear the finding. Fix: derive the fixture from the real clock at test time (`datetime.now(timezone.utc) - timedelta(hours=1)`), or inject a clock into `is_stale` so every clock read in the exercised path uses the same pinned value. A pinned NOW is safe only when every clock read in the path uses it. With the clock injected, add boundary cases just before, exactly at, and just after the 4-day threshold. Cheap detection: a CI job that runs the suite with the clock advanced (for example +30 and +365 days with a faketime-style shim).",
+      "expectations": [
+        "Flags the test as a finding: a fixture built from a pinned NOW is compared against the real clock inside `is_stale`",
+        "Explains that it passes only while real_now - NOW stays under the threshold, then fails on every branch at once with no causing diff",
+        "Does not accept the comment's margin argument as clearing the finding",
+        "Fixes by deriving the fixture from the real clock at test time, or by injecting the clock into the entry point",
+        "Asks for boundary cases just before, exactly at, and just after the threshold once the clock is injected",
+        "Mentions a clock-advanced (time-travel) CI run or equivalent as a cheap way to catch the class"
+      ]
     }
   ]
 }

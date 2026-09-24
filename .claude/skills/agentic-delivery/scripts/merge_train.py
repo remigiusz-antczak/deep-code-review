@@ -10,7 +10,8 @@ others out for the suspect's whole verification cycle (issue #1119), attribute
 a numeric-cap overshoot to the member that owns it (issue #1106), retry the
 union immediately after parking a member instead of sleeping a cycle per
 conflict (issue #1134), and never merge onto a base that moved or was
-rewritten after the union was proved (issue #1137). Prose alone let every one
+rewritten after the union was proved (issue #1137), and never compare against
+a stale fetched ref (issue #1139). Prose alone let every one
 of those rules be skipped under pressure; this script is the mechanism.
 
 SUBCOMMANDS
@@ -21,7 +22,11 @@ SUBCOMMANDS
           success/neutral/skipped, and at least --min-checks (K, >= 1) of those
           latest runs are `success`. Commit statuses (the legacy status API)
           are not read. Read-only.
-  verify  Re-plan, fetch the base and every member head, then build ONE union
+  verify  Re-plan, fetch the base and every member head (`git ls-remote`
+          first, then forced refspecs into refs unique to this run; a failed
+          fetch or a base still stale after bounded retries stops the cycle,
+          while a member still stale, gone, or moved since plan is skipped
+          alone), then build ONE union
           in a throwaway worktree (members merged in PR-number order onto the
           fresh base) and run --verify-cmd once in it (plus --count-cmd vs --cap
           when given). On a merge conflict the member is parked with its files
@@ -76,13 +81,14 @@ runs PR code on this machine, which is why fork PRs are skipped by default.
 OUTPUT AND EXIT CODES
 ---------------------
 One line per action (ELIGIBLE, SKIP, PLAN, FAIL, FLAKY, PARK, GREEN, RED,
-WOULD-MERGE, MERGED, NOOP, HALT, ERROR). Untrusted text (check names, file
+WOULD-MERGE, MERGED, NOOP, HALT, ERROR, DROP-FAILED). Untrusted text (check names, file
 names, forge errors) is stripped of control characters and truncated.
   0  plan listed; union green; dry-run printed; members merged; nothing to do
   1  verify found no green union (every member parked)
   2  usage or forge/git error (fail closed; nothing is guessed)
   3  HALT: base moved or rewritten, base red, another writer mid-train, a
-     member failed at merge time, or a refused push
+     member failed at merge time, a member landed but the new base could
+     not be verified, or a refused push
 
 USAGE
 -----
@@ -105,6 +111,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import uuid
 from contextlib import contextmanager
 
 sys.dont_write_bytecode = True  # never litter __pycache__ into a checksummed skill tree
@@ -149,6 +156,21 @@ def default_runner(args, cwd=None, timeout=3600):
     return proc.returncode, proc.stdout, proc.stderr
 
 
+def pid_alive(pid) -> bool:
+    """True unless `pid` is certainly not a running process on this host.
+
+    A process owned by another user (PermissionError) counts as alive, so the
+    caller never deletes a live run's refs. Side-effect free (signal 0).
+    """
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except (PermissionError, OverflowError, ValueError):
+        return True
+    return True
+
+
 def clean(text, limit=80) -> str:
     """Strip control characters and truncate untrusted text before printing it. Pure."""
     return re.sub(r"[\x00-\x1f\x7f]", "?", str(text))[:limit]
@@ -166,6 +188,8 @@ class Train:
         self.a, self.runner, self.out, self.sleep = args, runner, out, sleep
         self.repo_flag = ["--repo", args.repo] if args.repo else []
         self.base_sha = ""
+        self.run_id = f"{os.getpid()}-{uuid.uuid4().hex[:12]}"  # never a per-process counter (#1139)
+        self.refs = set()  # refs this run fetched into; dropped when the run ends
         self.state_path = args.state or self._default_state()
         self.state = self._load()
 
@@ -213,10 +237,86 @@ class Train:
         """Resolve a git ref to its SHA."""
         return self.run(["git", "rev-parse", ref])[1].strip()
 
-    def fetch(self, *refs):
-        """Fetch the base (plus `refs`) from the remote; return the fresh base SHA."""
-        self.run(["git", "fetch", "--quiet", self.a.remote, self.a.base, *refs])
-        return self.rev(f"refs/remotes/{self.a.remote}/{self.a.base}")
+    def fetch(self, members=()):
+        """Fetch the base and each member's PR head into this run's own refs.
+
+        Returns (base SHA, members still safe to compare). #1139: `git ls-remote`
+        is read first, then every ref is fetched with a forced refspec (`+src:dst`)
+        into refs/merge-train/<run-id>/, a namespace unique to this run (pid +
+        random UUID, never a cycle counter), so a restart never compares against
+        a ref an earlier run left behind. A non-zero fetch raises ForgeError (the
+        cycle stops, nothing is compared). A fetched ref that disagrees with
+        ls-remote was raced: the whole read is retried with --retries/backoff;
+        a base still disagreeing then raises ForgeError, while a member still
+        disagreeing, or whose fetched head is not the head plan checked, is
+        skipped alone (SKIP) so one PR's drift never aborts the cycle.
+        """
+        if not self.refs:
+            self.sweep()
+        for m in members:
+            if type(m["number"]) is not int:
+                raise ForgeError(f"PR number {clean(m['number'])!r} is not an integer; refusing to build a refspec")
+        ns = f"refs/merge-train/{self.run_id}"
+        base_src, base_dst = f"refs/heads/{self.a.base}", f"{ns}/base"
+        src = {m["number"]: f"refs/pull/{m['number']:d}/head" for m in members}
+        dst = {n: f"{ns}/pull-{n:d}" for n in src}
+        attempts = self.a.retries + 1
+        for i in range(attempts):
+            if i:
+                self.sleep(self.delay(i))
+            _, out, _ = self.run(["git", "ls-remote", self.a.remote, base_src, *src.values()])
+            remote = {ref: sha for sha, _, ref in (line.partition("\t") for line in out.splitlines())}
+            live = [n for n in src if src[n] in remote]  # a vanished PR ref is skipped, not fetched
+            self.refs.update([base_dst, *(dst[n] for n in live)])
+            self.run(["git", "fetch", "--quiet", "--no-tags", self.a.remote, f"+{base_src}:{base_dst}",
+                      *(f"+{src[n]}:{dst[n]}" for n in live)])
+            base_sha = self.rev(base_dst)
+            got = {n: self.rev(dst[n]) for n in live}
+            raced = {n for n in live if got[n] != remote[src[n]]}
+            if base_sha == remote.get(base_src) and not raced:
+                break
+        if base_sha != remote.get(base_src):
+            raise ForgeError(f"fetched {base_src} at {base_sha[:7]} but {self.a.remote} has "
+                             f"{clean(remote.get(base_src, 'nothing'))[:7]} after {attempts} tries; "
+                             "stale or raced fetch, not compared")
+        kept = []
+        for m in members:
+            n = m["number"]
+            why = (f"no {src[n]} on {clean(self.a.remote)}" if n not in got
+                   else f"stale or raced fetch after {attempts} tries" if n in raced
+                   else f"head moved to {got[n][:7]} since plan" if got[n] != m["head"] else "")
+            if why:
+                self.say(f"SKIP #{n} {why}")
+            else:
+                kept.append(m)
+        return base_sha, kept
+
+    def sweep(self):
+        """Delete refs/merge-train/<pid>-*/ namespaces left by crashed runs on this host.
+
+        A namespace is removed only when its pid is not a live process; a live
+        run's refs (or an unparseable name) are never touched. A reused pid keeps
+        a dead namespace alive one more run, the safe direction.
+        """
+        out = self.run(["git", "for-each-ref", "--format=%(refname)", "refs/merge-train/"], ok=False)[1]
+        for ref in out.split():
+            m = re.fullmatch(r"refs/merge-train/(\d+)-[0-9a-f]+/[\w-]+", ref)
+            if m and not pid_alive(int(m.group(1))):
+                self.run(["git", "update-ref", "-d", ref], ok=False)
+
+    def drop_refs(self):
+        """Delete every ref this run fetched into; log DROP-FAILED per failure and never raise.
+
+        Called from run()'s finally, so it must not break run()'s never-raises
+        contract; a leftover ref is swept by a later run once this pid is dead.
+        """
+        for ref in sorted(self.refs):
+            try:
+                rc, _, err = self.run(["git", "update-ref", "-d", ref], ok=False)
+                if rc:
+                    self.say(f"DROP-FAILED {ref} rc={rc}: {clean(err.strip(), 120)}")
+            except Exception as exc:  # noqa: BLE001 — cleanup must never mask the run's exit code
+                self.say(f"DROP-FAILED {ref}: {clean(exc, 120)}")
 
     def delay(self, attempt):
         """Backoff before retry `attempt` (1-based): --backoff doubling, capped at MAX_BACKOFF."""
@@ -374,7 +474,7 @@ class Train:
     def verify(self):
         """The `verify` subcommand: find the largest green union, parking culprits; record it."""
         members = self.eligible()
-        self.base_sha = self.fetch(*[f"refs/pull/{m['number']}/head" for m in members])
+        self.base_sha, members = self.fetch(members)
         parked_any = False
         while members:
             try:
@@ -451,7 +551,7 @@ class Train:
         if not members:
             self.say("NOOP nothing verified to merge")
             return OK
-        prev = self.fetch()
+        prev = self.fetch()[0]
         self.same_base(self.state["base_sha"], prev)
         if not self.a.apply:
             for m in members:
@@ -466,7 +566,14 @@ class Train:
                 self.save()
                 raise Halt(f"#{m['number']} not merged ({why}); {names(members[i + 1:]) or 'no members'} "
                            "left unmerged: re-plan and re-verify")
-            new = self.fetch()
+            try:
+                new = self.fetch()[0]
+            except ForgeError as exc:  # the PR already landed: never leave it listed as unmerged
+                self.say(f"MERGED #{m['number']} {m['head'][:7]} -> {self.a.base}@unverified grant={clean(self.a.grant)}")
+                self.state["members"] = []
+                self.save()
+                raise Halt(f"#{m['number']} landed; base unverified ({exc}); "
+                           f"{names(members[i + 1:]) or 'no members'} left unmerged: re-plan and re-verify") from exc
             parents = self.run(["git", "rev-list", "--parents", "-n", "1", new])[1].split()[1:]
             if parents != [prev, m["head"]]:
                 self.state["members"] = []
@@ -528,6 +635,7 @@ def run(argv, runner=default_runner, out=sys.stdout, sleep=time.sleep) -> int:
     if problems:
         print("ERROR " + "; ".join(problems), file=out)
         return ERROR
+    train = None
     try:
         train = Train(a, runner, out, sleep)
         return getattr(train, a.cmd)()
@@ -537,6 +645,9 @@ def run(argv, runner=default_runner, out=sys.stdout, sleep=time.sleep) -> int:
     except (ForgeError, ValueError, KeyError, TypeError) as exc:
         print(f"ERROR {clean(exc, 240)} (not verified)", file=out)
         return ERROR
+    finally:
+        if train:
+            train.drop_refs()
 
 
 # ---- selftest: a fake forge + git, no network, no real repository ----------
@@ -554,7 +665,8 @@ class FakeForge:
         self.delta, self.marked = {}, set()
         self.view_override, self.merge_fail, self.intruder = {}, set(), False
         self.trees, self.calls, self.sleeps, self.gates = {}, [], [], []
-        self.fail_prefix, self.parents = None, {}
+        self.fail_prefix, self.parents, self.remote_override = None, {}, {}
+        self.pushed, self.after_merge = {}, {}  # heads pushed after plan; remote refs changed by a merge
 
     def base(self):
         return self.hist[-1]
@@ -586,9 +698,19 @@ class FakeForge:
             self.hist.append(f"M{n}")
             self.parents[f"M{n}"] = [self.hist[-2], self.prs[n]["head"]]
             self.prs[n]["state"] = "MERGED"
+            self.remote_override.update(self.after_merge)
             return 0, "", ""
-        if a[:2] == ["git", "fetch"] or a[:3] in (["git", "worktree", "remove"], ["git", "merge", "--abort"]):
+        if a[:2] in (["git", "fetch"], ["git", "update-ref"], ["git", "for-each-ref"]) or a[:3] in (
+                ["git", "worktree", "remove"], ["git", "merge", "--abort"]):
             return 0, "", ""
+        if a[:2] == ["git", "ls-remote"]:
+            now = {"refs/heads/main": self.base(),
+                   **{f"refs/pull/{n}/head": self.pushed.get(n, p["head"]) for n, p in self.prs.items()}}
+            now.update(self.remote_override)
+            return 0, "".join(f"{now[r]}\t{r}\n" for r in a[3:] if now.get(r)), ""
+        if a[:2] == ["git", "rev-parse"] and "/pull-" in a[2]:
+            n = int(a[2].rsplit("-", 1)[1])
+            return 0, self.pushed.get(n, self.prs[n]["head"]) + "\n", ""
         if a[:2] == ["git", "rev-parse"]:
             return 0, self.base() + "\n", ""
         if a[:3] == ["git", "worktree", "add"]:
@@ -804,6 +926,143 @@ def _selftest() -> int:
     def untrusted_text_is_sanitised():
         return clean("a\x1b[31mb\nc") == "a?[31mb?c", clean("a\x1b[31mb\nc")
 
+    def real_repos():
+        """A real 'remote' repo (main + refs/pull/1/head) and an empty local repo pointing at it."""
+        root = tempfile.mkdtemp(dir=tmp)
+        src, local = os.path.join(root, "src"), os.path.join(root, "local")
+
+        def git(*args, cwd=src):
+            rc, out, err = default_runner(["git", *GIT_ID, *args], cwd=cwd)
+            assert rc == 0, err
+            return out.strip()
+        for d in (src, local):
+            git("init", "--quiet", d, cwd=root)
+        git("commit", "--quiet", "--allow-empty", "-m", "base")
+        git("branch", "-M", "main")
+        git("update-ref", "refs/pull/1/head", git("commit-tree", "HEAD^{tree}", "-p", "HEAD", "-m", "pr v1"))
+        git("remote", "add", "origin", src, cwd=local)
+        return git, local, lambda args, cwd=None, **kw: default_runner(args, cwd=cwd or local, **kw)
+
+    def real_train(runner, out=None):
+        a = build_parser().parse_args(["plan", "--base", "main", "--state", os.path.join(tmp, "rt.json")])
+        return Train(a, runner, out or io.StringIO(), lambda s: None)
+
+    def dead_pid():
+        proc = subprocess.Popen([sys.executable, "-c", ""])
+        proc.wait()
+        return proc.pid
+
+    def restart_after_crash_fetches_fresh_and_sweeps_dead_refs():
+        git, local, runner = real_repos()
+        v1 = git("rev-parse", "refs/pull/1/head")
+        crashed = real_train(runner)
+        crashed.run_id = f"{dead_pid()}-0123456789ab"  # a run whose process died without dropping its refs
+        crashed.fetch([{"number": 1, "head": v1}])
+        git("update-ref", f"refs/merge-train/{os.getpid()}-live/base", v1, cwd=local)  # a live run's ref
+        v2 = git("commit-tree", "HEAD^{tree}", "-p", "HEAD", "-m", "pr v2")  # non-fast-forward to v1
+        git("update-ref", "refs/pull/1/head", v2)
+        fresh_run = real_train(runner)
+        _, kept = fresh_run.fetch([{"number": 1, "head": v2}])
+        got = fresh_run.rev(f"refs/merge-train/{fresh_run.run_id}/pull-1")
+        swept = f"refs/merge-train/{crashed.run_id}/" not in git("for-each-ref", "refs/merge-train/", cwd=local)
+        fresh_run.drop_refs()
+        left = git("for-each-ref", "--format=%(refname)", "refs/merge-train/", cwd=local)
+        return (fresh_run.run_id != crashed.run_id and got == v2 and len(kept) == 1 and swept
+                and left == f"refs/merge-train/{os.getpid()}-live/base"), (got, v2, kept, swept, left)
+
+    def same_run_refetch_updates_non_fast_forward_ref():
+        git, _, runner = real_repos()
+        t = real_train(runner)
+        t.fetch([{"number": 1, "head": git("rev-parse", "refs/pull/1/head")}])
+        v2 = git("commit-tree", "HEAD^{tree}", "-p", "HEAD", "-m", "pr v2")
+        git("update-ref", "refs/pull/1/head", v2)
+        _, kept = t.fetch([{"number": 1, "head": v2}])
+        got = t.rev(f"refs/merge-train/{t.run_id}/pull-1")
+        t.drop_refs()
+        return got == v2 and len(kept) == 1, (got, v2, kept)
+
+    def failed_fetch_halts_cycle():
+        git, local, runner = real_repos()
+        t = real_train(runner)
+        git("commit", "--quiet", "--allow-empty", "-m", "local", cwd=local)
+        git("update-ref", f"refs/merge-train/{t.run_id}", "HEAD", cwd=local)  # blocks refs/merge-train/<run>/...
+        seen = []
+        t.runner = lambda args, cwd=None, **kw: seen.append(args[:2]) or runner(args, cwd=cwd, **kw)
+        try:
+            t.fetch([{"number": 1, "head": git("rev-parse", "refs/pull/1/head")}])
+            real_ok = False
+        except ForgeError as exc:
+            real_ok = "git fetch" in str(exc)
+        ordered = ["git", "ls-remote"] in seen and seen.index(["git", "ls-remote"]) < seen.index(["git", "fetch"])
+        f = FakeForge(2)
+        f.fail_prefix = ["git", "fetch"]
+        rc, out = go(f, "verify", "--verify-cmd", "t", state=fresh("ff.json"))
+        return real_ok and ordered and rc == ERROR and not f.gates and "GREEN" not in out, (real_ok, seen, out)
+
+    def drifted_member_is_skipped_not_the_cycle():
+        f = FakeForge(2)
+        f.pushed = {2: "h2b"}  # #2 was pushed after plan read its checks
+        rc, out = go(f, "verify", "--verify-cmd", "t", state=fresh("dm.json"))
+        return (rc == OK and "SKIP #2 head moved to h2b since plan" in out and "GREEN base=B0 members=#1" in out
+                and f.sleeps == []), (out, f.sleeps)
+
+    def raced_member_retried_then_skipped():
+        f = FakeForge(2)
+        f.remote_override = {"refs/pull/2/head": "h2new"}  # the remote keeps disagreeing with the fetched ref
+        rc, out = go(f, "verify", "--verify-cmd", "t", state=fresh("sf.json"))
+        return (rc == OK and "SKIP #2 stale or raced fetch" in out and "GREEN base=B0 members=#1" in out
+                and f.sleeps == [5, 10]), (out, f.sleeps)
+
+    def vanished_pr_ref_is_skipped_not_fetched():
+        f = FakeForge(2)
+        f.remote_override = {"refs/pull/2/head": None}  # ls-remote no longer lists #2's head
+        rc, out = go(f, "verify", "--verify-cmd", "t", state=fresh("vr.json"))
+        fetched = [c for c in f.calls if c[:2] == ["git", "fetch"]]
+        return (rc == OK and "SKIP #2 no refs/pull/2/head on origin" in out and "GREEN base=B0 members=#1" in out
+                and not any("refs/pull/2/head" in " ".join(c) for c in fetched)), (out, fetched)
+
+    def raced_base_retried_then_errors():
+        f = FakeForge(2)
+        f.remote_override = {"refs/heads/main": "B9"}
+        rc, out = go(f, "verify", "--verify-cmd", "t", state=fresh("rbf.json"))
+        return (rc == ERROR and "stale or raced fetch" in out and not f.gates and f.sleeps == [5, 10]), (out, f.sleeps)
+
+    def drop_failure_is_logged_and_never_raises():
+        results = []
+        for mode in ("rc", "raise"):
+            f = FakeForge(1)
+
+            def flaky_drop(args, cwd=None, _f=f, _mode=mode, **kw):
+                if args[:2] == ["git", "update-ref"]:
+                    if _mode == "raise":
+                        raise RuntimeError("disk gone")
+                    return 1, "", "cannot lock ref"
+                return _f(args, cwd=cwd, **kw)
+            flaky_drop.sleeps = f.sleeps
+            rc, out = go(flaky_drop, "verify", "--verify-cmd", "t", state=fresh(f"df-{mode}.json"))
+            results.append((rc, out))
+        return all(rc == OK and "DROP-FAILED" in out for rc, out in results), results
+
+    def post_merge_fetch_mismatch_halts_after_merged_line():
+        f = FakeForge(2)
+        st = verified(f, "pm.json")
+        f.after_merge = {"refs/heads/main": "B9"}  # the post-merge base cannot be proved
+        rc, out = go(f, "merge", "--apply", "--grant", "g", state=st)
+        merged = [c[3] for c in f.calls if c[:3] == ["gh", "pr", "merge"]]
+        with open(os.path.join(tmp, st), encoding="utf-8") as fh:
+            left = json.load(fh)["members"]
+        return (rc == HALT and merged == ["1"] and "#1 landed; base unverified" in out and left == []
+                and 0 <= out.find("MERGED #1") < out.find("HALT")), (out, merged, left)
+
+    def non_int_pr_number_is_rejected():
+        f = FakeForge(1)
+        t = real_train(f)
+        try:
+            t.fetch([{"number": "1:refs/heads/main", "head": "h1"}])
+            return False, "accepted"
+        except ForgeError:
+            return not any(c[:2] == ["git", "fetch"] for c in f.calls), f.calls
+
     cases = [
         ("plan-filters-latest-check-per-name-and-K", plan_filters),
         ("culprit-among-four-isolated-and-stays-parked", culprit_among_four_is_isolated_and_stays_parked),
@@ -824,6 +1083,16 @@ def _selftest() -> int:
         ("push-refused-before-runner", push_is_refused_before_the_runner),
         ("forge-outage-fails-closed", forge_outage_fails_closed),
         ("untrusted-text-sanitised", untrusted_text_is_sanitised),
+        ("restart-after-crash-fetches-fresh-and-sweeps-dead-refs", restart_after_crash_fetches_fresh_and_sweeps_dead_refs),
+        ("same-run-refetch-updates-non-fast-forward-ref", same_run_refetch_updates_non_fast_forward_ref),
+        ("failed-fetch-halts-cycle", failed_fetch_halts_cycle),
+        ("drifted-member-skipped-not-the-cycle", drifted_member_is_skipped_not_the_cycle),
+        ("raced-member-retried-then-skipped", raced_member_retried_then_skipped),
+        ("vanished-pr-ref-skipped-not-fetched", vanished_pr_ref_is_skipped_not_fetched),
+        ("raced-base-retried-then-errors", raced_base_retried_then_errors),
+        ("drop-failure-logged-never-raises", drop_failure_is_logged_and_never_raises),
+        ("post-merge-fetch-mismatch-halts-after-merged-line", post_merge_fetch_mismatch_halts_after_merged_line),
+        ("non-int-pr-number-rejected", non_int_pr_number_is_rejected),
     ]
     try:
         return bc.run_checks("merge_train", cases)
