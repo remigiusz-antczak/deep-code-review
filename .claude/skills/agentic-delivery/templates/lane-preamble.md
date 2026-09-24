@@ -25,5 +25,6 @@ default for this lane, not a suggestion.
 - Design port: `python3 .claude/skills/deep-code-review/scripts/parity_differ.py --design <design-file> --app <app-file>` — report the inventory MATCH/gap it prints, never a size measured by hand. Use the `<design-lane>` agent type, if this host defines one, for design ports.
 
 ## Stop conditions
+- Tool-call budget: at most `<tool-call cap>` tool calls (150 is a starting value; tune it from `python3 .claude/skills/agentic-ceo/scripts/token_report.py --budget`). At the cap, commit work in progress and hand back `BLOCKED | budget | <what remains>` instead of continuing.
 - Blocked: record the block and the next item; don't retry the same fix a third time.
 - Destructive or external action (force-push, deploy, secrets/IAM, external send, mass delete): gated — ask the owner, don't act.

@@ -68,6 +68,43 @@ ORCHESTRATION SHARE
 no more than 20% of total workflow tokens, leaving 80% for workers doing
 execution." See `docs/standards-index.md`.
 
+BUDGET GATE (--budget [TSV])
+----------------------------
+Turns the report into a pass/fail gate. Prints one line per breach, each
+naming its lever, then exits 1; prints one `token budget: ok` line and exits
+0 when every cap holds. Caps, their defaults, and the lever each names:
+
+  max_orchestration_share  0.20       compact orchestrator (start a fresh
+                                      session; the AWS ceiling quoted above)
+  max_tool_calls           150        split lane (per lane)
+  min_tool_calls           0 (off)    batch tasks (per lane; a thin lane pays
+                                      the whole startup for little work; an
+                                      unmeasured heuristic, opt in via TSV)
+  max_input_equivalent     3000000    cap reads (per lane)
+  max_startup_tokens       50000      trim brief (per lane; first-turn
+                                      context = spawn prompt + auto-loaded
+                                      files)
+
+The defaults are STARTING VALUES to tune from your own `--json` output, not
+claims about what a lane should cost. The three per-lane maxima sit near the
+90th percentile of three local sessions measured with this tool on
+2026-09-24 (tool calls p90 25-169, input-equivalent p90 0.28M-3.1M, startup
+p90 29K-48K), so the gate flags outlier lanes rather than the median one.
+
+Units differ on purpose: the orchestration share is computed on RAW tokens
+(the AWS metric is a share of total workflow tokens), while the per-lane
+token caps are INPUT-EQUIVALENT (cache-weighted, closer to cost). The
+optional TSV overrides
+them, one `<scope>\t<metric>\t<cap>` row per line (`#` comments and blank
+lines skipped). Scope `*` sets the default for every lane; a subagent's file
+stem or label sets that lane alone and wins over `*`. The orchestration
+share takes scope `*` only. A malformed row, unknown metric, non-numeric or
+non-finite cap, lane scope matching no lane, or missing TSV exits 2 (fail
+closed; a gate with an unreadable budget never passes). So does
+COULD_NOT_CHECK: zero usable main turns, or a subagent file with no usable
+line (report mode warns about such a file on stderr instead of dropping it). A lane's tool calls are its unique `tool_use` block ids (the
+same id on two streamed lines counts once), windowed by `--since`.
+
 OUTPUT
 ------
 Default text report is at most 20 lines. `--json` prints the full computed
@@ -78,29 +115,49 @@ CONTRACT (exit codes)
 ----------------------
 * 0 — report printed (including an all-zero report; a transcript with no
   usage-bearing turns is a valid, if boring, answer).
+* 1 — `--budget` only: at least one cap breached (one line per breach).
 * 2 — the main session file does not exist / cannot be read, or a bad
-  `--since` value was given (fail closed; never a guessed report).
+  `--since` value was given, or the budget TSV is unreadable or malformed
+  (fail closed; never a guessed report).
 
 USAGE
 -----
   token_report.py --session <path/to/session.jsonl> [--since ISO] [--json]
+  token_report.py --session <path/to/session.jsonl> [--since ISO] --budget [budget.tsv]
   token_report.py --selftest
 """
 from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import sys
 from datetime import datetime, timezone
 
 OK = 0
+BREACH = 1
 ERROR = 2
 
 CACHE_READ_MULT = 0.1
 CACHE_WRITE_5M_MULT = 1.25
 CACHE_WRITE_1H_MULT = 2.0
 ORCHESTRATION_FLAG_THRESHOLD = 0.20
+
+# metric -> (default cap, lever). Order is the breach-line order within a lane.
+# Starting values to tune from --json output, not claims (see BUDGET GATE).
+BUDGET_METRICS = {
+    "max_tool_calls": (150, "split lane: dispatch narrower lanes, each with its own tool-call cap"),
+    "min_tool_calls": (0, "batch tasks: fold related tasks into one lane to amortize startup"),
+    "max_input_equivalent": (3_000_000, "cap reads: read ranges and grep hits, not whole files"),
+    "max_startup_tokens": (50_000, "trim brief: shorter spawn prompt, fewer auto-loaded files"),
+}
+ORCHESTRATION_LEVER = "compact orchestrator: start a fresh session (beats /compact per SKILL)"
+DEFAULT_BUDGET = {
+    "orchestration": ORCHESTRATION_FLAG_THRESHOLD,
+    "star": {m: cap for m, (cap, _lever) in BUDGET_METRICS.items()},
+    "lanes": {},
+}
 
 ZERO_USAGE = {
     "input_tokens": 0,
@@ -244,6 +301,30 @@ def extract_handback_chars(entries: list):
     return last_handback if last_handback is not None else last_text
 
 
+def extract_tool_calls(entries: list, since) -> int:
+    """Count unique tool_use block ids on assistant lines at/after `since` (None = all).
+
+    A streamed turn can repeat a block on several lines; the id dedupes it.
+    A tool_use block with no id counts once per line (degrade path).
+    """
+    seen: set = set()
+    anonymous = 0
+    for entry in entries:
+        if entry.get("type") != "assistant":
+            continue
+        if since is not None:
+            ts = parse_timestamp(entry.get("timestamp"))
+            if ts is None or ts < since:
+                continue
+        for block in (entry.get("message") or {}).get("content") or []:
+            if isinstance(block, dict) and block.get("type") == "tool_use":
+                if isinstance(block.get("id"), str) and block["id"]:
+                    seen.add(block["id"])
+                else:
+                    anonymous += 1
+    return len(seen) + anonymous
+
+
 def load_meta(jsonl_path: str) -> dict:
     meta_path = jsonl_path[: -len(".jsonl")] + ".meta.json" if jsonl_path.endswith(".jsonl") else jsonl_path + ".meta.json"
     if not os.path.isfile(meta_path):
@@ -262,14 +343,18 @@ def load_meta(jsonl_path: str) -> dict:
 
 
 def build_subagent_report(jsonl_path: str, since) -> dict:
+    """One lane's totals; None when windowed out; {"unusable": True, ...} when no usable turn at all."""
     entries = list(read_jsonl(jsonl_path))
-    turns = filter_since(extract_turns(entries), since)
-    if not turns:
-        return None
-    meta = load_meta(jsonl_path)
     stem = os.path.basename(jsonl_path)
     if stem.endswith(".jsonl"):
         stem = stem[: -len(".jsonl")]
+    all_turns = extract_turns(entries)
+    if not all_turns:
+        return {"file": stem, "unusable": True}
+    turns = filter_since(all_turns, since)
+    if not turns:
+        return None
+    meta = load_meta(jsonl_path)
     first = turns[0]
     startup = first["input_tokens"] + first["cache_write_5m"] + first["cache_write_1h"] + first["cache_read"]
     totals = sum_turns(turns)
@@ -279,6 +364,7 @@ def build_subagent_report(jsonl_path: str, since) -> dict:
         "file": stem,
         "startup_tokens": startup,
         "handback_chars": extract_handback_chars(entries),
+        "tool_calls": extract_tool_calls(entries, since),
         **totals,
     }
 
@@ -291,12 +377,15 @@ def build_report(session_path: str, since) -> dict:
     session_dir = session_path[: -len(".jsonl")] if session_path.endswith(".jsonl") else session_path
     subagents_dir = os.path.join(session_dir, "subagents")
     subagents = []
+    unusable = []
     if os.path.isdir(subagents_dir):
         for name in sorted(os.listdir(subagents_dir)):
             if not name.endswith(".jsonl"):
                 continue
             rec = build_subagent_report(os.path.join(subagents_dir, name), since)
-            if rec is not None:
+            if rec is not None and rec.get("unusable"):
+                unusable.append(rec["file"])
+            elif rec is not None:
                 subagents.append(rec)
 
     sub_raw = sum(s["raw_tokens"] for s in subagents)
@@ -311,6 +400,8 @@ def build_report(session_path: str, since) -> dict:
         "session": session_path,
         "since": since.isoformat() if since else None,
         "main": main_totals,
+        "main_turns": len(main_turns),
+        "unusable_subagents": unusable,
         "subagents_count": len(subagents),
         "subagents_totals": {
             "input_equivalent": round(sub_input_eq, 2),
@@ -322,6 +413,98 @@ def build_report(session_path: str, since) -> dict:
         "top_subagents": top5,
         "all_subagents": subagents,
     }
+
+
+# ---------------------------------------------------------------------------
+# Budget gate
+# ---------------------------------------------------------------------------
+
+
+def load_budget(path: str) -> dict:
+    """Parse a `<scope>\t<metric>\t<cap>` TSV over DEFAULT_BUDGET.
+
+    Raises ValueError (with the offending line) on a malformed row, unknown
+    metric, non-numeric or negative cap, or an orchestration row whose scope
+    is not `*`; OSError on an unreadable file. The caller fails closed.
+    """
+    budget = {"orchestration": DEFAULT_BUDGET["orchestration"],
+              "star": dict(DEFAULT_BUDGET["star"]), "lanes": {}}
+    with open(path, "r", encoding="utf-8") as fh:
+        for n, raw in enumerate(fh, 1):
+            line = raw.strip()
+            if not line or line.startswith("#"):
+                continue
+            cols = [c.strip() for c in line.split("\t")]
+            if len(cols) != 3:
+                raise ValueError(f"line {n}: want <scope><TAB><metric><TAB><cap>: {line!r}")
+            scope, metric, cap_text = cols
+            try:
+                cap = float(cap_text)
+            except ValueError:
+                raise ValueError(f"line {n}: cap is not a number: {cap_text!r}") from None
+            if not math.isfinite(cap):
+                raise ValueError(f"line {n}: cap is not finite: {cap_text!r}")
+            if cap < 0:
+                raise ValueError(f"line {n}: cap is negative: {cap_text!r}")
+            if metric == "max_orchestration_share":
+                if scope != "*":
+                    raise ValueError(f"line {n}: max_orchestration_share takes scope '*' only")
+                budget["orchestration"] = cap
+            elif metric not in BUDGET_METRICS:
+                raise ValueError(f"line {n}: unknown metric: {metric!r}")
+            elif scope == "*":
+                budget["star"][metric] = cap
+            else:
+                budget["lanes"].setdefault(scope, {})[metric] = cap
+    return budget
+
+
+def could_not_check(report: dict, budget: dict) -> list:
+    """Reasons the gate cannot give a verdict; any entry means exit 2, never a pass.
+
+    Zero usable main turns (share undefined), a subagent file with no usable
+    line, or a lane-scope TSV row that matches no lane's file stem or label.
+    """
+    reasons = []
+    if report["main_turns"] == 0:
+        reasons.append("main transcript has no usable turns (orchestration share undefined)")
+    for stem in report["unusable_subagents"]:
+        reasons.append(f"subagent file {stem}.jsonl has no usable turns")
+    names = {s["file"] for s in report["all_subagents"]} | {s["label"] for s in report["all_subagents"]}
+    for scope, caps in sorted(budget["lanes"].items()):
+        if scope not in names:
+            reasons.append(f"budget row scope {scope!r} ({', '.join(sorted(caps))}) matches no lane")
+    return reasons
+
+
+def _num(value) -> str:
+    """Render 3001000.0 as 3001000 and 0.2 as 0.2 — breach lines stay exact and short."""
+    return str(int(value)) if float(value).is_integer() else str(value)
+
+
+def check_budget(report: dict, budget: dict) -> list:
+    """Return one breach line per exceeded cap: orchestrator first, then lanes by file.
+
+    Pure and deterministic: same report + budget, same lines in the same order.
+    """
+    lines = []
+    share, ceiling = report["orchestration_share"], budget["orchestration"]
+    if share > ceiling:
+        lines.append(f"BREACH orchestrator max_orchestration_share={_num(share)} > {_num(ceiling)}"
+                     f" -> {ORCHESTRATION_LEVER}")
+    source = {"max_tool_calls": "tool_calls", "min_tool_calls": "tool_calls",
+              "max_input_equivalent": "input_equivalent", "max_startup_tokens": "startup_tokens"}
+    for lane in sorted(report["all_subagents"], key=lambda s: s["file"]):
+        caps = dict(budget["star"])
+        caps.update(budget["lanes"].get(lane["label"], {}))
+        caps.update(budget["lanes"].get(lane["file"], {}))
+        for metric, (_default, lever) in BUDGET_METRICS.items():
+            value, cap = lane[source[metric]], caps[metric]
+            is_floor = metric.startswith("min_")
+            if (value < cap) if is_floor else (value > cap):
+                op = "<" if is_floor else ">"
+                lines.append(f"BREACH lane={lane['file']} {metric}={_num(value)} {op} {_num(cap)} -> {lever}")
+    return lines
 
 
 # ---------------------------------------------------------------------------
@@ -348,7 +531,8 @@ def render_text(report: dict) -> str:
             cost = round(s["input_equivalent"] + s["output_tokens"], 2)
             handback = s["handback_chars"] if s["handback_chars"] is not None else "n/a"
             lines.append(f"  {i}. {s['label']} [{s['agent_type']}] cost={cost} "
-                         f"startup={s['startup_tokens']} out={s['output_tokens']} handback_chars={handback}")
+                         f"startup={s['startup_tokens']} calls={s['tool_calls']} out={s['output_tokens']} "
+                         f"handback_chars={handback}")
     return "\n".join(lines)
 
 
@@ -362,6 +546,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--session", help="path to <session>.jsonl")
     p.add_argument("--since", help="ISO-8601 timestamp; only turns at/after it are counted")
     p.add_argument("--json", action="store_true", help="print the full report as JSON")
+    p.add_argument("--budget", nargs="?", const="", metavar="TSV",
+                   help="gate mode: exit 1 with one line per breached cap (optional TSV overrides defaults)")
     p.add_argument("--selftest", action="store_true")
     return p
 
@@ -386,6 +572,26 @@ def main(argv=None) -> int:
             return ERROR
 
     report = build_report(args.session, since)
+    if args.budget is not None:
+        try:
+            budget = load_budget(args.budget) if args.budget else DEFAULT_BUDGET
+        except (OSError, ValueError) as exc:
+            print(f"token_report.py: bad --budget file {args.budget}: {exc}", file=sys.stderr)
+            return ERROR
+        reasons = could_not_check(report, budget)
+        if reasons:
+            for reason in reasons:
+                print(f"COULD_NOT_CHECK: {reason}", file=sys.stderr)
+            return ERROR
+        breaches = check_budget(report, budget)
+        if not breaches:
+            print(f"token budget: ok ({report['subagents_count']} lanes, "
+                  f"orchestration share {report['orchestration_share'] * 100:.1f}%)")
+            return OK
+        print("\n".join(breaches))
+        return BREACH
+    for stem in report["unusable_subagents"]:
+        print(f"token_report.py: warning: subagent file {stem}.jsonl has no usable turns", file=sys.stderr)
     if args.json:
         print(json.dumps(report, indent=2, sort_keys=True))
     else:
@@ -529,6 +735,108 @@ def _selftest() -> int:
     u2 = _turn_usage({"message": {"usage": {"cache_creation_input_tokens": 1000,
                                             "cache_creation": {"ephemeral_1h_input_tokens": 400}}}})
     check("partial split: remainder -> 5m", u2["cache_write_5m"] == 600 and u2["cache_write_1h"] == 400, str(u2))
+
+    # -- budget gate (--budget): synthetic lanes, each built to trip one cap --
+    import contextlib
+    import io
+
+    def quiet_main(argv):
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            return main(argv)
+
+    def turn(req, ts, usage, tools=()):
+        content = [{"type": "tool_use", "id": t, "name": "Bash", "input": {}} for t in tools]
+        return json.dumps({"type": "assistant", "timestamp": ts, "requestId": req,
+                           "apiBlockIndex": 0, "message": {"usage": usage, "content": content}}) + "\n"
+
+    with tempfile.TemporaryDirectory() as tmp:
+        sess = os.path.join(tmp, "s.jsonl")
+        with open(sess, "w", encoding="utf-8") as fh:
+            fh.write(turn("m1", "2026-01-01T00:00:00Z", {"input_tokens": 100, "output_tokens": 10}))
+        sub = os.path.join(tmp, "s", "subagents")
+        os.makedirs(sub)
+        with open(os.path.join(sub, "agent-ok.jsonl"), "w", encoding="utf-8") as fh:
+            fh.write(turn("o1", "2026-01-01T00:01:00Z", {"input_tokens": 1000, "output_tokens": 10},
+                          [f"t{i}" for i in range(6)]))
+        report_ok = build_report(sess, None)
+        check("tool-calls-counted", report_ok["all_subagents"][0]["tool_calls"] == 6, str(report_ok["all_subagents"]))
+        check("default-budget-clean-run-has-no-breach", check_budget(report_ok, dict(DEFAULT_BUDGET)) == [],
+              str(check_budget(report_ok, dict(DEFAULT_BUDGET))))
+        check("budget-clean-run-exits-0", quiet_main(["--session", sess, "--budget"]) == OK, "")
+
+        with open(os.path.join(sub, "agent-wide.jsonl"), "w", encoding="utf-8") as fh:
+            # Same tool_use id logged on two streamed lines counts once: 6 calls, not 7.
+            fh.write(turn("w1", "2026-01-01T00:02:00Z", {"input_tokens": 1000, "output_tokens": 1}, ["a", "b"]))
+            fh.write(turn("w2", "2026-01-01T00:03:00Z", {"input_tokens": 3000000, "output_tokens": 1},
+                          ["b", "c", "d", "e", "f"]))
+        with open(os.path.join(sub, "agent-thin.jsonl"), "w", encoding="utf-8") as fh:
+            fh.write(turn("t1", "2026-01-01T00:04:00Z", {"input_tokens": 60000, "output_tokens": 1}, ["x"]))
+        with open(sess, "a", encoding="utf-8") as fh:
+            fh.write(turn("m2", "2026-01-01T00:05:00Z", {"input_tokens": 2000000, "output_tokens": 1}))
+        report_bad = build_report(sess, None)
+        wide = {s["file"]: s for s in report_bad["all_subagents"]}["agent-wide"]
+        check("duplicate-tool-use-id-counted-once", wide["tool_calls"] == 6, str(wide["tool_calls"]))
+
+        tsv = os.path.join(tmp, "budget.tsv")
+        with open(tsv, "w", encoding="utf-8") as fh:
+            fh.write("# scope\tmetric\tcap\n*\tmax_tool_calls\t150\n*\tmin_tool_calls\t5\n"
+                     "agent-wide\tmax_tool_calls\t5\n")
+        budget = load_budget(tsv)
+        check("lane-row-overrides-star-row", budget["lanes"]["agent-wide"]["max_tool_calls"] == 5, str(budget))
+        breaches = check_budget(report_bad, budget)
+        expected = [
+            "BREACH orchestrator max_orchestration_share=0.3951 > 0.2 -> compact orchestrator",
+            "BREACH lane=agent-thin min_tool_calls=1 < 5 -> batch tasks",
+            "BREACH lane=agent-thin max_startup_tokens=60000 > 50000 -> trim brief",
+            "BREACH lane=agent-wide max_tool_calls=6 > 5 -> split lane",
+            "BREACH lane=agent-wide max_input_equivalent=3001000 > 3000000 -> cap reads",
+        ]
+        got = [b.split(":", 1)[0] for b in breaches]
+        check("one-line-per-breach-naming-the-lever", got == expected, "\n".join(breaches))
+        check("breach-run-exits-1", quiet_main(["--session", sess, "--budget", tsv]) == BREACH, "")
+        check("orchestration-lever-says-fresh-session", "start a fresh session" in breaches[0], breaches[0])
+        check("min-tool-calls-heuristic-off-by-default", DEFAULT_BUDGET["star"]["min_tool_calls"] == 0
+              and not any("min_tool_calls" in b for b in check_budget(report_bad, DEFAULT_BUDGET)),
+              str(check_budget(report_bad, DEFAULT_BUDGET)))
+
+        # A lane-scope row that matches no lane is a typo, not a silent no-op.
+        with open(tsv, "w", encoding="utf-8") as fh:
+            fh.write("agent-ghost\tmax_tool_calls\t5\n")
+        err = io.StringIO()
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(err):
+            rc_ghost = main(["--session", sess, "--budget", tsv])
+        check("unmatched-lane-scope-exits-2-naming-row", rc_ghost == ERROR and "agent-ghost" in err.getvalue(),
+              f"{rc_ghost} {err.getvalue()!r}")
+
+        # A subagent file with no usable lines is reported, never silently dropped.
+        with open(os.path.join(sub, "agent-junk.jsonl"), "w", encoding="utf-8") as fh:
+            fh.write("{not json\n")
+        report_junk = build_report(sess, None)
+        check("unusable-subagent-listed", report_junk["unusable_subagents"] == ["agent-junk"],
+              str(report_junk.get("unusable_subagents")))
+        check("unusable-subagent-budget-could-not-check-exits-2",
+              quiet_main(["--session", sess, "--budget"]) == ERROR, "")
+        err = io.StringIO()
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(err):
+            rc_text = main(["--session", sess])
+        check("unusable-subagent-warned-on-stderr-in-report-mode",
+              rc_text == OK and "agent-junk" in err.getvalue(), f"{rc_text} {err.getvalue()!r}")
+        os.remove(os.path.join(sub, "agent-junk.jsonl"))
+
+        # Zero usable main turns: the share is undefined, so the gate cannot pass.
+        empty = os.path.join(tmp, "empty.jsonl")
+        with open(empty, "w", encoding="utf-8") as fh:
+            fh.write("{not json\n")
+        check("zero-main-turns-budget-could-not-check-exits-2", quiet_main(["--session", empty, "--budget"]) == ERROR, "")
+
+        for bad_row in ("*\tmax_tool_calls\tlots\n", "*\tmax_coffee\t3\n", "*\tmax_tool_calls\n",
+                        "agent-wide\tmax_orchestration_share\t0.3\n", "*\tmax_tool_calls\tnan\n",
+                        "*\tmax_input_equivalent\tinf\n"):
+            with open(tsv, "w", encoding="utf-8") as fh:
+                fh.write(bad_row)
+            check(f"bad-budget-row-exits-2 {bad_row!r}", quiet_main(["--session", sess, "--budget", tsv]) == ERROR, "")
+        check("missing-budget-file-exits-2",
+              quiet_main(["--session", sess, "--budget", os.path.join(tmp, "nope.tsv")]) == ERROR, "")
 
     if failures:
         for f in failures:
