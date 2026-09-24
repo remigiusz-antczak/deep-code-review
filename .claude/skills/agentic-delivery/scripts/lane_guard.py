@@ -101,20 +101,58 @@ fresh branch from `<base>`, take the lane's files from the bad commit
 (`git checkout <bad-sha> -- <paths>`), commit normally, and force-push with an
 explicit lease on the old head (force-push stays owner/standing-grant gated,
 same as any other force-push in this repo).
+
+WAIT MODE. A lane that ends its turn with background work still running (a
+browser test, a dev server, a build) hands back "waiting on background work"
+instead of a verified result. Before the handback, wait for that work,
+bounded, then verify:
+
+    python3 .claude/skills/agentic-delivery/scripts/lane_guard.py wait \
+        [--pid N ...] [--port N ...] [--file PATH ...] [--timeout S] \
+        && python3 .claude/skills/agentic-delivery/scripts/lane_guard.py handback ...
+
+Exit 0 (one `LANE_GUARD OK:` line) once every target is finished:
+  - --pid: must already be running when the wait *starts* (a stale or
+    mistyped pid is never silently "finished" — see below); once confirmed
+    alive, finished means it no longer runs (gone, or a zombie nobody reaped
+    yet — per `ps -o stat=`, falling back to a signal-0 probe).
+  - --port: must be observed accepting a connection on `localhost:<port>` at
+    least once within the `--settle` window (default 30s, capped at
+    --timeout — a target that only ever starts up slowly is a REFUSE-worthy
+    brief, not a longer wait); once confirmed listening, finished means
+    nothing accepts a connection there any more. A port that never once
+    listens is exactly as unverifiable as a pid that was never alive — never
+    read as "already done".
+  - --file: exists, is non-empty, and keeps the same size on two consecutive
+    polls. No alive-at-start check (a file plausibly pre-exists from a prior
+    run and is still the right target); point --file at a result written
+    once at the end (a JUnit report, a status file), not a streaming log
+    whose pauses look finished — for a log, wait on the writer's --pid.
+
+Exit 2 with one `LANE_GUARD COULD_NOT_CHECK:` line naming the target when: a
+--pid is not observed running at wait start; a --port is never observed
+listening within the settle window; or --timeout seconds (default 300) pass
+with something still running. A timeout is never a pass, and the handback
+does not run. Exit 1 (`LANE_GUARD REFUSE:`) on no target, a pid below 1, a
+port outside 1-65535, or a non-positive --timeout/--settle. Read-only: it
+signals nothing and kills nothing.
 """
 import argparse
 import os
 import re
 import shutil
+import socket
 import subprocess
 import sys
 import tempfile
+import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import lane_liveness  # noqa: E402  (sibling module, path set above)
 
 OK = 0
 REFUSED = 1
+COULD_NOT_CHECK = 2
 _STRIPPED_ENV = ("GIT_DIR", "GIT_WORK_TREE", "GIT_COMMON_DIR", "GIT_INDEX_FILE")
 _ALWAYS_DEFAULTS = ("main", "master")
 
@@ -390,6 +428,122 @@ def check_handback(cwd, sha, base, branch=None, cites=(), git="git", artifact_ro
     )
 
 
+def _pid_running(pid):
+    """True while `pid` is a live, non-zombie process. Read-only: signal 0 sends nothing."""
+    try:
+        os.kill(pid, 0)
+    except (ProcessLookupError, OverflowError):  # gone, or a pid no process can have
+        return False
+    except PermissionError:
+        pass  # exists, owned by another user
+    try:
+        stat = subprocess.run(["ps", "-o", "stat=", "-p", str(pid)], capture_output=True, text=True,
+                              timeout=10).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        return True  # no ps: signal 0 said it exists, so it still counts as running
+    return bool(stat) and not stat.startswith("Z")
+
+
+def _port_listening(port):
+    """True while something on localhost accepts a TCP connection on `port`."""
+    try:
+        socket.create_connection(("localhost", port), timeout=1).close()
+    except OSError:
+        return False
+    return True
+
+
+def check_wait(pids, ports, files, timeout=300.0, interval=1.0, settle=30.0):
+    """Wait, bounded by `timeout` seconds, until every pid/port/file target is finished (see WAIT MODE).
+
+    A --pid must already be running when this is called, else it is never trusted as "will finish" —
+    an unreachable pid (typo, already exited before the wait started) returns COULD_NOT_CHECK naming it
+    instead of an instant, wrong OK. A --port must be observed listening at least once within `settle`
+    seconds (capped at `timeout`) before "not listening" is trusted as done, for the same reason: a port
+    that never once accepted a connection was never confirmed to be the background work at all. --file
+    keeps its existing exists/non-empty/stable-size semantics with no alive-at-start check.
+
+    Returns (code, one line): OK when all finished, COULD_NOT_CHECK naming what still runs (or was never
+    confirmed alive/listening), REFUSED on bad input. Side-effects: none beyond reading process, socket,
+    and file state.
+    """
+    if not (pids or ports or files):
+        return REFUSED, "LANE_GUARD REFUSE: wait needs targets; name at least one --pid, --port, or --file"
+    if any(p < 1 for p in pids):
+        return REFUSED, "LANE_GUARD REFUSE: --pid must be a positive pid (0 and negatives address process groups)"
+    if any(not 1 <= p <= 65535 for p in ports):
+        return REFUSED, "LANE_GUARD REFUSE: --port must be 1-65535"
+    if not timeout > 0:
+        return REFUSED, "LANE_GUARD REFUSE: --timeout must be a positive number of seconds"
+    if not settle > 0:
+        return REFUSED, "LANE_GUARD REFUSE: --settle must be a positive number of seconds"
+
+    never_alive = [p for p in pids if not _pid_running(p)]
+    if never_alive:
+        named = ", ".join(f"pid {p}" for p in never_alive)
+        return COULD_NOT_CHECK, (f"LANE_GUARD COULD_NOT_CHECK: {named} not observed running at wait start; "
+                                  f"a pid that never lived cannot be trusted as 'finished'")
+
+    now = time.monotonic()
+    settle_bound = min(settle, timeout)
+    settle_deadline = now + settle_bound
+    deadline = now + timeout
+    sizes = {}
+    seen_listening = {p: False for p in ports}
+    while True:
+        now = time.monotonic()
+        pending = [f"pid {p} running" for p in pids if _pid_running(p)]
+        for p in ports:
+            if _port_listening(p):
+                seen_listening[p] = True
+                pending.append(f"port {p} listening")
+            elif not seen_listening[p] and now < settle_deadline:
+                pending.append(f"port {p} not yet observed listening (settle window)")
+        for path in files:
+            size = os.path.getsize(path) if os.path.isfile(path) else None
+            if size is None:
+                pending.append(f"file {path} absent")
+            elif size == 0:
+                pending.append(f"file {path} empty")
+            elif sizes.get(path) != size:
+                pending.append(f"file {path} still growing")
+            sizes[path] = size
+        never_listened = [p for p in ports if not seen_listening[p] and now >= settle_deadline]
+        if never_listened:
+            named = ", ".join(f"port {p}" for p in never_listened)
+            return COULD_NOT_CHECK, (f"LANE_GUARD COULD_NOT_CHECK: {named} never observed listening within "
+                                      f"{settle_bound:g}s settle window; a port that never once listened cannot "
+                                      f"be trusted as 'finished'")
+        if not pending:
+            done = [f"pid {p}" for p in pids] + [f"port {p}" for p in ports] + [f"file {f}" for f in files]
+            return OK, f"LANE_GUARD OK: background work finished ({', '.join(done)})"
+        if now >= deadline:
+            return COULD_NOT_CHECK, (f"LANE_GUARD COULD_NOT_CHECK: still running after {timeout:g}s: "
+                                     f"{', '.join(pending)}; do not hand back until it finishes")
+        time.sleep(interval)
+
+
+def _main_wait(argv):
+    parser = argparse.ArgumentParser(
+        prog="lane_guard.py wait",
+        description="Wait (bounded) for a lane's background work to finish before its handback.",
+    )
+    parser.add_argument("--pid", type=int, action="append", default=[], help="a process that must exit (repeatable)")
+    parser.add_argument("--port", type=int, action="append", default=[],
+                        help="a localhost port that must stop listening (repeatable)")
+    parser.add_argument("--file", action="append", default=[],
+                        help="a result file that must exist, be non-empty, and stop growing (repeatable)")
+    parser.add_argument("--timeout", type=float, default=300.0, help="total seconds to wait (default 300)")
+    parser.add_argument("--interval", type=float, default=1.0, help="seconds between checks (default 1)")
+    parser.add_argument("--settle", type=float, default=30.0,
+                        help="seconds a --port gets to start listening at least once before 'not listening' "
+                             "counts as done, capped at --timeout (default 30)")
+    args = parser.parse_args(argv)
+    code, line = check_wait(args.pid, args.port, args.file, args.timeout, max(args.interval, 0.05), args.settle)
+    print(line)
+    return code
+
+
 def _main_handback(argv):
     parser = argparse.ArgumentParser(
         prog="lane_guard.py handback",
@@ -415,8 +569,10 @@ def main(argv=None):
     raw = list(sys.argv[1:] if argv is None else argv)
     if raw[:1] == ["handback"]:
         return _main_handback(raw[1:])
+    if raw[:1] == ["wait"]:
+        return _main_wait(raw[1:])
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0],
-                                     epilog="subcommands: {handback} ... (see: lane_guard.py handback --help)")
+                                     epilog="subcommands: {handback,wait} ... (see: lane_guard.py <subcommand> --help)")
     parser.add_argument("--expect-branch", help="required: refuse unless HEAD is on exactly this branch")
     parser.add_argument("--allow-any-branch", action="store_true",
                         help="waive --expect-branch (non-lane probes only; proves less)")
@@ -779,6 +935,7 @@ def _selftest():
             os.environ["GIT_CEILING_DIRECTORIES"] = saved_ceiling
         shutil.rmtree(tmp, ignore_errors=True)
 
+    _selftest_wait(expect)
     passed = total[0] - len(failures)
     if failures:
         print(f"SELFTEST FAILED ({passed}/{total[0]}):")
@@ -787,6 +944,69 @@ def _selftest():
         return 1
     print(f"SELFTEST OK: {passed}/{total[0]}")
     return 0
+
+
+def _selftest_wait(expect):
+    """`wait` cases on real processes, a real listening port, and real files (each well under a second)."""
+    import socket
+    import threading
+
+    tmp = tempfile.mkdtemp(prefix="lane_guard_wait_")
+    try:
+        expect("wait-no-target-refused", check_wait([], [], [], timeout=1), REFUSED, "name at least one")
+        expect("wait-pid-zero-refused", check_wait([0], [], [], timeout=1), REFUSED, "positive pid")
+        expect("wait-bad-settle-refused", check_wait([], [], [os.path.join(tmp, "x")], timeout=1, settle=0),
+               REFUSED, "--settle")
+        dead = subprocess.Popen(["true"])
+        dead.wait()  # exited and reaped before the wait ever starts: never trusted as "will finish"
+        expect("wait-pid-never-alive-could-not-check", check_wait([dead.pid], [], [], timeout=1),
+               COULD_NOT_CHECK, f"pid {dead.pid} not observed running at wait start")
+        short = subprocess.Popen(["sleep", "0.2"])  # never reaped here: its zombie must still count as finished
+        expect("wait-pid-exits-ok", check_wait([short.pid], [], [], timeout=5, interval=0.05), OK, "LANE_GUARD OK")
+        longer = subprocess.Popen(["sleep", "30"])
+        try:
+            expect("wait-pid-timeout-names-it", check_wait([longer.pid], [], [], timeout=0.3, interval=0.05),
+                   COULD_NOT_CHECK, f"pid {longer.pid} running")
+        finally:
+            longer.kill()
+            longer.wait()
+            short.wait()
+        free = socket.socket()
+        free.bind(("127.0.0.1", 0))
+        never_bound_port = free.getsockname()[1]
+        free.close()  # port is free again; nothing ever listens on it during the wait below
+        expect("wait-port-never-listens-could-not-check",
+               check_wait([], [never_bound_port], [], timeout=0.3, interval=0.05, settle=0.1),
+               COULD_NOT_CHECK, f"port {never_bound_port} never observed listening")
+
+        server = socket.socket()
+        server.bind(("127.0.0.1", 0))
+        server.listen()
+        port = server.getsockname()[1]
+        try:
+            expect("wait-port-timeout-names-it", check_wait([], [port], [], timeout=0.3, interval=0.05),
+                   COULD_NOT_CHECK, f"port {port} listening")
+            threading.Timer(0.2, server.close).start()
+            expect("wait-port-closes-ok", check_wait([], [port], [], timeout=5, interval=0.05), OK, "LANE_GUARD OK")
+        finally:
+            server.close()
+        out = os.path.join(tmp, "results.xml")
+        expect("wait-file-absent-timeout", check_wait([], [], [out], timeout=0.3, interval=0.05),
+               COULD_NOT_CHECK, "absent")
+        open(out, "w", encoding="utf-8").close()  # a shell redirect creates the file empty, long before the result
+        expect("wait-file-empty-timeout", check_wait([], [], [out], timeout=0.3, interval=0.05),
+               COULD_NOT_CHECK, "empty")
+        os.remove(out)
+
+        def write_result():
+            with open(out, "w", encoding="utf-8") as handle:
+                handle.write("<testsuite/>\n")
+
+        threading.Timer(0.2, write_result).start()
+        expect("wait-file-appears-ok", check_wait([], [], [out], timeout=5, interval=0.05), OK, "LANE_GUARD OK")
+        expect("wait-bad-timeout-refused", check_wait([], [], [out], timeout=0), REFUSED, "--timeout")
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
 
 
 def _mkdir(parent, name):

@@ -52,10 +52,10 @@ import sys
 from datetime import datetime, timezone
 from urllib.parse import parse_qs, urlsplit
 
-TYPES = ("CLAIM", "RELEASE", "DECISION", "HANDOFF", "BLOCKER", "FIX-CLAIM", "QUESTION", "ANSWER", "AUDIT")
+TYPES = ("CLAIM", "RELEASE", "DECISION", "HANDOFF", "BLOCKER", "FIX-CLAIM", "QUESTION", "ANSWER", "AUDIT", "REVIEW")
 CHATTER_TYPES = ("STATUS", "ACK", "READY", "LANDED")
 
-FIELD_ORDER = ("sha", "test", "verdict", "topic", "ttl", "to", "of", "gate", "rule")
+FIELD_ORDER = ("sha", "branch", "test", "verdict", "resolved", "topic", "ttl", "to", "of", "gate", "rule")
 
 AGENT_PATTERN = r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}"
 _AGENT_RE = re.compile(rf"^{AGENT_PATTERN}$")
@@ -80,9 +80,12 @@ FIELD_RULES = {
     "to": _AGENT_RE,
     "of": re.compile(r"^[0-9]{1,20}$"),
     "gate": re.compile(r"^owner$"),
-    # AUDIT outcome for one item: a real gap to build, already done, or not
-    # applicable (no counterpart). Only `gap` is dispatchable work.
-    "verdict": re.compile(r"^(?:gap|done|na)$"),
+    # The union of every TYPE's verdicts; VERDICTS below narrows it per TYPE.
+    "verdict": re.compile(r"^(?:gap|done|na|approve|changes)$"),
+    # REVIEW: the PR head branch the attested sha was read from, and how many
+    # review findings the author resolved before the verdict.
+    "branch": re.compile(r"^[A-Za-z0-9_][A-Za-z0-9._/-]{0,199}$"),
+    "resolved": re.compile(r"^[0-9]{1,5}$"),
     # Why a RELEASE stands down, from RELEASE_RULES only: never a free-text
     # excuse. Optional in the grammar, so a RELEASE posted before `rule:`
     # existed still frees its claim on read; board_post.py requires it at
@@ -90,6 +93,11 @@ FIELD_RULES = {
     # yield on a peer's own stand-down message alone).
     "rule": re.compile(rf"^(?:{'|'.join(map(re.escape, RELEASE_RULES))})$"),
 }
+
+# Per-TYPE verdicts. AUDIT: a real gap to build, already done, or not
+# applicable (only `gap` is dispatchable work). REVIEW: an independent
+# reviewer lane's verdict on one exact PR head (surface_check.py attested).
+VERDICTS = {"AUDIT": ("gap", "done", "na"), "REVIEW": ("approve", "changes")}
 
 # Which optional fields each TYPE may carry. A field outside its TYPE's set is
 # a grammar error, so e.g. a CLAIM cannot carry `sha:` and look like a fix.
@@ -103,6 +111,7 @@ TYPE_FIELDS = {
     "QUESTION": {"gate"},
     "ANSWER": {"of"},
     "AUDIT": {"sha", "verdict", "topic"},
+    "REVIEW": {"sha", "branch", "verdict", "resolved"},
 }
 # Required on read and write alike. RELEASE's `rule` is deliberately absent:
 # it is a post-time requirement (board_post.py), not a grammar one.
@@ -111,9 +120,10 @@ TYPE_REQUIRED = {
     "FIX-CLAIM": {"sha", "test"},
     "ANSWER": {"of"},
     "AUDIT": {"sha", "verdict"},
+    "REVIEW": {"sha", "branch", "verdict", "resolved"},
 }
 # Types that act on a specific item and therefore cannot use `refs:-`.
-TYPES_NEEDING_REFS = {"CLAIM", "RELEASE", "HANDOFF", "AUDIT"}
+TYPES_NEEDING_REFS = {"CLAIM", "RELEASE", "HANDOFF", "AUDIT", "REVIEW"}
 
 PAGE_SIZE = 100  # GitHub REST maximum per_page for issue comments
 
@@ -160,13 +170,15 @@ def validate_post(ptype: str, refs: str, fields: dict) -> list:
             errors.append(f"unknown field {key!r}")
         elif key not in allowed:
             errors.append(f"field {key}: is not allowed on {ptype}")
-        elif not FIELD_RULES[key].match(value):
+        elif not FIELD_RULES[key].match(value) or (key == "verdict" and value not in VERDICTS[ptype]):
             errors.append(f"field {key}: has a malformed value")
         elif key == "ttl" and not 1 <= int(value) <= MAX_TTL_MINUTES:
             errors.append(f"ttl must be 1..{MAX_TTL_MINUTES} minutes")
     for key in sorted(TYPE_REQUIRED.get(ptype, set())):
         if key not in fields:
             errors.append(f"{ptype} requires {key}:")
+    if ptype == "REVIEW" and len(fields.get("sha", "")) not in (0, 40):
+        errors.append("REVIEW sha: must be the full 40-char head sha (an attestation binds one exact head)")
     return errors
 
 
