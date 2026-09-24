@@ -3,6 +3,18 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.458.0] — 2026-09-24
+
+### Added
+- Relabel-aware regression net (#1168): `parity_differ.py --baseline` keys a control by a stable identity (`data-testid`, else a unique non-placeholder `href`) before its label, so a same-identity control with new text is CHANGED_LABEL (reported, never a regression) while a real removal stays a regression; shared or placeholder hrefs fall back to the label; an owner-authored `relabel` accept row tags it (ACCEPTED).
+- Pre-push verdict cache (#1153): `templates/pre-push-verify.sh` skips the full gate only when a pass is recorded for the same commit sha, base sha, gate command and gate script content (plus an optional `DCR_PREPUSH_CACHE_KEY` toolchain fingerprint); a failing run never writes a pass; stamps live in `.git` and are pruned after 14 days; `DCR_PREPUSH_SKIP_CACHE=1` forces a full run.
+- Doctrine: an adaptive throttle never shrinks the bottleneck stage's own capacity — throttle the feeders (#1154); stacked lanes branch from the parent's local ref in the shared `.git`, never poll the remote (#1152); removing hosted CI from an integration branch needs the owner's explicit authorization and owner-held tokens.
+- README "What's new" covers the latest five releases.
+- size-budget-raise: .claude/skills/agentic-delivery/references/fanout-host-sizing.md 42953→43583 feeder-throttle rule (#1154)
+- size-budget-raise: .claude/skills/agentic-delivery/references/host-enforcement.md 27542→27912 owner authorization for removing integration-branch CI
+- size-budget-raise: .claude/skills/deep-code-review/references/migration-parity.md 27241→27410 relabel-aware regression net (#1168)
+- size-budget-raise: README.md 16233→16472 What's new for the latest five releases
+
 ## [1.457.0] — 2026-09-24
 
 ### Added — minimum-cost CI and token profile (universal, mandatory)

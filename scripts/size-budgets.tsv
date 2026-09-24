@@ -32,10 +32,10 @@
 .claude/skills/agentic-delivery/SKILL.md	23915
 .claude/skills/agentic-delivery/references/cost-quality-guardrails.md	9452
 .claude/skills/agentic-delivery/references/dev-env-ownership.md	28376
-.claude/skills/agentic-delivery/references/fanout-host-sizing.md	42953
+.claude/skills/agentic-delivery/references/fanout-host-sizing.md	43583
 .claude/skills/agentic-delivery/references/fast-agentic-delivery.md	6401
 .claude/skills/agentic-delivery/references/gate-epistemology.md	6114
-.claude/skills/agentic-delivery/references/host-enforcement.md	27542
+.claude/skills/agentic-delivery/references/host-enforcement.md	27912
 .claude/skills/agentic-delivery/references/incident-response.md	12693
 .claude/skills/agentic-delivery/references/install.md	1180
 .claude/skills/agentic-delivery/references/merge-queue-worktrees.md	59144
@@ -129,7 +129,7 @@
 .claude/skills/deep-code-review/references/merge-operations.md	61648
 .claude/skills/deep-code-review/references/method-situational.md	20804
 .claude/skills/deep-code-review/references/method.md	50527
-.claude/skills/deep-code-review/references/migration-parity.md	27241
+.claude/skills/deep-code-review/references/migration-parity.md	27410
 .claude/skills/deep-code-review/references/mobile-appsec.md	25914
 .claude/skills/deep-code-review/references/model-tiering.md	13271
 .claude/skills/deep-code-review/references/observability.md	17984
@@ -176,4 +176,4 @@
 .claude/skills/deep-code-review/references/ux-states.md	12588
 # README.md is not a skill file; its row is kept by hand (the regenerate
 # command above covers .claude/skills only).
-README.md	16233
+README.md	16472

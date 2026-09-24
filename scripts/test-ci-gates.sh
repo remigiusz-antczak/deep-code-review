@@ -2722,6 +2722,101 @@ else
   record 1 "pre-push-verify: removing the hold file lifts the hold"
 fi
 
+# Case: VERDICT CACHE (#1153). The hold-lifted run just above is the first
+# real (non-HOLD-blocked) execution of DCR_PREPUSH_CMD=true against
+# $ppv_clean_sha, so it already wrote a stamp. The identical
+# (commit, base, command) triple now serves from that stamp instead of
+# rerunning.
+ppv_run "$WORK/ppv-cache-hit.log" "refs/heads/main $ppv_clean_sha refs/heads/main $ppv_clean_sha" \
+  DCR_PREPUSH_CMD=true
+if [ "$PPV_RC" -eq 0 ] && grep -q 'cached PASS' "$WORK/ppv-cache-hit.log"; then
+  record 0 "pre-push-verify: an unchanged commit with the identical gate is served from the stamp cache"
+else
+  record 1 "pre-push-verify: an unchanged commit with the identical gate is served from the stamp cache"
+fi
+# A different DCR_PREPUSH_CMD text is a different gate version -- no stamp
+# match, so it actually reruns (planted so a bare commit-only key would
+# wrongly hit: the command text is part of the cache key).
+ppv_run "$WORK/ppv-cache-miss-cmd.log" "refs/heads/main $ppv_clean_sha refs/heads/main $ppv_clean_sha" \
+  DCR_PREPUSH_CMD='true # a different gate'
+if [ "$PPV_RC" -eq 0 ] && ! grep -q 'cached PASS' "$WORK/ppv-cache-miss-cmd.log" \
+  && grep -q 'running:' "$WORK/ppv-cache-miss-cmd.log"; then
+  record 0 "pre-push-verify: a changed DCR_PREPUSH_CMD (different gate version) is not served from the cache"
+else
+  record 1 "pre-push-verify: a changed DCR_PREPUSH_CMD (different gate version) is not served from the cache"
+fi
+# DCR_PREPUSH_SKIP_CACHE=1 forces a rerun even though the stamp still matches.
+ppv_run "$WORK/ppv-cache-skip.log" "refs/heads/main $ppv_clean_sha refs/heads/main $ppv_clean_sha" \
+  DCR_PREPUSH_CMD=true DCR_PREPUSH_SKIP_CACHE=1
+if [ "$PPV_RC" -eq 0 ] && ! grep -q 'cached PASS' "$WORK/ppv-cache-skip.log" \
+  && grep -q 'running:' "$WORK/ppv-cache-skip.log"; then
+  record 0 "pre-push-verify: DCR_PREPUSH_SKIP_CACHE=1 forces a rerun despite a matching stamp"
+else
+  record 1 "pre-push-verify: DCR_PREPUSH_SKIP_CACHE=1 forces a rerun despite a matching stamp"
+fi
+# A failing DCR_PREPUSH_CMD must never write a stamp -- rerun the identical
+# failing command a second time and it must fail again, not read back a
+# cached pass from the first (failed) attempt.
+ppv_run "$WORK/ppv-cache-fail-1.log" "refs/heads/main $ppv_clean_sha refs/heads/main $ppv_clean_sha" \
+  DCR_PREPUSH_CMD=false
+ppv_first_fail_rc="$PPV_RC"
+ppv_run "$WORK/ppv-cache-fail-2.log" "refs/heads/main $ppv_clean_sha refs/heads/main $ppv_clean_sha" \
+  DCR_PREPUSH_CMD=false
+if [ "$ppv_first_fail_rc" -ne 0 ] && [ "$PPV_RC" -ne 0 ] \
+  && ! grep -q 'cached PASS' "$WORK/ppv-cache-fail-2.log"; then
+  record 0 "pre-push-verify: a failing DCR_PREPUSH_CMD writes no stamp -- the identical command still fails on rerun"
+else
+  record 1 "pre-push-verify: a failing DCR_PREPUSH_CMD writes no stamp -- the identical command still fails on rerun"
+fi
+# Same commit, same command, but a DIFFERENT base (remote sha) must never
+# share a stamp -- DCR_PREPUSH_CMD's own verdict can depend on BASE_SHA (a
+# diff-affected test selection), so the base is part of the cache key.
+ppv_run "$WORK/ppv-cache-base-1.log" "refs/heads/main $ppv_clean_sha refs/heads/main $ppv_clean_sha" \
+  DCR_PREPUSH_CMD='true # base-key-test'
+ppv_run "$WORK/ppv-cache-base-2.log" "refs/heads/main $ppv_clean_sha refs/heads/main $ppv_marker_sha" \
+  DCR_PREPUSH_CMD='true # base-key-test'
+if [ "$PPV_RC" -eq 0 ] && ! grep -q 'cached PASS' "$WORK/ppv-cache-base-2.log" \
+  && grep -q 'running:' "$WORK/ppv-cache-base-2.log"; then
+  record 0 "pre-push-verify: the same commit against a different base never reuses the other base's stamp"
+else
+  record 1 "pre-push-verify: the same commit against a different base never reuses the other base's stamp"
+fi
+# A new commit (content change) never reuses a stale stamp -- the last use
+# of this fixture up to the amend case below, so mutating HEAD here is safe
+# for every earlier case above.
+printf 'more\n' >>"$ppvroot/local/clean.txt"
+git -C "$ppvroot/local" commit -qam "more" >/dev/null 2>&1
+ppv_new_tree_sha="$(git -C "$ppvroot/local" rev-parse HEAD)"
+ppv_run "$WORK/ppv-cache-miss-tree.log" "refs/heads/main $ppv_new_tree_sha refs/heads/main $ppv_new_tree_sha" \
+  DCR_PREPUSH_CMD=true
+if [ "$PPV_RC" -eq 0 ] && ! grep -q 'cached PASS' "$WORK/ppv-cache-miss-tree.log" \
+  && grep -q 'running:' "$WORK/ppv-cache-miss-tree.log"; then
+  record 0 "pre-push-verify: a new commit (changed content) never reuses a stale stamp"
+else
+  record 1 "pre-push-verify: a new commit (changed content) never reuses a stale stamp"
+fi
+# An amended commit -- IDENTICAL tree, new commit sha (reworded message only)
+# -- must also miss: the stamp is keyed on the commit actually being pushed
+# and reviewed, not only its content, so two different commits never share a
+# verdict even when their trees are byte-identical. The last use of this
+# fixture.
+git -C "$ppvroot/local" commit -q --amend -m "more (reworded)" >/dev/null 2>&1
+ppv_amend_sha="$(git -C "$ppvroot/local" rev-parse HEAD)"
+if [ "$(git -C "$ppvroot/local" rev-parse "${ppv_amend_sha}^{tree}")" \
+     = "$(git -C "$ppvroot/local" rev-parse "${ppv_new_tree_sha}^{tree}")" ]; then
+  record 0 "pre-push-verify: amend fixture setup -- amended commit keeps the same tree, new sha"
+else
+  record 1 "pre-push-verify: amend fixture setup -- amended commit's tree unexpectedly changed"
+fi
+ppv_run "$WORK/ppv-cache-amend.log" "refs/heads/main $ppv_amend_sha refs/heads/main $ppv_amend_sha" \
+  DCR_PREPUSH_CMD=true
+if [ "$PPV_RC" -eq 0 ] && ! grep -q 'cached PASS' "$WORK/ppv-cache-amend.log" \
+  && grep -q 'running:' "$WORK/ppv-cache-amend.log"; then
+  record 0 "pre-push-verify: an amended commit (same tree, new sha) never reuses the pre-amend stamp"
+else
+  record 1 "pre-push-verify: an amended commit (same tree, new sha) never reuses the pre-amend stamp"
+fi
+
 # ===========================================================================
 # Web must-load isolation (own lane; APPENDED AT THE END by convention). The
 # `web` archetype must-loads only the parents frontend-a11y.md and

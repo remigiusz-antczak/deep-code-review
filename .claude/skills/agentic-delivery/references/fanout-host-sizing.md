@@ -73,6 +73,12 @@ integrates.
   *enabling* constraint, Sources) and don't spawn lane N+1 while N are in flight with zero artifacts. Check the
   delivery ratio (landed ÷ spawned) each interval; near-zero for a full interval means
   **stop spawning and drain** (finish or kill what's in flight and integrate what exists), never add lanes.
+- **An adaptive throttle must never shrink the pipeline's known bottleneck stage's own capacity — throttle the
+  feeders instead** (#1154). A push queue (or any other identified constraint) that a load-triggered throttle
+  cuts down to fewer slots is not protected, it is starved harder at the exact moment load is highest and
+  throughput matters most; the WIP-admission cap above is that correct direction already — it slows the rate new
+  work *enters* the pipeline, never the constrained stage's own concurrency. If the bottleneck's own capacity must
+  move under load at all, growing it is the only direction that helps.
 
 ## Once lanes are saturated, cut per-lane cycle-time before adding lanes — throughput = WIP / cycle-time
 
