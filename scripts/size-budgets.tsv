@@ -27,13 +27,13 @@
 #   find .claude/skills \( -name 'SKILL.md' -o -path '*/references/*.md' \) \
 #     -type f | LC_ALL=C sort | while IFS= read -r f; do \
 #     printf '%s\t%s\n' "$f" "$(LC_ALL=C wc -c < "$f" | tr -d '[:space:]')"; done
-.claude/skills/agentic-ceo/SKILL.md	14318
+.claude/skills/agentic-ceo/SKILL.md	14524
 .claude/skills/agentic-delivery/SKILL.md	23915
 .claude/skills/agentic-delivery/references/dev-env-ownership.md	28376
 .claude/skills/agentic-delivery/references/fanout-host-sizing.md	40355
 .claude/skills/agentic-delivery/references/fast-agentic-delivery.md	6401
 .claude/skills/agentic-delivery/references/gate-epistemology.md	3957
-.claude/skills/agentic-delivery/references/host-enforcement.md	13017
+.claude/skills/agentic-delivery/references/host-enforcement.md	14583
 .claude/skills/agentic-delivery/references/incident-response.md	12693
 .claude/skills/agentic-delivery/references/merge-queue-worktrees.md	59144
 .claude/skills/agentic-delivery/references/multi-session-coordination.md	56999
@@ -44,7 +44,7 @@
 .claude/skills/agentic-delivery/references/support-ops.md	4455
 .claude/skills/agentic-delivery/references/template-adr.md	2481
 .claude/skills/agentic-delivery/references/template-postmortem.md	3223
-.claude/skills/agentic-delivery/references/unattended-operating-mode.md	19553
+.claude/skills/agentic-delivery/references/unattended-operating-mode.md	20389
 .claude/skills/agentic-delivery/references/unattended-trackers.md	43567
 .claude/skills/agentic-delivery/references/verification-handback.md	51573
 .claude/skills/business-ops/SKILL.md	10654

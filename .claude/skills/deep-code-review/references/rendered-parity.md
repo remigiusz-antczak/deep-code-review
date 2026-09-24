@@ -9,7 +9,7 @@ enforcing gate is in `ux-gates.md`.
 A "matches / exact / parity with `<reference>`" claim is only as good as the **surface** it was checked
 against. The canonical surface is the **default state a user lands on** — signed-out / no-role /
 no-persona / default route / local default — because it's the state a user is served **by default**,
-before any role or persona is chosen: the entry state every user passes through. A mock, or a
+before any role or persona is chosen. A mock, or a
 hand-selected persona/role view, is a **secondary** surface: a parity claim resting only on it verifies
 the wrong state (a first-time user never sees it). "More than the happy-path state" (checklist above) is
 necessary but not sufficient — the **default state must be among the states checked**, and a claim
@@ -34,7 +34,7 @@ picture when the source or build states the spec precisely. **A stale source *co
 the screenshot** — a code comment claiming an element "moved" in some past design revision is not the
 current design; when a comment and the live rendered reference disagree, the **current render wins** —
 verify against it. This governs how you read **Y**; it doesn't soften the rule below that *your
-implementation's* evidence must be the **render**, not the DOM — opposite sides of the comparison.
+implementation's* evidence must be the **render**, not the DOM.
 
 **Four axes — name which one a claim covers; never conflate them.** A UI compares on four independent
 axes:
@@ -79,7 +79,8 @@ reconfiguring what "default" means is a claim about a surface you wrote, not the
 
 **Enumerate every diff in one pass before fixing any.** Finding diffs one at a time — fix, re-declare
 "done," the user finds the next — is the loop that burns trust and manufactures the repeated false ✅.
-Run one foundation-first gate, `scripts/parity_differ.py --workflow` (capture: `templates/parity-capture.md`):
+Run one foundation-first gate, `scripts/parity_differ.py --workflow` (capture: `templates/parity-capture.md`;
+DOMs that nest a section differently: `--bands headings`, its SECTION BANDS):
 tokens, then primitives (a FOUNDATION/PRIMITIVE style row — a property or type role off in 2+ sections
 — blocks every section: fix it once), then per-section inventory (completeness is judged **only**
 there) + styles; progress = `sections passed k/n`; `--report` is the visual pass before "ready".

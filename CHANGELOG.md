@@ -3,6 +3,16 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.453.0] — 2026-09-24
+
+### Added
+- `parity_differ.py --bands headings` (#1075): sections are the vertical bands between consecutive headings (or `data-anchor` elements, which win), computed from each capture's own layout, so design and app crops cover the same region regardless of DOM nesting. Bands decide membership only; size and height never affect a verdict. A side with no `data-y`, an invalid `data-y`, mismatched band basis, or no visible anchor or heading is COULD_NOT_CHECK, never one whole-page band. A moved heading is a MOVED row. Opt-in for now: older captures lack `data-y` and accept/baseline rows are keyed by `data-section`. The capture template emits `data-y` and logs any band screenshot it skips.
+- Deferred owner questions for autonomous runs (`agentic-ceo/scripts/task_ledger.py`): `defer` records a question with the default taken, or parks only that item; `next` prints the highest-priority open item that is not owner-gated; `questions` prints the batch for the owner. Human-gate items (shared push, deploy, external send, secret or scope change) and destructive or irreversible items without a standing grant are always parked, never defaulted. A parked item cannot be unblocked while its question is pending, and resolved items cannot be deferred.
+- `agentic-ceo/scripts/stop_reminder.py`: optional, owner-installed hooks that never block — a model-visible turn-start line (`SessionStart`/`UserPromptSubmit`: pending deferred questions and the next non-gated item) and an owner-facing `Stop` notice; every path exits 0, with a bounded runtime. Snippets in `host-enforcement.md` use an absolute path, `|| true`, and a timeout.
+- size-budget-raise: .claude/skills/agentic-ceo/SKILL.md 14318→14524 deferred-question routing
+- size-budget-raise: .claude/skills/agentic-delivery/references/host-enforcement.md 13017→14583 optional non-blocking deferred-question hook snippets
+- size-budget-raise: .claude/skills/agentic-delivery/references/unattended-operating-mode.md 19553→20389 defer-and-continue rule with the always-park list
+
 ## [1.452.0] — 2026-09-24
 
 ### Changed — must-load floor cut

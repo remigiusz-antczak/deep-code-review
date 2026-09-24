@@ -30,6 +30,17 @@ loop, not a single task**. Frame it as the default stance:
   unattended time budget is a work loop** (termination-conditions bullet).
 - **A go-faster tick is not a demand for busywork; holding can be correct.**
   `unattended-trackers.md` **A go-faster signal fires on a clock, not on state**.
+- **A question for an absent owner is deferred, not waited on.** Record it with
+  `agentic-ceo/scripts/task_ledger.py defer --id T-### --question "<q>"`. A
+  reversible choice takes a default (`--default "<choice>"`), stated in the
+  handback. A Human gate (shared push, deploy, external send, secret/scope
+  change) or a destructive/irreversible choice without an owner-authored
+  standing grant: never default, always `--park`. Parking blocks that one item,
+  not the run; `unblock` is refused until `answer` records the reply. Continue
+  with `task_ledger.py next`, which skips parked items. The owner gets one batch
+  from `task_ledger.py questions` and can still stop the run or answer at any
+  time. Optional hooks (a model-visible turn-start line, an owner notice on
+  `Stop`): `host-enforcement.md` **Deferred-question hooks**.
 - **Measure delivery, not activity.** Report the **operator's own metric** and grade
   against durable output. Useful signals — **no** target thresholds (fabricated
   otherwise): merged-**to-default** per window, base-red **minutes-to-green**,

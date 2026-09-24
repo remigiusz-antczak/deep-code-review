@@ -6309,6 +6309,16 @@
         "States the concrete production consequence: on real Postgres the change silently drops/overwrites the stored revision trail on the next write, since the SELECT is never actually read",
         "Prescribes making the fake stateful (an in-memory table keyed like the real schema so write-then-read round-trips) or running the scenario once against an ephemeral real Postgres instance, and names the planted-defect check (delete the read line, suite must go red) as the way to confirm the gap"
       ]
+    },
+    {
+      "id": "parity-heading-bands-crop",
+      "prompt": "The design export lays each section out as flat siblings: a heading, then its body, with data-section on the heading alone. The app wraps each section in nested divs. The ancestor crops of 'usage' differ, so parity_differ.py lists the app's body content as EXTRA_IN_APP rows. What should the lane do?",
+      "expected_output": "The two DOMs nest the section differently, so data-section ancestors crop different regions; the rows are a crop artifact, not build work. The lane re-captures both sides with the template's BANDS=1 export (an integer data-y top y on every element) and runs parity_differ.py with --bands headings. Sections then become vertical bands from one band start to the next, computed from each capture's own layout: data-anchor elements win when present, else h1/h2 headings, and everything above the first start is the (page header) band. The flat and nested renders produce identical bands, so their inventories compare. The top y only decides band membership; size and height are never a parity signal. A sub-heading that sits in another band is one MOVED row. A design band start that the app lacks makes that band alone COULD_NOT_CHECK_CROP, and its content is compared inside the band before it. An invalid data-y, a missing data-y, or one side banded by anchors and the other by headings is COULD_NOT_CHECK.",
+      "expectations": [
+        "Identifies the EXTRA_IN_APP rows as a DOM-nesting crop artifact and re-captures with data-y and --bands headings, instead of treating them as build work",
+        "Explains that bands run from one heading or data-anchor top y to the next (data-anchor wins, a page-header band above the first start), and that y decides membership only, never pass or fail",
+        "States that a missing design band start makes only that band COULD_NOT_CHECK_CROP and that a moved sub-heading is a MOVED row"
+      ]
     }
   ]
 }
