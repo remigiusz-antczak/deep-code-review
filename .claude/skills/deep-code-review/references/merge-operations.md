@@ -171,8 +171,18 @@ forever. The escape is the merge train above, used deliberately as the *discharg
 3. **What the union green does *not* license.** Not merging a **red** member, not an `--admin` / force-merge
    past the gate, not an undocumented "just merge anyway." A red member is still red; only the
    *base-green-between-merges* wait is discharged, since the union already proved the combined tree.
+4. **Keystone exception (pre-ratified, never improvised).** When a cause no open branch introduced (a date- or
+   clock-triggered test) reds the base and the fix is one PR, only merging that PR onto red can discharge it.
+   With the owner away, the fleet stalls; the tempting workaround, cherry-picking the unmerged fix into every
+   sibling so its gates go green, spreads unreviewed code across N diffs, goes stale if the fix changes, and
+   unblocks nothing. The owner commits the exception **before** unattended runs, under the standing-grant
+   authorship rule (agentic-delivery `SKILL.md` **Standing grant**), naming the fix PR or pre-ratifying one
+   keystone of a shape (path globs, max files, expiry at most 30 days out; single-use): it may merge onto red
+   when the base fails the check on its own, the PR touches only the fix's files, base + PR is green in a
+   union run, and it merges alone, first. Siblings then **rebase** (which drops a duplicate patch), never carry a
+   copy. `merge_train.py keystone` checks each condition and parks any sibling carrying a copy (#1142).
 
-Name this the **red-base discharge** and put one of the two vehicles on record; an oral-only exception ("we
+Name this the **red-base discharge** and put the vehicle used on record; an oral-only exception ("we
 just merged past it that once") is itself the finding. A red base is the release pipeline's blocked state, so
 `release-engineering.md` cross-links here — but the discharge *mechanism* is the merge train, so it lives here
 and that file never restates it.

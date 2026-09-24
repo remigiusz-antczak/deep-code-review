@@ -19,6 +19,7 @@ default for this lane, not a suggestion.
 
 ## Verification
 - No "done" without evidence: a test id, an exact sha, or a file path — never a bare assertion.
+- Parked/handback claim: `python3 .claude/skills/agentic-delivery/scripts/lane_guard.py handback --sha <sha> --base <dispatch-base> --branch <branch> --cite <path> --artifact-root <dir>` (one `--cite` per committed evidence file; absolute artifacts must sit under `--artifact-root`). A refusal means not parked.
 - Deployed/served claim: `python3 .claude/skills/agentic-delivery/scripts/surface_check.py served --url <url> --expect-sha <sha> ...`.
 - CI-checks claim: `python3 .claude/skills/agentic-delivery/scripts/surface_check.py checks --gh-repo <owner/name> --sha <sha> ...`.
 - Design port: `python3 .claude/skills/deep-code-review/scripts/parity_differ.py --design <design-file> --app <app-file>` — report the inventory MATCH/gap it prints, never a size measured by hand. Use the `<design-lane>` agent type, if this host defines one, for design ports.
