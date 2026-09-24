@@ -7,10 +7,17 @@ name: gates
 # scripts/ci-gates.sh, exercised by scripts/test-ci-gates.sh; CI runs that same
 # helper against the real repo so the enforced check and its tests never diverge.
 
+# PR-only: branch protection requires `gates` with strict up-to-date branches,
+# so a PR's run already tested the exact tree that lands on main; a second run
+# on the post-merge push would repeat it and burn runner minutes. Superseded
+# runs on the same PR are cancelled.
 on:
-  push:
-    branches: [main]
   pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: gates-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read # least privilege (OWASP Scorecard: Token-Permissions)
@@ -18,6 +25,7 @@ permissions:
 jobs:
   gates:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       # SHA-pinned, not a mutable tag (the skill's own K rule for CI actions).
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

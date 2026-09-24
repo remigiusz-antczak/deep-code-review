@@ -1,6 +1,6 @@
 # Perun
 
-[![gates](https://github.com/remigiusz-antczak/deep-code-review/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/remigiusz-antczak/deep-code-review/actions/workflows/ci.yml)
+[![gates](https://github.com/remigiusz-antczak/deep-code-review/actions/workflows/ci.yml/badge.svg)](https://github.com/remigiusz-antczak/deep-code-review/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 **Perun makes your AI coding agent review code the same careful way every
