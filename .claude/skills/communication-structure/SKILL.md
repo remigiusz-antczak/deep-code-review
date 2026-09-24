@@ -18,7 +18,8 @@ Governs the *structure* of anything a human reads without you there to
 narrate it — a message (PR body, issue/PR comment, status update, reply) **or a
 deliverable** (a report, plan, doc, summary, table). Same prose-voice boundary as
 `idea-critic`: persisted artifacts stay normal English, never compressed chat
-shorthand. This is about shape and length, not vocabulary.
+shorthand. This is about shape and length, not vocabulary. Lookup table:
+`INDEX.md`; read it instead of opening references blindly.
 
 ## The rule
 

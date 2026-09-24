@@ -9,7 +9,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.444.0"
+  version: "1.445.0"
 ---
 
 # Idea critic
@@ -24,7 +24,8 @@ architecture, process, new agent/skill/cron, or unsolicited "we should".
 Persisted artifacts stay normal English. Chat may be terse. Do not vendor
 a voice skill here; see
 [JuliusBrussee/caveman](https://github.com/JuliusBrussee/caveman) if a
-project wants compressed assistant prose.
+project wants compressed assistant prose. Lookup table: `INDEX.md`; read it
+instead of opening references blindly.
 
 ---
 

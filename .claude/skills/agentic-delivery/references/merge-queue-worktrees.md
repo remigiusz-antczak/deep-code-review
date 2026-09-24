@@ -158,7 +158,7 @@ mainline beyond whatever narrow, human-approved change-control path a project al
 
 ## An independent-PR-queue cascade is a cadence choice, not a new authority
 
-Gate epistemology principle 6 requires union proof before a merge train — not restated here. A related but
+Gate epistemology principle 6 (union proof before a train) runs as `scripts/merge_train.py`. A related but
 distinct situation: a **queue of PRs that are each already independently green**, with no known interaction
 between them (typically right after the single common blocker above is fixed and the whole queue needs to
 resync). Landing that queue does not need a new, lighter-weight merge authority — it needs **cadence**: run the
@@ -358,7 +358,7 @@ delivery gate's own verdict.
 - **A rebase or merge-conflict resolution is unverified code, not a confirmed pass.** `git rebase --continue`
   never re-invokes `pre-commit` on the replayed commits, so re-run the lint+unit tier explicitly right after
   conflict resolution and before `git push`; `templates/pre-push-verify.sh` (`deep-code-review`) can enforce this
-  mechanically, but a hook is self-report, not the control — `branch-and-merge-hygiene.md`'s "Self-report ≠
+  mechanically (and refuses every push while `<git-common-dir>/DCR_HOLD` exists — an operator freeze), but a hook is self-report, not the control — `branch-and-merge-hygiene.md`'s "Self-report ≠
   control" is the trusted-evidence rule (not restated here).
 
 Distinct from *Gate on free RAM and the swap trend* and *CI-offload the heavy gate* (#935): those decide
@@ -568,9 +568,12 @@ worktree onto the freshly-fetched remote ref before running any script); (2) for
 **current** remote / CI state — merge gates, required-check verification —
 **query the forge/server API for the actual check-runs** — immune to local staleness — rather than trusting a
 local script copy (the same "trusted evidence is a forge run pinned to the reviewed SHA" discipline in
-`deep-code-review`'s `merge-operations.md`). **🚩** an agent that infers "the gate is broken" from a
-worktree without confirming its base ref is current; a merge or CI decision made from a local script in a
-worktree of unknown freshness.
+`deep-code-review`'s `merge-operations.md`). The narrowest case of this is a merge-train daemon racing **itself**:
+right after its own merge, poll the remote target until it observably contains the SHA it just merged (bounded
+retries with backoff, hard-stop-and-retry-next-tick on a fetch failure) before collecting the next union, rather
+than trusting a local/cached ref that has not yet observed its own write (#1128). **🚩** an agent that infers
+"the gate is broken" from a worktree without confirming its base ref is current; a merge or CI decision made
+from a local script in a worktree of unknown freshness.
 
 ## Out-of-tree shared scratch crosses commit metadata — worktree-per-lane doesn't cover it
 

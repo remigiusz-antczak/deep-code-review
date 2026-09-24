@@ -3,6 +3,42 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.445.0] — 2026-09-24
+
+### Added — navigation, measurement, fleet resilience
+- `scripts/skill_index.py`: generates a per-skill `INDEX.md` lookup table (task → file → when to read) so an agent finds the right reference without loading `SKILL.md` bodies; `--check` fails CI on a stale index.
+- `agentic-ceo/scripts/token_report.py`: per-session token spend from local transcripts — main loop vs subagents, orchestration share (flagged above 20%), most expensive lanes; falls back to `cache_creation_input_tokens` when the per-TTL breakdown is missing.
+- `agentic-delivery/scripts/merge_train.py`: mechanizes the merge-train doctrine — immediate union retry after removing one conflicting member (#1134), halt on a non-fast-forward target (#1137), prefix-bisection culprit isolation, bounded flaky retry.
+- `serial_gate.py --slots N` semaphore plus bounded retry with a shared cap; disk gate counts per-commit transient peaks (#1126, #1127); self-race on a freshly merged base (#1128); verification-debt bound (#1129).
+- VCS history-rewrite incident playbook with exact-target confirmation before destructive ops and a fleet-wide push freeze (#1136, #1138); `restore_ledger.py` classifies every branch after a restore (NEW_SINCE needs action; a plain clone is refused as a non-mirror); quota-exhaustion priority respawn and orchestrator-tier guard (#1132); `surface_check.py checks --wait` (interval clamped to 5 s, per-call timeout bounded by the deadline).
+- `agentic-delivery/templates/lane-preamble.md`: a paste block for every lane (isolation, no-poll, one-line handback).
+- README rewritten for three audience paths (new to agents, daily agent user, fleet operator) with getting-started and fleet guides; must-load floors restated from `scripts/mustload-budgets.tsv`.
+- Foundation-first parity workflow (`parity_differ.py --workflow`): style-level owner-approved deviations, per-section pass rule with k/n progress, a BLOCKED_BY_FOUNDATION state, a stdlib HTML side-by-side report, a capture template with a seeded persona; `feedback_ledger.py capture` records text/image/rule feedback in one command; a pre-push HOLD file blocks every push until the restorer clears it.
+- size-budget-raise: .claude/skills/agentic-ceo/SKILL.md 13452→13757 token_report routing and INDEX.md pointer
+- size-budget-raise: .claude/skills/agentic-delivery/SKILL.md 23862→23927 lane-preamble and merge_train routing
+- size-budget-raise: .claude/skills/agentic-delivery/references/fanout-host-sizing.md 36927→40367 disk transient peak, retry semaphore, quota priority respawn (#1126 #1127 #1132)
+- size-budget-raise: .claude/skills/agentic-delivery/references/host-enforcement.md 12805→13017 lane preamble and no-poll rule
+- size-budget-raise: .claude/skills/agentic-delivery/references/incident-response.md 7665→12693 VCS history-rewrite incident playbook (#1136 #1138)
+- size-budget-raise: .claude/skills/agentic-delivery/references/merge-queue-worktrees.md 58681→59144 self-race on own merge (#1128), merge_train route, pre-push HOLD file
+- size-budget-raise: .claude/skills/agentic-delivery/references/project-state.md 7452→7540 feedback_ledger capture command
+- size-budget-raise: .claude/skills/agentic-delivery/references/verification-handback.md 50258→51289 verification-debt bound (#1129)
+- size-budget-raise: .claude/skills/business-ops/SKILL.md 10581→10654 one-line INDEX.md pointer for agent navigation
+- size-budget-raise: .claude/skills/communication-structure/SKILL.md 5196→5269 one-line INDEX.md pointer for agent navigation
+- size-budget-raise: .claude/skills/contribution/SKILL.md 11404→11477 one-line INDEX.md pointer for agent navigation
+- size-budget-raise: .claude/skills/deep-code-review/SKILL.md 23889→23962 one-line INDEX.md pointer for agent navigation
+- size-budget-raise: .claude/skills/deep-code-review/references/rendered-parity.md 10131→10222 foundation-first parity workflow and capture template
+- size-budget-raise: .claude/skills/deep-code-review/references/migration-parity.md 26181→26352 owner-authored visual-reviewed accept row for text-less sections
+- size-budget-raise: .claude/skills/growth-analytics/SKILL.md 9884→9957 one-line INDEX.md pointer for agent navigation
+- size-budget-raise: .claude/skills/idea-critic/SKILL.md 12642→12715 one-line INDEX.md pointer for agent navigation
+- size-budget-raise: .claude/skills/positioning/SKILL.md 7332→7405 one-line INDEX.md pointer for agent navigation
+- size-budget-raise: .claude/skills/product-discovery/SKILL.md 10386→10459 one-line INDEX.md pointer for agent navigation
+- size-budget-raise: .claude/skills/product-output-safety/SKILL.md 13080→13153 one-line INDEX.md pointer for agent navigation
+
+### Fixed
+- Parity `--workflow`: section verdicts are withheld when the token check could not run; a style stage with zero pairs reports COULD_NOT_CHECK, never clean; the HTML report escapes non-ASCII section ids correctly and every captured render carries a no-network Content-Security-Policy; a text-less section (image, chart, map) can pass only through an owner-authored `visual-reviewed` accept row.
+- `feedback_ledger.py capture` stores image paths repo-relative and refuses paths outside the repository, so home-directory paths never reach the committed ledger.
+- The privacy gate no longer hangs on a named pipe in the scanned tree (`grep -D skip`); a regression case plants a FIFO.
+
 ## [1.444.0] — 2026-09-23
 
 ### Added

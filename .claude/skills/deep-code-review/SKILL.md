@@ -11,7 +11,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.444.0"
+  version: "1.445.0"
 ---
 
 # Deep Code Review
@@ -24,7 +24,8 @@ those overlays from the target's shape; the owner decides. Do not dump every
 overlay into every clone.
 
 This file is the map: scope, principles, gates, routing. Depth lives in
-`references/` and is loaded on demand.
+`references/` and is loaded on demand. Lookup table: `INDEX.md`; read it
+instead of opening references blindly.
 
 ---
 

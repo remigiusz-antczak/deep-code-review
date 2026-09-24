@@ -86,6 +86,18 @@
 # equals `git rev-parse HEAD` AND the working tree is clean; otherwise a
 # "pass" would silently verify a tree that is not the code being pushed.
 #
+# HOLD: while `$(git rev-parse --git-common-dir)/DCR_HOLD` or a repo-root
+# `.dcr-hold` exists, this hook refuses EVERY push (deletes and empty ref
+# lists included) and prints the file's first line as the reason. An
+# operator creates one to freeze pushes (`echo "owner review" >
+# "$(git rev-parse --git-common-dir)/DCR_HOLD"`) and deletes it to lift the
+# hold. The common-dir file is shared by every linked worktree and is not
+# a tracked file, so a lane cannot commit it away. A lane that repoints or
+# "self-heals" `core.hooksPath` to this template does not escape the hold,
+# because the check is in the hook itself. Like the rest of this hook it is
+# self-report: `git push --no-verify`, or a `core.hooksPath` that points
+# somewhere without this hook, skips it.
+#
 # Exit code: 0 iff every non-deleted pushed ref's tier run passed (or was
 # explicitly allowed through unset/blank). Fails closed on every other path.
 set -euo pipefail
@@ -96,6 +108,16 @@ die() {
   printf 'pre-push-verify: %s\n' "$*" >&2
   exit 1
 }
+
+# HOLD check (see HOLD above): runs before any ref is read.
+hold_common="$(git rev-parse --git-common-dir 2>/dev/null || true)"
+hold_top="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+for hold_file in "${hold_common:+${hold_common}/DCR_HOLD}" "${hold_top:+${hold_top}/.dcr-hold}"; do
+  if [ -n "${hold_file}" ] && [ -e "${hold_file}" ]; then
+    hold_reason="$(head -n 1 "${hold_file}" 2>/dev/null || true)"
+    die "HOLD -- ${hold_file} exists, so every push is refused until it is removed. Reason: ${hold_reason:-(none given)}"
+  fi
+done
 
 # is_zero_sha <sha> — true iff <sha> is non-empty and every char is '0'.
 # Matches `^0+$` without hardcoding a length, so a 40-hex SHA-1 zero id and a

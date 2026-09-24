@@ -69,7 +69,7 @@ select --map <map.tsv> [--base REF --head REF | --changed-file PATH ...]
       (e) any changed path matches a `!full` glob, or IS the map -> FULL, exit 0
       (f) otherwise: union of every matched row's target(s), deduped, sorted
 
-run --lock-dir DIR [--timeout SECONDS] -- <cmd...>
+run --lock-dir DIR [--timeout SECONDS] [--slots N] [--retry K --backoff S --retry-on REGEX] -- <cmd...>
     Serialize <cmd...> across lanes with a kernel advisory lock:
     `fcntl.flock(fd, LOCK_EX | LOCK_NB)` on the file `DIR/lock` (DIR is
     created if missing). A waiter polls with bounded exponential backoff
@@ -85,7 +85,31 @@ run --lock-dir DIR [--timeout SECONDS] -- <cmd...>
     open file descriptor. The child's own exit code is propagated. There is
     no staleness window, no age-based reclaim, and no lock file to "clean up
     by hand": a lock that looks held IS held, for as long as its holder's
-    process is alive, however long that is.
+    process is alive, however long that is — NO STALE-LOCK TAKEOVER, here or
+    at any slot below: nothing ages out, nothing is adopted from a plain
+    `run` (only `--singleton`, above, ever adopts, and only its own kind).
+
+    --slots N: an N-slot semaphore instead of one lock — N independent flock
+    files (`DIR/lock.0` .. `DIR/lock.N-1`; N=1, the default, is exactly the
+    single `DIR/lock` file above, unchanged). A caller takes whichever slot
+    is free first, so up to N callers run at once and caller N+1 queues with
+    the same bounded, jittered backoff and --timeout/124 semantics as a
+    single lock (#1127: cap the heavy tier at N concurrent instead of
+    serializing it to 1 or leaving it uncapped). Each slot is released the
+    same way a single lock is — its holder exiting, including SIGKILL — so
+    there is nothing to age out per slot either.
+
+    --retry K --backoff S --retry-on REGEX: retry the WHOLE acquire+run+
+    release cycle up to K more times (bounded: at most K+1 attempts, ever)
+    when an attempt exits nonzero AND its captured stdout+stderr matches
+    REGEX — never on a plain nonzero exit that doesn't match, so a lane's
+    real test/lint failure is reported at once instead of retried into a
+    fresh resource-exhaustion storm (#1127's failure mode: N lanes each
+    retrying a transient error amplify the very shortage that caused it).
+    Each retry waits an exponentially growing, jittered backoff (`S * 2^n`,
+    capped) before the next attempt. `--retry-on` is required whenever
+    `--retry` > 0 — an unconditional retry-on-any-failure is refused
+    (exit 2), since that is exactly the amplifying loop this closes.
 
 run --singleton --lock-dir DIR [--build-id ID] -- <helper cmd...>
     Make a long-lived helper (a watchdog, a static server) a singleton across
@@ -145,6 +169,7 @@ import json
 import os
 import posixpath
 import random
+import re
 import signal
 import socket
 import subprocess
@@ -177,6 +202,7 @@ _POLL_CAP = 1.0
 _POLL_BACKOFF = 1.6
 _ADOPT_READ_TRIES = 20  # x 0.1s: time for a just-started holder to write its record
 _LOCK_FREED = -1  # internal: the record never verified, but the lock is free again; retry the start once
+_RETRY_BACKOFF_CAP = 30.0  # ceiling on --retry's per-attempt backoff (#1127: bounded, never unbounded)
 
 
 # --------------------------------------------------------------------------
@@ -373,6 +399,72 @@ def _lock_file_path(lock_dir: str) -> str:
     return os.path.join(lock_dir, "lock")
 
 
+def _slot_lock_path(lock_dir: str, index: int, slots: int) -> str:
+    """Lock-file path for one semaphore slot. `slots<=1` is exactly
+    `_lock_file_path` (the single `lock` file) — no behavior or filename
+    change for the pre-existing single-lock case; `slots>1` uses
+    `lock.<index>`.
+    """
+    if slots <= 1:
+        return _lock_file_path(lock_dir)
+    return os.path.join(lock_dir, f"lock.{index}")
+
+
+def acquire_slot(lock_dir: str, slots: int, timeout: float) -> tuple[int, int]:
+    """Block until this process holds an exclusive kernel advisory lock on
+    ANY ONE of `slots` independent lock files — an N-slot semaphore built
+    from N `flock`s, not one lock reused: whichever slot is free first is
+    taken, so up to `slots` callers hold a slot at once and caller N+1
+    queues. `slots<=1` uses the same single `lock` file as `acquire_lock`
+    (identical behavior, not a special case). Same bounded, jittered
+    exponential backoff and `timeout`/`LockTimeout` semantics as
+    `acquire_lock`. Returns `(fd, index)`; release with `release_lock(fd)`
+    exactly as for the single-lock case. No stale-lock takeover: a slot is
+    freed only by its holder's fd closing (normal exit, SIGTERM/SIGINT via
+    `run_locked`, or the kernel on SIGKILL) — nothing here ages a slot out
+    or adopts one from another process.
+    """
+    assert fcntl is not None, "acquire_slot requires fcntl (POSIX only)"
+    os.makedirs(lock_dir, exist_ok=True)
+    slots = max(1, slots)
+    deadline = time.monotonic() + timeout
+    delay = _POLL_START
+    while True:
+        for index in range(slots):
+            fd = os.open(_slot_lock_path(lock_dir, index, slots), os.O_RDWR | os.O_CREAT, 0o644)
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                return fd, index
+            except BlockingIOError:
+                os.close(fd)
+                continue
+            except OSError:
+                os.close(fd)
+                raise
+        if time.monotonic() >= deadline:
+            raise LockTimeout(f"timed out after {timeout}s waiting for a free slot (0..{slots - 1}): {lock_dir}")
+        time.sleep(min(delay, _POLL_CAP) + random.uniform(0, delay * 0.1))
+        delay = min(delay * _POLL_BACKOFF, _POLL_CAP)
+
+
+def _slots_all_free(lock_dir: str, slots: int) -> bool:
+    """True iff every one of `slots` slot lock files is acquirable (and is
+    immediately released again) right now — proof all slots are free.
+    """
+    for index in range(slots):
+        try:
+            fd = os.open(_slot_lock_path(lock_dir, index, slots), os.O_RDWR | os.O_CREAT, 0o644)
+        except OSError:
+            return False
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError:
+            return False
+        finally:
+            os.close(fd)
+    return True
+
+
 def acquire_lock(lock_dir: str, timeout: float) -> int:
     """Block until this process holds an exclusive kernel advisory lock.
 
@@ -454,18 +546,13 @@ def release_lock(fd: int) -> None:
         pass
 
 
-def run_locked(lock_dir: str, timeout: float, cmd: list[str]) -> int:
-    """Acquire the lock, run `cmd`, release, and return `cmd`'s exit code.
-
-    Fails closed with `LOCK_ERROR`/2-family behavior and never runs `cmd` if
-    `fcntl` is unavailable (Windows has no `fcntl` module — this lock is
-    POSIX-only) or if the lock file itself cannot be opened/locked for a
-    reason other than contention. A SIGTERM/SIGINT while waiting or while
-    the child runs still releases the lock: the handler raises `SystemExit`,
-    which unwinds through the `finally` below exactly like any other
-    exception. Any OTHER process death (including SIGKILL) releases the
-    lock without any handler running at all, because the kernel closes the
-    dead process's file descriptors.
+def _run_locked_once(lock_dir: str, timeout: float, cmd: list[str], slots: int, capture: bool) -> tuple[int, str]:
+    """One acquire(-a-slot)+run+release cycle. Returns `(exit_code, output)`;
+    `output` is `cmd`'s combined stdout+stderr when `capture` is true (also
+    echoed to this process's real stdout/stderr so nothing is silently
+    swallowed), else `""` (the normal, streaming, non-retry path). Shared
+    body behind both `run_locked` and `run_locked_with_retry` — one lock/
+    release/signal implementation, not two.
     """
     if fcntl is None:
         print(
@@ -473,7 +560,7 @@ def run_locked(lock_dir: str, timeout: float, cmd: list[str]) -> int:
             "Windows) — this lock is POSIX-only; refusing to run unlocked",
             file=sys.stderr,
         )
-        return USAGE_ERROR
+        return USAGE_ERROR, ""
 
     held: dict[str, int | None] = {"fd": None}
 
@@ -484,21 +571,70 @@ def run_locked(lock_dir: str, timeout: float, cmd: list[str]) -> int:
     old_int = signal.signal(signal.SIGINT, _on_signal)
     try:
         try:
-            held["fd"] = acquire_lock(lock_dir, timeout)
+            if slots <= 1:
+                held["fd"] = acquire_lock(lock_dir, timeout)
+            else:
+                held["fd"], _ = acquire_slot(lock_dir, slots, timeout)
         except LockTimeout as exc:
             print(f"serial_gate: {exc}", file=sys.stderr)
-            return LOCK_TIMEOUT
+            return LOCK_TIMEOUT, ""
         except OSError as exc:
             print(f"serial_gate: lock acquisition failed: {exc}", file=sys.stderr)
-            return LOCK_ERROR
+            return LOCK_ERROR, ""
         _write_owner_info(held["fd"])
-        proc = subprocess.run(cmd)
-        return proc.returncode
+        if not capture:
+            return subprocess.run(cmd).returncode, ""
+        proc = subprocess.run(cmd, capture_output=True, text=True)
+        sys.stdout.write(proc.stdout)
+        sys.stderr.write(proc.stderr)
+        return proc.returncode, proc.stdout + proc.stderr
     finally:
         if held["fd"] is not None:
             release_lock(held["fd"])
         signal.signal(signal.SIGTERM, old_term)
         signal.signal(signal.SIGINT, old_int)
+
+
+def run_locked(lock_dir: str, timeout: float, cmd: list[str], slots: int = 1) -> int:
+    """Acquire the lock (or, with `slots` > 1, any free semaphore slot), run
+    `cmd`, release, and return `cmd`'s exit code.
+
+    Fails closed with `LOCK_ERROR`/2-family behavior and never runs `cmd` if
+    `fcntl` is unavailable (Windows has no `fcntl` module — this lock is
+    POSIX-only) or if the lock file itself cannot be opened/locked for a
+    reason other than contention. A SIGTERM/SIGINT while waiting or while
+    the child runs still releases the lock: the handler raises `SystemExit`,
+    which unwinds through the `finally` in `_run_locked_once` exactly like
+    any other exception. Any OTHER process death (including SIGKILL)
+    releases the lock without any handler running at all, because the
+    kernel closes the dead process's file descriptors.
+    """
+    rc, _ = _run_locked_once(lock_dir, timeout, cmd, slots, capture=False)
+    return rc
+
+
+def run_locked_with_retry(
+    lock_dir: str, timeout: float, cmd: list[str], slots: int, retry: int, backoff: float, retry_on: str
+) -> int:
+    """Like `run_locked`, but retries the WHOLE acquire+run+release cycle up
+    to `retry` more times (bounded: at most `retry + 1` attempts, ever) when
+    an attempt exits nonzero AND its captured stdout+stderr matches the
+    `retry_on` regex — never on a plain nonzero exit that doesn't match, so
+    a lane's real test/lint failure is returned at once instead of retried
+    into a fresh resource-exhaustion storm (#1127). Each retry waits an
+    exponentially growing, jittered backoff (`backoff * 2**attempt`, capped
+    at `_RETRY_BACKOFF_CAP`, +10% jitter) before the next attempt — the same
+    shape as the lock's own poll backoff, applied at the whole-command grain.
+    """
+    pattern = re.compile(retry_on)
+    attempt = 0
+    while True:
+        rc, output = _run_locked_once(lock_dir, timeout, cmd, slots, capture=True)
+        if rc == 0 or attempt >= retry or not pattern.search(output):
+            return rc
+        delay = min(backoff * (2**attempt), _RETRY_BACKOFF_CAP)
+        time.sleep(delay + random.uniform(0, delay * 0.1))
+        attempt += 1
 
 
 def _pid_alive(pid: int) -> bool:
@@ -768,8 +904,29 @@ def _cmd_run(args: argparse.Namespace, cmd: list[str]) -> int:
               file=sys.stderr)
         return USAGE_ERROR
     if args.singleton:
+        if args.slots != 1 or args.retry or args.retry_on:
+            print("serial_gate: --slots/--retry/--retry-on are not supported with --singleton",
+                  file=sys.stderr)
+            return USAGE_ERROR
         return run_singleton(args.lock_dir, args.build_id, cmd)
-    return run_locked(args.lock_dir, args.timeout, cmd)
+    if args.slots < 1:
+        print("serial_gate: --slots must be >= 1", file=sys.stderr)
+        return USAGE_ERROR
+    if args.retry < 0:
+        print("serial_gate: --retry must be >= 0", file=sys.stderr)
+        return USAGE_ERROR
+    if args.retry > 0:
+        if not args.retry_on:
+            print("serial_gate: --retry > 0 requires --retry-on <regex>", file=sys.stderr)
+            return USAGE_ERROR
+        try:
+            re.compile(args.retry_on)
+        except re.error as exc:
+            print(f"serial_gate: --retry-on is not a valid regex: {exc}", file=sys.stderr)
+            return USAGE_ERROR
+        return run_locked_with_retry(args.lock_dir, args.timeout, cmd, args.slots, args.retry, args.backoff,
+                                      args.retry_on)
+    return run_locked(args.lock_dir, args.timeout, cmd, args.slots)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -802,6 +959,16 @@ def main(argv: list[str] | None = None) -> int:
     p_run.add_argument("--singleton", action="store_true",
                        help="start a long-lived helper once across sessions; adopt a live holder instead of waiting")
     p_run.add_argument("--build-id", help="with --singleton: adopt only a holder recorded with this build id")
+    p_run.add_argument("--slots", type=int, default=1,
+                       help="N-slot semaphore across N lock files; any free slot may be taken (default 1 = the "
+                            "single lock, unchanged behavior); not supported with --singleton")
+    p_run.add_argument("--retry", type=int, default=0,
+                       help="retry the whole acquire+run+release cycle up to N more times, bounded, only when the "
+                            "exit is nonzero AND output matches --retry-on (default 0 = no retry)")
+    p_run.add_argument("--backoff", type=float, default=1.0,
+                       help="base seconds for --retry's exponential, jittered, capped backoff")
+    p_run.add_argument("--retry-on", help="regex matched against the failed attempt's combined stdout+stderr; "
+                                          "required when --retry > 0")
 
     cmd: list[str] = []
     if "run" in argv:
@@ -1031,6 +1198,8 @@ def _selftest_lock(tmp: str, check) -> None:
     _selftest_lock_exit_code(tmp, check, script_path)
     _selftest_lock_no_age_reclaim(tmp, check, script_path)
     _selftest_lock_no_fcntl(tmp, check)
+    _selftest_lock_slots(tmp, check, script_path)
+    _selftest_lock_retry(tmp, check, script_path)
     _selftest_singleton(tmp, check, script_path)
 
 
@@ -1231,6 +1400,97 @@ def _selftest_lock_no_fcntl(tmp: str, check) -> None:
         globals()["fcntl"] = saved
     check("no-fcntl-exit-2", rc == USAGE_ERROR, f"rc={rc}")
     check("no-fcntl-command-not-run", not os.path.exists(marker))
+
+
+def _selftest_lock_slots(tmp: str, check, script_path: str) -> None:
+    """`--slots N` is an N-slot semaphore, not N independent copies of the
+    single lock: with slots=2 and 5 concurrent racers, never more than 2 are
+    ever inside at once (deterministic proof, not a timing sample: each
+    racer marks itself in a shared `active/` dir before recording how many
+    markers — including its own — are present, so a real >N-holder
+    violation always leaves a >N count in the log), every racer runs exactly
+    once, and afterward every slot is free again (release-on-exit, per slot,
+    same as the single-lock case above).
+    """
+    racers = 5
+    slots = 2
+    lock_dir = os.path.join(tmp, "lock_slots")
+    active = os.path.join(tmp, "lock_slots_active")
+    log = os.path.join(tmp, "lock_slots_log")
+    os.makedirs(active)
+    child = (
+        "import os,sys,time\n"
+        f"rid=sys.argv[1]; active={active!r}; log={log!r}\n"
+        "open(os.path.join(active, rid), 'w').close()\n"
+        "n = len(os.listdir(active))\n"
+        "fd=os.open(log, os.O_WRONLY|os.O_APPEND|os.O_CREAT, 0o644)\n"
+        "os.write(fd, (str(n)+'\\n').encode()); os.close(fd)\n"
+        "time.sleep(0.3)\n"
+        "os.remove(os.path.join(active, rid))\n"
+    )
+    procs = [
+        subprocess.Popen([
+            sys.executable, script_path, "run", "--lock-dir", lock_dir, "--slots", str(slots),
+            "--timeout", "60", "--", sys.executable, "-c", child, str(i),
+        ])
+        for i in range(racers)
+    ]
+    rcs = [p.wait(timeout=90) for p in procs]
+    with open(log, encoding="utf-8") as fh:
+        counts = [int(x) for x in fh.read().split()]
+    check("slots-all-ran", rcs == [0] * racers and len(counts) == racers, f"rcs={rcs} counts={counts}")
+    check("slots-never-exceeds-cap", bool(counts) and max(counts) <= slots, f"counts={counts}")
+    check("slots-cap-actually-used", bool(counts) and max(counts) >= 1, f"counts={counts}")
+    check("slots-all-free-after", _slots_all_free(lock_dir, slots))
+
+
+def _selftest_lock_retry(tmp: str, check, script_path: str) -> None:
+    """`--retry K --retry-on REGEX`: retried only when a failed attempt's
+    combined output matches REGEX (recovers within the budget -> final rc 0
+    with exactly the attempts needed); a failure that does NOT match is
+    returned at once with zero retries (never amplifies a genuine, unrelated
+    failure, per #1127); and a helper that always fails matching output
+    still runs EXACTLY `retry + 1` total attempts, proving the loop is
+    bounded, not unbounded. `--retry` without `--retry-on` is a usage error.
+    """
+
+    def _counter(counter: str) -> str:
+        return (
+            "import os\n"
+            f"c={counter!r}\n"
+            "n = int(open(c).read()) if os.path.exists(c) else 0\n"
+            "open(c, 'w').write(str(n + 1))\n"
+        )
+
+    def _run(lock_dir: str, retry: int, retry_on: str | None, helper: str) -> int:
+        args = [sys.executable, script_path, "run", "--lock-dir", lock_dir, "--retry", str(retry)]
+        if retry_on is not None:
+            args += ["--retry-on", retry_on]
+        args += ["--backoff", "0.02", "--", sys.executable, "-c", helper]
+        return subprocess.run(args, capture_output=True, text=True, timeout=60).returncode
+
+    counter = os.path.join(tmp, "retry_recovers_count")
+    helper = _counter(counter) + "import sys\nif n < 2:\n    sys.stderr.write('RETRYME transient\\n'); sys.exit(1)\n"
+    rc = _run(os.path.join(tmp, "retry_recovers"), 5, "RETRYME", helper)
+    attempts = int(open(counter, encoding="utf-8").read())
+    check("retry-recovers-rc0", rc == 0, f"rc={rc}")
+    check("retry-recovers-attempts-3", attempts == 3, f"attempts={attempts}")
+
+    counter2 = os.path.join(tmp, "retry_no_match_count")
+    helper2 = _counter(counter2) + "import sys\nsys.stderr.write('unrelated real failure\\n'); sys.exit(9)\n"
+    rc2 = _run(os.path.join(tmp, "retry_no_match"), 5, "RETRYME", helper2)
+    attempts2 = int(open(counter2, encoding="utf-8").read())
+    check("retry-no-match-not-retried", rc2 == 9 and attempts2 == 1, f"rc={rc2} attempts={attempts2}")
+
+    counter3 = os.path.join(tmp, "retry_bounded_count")
+    helper3 = _counter(counter3) + "import sys\nsys.stderr.write('RETRYME always\\n'); sys.exit(1)\n"
+    rc3 = _run(os.path.join(tmp, "retry_bounded"), 2, "RETRYME", helper3)
+    attempts3 = int(open(counter3, encoding="utf-8").read())
+    check("retry-bounded-final-rc-propagated", rc3 == 1, f"rc={rc3}")
+    check("retry-bounded-exact-attempts", attempts3 == 3, f"attempts={attempts3} (expected retry+1=3)")
+
+    rc4 = _run(os.path.join(tmp, "retry_needs_pattern"), 1, None, "pass")
+    check("retry-without-pattern-usage-error", rc4 == USAGE_ERROR, f"rc={rc4}")
 
 
 def _selftest_singleton(tmp: str, check, script_path: str) -> None:

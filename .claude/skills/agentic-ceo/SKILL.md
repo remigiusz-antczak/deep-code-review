@@ -25,7 +25,8 @@ small build is not drowned in subagents; and when the owner is under
 pressure it keeps the work legible instead of freelancing. It **routes and
 decides**; it never re-implements what a specialist skill already does.
 
-Persisted artifacts stay normal English. Chat may be terse.
+Persisted artifacts stay normal English. Chat may be terse. Lookup table:
+`INDEX.md`; read it instead of opening references blindly.
 
 ---
 
@@ -144,12 +145,15 @@ delivery by hand when a skill or lane should. Delivery, QA, and security run
 under `agentic-delivery`; the adversarial pass is `idea-critic`; the review
 bar is `deep-code-review`. Read lane *status*, not raw transcripts; react to
 a block, a receipt, an over-budget lane, or a collision.
+Run `scripts/token_report.py` at wave end and in the morning handoff; flag an
+orchestration share over 20% or a costly subagent startup.
 Dispatch aged P0 / mechanism work before presentation polish; `agentic-delivery`'s
 `unattended-operating-mode.md` routes two opt-in gates: `scripts/priority_gate.py`
 blocks a presentation PR while aged P0/mechanism work is uncited, and
 `scripts/refix_gate.py` blocks churn without a class artifact.
 An OPEN owner priority outranks both: dispatch nothing outside it until DONE or BLOCKED
 (same file, **An open owner priority outranks every other item**; `scripts/focus_gate.py`).
+Paste `agentic-delivery`'s `templates/lane-preamble.md` into every lane brief before dispatch.
 
 ## Output discipline (no slop) — enforced across the suite
 Every user-facing output the suite produces — message, report, plan, table, or

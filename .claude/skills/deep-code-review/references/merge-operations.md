@@ -65,22 +65,20 @@ pre-splits the cap to dodge a merge conflict — that remedy was rejected (`dev-
 the ceiling to pass*). The union still owes the same gate everything else does: pass the ratchet/cap, or don't
 merge.
 
-**Isolating a culprit member: park the others for the suspect's full verification cycle, not merely
-until the next tick — or bisect.** The paragraph above attributes a numeric-ratchet overshoot to its
-owning member directly from the diff; when the failure instead needs an actual isolation run to find the
-culprit (a flaky interaction, a build-only break the ratchet can't compute per-member), "park every other
-member for one cycle, retry with the suspect alone" only works if the parking **survives past that one
-retry**. Park for **at least two cycles** — one to run the suspect alone, a second to hold the rest out
-*while that result is read and acted on* — never "parked members become eligible again on the very next
-tick," which re-includes everyone the cycle right after the isolated run and reproduces the exact same
-failing union forever: no new information, one burned verification cycle per attempt, and a failure that
-reads as flaky/unstable instead of attributable (issue #1119). A suspect that itself fails in isolation is
-parked **for real** — excluded from the union, not merely skipped once — and the search continues with the
-remainder; a suspect that passes in isolation clears it, making the interaction between two-or-more members
-the next hypothesis. Where the member count makes one-at-a-time isolation too slow, **bisect the member
-set** instead (halve it, retry, recurse into the failing half) — same convergence guarantee, fewer cycles.
-Either way, any downstream gate the union depends on should independently report **which member's diff**
-tripped it, so a culprit is nameable without relying on the parking loop alone.
+**Isolating a culprit member: hold the others out for the suspect's full verification cycle, or bisect.**
+When the failure needs an actual isolation run (a flaky interaction, a build-only break the ratchet can't
+compute per-member), the parking must **survive past that one retry**: park for at least two cycles (one to
+run the suspect alone, one to hold the rest out while that result is read), never "eligible again on the next
+tick", which rebuilds the same failing union forever and reads as flaky instead of attributable (issue #1119).
+A suspect that fails alone is parked **for real** until its head changes; one that passes clears itself, and
+an interaction becomes the next hypothesis. **Bisect the member set** when one at a time is too slow. After a
+park, **rebuild the union at once**: a sleep per conflicting member turns N conflicts into N cycles (issue
+#1134). **Merge only onto the base the union proved.** A base that moved since verify means re-plan, never a
+silent re-verify; a proved head that is no longer an ancestor of the fetched head means a rewrite, so halt for
+a human, or the train restores history someone removed on purpose (issue #1137). `merge_train.py`
+(agentic-delivery's `scripts/`) runs this section: plan, one union verify, bisection, `#N +D marker=…`
+lines, flaky retry with bounded backoff, and a dry-run merge that halts on a moved base and never pushes.
+`--apply` still needs the integration owner or a recorded standing grant.
 
 ### Mergeable is a snapshot against a moving base head — re-check before each merge; freeze the sweep while a resolver runs
 

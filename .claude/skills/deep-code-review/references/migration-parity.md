@@ -130,11 +130,12 @@ other sources that it never captured is kept in the delivery ledger
 `accept-file`; the owner commits it as the differ's `--accept`. Send a design-vs-feedback
 conflict to the owner; never settle it by re-aligning.
 
-**Check order: cheap and deterministic first — an earlier mismatch stops the rest.** Inventory
-(`parity_differ.py`; completeness = items matched, never pixels), then token **values**
-(`scripts/token_differ.py --design <f> --app <f>`, 0 = all MATCH), then computed styles
-(`parity_differ.py --style`), then structure/visual
-screenshots: an earlier verdict often explains a later pixel diff — fix, re-run first.
+**Check order: foundation first, one gate — `parity_differ.py --workflow`.** Token **values**
+(`token_differ.py`), then primitives (open FOUNDATION/PRIMITIVE style rows block every section:
+BLOCKED_BY_FOUNDATION, exit 7), then per-section inventory (completeness = items matched, never
+pixels) + computed styles, then `--report` screenshots: an earlier stage often explains a later
+diff — fix, re-run first.
+A section with no text `data-cs` (image/chart/map) stays UNVERIFIED unless an owner-committed accept row `visual-reviewed<TAB><section><TAB><reason><TAB><owner>` covers it.
 
 ## Scope a parity claim to the correspondence table — one screen verified is not the product
 

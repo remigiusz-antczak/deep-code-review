@@ -197,7 +197,20 @@ the same shape as the RAM/swap ceiling above applied to disk. Read an **ENOSPC**
 it is — **a sizing bug, the spawn gate omitted disk** — never retry it blind as a flaky lane (the same asymmetry
 as *a subagent's own crash report overrides a healthy probe*, below), and the same
 *contention, not a defect, until reproduced at low concurrency* shape as the probe procedure above: a
-fan-out-only ENOSPC is the resource cap, not the code. And treat a collapse in observable **work rate** — lanes
+fan-out-only ENOSPC is the resource cap, not the code.
+
+- **Budget a per-commit gate's transient peak, not only resident disk.** A pre-commit hook that snapshots the
+  tracked tree (`checkout-index`, a `cp -R` freshness rebuild) pays one full-tree copy **per run**, on top of the
+  resident footprint above: `disk_free > N_concurrent_commits × hook_peak + reserve`, `hook_peak` **measured**
+  from one real run, never guessed — 15 lanes committing at once against an unmeasured peak swung free disk from
+  21 GiB to <500 MiB in minutes (#1126). Bound the peak at the source: clone instead of copy (`cp -c` on APFS,
+  `--reflink=auto` on btrfs/xfs); exclude bytes no gate reads (e.g. committed binary evidence) from the snapshot
+  — but **prove that first** (grep the gates and tests for the excluded pattern, then run them) or the exclusion
+  silently blinds a gate that does read those bytes, a false green worse than the disk it saved. Cap the heavy
+  commit tier itself at `disk_free ÷ hook_peak` **measured** concurrent commits with `serial_gate.py run --slots
+  N` (below) rather than admitting every lane's commit at once.
+
+And treat a collapse in observable **work rate** — lanes
 not completing, tool calls timing out, nothing landing — as itself the resource signal, outranking any green
 metric (distinct from the delivery-ratio drain above: that asks whether lanes convert to artifacts, this asks
 whether the machine can still run them; a nothing-landing stretch trips both).
@@ -251,6 +264,20 @@ shared-quota headroom; **size to the binding one.** When the quota binds, extra 
 rate-limit-error and stall, wasting the tokens their partial work already spent (#830). This is the ceiling the
 *token budget* in the fan-out-ETA section below already assumes exists.
 
+- **A lane's retry on a shared-resource exhaustion (disk, a shared gate) must back off exponentially with
+  jitter and give up after a bounded count — an un-backed-off retry loop is a load generator, not a fix.** ~20
+  lanes each retrying a failed commit the instant space looked free consumed it before any single one finished,
+  climbing to 25-30 concurrent hook processes on 0% idle CPU (#1127, following #1126's disk peak). A lane hands
+  back `blocked on <resource>` after its bounded retries exhaust, never loops silently. Cap the heavy tier itself
+  with `serial_gate.py run --slots N` (an N-slot semaphore over N kernel `flock`s — no stale-lock takeover,
+  nothing to age out, the same primitive the module's 1-slot mutex already uses) rather than a home-grown
+  stale-lock-reclaim scheme, sizing `N` to the **measured** ceiling above, not a fixed guess (too low
+  under-utilizes a healthy machine, trading an ENOSPC storm for idle capacity). Pair it with `--retry K --backoff
+  S --retry-on REGEX`: retries only a matching failure, bounded to `K+1` attempts, backing off exponentially with
+  jitter — never a blanket retry-on-any-failure, which would retry a lane's genuine, unrelated test failure into
+  the same storm. **The orchestrator's first move in the storm is to pause new retries/admissions, not reclaim
+  caches** — caches are rarely the cause, and reclaiming them first burns time the pause would have used to let
+  the transient peak drain.
 - **A rate-limit error on a lane is a distinct signal from local overload — do not answer it with the RAM/swap back-off above.**
   The gates above catch the machine crawling; a lane erroring or failing to start on the provider's rate limit
   is the *shared* ceiling reporting itself from outside the box, and the local probe keeps reading healthy
@@ -271,6 +298,14 @@ rate-limit-error and stall, wasting the tokens their partial work already spent 
   token budget is exhausted. Prefer **fewer, higher-yield lanes** over many thin ones, and
   **checkpoint partial work to a durable artifact** (a pushed branch, a saved file) before a lane can die, so a
   rate-limit stop is resumable rather than tokens spent for zero delivery.
+- **Respawn by priority, not wholesale — and never move the fleet onto the orchestrator's own tier.** A quota
+  death (#1132) takes every lane on the exhausted model down within minutes, mid-commit and mid-PR; respawning
+  all of them onto the next tier up can exhaust *that* one too, especially when the orchestrator itself already
+  depends on it — the same single-point-of-failure shape, one tier up. Respawn in priority order instead: P0 /
+  user-facing lanes go to the next capable tier; mechanical finishing (a PR-body fix, a changelog fragment, a
+  rerun) goes to the cheapest tier; everything else waits for the reset. Brief a respawned lane from its
+  worktree (`git status`, the unpushed log) plus its queue entry in the orchestrator's own state file, never only
+  from the dead lane's context — the durable-artifact checkpoint above is what makes that briefing possible.
 
 **🚩 tell:** an orchestrator widening lane count because the local probe reads healthy — free RAM, idle cores,
 flat swap — while a rising fraction of lanes fail to start or die seconds in; the fan-out was sized to the
