@@ -99,27 +99,31 @@ SUBCOMMANDS
           the grant: one already in the base's history is refused until the
           owner commits the line again. Grant reads run with
           --no-replace-objects and an empty blame.ignoreRevsFile.
-          After an --apply merge it runs `refresh --apply` for the siblings,
-          isolated: the merge already landed, so a refresh error is a WARN
-          (exit still OK), never an ERROR/HALT that would make a landed
+          After an --apply merge it runs `refresh` for the siblings (same
+          local-commands-by-default as `refresh` itself, --use-update-branch
+          opt-in), isolated: the merge already landed, so a refresh error is a
+          WARN (exit still OK), never an ERROR/HALT that would make a landed
           merge look failed.
   refresh After a fix lands on the base, a CI re-run on an open PR reuses its
           OLD merge commit, so every PR opened before the fix stays red until
           its branch is updated: re-running is not the fix. Lists open PRs whose
-          head lacks --since (default: the base head) and prints the exact
-          `gh pr update-branch <n>` for each; --apply runs them. Always a merge
-          commit, never `--rebase` (a rebase rewrites a branch its lane may be
-          pushing to). A draft or a fork PR is skipped (--include-drafts /
+          head lacks --since (default: the base head) and, by default, prints
+          local `gh pr checkout <n>` + fetch + merge + push commands for that
+          PR's own owner to run on their next push — zero extra CI runs. --use-update-
+          branch instead prints/runs `gh pr update-branch <n>` (--apply runs
+          it), a merge commit each, never `--rebase` (a rebase rewrites a
+          branch its lane may be pushing to) — but each call costs one CI run,
+          so it is opt-in. A draft or a fork PR is skipped (--include-drafts /
           --allow-forks admit them). A PR carrying a copy of a keystone is
           skipped: it must drop the copy and rebase, not merge the fix in twice
           (the keystone screen parks it, and a PR parked for a keystone is
-          never updated). Calls are throttled (--backoff between each) and a
-          429/secondary-rate-limit response is retried on the existing
-          --retries/--backoff schedule; a failed update is reported and the
-          rest still run. Does not coordinate with a lane mid-push: run it
-          only when no lane is pushing to the PRs it updates, or have lanes
-          rebase afterward, since a lane's later force-push drops the merge
-          commit refresh just made.
+          never updated). --use-update-branch calls are throttled (--backoff
+          between each) and a 429/secondary-rate-limit response is retried on
+          the existing --retries/--backoff schedule; a failed update is
+          reported and the rest still run. Does not coordinate with a lane
+          mid-push: run --use-update-branch only when no lane is pushing to
+          the PRs it updates, or have lanes rebase afterward, since a lane's
+          later force-push drops the merge commit refresh just made.
   dupes   Parallel lanes that each carry their own copy of one fix conflict
           with each other and the train parks all but one. Flags every set of
           >= 2 open PRs whose `git diff -U0` hunks in the same file overlap
@@ -182,7 +186,8 @@ USAGE
   merge_train.py merge  --base main [--apply --grant REF]
   merge_train.py keystone --base main --pr N --verify-cmd CMD --only GLOB
                         [--only GLOB ...] [--owner-email E ...] [--require-signed] [--apply]
-  merge_train.py refresh --base main [--since SHA] [--apply]
+                        [--use-update-branch]
+  merge_train.py refresh --base main [--since SHA] [--use-update-branch --apply]
   merge_train.py dupes  --base main [--similarity 0.9]
   merge_train.py --selftest
 Common: --remote origin, --state PATH (default <git-common-dir>/merge-train.json).
@@ -1001,18 +1006,24 @@ class Train:
         """The `refresh` subcommand (also keystone --apply's last step): update PRs behind a landed fix.
 
         A CI re-run reuses the PR's old merge commit, so a PR stays red after the
-        fix lands until its branch is updated. Prints one `gh pr update-branch`
-        per open PR whose head lacks --since (default: the fetched base head);
-        --apply runs them, a merge commit each (never --rebase). A draft PR is
-        skipped (--include-drafts admits it) and a fork PR is skipped
+        fix lands until its branch is updated. Cost default: for each open PR
+        whose head lacks --since (default: the fetched base head) it prints the
+        local `gh pr checkout` + fetch + merge + push commands, for the
+        branch's own owner to run on their next push (spends zero extra CI
+        runs). Pass
+        --use-update-branch to instead print/run one `gh pr update-branch` per
+        PR (--apply runs them, a merge commit each, never --rebase) — each call
+        costs one CI run, so this is opt-in. A draft PR is skipped
+        (--include-drafts admits it) and a fork PR is skipped
         (--allow-forks admits it) — update-branch would run on a PR this
         script never otherwise touches. The keystone screen runs first, and a
         PR parked for a keystone is skipped: it must drop its copy of the fix,
-        not merge the fix in twice. Applied calls are spaced --backoff apart
-        (gh secondary-rate-limits a burst); a 429/secondary-rate-limit
-        response is retried on the --retries/--backoff schedule, any other
-        failure is not. Returns RED when any update failed (every other PR is
-        still tried), else OK.
+        not merge the fix in twice. Applied update-branch calls are spaced
+        --backoff apart (gh secondary-rate-limits a burst); a
+        429/secondary-rate-limit response is retried on the --retries/--backoff
+        schedule, any other failure is not. Returns RED when any
+        --use-update-branch update failed (every other PR is still tried),
+        else OK.
         """
         self.base_sha, members = self.fetch(self.open_prs())
         fix = getattr(self.a, "since", "") or self.base_sha
@@ -1038,6 +1049,13 @@ class Train:
                 self.say(f"SKIP #{n} already contains {self.a.base}@{fix[:7]}")
                 continue
             behind += 1
+            if not getattr(self.a, "use_update_branch", False):
+                checkout = " ".join(["gh", "pr", "checkout", str(n), *self.repo_flag])
+                self.say(f"LOCAL #{n} behind {self.a.base}@{fix[:7]}: {checkout} && "
+                         f"git fetch {self.a.remote} {self.a.base} && "
+                         f"git merge {self.a.remote}/{self.a.base} && git push  "
+                         "(run this on your own next push; --use-update-branch costs one CI run per PR instead)")
+                continue
             cmd = ["gh", "pr", "update-branch", str(n), *self.repo_flag]
             if not self.a.apply:
                 self.say(f"WOULD-UPDATE #{n} behind {self.a.base}@{fix[:7]}: {' '.join(cmd)}")
@@ -1057,6 +1075,9 @@ class Train:
                      else f"UPDATED #{n} merged {self.a.base}@{fix[:7]} in; CI now tests a new merge commit")
         if not behind:
             self.say(f"NOOP no open PR is behind {self.a.base}@{fix[:7]}")
+        elif not getattr(self.a, "use_update_branch", False):
+            self.say("LOCAL each PR owner runs the printed commands on their own next push; "
+                     "--use-update-branch opts into gh pr update-branch (one CI run per PR)")
         elif not self.a.apply:
             self.say("DRY-RUN nothing updated; --apply runs each gh pr update-branch (a re-run would reuse the old merge)")
         return RED if failed else OK
@@ -1217,11 +1238,17 @@ def build_parser():
     k.add_argument("--owner-email", action="append", default=[],
                    help="owner email (repeatable); else DCR_OWNER_EMAIL, else git config dcr.owner")
     k.add_argument("--apply", action="store_true", help="actually merge the keystone (default is a dry run)")
+    k.add_argument("--use-update-branch", action="store_true",
+                    help="post-merge refresh runs gh pr update-branch instead of printing local commands: "
+                         "costs one CI run per PR")
     k.add_argument("--timeout", type=int, default=3600, help="seconds per gate command")
     k.set_defaults(count_cmd="")
     r = sub.add_parser("refresh", parents=[common])
     r.add_argument("--since", default="", help="the landed fix commit (default: the base head)")
-    r.add_argument("--apply", action="store_true", help="run gh pr update-branch (default prints the commands)")
+    r.add_argument("--apply", action="store_true",
+                    help="with --use-update-branch, run gh pr update-branch (default prints local commands)")
+    r.add_argument("--use-update-branch", action="store_true",
+                    help="run gh pr update-branch instead of printing local commands: costs one CI run per PR")
     r.add_argument("--include-drafts", action="store_true", help="also update-branch a draft PR (default: skip it)")
     d = sub.add_parser("dupes", parents=[common])
     d.add_argument("--similarity", type=float, default=0.9, help="minimum normalized hunk similarity, 0 < s <= 1")
@@ -2034,9 +2061,29 @@ def _selftest() -> int:
         f.based = {"h1": {"B0", "F1"}}  # #1 was already updated onto it
         return f
 
-    def refresh_dry_run_prints_update_branch_for_behind_prs():
+    def refresh_default_prints_local_commands_no_ci_cost():
         f = refresh_forge()
-        rc, out = go(f, "refresh", state=fresh("rf.json"))
+        rc, out = go(f, "refresh", "--apply", state=fresh("rf.json"))  # --apply alone: still local, no cost
+        calls = [c for c in f.calls if c[:3] in (["gh", "pr", "update-branch"], ["gh", "pr", "checkout"])]
+        want = ["SKIP #1 already contains main@F1", "LOCAL #2 behind main@F1: gh pr checkout 2",
+                "LOCAL #3 behind main@F1: gh pr checkout 3", "--use-update-branch opts into"]
+        return rc == OK and all(w in out for w in want) and not calls, out
+
+    def refresh_local_command_is_exact_and_carries_repo_flag():
+        f = refresh_forge()
+        rc, out = go(f, "refresh", state=fresh("rfx.json"))
+        rc2, out2 = go(f, "refresh", "--repo", "acme/widgets", state=fresh("rfxr.json"))
+        want = ("LOCAL #2 behind main@F1: gh pr checkout 2 && git fetch origin main && "
+                "git merge origin/main && git push  (run this on your own next push; "
+                "--use-update-branch costs one CI run per PR instead)")
+        want_repo = ("LOCAL #2 behind main@F1: gh pr checkout 2 --repo acme/widgets && git fetch origin main && "
+                     "git merge origin/main && git push  (run this on your own next push; "
+                     "--use-update-branch costs one CI run per PR instead)")
+        return rc == OK and want in out and rc2 == OK and want_repo in out2, (out, out2)
+
+    def refresh_use_update_branch_dry_run_prints_gh_command():
+        f = refresh_forge()
+        rc, out = go(f, "refresh", "--use-update-branch", state=fresh("rf.json"))
         updates = [c for c in f.calls if c[:3] == ["gh", "pr", "update-branch"]]
         want = ["SKIP #1 already contains main@F1", "WOULD-UPDATE #2 behind main@F1: gh pr update-branch 2",
                 "WOULD-UPDATE #3 behind main@F1: gh pr update-branch 3", "DRY-RUN"]
@@ -2045,7 +2092,7 @@ def _selftest() -> int:
     def refresh_apply_updates_and_reports_each_failure():
         f = refresh_forge()
         f.update_fail = {2}
-        rc, out = go(f, "refresh", "--apply", "--repo", "acme/widgets", state=fresh("rf.json"))
+        rc, out = go(f, "refresh", "--use-update-branch", "--apply", "--repo", "acme/widgets", state=fresh("rf.json"))
         updates = [c[3:] for c in f.calls if c[:3] == ["gh", "pr", "update-branch"]]
         return (rc == RED and updates == [["2", "--repo", "acme/widgets"], ["3", "--repo", "acme/widgets"]]
                 and "UPDATE-FAILED #2" in out and "UPDATED #3" in out), out
@@ -2057,16 +2104,24 @@ def _selftest() -> int:
         rc2, out2 = go(f, "refresh", "--since", "Z9", state=fresh("rf.json"))
         rc4, out4 = go(f, "refresh", "--since=--output=x", state=fresh("rf.json"))
         rc3, out3 = go(f, "refresh", state=fresh("rf.json"))  # default: the base head
-        return (rc == OK and "SKIP #1 already contains main@F1" in out and "WOULD-UPDATE #2" in out
+        return (rc == OK and "SKIP #1 already contains main@F1" in out and "LOCAL #2" in out
                 and rc2 == ERROR and "not on main" in out2 and rc4 == ERROR and "not an option" in out4
-                and rc3 == OK and "WOULD-UPDATE #1 behind main@B2" in out3), (out, out2, out3)
+                and rc3 == OK and "LOCAL #1 behind main@B2" in out3), (out, out2, out3)
 
-    def keystone_apply_refreshes_siblings_but_not_copy_carriers():
+    def keystone_apply_refresh_follows_local_default_no_ci_cost():
         f = keystone_forge()
         rc, out = ks(f, "--apply", state="kf.json")
-        updates = [c[3] for c in f.calls if c[:3] == ["gh", "pr", "update-branch"]]
-        return (rc == OK and updates == ["2"] and "UPDATED #2" in out
+        calls = [c for c in f.calls if c[:3] == ["gh", "pr", "update-branch"]]
+        return (rc == OK and not calls and "LOCAL #2" in out
                 and "SKIP #3 carries a cherry-pick of keystone #1" in out), out
+
+    def keystone_use_update_branch_opts_into_gh_update_branch():
+        # parity: keystone's own --use-update-branch (not just refresh's) opts
+        # its post-merge refresh into gh pr update-branch.
+        f = keystone_forge()
+        rc, out = ks(f, "--use-update-branch", "--apply", state="kuub.json")
+        updates = [c[3] for c in f.calls if c[:3] == ["gh", "pr", "update-branch"]]
+        return rc == OK and updates == ["2"] and "UPDATED #2" in out and "LOCAL #2" not in out, out
 
     def keystone_apply_refresh_failure_is_warn_not_error():
         # #1130 a post-merge refresh error (e.g. a truncated PR list) used to
@@ -2097,8 +2152,8 @@ def _selftest() -> int:
         rc, out = go(f, "refresh", state=fresh("rfdf.json"))
         rc2, out2 = go(f, "refresh", "--include-drafts", "--allow-forks", state=fresh("rfdf.json"))
         return (rc == OK and "SKIP #2 draft" in out and "SKIP #3 fork" in out
-                and "WOULD-UPDATE #2" not in out and "WOULD-UPDATE #3" not in out
-                and "WOULD-UPDATE #2" in out2 and "WOULD-UPDATE #3" in out2), (out, out2)
+                and "LOCAL #2" not in out and "LOCAL #3" not in out
+                and "LOCAL #2" in out2 and "LOCAL #3" in out2), (out, out2)
 
     def refresh_throttles_and_retries_rate_limit():
         f = refresh_forge()
@@ -2111,7 +2166,7 @@ def _selftest() -> int:
                     return 1, "", "API rate limit exceeded (429)"
             return f(args, cwd=cwd, timeout=timeout)
         buf = io.StringIO()
-        rc = run(["refresh", "--apply", "--base", "main", "--retries", "1", "--backoff", "3",
+        rc = run(["refresh", "--use-update-branch", "--apply", "--base", "main", "--retries", "1", "--backoff", "3",
                   "--state", os.path.join(tmp, fresh("rtl.json"))], runner=runner, out=buf, sleep=f.sleeps.append)
         out = buf.getvalue()
         return (rc == OK and attempts["n"] == 2 and "UPDATED #2" in out and "UPDATED #3" in out
@@ -2239,10 +2294,13 @@ def _selftest() -> int:
         ("class-grant-refusals", class_grant_refusals),
         ("class-grant-picks-unused-covering-class", class_grant_picks_the_unused_class_that_covers_the_files),
         ("keystone-git-helpers-on-a-real-repo", keystone_git_helpers_on_a_real_repo),
-        ("refresh-dry-run-prints-update-branch", refresh_dry_run_prints_update_branch_for_behind_prs),
+        ("refresh-default-prints-local-no-ci-cost", refresh_default_prints_local_commands_no_ci_cost),
+        ("refresh-local-command-exact-repo-flag", refresh_local_command_is_exact_and_carries_repo_flag),
+        ("refresh-use-update-branch-dry-run", refresh_use_update_branch_dry_run_prints_gh_command),
         ("refresh-apply-updates-reports-failures", refresh_apply_updates_and_reports_each_failure),
         ("refresh-since-pins-the-fix-commit", refresh_since_pins_the_fix_commit),
-        ("keystone-apply-refreshes-not-carriers", keystone_apply_refreshes_siblings_but_not_copy_carriers),
+        ("keystone-apply-refresh-local-default", keystone_apply_refresh_follows_local_default_no_ci_cost),
+        ("keystone-use-update-branch-parity", keystone_use_update_branch_opts_into_gh_update_branch),
         ("duplicate-fixes-groups-near-identical", duplicate_fixes_groups_near_identical_hunks),
         ("dupes-names-earliest-canonical", dupes_names_the_earliest_pr_canonical),
         ("duplicate-fixes-parses-real-git-diff", duplicate_fixes_parses_real_git_diff),

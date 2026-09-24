@@ -821,6 +821,17 @@
       ]
     },
     {
+      "id": "parity-capture-timing-not-real-mismatch-on-serial-fetch-route",
+      "prompt": "A parity scan captured a route right after `waitUntil: 'networkidle'` resolved on page load and reported the 'holdings' section at 13% match. The route fetches its account summary, then only after that resolves fetches the holdings list (a serial/waterfall chain) -- the second fetch was still in flight when the screenshot was taken. A teammate wants to open a ticket to fix the 13% mismatch. What should happen instead?",
+      "expected_output": "Do not open a ticket to 'fix' the 13% score -- it is a capture-timing artifact, not a real visual divergence: `networkidle` at page load is a DOM-hydration-era signal and does not know about a fetch kicked off only after an earlier one resolves, so the capture fired mid-chain. Treat DOM-hydrated and data-settled as two different signals (templates/parity-capture.md's settle-signal item; rendered-parity.md names this a distinct race from a DOM-hydration race, related to #348's hydration-marker-vs-network-idle case but a different symptom -- a low score, not an empty capture). Re-capture waiting on an app-declared settle marker (`data-parity-ready=\"1\"`) or a longer bounded network-idle window, and re-run `parity_differ.py`. If the capture is re-used as-is, `--require-settled` (or an explicit `data-parity-ready=\"0\"` on the capture) makes `parity_differ.py` report COULD_NOT_CHECK for the run, never a scored mismatch -- a first low score is provisional until re-checked with a longer settle window, and only a genuine post-settle score justifies a ticket.",
+      "expectations": [
+        "Refuses to file a fix-it ticket for the 13% score without re-checking with a longer settle window first",
+        "Names the failure as a capture-timing artifact from a serial/waterfall fetch chain still in flight, not a real visual divergence",
+        "States DOM-hydrated and data-settled are two distinct signals -- a generic hydration/page-load marker is not sufficient for a route with sequential fetches",
+        "States parity_differ.py treats an unsettled capture (declared or required-but-missing) as COULD_NOT_CHECK, never a mismatch score"
+      ]
+    },
+    {
       "id": "port-wide-lsof-kill-reaps-clients-and-the-listen-filter-needs-dash-i",
       "prompt": "A teardown script runs `lsof -ti tcp:3000 | xargs kill -9` to free the dev port between runs. A teammate proposes fixing the collateral damage with `lsof -ti -sTCP:LISTEN tcp:3000` so only the listener is targeted. Any problems with either command?",
       "expected_output": "Both are broken, for opposite reasons. The original selects EVERY process holding port 3000 -- the listener and any connected client (a browser tab, a test runner, a proxy) -- so `xargs kill -9` reaps clients that have nothing to do with the server. The proposed fix is not a fix, and flag order is not why (`-sTCP:LISTEN -iTCP:3000` works): it puts the `-s` token between `-i` and its address, so `-i` takes no address and `tcp:3000` becomes a file operand -- lsof exits 1 with `status error on tcp:3000: No such file or directory`, `xargs kill` then kills nothing and the port stays bound. The verified listener-only form is `lsof -t -iTCP:3000 -sTCP:LISTEN` (tested on macOS lsof 4.91; confirm on Linux before treating it as universal). This is an instance of 'terminate only what you own, never by a bare pattern or port' -- prefer an owned process group over any lsof-by-port kill when the lane started the server itself. (concurrency-shared-state.md.)",
@@ -6065,6 +6076,17 @@
       ]
     },
     {
+      "id": "gnu-only-find-flag-silenced-stderr-fails-open-fleet-wide",
+      "prompt": "A liveness check runs `find \"$worktree\" -newermt '-10 minutes' 2>/dev/null` to see if a lane wrote anything recently, and treats an empty result as idle. It worked in CI (Linux) but on a teammate's Mac every lane reads idle, including ones that just committed. What is wrong, and what should the check do instead?",
+      "expected_output": "`-newermt` is a GNU findutils extension; BSD/macOS find has no such flag and rejects it as invalid. The `2>/dev/null` swallows that invalid-option error along with the intended noise, so the command finds nothing and every worker reads idle -- a false negative that looks like \"nothing changed,\" not \"the check is broken.\" Never suppress the stderr of a check whose result drives an action (kill, restart, reassign, alert, \"report idle\"): if the command can fail for a reason other than \"no match,\" that failure must be visible or explicitly handled. Fix: use the portable form both `find` implementations accept (a numeric N-minutes-ago flag, or detect the platform and branch), and smoke-test the probe against a known-live and a known-idle subject on the actual target platform (macOS here), not only the one it was authored on (lang-shell.md; mechanized by reaper_lint.py's GNU_FLAG_SILENCED_STDERR rule, which also covers the same shape for `stat -c`, `date -d`, and a no-argument `sed -i`).",
+      "expectations": [
+        "Identifies -newermt as a GNU-only find flag that BSD/macOS find rejects as invalid",
+        "States the 2>/dev/null swallowed the invalid-option error, producing a false 'idle' reading, not a real 'no match'",
+        "States the general rule: never suppress stderr of a check whose result drives an action",
+        "Requires a portable flag or platform detection, plus a live/idle smoke test on the actual target platform before trusting the probe fleet-wide"
+      ]
+    },
+    {
       "id": "design-realign-without-feedback-accept-file-overrides-feedback",
       "prompt": "Review this lane plan for a restyle: \"The design export named latest is the source of truth. Run parity_differ against it and fix every MISMATCH row until it reports MATCH.\" The app already carries two changes from survey feedback and a meeting action item that the design export never picked up. Anything wrong with the plan?",
       "expected_output": "Yes. The plan treats one requirement source, the design export, as the whole requirement set. Fixing every MISMATCH row would undo the implemented feedback the design never captured, because those changes show up as CHANGED or EXTRA_IN_APP rows and the lane would revert them. The delivery ledger (`agentic-delivery/scripts/feedback_ledger.py`) holds the full set. Before re-aligning, run its `accept-file` and pass the output as the parity differ's `--accept` file, so decided feedback is accepted rather than reverted. Any design-vs-feedback conflict goes to the owner as a question and is never settled by re-aligning.",
@@ -6393,6 +6415,26 @@
         "States a design-side zero/negative-area rect is COULD_NOT_CHECK, never used to derive an ordinal relation",
         "States the same app-side defect instead yields MISSING_IN_APP for that node, not COULD_NOT_CHECK",
         "States data-protected markers under --bands fail closed (COULD_NOT_CHECK) rather than being silently ignored"
+      ]
+    },
+    {
+      "id": "capped-list-no-remainder-indicator-reads-as-complete",
+      "prompt": "A dashboard's alerts panel calls `.slice(0, 5)` on an `alerts` array before rendering rows. The page header shows 'Alerts (142)' from a separate count query, but the list beneath renders only the 5 sliced items with no 'load more', page control, or remainder text. Finding?",
+      "expected_output": "Flag it. `.slice(0, 5)` renders fewer rows than the known total (142) with no visible remainder -- a truncation, not a pagination, and it reads as complete because the header's count and the rendered rows are independent reads of the same data that nothing forces to agree. Whenever total > shown, render an explicit remainder (\"+137 more\", a page control, \"Show all 142\") -- never a list that just stops (Nielsen: visibility of system status). A correct top-line count does not excuse a silently truncated list beneath it. (ux-states.md.)",
+      "expectations": [
+        "Flags the missing remainder indicator, not just praises the header count",
+        "Names why: total (142) exceeds shown (5) with no visible next/more affordance, so the cut reads as complete",
+        "Cites the general rule -- any total > shown needs an explicit remainder, not only this one instance"
+      ]
+    },
+    {
+      "id": "url-carries-token-weak-referrer-policy",
+      "prompt": "A page links to `/export?token=abc123&format=csv` and the app's `Referrer-Policy` is set explicitly to `no-referrer-when-downgrade`. Finding?",
+      "expected_output": "Flag it. `no-referrer-when-downgrade` sends the full URL -- including the `token` query param -- to any third-party origin the page later navigates to or embeds (an ad, an analytics pixel, an external link), because the `Referer` header carries path+query cross-origin. The modern safe default is `strict-origin-when-cross-origin` (MDN); this app has explicitly weakened it. Two independent fixes, do both: tighten `Referrer-Policy` to `strict-origin-when-cross-origin` (or `no-referrer` for the most sensitive routes), and stop putting the token in the URL at all -- a POST body, a header, or a short-lived opaque id meaningless if leaked. (frontend-security.md.)",
+      "expectations": [
+        "Names the weakened Referrer-Policy value specifically, not just \"missing security header\"",
+        "Explains the mechanism: Referer carries the full URL including query string cross-origin",
+        "Gives both fixes -- tighten the policy AND stop placing the token in the URL -- not just one"
       ]
     }
   ]

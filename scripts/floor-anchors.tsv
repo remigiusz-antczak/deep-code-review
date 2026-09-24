@@ -1,0 +1,23 @@
+# scripts/floor-anchors.tsv — rules that decide a Blocker verdict and must
+# never leave the always-loaded (must-load) floor, even when a cost cut moves
+# other prose behind a trigger. scripts/test-ci-gates.sh fails when either
+# anchor of a row is empty or is no longer present, as a fixed string, in its
+# file.
+#
+# Each row pins a rule twice: its heading (or the section/bullet that holds
+# it) AND a phrase from the rule's body, so a cut that keeps the heading but
+# guts the rule still goes red. Moving a rule is a deliberate floor change:
+# edit the rule, the row, and state why in the commit; never delete a row to
+# make the check pass. Doctrine:
+# agentic-delivery/references/cost-quality-guardrails.md.
+#
+# FORMAT: <file relative to repo root>\t<heading anchor>\t<body anchor>\t<what it protects>
+.claude/skills/deep-code-review/SKILL.md	1. **Evidence over opinion.**	No vibes, no "consider maybe."	evidence standard
+.claude/skills/deep-code-review/SKILL.md	3. **No fabrication.**	If you can't verify, say `unverified`	evidence standard
+.claude/skills/deep-code-review/SKILL.md	2. **Security, secret-exposure, and data-loss/integrity findings never relax**	`prototype` with an exposed credential is still Critical	core security basics
+.claude/skills/deep-code-review/SKILL.md	**(b) Target ship-ready**	- Negative authorization tests on every sensitive networked route.	core security basics
+.claude/skills/deep-code-review/SKILL.md	## No-fabrication & confidentiality	- **Secrets via env/secret manager only.**	core security basics
+.claude/skills/deep-code-review/SKILL.md	- **Confirm** before destructive, irreversible, billable, or shared-state	a closing confirmation question back	owner-gated actions
+.claude/skills/agentic-delivery/SKILL.md	| G8 Release |	Rollback proven; **owner approves** outward/production action	owner-gated actions
+.claude/skills/agentic-delivery/SKILL.md	**A running lane is not a finished one.**	verified — a green gate at the exact SHA	green on the reviewed head
+.claude/skills/agentic-delivery/SKILL.md	## Exact revision	a stale SHA fails closed	green on the reviewed head

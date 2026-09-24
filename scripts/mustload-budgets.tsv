@@ -195,13 +195,50 @@
 # instead of nothing (field friction #1). Floors: phase-floor-light
 # 28025->28178 (+153), phase-floor-full 36096->36249 (+153).
 #
-web	23349
+# W67 SPLIT (web must-load cut, P1b continuation): frontend-a11y.md's
+# "Security & compatibility" depth (output encoding, secrets/storage,
+# postMessage origin checks, Subresource Integrity, a strict CSP, Trusted
+# Types, DOM Clobbering, Referrer-Policy, clickjacking) moved to new
+# frontend-security.md, routed on a concrete trigger (sanitizes/renders user
+# HTML, sets a CSP, adds a postMessage listener, loads a third-party script,
+# stores a token, or can be framed). product-ux-quality.md's "Every data
+# state" depth beyond the base five-state rule (capped/sliced-list remainder
+# indicators, partial-apply reconciliation, empty-state coverage/named-cause/
+# stakes, filtered-vs-genuine emptiness, and a shared hook/context's
+# readiness signal across sibling consumers) moved to new ux-states.md,
+# routed the same way. Both parents keep the base rule plus a pointer; every
+# checklist item stays reachable (unchanged). SKILL.md's domain-P row was
+# trimmed (dropped two parenthetical glosses already stated in the linked
+# files) to net -32 bytes despite naming the two new files, so the Phase 0-2
+# floor took no byte increase from routing; it moved by rounding only.
+# Re-pinned: web 23349->19291 (-17.4%), phase-floor-light 28178->28170,
+# phase-floor-full 36249->36241.
+#
+# W67 REVIEW FIX: the split above over-moved. Two defects: (1)
+# frontend-security.md's Referrer-Policy/URL-token-leak bullet had no matching
+# trigger clause in frontend-a11y.md's routing row, SKILL.md's domain-P row,
+# or the file's own header, so a reviewer would never load the file for that
+# case -- added "sets Referrer-Policy, or a link/redirect/request carries a
+# token or id in its URL" to all three. (2) three genuinely BASE bullets
+# (output encoding, no secrets in the client bundle, no sensitive data in
+# localStorage/sessionStorage) were moved out as if they were depth; they
+# carry no further elaboration anywhere, so every web review needs them
+# in frontend-a11y.md same as the appsec/data splits keep their base checks
+# inline -- moved back (not duplicated). Also fixed two dangling same-file
+# "(below)" pointers the original split left after their target section moved
+# to a different file (product-ux-quality.md's remainder-indicator bullet,
+# frontend-security.md's Trusted-Types-layered-on-output-encoding bullet).
+# Re-pinned: web 19291->19419 (still -16.8% vs the pre-split 23349), phase-
+# floor-light 28170->28178, phase-floor-full 36241->36249 (SKILL.md's new
+# domain-P trigger gloss nets back to its original 23992-byte size).
+#
+web	19419
 mobile	14046
 api / service	18829
 data / ETL	19548
 agent / LLM / MCP	18981
 IaC / platform	4342
 lib / SDK	10907
-phase-floor-light	28178
-phase-floor-full	36249
+phase-floor-light	28168
+phase-floor-full	36239
 phase-conditional	method-situational.md

@@ -8,19 +8,33 @@ pages. Nothing here runs in CI: the snippet is a template for the project's own 
 
 For every page in the correspondence table, at every viewport in the list below, on **both** sides:
 
-1. `<out>/<side>/<page>@<width>.html` is a DOM snapshot after the page settles. Every section root carries
+1. **Data-settled, not just hydrated (#1165).** A route with a serial/waterfall fetch chain (one
+   request kicked off only after the previous resolves) can still be capturing while its data loads —
+   DOM-hydrated and data-settled are two different signals that can complete far apart in time, and a
+   capture taken between them scores as a large mismatch that is pure timing, never real divergence.
+   Wait for an **app-declared settle signal** — the app sets `document.documentElement.dataset.parityReady
+   = "1"` once its loading state clears everywhere (not only for the first component) — or, when the app
+   exposes none, network-idle for a fixed window (`N` ms with no new request) after the *last* request in
+   the chain, bounded to a documented max wait so a genuinely-broken fetch cannot hang the capture forever.
+   Record the outcome on the capture itself: set `data-parity-ready="1"` or `"0"` and
+   `data-parity-settle-ms="<elapsed>"` on the document (the Playwright snippet below does this).
+   `parity_differ.py` reads that marker: `"0"` is `COULD_NOT_CHECK` for the whole comparison, never scored
+   as a mismatch; with `--require-settled` a capture carrying no marker at all is the same
+   `COULD_NOT_CHECK` (an older capture cannot certify it settled). Treat a first low score as provisional —
+   re-check with a longer settle window before reporting it as a real difference.
+2. `<out>/<side>/<page>@<width>.html` is a DOM snapshot after the page settles. Every section root carries
    `data-section="<id>"` (the same ids on both sides), and populated units carry `data-item`.
-2. **Computed styles.** Every visible text-bearing element that should be style-checked carries a
+3. **Computed styles.** Every visible text-bearing element that should be style-checked carries a
    `data-cs` JSON object with a non-empty value for each property the differ compares (`font-family`,
    `font-size`, `font-weight`, `line-height`, `letter-spacing`, `color`, `background-color`, `padding`,
    `border-radius`, `box-shadow`). Values come from `getComputedStyle`, exported in the same browser for
    both sides.
-3. **Visibility markers.** Every element whose class hides it through a stylesheet (`hidden`, `sr-only`,
+4. **Visibility markers.** Every element whose class hides it through a stylesheet (`hidden`, `sr-only`,
    `invisible`, `d-none`, `visually-hidden`) carries `data-visible="true"` or `"false"`, read from
    `checkVisibility()`.
-4. Optional section screenshots: `<out>/<side>-shots/<page>@<width>/<section id>.png`. Pass that folder
+5. Optional section screenshots: `<out>/<side>-shots/<page>@<width>/<section id>.png`. Pass that folder
    to `--design-shots` / `--app-shots` together with `--report`.
-5. **Band markers (only with `BANDS=1`, for `parity_differ.py --bands headings`).** Use this when the design
+6. **Band markers (only with `BANDS=1`, for `parity_differ.py --bands headings`).** Use this when the design
    and the app nest a section differently, so `data-section` ancestors would crop different regions. Every
    element under `<body>` carries `data-y`, its integer top y in page coordinates. Section titles that are
    not h1/h2 carry `data-anchor` on both sides. The screenshots become heading y-band clips named by band
@@ -62,7 +76,27 @@ for (const vp of (process.env.VIEWPORTS || "1440x900").split(",")) {
     await ctx.addCookies([{ name, value: rest.join("="), url }]);
   }
   const tab = await ctx.newPage();
-  await tab.goto(url, { waitUntil: "networkidle" });
+  await tab.goto(url, { waitUntil: "domcontentloaded" });
+  // Data-settled, not just hydrated (#1165): prefer the app's own signal -- it alone knows
+  // when a serial/waterfall fetch chain, not only the first batch, has cleared everywhere.
+  // Bounded max wait either way, so a genuinely-broken fetch cannot hang the capture forever.
+  const READY_TIMEOUT_MS = Number(process.env.PARITY_READY_TIMEOUT_MS || 15000);
+  const settleStart = Date.now();
+  let ready;
+  try {
+    await tab.waitForFunction(() => document.documentElement.dataset.parityReady === "1",
+      null, { timeout: READY_TIMEOUT_MS });
+    ready = true;
+  } catch {
+    // No app-declared marker (or it never fired): fall back to network-idle for the tail of
+    // the chain, re-checked here (not only at goto), since a late fetch starts after goto settles.
+    ready = await tab.waitForLoadState("networkidle", { timeout: READY_TIMEOUT_MS }).then(() => true, () => false);
+  }
+  const settleMs = Date.now() - settleStart;
+  await tab.evaluate(([r, ms]) => {
+    document.documentElement.setAttribute("data-parity-ready", r ? "1" : "0");
+    document.documentElement.setAttribute("data-parity-settle-ms", String(ms));
+  }, [ready, settleMs]);
   await tab.evaluate(([props, bands]) => {
     for (const el of document.querySelectorAll(bands ? "body *" : "[data-section] *")) {
       if (bands) el.setAttribute("data-y", String(Math.round(el.getBoundingClientRect().top + scrollY)));
@@ -121,9 +155,13 @@ only frames the picture. With `BANDS=1`, add `--bands headings` to the gate comm
 ## Run the gate
 
 ```bash
-python3 .claude/skills/deep-code-review/scripts/parity_differ.py --workflow \
+python3 .claude/skills/deep-code-review/scripts/parity_differ.py --workflow --require-settled \
   --design out/design/home@1440.html --app out/app/home@1440.html \
   --design-tokens design.tokens.json --app-tokens out/app/tokens.css \
   --accept parity-accept.tsv --report out/home@1440.html \
   --design-shots out/design-shots/home@1440 --app-shots out/app-shots/home@1440
 ```
+
+`--require-settled` turns a marker-free capture (an older one, or the capture script itself failing to
+run) into `COULD_NOT_CHECK` too, not only an explicit `data-parity-ready="0"` — drop it only while
+migrating captures that predate this signal.

@@ -23,6 +23,14 @@ PID file the caller wrote) and must select the LISTENER only
 match. That is prose an agent may or may not follow. This script is a
 mechanism for the concrete shapes of that bug class (issue #1101).
 
+It also flags a second, unrelated bug class that lives in the same shell
+scripts this file already scans: `references/lang-shell.md`'s "a GNU-only
+flag piped to 2>/dev/null in a liveness/idle check fails open" (issue
+#1158) — a platform-specific flag (`find -newermt`/`-printf`, `stat -c`,
+`date -d`, a no-argument `sed -i`) whose invalid-option error is silently
+discarded, so the check that depends on it reports the wrong verdict
+instead of erroring. `GNU_FLAG_SILENCED_STDERR` below is that rule.
+
 WHAT IT SCANS
 --------------
 Each argument may be a file (scanned regardless of its name or extension; the
@@ -208,6 +216,13 @@ _REAPER_SAFE_FLAG_RE = re.compile(
 )
 _YAML_ARGS_KEY_RE = re.compile(r"^\s*(?:-\s+)?args\s*:(.*)$")
 
+# GNU-only flags a liveness/idle check can silently trust (rule
+# GNU_FLAG_SILENCED_STDERR): each pair verified GNU-vs-BSD/macOS from a man
+# page this session (docs/standards-index.md, 2026-09-24). `find -mmin` and
+# `find ... -delete` are portable on both and are deliberately never flagged.
+_STDERR_DEVNULL_RE = re.compile(r"2>\s*/dev/null|2>&-|&>\s*/dev/null")
+_SED_SCRIPT_START_RE = re.compile(r"^['\"]?[sy][/#|,;]")
+
 # lsof short options that take a required / optional argument (the rest of the
 # cluster, or for a required one the next token when the cluster ends there).
 _LSOF_REQ_ARG = set("AcdDekmpu")
@@ -256,6 +271,12 @@ _MSG = {
         "a reaper invoked from a git hook with no --dry-run/--stub flag -- a "
         "commit/push hook must never run a live reaper (every agent's commit "
         "would kill sibling lanes' dev servers and browsers)"
+    ),
+    "GNU_FLAG_SILENCED_STDERR": (
+        "a GNU-only flag with stderr piped to /dev/null -- on BSD/macOS this "
+        "flag errors as invalid, the error is discarded, and the check reads "
+        "as a false negative (no match) fleet-wide instead of erroring "
+        "(lang-shell.md)"
     ),
 }
 
@@ -690,6 +711,62 @@ def _classify(text: str) -> tuple[list[str], list[str]]:
     return direct, selectors
 
 
+def _gnu_only_flag(cmd: str, args: list[str]) -> str | None:
+    """Return the GNU-only flag `cmd` was invoked with in `args`, or None.
+
+    Verified GNU-vs-BSD/macOS divergence only (docs/standards-index.md,
+    2026-09-24 man-page fetch), never a guess: `find -printf`/`-newermt`
+    (absent from BSD/macOS find entirely), `stat -c`/`--format` (BSD/macOS
+    `stat` has no `-c`, only `-f`), `date -d`/`--date` (BSD/macOS `date` has
+    no `-d` at all), and `sed -i` given no argument (BSD/macOS `sed -i`
+    requires one, even `''`; GNU's suffix is optional). `find -mmin` and
+    `find ... -delete` are portable on both and are never returned here.
+    """
+    if cmd == "find":
+        for a in args:
+            if a in ("-printf", "-newermt"):
+                return a
+    elif cmd == "stat":
+        for a in args:
+            if a == "-c" or a.startswith("--format"):
+                return a
+    elif cmd == "date":
+        for a in args:
+            if a == "-d" or a.startswith("--date"):
+                return a
+    elif cmd == "sed":
+        for i, a in enumerate(args):
+            if a != "-i":
+                continue
+            nxt = args[i + 1] if i + 1 < len(args) else None
+            if nxt is not None and _SED_SCRIPT_START_RE.match(nxt):
+                return "-i (no suffix argument)"
+            return None   # an explicit extension argument (even '') is portable
+    return None
+
+
+def _gnu_flag_silenced_stderr(text: str) -> bool:
+    """True when a logical line invokes `find`/`stat`/`date`/`sed` with a
+    verified GNU-only flag (`_gnu_only_flag`) AND pipes that same command's
+    stderr to /dev/null (same pipe stage, not a later one) -- the shape that lets an invalid-option error masquerade
+    as "no match" (rule GNU_FLAG_SILENCED_STDERR, #1158)."""
+    if not _STDERR_DEVNULL_RE.search(text):
+        return False
+    for seg in _segments(text):
+        if not _STDERR_DEVNULL_RE.search(seg):
+            continue   # the redirect must silence this command, not a later stage
+        toks = _tokens(seg)
+        if not toks:
+            continue
+        idx = _command_at(toks, ("find", "stat", "date", "sed"))
+        if idx < 0:
+            continue
+        cmd = toks[idx].rsplit("/", 1)[-1]
+        if _gnu_only_flag(cmd, toks[idx + 1:]):
+            return True
+    return False
+
+
 def _captured_vars(text: str) -> list[str]:
     """Variable names a selector line's output lands in."""
     names: list[str] = []
@@ -847,6 +924,9 @@ def _scan_text(
 
         if _range_is_portlike(text) and any(_KILL_WORD_RE.search(t) for t in texts[li:li + 6]):
             add(li, "RANGE_KILL")
+
+        if _gnu_flag_silenced_stderr(text):
+            add(li, "GNU_FLAG_SILENCED_STDERR")
 
         if (is_hook and _reaper_invocation(text) and not _REAPER_SAFE_FLAG_RE.search(text)
                 and not (is_yaml and _yaml_sibling_dry_run(raw, logical[li][0]))):
@@ -1040,6 +1120,39 @@ _CASES: tuple[tuple[str, str, str, int, str], ...] = (
     ("yaml-run-block-fires", "ci.yml",
      ("jobs:\n  e2e:\n    steps:\n      - name: free port\n        run: |\n"
       "          echo freeing\n          lsof -ti :3000 | xargs kill -9\n"), FAIL, "LSOF_NO_LISTEN"),
+    # GNU_FLAG_SILENCED_STDERR: a GNU-only flag + stderr-to-/dev/null on the
+    # same line (#1158) -- each of the four verified commands, and each
+    # command's portable form (or a devnull-free line) staying clean.
+    ("gnu-find-newermt-devnull-fires", "a.sh",
+     "n=$(find . -newermt '-10 minutes' 2>/dev/null | wc -l)\n", FAIL, "GNU_FLAG_SILENCED_STDERR"),
+    ("gnu-find-printf-devnull-fires", "a.sh",
+     "find . -printf '%T@\\n' 2>/dev/null\n", FAIL, "GNU_FLAG_SILENCED_STDERR"),
+    ("gnu-stat-dash-c-devnull-fires", "a.sh",
+     "mtime=$(stat -c %Y \"$f\" 2>/dev/null)\n", FAIL, "GNU_FLAG_SILENCED_STDERR"),
+    ("gnu-stat-format-long-devnull-fires", "a.sh",
+     "mtime=$(stat --format=%Y \"$f\" 2>/dev/null)\n", FAIL, "GNU_FLAG_SILENCED_STDERR"),
+    ("gnu-date-dash-d-devnull-fires", "a.sh",
+     "t=$(date -d '10 minutes ago' +%s 2>/dev/null)\n", FAIL, "GNU_FLAG_SILENCED_STDERR"),
+    ("gnu-sed-i-no-suffix-devnull-fires", "a.sh",
+     "sed -i 's/idle/live/' \"$f\" 2>/dev/null\n", FAIL, "GNU_FLAG_SILENCED_STDERR"),
+    ("gnu-flag-without-devnull-ok", "a.sh",
+     "find . -newermt '-10 minutes' | wc -l\n", OK, ""),
+    ("find-mmin-devnull-ok", "a.sh",
+     "find . -mmin -10 2>/dev/null | wc -l\n", OK, ""),
+    ("find-delete-devnull-ok", "a.sh",
+     "find . -name '*.tmp' -delete 2>/dev/null\n", OK, ""),
+    ("stat-dash-f-devnull-ok", "a.sh",
+     "mtime=$(stat -f %m \"$f\" 2>/dev/null)\n", OK, ""),
+    ("date-dash-j-devnull-ok", "a.sh",
+     "t=$(date -j -f '%s' \"$epoch\" 2>/dev/null)\n", OK, ""),
+    ("sed-i-with-suffix-devnull-ok", "a.sh",
+     "sed -i '.bak' 's/idle/live/' \"$f\" 2>/dev/null\n", OK, ""),
+    ("sed-i-empty-suffix-devnull-ok", "a.sh",
+     "sed -i '' 's/idle/live/' \"$f\" 2>/dev/null\n", OK, ""),
+    ("gnu-flag-devnull-on-downstream-stage-ok", "a.sh",
+     "find . -newermt '-10 minutes' | wc -l 2>/dev/null\n", OK, ""),
+    ("gnu-flag-devnull-on-other-command-ok", "a.sh",
+     "find . -newermt '-10 minutes' | wc -l; echo done 2>/dev/null\n", OK, ""),
 )
 
 

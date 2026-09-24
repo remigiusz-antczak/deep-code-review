@@ -4,23 +4,41 @@ name: dcr-gates
 # INSTALLED skill's own gate scripts into THIS repo's CI, so the lessons the
 # skill documents (a pinned test per fix commit, no committed binaries) run
 # here as an enforced gate instead of staying prose an agent may or may not
-# follow. Edit the trigger branch below if this repo's default branch is not
-# `main`. Everything this workflow runs lives in `scripts/dcr-gates.sh`,
-# which resolves paths inside the installed skill tree — no gate logic is
+# follow. Everything this workflow runs lives in `scripts/dcr-gates.sh`, which
+# resolves paths inside the installed skill tree -- no gate logic is
 # duplicated in this file. Re-run `install.sh --with-gates` after upgrading
 # the skill; it will never silently overwrite a file you have since edited
 # (see the installer's note on first run).
-
-# `push` + `pull_request` both trigger this workflow. That is a duplicate run
-# only if the default branch's required-status-checks are STRICT (a PR branch
-# must be up to date before merge) — then the post-merge push re-runs exactly
-# what the PR already ran. If this repo enables strict required-status-checks,
-# drop the `push:` trigger (or scope it with `paths:`) instead of paying for
-# the duplicate run; a non-strict repo can keep both.
+#
+# MINIMUM-COST PROFILE (default below): doctrine lives in
+# `agentic-delivery/references/host-enforcement.md`'s "Minimum-cost CI &
+# token profile" -- not restated here. Hosted CI runs only on a PR into the
+# default branch; a draft PR is skipped (its checks would burn minutes on
+# work not yet ready for review); workflow-level `concurrency` cancels a
+# superseded run instead of racing it to finish (safe -- one final push per
+# PR before merge). If your default branch isn't `main`, edit `branches:`
+# below. This shape assumes there is NO separate integration branch -- if
+# there is one, that branch gets ZERO hosted CI (see the commented
+# alternative and the doctrine link above); do not add a `push:` trigger or
+# a second PR-into-development workflow to "also" cover it.
 on:
-  push:
-    branches: [main]
   pull_request:
+    branches: [main]
+    types: [opened, reopened, ready_for_review, synchronize]
+
+# ---------------------------------------------------------------------------
+# ALTERNATIVE (a repo with no separate integration branch, where every PR
+# merges straight into main and a post-merge push re-run is acceptable):
+# uncomment this block and delete the `on:` block above. `push` re-runs the
+# same commits `pull_request` already ran ONLY when the default branch's
+# required-status-checks are strict (branch must be up to date before
+# merge); a non-strict repo can keep both without a duplicate-run cost.
+#
+# on:
+#   push:
+#     branches: [main]
+#   pull_request:
+# ---------------------------------------------------------------------------
 
 # Cancels a superseded run instead of letting it burn its full runner-minute
 # budget after a newer push already replaced it (GitHub Actions concurrency:
@@ -34,6 +52,7 @@ permissions:
 
 jobs:
   dcr-gates:
+    if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 15 # bound a hung run instead of paying for GitHub's own unset-job default ceiling
     steps:

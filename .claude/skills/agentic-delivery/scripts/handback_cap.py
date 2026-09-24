@@ -28,9 +28,21 @@ After MAX_BLOCKS blocks for one agent_id, this hook lets the stop through
 unconditionally, so a subagent that cannot comply never loops forever. Block
 counters live in per-agent_id state files under a temp dir (sanitized id;
 directory overridable via HANDBACK_STATE_DIR, e.g. for isolated tests).
+
+STATUS TOKEN (opt-in: HANDBACK_REQUIRE_STATUS=1). When on, a non-exempt
+handback must also carry a status: a line that starts (case-insensitive,
+optionally after `status=` or `status:`) with `verified` or `unverified` as a
+whole word, or the host style `status | evidence | next` whose status field
+is `done`, `verified`, or `unverified`. The caller counts only verified work
+as done; a lane stopped by its tool-call cap (lane_cap.py) hands back
+UNVERIFIED with the remaining work. A handback with no status is blocked like
+an over-long one (same MAX_BLOCKS release valve). Off by default so an
+existing install's handbacks are not suddenly rejected; exempt types always
+skip it.
 """
 import json
 import os
+import re
 import sys
 import tempfile
 
@@ -43,6 +55,15 @@ DEFAULT_EXEMPT_TYPES = "Explore,Plan,claude-code-guide,statusline-setup"
 STATE_DIR = os.environ.get(
     "HANDBACK_STATE_DIR", os.path.join(tempfile.gettempdir(), "claude-handback-cap")
 )
+
+
+STATUS_RE = re.compile(
+    r"^\W*(?:status\s*[=:]\s*)?(?:(?:un)?verified\b|done\s*\|)", re.MULTILINE | re.IGNORECASE
+)
+
+
+def _require_status():
+    return os.environ.get("HANDBACK_REQUIRE_STATUS", "0") == "1"
 
 
 def _exempt_types():
@@ -70,7 +91,9 @@ def check(data):
     agent_id = str(data.get("agent_id") or "unknown")
     chars = len(msg)
     lines = msg.count("\n") + 1 if msg else 0
-    if chars <= MAX_CHARS and lines <= MAX_LINES:
+    too_long = chars > MAX_CHARS or lines > MAX_LINES
+    no_status = _require_status() and not STATUS_RE.search(msg)
+    if not too_long and not no_status:
         return 0
     os.makedirs(STATE_DIR, exist_ok=True)
     path = _state_path(agent_id)
@@ -79,11 +102,19 @@ def check(data):
         return 0
     with open(path, "w") as fh:
         fh.write(str(blocks + 1))
+    if not too_long:
+        sys.stderr.write(
+            "Handback has no status token. Start a line with VERIFIED (a green gate or a "
+            "confirmed effect at the exact SHA) or UNVERIFIED (anything else, with the "
+            "remaining work named), e.g. 'VERIFIED | <sha> | <gates>'.\n"
+        )
+        return 2
     sys.stderr.write(
         f"Handback too long ({chars} chars, {lines} lines; cap {MAX_CHARS} chars / "
         f"{MAX_LINES} lines). Rewrite your final message as a fields-only handback: "
         "key=value lines only (verdict, branch/sha, file paths, gate results, open issues). "
-        "No prose, no progress narration. Put any long content in a file and give its path.\n"
+        "No prose, no progress narration. Put any long content in a file and give its path. "
+        "Start a line with VERIFIED or UNVERIFIED.\n"
     )
     return 2
 
@@ -119,7 +150,32 @@ def _selftest():
             print(f"FAIL  {name} (got rc={got}, want rc={want})")
 
     # short message passes
-    case("short-passes", check({"agent_id": "a1", "last_assistant_message": "verdict=ok"}), 0)
+    case("short-passes", check({"agent_id": "a1", "last_assistant_message": "VERIFIED | verdict=ok"}), 0)
+
+    # status token is opt-in: off by default, a status-less short handback passes
+    case("status-check-off-by-default", check({"agent_id": "s0", "last_assistant_message": "verdict=ok"}), 0)
+    saved_req = os.environ.get("HANDBACK_REQUIRE_STATUS")
+    os.environ["HANDBACK_REQUIRE_STATUS"] = "1"
+    case("no-status-blocks-when-on", check({"agent_id": "s1", "last_assistant_message": "verdict=ok"}), 2)
+    case("host-style-done-passes", check({"agent_id": "s8", "last_assistant_message": "done | 4b2765b | next=merge"}), 0)
+    case("mixed-case-verified-passes", check({"agent_id": "s9", "last_assistant_message": "Verified | sha=abc"}), 0)
+    case("done-in-prose-blocks", check({"agent_id": "s10", "last_assistant_message": "done with it, sha=abc"}), 2)
+    case("unverified-passes", check({"agent_id": "s2", "last_assistant_message": "UNVERIFIED | todo=tests"}), 0)
+    case("status-key-passes", check({"agent_id": "s3", "last_assistant_message": "sha=abc\nstatus=VERIFIED"}), 0)
+    case("lowercase-verified-in-prose-blocks",
+         check({"agent_id": "s4", "last_assistant_message": "all verified, sha=abc"}), 2)
+    case("status-block-releases-after-max-blocks",
+         [check({"agent_id": "s5", "last_assistant_message": "ok"}) for _ in range(MAX_BLOCKS + 1)][-1], 0)
+    case("exempt-type-needs-no-status",
+         check({"agent_id": "s6", "agent_type": "Explore", "last_assistant_message": "ok"}), 0)
+    os.environ["HANDBACK_REQUIRE_STATUS"] = "0"
+    try:
+        case("status-check-off-via-env", check({"agent_id": "s7", "last_assistant_message": "ok"}), 0)
+    finally:
+        if saved_req is None:
+            os.environ.pop("HANDBACK_REQUIRE_STATUS", None)
+        else:
+            os.environ["HANDBACK_REQUIRE_STATUS"] = saved_req
 
     # long message (chars) blocks MAX_BLOCKS times then releases
     long_msg = "x" * 900
@@ -181,7 +237,7 @@ def _selftest():
     # so an in-process check() call can never see a per-invocation override.
     import subprocess
 
-    twenty_lines = "\n".join(["ok"] * 20)  # 20 lines, well under 800 chars
+    twenty_lines = "\n".join(["VERIFIED"] + ["ok"] * 19)  # 20 lines, well under 800 chars
 
     def run_subproc(agent_id, extra_env):
         env = dict(os.environ, HANDBACK_STATE_DIR=tmp)

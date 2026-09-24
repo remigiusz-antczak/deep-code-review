@@ -316,8 +316,10 @@ overhead, never more throughput.
 
 ## A monitor emits on state-transition or terminal state only — an unchanged poll is not an event
 
-A lane arming a **background monitor** — polling CI, a merge queue, or other remote state on the orchestrator's
-behalf — is a distinct, legitimate pattern from the lane that keeps re-polling its *own* already-green PR past
+A lane arming a **background monitor** — watching a merge queue or another long local process on the
+orchestrator's behalf, never CI status itself (`gh pr merge --auto` merges once required checks pass with no
+polling at all; `host-enforcement.md` **Cost discipline**) — is a distinct, legitimate pattern from the lane
+that keeps re-polling its *own* already-green PR past
 its own finish line, which `SKILL.md`'s *Failure* section already bans as a **scope** violation ("re-polling a
 green PR burns turns on unchanged news; report once, then stop"): that rule says watching CI after your finish
 line isn't your job at all; this section assumes a monitor that **is** someone's job and governs how it emits.

@@ -315,17 +315,22 @@ write_gate_file() {
 
 if [[ "${WITH_GATES}" -eq 1 ]]; then
   GATES_SRC="${SCRIPT_DIR}/.claude/skills/${REVIEW_NAME}/templates"
-  if [[ ! -f "${GATES_SRC}/dcr-gates.yml" || ! -f "${GATES_SRC}/dcr-gates.sh" || ! -f "${GATES_SRC}/pre-push-verify.sh" ]]; then
-    echo "error: cannot find ${GATES_SRC}/{dcr-gates.yml,dcr-gates.sh,pre-push-verify.sh}" >&2
+  if [[ ! -f "${GATES_SRC}/dcr-gates.yml" || ! -f "${GATES_SRC}/dcr-gates.sh" || ! -f "${GATES_SRC}/pre-push-verify.sh" || ! -f "${GATES_SRC}/integrator-gate.sh" ]]; then
+    echo "error: cannot find ${GATES_SRC}/{dcr-gates.yml,dcr-gates.sh,pre-push-verify.sh,integrator-gate.sh}" >&2
     exit 1
   fi
   write_gate_file "${GATES_SRC}/dcr-gates.yml" "${TARGET_DIR}/.github/workflows/dcr-gates.yml" 0
   write_gate_file "${GATES_SRC}/dcr-gates.sh" "${TARGET_DIR}/scripts/dcr-gates.sh" 1
   write_gate_file "${GATES_SRC}/pre-push-verify.sh" "${TARGET_DIR}/.githooks/pre-push" 1
+  write_gate_file "${GATES_SRC}/integrator-gate.sh" "${TARGET_DIR}/scripts/integrator-gate.sh" 1
   cat <<'EOF'
 
-CI enforcement wired (--with-gates):
-  .github/workflows/dcr-gates.yml  runs on push/PR; SHA-pinned checkout, fetch-depth 0
+CI enforcement wired (--with-gates), MINIMUM-COST PROFILE by default:
+  .github/workflows/dcr-gates.yml  PR-into-main ONLY (ready_for_review +
+                                    synchronize; drafts skipped); no push
+                                    trigger, no schedule; SHA-pinned checkout,
+                                    workflow-level concurrency cancels a
+                                    superseded run
   scripts/dcr-gates.sh             calls the INSTALLED skill's own gate scripts
                                     (fix_class_gate, binaries_gate) by resolved
                                     path -- no duplicated gate logic, no copies
@@ -338,7 +343,34 @@ CI enforcement wired (--with-gates):
                                     Then set DCR_PREPUSH_CMD (e.g. "make lint test-unit")
                                     in your shell profile. It is self-report, not a
                                     substitute for CI -- see the hook's own header.
+  scripts/integrator-gate.sh       run this on an integration branch's merge
+                                    result instead of adding hosted CI to it --
+                                    see its own header and
+                                    agentic-delivery/references/host-enforcement.md's
+                                    "Minimum-cost CI & token profile"
 Edit the workflow's trigger branch if this repo's default branch isn't `main`.
+
+MINIMUM-COST PROFILE CHECKLIST -- these are OWNER actions; install.sh never
+automates them (they need forge/org privileges this script does not have):
+  [ ] If this repo has a separate integration branch (development, staging,
+      ...): add branch protection/ruleset restricting merge AND push to ONE
+      integrator identity -- a deterministic script (never an LLM session),
+      run from launchd/cron with its gate token in the OS keychain, plus a
+      documented break-glass path for running it by hand. That identity runs
+      `scripts/integrator-gate.sh --target-branch <branch>`, which pushes the
+      merge result to a scratch ref, gates it, and only on a pass
+      fast-forwards the branch -- never `[skip ci]` on that branch. Do NOT
+      add hosted CI to it.
+  [ ] If a required status check is needed on the integration branch: have
+      integrator-gate.sh post it using a SEPARATE, low-privilege token from
+      whatever pushes -- never the same identity (it would be forgeable).
+  [ ] Set a soft spend budget (GitHub Settings > Billing) with alerts at
+      50/80/100% of your cap -- never a hard stop that could block real CI.
+  [ ] Confirm plan/ownership before relying on GitHub's merge queue: it needs
+      a public repo, or a private repo owned by an org on GitHub Enterprise
+      Cloud -- Team, Pro, and personal-account repos get none of it.
+  [ ] Run `python3 .claude/skills/deep-code-review/scripts/ci_cost_lint.py --gate .`
+      before merging any new/changed workflow file.
 
 Optional (not written -- add yourself if wanted, and only useful alongside
 --with-delivery): cap a subagent's chat handback via the SubagentStop hook in
