@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.449.0] — 2026-09-24
+
+### Added — token budget gate
+- `agentic-ceo/scripts/token_report.py --budget`: per-lane caps on tool calls, input-equivalent tokens, and startup overhead, plus an orchestration-share ceiling (default 20%); one line per breach naming the lever (split the lane, batch tasks, start a fresh orchestrator session, cap reads). Unverifiable input (no usable main-session turns, an unreadable lane transcript, a non-finite cap, an unmatched lane row) is COULD_NOT_CHECK (exit 2), never a pass. Default caps are starting values set near the 90th percentile of three local sessions, not published benchmarks.
+- Lane dispatch doctrine in `agentic-ceo` ("Stay strategic"): a tool-call cap in every dispatch prompt, related tasks batched per lane (a starting heuristic), and a fresh orchestrator session when its share exceeds the ceiling; the lane preamble carries the cap line. Sources logged in `docs/standards-index.md` (fetched 2026-09-24).
+- size-budget-raise: .claude/skills/agentic-ceo/SKILL.md 13757→14318 lane dispatch budget doctrine
+
 ## [1.448.0] — 2026-09-24
 
 ### Added

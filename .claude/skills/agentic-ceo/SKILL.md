@@ -145,8 +145,15 @@ delivery by hand when a skill or lane should. Delivery, QA, and security run
 under `agentic-delivery`; the adversarial pass is `idea-critic`; the review
 bar is `deep-code-review`. Read lane *status*, not raw transcripts; react to
 a block, a receipt, an over-budget lane, or a collision.
-Run `scripts/token_report.py` at wave end and in the morning handoff; flag an
-orchestration share over 20% or a costly subagent startup.
+Run `scripts/token_report.py --budget [caps.tsv]` at wave end and in the morning
+handoff; each breach line names its lever. Dispatch to that budget:
+- **Cap every lane** — the brief carries a tool-call cap (`lane-preamble.md`).
+- **Batch related tasks per lane** (3–5 is a starting heuristic, not measured), not
+  one lane per task: each lane re-pays its startup context and never reads the parent's cache.
+- **Orchestration share over 20% → hand off to a fresh session** briefed from the
+  task ledger; `/compact` re-reads the whole context, a fresh start does not.
+- **A read-only reviewer moves to a smaller model only when its eval shows no
+  quality loss**; otherwise it keeps its tier.
 Dispatch aged P0 / mechanism work before presentation polish; `agentic-delivery`'s
 `unattended-operating-mode.md` routes two opt-in gates: `scripts/priority_gate.py`
 blocks a presentation PR while aged P0/mechanism work is uncited, and

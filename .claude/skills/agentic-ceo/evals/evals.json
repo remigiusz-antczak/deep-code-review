@@ -142,6 +142,19 @@
         "Cites the orchestration-share / >20% flag as the concrete signal",
         "Checks per-subagent startup-token cost, not only the aggregate"
       ]
+    },
+    {
+      "id": "gates-lane-token-budget",
+      "prompt": "The last wave used 12 subagents, one per small task. The orchestrator is at 26% of session tokens and one lane made 400 tool calls. How do you dispatch the next wave?",
+      "expected_output": "Run `scripts/token_report.py --budget` and act on each breach line's named lever rather than an impression: batch the small tasks several per lane (3-5 as a starting heuristic, not a measured number) so each lane's startup context is paid once, split the 400-call lane and put a tool-call cap in every brief (the lane preamble's cap, 150 as a tunable starting value), and because the orchestration share is over the 20% ceiling, hand off to a fresh session briefed from the task ledger. Move a read-only reviewer to a smaller model only if its eval shows no quality loss.",
+      "expectations": [
+        "Runs scripts/token_report.py --budget (the gate) instead of eyeballing spend",
+        "Batches related tasks per lane to amortize per-lane startup, not one lane per task; any batch size is framed as a starting heuristic, not a measurement",
+        "Splits the over-cap lane and puts a tool-call cap in each dispatch brief",
+        "Treats an orchestration share over 20% as the trigger to hand off to a fresh session (or compact)",
+        "Does not downgrade a reviewer's model without an eval showing no quality loss",
+        "Presents the caps as starting values to tune, not as measured facts"
+      ]
     }
   ]
 }
