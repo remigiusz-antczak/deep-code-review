@@ -416,6 +416,22 @@ rebase or merge-conflict resolution is unverified code, not a confirmed pass*
 resolution; this says rebase in the first place, specifically to pick up a
 landed fix, before the branch's next push.
 
+## A moving base under a stack of dependent lanes: merge it in, don't rebase onto it — and verify a self-reported "rebased" claim
+
+The section above rebases a **single** queued branch onto a landed fix — safe because nothing downstream depends
+on that branch's SHAs. A **stacked** lane (a child branched off a parent's still-unmerged branch, `SKILL.md`'s
+*A stacked/child lane branches off the parent's LOCAL ref*) is different: rebasing the parent onto a base that
+keeps moving rewrites every SHA the child already built on, so each parent rebase forces every child to redo its
+own rebase, and a base that moves repeatedly compounds this. One observed run: the base moved 3 times in 2
+hours under a stacked set of lanes; agents reported "rebased" without it being verified — a merge (or a straight
+force-push with no actual rebase) is indistinguishable from a genuine rebase in a self-report. **Rule: merge the
+moved base into the stack, never rebase the stack onto it**, while lanes are
+stacked — a merge commit preserves every SHA the children already reference, so no child needs to redo anything;
+reserve rebase-onto-base for an unstacked, single branch. **Check:** `git merge-base --is-ancestor <old-head>
+<new-head>` — non-zero exit on a claimed "merged" update means the old head was **not** kept reachable (a
+disguised rebase or a force-push, not the claimed merge), and the reviewer treats the claim as unverified until
+this passes.
+
 ## Absent checks are a third state, not a slow "pending" — an uncomputable merge ref suppresses the run; bounded-wait then re-trigger, never wait forever
 
 The two sections above are how an autonomous drainer reads a check-state bit at two of the places it reads one:

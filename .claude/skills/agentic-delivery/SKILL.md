@@ -10,7 +10,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.459.0"
+  version: "1.460.0"
 ---
 
 # Agentic delivery
@@ -124,7 +124,7 @@ independent verification or a human approval that actually applies.
 |---|---|---|---|
 | G0 Intake | Owner goal | Brief | Goals, non-goals, constraints, and **appetite** (a stated time-box, not an estimate — Shape Up); `idea-critic` on any agent-originated approach before the owner sees it |
 | G1 Spec | Brief | Testable spec | Acceptance criteria; names `deep-code-review` scope and pinned base SHA |
-| G2 Plan | Spec | Acyclic work graph | Role triggers, one writer per worktree; **every lane with a paid model call names a per-lane token/dollar budget before G4 starts — no budget set is blocked, not unlimited** (a cap that defaults to off is not a cap) |
+| G2 Plan | Spec | Acyclic work graph | Role triggers, one writer per worktree; **every lane with a paid model call names a per-lane token/dollar budget before G4 starts — no budget set is blocked, not unlimited** (a cap that defaults to off is not a cap); in a multi-repo plan, classify each item provider vs consumer before cutting lanes (`references/roles.md` *No scope creep*) |
 | G3 Design | Graph | ADRs / contracts | Interfaces, NFR budgets, data/security decisions explicit. Shape: `references/template-adr.md` |
 | G4 Implement | Work packets | Patch/commit per lane | Tests before or with the change; packet names review skill + immutable base SHA |
 | G5 Verify | Exact revision | Test receipts | **Local stack up** (project's one-command / compose / devcontainer) then build, lint, type, unit, and applicable integration/E2E **green at that SHA**. A gate that never started the app is `UNVERIFIED`, not pass. **UI change (domain P):** headed-browser evidence on the exact route after the action (screenshot or equivalent). Unit tests alone are not a UI gate |
@@ -237,7 +237,9 @@ throwaway integration SHA plus one aggregate gate before a merge train (G7).
   running workers, worktrees (`git worktree list`), open PRs — and claim the
   work (a draft PR or assigned issue) before starting. Never spawn a duplicate
   of a running lane, and never start on a branch that already carries commits
-  without reading them first. One writer per file.
+  without reading them first. One writer per file (narrow stacked-lane exception:
+  `references/dev-env-ownership.md` *Another mis-fire: "one writer per file" reads a legitimate stacked pair as a
+  collision*).
 - **A forked lane with a narrower brief than its inherited context** (research-only, "change nothing"): prefer a fresh unit; verify from effects — `references/verification-handback.md` **A context-inheriting fork is not a blank slate**.
 - Serialize shared-state edits, migrations, generated files, and the
   integration branch — lanes sharing a host: `scripts/serial_gate.py`.

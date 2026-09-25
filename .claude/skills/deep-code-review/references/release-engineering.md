@@ -1,7 +1,8 @@
 # Release engineering — feature flags, progressive delivery & DORA (domain K)
 
 Read this when the target ships a feature-flag system, a canary or blue-green
-deploy pipeline, or a CI workflow that deploys — the **release** half of domain
+deploy pipeline, a CI workflow that deploys, or a perf/leak gate whose local
+runtime major may not match the deploy image — the **release** half of domain
 K, sitting beside `dependency-currency-and-upgrades.md`'s **build/supply-chain**
 half. `agentic-delivery`'s **Release** hat (`references/roles.md`, if that
 overlay is installed) is the authoring-time discipline this file audits at
@@ -255,6 +256,25 @@ but absent from the workflow that ships the artifact; a signature present but no
 trusted key; a release credited with a build-provenance level despite no publish/release job in
 `.github/workflows/` (or equivalent CI config) — just `RELEASING.md` / `CONTRIBUTING.md` or a `Makefile`
 target a human runs by hand (`npm publish`, `twine upload`, `git tag -s` + manual asset upload).
+
+## A perf/leak gate that boots the wrong runtime major diagnoses the wrong problem
+
+A perf, load-test, or memory-leak gate that runs against the **local dev runtime**
+instead of the **deploy image's** runtime produces a result for a system that isn't
+what ships — a runtime major-version difference (Node, Python, JVM, …) between local
+and the deploy image/`engines` field can change GC behavior, allocator defaults, or a
+dependency's native binding enough to point a leak/perf diagnosis at the wrong cause
+(one observed run: a local-vs-deploy runtime major mismatch cost one full wrong-diagnosis
+cycle before the gate was re-pointed at the right runtime). **Read the runtime major from
+the deploy artifact** (the container image's base tag, the platform's `engines`/runtime
+config) and boot the gate on **that** major, not whatever happens to be on the developer's
+machine or CI runner by default. **Check:** the gate's log prints the runtime version it
+booted, and that version matches the deploy image/`engines` declaration — a mismatch fails
+the gate before any perf/leak number is trusted. Cross-ref `method-situational.md`'s
+containerized/serverless deploy-contract preflight (the broader "reproduce a gate-aimed
+finding under the real deploy contract" rule this is one instance of) and
+`concurrency-shared-state.md`'s "Load-test coverage and heap-leak gates" (the heap-slope
+metric this runtime check must precede).
 
 ## Cross-references
 

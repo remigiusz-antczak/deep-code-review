@@ -1,6 +1,6 @@
 # Testing — situational checks
 
-Read this when `testing-and-evals.md` routes here: a doc-comment promises a fallback or several behaviors, a conflict resolution landed, property tests, fuzz targets, or a coverage figure carry the assurance, an equality assert hangs or times out, a test shells a real binary, the suite has flaky tests, retries, or fixed sleeps, a spawned job sends an alert, N sibling checks are copy-pasted, a store has interchangeable backends, a fix rests on one green run, a gate needs gitignored data, or a diff loosens an assert-absent test. Split from `testing-and-evals.md`; its taxonomy and core smells apply first, and bare "above" / "below" point within this file.
+Read this when `testing-and-evals.md` routes here: a doc-comment promises a fallback or several behaviors, a conflict resolution landed, property tests, fuzz targets, or a coverage figure carry the assurance, an equality assert hangs or times out, a test shells a real binary, the suite has flaky tests, retries, or fixed sleeps, a spawned job sends an alert, N sibling checks are copy-pasted, a store has interchangeable backends, a fix rests on one green run, a gate needs gitignored data, a diff loosens an assert-absent test, a lint gate is scoped to changed files or compares a warning count/cap, or a test reads a live system probe (memory, load average, clock, git log). Split from `testing-and-evals.md`; its taxonomy and core smells apply first, and bare "above" / "below" point within this file.
 
 ## Test smells that fire only on a matching target
 
@@ -21,6 +21,18 @@ Read this when `testing-and-evals.md` routes here: a doc-comment promises a fall
   pinned test breaks under the resolution, treat it as a signal to re-examine the
   resolution — **not** a cue to delete or "update" the test to match the merged code
   (it may pin behavior the other side still depends on).
+- **A changed-files-scoped lint's zero output is not "zero findings" — it can mean the
+  lint never ran on the file that matters.** A lint configured to run only on files a diff
+  touches reports nothing for a type-aware/cross-file rule that fires in an **unchanged**
+  caller of a changed symbol (a signature change surfaces a type error three call sites
+  away, none of them in the diff). Reading that empty output as "clean" and citing an
+  already-near-cap warning budget as "pre-existing, nothing to do" is the trap — two
+  observed lanes did exactly this, and a **full-scope** lint run (not changed-files-only)
+  found the real count higher by several warnings, entirely in unchanged callers. **Never
+  raise a lint/warning cap in a feature change** to make a partial-scope run pass — compare
+  **full-scope lint count on the branch against full-scope lint count on the base**, and let
+  the diff-scoped run be a fast pre-check only, never the number a cap decision is made on.
+  **Check:** the cap file is unchanged, and `full-lint(branch) <= full-lint(base)`.
 - **A property test whose generator encodes the invariant it checks is
   tautological.** If the input generator is built from the same rule the assertion
   verifies, it can never produce the case that violates it — the test passes
@@ -115,6 +127,20 @@ Read this when `testing-and-evals.md` routes here: a doc-comment promises a fall
   crashing at setup; this governs the test's **probe**, so the crash is caught by a
   functional check and prevented by explicit config up front rather than merely
   reported after the fact).
+- **A test that reads the real machine (RAM/swap, load average) or replays real recent git
+  history is a fleet-wide flake generator, not a CI-hermeticity edge case.** Two distinct
+  unpinned-input shapes recur: (1) a test that asserts on `sysctl`/`/proc/meminfo`-style
+  live memory or load-average reads — the value is whatever the runner happens to have free
+  *right now*, different on every machine and every run, and a threshold tuned on one box
+  fails on a busier one; (2) a test that samples "the latest N commits" from the real git
+  log and replays them — the sample silently changes as the branch moves, so the same test
+  name exercises different inputs run to run. Both produced real failures (one observed
+  spread: 5 union failures across 2 unrelated changes, traced back to these two shapes).
+  **Mock the system probe** (inject a fake memory/load reader) rather than reading the real
+  machine, and **pin the sample** — an explicit list of commit ids, not "the last N" — so a
+  moving branch can't change what a test exercises. **Check:** flag an unmocked
+  memory/`sysctl`/load-average call and an unpinned "latest N commits" git-log sample inside
+  a test file.
 - **A chronically flaky test is quarantined and fixed, not retried until green.** A test that
   passes and fails on the same code is a real signal (a race, an order/time/network dependence,
   a leaked fixture) — a blanket **retry-until-green** in CI masks it, manufactures false

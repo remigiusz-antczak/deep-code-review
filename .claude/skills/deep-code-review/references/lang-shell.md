@@ -70,6 +70,15 @@ Read this when the target runs any shell — CI `run:` steps, hooks, Dockerfile 
   liveness/staleness probe against one known-live and one known-idle subject **on the actual target
   platform**, not only the one it was authored on. Mechanized by `scripts/reaper_lint.py`'s
   `GNU_FLAG_SILENCED_STDERR` rule (concurrency-shared-state.md routes the rest of that script).
+- **`env NAME=value -u OTHER cmd` fails loudly on BSD/macOS `env`, and that's the trap.** BSD/macOS `env`
+  stops parsing options at the first `NAME=value`; an option (`-u`, `-i`, `-S`) placed after one is read
+  as the wrapped utility's own name instead — verified on macOS: `env A=1 -u B true` prints `env: -u: No
+  such file or directory` and exits 127. Some implementations (e.g. GNU `env`) accept the interleave, so
+  the script that was authored and tested there runs clean and only breaks when it ships to a BSD/macOS
+  box. Options first, every time: `env -u B A=1 cmd`. Mechanized by `scripts/reaper_lint.py`'s
+  `ENV_OPTION_AFTER_ASSIGNMENT` rule. The error is loud but easy to miss when the command boots a
+  backgrounded child: it lands in the child's own log while the harness reports only a readiness timeout.
+  A harness that boots a child must fail fast on the child's early exit and print its log tail.
 - **A script that gates on another tool's log, not its exit status.** Gate on
   the tool's exit status, captured to a file — never a pipe (pipe-hides-exit-code
   hazard: `language-stack-redflags.md`'s verification-shell section); the

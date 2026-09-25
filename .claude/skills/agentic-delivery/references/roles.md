@@ -255,7 +255,16 @@ what already works. It is a generic engineering standard; a project's own
   Never silently swallow.
 - **No scope creep.** No premature abstraction, no helper for one call site, no
   speculative future-proofing, no half-finished code left in the diff. Three
-  similar lines beat a wrong abstraction.
+  similar lines beat a wrong abstraction. **Multi-repo case, classify before dispatch:**
+  a shared **provider** repo (source/raw fields, the platform every consumer reads) is a
+  different scope than a **consumer** repo (a workflow, a derived/computed view built for
+  one use). Building consumer-specific logic inside the shared provider is scope creep
+  the diff-level checks above never catch, because the provider diff still looks clean in
+  isolation. One observed run: 2 lanes built consumer-specific features into the shared
+  provider (~45 agent-minutes; one lane killed, one discarded) before this was caught.
+  Classify each planned feature provider-or-consumer at G2, before lanes are cut; route
+  consumer-shaped work to the consumer repo. **Check:** the plan carries a
+  provider/consumer column per item, not just a file/owner column.
 - **No magic values.** Named constants/config; a status string or threshold lives
   in one shared place, not inline.
 - **Applied operations are idempotent** — safe to run twice, last-write-wins by a

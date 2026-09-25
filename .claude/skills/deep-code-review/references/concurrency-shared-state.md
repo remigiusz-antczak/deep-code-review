@@ -1,9 +1,11 @@
 # Concurrency & shared state
 
 Read this when reviewing races, TOCTOU, file/DB shared writers, async
-fire-and-forget, agent/worker locking, or tests/jobs that touch real shared
-paths. Expands section G of `SKILL.md`. Cross-ref J /
-`testing-and-evals.md` for the hermetic-test special case.
+fire-and-forget, agent/worker locking, tests/jobs that touch real shared
+paths, or a perf/leak gate judged on error rate alone rather than
+heap-slope. Expands section G of
+`SKILL.md`. Cross-ref J / `testing-and-evals.md` for the hermetic-test
+special case.
 
 ---
 
@@ -335,6 +337,48 @@ Common in agent/tooling repos: JSON/YAML "DB" files, append logs, lockfiles.
   **ordering**/deadlock above — a different failure mode.
 
 ---
+
+## Load-test coverage and heap-leak gates
+
+- **A perf/load gate that exercises only one production storage adapter clears the
+  build while a sibling adapter leaks.** When a target supports more than one adapter
+  for the same interface (a flat-file store for dev/CI, a database adapter in prod),
+  a load-test gate that instantiates only the fast/default one proves nothing about
+  the others' memory behavior — the same interchangeable-backend blind spot as
+  `testing-situational.md`'s store-fidelity rule, here on the *memory* axis rather than
+  correctness. **Gate every adapter the target ships**, not the one the harness
+  defaults to. **Judge on heap slope, not only p95/error rate:** compare post-GC heap
+  size at a short mark (~2s into a run) against a later mark (~60s) under sustained
+  concurrency — a flat line is healthy, a rising line is a leak regardless of latency
+  or error percentage staying green (one observed run: a file adapter held a flat
+  ~672 MB peak while a DB adapter leaked ~300 KB per request, ~7-9 MB/s at 60
+  concurrent users — p95 and error rate told nothing). **Check:** heap slope stays
+  under a set MB/min ceiling per adapter.
+- **A default heap-snapshot tool fails exactly where a leak gate needs it: at scale.**
+  A full heap snapshot at multi-GB size can break a `JSON.parse`-based analyzer's
+  string-length limit, so the one artifact that would show *which* retained object
+  grows is unreadable by the tool meant to read it. Doctrine: build a **streaming**
+  snapshot parser (read the heap-snapshot format incrementally, never
+  `JSON.parse` the whole file) that emits a **retainer-owner histogram** — which
+  class/constructor is holding the growing objects, not just that heap grew — and
+  take the snapshot at a **small heap-size limit** so it stays parseable by ordinary
+  means when the streaming tool isn't available. **Check:** the analyzer's output on
+  a >1 GB snapshot returns in well under a minute (one observed build: named the
+  retaining class from a 2 GB snapshot in 16s). (no shipped analyzer yet)
+- **Fire-and-forget async in request scope can pin every request's context to one
+  another.** A handler that fires `void asyncFn()` (or an un-awaited promise) without
+  isolating it commonly does one of two things wrong: it either drops the error (see
+  the *Missing `await`* grep-lead above) or, worse, it **adopts a module-level
+  in-flight promise** meant to coalesce concurrent callers — so every request racing
+  that shared promise pins its context to it, and the object graph behind it stays
+  reachable for as long as the slowest rider. **Require:** a detached execution
+  context for fire-and-forget work (never inherit the triggering request's context
+  wholesale), an explicit timeout, and a single-flight guard implemented **outside**
+  request scope (a module-level cache keyed on the work's own identity, not on which
+  request happened to trigger it first). **Check:** static grep for `void
+  \w+\(|\.then\(` with no `await`/`catch` in a request handler, corroborated by a
+  heap-slope measurement (above) at sustained concurrency — a fire-and-forget leak
+  shows the same rising-heap signature as an adapter leak.
 
 ## Tests & jobs vs real shared paths
 

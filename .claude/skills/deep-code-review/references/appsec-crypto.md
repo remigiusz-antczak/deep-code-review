@@ -1,6 +1,6 @@
 # Application security depth — cryptographic usage (A04)
 
-Read this when the target or diff encrypts or decrypts (cipher mode, IV, nonce), compares a signature, token, API key, or OTP against caller input, hashes passwords (KDF cost parameters), wraps keys (DEK / KEK), or holds data that must stay confidential for years. Split from `security-appsec.md`, whose per-category core checks (access control, injection, secrets, input validation, SSRF) apply to every application review.
+Read this when the target or diff encrypts or decrypts (cipher mode, IV, nonce), compares a signature, token, API key, or OTP against caller input, hashes passwords (KDF cost parameters), wraps keys (DEK / KEK), holds data that must stay confidential for years, or suggests a keygen/secret-printing command to the user. Split from `security-appsec.md`, whose per-category core checks (access control, injection, secrets, input validation, SSRF) apply to every application review.
 
 ## A04:2025 — Cryptographic Failures (depth)
 
@@ -97,3 +97,15 @@ KEK should also be at least as strong as the DEK." Reusing one key as both colla
 exists to provide — a KEK compromise then directly exposes every DEK it wrapped, not only the data behind the one key
 an attacker actually reached. Scope: hand-rolled/manual key wrapping only — pure-KMS delegation enforces this
 internally and is out of scope.
+
+**A suggested command that prints a generated secret to the current session leaks it into
+the transcript.** Guidance (human- or agent-authored) that tells the operator to generate a
+credential — an API key, a signing secret, a keypair — by running a command **in the same
+interactive session** that is being logged/transcribed puts the plaintext secret into that
+log the moment the command's stdout is echoed, even when the secret is never committed to a
+file (one observed case: a suggested in-session keygen command printed the secret straight
+into the transcript). Never suggest a command whose normal output is the secret itself when
+that output lands in a shared/logged surface. Generate it in a **separate, untranscribed**
+terminal, or have the command write directly to a **gitignored** file (`>` to the file, not
+to stdout) so the value never appears as command output at all. **Check:** no suggested
+command in-session prints keygen/secret-generation output to stdout.

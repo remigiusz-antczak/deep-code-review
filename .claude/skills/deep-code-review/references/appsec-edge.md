@@ -1,6 +1,6 @@
 # Application security depth — gates, proxy chains, caches, and isolation headers
 
-Read this when the target or diff recommends an auth gate, middleware, or edge rule; sits behind a reverse proxy, CDN, or WAF; keys a rate limit, allow/deny list, geo rule, or audit identity on `X-Forwarded-For` / `Forwarded` / `X-Real-IP`; caches a response derived from identity or reflects a header into a cacheable response; or is embedded cross-origin or uses camera, microphone, geolocation, or payment APIs. Split from `security-appsec.md`, whose per-category core checks (access control, injection, secrets, input validation, SSRF) apply to every application review.
+Read this when the target or diff recommends an auth gate, middleware, or edge rule; sits behind a reverse proxy, CDN, or WAF; keys a rate limit, allow/deny list, geo rule, or audit identity on `X-Forwarded-For` / `Forwarded` / `X-Real-IP`; caches a response derived from identity or reflects a header into a cacheable response; is embedded cross-origin or uses camera, microphone, geolocation, or payment APIs; a load test's traffic identity is unverified; or an unauthenticated surface filters resource types by name (allow vs deny list). Split from `security-appsec.md`, whose per-category core checks (access control, injection, secrets, input validation, SSRF) apply to every application review.
 
 ## A01:2025 — Broken Access Control (depth: gate proposals, proxy chains, caches)
 
@@ -42,6 +42,40 @@ reverse proxy and origin of different vendors/versions in front of an auth gate 
 **per request class**, before and after: anonymous → 401/redirect **and** legitimate member → 200 on the **same**
 class; plus a test that **fails with the gate removed**. A proposal missing the member→200 row is incomplete — don't
 recommend it (this is how outage-causing middleware ships).
+
+**A load test against an "authed" endpoint that never actually authenticated reports the
+wrong system.** A load-test harness pointed at a route behind an auth gate can **fail open
+at the harness**, not the app: a missing/expired token, a login step that silently
+no-ops, or a session cookie the runner never picked up all make the harness fall through to
+whatever the route serves an anonymous caller — often a cheap 401/redirect or a cached
+public response — while the run still reports clean throughput and 0% errors, because
+nothing about that shape looks like a failure. The gate then clears the **wrong** code path;
+the real, identity-bearing path (per-request user object, session lookups, wider response
+payload) never ran once (one observed run: "60 users, 0% errors" turned out to be byte-identical
+anonymous and authenticated responses; the real authenticated path, once actually exercised,
+OOM'd in 100-200s). **Assert identity resolution before measuring anything else**: confirm the
+response body/size differs between an anonymous and an authenticated call to the same URL
+before trusting any throughput/error/latency number from the run. The harness itself must
+**fail closed** on an auth failure — abort the run rather than silently falling through to the
+anonymous path. **Check:** `bytes(authed
+response) != bytes(anonymous response)` for the same request, else the load-test run FAILs
+before it reports any perf number.
+
+**A denylist of excluded types on an unauthenticated surface is permissive by default for
+every type added later — this is not a fail-open bug, it's the list working as written.**
+"Fail open" names what a check does when it *can't run* (errors, times out); this check
+runs fine and still ships every unnamed type, because excluding by name means anything
+unnamed passes. A response filter that hides certain record/resource **types** from an
+anonymous caller by naming the ones to *exclude* (a denylist) is silently permissive for
+any type that didn't exist, or wasn't named, when the filter was written — a new type
+ships visible-by-default to every unauthenticated caller until someone remembers to add
+it to the denylist, and nothing fails or warns in the meantime (caught only at review in
+one observed case). The unauthenticated surface is exactly the wrong place for a
+permissive-by-default list: invert it. **Name the types an anonymous caller may see (an allowlist)**
+and exclude everything else by default, so a new type is invisible until someone
+deliberately grants it. **Check:** a test asserts the returned type set equals the
+allowlist **exactly** (not "contains no denylisted type") — new-type coverage is
+structural, not remembered.
 
 **A security decision keyed on a client IP parsed from a multi-hop proxy header trusts the wrong end unless it counts the proxies in front of the app (CWE-348, *Use of Less Trusted Source*).**
 A rate-limit key, IP allow/deny, geo/geoblock, or audit-"who did this" identity derived from `X-Forwarded-For` /

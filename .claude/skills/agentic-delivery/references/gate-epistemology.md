@@ -63,6 +63,21 @@ that was populated and has since been **drained to zero** is different — that 
 that reached zero over time rather than a baseline that was always empty. Distinguish the two before scoring a
 zero count: `UNVERIFIED` for never-populated, pass for drained-with-history.
 
+## Principle 3, an unmeetable-locally case — a check no local environment can run is an explicit logged skip, not a silent pass or an infinite block
+
+Some checks a gate would like to run are genuinely **not runnable in the environment doing the verifying** — "a
+green local verify equals a working container build" is unmeetable without a local container daemon, no matter
+how thorough the rest of G5 is. Forcing that check anyway (fail the gate forever, or fabricate a pass) is worse
+than naming the gap: one observed run explicitly logged the skip and named the deploy step as the **first
+environment that actually checks it** — the gate that follows still runs it for real, and nothing downstream
+mistakes the local green for coverage it never had. **Rule: when a check is unmeetable in the current
+environment, log the skip with probe evidence (the failing check command and its actual output, not just an
+assertion it "can't run here"), keep the verdict `UNVERIFIED`, and name the first environment downstream that
+will actually run it** — never fold the gap into the local verdict as a silent pass, and the named downstream
+gate (deploy, here) must block release until that check actually runs there and passes. This is
+principle 3's *check could not run → `UNVERIFIED`* applied where "could not run" is a property of the
+environment, not a transient flake.
+
 ## Principle 9 — closing or deleting shared state
 
 9. **Closing or deleting shared state needs evidence, not presumption** — the
