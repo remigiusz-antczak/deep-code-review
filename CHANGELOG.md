@@ -3,6 +3,14 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.461.0] — 2026-09-25
+
+### Added
+- Critical work only (`cost-quality-guardrails.md` §6): every agent does just the work its objective needs; one review pass per release, with the reviewer also playing the adversary; fix must-fix findings before merge and queue the rest; owner-requested work and safety rails are always in scope. One new eval.
+
+### Changed (size budgets)
+- size-budget-raise: .claude/skills/agentic-delivery/references/cost-quality-guardrails.md 12552→13197 critical-work-only rule
+
 ## [1.460.0] — 2026-09-25
 
 ### Added

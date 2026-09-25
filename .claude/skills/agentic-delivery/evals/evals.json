@@ -2227,6 +2227,17 @@
         "The gate checks ancestry (child base is ancestor of parent tip) AND no overlap between the parent's post-base file changes and the child's files (or that the parent is frozen)",
         "Ancestry alone does not clear the exception if the parent is still actively rewriting the same files"
       ]
+    },
+    {
+      "id": "critical-work-only-no-extra-rounds",
+      "prompt": "A release has passed one reviewer+adversary pass; remaining findings are two medium wording nits. The conductor plans a third review round, a worktree cleanup sweep, and thank-you messages to peer sessions before merging. Is that right?",
+      "expected_output": "No. Only work critical to the objective: one review pass per release, fix must-fix findings before merge, queue the medium nits for the next wave, and skip the cleanup sweep and courtesy messages unless they block the objective or the owner asked. (cost-quality-guardrails.md section 6.)",
+      "expectations": [
+        "Rejects the third review round",
+        "Queues the medium nits instead of fixing them before merge",
+        "Drops the cleanup sweep and courtesy messages as non-critical",
+        "Keeps owner-requested work and safety rails in scope"
+      ]
     }
-  ]
+]
 }
