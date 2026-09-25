@@ -56,6 +56,44 @@ the owner decides.
 | "Restate the skill's steps here so it's handy." | That makes the registry a bundle and duplicates the skill. Point to the skill; let it hold the method. |
 | "I'll just remember the list, no need for the ledger file." | Memory is exactly what a compaction or a lost context erases. `add` every ask to `scripts/task_ledger.py` before starting; `status` reports from the file, never from memory. |
 
+## Owner-ask fidelity: don't let delivery mechanics substitute for the owner's actual backlog
+
+The six moves above route a flood of asks; these three rules keep the loop honest about which asks it is
+actually closing, once triage is running and ticks are quiet as well as chaotic.
+
+- **Report the terminal metric — backlog items closed ÷ total outstanding — above any lane/merge/gate count.**
+  Lanes spawned, PRs merged, and gates green are the loop's own activity metrics, not the terminal one: "gates
+  green" rewards whatever is easiest to gate-pass, not whatever the owner actually asked for, so a loop can drift
+  toward small, self-generated tickets (refactors, hardening, internal tooling) it can close quickly while larger
+  owner asks sit untouched. One observed run: several hundred delivery lanes spawned and a large number of PRs
+  merged over a multi-day stretch, all gates green throughout, while fewer than half of a roughly 116-item
+  stakeholder backlog had been addressed — most delivered PRs were self-generated work, not backlog items. Before
+  spawning self-generated work, check whether a named backlog item could absorb that lane instead. A status
+  report that names lanes/merges/gates without naming backlog-closed-so-far is incomplete. *Worked example:* a
+  run reporting a high lane/merge/gate-green count with fewer than half the 116-item backlog closed is flagged
+  for the low closure rate, not credited for the merge count.
+- **A complaint or observation is a signal, not a ticket — restate and confirm before it becomes a lane.** The
+  owner stating a complaint ("this is slow," "I don't like how X looks") without asking for a fix is not an
+  implicit work order; spawning a lane against it, unconfirmed, produces scope nobody asked for and consumes
+  review attention on tone rather than a request. One observed run: a single sentence of owner frustration about
+  one surface produced several parallel lanes touching unrelated files the owner had not asked to change, and the
+  owner's next message asked why that work existed. Before spawning a lane from a complaint, restate it as a
+  proposed, scoped ask (what would change, how big) and get explicit confirmation, or file it as a candidate
+  backlog item for later triage — never both silently assumed and silently executed. Only a stated request, or an
+  explicitly pre-approved standing category of fix, authorizes a spawn without that round-trip. *Worked example:*
+  "the dashboard feels sluggish" is filed as a candidate backlog item with a note to profile it, not spawned as an
+  immediate multi-lane performance sweep.
+- **Don't spawn a measurement or audit lane unless a decision is already waiting on its number.** Measuring feels
+  like useful, low-risk groundwork, but a lane that counts, inventories, or scores something nobody will act on
+  consumes lane budget, review attention, and — for anything touching a running app — real machine load for no
+  decision it changed. Before spawning a standalone measurement/audit lane, name the pending decision and the
+  two-plus actions that would follow from a high versus low result; if none exists, don't spawn it, or fold the
+  measurement into the work that will act on the answer. *Worked example:* "let's just check how many components
+  use pattern X" is declined for lack of a named decision; "how many use pattern X, because above our stated
+  threshold we budget a codemod lane, otherwise we leave it" is run, because the threshold decision is already
+  stated. **Carve-out: standing/required audits (security, privacy gate, owner-requested) run regardless of a
+  named pending decision** — they exist to catch what nobody is yet asking about, and this rule never skips them.
+
 ## Standards (by name; verify a figure/URL before citing one)
 GTD capture/clarify; incident command (single commander, unity-of-command,
 activity log); emergency-severity triage; WIP limits; "the ONE thing";

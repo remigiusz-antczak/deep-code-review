@@ -52,6 +52,34 @@ against the right surface* family (dev-vs-prod build, the gate's own detector) �
 instrument is the **full-page stitch capture mode**, the right one the live render or a non-stitched
 per-viewport shot.
 
+## An unscoped overflow/responsiveness audit floods real findings with false positives
+
+An automated overflow/responsive-layout audit run without written scoping rules over-reports
+heavily — worst when the audit is delegated to a lower-capability model that infers scope from
+the prompt alone ("check for overflow") rather than from checked instructions, and interprets it
+maximally literally: every hidden, off-screen, or not-yet-revealed element becomes a "defect." A
+report dominated by noise is worse than no report — a reviewer either hand-triages everything
+(defeating the point of automating it) or starts ignoring the audit's output entirely. One
+observed run: the same audit category, run once without scoping rules by a cheaper/faster model,
+reported 95 "defects"; a follow-up pass applying the three rules below on the same surface found
+zero real page-level scroll issues — the entire gap was scoping, not detection capability. Ship
+any overflow/responsiveness audit with these rules written into its own instructions, never left
+implicit:
+
+1. **Count overflow only when it causes page-level horizontal scroll, or clips content that is
+   actually visible outside a designated scrollable container.** An element wider than its parent
+   that a container legitimately scrolls, or that never forces the page to scroll, is not a
+   defect.
+2. **Exclude elements hidden from sighted layout (`display: none`, `visibility: hidden`,
+   sr-only clip).** These are not overflow defects by definition — they're not visible to
+   anyone. `aria-hidden` alone does not qualify: the element still renders and can still scroll.
+3. **Open click-to-reveal UI before judging its contents.** A collapsed accordion, an unopened
+   menu, or a closed modal's inner layout must be opened first; judging its overflow while closed
+   inspects markup nobody sees.
+
+This matters *more*, not less, when the audit is delegated to a cheaper/faster model — write the
+rules into the audit's own prompt/instructions rather than assuming they're implied.
+
 ## A clean checklist is a floor, not a ceiling — read the render and critique composition
 
 The gates (the enforcing gate's named pixel checklist in `ux-gates.md`, the rendered-route sweep, the

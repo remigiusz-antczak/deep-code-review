@@ -8,6 +8,12 @@ lifecycle, canary/blue-green claims vs actual config, DORA-or-`UNMEASURED` —
 `references/release-engineering.md`.
 - One-command reproducible build; lockfiles committed and honored; CI gates
   merge on lint + format + type + tests + security/dependency scan.
+- **A new or changed gate ships with its measured false-positive rate on HEAD**
+  in the PR description (target ≤10%), not only a description of what it
+  detects. Sound-looking detection logic can still fire mostly on non-defects
+  in a real codebase: one observed run had a naive dead-export scan at 93%
+  false positives, and a comment-density heuristic scored the best-documented
+  files worst. A gate landed without that number is unproven.
 - **Runner-minute cost of the workflow itself** (the staged fan-out remedy for
   an agent swarm's duplicate-CI shape lives in `references/parallel-audit.md`,
   not repeated here): a PR-triggered workflow needs `concurrency:` with a

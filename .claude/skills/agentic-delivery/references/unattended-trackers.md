@@ -155,9 +155,22 @@ Every move-on rule here and in the next two sections yields to an OPEN owner pri
 `unattended-operating-mode.md` **An open owner priority outranks every other item**.
 
 - **Keep the backlog outside the working context.** A ranked list of what to do next lives in a file or a
-  tracker the loop re-reads each turn — not only in the conversation, which a compaction or a handoff can drop.
-  The **queue-a-requirement-to-a-file** rule above is this same discipline applied to *incoming* scope; this
-  applies it to the *standing* backlog.
+  tracker — not only in the conversation, which a compaction or a handoff can drop. The
+  **queue-a-requirement-to-a-file** rule above is this same discipline applied to *incoming* scope; this applies
+  it to the *standing* backlog.
+- **Read a delta since the loop's own last tick by default, not the full tracker.** A recurring loop that
+  re-reads the whole backlog/state file in full on every tick pays that cost every cycle regardless of how much
+  changed, so token spend scales with tick-frequency × context-size rather than with actual new information. One
+  observed run: a loop ticking every few minutes re-read a multi-thousand-line state file in full each time;
+  across a day the cumulative re-read volume was many times the size of the actual changes made that day. Read
+  what changed in the backlog or what new events arrived since the loop's own last tick instead. Reserve a
+  **full** re-read for session start, a detected large gap (several missed ticks), a compaction, a handoff, any
+  stop/idle/"all blocked" claim, or an explicit re-sync request — never the steady-state per-tick default. Where
+  no delta mechanism exists yet, name that as a gap to fix, not a reason to keep re-reading in full. *Worked
+  example:* a loop switched from re-reading its multi-
+  thousand-line tracker in full on every tick to reading only the rows changed since its last recorded
+  tick-timestamp — same tick cadence, a fraction of the read volume; the resulting spend reduction was not
+separately measured, so state the change, not a number.
 - **Index the backlog by the owner's ask, and answer "what's left" by reading it — never by reconstructing from the transcript.**
   The file above is a ranked *work* list; a long or unattended session also needs it to carry the **ask-set** —
   one row per distinct owner request (id, ask, status, evidence, next action) — updated **at each milestone**,
@@ -176,7 +189,7 @@ Every move-on rule here and in the next two sections yields to an OPEN owner pri
   grant, never a deploy-triggering merge): that is not a stop, and the loop continues; when the granted window
   or stated **appetite** is spent (`SKILL.md` G0); or when a resource ceiling is hit (the environment-probe
   ceilings above). Each ending is stated with the evidence that it holds
-  ("backlog re-read; the tracker shows only owner-approval-gated items"), never asserted bare.
+  ("backlog re-read in full; the tracker shows only owner-approval-gated items"), never asserted bare.
 - **A milestone is a cue to pull the next item, not to stop.** Finishing an item or hitting a checkpoint
   re-enters the loop: pull the next backlog item and re-check the termination conditions. Stopping is a
   *decision* that a termination condition fired, and it is reported as one — not a drift into silence. An owner

@@ -54,6 +54,17 @@ closed (exit 2) on an unreadable test file or zero files found, unless
 `--allow-empty`. A flagged test is a lead for a human to add the missing
 rendered-DOM assertion, not an automatic defect.
 
+**Legacy source-text tests tax a later file split — a cost the scan above doesn't measure.** Each
+lint-shaped regex-over-source check hardcodes the file's path/layout, so splitting the file repoints
+every one (one observed run: 74% of a page's tests were source-text regexes; a 2.1k-line split
+repointed 32 of them). Mitigate with: a **shared source reader that throws loud on a missing path**
+(a moved file fails every dependent check by name, not silently); a **render-loader** shared per test
+file as the on-ramp from source-text to rendered-DOM checks (+0.8s/file, suite time flat); and a
+**ratchet on `scripts/source_scan_tests.py`'s finding count** against a stored baseline — new work may
+not raise it, even while legacy findings stay tolerated. `source_scan_tests.py` itself has no
+baseline support today; a wrapper that stores and diffs its finding count against a baseline is to
+be built, not assumed to already exist.
+
 ## Prove a rendered-layout claim with geometry, not class names
 
 A UI test that asserts **the class that is supposed to produce a layout** —
@@ -214,3 +225,23 @@ coincidence, and the coincidence breaks silently:
   zero images. (Distinct from reproducing a **build-specific** defect, which must use
   the production build — `method-situational.md`; this is capturing *feature* evidence past an
   auth gate.)
+
+## A locator keyed to visible text breaks the moment the component's own edit mode replaces that text
+
+- **Prefer a stable identifier over visible text for a locator that must survive
+  re-rendering.** A row located by its currently-visible text is fragile against any
+  state where the component legitimately swaps that text out — most commonly an edit
+  mode replacing a read view with an input/editor. Reading a row's text, acting on it,
+  then re-locating by that *same* text breaks the moment the row is mid-edit and no
+  longer shows it — a false red (one observed suite's largest false-failure source,
+  including its own opened editor panel replacing the read view the next assertion
+  expected). Use a `data-test-id` or the item's own stable id/version field instead;
+  address an already-open editor by its own container role/state, not by re-querying
+  the original row.
+- **Any UI interaction test must reproduce the open/activate step before typing or
+  asserting — never target a locator that bypasses it.** Example: a click-to-edit
+  field's spec must perform the click/focus that opens it before typing. Shortcutting
+  to typing skips the interaction a real user performs, so it can't catch an
+  event-bubbling regression in open/close (the skip-list gap in `ux-interaction.md`'s
+  click-anywhere-to-edit bullet) — one observed defect shipped past a check that typed
+  into the field's value without opening it first.

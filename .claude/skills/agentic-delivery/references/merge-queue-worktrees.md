@@ -575,6 +575,30 @@ than trusting a local/cached ref that has not yet observed its own write (#1128)
 "the gate is broken" from a worktree without confirming its base ref is current; a merge or CI decision made
 from a local script in a worktree of unknown freshness.
 
+## Worktree sprawl outruns manual cleanup — one prune tool, sized to open PRs plus live lanes
+
+The GC and orphaned-process sweeps in `fanout-host-sizing.md` (*The orchestrator owns garbage collection*, *The
+orchestrator also owns reaping orphaned heavy processes* — both **advisory and approval-gated**, never an
+autonomous destructive sweep) are the right shape; this is what trips when nothing runs them regularly. Each new
+worktree pays a **full dependency install** (never a symlinked shared tree — `dev-env-ownership.md`'s
+*Boot-the-dev-server lanes need a copy, not a symlink*) plus its own build artifacts, so an unattended fan-out
+that creates worktrees per lane and never sweeps the finished ones accumulates disk fast. One observed run: 174
+worktrees against 33 open PRs — roughly 94% orphaned — consuming roughly 400GB with the host at 80% disk.
+
+- **One worktree tool, not ad hoc `git worktree add`/`rm` per lane:** sparse-checkout the artifact directories a
+  lane doesn't need in full, and copy-on-write the dependency tree when the target's lockfile already matches a
+  sibling's (cheaper than a fresh install, still a real copy — never the symlink the dev-env rule above forbids).
+- **Prune through the existing approval-gated reap path** — merged branch, clean or allowlisted untracked state,
+  idle past a threshold, and **not a live process's cwd** (the process-level liveness check
+  `fanout-host-sizing.md`'s *work-product liveness signals go silent in the post-push window* already requires
+  before a delete) — propose-with-the-exact-command, execute-only-on-approval, the same bar that section already
+  sets; this section adds no new authority to delete.
+- **Size the pass, then measure it:** **total worktrees** should sit at or below **open PRs + live lanes** — a
+  standing ratio, not a one-time cleanup, since sprawl reaccumulates at the same rate a fan-out creates
+  worktrees. **Orphaned** worktrees (present, matching none of the above) are a separate count and target
+  **≈ 0 after each merge train** — any nonzero orphan count past that point means the prune pass didn't run or
+  missed something, not a tolerable steady state.
+
 ## Out-of-tree shared scratch crosses commit metadata — worktree-per-lane doesn't cover it
 
 Concurrent write-lanes that each generate per-lane content — a commit-message file, a plan/notes file, a

@@ -2060,6 +2060,85 @@
         "Recommends branching off the parent's LOCAL ref (git rev-parse / git worktree list), not polling the remote or forge API",
         "Reserves remote-based readiness checks for cross-machine coordination with no shared local ref"
       ]
+    },
+    {
+      "id": "confirm-gap-before-briefing-fix-lane",
+      "prompt": "A peer says one editor doesn't autosave. Before briefing a fix lane, what do you do?",
+      "expected_output": "Spend one search on the named component (grep for the storage key/hook) to confirm the gap is real before dispatching. Brief the lane with the evidence found ('absent: no reference to X in Y', or 'present in Y; reproduce the failing entry point first'), never the raw complaint.",
+      "expectations": [
+        "Confirms the reported gap exists in the code before dispatching a fix lane",
+        "Briefs the lane with evidence (absent/present + location), not the bare report",
+        "Names the cost asymmetry: a reproduce-first lane is cheap, a build-first lane can burn its budget on nothing"
+      ]
+    },
+    {
+      "id": "gate-tooling-is-a-versioned-deliverable",
+      "prompt": "A session built a merge-train script and an acceptance suite entirely in a scratch temp directory to gate tonight's release. Is that fine since it worked?",
+      "expected_output": "No. Gate/acceptance/release tooling is a deliverable with the same versioning bar as product code — commit it to the repo with tests and a usage note before or alongside the release it gates. Tooling that proved a release living only in a temp dir is itself a finding to raise.",
+      "expectations": [
+        "States gate/acceptance/release tooling must be versioned in the repo, not left in session-scoped scratch",
+        "Flags 'the tooling that proved this release lives only in a temp dir' as its own finding"
+      ]
+    },
+    {
+      "id": "cap-fanout-to-editable-seams-not-just-headroom",
+      "prompt": "Machine headroom supports a double-digit lane count. Most of the planned work touches one large shared file. How wide do you fan out?",
+      "expected_output": "Count the codebase's editable seams for the planned work and cap width at the minimum of that count and machine headroom, not headroom alone. Split the shared file with a pure-move lane first, land it, then fan out one lane per module.",
+      "expectations": [
+        "Caps fan-out width at min(editable seams, machine headroom), not headroom alone",
+        "Recommends a pure-move split-first lane when a shared file would bottleneck several planned lanes",
+        "Names repeated conflicts / re-verification as the cost of sizing on headroom alone"
+      ]
+    },
+    {
+      "id": "recurring-loop-reads-delta-not-full-tracker",
+      "prompt": "A conductor loop ticks every few minutes and re-reads its entire multi-thousand-line backlog file each time. Is that the right default?",
+      "expected_output": "No. Default to reading a delta since the loop's own last tick, not the full tracker. Reserve a full re-read for session start, a detected large gap, or an explicit re-sync request.",
+      "expectations": [
+        "States delta-since-last-tick as the default read, not full re-read every tick",
+        "Names full re-read as reserved for start/gap/explicit resync, not the steady-state default",
+        "Names token cost scaling with tick-frequency times context-size as the discipline point"
+      ]
+    },
+    {
+      "id": "deferred-ask-surfaced-to-owner-same-cycle",
+      "prompt": "You've internally labeled three owner asks 'deferred' in the feedback-coverage map this week without telling the owner. Is the map entry enough?",
+      "expected_output": "No. A deferred label is a reported decision, not an internal one — name each newly-deferred ask to the owner in the same cycle, with a reason and, when possible, an expected revisit point. Keep a standing, owner-visible deferred list as part of routine reporting.",
+      "expectations": [
+        "States that marking an ask deferred internally, without telling the owner, is a silent drop",
+        "Requires naming each newly-deferred ask to the owner in the same reporting cycle, with a reason",
+        "Requires a standing owner-visible 'currently deferred' list as part of routine status, not an on-request audit"
+      ]
+    },
+    {
+      "id": "hosted-ci-with-no-branch-protection-is-pure-cost",
+      "prompt": "A repo runs a full CI workflow on every push, but no branch-protection rule requires it before merge. Keep running it?",
+      "expected_output": "Not as-is — verify branch-protection/required-checks state first; a workflow existing is not a workflow enforced. The fix is to make it a required check in branch protection so a red run actually blocks the merge. Only if it genuinely cannot be made to gate should it be disabled at the repo level with owner authorization (checking for platform-injected default workflows too), and even then only the gating/test workflows — leave release, deploy, and security-scan workflows running unless the owner says otherwise — gating merges instead on a local QA receipt bound to the merged PR's exact head SHA.",
+      "expectations": [
+        "States that hosted CI with no required-check enforcement is pure spend, not a gate",
+        "Gives making it a required check (branch protection) as the first fix, before considering disabling it",
+        "If disabling is reached, limits it to gating/test workflows with owner authorization, keeping release/deploy/security-scan running"
+      ]
+    },
+    {
+      "id": "worktree-sprawl-pruned-to-open-prs-plus-live-lanes",
+      "prompt": "An unattended fan-out has been creating a worktree per lane for weeks with no cleanup pass. What's the target state after each merge train?",
+      "expected_output": "Total worktrees at or below open PRs plus live lanes; orphaned worktrees (merged, clean/allowlisted untracked, idle, not a live process's cwd) at approximately zero after each merge train, pruned through the existing advisory, approval-gated reap path — never an autonomous delete, and never a symlinked shared dependency tree.",
+      "expectations": [
+        "States both targets: total worktrees <= open PRs + live lanes, and orphaned worktrees ~= 0 after each merge train",
+        "Prune goes through the approval-gated reap path, never an autonomous destructive sweep",
+        "Does not recommend a symlinked shared dependency directory to save install cost"
+      ]
+    },
+    {
+      "id": "empty-baseline-gate-is-could-not-check-not-a-pass",
+      "prompt": "A regression-ratchet gate reports 0 violations because its baseline has 0 pinned entries — and the baseline has never had any entries in its history. Is that a pass?",
+      "expected_output": "No. A baseline that was never populated means the gate had nothing to check, not that it checked and found nothing wrong. Treat it as UNVERIFIED and fail closed or flag it explicitly, the same skip-loudly bar a missing fixture gets. This is distinct from a baseline that WAS populated and has since been drained to zero (every pin fixed, every regression closed, provable from history) — that is the ratchet's goal state and counts as a genuine pass.",
+      "expectations": [
+        "Distinguishes a never-populated zero-baseline gate from a gate that ran and found zero violations",
+        "Requires the never-populated case to fail closed or flag itself, not report a silent pass",
+        "States that a baseline drained to zero after being populated is a genuine pass, provable from history"
+      ]
     }
   ]
 }

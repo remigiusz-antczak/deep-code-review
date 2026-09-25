@@ -260,3 +260,15 @@ constraint**: *this surface must not show X.* When a new feature request conflic
   case in `testing-ui.md` (a spec dropped because its surface became *unreachable*, owed a named gap): here the
   surface is reachable and the constraint is **still intended** — the test is not stale, it is
   load-bearing.
+
+## A structural test anchored to a named neighbour breaks on that neighbour's rename, not on its own regression
+
+A test that slices a sequence of steps/sections/phases by name — "everything between marker `X` and
+marker `Y`" — is really testing **its own boundary**, and naming the *next* structural element after
+it (`Y`, a sibling step's own name) makes that boundary depend on a name the test doesn't own. One
+observed break: a step's structural test named its **sibling's** marker as the slice's end, and
+renaming that unrelated sibling — no change to the step under test — broke the test. **Rule:** slice
+from a marker's own start to the **next** marker generically (positionally — "the next heading",
+"the next `## ` boundary" — not by that neighbour's literal name), never by a specific neighbour's
+name. **Pass condition to check for:** renaming any *other* step/section keeps the test green;
+renaming or removing the step actually under test is the only thing that should break it.

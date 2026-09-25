@@ -47,10 +47,32 @@ A control is a defect until its whole loop works in the running product, not jus
 - **WYSIWYG, never raw markup shown to users.** Store markup; **display it formatted**. A rich-text
   field showing `**bold**`, `<u>`, or `*` tokens while the user types has leaked its storage format into
   the UI — render what the text will look like once posted.
+- **A click-anywhere-to-edit wrapper's interactive-skip-list must cover every element the field can render
+  *while being edited*, not only its read-state elements.** The common pattern wraps a read-only view in a
+  click-to-edit handler with an explicit skip-list (links, buttons, inputs) so clicking those doesn't also
+  re-trigger the outer edit. That skip-list is usually written before the field grows a richer nested
+  editor — a contenteditable rich-text region, or an inline editor panel the field renders once opened —
+  which don't match the original list's element types. A click, or even a keystroke (Space/Enter), inside
+  the open editor then bubbles up and re-triggers the outer handler, closing the very panel the user is
+  mid-edit in. When reviewing this pattern, name every element type the field can render while open —
+  contenteditable/rich-text regions and any nested editor panel included — and confirm the skip-list covers
+  all of them, not just its read-state set.
 - **No dead controls, and disabled must look disabled.** A button/toggle/arrow rendered enabled whose
   handler is a no-op is a trust defect; an unavailable control must *look* unavailable, not merely be
   inert. Unit-logic tests passing is **not** a working UI — exercise the real control in the running app
   (cross-ref the live-verification rule in `product-ux-quality.md`'s pre-ship checklist).
+- **A control-inventory / presence gate (which controls render, keyed by name or role) proves presence, not
+  that the control works — it needs a separate functional/interaction pass, not a substitute for one.** A
+  fast pre-merge gate that lists rendered controls catches accidental removal, and is structurally blind to a
+  control that renders, reports itself enabled, and still does the wrong thing (or nothing) when activated —
+  "renders but doesn't work" is a different bug class from "was removed," and a green inventory gate is not
+  evidence a batch of behaviour changes is safe. Two observed shapes: an edit-confirmation control vanished
+  from the real user flow while the inventory gate stayed green (the name it checked for was still present
+  elsewhere); a picker rendered and reported present but opened nothing when clicked — the gate proved
+  presence, not that the click did anything. A third, related false-positive: the same inventory style, keyed
+  by accessible name, flagged an intentional label change on the same control as a "removal." For any
+  interactive (not display-only) surface, require both: the inventory/presence check *and* a pass that
+  actually invokes each changed control and asserts on its effect.
 - **A filter/facet option that matches zero rows in real data is a dead control too.** The no-op-handler
   case above is *structural*; this is *data*: a filter/facet/sort option whose handler works fine but
   that **no real row can ever satisfy** (a category with no items, a status nothing is ever in) still

@@ -67,6 +67,16 @@ survives the *next* contributor — see "Standards imprint" below.
   guides an agent but binds nothing unless a **gate** backs it (pre-commit,
   required CI). "Documented but unenforced" is the highest-value durable-
   standards finding (see the imprint below).
+- **An always-loaded rules file pays its cost every session, whether or not each section is still true.**
+  Because `AGENTS.md`/`CLAUDE.md` peers load in full on every session start (not on demand like a
+  skill's routed reference), they need a stricter size discipline than progressive-disclosure docs —
+  one observed file grew to ~800 lines including sections describing a mechanism that had already been
+  replaced same-day, still loaded on every subsequent session until someone noticed. Flag: (1) no
+  stated line/size cap on the file, (2) a section describing a mechanism the repo's own history shows
+  was superseded, with no corresponding deletion in the PR that superseded it. **Rule:** keep this file
+  to invariants (rules that don't change per-mechanism) over mechanism descriptions where avoidable; a
+  PR that retires or replaces a mechanism deletes that mechanism's section from this file in the *same*
+  PR, not as follow-up cleanup.
 
 ## Developer experience
 
