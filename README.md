@@ -226,11 +226,11 @@ keeps that load small:
 
 The latest five releases; full detail in [`CHANGELOG.md`](CHANGELOG.md).
 
+- **1.461.0** — Critical work only: agents spend tokens just on the objective.
 - **1.460.0** — Field-feedback wave: allowlist filters, load tests prove identity, heap slope.
 - **1.459.0** — Deferred asks reported, never silently queued; build and interaction gates; per-row N+1.
 - **1.458.0** — Renamed controls read as relabels, not removals; pre-push reuses a verified result for the same commit; stacked lanes branch from the local ref.
 - **1.457.0** — Minimum-cost CI & token profile: integration branches skip hosted CI for a local deterministic gate; cost-vs-quality guardrails (tier gate, lane cap, escaped-defect trailers).
-- **1.456.0** — Protected-visual components scored on ordinal relations, never size; a draft-skip-CI note; a one-lock-one-resource concurrency fix; `ci_cost_lint.py` runner-cost checks.
 ---
 
 ## FAQ

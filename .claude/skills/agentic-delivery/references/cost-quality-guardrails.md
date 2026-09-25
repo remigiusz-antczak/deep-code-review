@@ -183,6 +183,15 @@ directories.
   hand-synced copies drift from each other, and drift here is drift in the thing everyone trusted to say "safe to
   ship."
 
+## 6. Critical work only — spend tokens on the objective
+
+Every agent (conductor and lane) does only the work its objective needs to be done and verified. Out of
+scope unless the owner asks for it or it blocks the objective: optional sweeps, extra review rounds past the
+one the release needs, cleanup or housekeeping, polish, and courtesy or status messages that change no
+decision. One review pass per release: the reviewer also plays the adversary. Before merge, fix only
+must-fix findings; queue the rest for the next wave (a one-line fix may ride along). An owner-authored
+rule, reported problem, or safety rail is never "non-critical".
+
 ## Related
 
 - Claimed vs enforced grading for each mechanism: `host-enforcement.md`.
