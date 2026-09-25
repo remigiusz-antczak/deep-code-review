@@ -96,9 +96,11 @@ model: prototype / mvp / growth / mature), the **area** of the ask, and the
 ## The chaos playbook — the owner under pressure
 
 **Read `references/chaos-playbook.md` when** the owner floods you with many rapid,
-conflicting asks under pressure: six moves (capture, reflect back, triage, one next
-action, hold the rest visibly, support by action), forbidden phrases, boundary,
-and the suite's named standards (read them there before citing one).
+conflicting asks under pressure, **and also on a routine status/quiet tick** — its
+owner-ask-fidelity measure (deferred asks against backlog vs. total) applies whether
+or not the owner is currently flooding you: six moves (capture, reflect back, triage,
+one next action, hold the rest visibly, support by action), forbidden phrases,
+boundary, and the suite's named standards (read them there before citing one).
 
 ## The task ledger — the ONE durable todo list
 

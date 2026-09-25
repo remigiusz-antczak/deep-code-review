@@ -148,6 +148,27 @@ installed). A `Regression-Of:` sha that does not resolve is reported
 - **Four-week baseline first.** With `--baseline-start`, a cut dated inside
   the first 28 days fires.
 
+## 5. Gate/acceptance/release tooling is itself a deliverable — version it, don't leave it in scratch
+
+The tooling that *proves* a release is safe — a merge/train orchestrator, a duplicate-detector, an acceptance
+suite, a release-candidate script, load-test tooling — is as load-bearing as the feature code it gates, and cuts
+the same corner when it lives only in a session-scoped temp/scratch directory: no review, no commit history, no
+tests, and it disappears the moment the session or machine restarts. One observed run: a post-mortem inventory
+found every piece of tooling that had gated that night's merges — the merge/train orchestrator, the
+duplicate-detector, a visual-diff pairing tool, a test-queue manager, a full multi-persona acceptance suite
+(roughly 1,800 lines), and the release-candidate script (roughly 1,000 lines) — living only under a session-scoped
+temp path; one contributor had three separately hand-maintained copies of part of it across different working
+directories.
+
+- **Version it before or alongside the release it gates** — the repository, with its own tests and a short
+  README/usage note — same bar as product code, not a personal scratch copy.
+- **"The thing that proved this release lives only in a temp directory and disappears on restart" is a finding
+  worth raising on its own**, independent of whatever the tooling was checking: a reviewer looking at the shipped
+  release otherwise has no way to see what the acceptance run that gated it actually checked.
+- **Two sessions independently building overlapping tooling is itself the signal** the tool belongs in the repo:
+  hand-synced copies drift from each other, and drift here is drift in the thing everyone trusted to say "safe to
+  ship."
+
 ## Related
 
 - Claimed vs enforced grading for each mechanism: `host-enforcement.md`.

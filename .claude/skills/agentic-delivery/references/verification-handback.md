@@ -9,6 +9,23 @@ pointer to a section not in this file resolves through that index.
 
 ---
 
+## Confirm a reported gap exists in the code before briefing a fix lane from it
+
+A peer or the owner reporting a gap from the **running app** ("this editor doesn't autosave") is a lead, not a
+confirmed defect — the report names a symptom observed at one entry point, and the conductor briefing a fix lane
+straight from it skips the same evidence step *An acceptance criterion with no test is `unverified`* already
+requires on the review side (`roles.md`). One observed run: a conductor briefed a fix lane from exactly this kind
+of report; the lane spent about 40 minutes and found the named component already autosaved (restore on reopen,
+save on keystroke, clear on submit, all pinned by tests) — the report had most likely described a different entry
+point or a transient state.
+
+- **Spend one search before dispatch.** Grep the named component for the feature's storage key, hook, or handler
+  — cheap, and it turns the brief from an adjective ("it's missing") into evidence.
+- **Brief the lane with that evidence, not the raw report:** `"absent: no reference to <X> in <Y>"`, or
+  `"present in <Y>; reproduce the failing entry point first"` — never the bare complaint.
+- A lane that opens by **reproducing** the gap is cheap regardless of outcome. A lane that opens by **building the
+  fix** can burn its whole budget proving there was nothing to fix.
+
 ## Delegate visual / parity work by measured number, not adjective
 
 A qualitative brief for visual/parity work handed to sub-agents ("make this match that") does not converge: each

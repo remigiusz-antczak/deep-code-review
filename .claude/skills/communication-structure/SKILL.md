@@ -9,7 +9,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.2.0"
+  version: "1.2.1"
 ---
 
 # Communication structure
@@ -37,7 +37,12 @@ shorthand. This is about shape and length, not vocabulary. Lookup table:
 - **Their next action, not your process.** The reader is overloaded and mid
   context-switch. Give them what changes what they do next; drop the
   reasoning trail that got you there.
-- **Numbers over adjectives.** "40s to 6s" beats "significantly faster."
+- **Numbers over adjectives.** "40s to 6s" beats "significantly faster." Every headline metric states the
+  **exact measured value and the exact target on the same line** (`X / Y`, or `X of Y`), computed at report time,
+  not asserted from memory or rounded toward the desired outcome — "the vast majority" of a target where the
+  exact figure is under two-thirds of it is not a rounding, it is a flattering misstatement. A status that uses
+  only descriptive language ("mostly," "on track," "nearly there") with no paired numbers is incomplete. If the
+  exact number is not known, say so — never approximate favorably.
 
 ## Deliverables, not just messages
 
@@ -101,3 +106,10 @@ though it might just be a caching thing. Let me know if this is known or if
 you want me to dig deeper."
 After: "The 'Next' button is disabled but styled identically to the active
 one — looks clickable, does nothing. **Fixing now; no decision needed.**"
+
+**Progress status, exact vs. flattering.**
+Before: "Strong progress on the backlog this week — we've closed the vast
+majority of the open items and are nearly done."
+After: "**<closed> / <total> backlog items closed.** Remainder listed below,
+owner-blocked ones flagged." (the real counts go in place of the
+placeholders — never a rounded-up or descriptive-only substitute for them)

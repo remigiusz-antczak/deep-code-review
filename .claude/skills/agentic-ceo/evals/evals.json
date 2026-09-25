@@ -178,6 +178,16 @@
         "Holds the remaining items with a visible state instead of dropping them",
         "Uses no 'calm down' / 'relax' or narration of the owner's feelings"
       ]
+    },
+    {
+      "id": "owner-ask-fidelity-backlog-over-mechanics",
+      "prompt": "This week: 12 lanes merged, all gates green. In passing, the owner says 'this whole thing feels chaotic.' A teammate proposes spawning a lane to audit how many backlog items are stale. What does the weekly status report lead with, and what triggers a new lane?",
+      "expected_output": "Report backlog items closed / total outstanding above the lane/merge/gate count; a high-throughput, low-closure run is flagged, not credited. The owner's bare complaint (not a request) is restated as a scoped ask and confirmed, or filed as a backlog candidate, before it becomes a lane. The proposed audit lane is only spawned once a named decision is waiting on its number.",
+      "expectations": [
+        "Leads the status with backlog-closed/total-outstanding, not lane/merge/gate counts alone",
+        "Treats the owner's 'feels chaotic' remark as a signal requiring restate-and-confirm (or backlog filing), not an automatic spawn",
+        "Declines or defers the proposed audit lane absent a named pending decision waiting on its number"
+      ]
     }
   ]
 }

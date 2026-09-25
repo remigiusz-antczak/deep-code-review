@@ -42,6 +42,14 @@ Read this when the target or diff fetches data for a view: dependent requests on
   instance**. The coalescing itself is the **de-dupe / single-flight** mechanism from `performance-db-cost.md`
   (External calls, and the cache-expiry stampede) applied one layer out — at the client component tree rather
   than a server cache.
+- **A reusable component that owns its per-item data fetch is fine mounted once and an N+1 when a caller
+  mounts it per row.** Check **every call site** of a shared component with a private fetch hook: can it mount
+  many times on one page, and does the request count scale with that? One observed run: 47 separate requests
+  to one per-item endpoint from a single page (counted by decoding each request's parameters, since a raw count
+  can double under a dev-mode double render). **Fix — shared-instance prop with private-fetch fallback:** an
+  optional shared-data prop fed by one batched fetch, with the private fetch kept as the default, so
+  single-mount callers are unchanged. Distinct from the
+  singleton-read-hook bullet above, where every mount wants the *same* value (fix: dedup/cache).
 - **A fetch already collapsed to one request behind a shared hook/Provider is still issued again by an
   always-mounted consumer that kept its own raw fetch of the same URL.** Once the identity / notification /
   settings endpoint is lifted behind the single Provider/Context or request-deduping cache from the bullet

@@ -44,6 +44,23 @@ query is a named failure mode, not a hypothetical one. **Pilot before full fan-o
 batch, run a handful of lanes first, fix what the pilot exposes, then commit the rest of the width — cheaper
 than discovering a bad task boundary after the full width is already running.
 
+**Cap fan-out width at the codebase's editable seams, not machine headroom alone.** The probe above sizes width
+from RAM/CPU; that ceiling is silent about how many independently-editable regions the *planned work* actually
+touches. When most of the plan concentrates on a handful of large, shared files, lanes collide on those files
+regardless of headroom — merge conflicts, dedicated conflict-resolution lanes, repeated batch/train
+re-verifications of work already checked once. One observed run: a fan-out sized to a double-digit lane count on
+available memory, where a large share of those lanes targeted one of a handful of large shared files, producing
+repeated conflicts and forcing several full batch re-verifications of the same integration branch before it
+landed — cost the memory-only sizing never anticipated. Before sizing a wide fan-out, count the planned work's
+distinct files/modules (weighted by how many lanes target each) and cap width at
+**min(editable seams, machine headroom)**, not headroom alone. Where the plan needs more lanes than a shared file
+can support, **split that file first** with a dedicated pure-move/no-op lane (*Split a shared hand-edited file
+before fanning out*, below) and land it ahead of the fan-out, rather than accepting collisions as parallelism's
+cost. Worked example: a plan lists a dozen fixes, but seam-counting shows most of them land in the same two
+shared files — correct sizing narrows the fan-out to one lane per shared file (serializing the fixes that
+target it) instead of one lane per fix, and inserts a split-first lane ahead of the fan-out for the file with
+the most collisions.
+
 ## Escalate a lane, don't just retry it
 
 **Escalate a lane, don't just retry it.** After two equivalent failures on the

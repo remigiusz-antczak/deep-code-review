@@ -127,6 +127,30 @@ computed against one base head, consumed against another — except the moving h
 not a gate's diff. A fleet coordinator applies this whenever it batches merges; `agentic-delivery`'s
 `merge-queue-worktrees.md` cross-references here rather than restating it.
 
+**A stale CONFLICTING is a cached-view claim, not ground truth — verify locally before trusting it, and clear
+it without a full re-run when nothing actually changed.** A forge can report a PR CONFLICTING against its
+target branch off an **older view** of that target, even though a local merge of the exact same two commits
+(PR head, target head) is clean — one observed run saw six PRs flip CONFLICTING at once right after their
+shared base PR merged, with no textual conflict locally and no custom merge driver involved. The usual fix —
+merge the target into the PR branch — creates a **new head commit**, so a merge-train proof already run
+against the old union (Merge trains, above) no longer names that commit, tempting
+either a full re-run or a trust-the-refresh shortcut. Neither is necessary: prove the refreshed head produces
+the **identical tree** to the already-tested union candidate —
+
+```
+git merge-tree --write-tree <target-branch> <new-head>   # tree id the refresh would produce
+git rev-parse <tested-union-commit>^{tree}                # tree id the gates already tested
+```
+
+Equal tree ids mean the refresh changed nothing the gates didn't already see — the earlier proof still holds for
+**content-only** gates (tests, lint, build), no re-run needed there. A gate that reads **commit metadata** —
+trailers, message lints, signer checks — still runs against the **new head**: the tree comparison says nothing
+about the commit object wrapping it. Record the refreshed head's receipt as **both tree ids plus the new head
+SHA**, consistent with the pin-the-verdict-to-the-exact-SHA discipline above. Different tree ids mean real
+content changed and a new union must be tested. Use the same comparison to decide whether a refresh-only push
+(clearing a stale flag, not resolving a real conflict) needs re-verification at all, instead of defaulting to a
+full gate re-run.
+
 ### A finished check's green can be stale off a prior evaluation — confirm it ran against the current head, and know each gate's trigger model
 
 A green that already **finished** isn't durable either — the reviewed object can change under it, so the check

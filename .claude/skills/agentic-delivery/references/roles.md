@@ -166,7 +166,21 @@ multi-agent build from hallucinating a plausible-but-wrong feature (MetaGPT).
   original signal) or `deferred: <reason>`. It is the product analogue of the
   review's coverage ledger — an item that is silently dropped is the failure this
   map exists to make visible. "We shipped something" is not "we closed the
-  signal"; only a verified entry closes it.
+  signal"; only a verified entry closes it. **A `deferred` label is a reported
+  decision, not an internal one** — labeling an ask `deferred` in the map without
+  naming it to the owner, with a reason, in the same cycle it was deferred, is a
+  silent drop wearing the coverage map's own vocabulary: from the owner's side
+  nothing happened and nothing was said. One observed run: a sizeable share of an
+  owner's asks were internally marked `deferred` over several sessions, and when
+  the owner asked for a status of everything they had requested, most of that
+  deferred set had never been mentioned to them, and several had no plan to be
+  revisited at all. Surface every newly-`deferred` row to the owner in the cycle
+  it changes state, with the reason and, when possible, an expected revisit
+  point; a standing, owner-visible list of everything currently `deferred` is
+  part of the routine status report, not a separate audit the owner has to
+  request. *Worked example:* "deferring the export-format ask — waiting on the
+  billing-schema decision, will revisit after that lands" is surfaced in-cycle,
+  the opposite of a `deferred` row that only ever exists in the map file.
 - **Owner-collected feedback and current shipped functionality outrank an
   abstract design spec — precedence is stable brief to merge.** When a
   design-spec review flags that a shipped feature (built from a real owner

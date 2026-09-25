@@ -249,6 +249,26 @@ against that exact head SHA, and **never** honors a `[skip ci]` commit
 message on the ref main CI protects (a skip-ci merge into a protected branch
 defeats the backstop main CI is there to be).
 
+**Hosted CI that cannot actually block a merge is pure cost — verify branch protection before trusting it as a
+gate.** A workflow running on every push is spend with zero enforcement value if nothing on the host actually
+requires it to pass before a merge lands: no branch-protection rule naming it as a required check, so a red run
+never stops anyone. One observed run: roughly 18,000 CI runs over about 25 days with no branch protection
+configured; in one 24-hour window only about 25 of 1,000 queued jobs actually started before the account's CI
+spend was refused, and disabling workflows one at a time still left two platform-injected default workflows
+running. Query the host's actual branch-protection/required-checks state before trusting a green workflow as a
+gate — a workflow *existing* and a workflow *enforced* are different claims (the Protocol / Host-enforced split
+above). The first fix is to **make it a required check** — add the workflow to branch protection so a red run
+actually blocks the merge; that alone converts spend into enforcement, no disabling needed. Only when the
+workflow genuinely cannot be made to gate (no branch-protection hook available, or the owner declines) does
+disabling apply, and even then **only the gating/test workflows** — leave release, deploy, and security-scan
+workflows running unless the owner says otherwise, since those carry value beyond blocking a merge. Disable
+**at the repo level, with owner authorization (below)**, not per-workflow — check for platform-injected default
+workflows too, since a per-workflow disable can miss them — and replace the check with a **local QA receipt
+bound to the merged PR's exact head SHA at merge time** (the `Verify:`-line discipline in
+`verification-handback.md`, applied to the merge gate itself), never a hosted run nobody is
+required to wait for. Disabling a repo-level workflow is a shared-state, hard-to-reverse change —
+confirm with the owner before disabling, per the confirm-before-destructive-action rule.
+
 **Removing hosted CI from an integration branch, and posting required
 statuses under a separate identity, both need the repo owner's explicit
 authorization and owner-held tokens** — an agent proposes this profile and

@@ -3,6 +3,35 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.459.0] — 2026-09-25
+
+### Added
+- Owner-facing delivery: a deferred ask is named to the owner, with a reason, in the cycle it was deferred, and a standing "currently deferred" list is part of routine status (#1187). An orchestrator reports backlog closed against total, not lanes or merges (#1181). A complaint is restated as a scoped ask, not auto-spawned into lanes (#1182). A measurement lane needs a named pending decision (#1184). Status gives the exact number against its target (#1185).
+- Delivery mechanics: recurring loops read the delta since the last tick, replacing the "re-read each turn" default (#1186). Fan-out width is min(host headroom, editable seams) (#1183). Confirm an observed gap in code before briefing a fix lane (#1172). Release-proving tooling is versioned, not left in scratch (#1173). CI that cannot block merges is switched off, with a local receipt bound to the head SHA (owner authorization still required). Worktree hygiene and a safe prune. An empty gate baseline reports UNVERIFIED, not a pass.
+- Review: a merge-tree comparison proves a re-merged PR head and clears a stale "conflicting" status without full re-verification (#1171, #1176). A clean-tree type-check (no prior build) cannot see framework-generated route types, so a production build is its own gate (#1174). Click-to-edit wrappers treat nested rich-text editors as interactive (#1175). Self-fetching components become an N+1 when mounted per row (#1177). Locators keyed to visible row text break under edit mode (#1178). A control-inventory gate proves presence, not behaviour; add an interaction pass (#1179). Overflow audits are scoped to real page scroll or visible clipping (#1180). Structural test slices run from their own marker to the next. Always-loaded rules files stay invariant-only and capped. A new gate states its false-positive rate on HEAD.
+- 21 new evals across agentic-ceo, agentic-delivery, communication-structure and deep-code-review; communication-structure 1.2.1.
+
+### Changed (size budgets)
+- size-budget-raise: .claude/skills/agentic-ceo/references/chaos-playbook.md 3825→7573 orchestrator backlog and owner-complaint doctrine (#1181, #1182, #1184)
+- size-budget-raise: .claude/skills/agentic-delivery/references/cost-quality-guardrails.md 9452→11202 versioned release tooling (#1173)
+- size-budget-raise: .claude/skills/agentic-delivery/references/fanout-host-sizing.md 43583→45230 fan-out sized to editable seams (#1183)
+- size-budget-raise: .claude/skills/agentic-delivery/references/gate-epistemology.md 6114→7641 empty baseline reads UNVERIFIED
+- size-budget-raise: .claude/skills/agentic-delivery/references/host-enforcement.md 27912→29937 CI that cannot gate is switched off
+- size-budget-raise: .claude/skills/agentic-delivery/references/merge-queue-worktrees.md 59144→61329 worktree hygiene and safe prune
+- size-budget-raise: .claude/skills/agentic-delivery/references/roles.md 23958→25102 deferred asks reported to the owner (#1187)
+- size-budget-raise: .claude/skills/agentic-delivery/references/unattended-trackers.md 43717→45015 delta-since-last-tick loop reads (#1186)
+- size-budget-raise: .claude/skills/agentic-delivery/references/verification-handback.md 52436→53801 confirm a gap before briefing a fix lane (#1172)
+- size-budget-raise: .claude/skills/communication-structure/SKILL.md 5269→6208 exact number against target (#1185)
+- size-budget-raise: .claude/skills/deep-code-review/references/docs-and-dx.md 22513→23466 always-loaded rules file cap
+- size-budget-raise: .claude/skills/deep-code-review/references/domain-k.md 4417→4865 new gates state false-positive rate
+- size-budget-raise: .claude/skills/deep-code-review/references/merge-operations.md 61648→63549 merge-tree proof for re-merged and stale-conflict PRs (#1171, #1176)
+- size-budget-raise: .claude/skills/deep-code-review/references/method-situational.md 20804→22082 production build as a separate gate (#1174)
+- size-budget-raise: .claude/skills/deep-code-review/references/testing-situational.md 25395→26399 marker-to-next-marker structural slices
+- size-budget-raise: .claude/skills/deep-code-review/references/testing-ui.md 13733→16110 text-keyed locators and loud source readers (#1178)
+- size-budget-raise: .claude/skills/deep-code-review/references/ux-interaction.md 14023→16270 nested editors in click-to-edit; presence vs interaction gates (#1175, #1179)
+- size-budget-raise: .claude/skills/deep-code-review/references/ux-sweep.md 18229→20273 scoped overflow audits (#1180)
+- size-budget-raise: .claude/skills/deep-code-review/references/web-fetch.md 22040→22842 per-row N+1 in self-fetching components (#1177)
+
 ## [1.458.0] — 2026-09-24
 
 ### Added

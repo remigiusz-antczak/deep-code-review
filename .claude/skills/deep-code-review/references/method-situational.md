@@ -71,6 +71,20 @@ Read this when `method.md` routes here: a gate verdict is disputed, a green, CI 
   module** (a helper, constant, or classifier beside the handlers in a Next.js App
   Router `route.ts`) makes the generated validator reject the module — move pure
   logic to a sibling module.
+- **A standalone type-checker structurally can't see a framework's build-time-generated
+  constraint types — a real production build is a separate, required gate, not a
+  substitute for `tsc --noEmit`.** Distinct from the idempotency bullet above: that one
+  is about *ordering* (build-then-typecheck poisons a later run via a stray export);
+  this one is about a clean tree with no prior build — the type being checked against
+  **only exists** once the framework's own build step generates it, so it is out of
+  scope for such a run — confirmed case: a Next.js App Router route handler's exported
+  signature (its second argument's shape) is checked against a type the framework
+  generates at build time, so this run cannot fail on a malformed handler
+  signature (one observed run: the error — `TS2344`, "does not satisfy the constraint" —
+  surfaced for the first time in the final release-candidate build, having passed every
+  merge-train union and PR gate that ran only `tsc --noEmit`). Any framework with a
+  build-time route/handler type-generation step is presumed to have the same gap. Gate
+  on a real production build in addition to the type-checker, not instead of it.
 - **Name *why* local and CI diverge — sources beyond the gate set.** (a)
   **Sharding / worker count** (the config-vs-baseline rule below): a spec order or a
   `--workers=1` fallback that never occurs under CI's sharded config. (b) **OS font

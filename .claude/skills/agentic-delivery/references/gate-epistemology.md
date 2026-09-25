@@ -47,6 +47,22 @@ Copied as principles, not as anyone's private playbook:
    earlier in the run (principles 9 and 11 apply the same discipline to a close and to the
    owner's rendered surface).
 
+## Principle 3, an empty-baseline case — a gate with nothing to check is not the same as a gate that checked and passed
+
+A gate that compares a run against a **baseline** (a ratchet, a pin count, a regression set) and finds the
+baseline **empty** — zero pins, zero prior entries — can read as green by the same code path a real pass takes,
+because "0 violations found" and "nothing was there to check" produce the identical exit code. That is principle
+3's *check could not run → `UNVERIFIED`* case wearing a passing gate's clothes: an empty baseline has not
+confirmed the thing it exists to confirm, it has confirmed there was nothing to confirm against. One observed
+run: only a design ratchet among a set of similar gates turned out to have zero pins, and it silently passed
+throughout. Treat a **never-populated** baseline as `UNVERIFIED`, not a pass: a gate whose baseline has never
+had entries must fail closed or flag itself explicitly, the same skip-loudly bar principle 5 already sets for a
+missing fixture, applied here to a baseline with nothing in it rather than a fixture that is absent. A baseline
+that was populated and has since been **drained to zero** is different — that is the ratchet's goal state
+(every pin fixed, every regression closed), and it is provable, not merely claimed: the history shows entries
+that reached zero over time rather than a baseline that was always empty. Distinguish the two before scoring a
+zero count: `UNVERIFIED` for never-populated, pass for drained-with-history.
+
 ## Principle 9 — closing or deleting shared state
 
 9. **Closing or deleting shared state needs evidence, not presumption** — the

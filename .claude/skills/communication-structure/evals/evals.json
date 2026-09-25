@@ -36,6 +36,16 @@
         "No abbreviated/caveman-style shorthand appears in the PR body",
         "The message still satisfies BLUF, one-ask and cut-on-sight rules"
       ]
+    },
+    {
+      "id": "exact-number-not-flattering-rounding",
+      "prompt": "Draft a weekly status. Real backlog closure this week: 18 items closed against a target of 30 items.",
+      "expected_output": "The headline states the exact measured value and exact target on the same line (18 / 30), computed at report time. No adjective ('strong progress', 'nearly there') substitutes for or rounds past the real number.",
+      "expectations": [
+        "States the exact measured/target pair (18 / 30), not a rounded or favorable approximation",
+        "Does not use descriptive-only language ('mostly', 'on track') in place of the paired numbers",
+        "If the exact number isn't known, says so rather than approximating favorably"
+      ]
     }
   ]
 }

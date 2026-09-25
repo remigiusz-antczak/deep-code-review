@@ -6447,6 +6447,116 @@
         "Explains the mechanism: Referer carries the full URL including query string cross-origin",
         "Gives both fixes -- tighten the policy AND stop placing the token in the URL -- not just one"
       ]
+    },
+    {
+      "id": "stale-conflicting-clear-via-merge-tree",
+      "prompt": "A hosting platform marks a PR CONFLICTING against its target branch. A local `git merge` of the exact same PR-head and target-head commits is clean, with no custom merge driver. What should the merge-train conductor do before re-running the full gate suite?",
+      "expected_output": "Treat the host's CONFLICTING as a cached-view claim, not ground truth -- verify locally first. Merge the target into the PR branch once to refresh the flag (creating a new head commit), then compare `git merge-tree --write-tree <target> <new-head>` against `git rev-parse <tested-union-commit>^{tree}` -- equal tree ids mean the refresh changed nothing the *content-only* gates (tests, lint, build) didn't already test, so those need no re-run. A gate that reads commit metadata -- trailers, message lints, signer checks -- still runs against the new head regardless, since the tree comparison says nothing about the commit object wrapping it. Different tree ids mean a real re-verification is required. Record the refreshed head's receipt as both tree ids plus the new head SHA. (merge-operations.md.)",
+      "expectations": [
+        "Names host-CONFLICTING-but-locally-clean as a stale cached-view, distinct from a real conflict",
+        "Gives the merge-tree-comparison technique as the way to decide whether re-verification is needed",
+        "Notes metadata-reading gates (trailers, message lints) still run on the new head even when tree ids match"
+      ]
+    },
+    {
+      "id": "tsc-noemit-misses-route-handler-constraint",
+      "prompt": "A Next.js App Router project's merge gate runs `tsc --noEmit` and treats a clean run as proof the framework build typechecks. A route handler's exported signature is malformed. Will the gate catch it?",
+      "expected_output": "No, and the gate is wrong to rely on `tsc --noEmit` alone for this. The route handler's signature is checked against a constraint type the framework generates only inside its own build step -- a clean-tree `tsc --noEmit`, with no prior build, cannot see that generated type, so it cannot fail on this class of error (observed: surfaced only as TS2344 during a real production build, after passing every merge-train union and PR gate that ran only `tsc --noEmit`). Require a real production build as a separate, required gate step for any framework with build-time route/handler type generation -- not a substitute for the type-checker, an addition to it. (method-situational.md.)",
+      "expectations": [
+        "States that tsc --noEmit cannot see build-time-generated route/handler constraint types",
+        "Explains why: the constraint type is generated only inside the framework's own build step, so a clean-tree/no-prior-build tsc run has nothing to check the signature against",
+        "Recommends a real production build as a required, separate gate step, not merely a nice-to-have"
+      ]
+    },
+    {
+      "id": "click-to-edit-skiplist-misses-nested-editor",
+      "prompt": "A click-anywhere-to-edit wrapper skips triggering edit-mode for clicks on links, buttons, and inputs. The field later grows an inline rich-text editor panel it renders once opened. A user clicks inside the open editor and it closes mid-edit. What's the fix, and how should the acceptance test for this field be written?",
+      "expected_output": "The skip-list only covers the field's read-state element types; it never grew to cover the contenteditable/rich-text region or the nested editor panel the field renders once opened, so a click or keystroke inside the open editor bubbles up and re-triggers the outer edit handler, closing it. Fix: extend the skip-list to cover every element type the field can render while being edited, not just its read-state elements. Separately, the acceptance test must perform the click that opens the field before typing into or asserting on it -- typing directly against a locator that bypasses the open step never exercises the bubbling path and cannot catch this regression. (ux-interaction.md, testing-ui.md.)",
+      "expectations": [
+        "Names the skip-list gap: covers read-state elements but not the field's open-state editor/contenteditable",
+        "States the fix as extending the skip-list to every element the field can render while open",
+        "States that the test must reproduce the open/click step before asserting, not shortcut to typing"
+      ]
+    },
+    {
+      "id": "reusable-component-owned-fetch-mounted-in-a-loop",
+      "prompt": "A card component fetches its own per-item reaction count on mount, documented as \"cheap, one extra request per detail page.\" It's then reused unchanged on a feed page that renders one card per row for a long list. What's the finding?",
+      "expected_output": "N+1 by mount count, not by query. The component's private fetch is fine at one mount per page; reused in a loop, it fires one request per mounted instance, scaling with list length instead of page count (one observed run measured 47 separate per-item requests from a single page load). Check every call site of a component with a private data-fetch hook, not just its own file, and ask whether request count scales with mount count. Fix: **shared-instance prop with private-fetch fallback** -- add an optional externally-supplied shared-data-instance prop, private fetch remaining the default fallback -- existing single-mount call sites are unaffected, loop call sites opt into one shared batched fetch. (web-fetch.md.)",
+      "expectations": [
+        "Identifies the pattern as N+1 scaling with mount count, not a query-level N+1",
+        "States that call sites, not just the component's own file, must be checked",
+        "Names the fix as \"shared-instance prop with private-fetch fallback\""
+      ]
+    },
+    {
+      "id": "locator-by-visible-text-breaks-under-edit-mode",
+      "prompt": "A spec reads a row's visible text, clicks an edit action, types a new value directly into a value locator without first clicking to open the field, then re-locates the row by its ORIGINAL visible text to assert the result. The row is now mid-edit and no longer shows that text. What's wrong with this spec?",
+      "expected_output": "Two separate defects. First, the spec skips the real open step (the click that opens the field) and types straight into a value locator, so it can never catch an event-bubbling regression in the open/close interaction. Second, re-locating the row by its original visible text breaks the moment the row's own edit mode replaces that text with an input/editor -- a false red, not a real regression. Fix both: perform the click that opens the field before typing or asserting, and locate by a stable identifier (data-test-id or the item's own stable id/version field) instead of visible text, addressing an already-open editor by its own container role/state rather than re-querying the original row. (testing-ui.md.)",
+      "expectations": [
+        "Flags the missing open/click step before typing, distinct from the locator issue",
+        "Flags the text-based locator as fragile against the component's own edit-mode re-render",
+        "Recommends a stable id/data-test-id locator and addressing the open editor by its own state"
+      ]
+    },
+    {
+      "id": "control-inventory-gate-green-control-nonfunctional",
+      "prompt": "A merge gate inventories rendered controls by accessible role/name and stays green. A picker control renders, reports itself enabled, and opens nothing when clicked. Was the gate wrong to pass this PR?",
+      "expected_output": "The gate did what it's for -- it proved the control still renders -- but that's not the same claim as \"the control works,\" and treating a green inventory gate as sufficient evidence a behaviour change is safe is the finding. \"Renders but doesn't work\" is a different bug class from \"was removed,\" and a presence/inventory gate is structurally blind to it. For any interactive surface, require both the inventory/presence check and a functional pass that actually invokes each changed control and asserts on its effect -- one does not substitute for the other. (ux-interaction.md.)",
+      "expectations": [
+        "States that a presence/inventory gate proves rendering, not functional correctness",
+        "Names \"renders but doesn't work\" as a distinct bug class from \"was removed\"",
+        "Requires both an inventory/presence check and a functional/interaction check, not either alone"
+      ]
+    },
+    {
+      "id": "unscoped-overflow-audit-false-positive-flood",
+      "prompt": "An automated responsive/overflow audit is delegated to a fast, cheap model with the prompt \"check every page for overflow issues.\" It returns 95 findings. What's the likely problem, and what should the audit's instructions contain?",
+      "expected_output": "Almost certainly a scoping gap, not a real defect count -- an unscoped audit run by a cheaper model interprets \"check for overflow\" maximally literally and reports every hidden, off-screen, or not-yet-revealed element as a defect (one observed run: 95 unscoped findings vs. zero real page-level scroll issues once scoping rules were applied to the same surface). Ship the audit with three rules written into its own instructions: count overflow only when it causes page-level horizontal scroll or clips content actually visible outside a designated scrollable container; exclude hidden/screen-reader-only elements; open click-to-reveal UI before judging its contents. This matters more, not less, when the audit runs on a cheaper/faster model. (ux-sweep.md.)",
+      "expectations": [
+        "Identifies the 95-finding result as a likely scoping problem, not a real defect count",
+        "States the three named scoping rules (page-level-scroll-or-visible-clip only; exclude hidden/sr-only; open click-to-reveal first)",
+        "Notes scoping matters more when the audit runs on a cheaper/faster model, and belongs in the audit's own instructions"
+      ]
+    },
+    {
+      "id": "source-text-tests-tax-a-file-split",
+      "prompt": "A 2,100-line page has dozens of tests that `readFileSync` the component and regex-check its source text. Splitting that file into smaller modules is proposed. What's the hidden cost, and what should the codebase have in place first?",
+      "expected_output": "Every source-text test hardcodes the file's path and often its byte layout, so splitting the file repoints every one of them even though the checked invariant didn't change (one observed run: 74% of a page's tests were source-text regexes; the split required repointing 32 of them). Put two things in place before splitting at scale: a shared source reader that throws loudly on a missing path (so a moved file fails every dependent check by name, not silently), and a unit-runner component-render loader as the on-ramp from source-text checks to real rendered-DOM assertions (measured: +0.8s per file, suite wall-time flat). Ratchet the source-text-test count against a stored baseline so it never rises on new work, without requiring an immediate rewrite of existing debt -- `scripts/source_scan_tests.py` has no baseline support today, so a wrapper that stores and diffs its finding count is to be built. (testing-ui.md.)",
+      "expectations": [
+        "Names the refactor-tax mechanism: source-text tests hardcode path/layout and break on file moves regardless of invariant change",
+        "Recommends a shared, loud-failing source reader as the fix for silent breakage on a moved file",
+        "Recommends ratcheting the source-text-test count (never rises), noting the baseline wrapper has to be built rather than already existing"
+      ]
+    },
+    {
+      "id": "structural-test-anchored-to-sibling-name",
+      "prompt": "A step's structural test slices its own section as \"everything between MY_MARKER and NEXT_STEP_MARKER\", naming the next step's own marker literally. A later PR renames that next step (no change to the step under test) and the structural test breaks. What's the defect and the fix?",
+      "expected_output": "The test's boundary depends on a name it doesn't own -- renaming an unrelated sibling shouldn't break a test for a step nobody touched. Fix: slice from the marker's own start to the next marker generically and positionally (\"the next heading\", \"the next structural boundary\"), never by a specific neighbour's literal name. Pass condition to check for: renaming any other step/section keeps the test green; only renaming or removing the step actually under test should break it. (testing-situational.md.)",
+      "expectations": [
+        "Identifies the root cause as the test naming an unowned neighbour's marker as its own boundary",
+        "States the fix as a positional/generic \"next marker\" slice, not a named-neighbour slice",
+        "States the pass condition: renaming an unrelated sibling must not break the test"
+      ]
+    },
+    {
+      "id": "always-loaded-rules-file-carries-stale-mechanism",
+      "prompt": "A project's `CLAUDE.md` has grown to ~800 lines, including a section describing a caching mechanism that was replaced by a different one three commits ago -- the old section was never deleted. What's the finding?",
+      "expected_output": "This file loads in full on every session, unlike a routed skill reference, so it needs a stricter size/staleness discipline: every stale section is a cost paid on every subsequent session until someone notices. Flag both the missing size/line cap and the specific stale section describing a superseded mechanism. Fix: keep the file to invariants over mechanism descriptions where avoidable, and require the PR that supersedes a mechanism to delete that mechanism's section from this file in the same PR, not as later cleanup. (docs-and-dx.md.)",
+      "expectations": [
+        "Names the always-loaded (every session) cost as distinct from a progressive-disclosure skill reference",
+        "Flags the specific stale section describing a superseded mechanism as a finding on its own",
+        "States the fix: same-PR deletion when a mechanism is superseded, plus a stated size/line cap"
+      ]
+    },
+    {
+      "id": "new-gate-ships-without-false-positive-rate",
+      "prompt": "A PR adds a new dead-export detection gate to CI. The PR description explains the detection logic (unreferenced exports via static analysis) but states no false-positive rate. Should it be approved as-is?",
+      "expected_output": "No -- detection logic being sound in the abstract doesn't mean the gate is usable on this codebase; it needs to be run once against HEAD and its false-positive rate stated in the PR (one observed case: a naive dead-export scanner had a 93% false-positive rate). Require the PR to state the measured false-positive rate from a run against HEAD, target <=10%, before landing the gate -- a gate without that number is unproven regardless of how correct its logic reads. (domain-k.md.)",
+      "expectations": [
+        "States that detection-logic soundness alone doesn't prove the gate is usable",
+        "Requires a measured false-positive rate from a run against HEAD in the PR description",
+        "Names a target ceiling (<=10%) for that rate"
+      ]
     }
   ]
 }
