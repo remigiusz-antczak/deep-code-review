@@ -223,6 +223,14 @@ _YAML_ARGS_KEY_RE = re.compile(r"^\s*(?:-\s+)?args\s*:(.*)$")
 _STDERR_DEVNULL_RE = re.compile(r"2>\s*/dev/null|2>&-|&>\s*/dev/null")
 _SED_SCRIPT_START_RE = re.compile(r"^['\"]?[sy][/#|,;]")
 
+# BSD/macOS `env` requires every option before the first NAME=value
+# assignment; an option placed after one is read as the utility's own name
+# instead and fails loudly (rule ENV_OPTION_AFTER_ASSIGNMENT; verified on
+# macOS: `env A=1 -u B true` -> "env: -u: No such file or directory", exit
+# 127). Some implementations (e.g. GNU env) accept the interleave, which is
+# why the script that was authored and tested there ships broken.
+_ENV_ASSIGN_RE = re.compile(r"^[A-Za-z_]\w*=")
+
 # lsof short options that take a required / optional argument (the rest of the
 # cluster, or for a required one the next token when the cluster ends there).
 _LSOF_REQ_ARG = set("AcdDekmpu")
@@ -277,6 +285,14 @@ _MSG = {
         "flag errors as invalid, the error is discarded, and the check reads "
         "as a false negative (no match) fleet-wide instead of erroring "
         "(lang-shell.md)"
+    ),
+    "ENV_OPTION_AFTER_ASSIGNMENT": (
+        "env option placed after a NAME=value assignment -- BSD/macOS env "
+        "requires every option before the first assignment and reads a "
+        "later one as the utility's own name instead, failing loudly there "
+        "(some implementations, e.g. GNU env, accept the interleave, so the "
+        "script only breaks on BSD/macOS); put options first: "
+        "`env -u B A=1 cmd`, not `env A=1 -u B cmd`"
     ),
 }
 
@@ -745,6 +761,37 @@ def _gnu_only_flag(cmd: str, args: list[str]) -> str | None:
     return None
 
 
+def _env_option_after_assignment(text: str) -> bool:
+    """True when `env` is invoked with a `NAME=value` token followed later by
+    an option (`-u`, `-i`, `-S`, ...) -- BSD/macOS `env` stops parsing options
+    at the first assignment and reads the option as the utility name instead,
+    failing loudly there. Some implementations (e.g. GNU `env`) tolerate the
+    interleave, so this breaks only on BSD/macOS (rule
+    ENV_OPTION_AFTER_ASSIGNMENT)."""
+    for seg in _segments(text):
+        toks = _tokens(seg)
+        idx = _command_at(toks, ("env",))
+        if idx < 0:
+            continue
+        seen_assign = False
+        skip_next = False
+        for t in toks[idx + 1:]:
+            if skip_next:
+                skip_next = False
+                continue
+            if t.startswith("-"):
+                if seen_assign:
+                    return True
+                if t in ("-u", "-S", "-P", "-C", "-L"):
+                    skip_next = True  # these take an argument; don't read it as the utility name
+                continue
+            if _ENV_ASSIGN_RE.match(t):
+                seen_assign = True
+                continue
+            break  # utility name reached; env's own arg list ends here
+    return False
+
+
 def _gnu_flag_silenced_stderr(text: str) -> bool:
     """True when a logical line invokes `find`/`stat`/`date`/`sed` with a
     verified GNU-only flag (`_gnu_only_flag`) AND pipes that same command's
@@ -927,6 +974,9 @@ def _scan_text(
 
         if _gnu_flag_silenced_stderr(text):
             add(li, "GNU_FLAG_SILENCED_STDERR")
+
+        if _env_option_after_assignment(text):
+            add(li, "ENV_OPTION_AFTER_ASSIGNMENT")
 
         if (is_hook and _reaper_invocation(text) and not _REAPER_SAFE_FLAG_RE.search(text)
                 and not (is_yaml and _yaml_sibling_dry_run(raw, logical[li][0]))):
@@ -1153,6 +1203,14 @@ _CASES: tuple[tuple[str, str, str, int, str], ...] = (
      "find . -newermt '-10 minutes' | wc -l 2>/dev/null\n", OK, ""),
     ("gnu-flag-devnull-on-other-command-ok", "a.sh",
      "find . -newermt '-10 minutes' | wc -l; echo done 2>/dev/null\n", OK, ""),
+    # ENV_OPTION_AFTER_ASSIGNMENT: an option after a NAME=value fires; every
+    # option before the first assignment (GNU or BSD-safe order) stays clean.
+    ("env-option-after-assignment-fires", "a.sh",
+     "env A=1 -u B cmd\n", FAIL, "ENV_OPTION_AFTER_ASSIGNMENT"),
+    ("env-options-first-ok", "a.sh",
+     "env -u B A=1 cmd\n", OK, ""),
+    ("env-option-arg-not-mistaken-for-cmd-fires", "a.sh",
+     "env -u B A=1 -u C cmd\n", FAIL, "ENV_OPTION_AFTER_ASSIGNMENT"),
 )
 
 

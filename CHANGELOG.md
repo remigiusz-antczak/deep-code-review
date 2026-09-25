@@ -3,6 +3,32 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.460.0] — 2026-09-25
+
+### Added
+- Delivery, from field feedback: lanes bootstrap gitignored assets into a fresh worktree before judging lint or types. A brief never asks a read-only agent type to write a file. Plans classify each feature as provider or consumer before lanes start. One browser-test run per worktree, with a lock and a timeout. A moved base is merged, never rebased, and `git merge-base --is-ancestor` exposes a rewrite. Two stacked lanes may share a file when their changed files don't overlap, or when the parent lane is frozen.
+- Review: filters on unauthenticated paths are allowlists. Never suggest a command that prints a secret into the session. An authenticated load test proves its identity resolved before measuring, and the harness itself fails closed on an auth failure. Perf gates cover every production storage adapter and judge heap slope. Leak and perf gates run the deploy's runtime major. Streaming heap-snapshot analysis is doctrine — guidance for a multi-GB snapshot; no analyzer ships with the skill. Request-scoped fire-and-forget async pins memory. Lint counts compare full scope against the base head, and a cap is never raised in a feature change. e2e uses real pointer input, not programmatic clicks. Tests mock system probes and pin commit samples.
+- `reaper_lint.py` `ENV_OPTION_AFTER_ASSIGNMENT`: `env A=1 -u B cmd` exits 127 on BSD/macOS. Per `lang-shell.md` guidance, a harness that boots a child fails fast on its early exit and prints the child's log tail.
+
+### Changed
+- The skip-CI marker is keyed to the CI state. The commit-body cap exempts required trailer keys only. A check that cannot run locally is an evidenced, logged skip that stays UNVERIFIED, and the deploy gate blocks release until it passes.
+- 20 new evals (agentic-delivery 9, deep-code-review 11).
+
+### Changed (size budgets)
+- size-budget-raise: .claude/skills/agentic-delivery/references/cost-quality-guardrails.md 11202→12552 commit-body cap exempts required trailer keys
+- size-budget-raise: .claude/skills/agentic-delivery/references/dev-env-ownership.md 28376→32418 worktree asset bootstrap, stacked-lane file-overlap exception, per-worktree browser-run lock
+- size-budget-raise: .claude/skills/agentic-delivery/references/gate-epistemology.md 7641→9016 full-scope lint counts; evidenced logged skip stays UNVERIFIED
+- size-budget-raise: .claude/skills/agentic-delivery/references/host-enforcement.md 29937→31961 skip-CI marker keyed to CI state
+- size-budget-raise: .claude/skills/agentic-delivery/references/merge-queue-worktrees.md 61329→62783 merge a moved base; ancestry check for rewrites
+- size-budget-raise: .claude/skills/agentic-delivery/references/roles.md 25102→25910 brief matches agent toolset; provider vs consumer scoping
+- size-budget-raise: .claude/skills/deep-code-review/references/appsec-crypto.md 9664→10702 no secret-printing commands in session
+- size-budget-raise: .claude/skills/deep-code-review/references/appsec-edge.md 10509→13336 allowlist filters on unauthenticated paths; harness must fail closed on auth failure
+- size-budget-raise: .claude/skills/deep-code-review/references/concurrency-shared-state.md 32992→36269 request-scoped fire-and-forget async; heap slope and streaming-analysis doctrine
+- size-budget-raise: .claude/skills/deep-code-review/references/lang-shell.md 7046→7968 env option order; fail fast on child early exit
+- size-budget-raise: .claude/skills/deep-code-review/references/release-engineering.md 20792→22294 authed load tests prove identity; every adapter; deploy runtime major
+- size-budget-raise: .claude/skills/deep-code-review/references/testing-situational.md 26399→28808 mocked system probes; pinned commit samples; changed-files-scoped lint zero output
+- size-budget-raise: .claude/skills/deep-code-review/references/testing-ui.md 16110→17432 real pointer input, no programmatic clicks in e2e (jsdom/userEvent caveat, scoped grep)
+
 ## [1.459.0] — 2026-09-25
 
 ### Added

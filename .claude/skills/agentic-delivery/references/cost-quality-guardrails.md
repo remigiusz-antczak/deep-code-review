@@ -66,6 +66,20 @@ the reviewer's receipt (`verification-handback.md`). This repository runs the
 range gate in CI as advisory, and its release squash commits carry both
 trailers.
 
+- **A terse-commit convention caps prose, never the required trailers.** This skill puts several **required**
+  trailer lines on a commit — `Tests: X/X` (`roles.md`), `Regression-Of:` / `Severity:` / `Cost-Cut:` (the
+  escaped-defects section below), and the tier trailers this section gates (`Model:`, `Reviewed-By:`). A
+  separate, generic terse-commit convention (a fixed line count for the whole body) collides with that
+  requirement: one observed run exceeded a 5-line commit-body cap roughly 30% of the time trying to fit the
+  required trailers in. Fixing this at the convention layer, not by dropping a trailer: **a line-count cap on a
+  commit body counts prose only — exactly the trailer keys this skill requires (`Tests:`, `Regression-Of:`,
+  `Severity:`, `Cost-Cut:`, `Model:`, `Reviewed-By:`) are additional and never counted against it; no other
+  line earns the exemption.** State the split explicitly wherever the cap is configured (prose lines vs. those
+  named trailer lines), so a commit that is short on rationale but carries every required trailer still passes,
+  and a commit padded with trailers is never penalized for "exceeding" a cap meant for prose. Terseness on the
+  prose side follows the same billed-output logic as a lane's handback: `fanout-host-sizing.md`'s *A lane's own
+  handback is billed output* heading.
+
 ## 2. Lane caps — cap what the lane can observe
 
 A lane cannot see its own token count while it runs; `token_report.py` reads

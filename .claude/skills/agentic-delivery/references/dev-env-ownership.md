@@ -29,6 +29,19 @@ mechanical (install, don't link). Reserve the symlink for edit-only fast-tier la
 under-installed symlink, is the former, never a content finding (the gate-epistemology distinction, principle 3
 above).
 
+## A fresh worktree needs its gitignored assets bootstrapped, not just its dependencies
+
+The dependencies-directory copy above is one instance of a wider gap: a fresh worktree starts with **only
+tracked files** — anything the repo gitignores (installed deps, a vendored UI kit, a local allowlist, an `.env`)
+is **absent** until something puts it there, and "clone the branch" does not. One observed run: 3 of 6 lanes hit
+missing gitignored assets; a type-aware lint rule then fired on the resulting gap (7 false errors across 2
+files), and one lane misread the failure as **"pre-existing on main"** and stopped rather than bootstrapping —
+10-20 minutes lost per affected lane. **Rule: a bootstrap script copy-on-write-copies every gitignored asset a
+lane needs (deps, vendored kit, allowlist, env) from a known-good tree, and every lane runs it before its first
+gate** — not a per-lane ad hoc `cp`. **Check:** lint run unchanged in the fresh worktree must equal lint run in
+the main checkout — a mismatch means an asset is still missing, not that main was already red (the misdiagnosis
+this run made).
+
 ## Serve and commit from separate trees — a long-running process dirties a gate-asserted config
 
 A long-running process — a dev server, a codegen/asset watcher — that **rewrites a tracked config file on boot**
@@ -245,6 +258,21 @@ this") **before** opening the worktree, never after — take-then-announce races
 land every instance in one lane, one follow-up confirms none remain (its full instance set is scoped
 once, `deep-code-review` `method.md` Phase 4).
 
+**Another mis-fire: "one writer per file" reads a legitimate stacked pair as a collision.** A child lane
+branched off a parent's local ref (`SKILL.md` *A stacked/child lane branches off the parent's LOCAL ref*)
+necessarily builds on files the parent already wrote and has not yet merged — read literally, "one writer per
+file" flags that as two writers on the same file and blocks it, even though the stack is an authorized,
+sequenced hand-off, not a race. Scope the rule to **concurrent, unordered** writers: a stacked child writing
+*after* the parent's local commit it branched from is one writer at a time on that history. This is a narrow
+exception to SKILL.md's "One writer per file", not a repeal of it: it applies only when **either** (a) the files
+the parent changed after the child's base — `git diff --name-only <child-base>..<parent-tip>` — have **no
+overlap** with the files the child changes, so the child never writes a file the parent touched after the fork,
+**or** (b) the parent is frozen (no further commits expected before the child merges), so there is no moving
+target left to collide with. Gate on ancestry first (the child's base commit is an ancestor of the parent's
+current tip — genuinely building on the latest parent state, not a stale fork of it), then on that overlap check
+or frozen-parent condition — ancestry alone is not enough if the parent is still actively rewriting the same
+files the child just built on.
+
 **The converse over-caution: a shared artifact in flight blocks only the lanes that touch it.** Withholding
 *every* lane because one in-flight branch edits a shared file (a design-token file, a lockfile, a config) is the
 mirror error — disjoint-surface lanes that never touch that artifact are safe to run in parallel, and pausing
@@ -281,7 +309,25 @@ failing open — #936); resume UI lenses once the redesign merges. Distinct from
 *route the peripheral fixes now, hold the contested ones* — routes **fix** lanes by file; this repoints
 **review** lenses off a contested *dimension* onto an uncontested one.
 
-**A commit or PR attribution trailer names the agent that actually did the work.** Under a shared commit
+## N parallel test-runner invocations sharing one worktree's artifact/state dir collide — one worktree gets one invocation
+
+*One writer per worktree* (`SKILL.md`) stops two lanes writing the same **tracked** files; it says nothing about
+two invocations of the **same** lane's test runner writing the same **untracked** artifact/state dir (a
+browser-test output folder, a screenshot dir, a lockfile the runner itself manages) inside one worktree. One
+observed run: 13 parallel browser-test runs launched in a single worktree produced 6 false failures from
+shared-artifact collisions, and the failures were misattributed to another agent's cleanup rather than to the
+collision. **Rule: run at most one test-runner invocation per worktree at a time; when more than one genuinely
+must share a tree, give each invocation its own unique output/artifact dir** (never the runner's default shared
+path). **Check:** a per-worktree lockfile taken before a test-runner invocation starts and released after —
+a second invocation finding the lock held waits or fails closed instead of racing into the same dir. Give the
+lock a timeout (a held-past-timeout lock is stale, not necessarily abandoned): a second invocation that hits a
+stale lock **reports it** (which invocation/PID holds it, how long) rather than deleting it outright, since a
+slow-but-live run can still hold a lock past a conservative timeout — auto-delete only after confirming the
+holder's process is actually gone.
+
+## A commit or PR attribution trailer names the agent that actually did the work
+
+Under a shared commit
 template, the co-author / attribution trailer must name the *real* executing agent or model per lane — a
 template that **hardcodes one model name** makes history lie about who produced what, the same wrong-producer /
 false-attribution failure the review side treats as a correctness defect. Parameterize the trailer or let each

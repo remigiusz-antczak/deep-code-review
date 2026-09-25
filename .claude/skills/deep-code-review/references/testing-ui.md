@@ -245,3 +245,18 @@ coincidence, and the coincidence breaks silently:
   event-bubbling regression in open/close (the skip-list gap in `ux-interaction.md`'s
   click-anywhere-to-edit bullet) — one observed defect shipped past a check that typed
   into the field's value without opening it first.
+- **A programmatic `element.click()` / `dispatchEvent(...)` fires a control a real pointer
+  can't reach.** Calling the DOM method directly (Testing Library's `fireEvent.click`, a
+  raw `HTMLElement.click()`, or a hand-built `dispatchEvent(new MouseEvent(...))`) invokes
+  the element's click handler regardless of what a real click would have hit first — an
+  overlay scrim, a `pointer-events: none` sibling, a control positioned under something
+  else. The test goes green on a control a user's actual click can never reach (one
+  observed case: a real overlay hid a "dead" control; the programmatic-click spec never
+  noticed). jsdom has no layout engine, so even Testing Library's `userEvent` cannot see an
+  overlay scrim there — catching this needs a **real-browser** pointer test (Playwright/
+  Cypress `.click()`, which does actual hit-testing against the rendered page) so the spec
+  fails the way a user's click would. Playwright/locator `.click()` (e.g. `page.locator(...).click()`
+  or `page.click(...)`) *is* the correct real-pointer form — it hit-tests the rendered page — so
+  a check must not flag it. **Check**, scoped to e2e/UI spec dirs:
+  `grep -rnE '\bel(ement)?\.click\(\)|dispatchEvent\(|fireEvent\.' <e2e/UI test dirs>` should
+  return zero hits outside a documented, hit-tested exception.

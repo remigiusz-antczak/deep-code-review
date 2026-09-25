@@ -33,6 +33,16 @@ The **host-enforced** form spawns the worker with an allowed-tools set that excl
 at the execution boundary); the protocol fallback audits the receipt's tool calls afterward. Declare
 tool access at the level you can enforce; narrow the dependent action when only the prompt exists.
 
+**The mirror mismatch: a brief telling a no-write agent type to write.** The tool-omission control above cuts
+both ways — a type spawned with no write tool cannot honor a brief line like "write findings to `<path>`," so
+the dispatch fails silently: the agent still runs, its findings land only in its own transcript, and its
+handback has no artifact to cite, so the orchestrator can only mark it `UNVERIFIED`. One observed run: 3 of 3
+handbacks from a read-only type briefed to write a file came back `UNVERIFIED` this way. **Rule: a brief for a
+no-write/read-only type asks for findings inline in the handback, never a path to write.** **Check:** lint the
+drafted brief for the type's declared capability — a "write to `<path>`" (or equivalent write-instruction)
+phrase paired with a read-only/no-write agent type fails the brief before dispatch, the same pre-flight-the-gate
+discipline `unattended-trackers.md`'s marker-shape check applies to a different mismatch.
+
 ## Isolated write-lanes: guard first, stop at the first refusal
 
 Isolation is a control too: a lane that lost it writes a shared tree. A write-lane brief's first
@@ -248,6 +258,17 @@ script. The integrator refuses to push without a passing `dcr-gates.sh` run
 against that exact head SHA, and **never** honors a `[skip ci]` commit
 message on the ref main CI protects (a skip-ci merge into a protected branch
 defeats the backstop main CI is there to be).
+
+**Key the `[skip ci]` marker convention to the ref's actual CI state, not a blanket per-commit habit.** On a ref
+with **zero GitHub-hosted CI already** (this integration-branch case above), stamping every commit with
+`[skip ci]` skips nothing that would otherwise run — it is pure noise, paid on every commit for zero effect. One
+observed run: the marker kept firing on commits after CI had already been turned off at the repo level. Drop the
+marker entirely on a CI-off ref; add it back only if/when hosted CI is (re-)enabled on that specific ref — this
+add-it-back case never applies to a ref main CI protects (the *Cost discipline* rule above, ~L222: `[skip ci]`
+is never an option there, CI-off or not). **Check:**
+before requiring or emitting the marker, read the ref's actual CI state (branch-protection required-checks list,
+or whether any workflow triggers on that ref) — a marker keyed to a stale assumption is the same "protocol claim
+with no enforcement behind it" failure this section's Claim-only-the-level-you-observed rule names.
 
 **Hosted CI that cannot actually block a merge is pure cost — verify branch protection before trusting it as a
 gate.** A workflow running on every push is spend with zero enforcement value if nothing on the host actually

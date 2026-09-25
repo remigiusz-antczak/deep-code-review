@@ -6557,6 +6557,118 @@
         "Requires a measured false-positive rate from a run against HEAD in the PR description",
         "Names a target ceiling (<=10%) for that rate"
       ]
-    }
-  ]
+    },
+  {
+    "id": "load-test-never-confirmed-real-identity",
+    "prompt": "A load-test report claims '60 concurrent users, 0% errors' against an authenticated endpoint. The response bodies recorded for the run are byte-identical to what an anonymous, unauthenticated request to the same URL returns. Is this run trustworthy evidence the authenticated path performs well?",
+    "expected_output": "No -- the harness never actually authenticated; it exercised the anonymous/cached fallback path, not the real per-user code path, so the clean error rate and throughput describe the wrong system. Before trusting any perf number from an authenticated load test, assert that the response differs from the same URL's anonymous response (bytes(authed) != bytes(anonymous)); a match means the run measured nothing about the authenticated path and must fail before any latency/error number is reported. (appsec-edge.md.)",
+    "expectations": [
+      "States the harness ran against the anonymous/fallback path, not the authenticated one",
+      "Requires asserting authed response bytes differ from anonymous response bytes before trusting the run",
+      "Concludes the 0%-errors/60-user result is not evidence about the real authenticated path"
+    ]
+  },
+  {
+    "id": "perf-gate-covers-only-one-storage-adapter",
+    "prompt": "A target ships two interchangeable storage adapters (a file-based one for dev/CI, a database one in prod) behind the same interface. Its load-test/leak gate only ever instantiates the file adapter, and judges pass/fail on p95 latency and error rate. Is this gate sufficient to catch a memory leak in the database adapter?",
+    "expected_output": "No -- an interchangeable-backend gate that only boots one adapter says nothing about the others, and p95/error-rate can both stay green while heap grows unbounded underneath. Run the gate against every production adapter the target ships, and judge on heap slope (post-GC heap at ~2s vs ~60s under sustained concurrency) rather than only latency/error metrics, since a leaking adapter can look perfectly healthy on both. (concurrency-shared-state.md.)",
+    "expectations": [
+      "States that clearing the gate on one adapter says nothing about a sibling adapter",
+      "Requires running the perf/leak gate against every production adapter, not just the default one",
+      "Requires a heap-slope metric (short-mark vs later-mark heap size) in addition to p95/error rate"
+    ]
+  },
+  {
+    "id": "perf-gate-boots-wrong-runtime-major",
+    "prompt": "A team diagnoses a suspected memory leak by running the perf gate locally, where the dev machine has Node 18 installed. The deploy image's declared engines field pins Node 20. The local run shows no leak. What's the finding?",
+    "expected_output": "The gate booted the wrong runtime major -- GC behavior and allocator defaults can differ enough between majors that a clean local run says nothing about what ships. Read the runtime major from the deploy artifact (container image base tag or the engines/runtime declaration) and boot the gate on that major; print the booted version in the gate's log so a mismatch is visible before any perf/leak verdict is trusted. (release-engineering.md.)",
+    "expectations": [
+      "Identifies the local-vs-deploy-image runtime major mismatch as the root cause of an untrustworthy result",
+      "Requires reading the runtime major from the deploy artifact/engines declaration, not the local machine",
+      "Requires the gate's log to print the booted runtime version for verification"
+    ]
+  },
+  {
+    "id": "streaming-heap-analysis-needed-over-1gb-snapshot",
+    "prompt": "A heap-leak investigation takes a full heap snapshot at 1.8 GB, and the JSON.parse-based analyzer throws a string-length error before it can name the retaining class. How should the gate get an answer?",
+    "expected_output": "A JSON.parse-based analyzer breaks exactly where a leak gate needs it: at multi-GB scale, past the parser's string-length limit. Build a streaming snapshot parser that reads the heap-snapshot format incrementally and emits a retainer-owner histogram (which class/constructor holds the growing objects, not just that heap grew), and take the snapshot at a small heap-size limit as a fallback so it stays parseable by ordinary means when the streaming tool isn't available. No such analyzer ships with this skill yet. (concurrency-shared-state.md.)",
+    "expectations": [
+      "Identifies JSON.parse's string-length limit as why the default analyzer fails on a >1 GB snapshot",
+      "Requires a streaming parser emitting a retainer-owner histogram, not just heap-size growth",
+      "States no shipped analyzer exists yet, so this is a doctrine, not a tool to run"
+    ]
+  },
+  {
+    "id": "fire-and-forget-adopts-module-level-in-flight-promise",
+    "prompt": "A request handler does `void processInBackground()`, where `processInBackground` checks a module-level cache for an in-flight promise for the same work and returns it if present, otherwise starts and caches a new one. Under load, heap grows steadily with concurrent users. What's the defect?",
+    "expected_output": "The fire-and-forget call adopts a module-level in-flight promise meant to coalesce concurrent callers, so every request racing that promise pins its context to it and the retained object graph stays reachable for as long as the slowest rider, growing with concurrency instead of staying flat. Require a detached execution context for fire-and-forget work, an explicit timeout, and a single-flight guard implemented outside request scope; corroborate with a heap-slope measurement at sustained concurrency, which will show the same rising-heap signature as an adapter leak. (concurrency-shared-state.md.)",
+    "expectations": [
+      "Identifies the module-level in-flight-promise coalescing as pinning every request's context together",
+      "Requires a detached context, explicit timeout, and single-flight guard outside request scope",
+      "Ties the diagnosis to a heap-slope measurement under sustained concurrency"
+    ]
+  },
+  {
+    "id": "denylist-of-excluded-types-permissive-by-default-on-new-type",
+    "prompt": "An unauthenticated API endpoint filters which resource types are visible to anonymous callers using a list of type names to exclude. A new resource type is added to the system six months later. Is it visible to an anonymous caller by default?",
+    "expected_output": "Yes, and that is the defect -- a denylist on an unauthenticated surface is permissive by default for anything not yet named, so the new type ships visible to every anonymous caller until someone remembers to add it to the exclusion list. This is not a fail-open bug -- the filter runs fine and still ships every unnamed type, because excluding by name means anything unnamed passes; the list is working exactly as written. Invert it to an allowlist naming the types an anonymous caller may see, excluding everything else by default; assert the returned type set equals the allowlist exactly, not merely 'contains no denylisted type'.",
+    "expectations": [
+      "States the new type is visible by default because a denylist is permissive by default for anything unnamed",
+      "States this is not a fail-open bug -- the check runs fine, the list just admits any unnamed type by design",
+      "Requires inverting to an allowlist of permitted types on the unauthenticated surface",
+      "Requires a test asserting the returned type set equals the allowlist exactly"
+    ]
+  },
+  {
+    "id": "suggested-keygen-command-prints-secret-to-transcript",
+    "prompt": "To help a user set up a new API credential, an assistant suggests running a keygen command directly in the current chat session and pasting the printed key back in. The session is logged. Is this a safe way to generate the credential?",
+    "expected_output": "No -- the command's normal output is the plaintext secret, and running it in the same logged/transcribed session writes that secret straight into the transcript, even though it's never committed to a file. Generate the credential in a separate, untranscribed terminal, or redirect the command's output directly to a gitignored file instead of letting it print to stdout, so the secret never appears as visible command output. (appsec-crypto.md.)",
+    "expectations": [
+      "States that the keygen command's stdout landing in a logged session leaks the secret into the transcript",
+      "Requires generating the secret in a separate, untranscribed terminal, or writing directly to a gitignored file",
+      "Rejects suggesting an in-session command whose output is the secret itself"
+    ]
+  },
+  {
+    "id": "changed-files-lint-zero-output-misread-as-clean",
+    "prompt": "A lint tool scoped to only the files a PR touches reports zero warnings. The PR's author cites the repo's warning-cap file, which is already near its ceiling, and raises the cap by one to land the change. Is this justified?",
+    "expected_output": "No -- a changed-files-scoped lint's zero output can mean the type-aware rule never ran on the unchanged caller where it actually fires, not that the codebase is clean; raising the cap on that basis is unjustified. Compare a full-scope lint run on the branch against a full-scope run on the base instead of trusting the diff-scoped number, and never raise a warning/lint cap in a feature change -- the cap file should stay unchanged and full-lint(branch) must be <= full-lint(base).",
+    "expectations": [
+      "States that zero output from a changed-files-scoped lint doesn't mean the codebase is clean",
+      "Requires comparing full-scope lint totals on branch vs base rather than trusting the diff-scoped count",
+      "Rejects raising the warning/lint cap to make the change land"
+    ]
+  },
+  {
+    "id": "programmatic-click-bypasses-overlay-scrim",
+    "prompt": "An e2e spec calls `element.click()` directly on a button to test its handler. In production, a semi-transparent overlay sits on top of that button so a real user's pointer click never reaches it. Does the passing spec prove the button is usable?",
+    "expected_output": "No -- a programmatic click invokes the handler directly, bypassing the hit-testing a real pointer click would do, so the spec passes on a control a real click can never reach. jsdom has no layout engine, so even Testing Library's userEvent.click cannot see an overlay scrim there; use a real-browser pointer test (Playwright/Cypress `.click()`, which does actual hit-testing against the rendered page) so the spec fails the way a real user's click would. Scoped to e2e/UI spec dirs: `grep -rnE '\\bel(ement)?\\.click\\(\\)|dispatchEvent\\(|fireEvent\\.'` and expect zero hits outside a documented, hit-tested exception. (testing-ui.md.)",
+    "expectations": [
+      "States that a programmatic click bypasses real pointer hit-testing and can hit a dead control",
+      "States jsdom/userEvent cannot see an overlay scrim, so the fix is a real-browser pointer test, not userEvent",
+      "Names the grep check scoped to e2e/UI spec dirs for element.click()/dispatchEvent(/fireEvent. in e2e test files"
+    ]
+  },
+  {
+    "id": "test-reads-real-machine-memory-and-unpinned-git-log",
+    "prompt": "Two unrelated test suites fail intermittently in CI: one asserts a threshold against the runner's live free-memory reading, the other replays 'the last 5 commits' from the real git log each run. What's the shared root cause and the fix for each?",
+    "expected_output": "Both are unpinned, machine/moment-dependent inputs: the live memory/load reading differs by runner and moment, and 'the last N commits' silently changes as the branch moves, so the same test name exercises a different input every run. Mock the system probe (inject a fake memory/load reader) instead of reading the real machine, and pin the commit sample to an explicit list of commit ids instead of 'the latest N'.",
+    "expectations": [
+      "Identifies both failures as unpinned, machine- or moment-dependent test inputs",
+      "Requires mocking the memory/load-average probe instead of reading the real machine",
+      "Requires pinning the commit sample to explicit commit ids instead of 'the latest N'"
+    ]
+  },
+  {
+    "id": "bsd-env-option-after-assignment-breaks-on-bsd",
+    "prompt": "A shell script runs `env A=1 -u B cmd` to set A and unset B before invoking cmd. The script boots cmd as a background server and waits for a health check. It works in CI (Linux), but on macOS the harness only reports 'no health answer within 60s'. Why, and what should change in the script and the harness?",
+    "expected_output": "Some implementations (e.g. GNU env) tolerate an option after a NAME=value assignment, but BSD/macOS env stops parsing its own options at the first assignment and reads the next token, `-u`, as the utility it's supposed to run -- e.g. `env A=1 -u B true` prints `env: -u: No such file or directory` and exits 127. Put every option before the first assignment: `env -u B A=1 cmd`. Mechanized by scripts/reaper_lint.py's ENV_OPTION_AFTER_ASSIGNMENT rule. The harness must not mask this as a slow-boot readiness failure: when the background child exits early, fail fast instead of waiting out the health-check timeout, and print the child's log tail so the exit-127 error is visible, not just 'no health answer within 60s'. (lang-shell.md.)",
+    "expectations": [
+      "Explains that BSD/macOS env stops parsing options at the first NAME=value assignment",
+      "States the failure is loud: exit 127 with a \"No such file or directory\" error, not a silent pass-through",
+      "Gives the fix: put every option before the first assignment",
+      "Says a harness that boots the command as a background child must fail fast on the child's early exit and print its log tail, not wait out a readiness timeout"
+    ]
+  }
+]
 }

@@ -2140,5 +2140,93 @@
         "States that a baseline drained to zero after being populated is a genuine pass, provable from history"
       ]
     }
+,
+    {
+      "id": "fresh-worktree-bootstraps-gitignored-assets",
+      "prompt": "A lane starts in a freshly created worktree and lint fails with errors not present on main.",
+      "expected_output": "Bootstrap the worktree's gitignored assets (deps, vendored kit, allowlist, env) from a known-good tree before treating the failure as a real finding; compare lint in the fresh worktree unchanged against lint in the main checkout.",
+      "expectations": [
+        "A fresh worktree starts with tracked files only; gitignored assets are absent until bootstrapped",
+        "The lane does not conclude the failure is pre-existing on main without that comparison",
+        "A bootstrap script, not an ad hoc per-lane copy, provisions the assets"
+      ]
+    },
+    {
+      "id": "no-write-type-briefed-inline-not-to-path",
+      "prompt": "Draft a brief for a read-only reviewer agent type that tells it to write its findings to a file path.",
+      "expected_output": "The brief is rejected before dispatch: a no-write/read-only type cannot honor a write instruction, so the brief asks for findings inline in the handback instead.",
+      "expectations": [
+        "A brief-lint step flags a write-to-path instruction paired with a read-only agent type",
+        "The fix is at brief-authoring time, not discovered as an UNVERIFIED handback after the fact"
+      ]
+    },
+    {
+      "id": "multi-repo-plan-classifies-provider-consumer",
+      "prompt": "Plan a feature that spans a shared provider repo and a consumer repo before cutting lanes.",
+      "expected_output": "Each planned item is classified provider (source/raw field) or consumer (workflow/derived view) before lanes are dispatched; consumer-shaped work is routed to the consumer repo, not built inside the shared provider.",
+      "expectations": [
+        "The plan carries a provider/consumer column per item",
+        "A provider-repo diff that looks clean in isolation is not accepted as proof there was no consumer-scope creep"
+      ]
+    },
+    {
+      "id": "one-test-runner-invocation-per-worktree",
+      "prompt": "Two test-runner invocations are about to start concurrently inside the same worktree.",
+      "expected_output": "Only one invocation runs at a time per worktree, gated by a per-worktree lockfile; a second invocation that must share the tree gets its own unique output/artifact dir.",
+      "expectations": [
+        "A shared artifact/state dir across concurrent invocations is named as the false-failure risk",
+        "A failure from this collision is not misattributed to another agent's cleanup"
+      ]
+    },
+    {
+      "id": "stacked-lanes-merge-not-rebase-moved-base",
+      "prompt": "A base branch under a stack of dependent lanes has moved again; a lane reports it rebased onto the new base.",
+      "expected_output": "The moved base is merged into the stack, not rebased onto, so every child lane's existing SHAs stay reachable; the self-reported rebase is verified with git merge-base --is-ancestor old-head new-head, and a non-zero (failing) exit means the old head is not an ancestor of the new one -- history was rewritten, not merged -- so the claim is flagged, not trusted.",
+      "expectations": [
+        "Rebase is reserved for a single unstacked branch, not a stack with dependent children",
+        "A self-report of 'rebased' is not accepted without the ancestor check",
+        "is-ancestor FAILING (non-zero exit) is what flags the claim: it means the old head was not kept reachable, i.e. history was rewritten"
+      ]
+    },
+    {
+      "id": "unmeetable-check-logged-skip-not-silent-pass",
+      "prompt": "G5 wants to verify a container build, but no local container daemon is available.",
+      "expected_output": "The check is logged as an explicit skip naming why and naming deploy as the first environment that will actually run it; the local verify is never reported as covering the container build. The skip carries probe evidence (the command run and its no-daemon error), the local verdict for the container build stays UNVERIFIED rather than PASS, and the deploy gate blocks release until the container build is actually verified in the environment that has a daemon.",
+      "expectations": [
+        "The gap is not folded into the local verdict as a silent pass",
+        "The check is not blocked forever demanding an environment that cannot exist locally",
+        "The skip is backed by probe evidence (command run, no-daemon error), not an unverified assertion",
+        "The container-build verdict is recorded as UNVERIFIED, not PASS",
+        "The deploy gate blocks release until the container build is actually verified"
+      ]
+    },
+    {
+      "id": "skip-ci-marker-keyed-to-ci-state",
+      "prompt": "A repo's integration branch already has zero GitHub-hosted CI. A commit convention still stamps every commit with [skip ci].",
+      "expected_output": "The [skip ci] marker is dropped on that ref — there is no CI running there to skip — and would only be re-added if hosted CI is enabled on that specific ref.",
+      "expectations": [
+        "The marker requirement is keyed to the ref's actual CI state, read from branch protection or workflow triggers",
+        "A blanket per-commit marker habit is not kept once it stops skipping anything"
+      ]
+    },
+    {
+      "id": "commit-body-cap-excludes-required-trailers",
+      "prompt": "A terse-commit convention caps the commit body at 5 lines. This skill also requires Tests: X/X and other trailers on the same commit.",
+      "expected_output": "The line-count cap counts prose only; every trailer this skill requires (Tests: X/X, Regression-Of:, Severity:, Cost-Cut:, tier trailers) is additional and never counted against the cap.",
+      "expectations": [
+        "A commit carrying every required trailer plus a short why-sentence is not rejected for exceeding a prose cap",
+        "No required trailer is dropped to fit under the cap"
+      ]
+    },
+    {
+      "id": "stacked-pair-not-flagged-as-dual-writer",
+      "prompt": "A child lane branched off a parent's local ref edits a file the parent already wrote but has not yet merged. The parent's commits after the child's base never touch that file.",
+      "expected_output": "This is not a one-writer-per-file violation: the child's base commit is an ancestor of the parent's current tip, and the parent's post-base changes do not overlap the child's files, so it is one writer at a time on that history, not two concurrent writers.",
+      "expectations": [
+        "The rule is scoped to concurrent, unordered writers, not a sequenced stacked hand-off",
+        "The gate checks ancestry (child base is ancestor of parent tip) AND no overlap between the parent's post-base file changes and the child's files (or that the parent is frozen)",
+        "Ancestry alone does not clear the exception if the parent is still actively rewriting the same files"
+      ]
+    }
   ]
 }
