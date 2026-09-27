@@ -409,7 +409,7 @@ appended and exit 9 stands.
 BUNDLE CHECKSUM (`--design-bundle-dir D --design-checksum F`)
 ---------------------------------------------------------------
 Before any score, verify a served design bundle directory D against a `sha256sum`-format
-manifest F (`<hex>  <relpath>` per line, e.g. `sha256sum -C` output for the trusted source
+manifest F (`<hex>  <relpath>` per line, e.g. `sha256sum` output for the trusted source
 export — `migration-parity.md`, "Verify a served bundle is complete and current"). Any file
 missing, extra, or hash-mismatched refuses the whole run — COULD_NOT_CHECK, printed before
 `--design`/`--app` are even read; never a score off an unverified bundle. Both flags are
