@@ -262,6 +262,20 @@ Review:
   preflight below (which degrades to a cached snapshot; a bare read fan-out usually has none,
   so the honest fallback here is an explicit error/stale marker, or last-good only where one
   exists).
+- **An outward effect reports success only after the effect itself resolved — never after a
+  swallowed or unawaited failure.** The near-inverse of the fail-soft-read bullet above, on the
+  **write** side: a send/charge/publish/delete/webhook/tool-call handler that swallows the
+  provider's rejection (`.catch(() => {})`), fires the call without awaiting it, or returns
+  `{ ok: true }` without checking the result, tells the caller "done" when the effect never
+  happened or its outcome is unknown. The user, the audit log, and the next job all treat it as
+  done — nothing records that a retry is needed, so email never sends, a charge never lands, a
+  delete never happens, and the first signal is a customer. Return success only once the provider
+  call actually resolved successfully, or return an explicit `unknown`/`pending` with a
+  reconciliation path — swallow-then-`ok: true` is a finding even when a later retry exists, and
+  a retry against a non-idempotent call is a second, distinct finding (name the missing
+  idempotency key). Billing's double-charge races (`billing-correctness.md`) are the money-specific
+  instance of this same shape. **Test:** stub the provider to reject, assert the handler does not
+  report success, and assert a repeated call does not double-apply.
 - **Echo-verify writes** when the cost of silent drift is high: compare the
   store's returned record to what was sent (field-by-field or hash), not only
   "HTTP 200."

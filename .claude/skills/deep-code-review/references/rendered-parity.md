@@ -180,3 +180,31 @@ side: the raw pass rate, and the **visible-parity score** = pass / (pass + REAL)
 present the raw number alone as "how aligned" the product is. A known harness-artifact (a
 headless font-substitution difference, a settle-timing flake) is labeled as such, with its
 evidence, not folded into the same bucket as a genuine layout defect.
+
+## A design port takes content from real data — the mockup's sample fixture is layout spec, not shippable copy
+
+A mockup or prototype exists to specify **structure and styling** (the two axes above); its own
+sample text — fake names, lorem-ipsum-style copy, fixture rows — exists only to fill that layout in
+the design tool. A port that imports the mockup's sample-data module directly into the production
+surface ships that placeholder as if it were real: the **content axis** is never supposed to travel
+from mockup to product, only structure and styling are. Guard it as code, not intent: a production
+module importing a design-sample/fixture module is a finding on its own, independent of how the
+port otherwise scores, and a regression test asserting that import is absent keeps a later port from
+reintroducing it. Wire the scorer to match: when the harness above classifies a failing check REAL
+vs HARNESS-ARTIFACT, a **sample-vs-real text** difference on the content axis is HARNESS-ARTIFACT —
+swapping fixture copy for the app's real source-of-truth data is the fix working, not a mismatch,
+and a scorer that penalizes it rewards keeping the placeholder.
+
+## A parity tolerance is scoped narrow and self-tested — a blanket percentage hides a real regression inside a pass
+
+A gate that passes an entire surface once its aggregate diff falls under one repo-wide percentage
+("under 5% pixel diff passes") lets a real, visible defect confined to one small region hide behind
+every other region's pass — and the path of least resistance under pressure to go green is to widen
+that one number, not fix the region. Scope every tolerance to the region/selector and viewport it
+actually covers, with an explicit max-diff bound, a one-line reason, and a reference to the decision
+that accepted it (the accept-file discipline above, applied per entry rather than as one blanket
+knob). Prove each bound still catches what it's meant to: a self-test that injects a fresh diff
+inside that same region must still fail against the recorded bound — a tolerance nobody has tried to
+break is unverified, not proven safe. Never raise a blanket, repo-wide percentage to clear a batch of
+mismatches; a narrow, documented, self-tested exception per region is the only kind of tolerance this
+gate accepts.

@@ -112,6 +112,9 @@ domain E (cost/money), with cross-refs to F (reliability), G (concurrency), and 
   `concurrency-shared-state.md`).
 - Concurrent webhook + user action (cancel while a renewal charges) resolves to
   one consistent state, not a partial one.
+- A charge handler that reports success after a swallowed or unawaited provider rejection is the
+  general outward-effect defect `reliability-error-handling.md` covers — this section is the
+  money-specific double-charge race, not that claim.
 
 ## Ledger integrity
 

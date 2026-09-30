@@ -29,6 +29,16 @@ mechanical (install, don't link). Reserve the symlink for edit-only fast-tier la
 under-installed symlink, is the former, never a content finding (the gate-epistemology distinction, principle 3
 above).
 
+**A copy-on-write clone copies corruption too — validate it, or clean-install, before a release gate.** The
+clone above trades the symlink's three failure modes for a fourth: it is a byte-for-byte duplicate of its
+source, including any defect already sitting in that source tree (a partially-written or duplicated nested
+copy of a core framework package inside `node_modules`, say). "Clone succeeded" proves nothing about whether
+the source it copied was healthy — the clone inherits the corruption silently, and a gate run against it goes
+green on a broken install. Before trusting a cow clone of a dependency tree for a **release-gating** check,
+either validate the clone (assert the known corruption pattern is absent) or run `npm ci` instead of cloning.
+A green gate against an uninspected cow clone is not proof of a healthy install; reserve the clone for
+throwaway/fast-tier lanes where a false pass costs a re-run, not a release.
+
 ## A fresh worktree needs its gitignored assets bootstrapped, not just its dependencies
 
 The dependencies-directory copy above is one instance of a wider gap: a fresh worktree starts with **only

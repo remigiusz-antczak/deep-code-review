@@ -3,6 +3,31 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.472.0] — 2026-09-30
+
+### Added
+- Design port takes content from real source-of-truth data, never the mockup's sample fixture (`deep-code-review`'s `rendered-parity.md`): a production module importing a design-sample/fixture module is a finding on its own, and a parity scorer treats a sample-vs-real text diff as harness noise, not a mismatch (#1249).
+- Parity tolerances are narrow and self-tested, never a blanket percentage (`rendered-parity.md`): scope each tolerance to a region/selector/viewport with a bound, reason, and decision reference, proven by a self-test that a fresh diff in that region still fails (#1250).
+- A copy-on-write dependency clone inherits its source's corruption silently (`agentic-delivery`'s `dev-env-ownership.md`): validate the clone against a known corruption pattern, or clean-install, before trusting it for a release-gating check (#1251).
+- A bypassed local gate with no committed record is a finding, not a silent exception (`deep-code-review`'s `branch-and-merge-hygiene.md`): an untraced `--no-verify` is reported; a logged bypass still doesn't clear the required forge check (#1252).
+- An outward effect (send/charge/publish/delete/webhook) reporting success after a swallowed or unawaited failure is a finding (`reliability-error-handling.md`, pointed at from `billing-correctness.md`) (#1253).
+- Orchestration-cost checklist for multi-agent delivery runs (`agentic-delivery`'s `cost-quality-guardrails.md`): event-driven wakes over timed check-ins, an always-loaded rule-size budget, no leaked background shells, per-lane token budgets, model-tier routing (#1254).
+- Merge-train robustness: per-PR-and-pair bisect over full-train re-runs, behavior-change PRs port their own specs, committed generated docs don't survive a train, capability-gated UI needs an explicit test stub (`deep-code-review`'s `merge-operations.md`) (#1255).
+- Release PRs never use the integration branch as head when head branches auto-delete on merge (`merge-operations.md`) (#1256).
+- Committed UX evidence and harness-isolated worktrees both need the repo's own sparse-checkout discipline, not ad hoc growth (`agentic-delivery`'s `merge-queue-worktrees.md`); a refused cross-branch push stays refused when routed through a peer (`multi-session-coordination.md`); an owner's multi-part request becomes a tracked checklist immediately so a compaction can't silently drop part of it (`unattended-trackers.md`) (#1257).
+- 9 new evals (6 deep-code-review, 3 agentic-delivery), one per lesson above.
+
+### Changed (size budgets)
+- size-budget-raise: .claude/skills/deep-code-review/references/rendered-parity.md 14786→17091 fixture-not-shippable-content + narrow-tolerance-self-tested sections (#1249, #1250)
+- size-budget-raise: .claude/skills/agentic-delivery/references/dev-env-ownership.md 32418→33360 cow-clone-inherits-corruption paragraph (#1251)
+- size-budget-raise: .claude/skills/deep-code-review/references/reliability-error-handling.md 43449→44746 outward-effect-reports-success-after-swallowed-failure bullet (#1253)
+- size-budget-raise: .claude/skills/deep-code-review/references/billing-correctness.md 8429→8674 pointer to reliability-error-handling.md (#1253)
+- size-budget-raise: .claude/skills/agentic-delivery/references/cost-quality-guardrails.md 13197→15531 orchestration-cost checklist section (#1254)
+- size-budget-raise: .claude/skills/deep-code-review/references/merge-operations.md 65347→70388 bisect/behavior-change-specs/generated-docs/capability-gate + release-head-discipline sections (#1255, #1256)
+- size-budget-raise: .claude/skills/agentic-delivery/references/merge-queue-worktrees.md 62783→64340 committed-evidence + isolated-worktree sparse-checkout section (#1257)
+- size-budget-raise: .claude/skills/agentic-delivery/references/multi-session-coordination.md 66778→67484 cross-branch-push-laundering bullet (#1257)
+- size-budget-raise: .claude/skills/agentic-delivery/references/unattended-trackers.md 45931→46886 owner-checklist-survives-compaction section (#1257)
+
 ## [1.471.0] — 2026-09-28
 
 ### Added

@@ -458,6 +458,17 @@ owns the status discipline here: a brief is a transcript, not a landed artifact,
   while the thing they were supposed to unblock never moves is displacing delivery with investigation; the
   status that names *what shipped* (above) is what surfaces it.
 
+## An owner's multi-part request becomes a tracked checklist immediately, or a compaction drops part of it silently
+
+A long, multi-part owner request handled turn-by-turn out of the conversation — "do A, B, and C" answered by
+just doing A then moving on — has no durable record of B and C until a compaction or handoff happens, at
+which point they're gone with no trace anyone was asked for them, unlike the research-recommendation case
+above where the omission at least leaves a brief. Write the owner's list into a tracked checklist file the
+moment it's received, before starting item A, and tick each item off as it lands — the same
+keep-the-backlog-outside-the-working-context discipline this file already applies to a standing backlog,
+applied to a single request's own sub-items. "Done" is reported only once every item on that file shows
+done or an explicit, recorded reason it wasn't — never inferred from "I did the parts I remembered."
+
 ## Terminus is a claim about ALL work queues — verify every one before declaring done
 
 An agent working one backlog can declare "terminus — nothing left" while a **second, parallel work queue** sits

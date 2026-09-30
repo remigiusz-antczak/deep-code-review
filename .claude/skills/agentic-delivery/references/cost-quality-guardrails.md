@@ -192,8 +192,36 @@ decision. One review pass per release: the reviewer also plays the adversary. Be
 must-fix findings; queue the rest for the next wave (a one-line fix may ride along). An owner-authored
 rule, reported problem, or safety rail is never "non-critical".
 
+## 7. Orchestration cost — a run's own coordination is a cost line, distinct from the work it coordinates
+
+A multi-agent run's cost is not only what the lanes do; a run that landed the same merged output at
+roughly 3× a normal day's spend traced the excess entirely to how it was coordinated, not to the work
+itself. Check each of these on any conductor/lane setup:
+
+- **Event-driven wakes, not a timed check-in.** A recurring fixed-interval "tick" makes the coordinating
+  session re-read its whole (often long) context each time, usually to report "no change." Detached long
+  jobs (merge trains, test runs) wake the conductor when they finish; drop fixed-interval polling.
+  `unattended-operating-mode.md` covers the wait/poll discipline this rests on.
+- **Bound the always-loaded layer.** Rule files plus a memory index loaded into every session and every
+  subagent add up; keep what loads unconditionally under roughly 200 lines (~10 KB) and move detail into
+  on-demand docs a trigger routes to (`floor-anchors.tsv` above already lints the routed side of this).
+- **A reply-length cap that forces a rewrite costs double, not zero** — the over-length reply and the
+  rewritten one both reach output. Write within the cap the first time rather than relying on the hook to
+  catch it after the fact.
+- **No leaked background shells.** A wait loop (`until …; sleep`, `tail -f`) started as a background task
+  can survive for days once its parent session moves on. Run only finite commands in the background, and
+  detach a genuinely long job with `nohup … & disown` so it reports through a file instead of a held shell.
+- **A subagent has real per-call overhead** (its own rule set and tool definitions load fresh). Do small
+  git/CLI/single-test checks inline; reserve a subagent dispatch for work that's actually large and
+  isolated, with a token budget stated in the brief.
+- **Route by tier, escalate only for a named hard step.** The conductor and routine lanes run on a
+  mid-tier model; the top tier is reserved for one named hard step, then the run drops back down; the most
+  mechanical lanes run on the smallest tier that still passes review (§1's tier table is the review-side
+  half of this same routing).
+
 ## Related
 
 - Claimed vs enforced grading for each mechanism: `host-enforcement.md`.
 - Review-side model tiers: `deep-code-review`'s `model-tiering.md`, which
   reads the same tiers file.
+- The wait/poll discipline §7's event-driven-wakes bullet rests on: `unattended-operating-mode.md`.

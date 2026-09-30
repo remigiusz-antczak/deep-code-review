@@ -615,6 +615,24 @@ worktrees against 33 open PRs — roughly 94% orphaned — consuming roughly 400
   **≈ 0 after each merge train** — any nonzero orphan count past that point means the prune pass didn't run or
   missed something, not a tolerable steady state.
 
+## Committed UX evidence bloats every checkout — sparse-exclude it, and prune it out of HEAD
+
+Screenshot/recording evidence attached to a PR review is easy to commit straight into the tree it documents;
+at scale (thousands of PNGs, low single-digit GB) every worktree and lane then checks that folder out on
+creation — slow worktree creation, disk churn, and, observed once, a file watcher pegged at 100% CPU
+walking it. Give every worktree a sparse checkout that excludes the evidence folder by default (a lane that
+genuinely needs to look at the evidence adds it back explicitly), and prune evidence older than roughly a
+week out of **HEAD** — git history still has it; nothing needs it live in every checkout going forward.
+
+**A harness-isolated worktree doesn't inherit the repo's own sparse-checkout script — it needs the same
+discipline applied explicitly, or it grows past the ordinary worktree-sprawl numbers above.** A per-subagent
+"isolated worktree" mode that clones fresh rather than reusing the fleet's worktree tooling skipped the
+sparse-checkout step above in one observed run and grew to roughly 220GB. Brief every isolated-worktree lane
+to run the project's own sparse-checkout script on creation, not a bare clone, and remove the worktree at
+hand-back rather than leaving it for the periodic prune pass to find — or, short of that, add the same
+cleanup sweep this section already prescribes (remove if clean and its `HEAD` is reachable from a remote) to
+the isolation harness's own lifecycle, not only to the fleet's worktrees.
+
 ## Out-of-tree shared scratch crosses commit metadata — worktree-per-lane doesn't cover it
 
 Concurrent write-lanes that each generate per-lane content — a commit-message file, a plan/notes file, a

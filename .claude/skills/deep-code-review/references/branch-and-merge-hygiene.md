@@ -350,8 +350,8 @@ gate:
   flight** — trusting the check's colour without reading the head / input digest it ran against.
 - A PR closed as duplicate/superseded on title or branch similarity with no tip-diff evidence in the close
   comment.
-- A local hook, a `Tests: N/N` line, or a checked PR-template box logged as a passing control (self-reported,
-  `--no-verify`-bypassable) instead of a forge run pinned to the reviewed SHA.
+- A local hook, a `Tests: N/N` line, or a checked box logged as a passing control (self-reported,
+  `--no-verify`-bypassable, no committed record) instead of a forge run pinned to the SHA.
 - Under a worktree: an inherited absolute `core.hooksPath`, or a pre-push hook whose range is a hardcoded
   default branch instead of the pushed refs on stdin — gates run against the wrong tree or the wrong range.
 - A programmatic conflict resolution that stages with a quoted `git add` **without** grepping the staged tree

@@ -2360,6 +2360,33 @@
         "States it must use the app's own design-system primitives, not a separate design tool's output",
         "States the flag flip at release is a visibility change, not a rewrite/port"
       ]
+    },
+    {
+      "id": "cow-clone-inherits-source-corruption",
+      "prompt": "Review a release-gating lane that trusts a copy-on-write clone of an installed node_modules tree with no validation and no clean install, where the source tree has a known duplicated-package corruption pattern.",
+      "expected_output": "The lane is flagged: a green gate run against the uninspected cow clone is not proof of a healthy install. The fix is to validate the clone against the known corruption pattern, or run npm ci instead of cloning, before trusting a release-gating result.",
+      "expectations": [
+        "An uninspected cow-clone dependency tree used for a release gate is reported as a finding",
+        "The recommended fix is validate-the-clone or clean-install, not trusting the clone as-is"
+      ]
+    },
+    {
+      "id": "orchestration-cost-timed-checkins-and-leaked-shells",
+      "prompt": "Review a multi-agent delivery run that used a recurring 5-minute conductor check-in re-reading its full context each tick, and left several `until ...; sleep` wait loops running as background tasks for days.",
+      "expected_output": "Both are reported as findings: the fixed-interval check-in should be event-driven (wake on job completion, not on a timer), and the wait loops should not run as unattended background tasks \u2014 only finite commands belong in the background, with long jobs detached via nohup reporting through a file.",
+      "expectations": [
+        "A fixed-interval conductor check-in re-reading full context is flagged as an orchestration-cost defect",
+        "A long-lived background wait loop is flagged; the fix named is event-driven wake plus nohup-detached finite commands"
+      ]
+    },
+    {
+      "id": "workspace-bloat-committed-evidence-and-worktree-sprawl",
+      "prompt": "Review a repo with several thousand committed screenshot PNGs in HEAD (multi-GB) that every new worktree checks out in full, and a harness's isolated-worktree mode that clones fresh rather than using the repo's sparse-checkout script.",
+      "expected_output": "Both are reported as findings: the committed evidence needs a sparse-checkout exclusion for worktrees plus pruning stale evidence out of HEAD (history keeps it); the isolated-worktree mode needs to run the project's sparse-checkout script on creation and be removed at hand-back.",
+      "expectations": [
+        "Committed multi-GB evidence checked out by every worktree is flagged, with sparse-checkout plus pruning as the fix",
+        "An isolated-worktree mode that skips the repo's sparse-checkout script is flagged separately from ordinary worktree sprawl"
+      ]
     }
   ]
 }

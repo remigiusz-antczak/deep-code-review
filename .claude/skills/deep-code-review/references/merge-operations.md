@@ -91,6 +91,51 @@ mergeable PRs as false conflicts (issue #1139). `merge_train.py`
 lines, flaky retry with bounded backoff, and a dry-run merge that halts on a moved base and never pushes.
 `--apply` still needs the integration owner or a recorded standing grant.
 
+### Bisect by single-PR merge and the narrowest failing spec set — never a full train re-run per guess
+
+When a regression surfaces in a broad suite (browser/UI specs, an end-to-end run) rather than the
+numeric ratchet the ratchet-attribution paragraph above already covers, re-running the whole train per
+guess costs a full cycle (tens of minutes) for one bit of information. Cheaper: merge each suspect PR
+**alone** onto the proven base and run only the specific spec files the regression named — a few minutes
+each, not a full re-run — before reaching for the whole-train bisect machinery. Test **pairs**, not only
+singles: some failures appear only with two specific PRs merged together (an interaction neither
+introduces alone), and some are load flakes from concurrent runners that pass in every isolated
+configuration — a suspect that passes alone and in every pairing it's tried in is not exonerated until a
+load-matched re-run is tried, or it should be treated as a flake, not a regression, and handled by the
+load-flaky-gate discipline (`merge-queue-worktrees.md`). Keep the **majority-rerun** ("fails 2 of 3")
+shortcut for short regression lists — roughly 5 specs or fewer; past that, per-PR bisection is cheaper
+than reading a noisy majority vote across a long list.
+
+### A behavior change ports its own specs in the same PR — the mover updates every assertion the move breaks
+
+A PR that intentionally relocates behavior a suite asserts against (moving a UI element to a new home,
+renaming a route, changing a default) breaks every spec still written against the old location — and
+those specs are usually scattered across files the author didn't touch. The PR that causes the move is
+the PR that updates them: keep every assertion (don't delete the coverage to make the suite pass), and
+treat "my change is right, the specs are stale" as a signal to fix the specs in the same PR, not a
+finding against the suite. A merge train discovering broken specs this way after landing several PRs is
+discovering a review gap, not a train defect — this belongs in review, before the member enters the
+batch.
+
+### Committed generated docs plus a freshness check don't survive a merge train — generate at build time or serve on demand
+
+A doc generated from source and then committed, guarded by a test asserting it's still fresh, works for
+one PR at a time; inside a train, *any other* member's backend change can make the committed doc stale
+relative to the union tree even though neither PR touching the doc itself changed. The freshness test
+then fails on a union no single member's own CI would have flagged. Generate the doc in the build step,
+or serve it on demand instead of committing a snapshot — a train (or any batch merge) is exactly the
+condition committed-plus-freshness-test doesn't survive.
+
+### A capability-gated control needs an explicit test double, not an ambient default — a flipped gate turns specs red with no code change
+
+A UI control gated on an environment capability (an API key present, a feature entitlement) renders
+disabled whenever that capability is absent in the test environment — which a spec written against the
+enabled state doesn't expect, and which flips with the environment, not with the code under test. Specs
+must stub the capability explicitly (force it on for the enabled-state assertions) and carry a separate
+disabled-state case, rather than relying on whatever the test environment's ambient default happens to
+be; a merge train is where an environment-dependent flip is likeliest to surface, because it's the point
+several members' changes and the ambient environment are evaluated together.
+
 ### Mergeable is a snapshot against a moving base head — re-check before each merge; freeze the sweep while a resolver runs
 
 "Green + mergeable" is a **snapshot against the current base head, not a durable property**. Landing PR A can
@@ -412,6 +457,20 @@ merges it into the protected branch, a governance breach even when the code is g
 - **Recovery when a PR already merged to the protected branch**: do **not** auto-revert the protected branch
   (itself a gated, owner-level change) — surface it for an owner decision, and separately port the change onto
   the integration branch so the two don't diverge.
+
+**A release PR's *head* is never the shared integration branch — the risk is sharpest when "delete head
+branch on merge" is on, but the rule holds either way.** The base-branch check above guards where a PR merges *to*; the symmetric
+risk is what it merges *from*. A release PR whose head is the integration branch itself, merged on a host
+with auto-delete-head-branch enabled, deletes the integration branch on merge — and the host then retargets
+every other open PR based on it to the default branch, silently repointing PRs their authors never touched
+at production. Cut releases from a disposable `release/<date>` branch pinned at the release commit; never
+use a shared/integration branch as a release PR's head. The merge script or gate refuses any release PR
+whose head is the integration branch, and after every release merge, verify the integration branch still
+exists before starting the next batch — an automation that merges by PR number with no such check would
+merge straight into production the moment the branch it depended on vanished. A contributor-parity file (an
+allowlist of public API paths, say) kept as one generated source rather than hand-duplicated in each of
+several release PRs avoids the sibling failure mode: two release PRs landing on the integration branch with
+that file edited two different ways, disagreeing the moment both are in.
 
 ### Self-reported evidence is not a trusted control; a local hook is advisory
 
