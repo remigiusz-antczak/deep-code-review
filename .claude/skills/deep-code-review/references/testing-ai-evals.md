@@ -89,3 +89,28 @@ needs its own harness:
   sequence reached the goal without an unrecoverable wrong turn). A right final
   answer reached via a lucky or unsafe path is a latent failure, and a wrong tool
   choice is invisible to an output-only bench.
+
+## Evaluating a code-review skill on real paired diffs
+Score a review skill against defects mined from the repo's own fix history, as commit pairs with a machine-checkable oracle:
+- **Pair each defect with its fix, not a guessed bug-introducing commit.** Require a regression test that fails at the parent and passes at the fix;
+the fix-parent is the latest commit where the defect is provably present — run the test. The skill reviews the parent for recall and the fixed sha for
+specificity; one finding naming the just-fixed defect is a suspected memorization leak — report that rate beside recall.
+- **Measure false positives on the fixed sha and on separately sampled clean diffs.** A fixed sha can still hold a real latent defect, so human-sample
+its findings before charging them; report the FP rate beside recall.
+- **Match findings on mechanism, not location.** A finding counts only if it names the same root cause as the fix (a race is not a null dereference);
+a location-only hit is a miss or at best partial. Report strict and partial recall separately — the gap is the vague-alarm rate.
+Adjudicate borderline matches with an LLM judge under the bias controls above.
+- **Dedup findings per defect before scoring.** Several findings on one defect earn one recall credit; every unmatched finding charges the FP budget —
+but unmatched is not automatically false: human-label a sample, since some unmatched findings are real unknown defects.
+- **Headline: recall at the severity gate the skill actually posts at, subject to the FP budget above.** Widening the gate trivially raises
+recall; the budget is what binds.
+- **State the selection bias: the corpus holds only test-catchable defects.** Requiring a failing regression test excludes design, performance,
+security-by-omission, and docs defects, so measured recall is an upper bound for defects tests cannot express — say so beside the headline.
+- **The instrument must score 1.0 on hand-written correct findings** derived from the ground-truth records, and 0 on deliberately wrong ones. If the
+correct findings don't match, the matcher is broken — fix it before reviewing the skill.
+- **Version the matching policy** (line tolerances, root-cause rules) — it is part of the instrument, and prompt tuning otherwise converges on its quirks.
+Re-run the canaries on every matcher change.
+- **Compare skill versions paired, not unpaired:** run both on the same defect set and read the discordant pairs, which carry the signal. Report
+intervals, never bare point estimates.
+- **Split CI by cost and determinism.** Every PR runs the offline part — corpus integrity, matcher unit tests, canaries, metric recomputation from
+committed finding artifacts; the paid live harness runs on a schedule, append-only, with metric diffs surfacing as PR checks.

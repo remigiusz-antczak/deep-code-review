@@ -7621,6 +7621,22 @@
         "Merges same-root-cause findings into one entry listing every site",
         "Names a revert test for each behaviour change"
       ]
+    },
+    {
+      "id": "review-skill-eval-recall-fp-budget-instrument",
+      "prompt": "We need to prove the new version of our LLM code-review skill catches more real defects than the one in production before we swap it in. I have 60 merged fix commits from our own repos; each fix added a regression test that fails on the parent commit and passes on the fix. Walk me through the evaluation: which commits the skill reviews, what counts as a detected defect versus a false positive, how you handle multiple findings on the same defect and findings that match nothing, how you check the skill isn't just remembering these public fixes, how you sanity-check the scoring machinery itself, what kinds of defects this corpus can never contain, and what runs on every PR versus a scheduled paid run.",
+      "expected_output": "Review the fix-parent of each pair — the last commit where the regression test fails; run the test to confirm rather than guessing a bug-introducing commit. Run the skill on the parent for recall and on the fixed commit for specificity: false-positive load is measured on the fixed commit and on separately sampled clean diffs, and a fixed commit can still hold a real latent defect, so human-sample its findings before charging them; one finding naming the just-fixed defect is a suspected memorization leak reported beside recall. Credit a finding only when it names the same root-cause mechanism as the fix (a race is not a null dereference); location-only hits are misses or partial, and strict versus partial recall are reported separately. Dedup per defect — one recall credit however many findings — and charge every unmatched finding to the FP budget, but human-label a sample of unmatched findings first, since some are real unknown defects. Headline: recall at the severity gate the skill actually posts at, subject to that FP budget. Because every pair requires a failing regression test, the corpus holds only test-catchable defects — design, performance, security-by-omission, and docs defects never enter it — so measured recall is an upper bound for defects tests cannot express; state that caveat beside the headline. Hand-written findings derived from the ground-truth records must score full recall and deliberately wrong ones zero; version the matching policy and re-run canaries on every change. Compare skill versions paired on the same defect set via discordant pairs, reporting intervals not point estimates. Per-PR CI runs the deterministic offline part (corpus integrity, matcher unit tests, canaries, metric recomputation from committed finding artifacts); the paid live harness runs on a schedule, append-only.",
+      "expectations": [
+        "Reviews the fix-parent commit, confirmed by running the regression test, rather than a guessed bug-introducing commit",
+        "Measures false positives on the fixed commit and on separately sampled clean diffs, human-sampling fixed-commit findings before charging them since a fixed commit can hold a real latent defect, and flags a finding naming the fixed defect as a suspected memorization leak",
+        "Credits a detection only on root-cause mechanism agreement, treats location-only matches as misses or partial, and reports strict and partial recall separately",
+        "Deduplicates findings per defect to one recall credit and charges every unmatched finding to the false-positive budget",
+        "Human-labels a sample of unmatched findings instead of auto-counting them as false positives, since some may be real unknown defects",
+        "States the headline as recall at the severity gate the skill actually posts at, subject to the false-positive budget",
+        "States that requiring a failing regression test restricts the corpus to test-catchable defects, so measured recall is an upper bound for design, performance, security-by-omission, and docs defects that tests cannot express",
+        "Requires hand-written correct findings from ground truth to score full recall and deliberately wrong findings to score zero, with a versioned matcher and canaries re-run on changes",
+        "Compares skill versions paired on the same defect set via discordant pairs with intervals, and splits CI into deterministic per-PR checks versus a scheduled paid live harness"
+      ]
     }
   ]
 }

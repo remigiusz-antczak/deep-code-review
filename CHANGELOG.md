@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.495.0] — 2026-10-06
+
+### Added
+- `testing-ai-evals.md` gains "Evaluating a code-review skill on real paired diffs": pair each defect with its fix-parent under an executable regression-test oracle, match findings on mechanism rather than location, dedup per defect, human-sample unmatched findings instead of auto-counting them false, measure false positives on the fixed commit and on clean diffs, state the test-catchable-defect selection bias, require the matcher to score hand-written correct findings 1.0 and wrong ones 0, compare versions paired, and split deterministic per-PR CI from a scheduled paid live harness. One eval (`review-skill-eval-recall-fp-budget-instrument`). Advances #267 (the instrument design; the corpus and runner are not built).
+- Provenance: model-proposed (PCSS GLM-5.3-Flash, from a design-comparison of five models), Claude-verified (reviewed against the existing file for duplication, unsupported claims and internal consistency; one hedge added by the reviewer: "suspected" memorization leak).
+- size-budget-raise: .claude/skills/deep-code-review/references/testing-ai-evals.md 6901→9721 #267 review-skill detection-quality instrument
+
 ## [1.494.0] — 2026-10-06
 
 ### Added
