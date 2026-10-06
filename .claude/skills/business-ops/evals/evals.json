@@ -95,6 +95,17 @@
         "Encodes NO date -- notes NIS2's reporting windows / accountability duties are amendment- and Member-State-sensitive, to confirm with counsel",
         "Reuses the CRA / A03 supply-chain leads rather than restating them (cross-skill, no duplication)"
       ]
+    },
+    {
+      "id": "business-ops-asymmetric-boundary-lane",
+      "prompt": "Is my contractor arrangement legally an employee relationship, and what will our margin be at $40 per seat and $12 cost per seat?",
+      "expected_output": "Asymmetric boundary: classify the lane first. The classification question depends on law, so Lane R (route to a professional, no conclusion); the margin is arithmetic on the user's numbers, so Lane A (apply, show the work). When unsure, treat as Lane R.",
+      "expectations": [
+        "Splits the two questions into Lane R and Lane A",
+        "Does not conclude the legal classification",
+        "Shows the margin arithmetic from the user's own inputs",
+        "Defaults to Lane R when unsure"
+      ]
     }
   ]
 }

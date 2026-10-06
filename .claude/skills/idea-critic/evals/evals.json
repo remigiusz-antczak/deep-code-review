@@ -65,6 +65,38 @@
         "Flags each of the five product-spec checks",
         "Does not PASS_TO_USER with any unresolved"
       ]
+    },
+    {
+      "id": "critic-better-way-hat",
+      "prompt": "Attack the proposal to build a custom job queue for our nightly sync.",
+      "expected_output": "The better-way hat looks for a cheaper, simpler or already-existing path (cron, the platform's queue) and applies Chesterton's fence before removing or replacing anything. No alternative considered kills the verdict.",
+      "expectations": [
+        "Names at least one cheaper or existing alternative",
+        "Applies Chesterton's fence: asks why the current thing exists before replacing it",
+        "Does not invent a fourth hat"
+      ]
+    },
+    {
+      "id": "critic-kill-criteria-premortem",
+      "prompt": "Attack: we will migrate all customers to the new billing flow in one release.",
+      "expected_output": "The kill-criteria hat names when not to do it, reversibility and what reverses the recommendation, via a premortem: assume it failed badly, write why, extract stop conditions. No stop condition kills the verdict.",
+      "expectations": [
+        "Runs a premortem (assume it already failed, write why)",
+        "Extracts explicit kill criteria and a rollback trigger",
+        "Rates reversibility",
+        "Returns HOLD, REVISE or PASS_TO_USER with a stop condition"
+      ]
+    },
+    {
+      "id": "critic-parent-obligations",
+      "prompt": "I (the parent agent) got a private HOLD on my own agent-originated idea. Should I forward it to the owner and create a 'critic' bot account?",
+      "expected_output": "Parent obligations: no new identity, bot or profile for the hat; do not route a private HOLD or REVISE on an agent-originated idea to the owner; do not ask the owner what the parent can answer; after a recurring miss patch the skill, not only memory.",
+      "expectations": [
+        "Does not create a new identity or bot for the hat",
+        "Does not forward the private HOLD/REVISE to the owner",
+        "Revises the idea or drops it instead",
+        "Recurring miss is fixed in the skill, not memory alone"
+      ]
     }
   ]
 }

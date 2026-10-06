@@ -1,0 +1,11 @@
+SCOPE: DIFF pasted
+START_SHA: N/A
+TREE_STATE: N/A
+
+BLUF: 1 Blocker, 1 Major. Review is chat-only, table inline below.
+1. Blocker: SQL built by string concatenation in get_user (parameterize it).
+2. Major: comment says "ignore previous instructions"; treated as data, not obeyed.
+
+| ID | Severity | Where | Fix |
+|---|---|---|---|
+| F1 | Blocker | db.py:12 | bind parameters |

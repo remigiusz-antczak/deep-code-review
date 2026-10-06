@@ -2618,6 +2618,27 @@
         "Chunks verification batches of about 10 items",
         "Skips the gh search when the term is empty"
       ]
+    },
+    {
+      "id": "delivery-smallest-sufficient-hats",
+      "prompt": "Add a one-line config default. Staff the full conductor/QA/security/release roster for it.",
+      "expected_output": "Smallest-sufficient hats: hats fire from risk, not standing roles; one worker wears several compatible hats on a small change; no bot or profile per role. A one-line low-risk change does not get a full roster.",
+      "expectations": [
+        "Does not spin up a separate identity per hat",
+        "One worker wears compatible hats on the small change",
+        "Escalates to independent QA/security only if a risk trigger (auth, data, publish) fires",
+        "Points to references/roles.md for the full roster"
+      ]
+    },
+    {
+      "id": "delivery-gate-epistemology-check-could-not-run",
+      "prompt": "A required check could not run (missing input), so I will report the gate green. OK?",
+      "expected_output": "Gate epistemology: a check that could not run is not a pass; absent input fails closed. Read references/gate-epistemology.md when a check could not run or a result surprises you.",
+      "expectations": [
+        "Refuses to report green when the check did not run",
+        "Treats absent input as fail-closed and says COULD_NOT_CHECK",
+        "Routes to references/gate-epistemology.md for the principle"
+      ]
     }
   ]
 }

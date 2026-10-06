@@ -11,6 +11,14 @@
       ]
     },
     {
+      "id": "market-size-tam",
+      "prompt": "What is our TAM?",
+      "should_trigger": true,
+      "moments": [
+        "tam sizing"
+      ]
+    },
+    {
       "id": "legal-tax",
       "prompt": "Is this a securities offering for tax purposes?",
       "should_trigger": true,

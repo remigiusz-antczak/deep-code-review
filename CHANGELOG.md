@@ -3,6 +3,19 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.495.0] — 2026-10-06
+
+### Added
+- Evals for 15 previously untested capabilities (coverage audit: untested 51 to 36): `deep-code-review` DIFF quick-path, no-fabrication and confidentiality, operating principles; `agentic-ceo` stay strategic, output discipline; `agentic-delivery` smallest-sufficient hats, gate epistemology; `communication-structure` the rule, 150 words, cut on sight; `idea-critic` better-way hat, kill-criteria hat, parent obligations; `contribution` prime constraint; `business-ops` asymmetric boundary.
+- `scripts/eval_predicates.py`: `chat_only_contract` predicate (START_SHA is N/A or 7-40 hex; summary before the first table row is at most 30 lines) bound to eval `chat-only-diff-start-sha-na`, with a golden good/red pair (#1339).
+- `business-ops` trigger case: "What is our TAM?" (#1340).
+
+### Changed
+- `deep-code-review` first-response block: START_SHA is N/A on pasted or diff-only input, never inferred; Findings report: a chat-only run prints the summary first and the table inline below (#1339).
+- `positioning` description says "market-size" instead of TAM; `business-ops` description names TAM sizing so market-size questions route to it (#1340). Independent versions: business-ops 1.5.2, positioning 1.0.3.
+- `report-format.md`: chat-only run rule (summary first, table inline; START_SHA N/A on pasted input) (#1339).
+- size-budget-raise: .claude/skills/deep-code-review/references/report-format.md 20673→20944 #1339 chat-only fallback rule
+
 ## [1.494.0] — 2026-10-06
 
 ### Added

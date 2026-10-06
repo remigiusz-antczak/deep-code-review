@@ -2,13 +2,13 @@
 name: business-ops
 description: >-
   Use for money and compliance questions on taking a product to market. Lane
-  A: pricing, unit economics, LTV/CAC, runway, applied to YOUR numbers. Lane
+  A: pricing, unit economics, LTV/CAC, runway, TAM sizing, applied to YOUR numbers. Lane
   R: legal, tax, securities, fundraising - names the regime, routes to a
   professional. Educational, not advice. Opt-in: --with-business.
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.5.1"
+  version: "1.5.2"
 ---
 
 # Business ops

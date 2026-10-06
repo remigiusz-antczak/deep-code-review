@@ -4,11 +4,11 @@ description: >-
   Use when shaping how a product is positioned to its market: value
   proposition, segment, differentiation, messaging (Value Proposition Canvas,
   message house). A hypothesis to validate with real buyers; never fabricates
-  TAM or competitor claims. Opt-in: --with-positioning.
+  market-size or competitor claims. Opt-in: --with-positioning.
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.0.2"
+  version: "1.0.3"
 ---
 
 # Positioning
