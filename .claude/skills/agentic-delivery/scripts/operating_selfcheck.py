@@ -98,10 +98,12 @@ def check_settings(settings_path: str) -> dict:
     start_cmds = _flatten_commands(hooks.get("SubagentStart", []))
     stop_cmds = _flatten_commands(hooks.get("SubagentStop", []))
     handback_hits = sum(1 for c in stop_cmds if "handback_cap.py" in c)
+    if any("<" in str(e.get("matcher", "")) for e in hooks.get("SubagentStop", []) if isinstance(e, dict)):
+        handback_hits = min(handback_hits, 1)  # placeholder matcher never fires
     if handback_hits >= 2:
         handback_status = "PRESENT"
     elif handback_hits == 1:
-        handback_status = "MISSING (one tier only -- no matcher-scoped second SubagentStop entry)"
+        handback_status = "MISSING (one tier only -- no real matcher-scoped second SubagentStop entry)"
     else:
         handback_status = "MISSING"
     env = data.get("env", {}) if isinstance(data, dict) else {}

@@ -3,6 +3,17 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.494.1] — 2026-10-06
+
+### Fixed
+Five findings from an ultrareview pass:
+- `install.sh --apply-operating-layer` no longer merges the template SubagentStop entry whose matcher is the literal placeholder `<your-read-only-review-type>` (it never fires); it warns instead. `operating_selfcheck.py` reports a placeholder matcher as not configured.
+- `reap_own.sh` `age()` tolerates a PID that vanished mid-run instead of aborting under `set -euo pipefail`.
+- `update-installed.sh` infers `--apply-operating-layer` only from `subagent_start_inject.py`, not any `SubagentStart` hook.
+- `subagent_start_inject.py` exits 0 with a note on non-object hook JSON (`null`, `[]`, `5`).
+- `scripts/size-budgets.tsv`: agentic-delivery/SKILL.md re-pinned 22907 to 22777 (exact size).
+- Regression tests: `scripts/test-ultrareview-fixes.sh`.
+
 ## [1.494.0] — 2026-10-06
 
 ### Added

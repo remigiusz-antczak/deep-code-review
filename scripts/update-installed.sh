@@ -30,7 +30,7 @@ for t in "$@"; do
       product-output-safety:--with-output-safety; do
       [[ -d "${t}/.claude/skills/${p%%:*}" ]] && inf+=("${p#*:}")
     done
-    grep -qs SubagentStart "${t}/.claude/settings.local.json" && inf+=(--apply-operating-layer)
+    grep -qs subagent_start_inject.py "${t}/.claude/settings.local.json" && inf+=(--apply-operating-layer)
     [[ -d "${t}/.claude/skills/deep-code-review" ]] \
       || { echo "error: no install marker at ${m} and no deep-code-review skill to infer from; run install.sh once first" >&2; exit 1; }
     mkdir -p "${t}/.claude"

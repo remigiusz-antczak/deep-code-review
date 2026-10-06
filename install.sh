@@ -422,11 +422,13 @@ if [[ "${WITH_OPERATING_LAYER}" -eq 1 ]]; then
     OPLAYER_LOCAL="${TARGET_DIR}/.claude/settings.local.json"
     [[ -f "${OPLAYER_LOCAL}" ]] || echo '{}' > "${OPLAYER_LOCAL}"
     # Append template hook entries not already present; existing env/model win.
+    # Placeholder matchers (contain "<") never fire: skip them, tell the operator.
+    echo "warning: skipped template hook entries with a placeholder matcher (e.g. <your-read-only-review-type>); add a SubagentStop entry with your real review agent type by hand" >&2
     jq --slurpfile t "${OPLAYER_SRC}" '
       ($t[0]) as $t
       | reduce ($t.hooks | keys[]) as $e (.;
           (.hooks[$e] // []) as $a
-          | .hooks[$e] = $a + ($t.hooks[$e] | map(select(. as $x | $a | index([$x]) | not))))
+          | .hooks[$e] = $a + ($t.hooks[$e] | map(select(((.matcher // "") | contains("<") | not) and (. as $x | $a | index([$x]) | not)))))
       | .env = ($t.env + (.env // {}))
       | .model //= "sonnet"' "${OPLAYER_LOCAL}" > "${OPLAYER_LOCAL}.tmp"
     if cmp -s "${OPLAYER_LOCAL}" "${OPLAYER_LOCAL}.tmp"; then
