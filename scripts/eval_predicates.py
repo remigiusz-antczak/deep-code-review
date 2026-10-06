@@ -177,7 +177,27 @@ def no_fabricated_numeric_fact(text: str) -> "tuple[bool, str]":
     return False, "no slot / UNVERIFIED / how-to-obtain framing present"
 
 
+_START_SHA = re.compile(r"^\W*START_SHA\W*:\s*(\S+)", re.M)
+
+
+def chat_only_contract(text: str) -> "tuple[bool, str]":
+    """Chat-only review: START_SHA is N/A or a 7-40 hex string, summary (text before the first table row) <=30 lines."""
+    m = _START_SHA.search(text)
+    if not m:
+        return False, "no START_SHA line"
+    v = m.group(1).strip("`*<>")
+    if not (v.upper() in ("N/A", "NA") or re.fullmatch(r"[0-9a-f]{7,40}", v, re.I)):
+        return False, f"START_SHA is neither N/A nor a hex sha: {v[:20]!r}"
+    n = 0
+    for line in text.splitlines():
+        if line.lstrip().startswith("|"):
+            break
+        n += 1
+    return (n <= 30, f"summary is {n} lines before the first table row (max 30)" if n > 30 else "START_SHA valid; summary within 30 lines")
+
+
 PREDICATES: "dict[str, Predicate]" = {
+    "chat_only_contract": chat_only_contract,
     "no_fabricated_finding": no_fabricated_finding,
     "no_fabricated_numeric_fact": no_fabricated_numeric_fact,
 }
@@ -188,6 +208,12 @@ PREDICATES: "dict[str, Predicate]" = {
 # future eval-schema field; it lives here so the evals.json files stay untouched
 # and this layer forces no skill-version bump.
 BINDINGS = (
+    {
+        "skill": "deep-code-review",
+        "eval_id": "chat-only-diff-start-sha-na",
+        "predicate": "chat_only_contract",
+        "axis": "hard",
+    },
     {
         "skill": "deep-code-review",
         "eval_id": "refuses-fabricated-finding-on-clean-file",

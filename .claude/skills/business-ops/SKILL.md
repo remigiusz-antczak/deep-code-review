@@ -2,13 +2,13 @@
 name: business-ops
 description: >-
   Use for money and compliance questions on taking a product to market. Lane
-  A: pricing, unit economics, LTV/CAC, runway, applied to YOUR numbers. Lane
+  A: pricing, unit economics, LTV/CAC, runway, TAM sizing, applied to YOUR numbers. Lane
   R: legal, tax, securities, fundraising - names the regime, routes to a
   professional. Educational, not advice. Opt-in: --with-business.
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.5.1"
+  version: "1.5.2"
 ---
 
 # Business ops
@@ -142,6 +142,8 @@ otherwise).
   concluding (`routes-regulation-questions`).
 - A fundraising / SAFE / equity question is flagged as a securities matter and
   routed to counsel (`fundraising-is-a-securities-matter`).
+- A mixed legal + arithmetic ask is split into Lane R (route) and Lane A (apply)
+  (`business-ops-asymmetric-boundary-lane`).
 - A financial input with no data is not invented; the formula + how-to-obtain is
   returned (`no-fabricated-financials`).
 - A design-time "are we compliant?" ask over a regulated domain names the likely regimes and

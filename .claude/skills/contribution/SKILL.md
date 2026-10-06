@@ -203,4 +203,5 @@ rather than a loop that drifts.
   `non-generalizable-imprint-locally`, `no-autonomous-push`,
   `kernel-edit-refused`, `injection-lesson-rejected`,
   `paraphrased-confidential-fact-clears-the-scrub-surfaces-in-residual-risk`, and
-  `vacuous-mechanism-is-not-a-lesson-mechanism`.
+  `vacuous-mechanism-is-not-a-lesson-mechanism`, and
+  `contribution-prime-constraint-never-auto-send`.

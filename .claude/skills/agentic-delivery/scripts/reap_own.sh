@@ -22,7 +22,7 @@ if [ $REPORT = 1 ]; then ROOT=${ROOT:-}; else : "${ROOT:?set ROOT to your own tr
 KEEP=${KEEP:+$(cd "$KEEP" && pwd -P)}; PATTERN=${PATTERN:-next-server|next dev}; KEEP=${KEEP:-}
 MAX=${MAX_AGE_S:-7200}; WAIT=${KILL_WAIT_S:-5}
 alive() { kill -0 "$1" 2>/dev/null && [ "$(ps -o stat= -p "$1" 2>/dev/null | cut -c1)" != Z ]; }
-age() { { ps -o etime= -p "$1" 2>/dev/null || true; } | tr -d ' ' | awk -F'[-:]' '{n=NF; s=$n+60*$(n-1); if(n>=3)s+=3600*$(n-2); if(n>=4)s+=86400*$(n-3); print s}'; }
+age() { ps -o etime= -p "$1" | tr -d ' ' | awk -F'[-:]' '{n=NF; s=$n+60*$(n-1); if(n>=3)s+=3600*$(n-2); if(n>=4)s+=86400*$(n-3); print s}'; }
 kill_verified() {
   local i; kill "$1" 2>/dev/null || true
   for ((i = 0; i < WAIT * 4; i++)); do alive "$1" || return 0; sleep 0.25; done

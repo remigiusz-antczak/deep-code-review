@@ -89,9 +89,6 @@ def run(stdin_text: str) -> str:
         data = json.loads(stdin_text)
     except (json.JSONDecodeError, TypeError):
         return ""
-    if not isinstance(data, dict):
-        sys.stderr.write("subagent_start_inject: hook input is not a JSON object; injecting nothing.\n")
-        return ""
     if data.get("hook_event_name") != "SubagentStart":
         return ""
     house_file = os.environ.get("HOUSE_DEFAULTS_FILE")

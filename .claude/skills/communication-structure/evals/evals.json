@@ -57,6 +57,39 @@
         "Drops the future-tense roadmap promise",
         "Says the surface was checked, or flags the claim as unverified"
       ]
+    },
+    {
+      "id": "comm-the-rule-bluf-one-decision",
+      "prompt": "Rewrite this 600-word status as a PR comment. It asks three questions and buries the ask in paragraph 4.",
+      "expected_output": "The rule: BLUF in line 1-2, one message one decision with the yes/no on the last line, scannable, their next action not your process. Open questions beyond the 1-2 that change the decision move to the doc or PR.",
+      "expectations": [
+        "Line 1-2 is the answer or ask",
+        "One explicit decision, yes/no on the last line",
+        "Keeps only the 1-2 questions that change the decision",
+        "Drops process narration the reader does not need"
+      ]
+    },
+    {
+      "id": "comm-150-words-30-seconds",
+      "prompt": "Summarise a 3-hour investigation for the owner.",
+      "expected_output": "Under 30 seconds: about 150 words by default; longer only with a stated reason per block. Material uncertainty is kept, filler is cut.",
+      "expectations": [
+        "Output is about 150 words or fewer",
+        "Keeps one load-bearing bolded sentence",
+        "Keeps honest unknowns while cutting hedges",
+        "Longer length is justified per block, or cut"
+      ]
+    },
+    {
+      "id": "comm-cut-on-sight-ai-slop",
+      "prompt": "Reply to the reviewer: they found a real bug in my change.",
+      "expected_output": "Cut on sight: no 'you're right' or 'great point', no apology instead of the fix, no filler adjectives like comprehensive or robust, no summary of the summary. State the fix and its evidence.",
+      "expectations": [
+        "Does not open with 'You're right' or an apology",
+        "No filler adjectives (comprehensive, robust, seamless)",
+        "States the fix and the verifying evidence",
+        "Takes a position instead of listing options"
+      ]
     }
   ]
 }

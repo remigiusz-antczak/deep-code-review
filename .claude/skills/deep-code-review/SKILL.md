@@ -8,7 +8,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.494.1"
+  version: "1.495.0"
 ---
 
 # Deep Code Review
@@ -86,12 +86,12 @@ physical or social-engineering action.
 **Host-neutral tools.** Read files, `rg`, `git show`/`git log`, run the
 project's scripts. Fan-out contract: `parallel-audit.md`.
 
-**First response before reviewing** — a review that never printed this block
+**First response before reviewing** — a review without this block
 is incomplete:
 
 ```
 SCOPE: <FULL | DIFF <base> | FILE <paths>>
-START_SHA: <sha | N/A>
+START_SHA: <sha | N/A>  (N/A if pasted)
 TREE_STATE: <CLEAN | DIRTY | WORKTREE_PATH=<path>>
 VERIFY_SURFACE: <url-or-port · tree/worktree path · branch · sha actually rendered | NONE_RUNNING> (required on web/port/restyle/parity; TREE_STATE is where I edit, this is what a human sees — often another tree; check: agentic-delivery `surface_check.py`)
 HISTORY_DEPTH: <git rev-list --count HEAD | N/A>
@@ -288,7 +288,7 @@ copied to `references/example-review-report.md` by `install.sh`.
 
 Default: chat BLUF ≤30 lines + full table **out-of-tree**. Never paste the
 machine table as the first chat bubble. In-repo `code-review/` only on
-explicit confirmation and an idle checkout. On a public remote, committed
+confirmation and an idle checkout. On a public remote, committed
 reports are ID + severity + area only.
 
 ---

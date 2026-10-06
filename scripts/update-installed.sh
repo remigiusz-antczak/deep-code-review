@@ -19,9 +19,7 @@ if [[ "${DCR_NO_PULL:-0}" != 1 ]]; then
   fi
 fi
 echo "dcr version: $(cat "${HERE}/.claude/skills/deep-code-review/VERSION")"
-# One bad target must not abort the rest: run each in a function (|| disables set -e, so return explicitly).
-update_one() {
-  local t="$1" m inf p l flags
+for t in "$@"; do
   m="${t}/.claude/.dcr-install-flags"
   if [[ ! -f "${m}" ]]; then
     # Pre-marker install: infer one flag per installed sibling skill, plus the operating layer.
@@ -32,17 +30,14 @@ update_one() {
       product-output-safety:--with-output-safety; do
       [[ -d "${t}/.claude/skills/${p%%:*}" ]] && inf+=("${p#*:}")
     done
-    grep -qs subagent_start_inject.py "${t}/.claude/settings.local.json" && inf+=(--apply-operating-layer)
+    grep -qs SubagentStart "${t}/.claude/settings.local.json" && inf+=(--apply-operating-layer)
     [[ -d "${t}/.claude/skills/deep-code-review" ]] \
-      || { echo "error: no install marker at ${m} and no deep-code-review skill to infer from; run install.sh once first" >&2; return 1; }
-    mkdir -p "${t}/.claude" || return 1
-    printf '%s\n' ${inf[@]+"${inf[@]}"} > "${m}" || return 1
+      || { echo "error: no install marker at ${m} and no deep-code-review skill to infer from; run install.sh once first" >&2; exit 1; }
+    mkdir -p "${t}/.claude"
+    printf '%s\n' ${inf[@]+"${inf[@]}"} > "${m}"
     echo "no install marker in ${t}; inferred flags: ${inf[*]:-(none, review-only)}; wrote ${m}"
   fi
   flags=()
   while IFS= read -r l; do [[ -n "${l}" ]] && flags+=("${l}"); done < "${m}"
-  bash "${HERE}/install.sh" ${flags[@]+"${flags[@]}"} "${t}" || return 1
-}
-failed=()
-for t in "$@"; do update_one "$t" || failed+=("$t"); done
-[[ ${#failed[@]} -eq 0 ]] || { echo "error: failed targets: ${failed[*]}" >&2; exit 1; }
+  bash "${HERE}/install.sh" ${flags[@]+"${flags[@]}"} "${t}"
+done

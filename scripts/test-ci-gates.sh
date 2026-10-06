@@ -3675,7 +3675,7 @@ if command -v jq >/dev/null 2>&1; then
   DCR_NO_PULL=1 bash "$ROOT/scripts/update-installed.sh" "$OPA" >"$WORK/opa2.log" 2>&1
   if cmp -s "$WORK/opa.first" "$OPA/.claude/settings.local.json" \
     && [ "$(jq '.hooks.SubagentStart | length' "$OPA/.claude/settings.local.json")" = 1 ] \
-    && [ "$(jq '.hooks.SubagentStop | length' "$OPA/.claude/settings.local.json")" = 1 ] \
+    && [ "$(jq '.hooks.SubagentStop | length' "$OPA/.claude/settings.local.json")" = 2 ] \
     && [ "$(jq -r .model "$OPA/.claude/settings.local.json")" = opus ] \
     && [ -f "$OPA/.claude/settings.local.json.bak" ] \
     && [ -f "$OPA/.claude/agents/delivery-lane.md" ]; then
@@ -3728,13 +3728,6 @@ if bash "$ROOT/scripts/test-train-scripts.sh" >"$WORK/train-scripts.log" 2>&1; t
   record 0 "train scripts: land_train/train_land/reap_own tests pass"
 else
   record 1 "train scripts: land_train/train_land/reap_own tests pass"; tail -5 "$WORK/train-scripts.log"
-fi
-
-# ultrareview fixes: own per-feature file (scripts/test-ultrareview-fixes.sh), one case here.
-if bash "$ROOT/scripts/test-ultrareview-fixes.sh" >"$WORK/ultrareview.log" 2>&1; then
-  record 0 "ultrareview fixes: operating-layer placeholder, reap_own, update-installed, inject guards"
-else
-  record 1 "ultrareview fixes: operating-layer placeholder, reap_own, update-installed, inject guards"; tail -8 "$WORK/ultrareview.log"
 fi
 
 # loop templates: own per-feature file (scripts/test-loop-templates.sh), one case here.

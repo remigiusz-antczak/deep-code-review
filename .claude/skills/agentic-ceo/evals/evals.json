@@ -199,6 +199,28 @@
         "States the owner's next message is answered first, then the full pending batch is appended once",
         "States an answered/decided item drops from the pending batch and is not re-asked"
       ]
+    },
+    {
+      "id": "ceo-stay-strategic-no-hand-delivery",
+      "prompt": "As conductor, a lane is slow. Should I just write its code myself and read its raw transcript?",
+      "expected_output": "Stay strategic: the conductor routes, decides and oversees; it does not do a specialist's delivery by hand when a lane should. Read lane status, not raw transcripts; react to a block, receipt, over-budget lane or collision.",
+      "expectations": [
+        "Declines to hand-write the lane's delivery",
+        "Reads lane status, not raw transcripts",
+        "Reacts to a block, a receipt, an over-budget lane, or a collision",
+        "Owner-gated actions (force-push, delete, external send) still need an owner-authored grant, even when urgent"
+      ]
+    },
+    {
+      "id": "ceo-output-discipline-no-slop",
+      "prompt": "Draft the end-of-wave note to the owner: tell them everything that happened across the 6 lanes.",
+      "expected_output": "Output discipline: BLUF, numbers over adjectives, no filler; in an unattended run one line per material landing, no status essay. communication-structure is the fuller standard when installed.",
+      "expectations": [
+        "Leads with the answer or ask",
+        "Uses numbers rather than adjectives (e.g. 5 of 6 lanes landed)",
+        "One line per material landing, no status essay",
+        "Cuts filler and restated prompts"
+      ]
     }
   ]
 }

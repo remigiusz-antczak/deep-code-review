@@ -3,17 +3,18 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
-## [1.494.1] — 2026-10-06
+## [1.495.0] — 2026-10-06
 
-### Fixed
-Five findings from an ultrareview pass:
-- `install.sh --apply-operating-layer` no longer merges the template SubagentStop entry whose matcher is the literal placeholder `<your-read-only-review-type>` (it never fires); it warns instead. `operating_selfcheck.py` reports a placeholder matcher as not configured.
-- `reap_own.sh` `age()` tolerates a PID that vanished mid-run instead of aborting under `set -euo pipefail`.
-- `update-installed.sh` infers `--apply-operating-layer` only from `subagent_start_inject.py`, not any `SubagentStart` hook.
-- `update-installed.sh` processes each target independently and exits non-zero at the end if any failed, instead of aborting on the first bad target.
-- `subagent_start_inject.py` exits 0 with a note on non-object hook JSON (`null`, `[]`, `5`).
-- `scripts/size-budgets.tsv`: agentic-delivery/SKILL.md re-pinned 22907 to 22777 (exact size).
-- Regression tests: `scripts/test-ultrareview-fixes.sh`.
+### Added
+- Evals for 15 previously untested capabilities (coverage audit: untested 51 to 36): `deep-code-review` DIFF quick-path, no-fabrication and confidentiality, operating principles; `agentic-ceo` stay strategic, output discipline; `agentic-delivery` smallest-sufficient hats, gate epistemology; `communication-structure` the rule, 150 words, cut on sight; `idea-critic` better-way hat, kill-criteria hat, parent obligations; `contribution` prime constraint; `business-ops` asymmetric boundary.
+- `scripts/eval_predicates.py`: `chat_only_contract` predicate (START_SHA is N/A or 7-40 hex; summary before the first table row is at most 30 lines) bound to eval `chat-only-diff-start-sha-na`, with a golden good/red pair (#1339).
+- `business-ops` trigger case: "What is our TAM?" (#1340).
+
+### Changed
+- `deep-code-review` first-response block: START_SHA is N/A on pasted or diff-only input, never inferred; Findings report: a chat-only run prints the summary first and the table inline below (#1339).
+- `positioning` description says "market-size" instead of TAM; `business-ops` description names TAM sizing so market-size questions route to it (#1340). Independent versions: business-ops 1.5.2, positioning 1.0.3.
+- `report-format.md`: chat-only run rule (summary first, table inline; START_SHA N/A on pasted input) (#1339).
+- size-budget-raise: .claude/skills/deep-code-review/references/report-format.md 20673→20944 #1339 chat-only fallback rule
 
 ## [1.494.0] — 2026-10-06
 
@@ -809,7 +810,7 @@ Five findings from an ultrareview pass:
 - 38,083 is the `web` archetype's MUST-LOAD **floor**, not a typical review's real load: a typical dashboard also triggers `web-fetch.md` (22,040 bytes / 4 = 5,510 tokens) and `a11y-live.md` (6,889 bytes / 4 = 1,722 tokens), for a combined 45,315 estimated tokens (`scripts/mustload-budgets.tsv` WEB NOTE).
 
 ### Added
-- `deep-code-review/scripts/reaper_lint.py` (opt-in `DCR_REAPER_LINT=1` in `templates/dcr-gates.sh`): a heuristic, opt-in lint, not a proof. It can miss a reaper built from variables, `eval`, or a helper in another file, and a clean run means only that no known shape matched. It flags cleanup scripts that pipe `lsof -t` with an `-i` selector into `kill` without `-sTCP:LISTEN` (any flag order or cluster, including through a `pids=$(lsof …)` variable killed later in the file), kill across a port range (`seq`, `{A..B}`, or `for ((…))` with bounds of 1024 or more), use `pkill`/`killall`/`pgrep` or `ps | grep` on a browser/server name (whole-word match on the pattern argument only), call `fuser -k <port>/tcp` or `kill-port`, or assign a protected-port list of two or more port numbers. Comments are stripped and `` continuations joined before matching. An unlistable directory, an unreadable file, or a file that is not UTF-8 text exits 2. Extensionless scripts are found by shebang, along with `*.mk`, `GNUmakefile`, and `justfile`. A line is exempted only by `# reaper-lint: allow <reason>` on that same line. Doctrine: reap only provably own or orphaned processes; dry-run by default. Closes #1101.
+- `deep-code-review/scripts/reaper_lint.py` (opt-in `DCR_REAPER_LINT=1` in `templates/dcr-gates.sh`): a heuristic, opt-in lint, not a proof. It can miss a reaper built from variables, `eval`, or a helper in another file, and a clean run means only that no known shape matched. It flags cleanup scripts that pipe `lsof -t` with an `-i` selector into `kill` without `-sTCP:LISTEN` (any flag order or cluster, including through a `pids=$(lsof …)` variable killed later in the file), kill across a port range (`seq`, `{A..B}`, or `for ((…))` with bounds of 1024 or more), use `pkill`/`killall`/`pgrep` or `ps | grep` on a browser/server name (whole-word match on the pattern argument only), call `fuser -k <port>/tcp` or `kill-port`, or assign a protected-port list of two or more port numbers. Comments are stripped and `\` continuations joined before matching. An unlistable directory, an unreadable file, or a file that is not UTF-8 text exits 2. Extensionless scripts are found by shebang, along with `*.mk`, `GNUmakefile`, and `justfile`. A line is exempted only by `# reaper-lint: allow <reason>` on that same line. Doctrine: reap only provably own or orphaned processes; dry-run by default. Closes #1101.
 - Log-parsing gates anchor on the runner's real summary line and are dry-run against a known-green and a known-red log (`lang-shell.md`, #1097); a review harness with no report file raises its handback cap with a matcher-scoped `SubagentStop` entry instead of being exempted (`host-enforcement.md`, #1099). +evals.
 - size-budget-raise: .claude/skills/deep-code-review/references/concurrency-shared-state.md 30122→30933 reaper rules + reaper_lint command (#1101)
 

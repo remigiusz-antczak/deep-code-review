@@ -4,6 +4,8 @@ Read this when writing Phase 5 artifacts (chat BLUF, full technical table, plain
 
 ## Findings report — exact format
 
+**Chat-only run** (no filesystem, so no out-of-tree path): print the BLUF summary (at most 30 lines) first, then the full table inline below it. On pasted or diff-only input `START_SHA` is N/A, never inferred or invented; a sha is valid only if it appears in the input.
+
 ```
 # Code Review — <target> (<FULL|DIFF|FILE>, base <ref>)
 
