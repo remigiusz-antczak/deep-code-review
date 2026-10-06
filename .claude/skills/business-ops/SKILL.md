@@ -142,6 +142,8 @@ otherwise).
   concluding (`routes-regulation-questions`).
 - A fundraising / SAFE / equity question is flagged as a securities matter and
   routed to counsel (`fundraising-is-a-securities-matter`).
+- A mixed legal + arithmetic ask is split into Lane R (route) and Lane A (apply)
+  (`business-ops-asymmetric-boundary-lane`).
 - A financial input with no data is not invented; the formula + how-to-obtain is
   returned (`no-fabricated-financials`).
 - A design-time "are we compliant?" ask over a regulated domain names the likely regimes and
