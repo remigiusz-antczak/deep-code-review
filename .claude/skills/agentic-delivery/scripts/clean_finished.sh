@@ -6,7 +6,7 @@
 #   - it has unpushed commits (commits not on any remote; a MERGED PR whose head is exactly HEAD counts as
 #     pushed, since squash-and-delete-branch leaves no remote ref).
 # A dirty worktree is archived first: `git diff HEAD` plus the untracked-file list go to
-# ARCHIVE_DIR/<name>.patch (default $TMPDIR/worktree-archive), and it is removed only after the write succeeded.
+# ARCHIVE_DIR/<name>.patch, or <name>.N.patch when that exists (default $TMPDIR/worktree-archive), and it is removed only after the write succeeded.
 # The main worktree and the one you run from are never removed. Untracked file CONTENTS are listed, not saved.
 # Detached-HEAD worktrees have no branch to judge and are left alone.
 # SCRATCH (optional, space-separated absolute paths): deleted outright (never "/" or $HOME).
@@ -16,8 +16,9 @@ set -euo pipefail
 : "${ROOT:?set ROOT to your own worktree tree}"
 ROOT=$(cd "$ROOT" && pwd -P); GH=${GH:-gh}; AR=${ARCHIVE_DIR:-${TMPDIR:-/tmp}/worktree-archive}
 top=$(git rev-parse --show-toplevel); top=$(cd "$top" && pwd -P)
+command -v lsof >/dev/null || { echo "clean_finished: lsof missing; cannot tell if a worktree is in use, removing nothing" >&2; exit 2; }
 rm=0 sk=0 ar=0
-while read -r wt br; do
+while IFS=$'\t' read -r wt br; do
   [ "$wt" != "$top" ] || continue
   case "$wt" in "$ROOT"/*) ;; *) continue ;; esac
   state="" head=""
@@ -30,12 +31,13 @@ while read -r wt br; do
     [ "$(git -C "$wt" rev-list --count HEAD --not --remotes)" = 0 ] || { sk=$((sk+1)); continue; }
   fi
   if [ -n "$(git -C "$wt" status --porcelain)" ]; then
-    mkdir -p "$AR"; f="$AR/$(basename "$wt").patch"
+    mkdir -p "$AR"; f="$AR/$(basename "$wt").patch" i=0
+    while [ -e "$f" ]; do i=$((i+1)); f="$AR/$(basename "$wt").$i.patch"; done  # same-named worktrees must not overwrite an archive
     { git -C "$wt" diff HEAD; echo "# untracked:"; git -C "$wt" ls-files --others --exclude-standard; } >"$f" || { sk=$((sk+1)); continue; }
     ar=$((ar+1))
   fi
   if git worktree remove --force "$wt" >/dev/null 2>&1; then rm=$((rm+1)); else sk=$((sk+1)); fi
-done < <(git worktree list --porcelain | awk '/^worktree /{w=$2} /^branch /{sub("refs/heads/","",$2); print w, $2}')
+done < <(git worktree list --porcelain | awk '/^worktree /{w=substr($0,10)} /^branch /{print w "\t" substr($0,19)}')
 for s in ${SCRATCH:-}; do
   case "$s" in /|"$HOME"|"$HOME"/|"") continue ;; /*) rm -rf "$s" ;; esac
 done

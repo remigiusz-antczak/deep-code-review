@@ -19,7 +19,9 @@ for f in "$dir/.banlist.txt" "$dir/.banlist.local.txt"; do
   while IFS= read -r p || [ -n "$p" ]; do
     p="${p#"${p%%[![:space:]]*}"}"
     case "$p" in ''|'#'*) continue ;; esac
-    printf '%s' "$text" | grep -qE -e "$p" 2>/dev/null && flag "banlist pattern hit in $(basename "$f") (content withheld)"
+    printf '%s' "$text" | grep -qE -e "$p" 2>/dev/null; rc=$?
+    [ "$rc" -eq 0 ] && flag "banlist pattern hit in $(basename "$f") (content withheld)"
+    [ "$rc" -ge 2 ] && flag "invalid regex in $(basename "$f") (fail closed, content withheld)"
   done < "$f"
 done
 printf '%s\n' "$text" | grep -oE '[A-Za-z0-9-]+/[A-Za-z0-9._-]+' | grep -vxF "$SELF_REPO" | grep -q . \

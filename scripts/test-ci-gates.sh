@@ -3730,6 +3730,13 @@ else
   record 1 "train scripts: land_train/train_land/reap_own tests pass"; tail -5 "$WORK/train-scripts.log"
 fi
 
+# ops-script edge cases: own per-feature file (scripts/test-ops-edge.sh), one case here.
+if bash "$ROOT/scripts/test-ops-edge.sh" >"$WORK/ops-edge.log" 2>&1; then
+  record 0 "ops edge cases: clean_finished/land_train/prefile_check/pipe_mask_guard"
+else
+  record 1 "ops edge cases: clean_finished/land_train/prefile_check/pipe_mask_guard"; tail -5 "$WORK/ops-edge.log"
+fi
+
 # loop templates: own per-feature file (scripts/test-loop-templates.sh), one case here.
 if bash "$ROOT/scripts/test-loop-templates.sh" >"$WORK/loop-templates.log" 2>&1; then
   record 0 "loop templates: scripts exist, >=20 min, installed, routed"

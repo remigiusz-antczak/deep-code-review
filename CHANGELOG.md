@@ -3,6 +3,18 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.495.0] — 2026-10-06
+
+### Fixed
+- `clean_finished.sh`: a worktree path containing spaces was silently never cleaned (the porcelain parse split on whitespace); a missing `lsof` made every worktree look idle, so a worktree with a live process could be removed (now exit 2, nothing removed); two dirty worktrees with the same directory name overwrote one archive (now `<name>.N.patch`).
+- `land_train.sh`: a failing merge command was piped through `tail` and the script exited 0; it now prints `FAILED rc=N: ...` per PR and exits 1 when any landing failed.
+- `prefile_check.sh`: an invalid regex in the banlist matched nothing and the check passed; it now refuses (fail closed).
+- `pipe_mask_guard.py`: also flags pytest, jest, vitest, lint, build, make, tsc, mypy, ruff, cargo, npm, pnpm and yarn piped to `tail`, `head`, `grep`, `tee`, `sed` or `awk`, and `|&`.
+
+### Added
+- Coordinator loop template: the wake checklist runs `host_probe.py --lane-type cpu` and starts no new lane on `HOLD` or `COULD_NOT_CHECK`.
+- `scripts/test-ops-edge.sh`: regression tests for the fixes above (8 cases, red on the previous scripts), wired into `scripts/test-ci-gates.sh`.
+
 ## [1.494.0] — 2026-10-06
 
 ### Added

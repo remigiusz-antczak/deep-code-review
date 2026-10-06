@@ -15,7 +15,7 @@
 # Stacked children (open PRs based on a member's head branch) are retargeted to BASE_BRANCH before each merge.
 # Refuses (skips) a PR whose base is not BASE_BRANCH. On every exit, linked worktrees in UNION_DIRS are removed
 # (_clean_union.sh).
-# Exit: 0 all landed or skipped-with-notice, 2 usage/no union worktree.
+# Exit: 0 all landed or skipped-with-notice, 1 a merge command failed (see "FAILED rc=" lines), 2 usage/no union worktree.
 set -euo pipefail
 [ $# -eq 2 ] || { echo "usage: land_train.sh <base-sha> <union-sha>" >&2; exit 2; }
 BASE=$1 U=$2
@@ -37,6 +37,7 @@ for d in $UNION_DIRS; do git -C "$d" cat-file -e "$U^{commit}" 2>/dev/null && W=
 members=$(git -C "$W" log --merges --first-parent --reverse --format='%s %P' "$BASE..$U" \
   | sed -nE "s/^$PR_RE [0-9a-f]+ ([0-9a-f]+).*/\1 \2/p")
 [ -n "$members" ] || { echo "no members found in $BASE..$U"; exit 2; }
+fails=0
 LAST=$(printf '%s\n' "$members" | tail -1 | cut -d' ' -f1)
 
 while read -r N SHA; do
@@ -60,6 +61,9 @@ while read -r N SHA; do
   for c in $("$GH" pr list --base "$hb" --state open --json number -q '.[].number' </dev/null); do
     "$GH" pr edit "$c" --base "$BASE_BRANCH" </dev/null >/dev/null && echo "RETARGET #$c: $hb -> $BASE_BRANCH"
   done
-  out=$(bash -c "$LAND_CMD" _ "$N" "$SHA" </dev/null 2>&1 | tail -1) || true
+  rc=0; out=$(bash -c "$LAND_CMD" _ "$N" "$SHA" </dev/null 2>&1) || rc=$?  # capture, then tail: a pipe would mask the merge's exit
+  out=$(tail -1 <<<"$out")
+  [ "$rc" -eq 0 ] || { fails=$((fails+1)); out="FAILED rc=$rc: $out"; }
   echo "#$N($M)$([ "$N" = "$LAST" ] && echo ' last'): $out"
 done <<<"$members"
+[ "$fails" -eq 0 ] || { echo "$fails PR(s) failed to land" >&2; exit 1; }

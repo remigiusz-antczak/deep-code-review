@@ -12,7 +12,8 @@ ready). Never faster than 20 minutes: a tighter tick burns tokens for no new inf
 2. Peers: read each machine's free-lane count from the coordination issue. Run
    `ROOT=<repo-root> bash .claude/skills/agentic-delivery/scripts/reap_own.sh --report`; an idle peer while
    `lane:<machine>` issues wait is a finding: label or assign, per the pull-queue doctrine
-   (references/multi-session-coordination.md).
+   (references/multi-session-coordination.md). Host: `python3 .claude/skills/agentic-delivery/scripts/host_probe.py
+   --lane-type cpu`; `HOLD` or `COULD_NOT_CHECK` means start no new lane this wake, and say so on the board.
 3. Trains: for 2 or more green, reviewed PRs on one base, run
    `bash .claude/skills/agentic-delivery/scripts/train_land.sh <tag> <pr> <pr> ...`. A single PR takes the
    normal merge path.

@@ -4,7 +4,7 @@
 `gate | tail` reports the reader's exit status, so a failing gate reads as 0 and a
 failed push gets reported as pushed. Reads the hook's stdin JSON
 (`tool_input.command`) and matches `(git commit|push|merge | gh pr merge | qa | gate |
-test | ci-gates) ... | tail|head|grep` where the command has neither `pipefail` nor
+test | ci-gates | pytest | jest | vitest | lint | build | make | tsc | mypy | ruff | cargo | npm | pnpm | yarn) ... | tail|head|grep|tee|sed|awk` (`|&` too) where the command has neither `pipefail` nor
 `PIPESTATUS`/`pipestatus`.
 
 Default WARN: exit 0 with PreToolUse `hookSpecificOutput.additionalContext` JSON on
@@ -20,7 +20,7 @@ import re
 import sys
 
 HIT = re.compile(
-    r"\b(git\s+(commit|push|merge)|gh\s+pr\s+merge|qa|gate|test|ci-gates)\b[^|]*(?<!\|)\|(?!\|)\s*(tail|head|grep)\b"
+    r"\b(git\s+(commit|push|merge)|gh\s+pr\s+merge|qa|gate|test|ci-gates|pytest|jest|vitest|lint|build|make|tsc|mypy|ruff|cargo|npm|pnpm|yarn)\b[^|]*(?<!\|)\|(?!\|)&?\s*(tail|head|grep|tee|sed|awk)\b"
 )
 SAFE = re.compile(r"pipefail|PIPESTATUS|pipestatus")
 MSG = (
