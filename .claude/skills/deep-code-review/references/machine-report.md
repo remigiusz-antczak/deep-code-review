@@ -57,6 +57,12 @@ review:
   archetype: api               # from the first-response block
   stage: growth                # prototype | mvp | growth | mature | UNVERIFIED
   prior: null                  # path of the prior machine report re-verified, else null
+  verification:                # independent-verifier stage (verification-stage.md); omit when it did not run
+    verifier: subagent         # subagent | separate-pass
+    candidates: 14             # findings sent to a verifier
+    confirmed: 8               # the `findings` rows below
+    unverified: 3              # also rows below, `confidence: unverified`
+    refuted: 3                 # dropped; only this count survives
 
 ground_truth:                  # each: ok | failed | not-run, with a note on anything not ok
   build: ok
@@ -152,6 +158,11 @@ Field rules, beyond the comments above:
 - **`fix` is required on every `gap` row**; "investigate" is not a fix. A fix
   whose mechanism was never reproduced carries `mechanism_unproven: true` and
   the finding stays open.
+- **Verification outcome maps onto `confidence`** (`verification-stage.md`): a
+  verifier-`confirmed` finding is `CONFIRMED` with its evidence; `unverified`
+  stays a row with `confidence: unverified` and `resolves_with`; `refuted`
+  candidates get no row, only the `review.verification.refuted` count, and
+  `confirmed + unverified + refuted` must equal `candidates`.
 - **Ids are stable within a run and traceable across runs.** Number `F1…Fn`
   in severity order as the report does; `prior_id` links a row to the earlier
   file so a consumer can compute fixed / still-open / changed without a person

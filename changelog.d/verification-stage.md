@@ -1,0 +1,10 @@
+### Added
+- Independent verification stage for `DIFF`/`FULL` reviews (`references/verification-stage.md`, routed from the Phase 4 row of `SKILL.md`): each candidate finding goes, in batches of about five and without severity or the author's reasoning, to a fresh verifier context (a subagent, or a separate pass when none exist) that must get an external signal (read or grep the cited code, run a probe, test or linter) and answers confirmed, refuted or unverified. Only tool-backed confirmed findings count in the report; unverified ones are listed separately and never promoted; refuted ones are dropped and counted. A model-only judgement never confirms. `machine-report.md` gains `review.verification` counts and the verdict-to-`confidence` mapping. Addresses the "no independent verification fleet" gap.
+- `scripts/verify_findings.py` (stdlib) with `scripts/test_verify_findings.py` (wired into CI): `prompts` batches a findings JSON into verifier prompts, `merge` folds verdicts back and fails closed (missing, malformed, conflicting, evidence-free or model-only answers become unverified).
+- Measured on the held-out fixture over 8 first-pass reviews and 101 candidates: recall 5.25/6 before and after when the unverified list is kept (3.13/6 on the confirmed list alone), strict precision 0.51 to 0.53 on the confirmed list, 0 candidates refuted, cost 2.05x one pass. Directional: one diff, one model, and the verifier prompt was edited once after a first run on the same data.
+- One eval case (`diff-review-independent-verification-stage`).
+
+### Changed
+- `SKILL.md`: removed a sentence that restated the gate-self-test cap already in `machine-report.md` and the definition of done, and an aside about the Phase 6 overlay, to pay for the new Phase 4 pointer inside the frozen Phase 0-2 floor. Both `phase-floor-*` pins in `mustload-budgets.tsv` re-pinned down (23173 to 23158, 31392 to 31377).
+
+size-budget-raise: .claude/skills/deep-code-review/references/machine-report.md 10061→10860 review.verification block and verdict-to-confidence mapping for the verification stage

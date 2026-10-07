@@ -103,7 +103,7 @@ COVERAGE_LEDGER: <applicable domains + must-load refs>
 ```
 
 Dirty / occupied tree → dedicated worktree; planted probes banned on the live
-tree. Skip of the planted-defect probe caps only the gate-self-test claim.
+tree.
 
 ---
 
@@ -166,12 +166,11 @@ review after the first-response block.
 | 1 Ground truth | Documented setup, aggregate gate by name + exit code, per-subtree coverage, planted-defect probe (missing / empty / wrong / path-excluding config) | `method.md`, `testing-and-evals.md`, `language-stack-redflags.md` + `lang-*.md` per language present; `method-situational.md` when any verdict is cited or disputed; `redflags-situational.md` when the target has switch/case control flow, a hand-rolled delimiter scanner, a floor then a clamp on one value, or a partition/ring validity gate |
 | 2 Domain audits | Walk applicable A–W with `file:line`; fan-out under `parallel-audit.md` | `domain-checklists.md` → `domain-<letter>.md` per applicable domain + per-domain refs |
 | 3 Adversarial | Hostile user **and** hostile upstream; networked openers: anon GET, two-principal swap, dual-surface, then injection/SSRF | `security-appsec.md`, `security-ai-agents.md`, `security-agent-skills.md` |
-| 4 Synthesize | Dedup, compounds, snippet-or-drop at `START_SHA`, fail-open vs fail-closed, **anti-slop** | `method.md` |
+| 4 Synthesize | Dedup, compounds, snippet-or-drop at `START_SHA`, fail-open vs fail-closed, **anti-slop** | `method.md`; `verification-stage.md` when candidates exist |
 | 5 Report | Chat BLUF ≤30 lines + full table out-of-tree; in-repo `code-review/` only on confirmation | `method-report.md`, `report-format.md`, `example-review-report.md` |
 | 6 Imprint | Opt-in `AGENTS.md` + gates; detect-and-stop if present; pair each standard with a gate | `docs-and-dx.md` |
 
-Phase 6 imprints **this project's review bar**, never delivery (an overlay
-below, on the owner's yes).
+Phase 6 imprints **this project's review bar**, never delivery.
 
 ---
 

@@ -7704,6 +7704,18 @@
         "Requires hand-written correct findings from ground truth to score full recall and deliberately wrong findings to score zero, with a versioned matcher and canaries re-run on changes",
         "Compares skill versions paired on the same defect set via discordant pairs with intervals, and splits CI into deterministic per-PR checks versus a scheduled paid live harness"
       ]
+    },
+    {
+      "id": "diff-review-independent-verification-stage",
+      "prompt": "Your DIFF review produced 14 candidate findings. Before you write the report, how do you decide which of them are findings, and what does the report say about the ones you do not file?",
+      "expected_output": "Send the candidates, without severity or your reasoning, to verifiers in fresh contexts (a subagent per batch of about five findings, or a separate pass when no subagents exist) that try to reproduce each claim with an external signal: read or grep the cited code, run a one-line probe, test or linter, or the repo's review check runner, with a model-only judgement as the labelled last resort. Only confirmed findings (with the verifier's evidence) count in the findings and verdict. Unverified candidates, including any whose verifier gave no evidence, used only a model-only judgement, conflicted, or timed out, are listed separately and never promoted; refuted candidates are dropped but their count is printed (for example 14 candidates, 8 confirmed, 3 unverified, 3 refuted). Probes never run the reviewed script or a billable call.",
+      "expectations": [
+        "Dispatches candidates to independent fresh-context verifiers rather than re-reading them in the authoring context",
+        "Batches several findings per verifier to bound cost",
+        "Requires an external signal (read, grep, run, test, linter) and treats a model-only judgement as the last, labelled resort",
+        "Reports only confirmed findings as findings and lists unverified ones separately without promoting them",
+        "Drops refuted candidates but prints the refuted count so the filter is visible"
+      ]
     }
   ]
 }

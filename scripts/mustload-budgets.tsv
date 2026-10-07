@@ -277,7 +277,7 @@ data / ETL	19991
 agent / LLM / MCP	19610
 IaC / platform	4342
 lib / SDK	11038
-phase-floor-light	23173
-phase-floor-full	31392
+phase-floor-light	23158
+phase-floor-full	31377
 phase-conditional	method-situational.md
 phase-conditional	redflags-situational.md
