@@ -14,15 +14,17 @@ git init -q --bare -b main "$WORK/origin.git"
 R="$WORK/repo"; mkdir "$R"
 rsync -a --exclude=.git --exclude=.claude/worktrees --exclude=changelog.d "$ROOT/" "$R/"
 git -C "$R" init -q -b main; g remote add origin "$WORK/origin.git"
-g add -A; g commit -q -m base; g push -q origin main
+g add -A; g commit -q -m base; g push -q origin main; BASE=$(g rev-parse HEAD)
 V0=$(cat "$R/.claude/skills/deep-code-review/VERSION")
 exp1="${V0%%.*}.$(( $(echo "$V0" | cut -d. -f2) + 1)).0"
 exp2="${V0%%.*}.$(( $(echo "$V0" | cut -d. -f2) + 2)).0"
 
-lane() { # <branch> <ref-file> <slug>: edit a ref, add a fragment, regen like a real lane (no bump)
+lane() { # <branch> <ref-file> <slug>: edit a ref, add a fragment (with its raise marker), regen like a real lane (no bump)
   g checkout -q -b "$1" main
-  printf '\nlane %s note.\n' "$1" >>"$R/.claude/skills/deep-code-review/references/$2"
-  mkdir -p "$R/changelog.d"; printf '### Added\n- lane %s change.\n' "$1" >"$R/changelog.d/$3.md"
+  f=.claude/skills/deep-code-review/references/$2; before=$(wc -c <"$R/$f" | tr -d ' ')
+  printf '\nlane %s note.\n' "$1" >>"$R/$f"
+  mkdir -p "$R/changelog.d"
+  printf '### Added\n- lane %s change.\n- size-budget-raise: %s %s→%s test\n' "$1" "$f" "$before" "$(wc -c <"$R/$f" | tr -d ' ')" >"$R/changelog.d/$3.md"
   (cd "$R" && bash scripts/land-release.sh --regen); g add -A; g commit -q -m "lane $1"
 }
 lane a a11y-aria.md a
@@ -38,5 +40,7 @@ grep -q 'lane a change' "$R/CHANGELOG.md" && grep -q 'lane b change' "$R/CHANGEL
 [ -z "$(ls "$R/changelog.d" 2>/dev/null)" ]; ok $? "fragments consumed"
 (cd "$R" && bash scripts/ci-gates.sh version . >/dev/null && bash scripts/ci-gates.sh size --config scripts/size-budgets.tsv . >/dev/null \
   && python3 scripts/skill_index.py --check >/dev/null && bash scripts/write-checksums.sh "$WORK/sums" >/dev/null && cmp -s "$WORK/sums" SHA256SUMS); ok $? "version, size, index, checksum gates green"
+grep -q '^README.md	' "$R/scripts/size-budgets.tsv"; ok $? "hand-kept README.md size row survives regen"
+(cd "$R" && bash scripts/ci-gates.sh size-ratchet --base $BASE --config scripts/size-budgets.tsv . >/dev/null); ok $? "size-ratchet green on the landed tree"
 (cd "$R" && bash scripts/land-release.sh) >/dev/null 2>&1; [ $? -ne 0 ]; ok $? "land with no fragment refuses"
 exit $fail

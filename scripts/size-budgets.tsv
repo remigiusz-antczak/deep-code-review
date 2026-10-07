@@ -27,7 +27,7 @@
 #   find .claude/skills \( -name 'SKILL.md' -o -path '*/references/*.md' \) \
 #     -type f | LC_ALL=C sort | while IFS= read -r f; do \
 #     printf '%s\t%s\n' "$f" "$(LC_ALL=C wc -c < "$f" | tr -d '[:space:]')"; done
-.claude/skills/agentic-ceo/SKILL.md	14524
+.claude/skills/agentic-ceo/SKILL.md	12616
 .claude/skills/agentic-ceo/references/chaos-playbook.md	7573
 .claude/skills/agentic-delivery/SKILL.md	23261
 .claude/skills/agentic-delivery/references/cost-quality-guardrails.md	15846
@@ -51,12 +51,12 @@
 .claude/skills/agentic-delivery/references/unattended-operating-mode.md	24057
 .claude/skills/agentic-delivery/references/unattended-trackers.md	46886
 .claude/skills/agentic-delivery/references/verification-handback.md	57146
-.claude/skills/business-ops/SKILL.md	10654
+.claude/skills/business-ops/SKILL.md	10345
 .claude/skills/business-ops/references/regulated-domain-triage.md	8045
 .claude/skills/communication-structure/SKILL.md	6923
-.claude/skills/contribution/SKILL.md	12025
+.claude/skills/contribution/SKILL.md	11578
 .claude/skills/contribution/references/contribution-procedure.md	7018
-.claude/skills/deep-code-review/SKILL.md	23992
+.claude/skills/deep-code-review/SKILL.md	23800
 .claude/skills/deep-code-review/references/a11y-aria.md	26605
 .claude/skills/deep-code-review/references/a11y-color-motion.md	8435
 .claude/skills/deep-code-review/references/a11y-focus.md	22485
@@ -93,7 +93,7 @@
 .claude/skills/deep-code-review/references/domain-a.md	7018
 .claude/skills/deep-code-review/references/domain-b.md	6293
 .claude/skills/deep-code-review/references/domain-c.md	5128
-.claude/skills/deep-code-review/references/domain-checklists.md	1997
+.claude/skills/deep-code-review/references/domain-checklists.md	1958
 .claude/skills/deep-code-review/references/domain-d.md	2348
 .claude/skills/deep-code-review/references/domain-e.md	2994
 .claude/skills/deep-code-review/references/domain-f.md	2914
@@ -113,7 +113,7 @@
 .claude/skills/deep-code-review/references/domain-t.md	3663
 .claude/skills/deep-code-review/references/domain-w.md	8213
 .claude/skills/deep-code-review/references/example-review-report.md	394
-.claude/skills/deep-code-review/references/frontend-a11y.md	24316
+.claude/skills/deep-code-review/references/frontend-a11y.md	19905
 .claude/skills/deep-code-review/references/i18n-l10n.md	10160
 .claude/skills/deep-code-review/references/infra-evolution-by-stage.md	7856
 .claude/skills/deep-code-review/references/infra-iac-containers.md	17369
@@ -138,7 +138,7 @@
 .claude/skills/deep-code-review/references/performance-db-cost.md	43051
 .claude/skills/deep-code-review/references/privacy-by-design.md	4924
 .claude/skills/deep-code-review/references/privacy-compliance.md	17463
-.claude/skills/deep-code-review/references/product-ux-quality.md	38811
+.claude/skills/deep-code-review/references/product-ux-quality.md	27504
 .claude/skills/deep-code-review/references/readme-authoring.md	6910
 .claude/skills/deep-code-review/references/release-engineering.md	27810
 .claude/skills/deep-code-review/references/reliability-error-handling.md	45745
@@ -167,12 +167,12 @@
 .claude/skills/deep-code-review/references/ux-writes.md	11797
 .claude/skills/deep-code-review/references/web-fetch.md	22842
 .claude/skills/deep-code-review/references/web-render.md	18925
-.claude/skills/growth-analytics/SKILL.md	9957
-.claude/skills/idea-critic/SKILL.md	13093
+.claude/skills/growth-analytics/SKILL.md	9392
+.claude/skills/idea-critic/SKILL.md	13090
 .claude/skills/idea-critic/references/decision-hygiene.md	4549
-.claude/skills/positioning/SKILL.md	7405
-.claude/skills/product-discovery/SKILL.md	11665
-.claude/skills/product-output-safety/SKILL.md	13153
+.claude/skills/positioning/SKILL.md	6951
+.claude/skills/product-discovery/SKILL.md	11337
+.claude/skills/product-output-safety/SKILL.md	12450
 .claude/skills/deep-code-review/references/frontend-security.md	6256
 .claude/skills/deep-code-review/references/ux-states.md	13053
 # README.md is not a skill file; its row is kept by hand (the regenerate
