@@ -581,6 +581,8 @@ echo "  scopes: FULL | DIFF <base-ref> | FILE <paths>"
 echo "  read:   .claude/skills/${REVIEW_NAME}/SKILL.md (mirrors under other hosts when installed)"
 if [[ "${WITH_DELIVERY}" -eq 1 ]]; then
   echo "  delivery: load agentic-delivery for gated multi-role work"
+  echo "  janitor:  schedule unattended cleanup (previews first, then runs every 15 min): bash .claude/skills/agentic-delivery/scripts/install_janitor.sh <repo>..."
+  echo "            installed? bash .claude/skills/agentic-delivery/scripts/install_janitor.sh --check"
 fi
 if [[ "${WITH_CRITIC}" -eq 1 ]]; then
   echo "  critic:   load idea-critic before a plan reaches the owner"
