@@ -3730,6 +3730,13 @@ else
   record 1 "train scripts: land_train/train_land/reap_own tests pass"; tail -5 "$WORK/train-scripts.log"
 fi
 
+# land-release: own per-feature file (scripts/test-land-release.sh), one case here.
+if bash "$ROOT/scripts/test-land-release.sh" >"$WORK/land-release.log" 2>&1; then
+  record 0 "land-release: two fragment lanes land back-to-back with no rebump"
+else
+  record 1 "land-release: two fragment lanes land back-to-back with no rebump"; tail -8 "$WORK/land-release.log"
+fi
+
 # ultrareview fixes: own per-feature file (scripts/test-ultrareview-fixes.sh), one case here.
 if bash "$ROOT/scripts/test-ultrareview-fixes.sh" >"$WORK/ultrareview.log" 2>&1; then
   record 0 "ultrareview fixes: operating-layer placeholder, reap_own, update-installed, inject guards"

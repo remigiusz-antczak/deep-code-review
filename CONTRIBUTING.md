@@ -25,6 +25,21 @@ change. Read it first; the essentials are only summarized here.
   and no-fabrication rules; they apply to code, comments, docs, commits, and git
   history.
 
+## Releasing without version collisions
+
+Parallel lanes must not bump the version: each one claims "main + 1" and all but one collide.
+
+- **Lane:** add `changelog.d/<slug>.md` (the body for the release heading: `### Added` plus bullets;
+  put any `size-budget-raise:` marker here). Do not touch `VERSION`, `metadata.version`,
+  `plugin.json` or the top of `CHANGELOG.md`. Run `bash scripts/land-release.sh --regen` before
+  pushing so INDEX.md, `SHA256SUMS` and `size-budgets.tsv` match your tree.
+- **Land:** on the branch, run `bash scripts/land-release.sh`. Under a lock it merges `origin/main`
+  (generated-file conflicts are regenerated, anything else aborts), stamps the next minor across the
+  lockstep set, folds the fragments into `CHANGELOG.md`, regenerates, and commits. Push and merge as
+  usual. A lane that lands second re-runs the same command: no hand rebump, no force-push.
+- **PR body:** one `Closes #N` line per issue. `Closes #a, #b` closes only `#a`.
+- **Check:** `bash scripts/test-land-release.sh` lands two fragment branches back-to-back.
+
 ## Before you open a PR
 
 Run the same gates CI runs ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)):
