@@ -12,8 +12,8 @@ e3229aa03cb46428a334e96ea8ad00dc27dfb5606ffbe99ca99c2524597d353f  .claude/skills
 bcf5695cf72009265b4b35a10d090108822be218bc8eac0a09c7a2ccfdb542c8  .claude/skills/agentic-ceo/scripts/task_ledger.py
 97da32f3ce246a7c291340b03902159a5a0b42bfbf27bd50986f2c7c15da4bcf  .claude/skills/agentic-ceo/scripts/token_report.py
 a116dade3fe6f5f3e5ef5116fe74bf2d4ab6b77f637e6d66484d5e4f521dcd98  .claude/skills/agentic-delivery/INDEX.md
-c9b54739b4b4d5ed3a7ee0960492ed8708a6b4b7caff6ebd77ecd8f13ca77d08  .claude/skills/agentic-delivery/SKILL.md
-4689c38b4b4f7ea7398df9ab595a9dd10dd6dbdc5d698d502ecde57ba862323f  .claude/skills/agentic-delivery/VERSION
+90a2a528a7e8cee90da71021062e3dd2545a491a700629d61bc52b5ab77b9e4f  .claude/skills/agentic-delivery/SKILL.md
+e1a9e4c0e70c1da30aa05c3396c784eea31c3003725cf5bd3bcdb1b81f139d6b  .claude/skills/agentic-delivery/VERSION
 2acd29af130d6d9c2d79e2a372ca969b7afc639671b0755b843f6b40026c43fb  .claude/skills/agentic-delivery/evals/evals.json
 7a90c7f2d122567d089a1f7d4143f67f84acb36f04817123c8a3cf94524bcaf6  .claude/skills/agentic-delivery/evals/triggers.json
 4d9d4b49467fb1b21b0533f7729800892f582a936f16059f4a7bb2ea24d770ee  .claude/skills/agentic-delivery/references/cost-quality-guardrails.md
@@ -92,8 +92,8 @@ f51f6fbda9a1ad8fc7ec82c54a7939764e9d4032765396d81d7c1c0659179734  .claude/skills
 bb541f96bd7d0c3bb4adff8dcaac0f50efa2493b8215b6aa671805bfbb89c42b  .claude/skills/contribution/references/contribution-procedure.md
 a3872cb524e3b1faa5632636abc317fdab5cd8b28a6da5989a8fbc1747cdeb4d  .claude/skills/contribution/scripts/prefile_check.sh
 4d41447b376c560d609b8fd196658a7ac858cd64eef0c1f1a05d9cc47f2cb7cf  .claude/skills/deep-code-review/INDEX.md
-dbb5ffb31687b76d95ace6754421cd7ce0ddada3ebf3c8de73a5551d7a3dfd89  .claude/skills/deep-code-review/SKILL.md
-4689c38b4b4f7ea7398df9ab595a9dd10dd6dbdc5d698d502ecde57ba862323f  .claude/skills/deep-code-review/VERSION
+30b265d5014f91496e4283401c673c779cf3643e6b901536d405ab7cc97d0265  .claude/skills/deep-code-review/SKILL.md
+e1a9e4c0e70c1da30aa05c3396c784eea31c3003725cf5bd3bcdb1b81f139d6b  .claude/skills/deep-code-review/VERSION
 d2ffc15187d6c9c3a7d7219c0b8b4cbce8f2be0d8537f3aeb62447407b3746b2  .claude/skills/deep-code-review/evals/evals.json
 67c9b0fe61e094ccf41db3620536e699b2777d7caca4f5888f8ef1664b6c32c6  .claude/skills/deep-code-review/evals/triggers.json
 b84e3a2b88dc189f041784e76b97e68ad879915814e00f4b37cd27513746d6f1  .claude/skills/deep-code-review/references/a11y-aria.md
@@ -243,8 +243,8 @@ fbc24fe2b0ebcaa15bcddc856e744d735148af4fb3e437725ac368696bbde5ca  .claude/skills
 4c8047eeb8b174b520c736e7b189d5a49e4a755aad738e9c44c8af4e25fe1067  .claude/skills/growth-analytics/evals/evals.json
 a355cb79fa73df4f6a925b06016dafcf7f4a046715f9bbfd670a4204bc1745ca  .claude/skills/growth-analytics/evals/triggers.json
 58cb027a29d2e07fd714b3d7ab82682530aa80cd0826a86c598b93b0754c6b1e  .claude/skills/idea-critic/INDEX.md
-d1bc2f7c1bd09890a80d920ffc41838c64a7ae833358c2b035f31ecde6865cc1  .claude/skills/idea-critic/SKILL.md
-4689c38b4b4f7ea7398df9ab595a9dd10dd6dbdc5d698d502ecde57ba862323f  .claude/skills/idea-critic/VERSION
+f873d1321ef744abf4e125d7d0d165654891b44fe73ff87acc6df8611f00453c  .claude/skills/idea-critic/SKILL.md
+e1a9e4c0e70c1da30aa05c3396c784eea31c3003725cf5bd3bcdb1b81f139d6b  .claude/skills/idea-critic/VERSION
 d3d10587b6ea8c9e0ae757a5bf262367909acf680e71c2abc9c2db9a947274fa  .claude/skills/idea-critic/evals/evals.json
 d8098c5ced63e8b8608867dd144091049563a0553cf62d27ce05b9d52ac54266  .claude/skills/idea-critic/evals/triggers.json
 c5615e5c59bc2e452c2c49619be2ec5e456f3c167e772498316f8b5a45deb2c8  .claude/skills/idea-critic/references/decision-hygiene.md
