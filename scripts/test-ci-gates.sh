@@ -3765,6 +3765,13 @@ else
   record 1 "ops edge cases: clean_finished/land_train/prefile_check/pipe_mask_guard"; tail -5 "$WORK/ops-edge.log"
 fi
 
+# janitor: own per-feature file (scripts/test-janitor.sh), one case here.
+if bash "$ROOT/scripts/test-janitor.sh" >"$WORK/janitor.log" 2>&1; then
+  record 0 "janitor: dry-run vs apply, unpushed skip, out-of-scope untouched, scheduler install"
+else
+  record 1 "janitor: dry-run vs apply, unpushed skip, out-of-scope untouched, scheduler install"; tail -5 "$WORK/janitor.log"
+fi
+
 # loop templates: own per-feature file (scripts/test-loop-templates.sh), one case here.
 if bash "$ROOT/scripts/test-loop-templates.sh" >"$WORK/loop-templates.log" 2>&1; then
   record 0 "loop templates: scripts exist, >=20 min, installed, routed"

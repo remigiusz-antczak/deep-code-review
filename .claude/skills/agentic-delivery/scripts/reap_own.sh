@@ -10,6 +10,8 @@
 # QA_PORTS (optional space-separated TCP ports: an own listener there with cwd under ROOT is reaped too,
 # since a leftover server on a QA port makes the QA script skip its browser half), KILL_WAIT_S.
 #
+# DRY_RUN=1: print "would reap ..." instead of killing. LEDGER=file: append one tab-separated line per kill.
+#
 # --report: cross-session, read-only, never kills. Lists every own process matching PATTERN or listening on a
 # TCP port as "<cwd> pid=<n> age=<s>s" sorted by worktree path (ROOT optional: unset = all of them), then
 # "orphans=N", the free RAM, and a "FINDING hot" line for each own process using >= CPU_HOT percent CPU
@@ -42,7 +44,10 @@ for P in $(printf '%s\n' $PIDS | sort -u); do
   if [ -n "$KEEP" ]; then case "$C" in "${KEEP%/}"|"${KEEP%/}"/*) continue ;; esac; fi
   E=$(age "$P")
   if [ $REPORT = 1 ]; then rows="$rows$C pid=$P age=${E:-0}s"$'\n'; n=$((n+1)); continue; fi
-  if [ "${E:-0}" -gt "$MAX" ]; then if kill_verified "$P"; then n=$((n+1)); fi; fi
+  if [ "${E:-0}" -gt "$MAX" ]; then
+    if [ "${DRY_RUN:-0}" = 1 ]; then echo "would reap pid=$P cwd=$C age=${E}s" >&2; n=$((n+1))
+    elif kill_verified "$P"; then n=$((n+1)); [ -z "${LEDGER:-}" ] || printf '%s\treap\t%s\tpid=%s age=%ss\n' "$(date -u +%FT%TZ)" "$C" "$P" "$E" >>"$LEDGER"; fi
+  fi
 done
 if [ $REPORT = 0 ]; then echo "reaped=$n"; exit 0; fi
 printf '%s' "$rows" | sort

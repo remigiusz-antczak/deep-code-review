@@ -1,6 +1,7 @@
 # Cleanup loop (standalone)
 
-For a machine with no coordinator or peer loop. Cadence: every 30 minutes or hourly. Never faster than 20
+Fallback for a host with no OS scheduler: `scripts/install_janitor.sh` schedules the same cleanup without an agent and
+supersedes this loop. For a machine with no coordinator or peer loop. Cadence: every 30 minutes or hourly. Never faster than 20
 minutes.
 
 ## /loop prompt (copy-paste)
