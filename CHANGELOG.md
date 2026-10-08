@@ -3,6 +3,13 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.539.0] — 2026-10-08
+
+### Added
+- Compact mode (`references/compact-mode.md`, under 2.5KB) for non-Claude or small-context models, routed from SKILL.md, with the measured cross-model bench in `docs/bench/`. On Qwen3-Coder-Next it beat a plain prompt by +0.167 recall (CI +0.033 to +0.300); gpt-oss and DeepSeek differences were within noise.
+
+size-budget-raise: .claude/skills/deep-code-review/SKILL.md 23473→23590 one routing line to compact-mode.md
+
 ## [1.538.0] — 2026-10-08
 
 - Operating layer allows the standard autonomous dev loop without prompts in every permission mode: in-project edits, common test runners and git add/commit/status/diff/log. It still denies `--no-verify`, force-push and edits to `.claude/settings*.json`. No `defaultMode` is set, so interactive auto mode is kept. Measured before: 5 of 6 standard headless tasks were blocked after a fresh install (Refs #1380).
