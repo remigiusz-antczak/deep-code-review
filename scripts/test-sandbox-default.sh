@@ -24,8 +24,9 @@ jq -e '.sandbox.excludedCommands == ["gh *"] and (.permissions.allow | index("Ba
   and (.sandbox.filesystem.allowWrite | contains(["~/.cache","~/.npm"]))' "$A" >/dev/null; ok $? "apply: autonomy-ready keys present"
 jq -e '.permissions.deny | contains(["Bash(rm -rf *)","Bash(rm -fr *)","Bash(rm -r *)","Bash(rm -R *)","Bash(sudo *)"])' "$A" >/dev/null; ok $? "apply: rm/sudo deny rules present"
 jq -e '.permissions.deny | index("Bash(curl *)")' "$A" >/dev/null; ok $? "apply: existing deny rule kept"
+jq -e '(.permissions.allow | contains(["Edit(/**)","Bash(python3 -m pytest *)","Bash(git add *)","Bash(git commit *)"])) and (.permissions.deny | contains(["Edit(/.claude/settings.local.json)","Bash(git commit --no-verify *)","Bash(git push --force *)"]))' "$A" >/dev/null; ok $? "apply: autonomy allow rules present; no-verify, force-push and own-settings edits denied"
 bash "$ROOT/install.sh" --with-delivery --apply-operating-layer "$W/a" >/dev/null 2>&1
-[ "$(jq '.permissions.deny | length' "$A")" = 10 ]; ok $? "apply: idempotent deny list (10 entries)"
+[ "$(jq '.permissions.deny | length' "$A")" = 16 ]; ok $? "apply: idempotent deny list (16 entries)"
 for c in "gh alias *" "gh extension *" "gh repo delete *" "gh release delete *"; do
   jq -e --arg r "Bash($c)" '.permissions.deny | index($r)' "$A" >/dev/null; ok $? "apply: destructive gh denied: $c"
 done

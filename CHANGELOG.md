@@ -3,6 +3,10 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.538.0] — 2026-10-08
+
+- Operating layer allows the standard autonomous dev loop without prompts in every permission mode: in-project edits, common test runners and git add/commit/status/diff/log. It still denies `--no-verify`, force-push and edits to `.claude/settings*.json`. No `defaultMode` is set, so interactive auto mode is kept. Measured before: 5 of 6 standard headless tasks were blocked after a fresh install (Refs #1380).
+
 ## [1.537.0] — 2026-10-08
 
 ### Changed
