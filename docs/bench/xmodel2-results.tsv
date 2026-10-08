@@ -1,0 +1,10 @@
+model	arm	cases	parse_fail	bugs	hit	findings	recall	verified_precision	empty_rate	avg_tokens
+gpt-oss_120b	plain	30	0	30	5	68	0.167	0.735	0.10	2185
+gpt-oss_120b	full	30	0	30	2	76	0.067	0.671	0.07	1756
+gpt-oss_120b	compact	30	1	30	7	68	0.233	0.574	0.07	2756
+DeepSeek-V4-Flash	plain	30	1	30	7	85	0.233	0.529	0.07	691
+DeepSeek-V4-Flash	full	30	6	30	6	94	0.200	0.617	0.23	2039
+DeepSeek-V4-Flash	compact	30	0	30	6	137	0.200	0.620	0.00	599
+Qwen3-Coder-Next	plain	30	0	30	1	4	0.033	0.750	0.97	16
+Qwen3-Coder-Next	full	30	0	30	3	40	0.100	0.400	0.77	147
+Qwen3-Coder-Next	compact	30	3	30	6	122	0.200	0.426	0.37	884

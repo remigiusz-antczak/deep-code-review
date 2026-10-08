@@ -104,8 +104,8 @@ bb541f96bd7d0c3bb4adff8dcaac0f50efa2493b8215b6aa671805bfbb89c42b  .claude/skills
 6108f7f8d13cefb9a23ca3960cc3bc73200f8ef88fe39c9d1a9b49b9ec7222f1  .claude/skills/contribution/scripts/learning_to_pr.py
 a3872cb524e3b1faa5632636abc317fdab5cd8b28a6da5989a8fbc1747cdeb4d  .claude/skills/contribution/scripts/prefile_check.sh
 36bee017dcdf6b3fcc00b85c361b27987c0a610e088115eb07318a56c878ccfb  .claude/skills/contribution/scripts/share_learning.py
-7f538be1e4941077be348926704bcd44f0a782e047b708a2a86b7ff56e514491  .claude/skills/deep-code-review/INDEX.md
-375a78023d66a61fc00d2d964be537ccfd178d8a6f67c293baa926745ef674b4  .claude/skills/deep-code-review/SKILL.md
+b80ada91de804c72f2644f86fe01104a995cf2770da085af02da6c0b4d3743c6  .claude/skills/deep-code-review/INDEX.md
+24b32ca7b72b97ec135ce0bc4686e86333e90db485035c8764ae8e1016a6f583  .claude/skills/deep-code-review/SKILL.md
 a61ba0c902fa348210d15c243c2c4cd24ba56bb7237b9afb6490f731e0a7084b  .claude/skills/deep-code-review/VERSION
 cad0029c42549781aec334924d2683a90950cbda9800afdc5624effb48ff59d8  .claude/skills/deep-code-review/evals/evals.json
 13dbb52e4bf61b1093302e094151def167371d26e7cf67a026f3beeb09d34378  .claude/skills/deep-code-review/evals/triggers.json
@@ -128,6 +128,7 @@ a8825f0d50c6aab31f77eb209312382e98c741b14ad19c2348c38ae551422048  .claude/skills
 6f4c9222628d37993187da36e51ee6a5a5daee74e51f31da9b343742bc82b575  .claude/skills/deep-code-review/references/appsec-tokens.md
 0abd4efacaead5559ce491c64ef044182fcf408ba490e5f69cc1fa69df8ab829  .claude/skills/deep-code-review/references/billing-correctness.md
 d6156d79fbc16c58dc0993c052a070f3a6e732663487a9dcf64dbfcc69ded946  .claude/skills/deep-code-review/references/branch-and-merge-hygiene.md
+334f4dad81c8eca4e8841480d6cb03f50b0901e480b77ff3b0e7c95b48a4da92  .claude/skills/deep-code-review/references/compact-mode.md
 470092f614773604ca523a551081cd82b7e26a64ce290c0c69306e33bc282038  .claude/skills/deep-code-review/references/concurrency-shared-state.md
 9784d63efd0de74e1362272395e4e6d169a949711441475bbff1fa0879307624  .claude/skills/deep-code-review/references/data-contracts.md
 59fd81eb6deb38c3a8d96978a326d034cfbce45a110e0734c3f634927d02c798  .claude/skills/deep-code-review/references/data-freshness.md

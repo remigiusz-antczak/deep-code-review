@@ -38,6 +38,7 @@ scope `FULL` | `DIFF <base>` | `FILE <paths>`.
 **As a one-shot prompt** — paste this file, then name target and scope; for a
 non-file-capable model also paste the `references/*.md` for the archetype.
 **As a checklist** — walk the domain map, loading `domain-checklists.md`.
+**Non-Claude or small-context model** — read `references/compact-mode.md` (condensed prompt) instead of this file.
 
 **Scope modes** (state which; if unstated, infer):
 - `FULL` — entire repository. Default when handed a repo.
