@@ -23,7 +23,7 @@ file (`--settings`, default `.claude/settings.json`):
   command contains `handback_cap.py` (one entry is the default cap only, not
   the second, `matcher`-scoped tier `host-enforcement.md` documents).
 - `subagent-model-pin` — `CLAUDE_CODE_SUBAGENT_MODEL` in the settings file's
-  `env` block.
+  `env` block (`WARN:` when `_FORCE=1` pins a haiku-class model).
 A settings file that does not exist at all reports all three `MISSING` (a
 fresh install has none yet); an existing but unreadable/malformed one reports
 all three `COULD_NOT_CHECK` instead — genuinely ambiguous, never guessed.
@@ -65,6 +65,10 @@ PROTOCOL_ONLY = (
 
 SANDBOX_RED = ("MISSING RED: sandbox off -- an agent's `rm -rf` can delete your files; set sandbox.enabled=true and "
                "sandbox.allowUnsandboxedCommands=false (install.sh --apply-operating-layer)")
+
+
+PIN_WARN = ("WARN: CLAUDE_CODE_SUBAGENT_MODEL_FORCE=1 pins every subagent to a haiku-class model "
+            "(overrides lane agents: junk commits, lost hand-backs); pin to sonnet or unset FORCE")
 
 
 def _flatten_commands(hook_entries: list) -> list:
@@ -116,7 +120,9 @@ def check_settings(settings_path: str) -> dict:
     return {
         "subagent-start-injector": "PRESENT" if any("subagent_start_inject.py" in c for c in start_cmds) else "MISSING",
         "handback-cap-two-tier": handback_status,
-        "subagent-model-pin": "PRESENT" if "CLAUDE_CODE_SUBAGENT_MODEL" in env else "MISSING",
+        "subagent-model-pin": PIN_WARN if (str(env.get("CLAUDE_CODE_SUBAGENT_MODEL_FORCE")) in ("1", "true")
+                                           and "haiku" in str(env.get("CLAUDE_CODE_SUBAGENT_MODEL", "")).lower())
+                              else "PRESENT" if "CLAUDE_CODE_SUBAGENT_MODEL" in env else "MISSING",
         "sandbox-on": "PRESENT" if sb.get("enabled") is True and sb.get("allowUnsandboxedCommands") is False
                       else SANDBOX_RED,
     }

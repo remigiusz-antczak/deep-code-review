@@ -36,6 +36,9 @@ lifecycle, canary/blue-green claims vs actual config, DORA-or-`UNMEASURED` —
   backstops) is the canonical doctrine in
   `agentic-delivery/references/host-enforcement.md`'s "Minimum-cost CI & token
   profile" — not restated here.
+- **No self-hosted runner on a developer machine** unless it is ephemeral and runs as a
+  low-privilege account or VM; a persistent one runs every PR's code as that user
+  (`infra-iac-containers.md`, CICD-SEC-7).
 - Third-party CI actions **pinned to a commit SHA** (not `@main`/`@v3`), bumped
   by a bot that passes the same gates; secrets from the CI store, never echoed
   (`set -x` leaks). **Package-signature verification is blocking**; transitive-CVE

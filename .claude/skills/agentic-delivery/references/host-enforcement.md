@@ -119,7 +119,7 @@ it to named agent types):
 "hooks": {
   "SubagentStop": [
     { "hooks": [{ "type": "command",
-        "command": "python3 .claude/skills/agentic-delivery/scripts/handback_cap.py" }] }
+        "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/skills/agentic-delivery/scripts/handback_cap.py\"" }] }
   ]
 }
 ```
@@ -140,7 +140,7 @@ second, `matcher`-scoped `SubagentStop` entry with env overrides:
 
 ```json
 { "matcher": "security-reviewer", "hooks": [{ "type": "command",
-    "command": "HANDBACK_MAX_LINES=25 HANDBACK_MAX_CHARS=2000 python3 .claude/skills/agentic-delivery/scripts/handback_cap.py" }] }
+    "command": "HANDBACK_MAX_LINES=25 HANDBACK_MAX_CHARS=2000 python3 \"$CLAUDE_PROJECT_DIR/.claude/skills/agentic-delivery/scripts/handback_cap.py\"" }] }
 ```
 
 ## Standing modes at SubagentStart, with per-type exemptions (a Host-enforced instance)
@@ -172,7 +172,7 @@ Exceptions are carved **mechanically, by agent type**, not left to each lane's m
 "hooks": {
   "SubagentStart": [
     { "hooks": [{ "type": "command",
-        "command": "HOUSE_DEFAULTS_FILE=.claude/house-defaults.md python3 .claude/skills/agentic-delivery/scripts/subagent_start_inject.py" }] }
+        "command": "HOUSE_DEFAULTS_FILE=\"$CLAUDE_PROJECT_DIR/.claude/house-defaults.md\" python3 \"$CLAUDE_PROJECT_DIR/.claude/skills/agentic-delivery/scripts/subagent_start_inject.py\"" }] }
   ]
 }
 ```
@@ -231,10 +231,16 @@ frontmatter is per-agent (Protocol); the other-requests env/setting pin or
 `FORCE_PROMPT_CACHING_5M` overrides it.
 Declare which control is set, and its bucket default.
 
+Pin lane agents (anything that edits, commits, or hands back) to `sonnet`; use
+`haiku` only for explicitly mechanical tasks (grep, listing, formatting).
+`FORCE=1` with a haiku-class pin overrides every lane agent's own `model:`; field
+result: junk commits and lost hand-backs. `perun_doctor.py` and
+`operating_selfcheck.py` WARN on that combination: pin to sonnet or unset `FORCE`.
+
 ```json
 {
   "env": {
-    "CLAUDE_CODE_SUBAGENT_MODEL": "haiku",
+    "CLAUDE_CODE_SUBAGENT_MODEL": "sonnet",
     "CLAUDE_CODE_SUBAGENT_MODEL_FORCE": "1",
     "CLAUDE_CODE_SUBAGENT_PROMPT_CACHE_TTL": "1h"
   }
