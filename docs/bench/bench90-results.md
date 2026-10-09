@@ -59,3 +59,7 @@ A second benchmark used agentic review (a checkout plus Read, Grep and Glob tool
 | Opus, one pass | 0.744 | +0.100 [+0.022, +0.189] | 0.867 (+0.039 [-0.032, +0.113]) | $0.131 |
 
 Opus costs less than the two-pass union and is the only setup whose recall interval clears zero. Its precision gain does not clear zero. Same caveats as above: one replicate, one corpus, model-judged.
+
+## Optional: repeatability
+
+For N replicate runs of one case, `score_review.py --repeat RUN1.json RUN2.json ...` prints, per finding (same file, lines within 3), the share of runs that report it and the severity agreement with direction (up/down/both/none). Not part of the headline numbers.

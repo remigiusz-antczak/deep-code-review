@@ -2,6 +2,7 @@
 """Score a review's findings against a ground-truth file: recall and precision under an FP budget.
 
   score_review.py GROUND_TRUTH.json FINDINGS.json [--max-fp N]
+  score_review.py --repeat RUN1.json RUN2.json ...   (optional repeatability report)
   score_review.py --selftest
 
 FINDINGS.json is a list of objects with at least `file` and `text` (the bug mechanism); `line` and
@@ -42,12 +43,49 @@ def score(truth: dict, findings: list) -> dict:
             "unmatched": len(findings) - matched}
 
 
+SEVS = ["nit", "low", "medium", "high", "critical", "blocker"]
+WINDOW = 3  # same file basename and lines within this many, as a merge would cluster them
+
+
+def repeatability(runs: list) -> dict:
+    """Per finding cluster (file + 3-line window): presence = share of runs reporting it; severity agreement = share
+    of those runs at the modal severity; direction = where the divergent runs sit vs the mode (up/down/both/none)."""
+    clusters = []  # [file, line, {run_index: severity}]
+    for i, run in enumerate(runs):
+        for f in run:
+            base, ln = Path(str(f.get("file", ""))).name, int(f.get("line") or 0)
+            c = next((c for c in clusters if c[0] == base and abs(c[1] - ln) <= WINDOW), None)
+            if c is None:
+                c = [base, ln, {}]
+                clusters.append(c)
+            c[2].setdefault(i, str(f.get("severity", "")).lower())
+    out = []
+    for base, ln, sev in clusters:
+        rank = [SEVS.index(s) if s in SEVS else -1 for s in sev.values()]
+        mode = max(set(rank), key=lambda r: (rank.count(r), -r))
+        up, down = any(r > mode for r in rank), any(r < mode for r in rank)
+        out.append({"file": base, "line": ln, "presence": round(len(sev) / len(runs), 4),
+                    "severity_agreement": round(rank.count(mode) / len(rank), 4),
+                    "direction": "both" if up and down else "up" if up else "down" if down else "none"})
+    return {"runs": len(runs), "findings": out,
+            "mean_presence": round(sum(c["presence"] for c in out) / len(out), 4) if out else None}
+
+
+def _repeat_selftest() -> bool:
+    a = [{"file": "f.py", "line": 10, "severity": "High"}, {"file": "g.py", "line": 20, "severity": "Medium"}]
+    c = [{"file": "f.py", "line": 12, "severity": "Critical"}, {"file": "h.py", "line": 5, "severity": "Low"}]
+    r = {(x["file"]): x for x in repeatability([a, a, c])["findings"]}
+    return (r["f.py"]["presence"], r["f.py"]["severity_agreement"], r["f.py"]["direction"]) == (1.0, 0.6667, "up") \
+        and (r["g.py"]["presence"], r["g.py"]["severity_agreement"]) == (0.6667, 1.0) and r["h.py"]["presence"] == 0.3333 \
+        and repeatability([a, a, c])["mean_presence"] == 0.6667
+
+
 def selftest(truth: dict) -> bool:
     good = [{"file": b["file"], "text": b["example"]} for b in truth["bugs"]]
     wrong = [{"file": b["file"], "text": "style nit: add a comment here"} for b in truth["bugs"]]
     other_file = [{"file": "unrelated.sh", "text": b["example"]} for b in truth["bugs"]]
     g, w, o = score(truth, good), score(truth, wrong), score(truth, other_file)
-    return g["recall"] == 1.0 and g["precision"] == 1.0 and w["recall"] == 0 and o["recall"] == 0 and w["unmatched"] == len(wrong)
+    return _repeat_selftest() and g["recall"] == 1.0 and g["precision"] == 1.0 and w["recall"] == 0 and o["recall"] == 0 and w["unmatched"] == len(wrong)
 
 
 def main(argv: list) -> int:
@@ -55,12 +93,20 @@ def main(argv: list) -> int:
     ap.add_argument("paths", nargs="*")
     ap.add_argument("--max-fp", type=int)
     ap.add_argument("--selftest", action="store_true")
+    ap.add_argument("--repeat", action="store_true", help="paths are N replicate FINDINGS files; print a repeatability report")
     a = ap.parse_args(argv)
     default = Path(__file__).resolve().parent / "fixtures/heldout/pr1354-ops-scripts/ground-truth.json"
     if a.selftest:
         ok = selftest(json.loads(default.read_text(encoding="utf-8")))
         print("score_review selftest:", "ok" if ok else "FAIL")
         return 0 if ok else 1
+    if a.repeat:
+        try:
+            print(json.dumps(repeatability([json.loads(Path(p).read_text(encoding="utf-8")) for p in a.paths]), indent=1))
+        except (OSError, ValueError, TypeError, AttributeError) as e:
+            print(f"score_review: bad input ({type(e).__name__})", file=sys.stderr)
+            return 2
+        return 0
     if len(a.paths) != 2:
         ap.error("need GROUND_TRUTH.json FINDINGS.json")
     try:
