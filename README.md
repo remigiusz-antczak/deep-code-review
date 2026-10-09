@@ -21,17 +21,13 @@ saw only the code change, not the fix, and ran once per case. The cases' answers
 are read only by the test runner, so Perun can't be tuned to them. The
 [public manifest](scripts/eval-fixtures/bench/manifest.json) lists 27 other
 cases to show how cases are built; it is not the set behind these numbers. A bug
-counts as "caught" if the review named it. This replaces an earlier 30-case test,
-which is superseded. A clean full re-run is pending, so treat the numbers as
-provisional.
+counts as "caught" if the review named it. This is a clean 89-case run with isolated run directories; it replaces earlier 30-case and 64-case numbers.
 
-- **A single Perun pass does not find more bugs than a plain prompt.**
-  Both caught [39.1% of the bugs](docs/bench/bench90-results.md) in the 64 cases
-  with intact records (difference 0.0 points, margin of error -7.8 to +7.8).
-- **A second independent pass adds little.** Merging two passes caught
-  [41.6%, +1.6 points over one pass](docs/bench/bench90-results.md), a gain not
-  shown to be real. No claim is made about false alarms: precision has not been
-  re-measured yet.
+- **On this prompt-only benchmark, Perun's review is not measurably better than a plain prompt, and it costs about 2 times as much.**
+  Bugs caught on 89 cases: [plain 36.0%, Perun one pass 32.6%](docs/bench/bench90-results.md)
+  (-3.4 points, margin of error -10.1 to +3.4); two merged passes 39.3% (+3.4 points, -2.2 to +9.0).
+- **False alarms are not measurably different either.** Share of flagged issues a verifier
+  model judged real: plain 61.8%, one pass 65.3% (+3.5 points, -3.8 to +10.5). No difference clears zero.
   Perun still misses most bugs, so keep people reviewing too.
 - **Shorter instructions to read.** AI tools charge by the *token* (a piece of a word).
   The instructions the assistant must read before each review shrank by
@@ -42,8 +38,8 @@ provisional.
   the effect has not been measured ([host safety](docs/host-safety.md)).
 
 **Cost.** A review with Perun costs more than a plain one:
-[$0.096 per code change for one pass against $0.059](docs/bench/bench90-results.md)
-(about 1.6 times), as reported by the test runner.
+[$0.080 per code change for one pass against $0.043](docs/bench/bench90-results.md)
+(about 1.9 times; $0.163 for two passes), as reported by the test runner.
 
 Time saved and money saved have not been measured, so none are claimed. To
 estimate them for your team, use the worked formula and the three-step pilot in

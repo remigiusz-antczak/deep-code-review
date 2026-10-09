@@ -3,6 +3,11 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.552.0] — 2026-10-09
+
+### Changed
+- README, docs/for-leaders.md and docs/bench/bench90-results.md now report the clean 89-case benchmark: Perun review is not measurably better than a plain prompt (recall 0.326 vs 0.360, verified precision 0.653 vs 0.618, no interval clears zero) and costs about 1.9 times per review (3.8 times for two passes). Replaces the 64-case interim numbers.
+
 ## [1.551.0] — 2026-10-09
 
 ### Changed
