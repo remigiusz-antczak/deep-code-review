@@ -8,7 +8,7 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.555.0"
+  version: "1.556.0"
 ---
 
 # Deep Code Review
@@ -68,7 +68,7 @@ Batch-mark untouched domains N/A; escalate on any blast-radius 🚩. Procedure:
 | IaC / platform | B K L N | `infra-iac-containers.md` |
 | lib / SDK | A H I J K | `api-contracts.md`, `dependency-currency-and-upgrades.md` |
 
-Domains outside the default set: **N/A with a one-line reason**. `other` has
+Domains outside the set: **N/A with a one-line reason + probe**. `other` has
 no default — derive from Phase 0 entry points.
 
 **Role overlay (optional lens).** Orders and assigns the same A–W domains; it

@@ -84,6 +84,8 @@ coverage:                      # ONE ROW PER ASSIGNED DOMAIN (A–T and W). No r
     note: "mutating routes and webhook handlers only; UI routes not read"
   L:
     status: not-applicable
+    probe: "git ls-files | grep -iE 'docker|\\.tf$'"
+    fact: "0 matches"
     note: "no IaC, containers, or cloud config in the tree"
   P:
     status: not-scanned
@@ -142,7 +144,7 @@ Field rules, beyond the comments above:
 - **`coverage` is complete** — every assigned domain (A–T and W; U/V/X–Z are
   unassigned — `SKILL.md`'s domain map), including on `DIFF` and
   `FILE` scopes (where most rows are `not-applicable` or `partial` with the
-  slice named). `scanned` needs no note; every other status needs one. On a
+  slice named). `scanned` needs no note; every other status needs one. A `not-applicable` row also needs `probe:` (searched) and `fact:` (fired), else `merge_findings.py` downgrades it to `not-scanned` (`na_flagged`). On a
   fan-out, `finder` and `lead_read` carry the unit manifest's attribution
   (`parallel-audit.md`); a unit whose finder never completed is `unverified`
   in the note, never `scanned`.
