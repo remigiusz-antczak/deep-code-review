@@ -7977,6 +7977,27 @@
         "Compares the config file to the flags in the invoking script",
         "Reports the effective value (1) not the config value (0)"
       ]
+    },
+    {
+      "id": "full-audit-guard-added-later-and-secondary-reads",
+      "prompt": "FULL audit of an app whose getProject accessor gained a tenant check, while a search palette, an export job and a notifications feed read the projects table directly. Server actions also run a 5s external call on mount.",
+      "expected_output": "Greps every other reader of the raw table and flags the search, export and notifications readers as bypassing the accessor guard; builds a role x resource matrix including those secondary read surfaces; flags the slow mount-time server action because Next serializes actions per page.",
+      "expectations": [
+        "Greps all other readers of the raw primitive after a guard is added to one accessor",
+        "Covers secondary read surfaces (search, exports, notifications, counts) in the access matrix",
+        "Flags a long server action called on mount as blocking later actions"
+      ]
+    },
+    {
+      "id": "full-audit-replay-and-fail-closed-switch",
+      "prompt": "FULL audit: a client retries a 429 with the same single-use token, a webhook handler rejects redeliveries older than 5 minutes, an idempotency key is matched by prefix, a kill switch parses 'off' only and treats anything else as on, and a nightly job and a manual button take separate locks.",
+      "expected_output": "Flags token reuse on retry, the freshness window versus redelivery, the prefix-matched key collision, the kill switch not failing closed on unknown values, and the two locks for one job.",
+      "expectations": [
+        "Flags single-use token replay on a 429 retry",
+        "Flags prefix-matched idempotency keys",
+        "Flags a kill switch that does not fail closed on unknown values",
+        "Requires one shared lock for scheduled and manual runs of the same job"
+      ]
     }
   ]
 }
