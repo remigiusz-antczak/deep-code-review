@@ -35,3 +35,15 @@ Cost including the verifier pass: plain $0.082, single $0.119, two-pass $0.240. 
 - Verification is done by a model, not a human.
 - This measures prompt-only review of a diff. It does not measure Perun's tool-using, multi-step workflows.
 - Per-language breakdowns are not reported.
+
+## High-stakes review: one Opus pass (2026-10-09)
+
+A second benchmark used agentic review (a checkout plus Read, Grep and Glob tools, minimal prompt) on 90 held-out bugs, one replicate. It led Perun to replace "two independent passes plus union" with one Opus pass for explicitly high-stakes changes; the normal default stays one Sonnet pass.
+
+| Setup | Recall | Recall vs Sonnet single [95% CI] | Precision | Cost per review |
+|---|---|---|---|---|
+| Sonnet, one pass | 0.644 | - | 0.828 | $0.073 |
+| Sonnet, two passes, union | 0.667 | +0.022 [0.000, +0.056] | 0.808 | $0.144 |
+| Opus, one pass | 0.744 | +0.100 [+0.022, +0.189] | 0.867 (+0.039 [-0.032, +0.113]) | $0.131 |
+
+Opus costs less than the two-pass union and is the only setup whose recall interval clears zero. Its precision gain does not clear zero. Same caveats as above: one replicate, one corpus, model-judged.
