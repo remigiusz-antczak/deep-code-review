@@ -760,3 +760,14 @@ GitHub token, so the gate logs "same-account review: run-id separation only"), a
 signature. Policy key `review_gate` in `.perun/policy.json`: `warn` (default; **warn-only for this release**, prints a
 WARN and merges anyway), `enforce` (skips the PR; `land_train.sh` prints `REFUSE #N no independent review`), `off`
 (opt out). Expect `enforce` to become the default in a later release.
+
+## Fleet delivery rules: keep the gate real, size trains by footprint, merge one at a time, pin every guard
+
+- **Never swap a slow or hanging gate for a weaker proof.** Replacing the browser run with unit-only let about 900 merges
+  through while trunk accumulated 110+ unseen browser failures. Fix the gate (affected selection, sharding, caching).
+- **Train by footprint.** A change outside the app needs no browser run, app batches stay small, and a lockfile or
+  framework bump lands alone.
+- **Under high merge churn, resolve, push and merge each PR one at a time, immediately**; a batch of resolved PRs goes
+  stale before the last one lands.
+- **Pin every guard with a contract test that fails if the call or rule disappears**, and prefer symptom alarms
+  (trunk-green %, merges per day, gate p50 drift) over a check that only proves the guard exists.

@@ -3759,6 +3759,13 @@ else
   record 1 "train resilience: flake re-run triage, exclusive gate lease, mkdir locks"; tail -8 "$WORK/train-resilience.log"
 fi
 
+# fleet lessons: own per-feature file (scripts/test-fleet-lessons.sh), one case here.
+if bash "$ROOT/scripts/test-fleet-lessons.sh" >"$WORK/fleet-lessons.log" 2>&1; then
+  record 0 "fleet lessons: same-host baselines, fresh-store per-title re-runs, process-group timebox"
+else
+  record 1 "fleet lessons: same-host baselines, fresh-store per-title re-runs, process-group timebox"; tail -8 "$WORK/fleet-lessons.log"
+fi
+
 # land-release: own per-feature file (scripts/test-land-release.sh), one case here.
 if bash "$ROOT/scripts/test-land-release.sh" >"$WORK/land-release.log" 2>&1; then
   record 0 "land-release: two fragment lanes land back-to-back with no rebump"

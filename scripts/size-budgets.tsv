@@ -38,7 +38,7 @@
 .claude/skills/agentic-delivery/references/host-enforcement.md	38051
 .claude/skills/agentic-delivery/references/incident-response.md	12693
 .claude/skills/agentic-delivery/references/install.md	1180
-.claude/skills/agentic-delivery/references/merge-queue-worktrees.md	68717
+.claude/skills/agentic-delivery/references/merge-queue-worktrees.md	69576
 .claude/skills/agentic-delivery/references/multi-session-coordination.md	71643
 .claude/skills/agentic-delivery/references/operating-discipline.md	6521
 .claude/skills/agentic-delivery/references/production-grade-product-playbook.md	6635
@@ -48,7 +48,7 @@
 .claude/skills/agentic-delivery/references/support-ops.md	4455
 .claude/skills/agentic-delivery/references/template-adr.md	2641
 .claude/skills/agentic-delivery/references/template-postmortem.md	3387
-.claude/skills/agentic-delivery/references/unattended-operating-mode.md	26509
+.claude/skills/agentic-delivery/references/unattended-operating-mode.md	26732
 .claude/skills/agentic-delivery/references/unattended-trackers.md	46886
 .claude/skills/agentic-delivery/references/verification-handback.md	57146
 .claude/skills/business-ops/SKILL.md	10345
@@ -102,7 +102,7 @@
 .claude/skills/deep-code-review/references/domain-h.md	7805
 .claude/skills/deep-code-review/references/domain-i.md	1456
 .claude/skills/deep-code-review/references/domain-j.md	2823
-.claude/skills/deep-code-review/references/domain-k.md	4865
+.claude/skills/deep-code-review/references/domain-k.md	5078
 .claude/skills/deep-code-review/references/domain-l.md	1181
 .claude/skills/deep-code-review/references/domain-m.md	1193
 .claude/skills/deep-code-review/references/domain-n.md	858

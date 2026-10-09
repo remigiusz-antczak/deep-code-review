@@ -91,7 +91,7 @@ if [ $rc -eq 0 ]; then git checkout -q --detach "$REMOTE/$BASE_BRANCH"; break; f
 BR="BROWSER RED: union $U fails browser specs (see $LOG.browser); nothing landed"
 [ -n "${RERUN_CMD:-}" ] || { git checkout -q --detach "$REMOTE/$BASE_BRANCH"; echo "$BR" >&2; exit 1; }
 sed -nE 's/^FAIL +//p' "$LOG.browser" >"$LOG.fails"
-renew; t=0; RERUN_CMD=$RERUN_CMD bash "$HERE/train_flake.sh" "$LOG.fails" "${BASELINE_FAILS:-/dev/null}" >"$LOG.flake" || t=$?
+renew; t=0; RERUN_CMD=$RERUN_CMD FLAKE_INVOCATION=${FLAKE_INVOCATION:-$BROWSER_CMD} bash "$HERE/train_flake.sh" "$LOG.fails" "${BASELINE_FAILS:-/dev/null}" >"$LOG.flake" || t=$?
 git checkout -q --detach "$REMOTE/$BASE_BRANCH"  # isolated re-runs above ran at the union; bisect below starts from the base
 cat "$LOG.flake"
 # Landable only when at least one NEW failure was listed and every new one re-ran and classified FLAKE: a red run with no
