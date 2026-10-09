@@ -168,7 +168,7 @@ explicit third choice), not which one this review prefers.
 - Rendered UI, browser, or E2E specs → `testing-ui.md` (layout geometry, pre-hydration capture, rewritten specs, state-dependent specs).
 - Model-dependent output (LLM features, RAG, agents) → `testing-ai-evals.md`.
 - Classical ML pipelines, served models, fairness, or notebooks → `testing-ml.md`.
-- A doc-comment promising a fallback, a conflict resolution, property/fuzz/mutation assurance or a coverage figure cited as assurance, a hanging equality assert, a shelled real binary, flaky tests / retries / fixed sleeps, a spawned-job alert, N copy-pasted sibling checks, interchangeable store backends, a one-green-run fix, a gate needing gitignored data, a loosened assert-absent test, or a load/swarm/soak test harness's own failure or throughput count → `testing-situational.md`.
+- A doc-comment promising a fallback, a conflict resolution, property/fuzz/mutation assurance or a coverage figure cited as assurance, a hanging equality assert, a shelled real binary, flaky tests / retries / fixed sleeps, a spawned-job alert, N copy-pasted sibling checks, interchangeable store backends, a one-green-run fix, a gate needing gitignored data, a loosened assert-absent test, a load/swarm/soak test harness's own failure or throughput count, or a gate that accepts free text or a URL as evidence → `testing-situational.md`.
 
 ## Business rules as executable specs
 

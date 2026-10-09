@@ -370,3 +370,23 @@ A diff's size sets the review mode, never its title. One small preprint (150 sam
 | Opus, one pass | 0.744 (+0.100 [+0.022, +0.189]) | 0.867 (+0.039 [-0.032, +0.113]) | $0.131 |
 
 Opus costs less than the two-pass union and is the only option whose recall interval clears zero; the precision gain does not.
+
+### Composition, effective config, and rule enforcement (FULL scope; on a `DIFF` only when the branch merges into a train or union)
+
+- **Union composition: a test or gate that passes alone and fails beside a sibling branch.** (1) A test or gate
+  whose input is a **whole-tree scan** (a glob or full-repo grep for a forbidden token or identifier) is
+  non-hermetic under union: its verdict depends on files other branches add. Pin its scope to the diff or a
+  fixture; High when its pass or fail decides a merge. (2) A stored **baseline or ratchet file must record the SHA
+  it was computed at**, and the gate must fail closed when that SHA is not the current comparison base (never
+  silently reuse it). The same-host and same-invocation baseline rule above covers *where* the baseline ran;
+  this covers *when*. (3) For a branch headed into a train, run the new tests on base plus branch and report the
+  combined result as its own status; "green alone" is `unverified` for the union.
+- **Effective config versus invoked flags.** For each gate script, list the effective value of each setting as the
+  runner resolves it (config file plus CLI override, for example a retry count) and flag any disagreement with the
+  config file, citing the effective value. The flag in the script wins and the config review never sees it.
+- **Rule-to-enforcement map (FULL audit of existing rules).** Extract the MUST, NEVER and ALWAYS lines from the
+  target's agent-facing docs and any decision index (the line pattern `scripts/ci-gates.sh rules` uses for this
+  repo's own SKILL.md files is a reusable starting regex). Each row needs a gate id or a test name; a row
+  with neither is a finding: Medium, High when the rule guards a publish boundary, spend, or a destructive
+  action. A **closed regression issue** must cite a pinning test. Ask for a classification (pin, or exempt with a
+  reason), not an automatic test.

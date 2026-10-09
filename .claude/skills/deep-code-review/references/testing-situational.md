@@ -143,12 +143,16 @@ Read this when `testing-and-evals.md` routes here: a doc-comment promises a fall
   a test file.
 - **A test service owned by one gate run breaks every concurrent run on the machine.** A fixture database that a gate run starts if absent and kills on exit is shut down under the other runs by whichever finishes first, and the resulting connection errors (for example Postgres `57P03`, "the database system is shutting down") read as flaky tests. When lanes share a machine, start shared test services detached, or ref-count them so only the last user stops them. Finding: a gate that stops a service it did not exclusively start. Test: two overlapping runs both pass when the first exits early.
 
+- **Evidence gate accept-predicate audit.** For each gate that accepts free text or a URL as evidence (a
+  justification, an image, a receipt), state what the predicate verifies. A form-only predicate (length, regex,
+  URL syntax, presence) is a finding quoting the exact bypass input. The gate's own test needs at least three
+  adversarial inputs: a short justification, an unreachable URL, an artifact bound to a different commit.
+
 - **A chronically flaky test is quarantined and fixed, not retried until green.** A test that
   passes and fails on the same code is a real signal (a race, an order/time/network dependence,
   a leaked fixture) — a blanket **retry-until-green** in CI masks it, manufactures false
   confidence, and once the team learns to re-run red a *genuine* regression hides in the noise.
-  Move a known-flaky test to a **non-blocking quarantine** with a tracked owner and a fix
-  deadline (not a permanent dumping ground), and fix the underlying nondeterminism (pin the
+  Move a known-flaky test to a **non-blocking quarantine** with a named owner (not a placeholder such as "unassigned") and an expiry date that the gate reading the quarantine list fails on (an unowned or expired entry is a finding, not a permanent dumping ground), and fix the underlying nondeterminism (pin the
   clock/seed, remove the shared state, await the real condition instead of `sleep`). A standing
   CI retry count `> 0` used to paper over flakes — rather than a bounded retry on a genuinely
   external flake with the rate tracked — is the finding.

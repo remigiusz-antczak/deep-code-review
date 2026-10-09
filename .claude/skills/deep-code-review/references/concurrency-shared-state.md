@@ -448,6 +448,12 @@ or directory`) and `xargs kill` kills nothing.
   -<pgid>`), so the whole subtree — the tool and every child it forked — dies
   together and no unrelated process is selected, unless a child started its own
   session/group (`setsid`) and escaped it — which the orphan bullet backstops.
+- **A destructive selector built only from inferred ownership is a finding.** A reaper or cleanup predicate
+  made of inferred attributes (parent is init or detached, age over N hours, name, path prefix) with no
+  recorded owner token (a pgid file, a claim record, an environment marker written at spawn) will match a
+  legitimate long job that is detached by design. High; Critical when `--apply` runs without a dry-run gate.
+  Require a **positive-control fixture** (a detached long-running job that must survive the selector; its absence
+  is the finding), and a default of report-only that prints each victim with the evidence that selected it.
 - **Escalate, don't nuke.** Graceful stop (SIGTERM) → a bounded grace window for the
   child to flush and release locks → SIGKILL only if it outlives the window. A
   straight SIGKILL orphans children and skips the signal-safe cleanup the store-root
