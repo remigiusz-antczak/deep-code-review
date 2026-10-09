@@ -68,6 +68,16 @@ def hook_commands(repo):
     return cmds
 
 
+def settings_env(repo):
+    env = {}
+    for n in ("settings.json", "settings.local.json"):
+        try:
+            env.update(json.loads((repo / ".claude" / n).read_text()).get("env", {}))
+        except (OSError, ValueError, AttributeError):
+            pass
+    return env
+
+
 def check(repo, home):
     rows = []  # (status, check, detail)
     add = lambda s, c, d: rows.append((s, c, d))
@@ -91,6 +101,12 @@ def check(repo, home):
     cmds = [re.sub(r'"?\$\{?CLAUDE_PROJECT_DIR\}?/?"?', "", c) for c in hook_commands(repo)]  # project-dir anchored paths resolve against repo
     missing = sorted({m for c in cmds for m in re.findall(r"[\w./-]+\.(?:py|sh)\b", c) if not (repo / m).is_file()})
     add("FAIL" if missing else "OK", "hook files exist", ("missing: " + ", ".join(missing)) if missing else f"{len(cmds)} hook command(s) resolve")
+    rel = sorted({c for c in hook_commands(repo) if re.search(r"(?:^|[\s=])\.{0,2}/?\.claude/", c)})
+    if rel:  # cwd-relative: breaks (silently) when the cwd is not the repo root, e.g. inside a worktree
+        add("WARN", "hook paths", f"{len(rel)} hook command(s) use relative .claude/ paths and fail outside the repo root; re-run install.sh --apply-operating-layer (restart sessions after): " + "; ".join(rel[:2]))
+    env = settings_env(repo)
+    if str(env.get("CLAUDE_CODE_SUBAGENT_MODEL_FORCE")) in ("1", "true") and "haiku" in str(env.get("CLAUDE_CODE_SUBAGENT_MODEL", "")).lower():
+        add("WARN", "subagent model", "FORCE=1 pins every subagent to haiku (overrides lane agents; junk commits, lost hand-backs): pin to sonnet or unset FORCE")
     # mechanisms with no caller
     opted_out = "--no-operating-layer" in flagtxt
     sd = repo / ".claude/skills/agentic-delivery/scripts"

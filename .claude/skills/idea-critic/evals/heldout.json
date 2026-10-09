@@ -1,0 +1,85 @@
+{
+  "skill_name": "idea-critic-heldout",
+  "evals": [
+    {
+      "id": "heldout-pass-cache-ttl",
+      "prompt": "Agent-originated: raise the product-catalog cache TTL from 60s to 300s. Evidence: 7 days of logs show 92% of catalog reads hit unchanged rows; catalog edits are made by 3 staff via an admin page that already purges the cache key on save; origin load is the top cost driver at 40% of read-replica CPU. Kill criterion: revert if any staff-reported stale price persists after a save, or replica CPU does not fall 20% in a week. Rollback: one config value.",
+      "expected_output": "Verdict is PASS_TO_USER; at most one non-blocking note.",
+      "expectations": [
+        "Verdict is PASS_TO_USER; at most one non-blocking note."
+      ]
+    },
+    {
+      "id": "heldout-pass-onboarding-email",
+      "prompt": "Agent-originated: add a day-3 reminder email to new-user onboarding. Evidence: in the last 8 weeks 38% of signups never completed setup and 70% of those had no activity after day 2; the email reuses the existing template system and unsubscribe handling, with unit tests for send-window logic. Ships to 20% of new signups as a randomized holdout for 3 weeks. Kill criterion: stop if setup completion does not rise by at least 3 points or unsubscribes exceed 1%. Rollback: turn the flag off.",
+      "expected_output": "Verdict is PASS_TO_USER; at most one non-blocking note.",
+      "expectations": [
+        "Verdict is PASS_TO_USER; at most one non-blocking note."
+      ]
+    },
+    {
+      "id": "heldout-pass-oncall-rotation",
+      "prompt": "Agent-originated: lengthen the on-call rotation from 1 week to 2 weeks for the platform team. Evidence: the team has 4 engineers and handoff notes show about 30% of incidents lose context at handoff; a survey of all 4 engineers shows no objection and a runbook already covers handoff. Kill criterion: revert if median time-to-acknowledge worsens by 20% or any engineer reports burnout in the monthly check-in over the next 8 weeks. Rollback: the old schedule document is kept.",
+      "expected_output": "Verdict is PASS_TO_USER; at most one non-blocking note.",
+      "expectations": [
+        "Verdict is PASS_TO_USER; at most one non-blocking note."
+      ]
+    },
+    {
+      "id": "heldout-pass-dead-code",
+      "prompt": "Agent-originated: delete the unused legacy_export module. Evidence: grep and the import graph show zero references in code, tests, scripts and docs; coverage reports show 0 executions over the last 90 days of production traces; the module was deprecated two releases ago per the changelog. Kill criterion: restore it if any user reports the removed function. Rollback: git revert of one commit.",
+      "expected_output": "Verdict is PASS_TO_USER; at most one non-blocking note.",
+      "expectations": [
+        "Verdict is PASS_TO_USER; at most one non-blocking note."
+      ]
+    },
+    {
+      "id": "heldout-pass-rate-limit",
+      "prompt": "Agent-originated: add a per-API-key rate limit of 100 requests per minute to the public search endpoint. Evidence: the 99.9th percentile key makes 22 requests per minute over the last 30 days; one scraper key made 4,000 per minute during the last incident and drove p99 latency from 200ms to 3s; the limiter uses the existing shared middleware with tests for the 429 path. Kill criterion: remove or raise the limit if any legitimate customer reports 429s or the rate of 429s exceeds 0.1% of requests. Rollback: a config value.",
+      "expected_output": "Verdict is PASS_TO_USER; at most one non-blocking note.",
+      "expectations": [
+        "Verdict is PASS_TO_USER; at most one non-blocking note."
+      ]
+    },
+    {
+      "id": "heldout-pass-docs-example",
+      "prompt": "Agent-originated: fix the broken code sample in the authentication guide. Evidence: the sample uses a parameter renamed in the last release; the corrected sample was run against the current release this session and returned the documented response. Kill criterion: revert if a reader reports the new sample failing. Rollback: git revert of one docs commit.",
+      "expected_output": "Verdict is PASS_TO_USER; at most one non-blocking note.",
+      "expectations": [
+        "Verdict is PASS_TO_USER; at most one non-blocking note."
+      ]
+    },
+    {
+      "id": "heldout-hold-auto-merge",
+      "prompt": "Agent-originated: auto-merge any dependency-update pull request whose tests pass, including major-version bumps, to cut maintenance time. Evidence: the maintainers spend 6 hours a month on dependency updates. Kill criterion: revert if a release breaks. Rollback: disable the bot.",
+      "expected_output": "Verdict is HOLD or REVISE, never PASS_TO_USER, naming a concrete failure scenario.",
+      "expectations": [
+        "Verdict is HOLD or REVISE, never PASS_TO_USER, naming a concrete failure scenario."
+      ]
+    },
+    {
+      "id": "heldout-hold-logs-pii",
+      "prompt": "Agent-originated: log full request and response bodies for every API call to speed up debugging, retained for 2 years. Evidence: debugging the last incident took 2 days for lack of payload data. Kill criterion: stop if log storage cost exceeds budget. Rollback: change the log level.",
+      "expected_output": "Verdict is HOLD or REVISE, never PASS_TO_USER, naming a concrete failure scenario.",
+      "expectations": [
+        "Verdict is HOLD or REVISE, never PASS_TO_USER, naming a concrete failure scenario."
+      ]
+    },
+    {
+      "id": "heldout-hold-rewrite",
+      "prompt": "Agent-originated: rewrite the billing service from scratch in a new language this quarter because the current code is hard to read. Evidence: two engineers dislike the current code. Kill criterion: abandon if the rewrite slips past quarter end. Rollback: keep the old service running until cutover.",
+      "expected_output": "Verdict is HOLD or REVISE, never PASS_TO_USER, naming a concrete failure scenario.",
+      "expectations": [
+        "Verdict is HOLD or REVISE, never PASS_TO_USER, naming a concrete failure scenario."
+      ]
+    },
+    {
+      "id": "heldout-hold-metric-vanity",
+      "prompt": "Agent-originated: make weekly signups the team's sole success metric and tie the bonus pool to it. Evidence: signups are easy to count and rose 12% last quarter after a campaign. Kill criterion: change the metric if signups fall two quarters in a row. Rollback: edit the bonus policy next year.",
+      "expected_output": "Verdict is HOLD or REVISE, never PASS_TO_USER, naming a concrete failure scenario.",
+      "expectations": [
+        "Verdict is HOLD or REVISE, never PASS_TO_USER, naming a concrete failure scenario."
+      ]
+    }
+  ]
+}
