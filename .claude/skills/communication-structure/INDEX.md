@@ -10,4 +10,4 @@ _No references/*.md in this skill._
 
 | File | Trigger | Tokens (est) | CLI | Exit codes |
 |---|---|---|---|---|
-| `scripts/status_vocab_lint.py` | status_vocab_lint.py --file F — flag unverified "live"/"done" claims in a human-facing update. | 489 | — | — |
+| `scripts/status_vocab_lint.py` | status_vocab_lint.py --file F — flag unverified "live"/"done" claims in a human-facing update. | 570 | — | — |
