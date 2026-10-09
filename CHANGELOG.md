@@ -10,7 +10,7 @@ follows Keep a Changelog; versioning follows Semantic Versioning.
 - idea-critic evals: six new PASS controls (infra pool size, product CSV export, hiring screen, refactor, pricing experiment, docs) and two new must-HOLD cases (drop staging for flags, skip second review on small PRs). Early drafts of three controls had real flaws the critic correctly found (a kill trigger that could not fire, a power calculation inconsistent with its own break-even, an unescaped formula-injection prefix); the controls were corrected, so the final controls were tuned using critic feedback.
 - Live A/B (claude -p, sonnet, no tools, 3 replicates, 19 cases = 10 PASS controls + 9 must-HOLD/REVISE; keyword objection predicates; 95% bootstrap CI), same cases: plain prompt PASS accuracy 0.23 [0.10-0.40], HOLD/REVISE accuracy 1.00, objection recall 0.81 [0.67-0.96]; Veles before this change PASS accuracy 0.70 [0.53-0.87], HOLD/REVISE accuracy 0.96 [0.89-1.00], objection recall 0.85 [0.70-0.96]; Veles after PASS accuracy 0.87 [0.73-0.97], HOLD/REVISE accuracy 1.00 [1.00-1.00], objection recall 0.93 [0.81-1.00]. Remaining over-rejections: the hiring-screen control (3/3 REVISE, kill criterion blind to false negatives, arguably a real gap) and 1 of 3 pricing runs. Two intermediate iterations scored PASS accuracy 0.60 and 0.70 before the controls were corrected.
 
-size-budget-raise: .claude/skills/idea-critic/SKILL.md 15011→   16145 concrete-failure-scenario calibration rule
+size-budget-raise: .claude/skills/idea-critic/SKILL.md 15011→16145 concrete-failure-scenario calibration rule
 
 ## [1.556.0] — 2026-10-09
 
