@@ -21,7 +21,7 @@
 # CHANGELOG section for the version plus a link to the full CHANGELOG. No-op (exit 0) unless origin/main is at this
 # checkout's version, or when policy `release_every` (.perun/policy.json, default 1) = N and the minor is not a
 # multiple of N. Idempotent: an existing release only gets its notes updated. Never moves a tag: a local or remote
-# tag on another commit is refused. Env also: GH (gh).
+# tag on another commit is refused. Env also: GH (gh), REPO_URL (changelog link base; default from the remote).
 # Env: REMOTE (origin), BASE_BRANCH (main), RELEASE_DATE (today). Exit 0 ok, 1 failure, 2 usage.
 set -euo pipefail
 cd "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -60,8 +60,11 @@ if [ "$mode" = tag ] || [ "$mode" = publish ]; then
   fi
   [ "$mode" = publish ] || exit 0
   notes=$(mktemp "${TMPDIR:-/tmp}/land-notes.XXXXXX"); trap 'rm -f "$notes"' EXIT
-  { git show "$REMOTE/$BASE_BRANCH:CHANGELOG.md" | awk -v h="## [$ver]" 'index($0,h)==1{p=1;next} p&&/^## /{p=0} p'
-    printf '\nFull changelog: https://github.com/remigiusz-antczak/deep-code-review/blob/main/CHANGELOG.md\n'; } >"$notes"
+  git show "$REMOTE/$BASE_BRANCH:CHANGELOG.md" | awk -v h="## [$ver]" 'index($0,h)==1{p=1;next} p&&/^## /{p=0} p' >"$notes"
+  grep -q '[^[:space:]]' "$notes" || { echo "land-release publish: no CHANGELOG section for $ver" >&2; exit 2; }
+  # repo URL from the remote (ssh or https form, REPO_URL overrides); no link when it is not a web remote
+  url=${REPO_URL:-$(git remote get-url "$REMOTE" | sed -E 's#^git@([^:]+):#https://\1/#; s#^ssh://git@([^/]+)/#https://\1/#; s#\.git$##')}
+  case "$url" in https://*) printf '\nFull changelog: %s/blob/%s/CHANGELOG.md\n' "$url" "$BASE_BRANCH" >>"$notes" ;; esac
   if "${GH:-gh}" release view "v$ver" >/dev/null 2>&1; then
     "${GH:-gh}" release edit "v$ver" --notes-file "$notes"; echo "land-release publish: updated notes of v$ver"
   else

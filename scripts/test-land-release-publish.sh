@@ -25,7 +25,7 @@ case "$1 $2" in
   "release edit") shift 2; while [ $# -gt 0 ]; do [ "$1" = --notes-file ] && cp "$2" "$STUB_LOG.notes"; shift; done ;;
 esac
 S
-chmod +x "$WORK/gh"; export GH="$WORK/gh" STUB_LOG="$WORK/gh.log"
+chmod +x "$WORK/gh"; export REPO_URL=https://github.com/acme/example GH="$WORK/gh" STUB_LOG="$WORK/gh.log"
 pub() { (cd "$R" && bash scripts/land-release.sh publish 2>&1); }
 
 g checkout -q -b lane main
@@ -37,9 +37,21 @@ g push -q origin HEAD:main; REL=$(g rev-parse HEAD)
 out=$(pub); rc=$?
 [ $rc -eq 0 ] && grep -q "^release create v$exp --title Perun v$exp --notes-file .* --verify-tag --latest$" "$STUB_LOG"; ok $? "first publish creates the release with the required flags"
 [ "$(git -C "$WORK/origin.git" rev-parse "v$exp^{commit}")" = "$REL" ]; ok $? "annotated tag pushed at the release commit"
-grep -q 'publish test' "$STUB_LOG.notes" && grep -q 'Full changelog: https://github.com/.*/CHANGELOG.md' "$STUB_LOG.notes" && ! grep -q '^## \[' "$STUB_LOG.notes"; ok $? "notes = CHANGELOG section for $exp plus full-changelog link"
+grep -q 'publish test' "$STUB_LOG.notes" && grep -q 'Full changelog: https://github.com/acme/example/blob/main/CHANGELOG.md' "$STUB_LOG.notes" && ! grep -q '^## \[' "$STUB_LOG.notes"; ok $? "notes = CHANGELOG section for $exp plus full-changelog link"
 out=$(pub); rc=$?
 [ $rc -eq 0 ] && grep -q "^release edit v$exp --notes-file" "$STUB_LOG" && [ "$(grep -c '^release create' "$STUB_LOG")" -eq 1 ]; ok $? "re-run updates notes (no second create), exit 0"
+# gh failure on first run leaves a tag but no release; the re-run completes it
+git -C "$WORK/origin.git" tag -d "v$exp" >/dev/null; g tag -d "v$exp" >/dev/null; rm -f "$STUB_LOG" "$STUB_LOG.created"
+out=$(GH=false pub); rc=$?
+[ $rc -ne 0 ] && [ -n "$(git -C "$WORK/origin.git" tag -l "v$exp")" ]; ok $? "gh failure on first run exits non-zero, tag already pushed"
+out=$(pub); rc=$?
+[ $rc -eq 0 ] && grep -q "^release create v$exp" "$STUB_LOG"; ok $? "re-run after gh failure creates the release"
+# missing CHANGELOG section is refused
+git -C "$WORK/origin.git" tag -d "v$exp" >/dev/null; g tag -d "v$exp" >/dev/null; rm -f "$STUB_LOG" "$STUB_LOG.created"
+sed -i.bak "s/^## \\[$exp\\]/## [x$exp]/" "$R/CHANGELOG.md"; g commit -qam nosection; g push -q origin HEAD:main
+out=$(pub); rc=$?
+[ $rc -eq 2 ] && grep -q "no CHANGELOG section for $exp" <<<"$out" && [ ! -e "$STUB_LOG" ]; ok $? "missing CHANGELOG section refused (exit 2), no gh create"
+g reset -q --hard HEAD~1; g push -q -f origin HEAD:main 2>/dev/null
 # existing tag never moved: remote tag on another commit refuses, tag stays
 git -C "$WORK/origin.git" tag -d "v$exp" >/dev/null; git -C "$WORK/origin.git" tag "v$exp" "$(g rev-parse HEAD~1)"
 g tag -d "v$exp" >/dev/null
