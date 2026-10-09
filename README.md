@@ -47,6 +47,9 @@ counts as "caught" if the review named it. This is a clean 89-case run with isol
 **Cost.** A review with Perun costs more than a plain one:
 [$0.080 per code change for one pass against $0.043](docs/bench/bench90-results.md)
 (about 1.9 times; $0.163 for two passes), as reported by the test runner.
+For changes that are explicitly high-stakes, Perun runs one agentic pass on Opus instead of two Sonnet passes:
+recall 0.744 against 0.644 for one Sonnet pass (+0.100, interval +0.022 to +0.189), $0.131 per review against $0.144
+for two Sonnet passes combined ([details](docs/bench/bench90-results.md)).
 
 Time saved and money saved have not been measured, so none are claimed. To
 estimate them for your team, use the worked formula and the three-step pilot in

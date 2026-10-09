@@ -2,15 +2,14 @@
   "skill_name": "deep-code-review",
   "evals": [
     {
-      "id": "high-stakes-two-independent-passes-union",
-      "prompt": "Review a release gate for a payments data-loss path. Budget allows extra passes. How many passes, and how is the second one run?",
-      "expected_output": "Default is one pass; because the gate is high-stakes it runs two independent passes (the second not seeded with the first's findings), then a union, dedupe and verify, separate from the Phase 3 security adversarial pass.",
+      "id": "high-stakes-one-opus-pass",
+      "prompt": "Review a release gate for a payments data-loss path. Budget allows extra passes and tokens=efficient. Which model and how many passes?",
+      "expected_output": "One agentic pass (checkout plus Read/Grep/Glob) on the strongest model (Opus) because the change is explicitly high-stakes; the normal default stays one Sonnet pass. No second pass or union.",
       "expectations": [
-        "Keeps N = 1 as the default and uses two passes only because the gate is high-stakes (release, security, or data-loss)",
-        "Runs the second pass independently with the same inputs and does not seed it with the first pass's findings, because most of the gain is sampling variance",
-        "Unions and dedupes the two lists, then checks single-pass findings against the code and drops any that does not reproduce",
-        "Does not add a third pass",
-        "Cites the measurement as directional: two independent passes recall 0.41 at 0.77 verified precision, a seeded gap pass 0.43 at 0.71 (+0.02, interval including zero) at 1.15x the cost",
+        "Keeps N = 1 and switches that pass to Opus only because the gate is explicitly high-stakes (release, security, or data-loss)",
+        "Says tokens=efficient still allows Opus for an explicitly high-stakes change, and not otherwise",
+        "Does not run two passes or a union",
+        "Cites the measurement as directional: Opus one pass recall 0.744 (+0.100 [+0.022, +0.189] over Sonnet 0.644), precision 0.867, $0.131 per review, cheaper than the two-pass Sonnet union at $0.144 (recall 0.667)",
         "Treats this as distinct from the Phase 3 security adversarial pass"
       ]
     },

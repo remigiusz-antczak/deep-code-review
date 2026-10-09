@@ -3,6 +3,10 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.554.0] — 2026-10-09
+
+High-stakes review default changed from two independent passes plus union to one agentic pass on Opus (measured on 90 held-out bugs: recall 0.744 against 0.644 for one Sonnet pass, $0.131 per review against $0.144 for two Sonnet passes). Normal default stays one Sonnet pass. `/review --high-stakes` selects it. Refs #1380.
+
 ## [1.553.0] — 2026-10-09
 
 ### Changed
