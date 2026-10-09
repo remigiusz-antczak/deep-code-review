@@ -429,6 +429,13 @@ is skipped by `process.exit`, SIGINT, worker crash, or overlapping runs.
 - Rate by consequence (operator data loss, PII mix-up, flaky CI) — often High
   or Critical. Depth and fix pattern: `testing-and-evals.md`.
 
+### Shared fixed-name QA database or port across parallel worktrees
+
+Parallel worktrees, agents, or CI jobs that all use one fixed-name database, schema, port, temp path, or container
+name collide: one run's migration, seed, or teardown corrupts another's results, producing flaky or falsely green
+checks. Grep test and dev scripts for literal DB names, `localhost:<port>` and fixed container names; each run should
+derive a unique name (worktree or run id) or take an ephemeral port, and tear down only what it created.
+
 ## Terminating work you own
 
 Shedding load or aborting a lane means killing **only the processes you started**,
