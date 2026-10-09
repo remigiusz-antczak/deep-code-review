@@ -7852,9 +7852,9 @@
         "Refuses or drops the finding whose file does not exist and the finding with no snippet, naming the reason for each",
         "Does not post ungrounded findings to make the count look larger",
         "Dedupes and caps via merge_findings.py rather than posting every raw finding"
-        ]
-      },
-      {
+      ]
+    },
+    {
       "id": "out-of-diff-tracing-contract-change",
       "prompt": "Review a 3-file DIFF that adds a required parameter to a shared helper's signature; only the helper's file is in the diff. What must be done beyond reading the hunks, and what does the machine report say if nothing else was opened?",
       "expected_output": "Runs impact_map.py and context_pack.py, opens the out-of-diff callers of the changed contract, and records out_of_diff_opened in ground_truth.notes; zero opened on a contract change is a warning that caps the DIFF verdict below Approve.",
@@ -7864,6 +7864,15 @@
         "Treats the tool output as leads and greps for callers it misses, not as a complete call graph",
         "Records out_of_diff_opened N of M in ground_truth.notes of the machine report",
         "Treats zero out-of-diff files opened on a contract change as a warning that caps the verdict below Approve and lists unopened files as unverified"
+      ]
+    },
+    {
+      "id": "repo-access-default",
+      "prompt": "You are handed only a pasted diff of a PR that renames a helper's parameter. How should the review run?",
+      "expected_output": "Run in a checkout of the repo at the PR head with Read, Grep and Glob, with a minimal prompt, not extra instructions; a diff-only review measured about 28 points lower recall (docs/bench/bench90-results.md).",
+      "expectations": [
+        "Reviews in a repo checkout with read and search tools rather than on the pasted diff alone",
+        "Does not pile extra instructions on top of the repo access, which measured no gain"
       ]
     }
   ]

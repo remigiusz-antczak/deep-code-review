@@ -23,6 +23,13 @@ are read only by the test runner, so Perun can't be tuned to them. The
 cases to show how cases are built; it is not the set behind these numbers. A bug
 counts as "caught" if the review named it. This is a clean 89-case run with isolated run directories; it replaces earlier 30-case and 64-case numbers.
 
+- **Reviewing with repo access is the big win, and it is now the default.** An
+  assistant that can read the surrounding code caught
+  [64.4% of the bugs against 36.7% for a diff-only prompt](docs/bench/bench90-results.md)
+  (+27.8 points, margin of error +18.9 to +37.8) with about 20 points fewer false
+  alarms, at $0.073 against $0.082 per review. Perun's `/review` command and the
+  opt-in PR workflow now always run in a checkout with read and search tools.
+  Extra instructions on top (the long skill text, or a caller-tracing prompt) added cost or lost precision without a measured gain.
 - **On this prompt-only benchmark, Perun's review is not measurably better than a plain prompt, and it costs about 2 times as much.**
   Bugs caught on 89 cases: [plain 36.0%, Perun one pass 32.6%](docs/bench/bench90-results.md)
   (-3.4 points, margin of error -10.1 to +3.4); two merged passes 39.3% (+3.4 points, -2.2 to +9.0).
