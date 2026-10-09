@@ -292,6 +292,7 @@ jobs:
           python3 scripts/test_policy_ux.py
           bash scripts/test-resource-policy-train.sh
           python3 scripts/test_review_feedback.py
+          python3 scripts/test_review_lean.py
           bash scripts/test-post-review.sh
           python3 scripts/test_finding_gates.py
           bash scripts/test-pr-review-workflow.sh
