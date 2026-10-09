@@ -38,6 +38,13 @@ LINDDUN, mapping to existing checks, residual risk and owner decision), follow `
 - **🚩** a domain / sender-name / package-name / username rendered from user-controlled text as a trust cue with only
   HTML-escaping — no confusable or mixed-script check.
 
+### Config hygiene and kill switches
+
+Env and config reads should go through one accessor that trims whitespace (a trailing newline pasted into a secret
+or flag silently breaks comparisons) and validates presence at startup. Grep for raw `process.env.` / `os.environ`
+reads outside it. A kill switch, feature gate, or allow-list must fail closed: a missing, empty, or unparsable value
+disables the risky path rather than enabling it, and an unset "disable" flag must not mean "enabled for everyone".
+
 ## Authorization: a client-side gate is not a server-side check — verify the trace, then verify the scope
 
 - **A client-side permission/state gate (a hidden button, a disabled control, a client-side

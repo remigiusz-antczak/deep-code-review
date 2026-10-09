@@ -164,6 +164,14 @@ uses.
 
 ---
 
+### Latency budget per handler
+
+For each handler, sum `timeout × (retries + 1)` over every sequential outbound call reachable from it (include the
+retry wrapper, SDK defaults, and DB calls) and compare with the ingress limit (platform function max duration, proxy
+or load-balancer timeout). Flag any handler above 0.7× the limit: one slow dependency then returns the platform's
+generic timeout instead of the app's own error, and in-flight work is cut mid-write. Parallel calls count as the
+slowest, not the sum. Record the sum, the limit, and the ratio as evidence.
+
 ## Bulkheads — isolate resource pools so one saturated dependency can't sink the rest
 
 A shared resource pool (a connection pool, an outbound HTTP/SDK client, a worker/thread pool, a
@@ -311,6 +319,13 @@ Review:
   a store-less front-end/edge surface, the durable copy is the one committed to git.
 
 ---
+
+### Partial-success pipelines: which cursor moves on which outcome
+
+For a pipeline that processes items in batches and persists a cursor, watermark, or "last processed" marker, write a
+table of outcome (all ok, some failed, all failed, skipped, crashed mid-batch) against each cursor and say whether it
+advances. 🚩 a cursor that advances on partial failure (failed items are never retried), or that stays put on a
+permanent failure (the batch is retried forever). Each item needs its own retry state or a dead-letter path.
 
 ## The dual-write problem — a local write + a remote publish are not atomic
 
