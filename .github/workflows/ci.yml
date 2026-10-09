@@ -301,6 +301,7 @@ jobs:
           python3 scripts/test_perun_doctor.py
           python3 scripts/test_auto_update.py
           python3 scripts/test_fleet_hooks.py
+          python3 scripts/test_field_mos_1009.py
           bash scripts/test-land-release-tag.sh
           python3 scripts/test_scan_tracked_only.py
           python3 scripts/test_review_gate.py
