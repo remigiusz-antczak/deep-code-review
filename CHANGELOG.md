@@ -3,6 +3,16 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.557.0] — 2026-10-09
+
+### Changed
+- idea-critic (Veles): tightened the calibration rule. REVISE or HOLD now requires a concrete failure scenario tied to the proposal (named condition, bad outcome, why the stated evidence and kill criterion do not cover it); generic "may", "might" and "consider X" risks and "can't re-verify" become non-blocking notes under PASS_TO_USER; evidence cited with provenance is taken as given. Diagnosis of the prior runs: the over-rejections came from the critic distrusting stated evidence and raising speculative risks that the proposal's own observation and kill criterion already covered. Refs #1380.
+- idea-critic evals: six new PASS controls and two new must-HOLD cases (tuning set), plus a frozen held-out file `evals/heldout.json` (6 sound PASS proposals, 4 must-HOLD/REVISE) written before scoring.
+- Live A/B (claude -p, sonnet, no tools, 3 replicates, keyword objection predicates, 95% bootstrap CI). **In-sample (tuning set, 19 cases)**: the rule wording and three controls were tuned on these cases using critic output (earlier iterations scored PASS accuracy 0.60 and 0.70), so treat as optimistic. PASS accuracy: plain 0.23 [0.10-0.40], Veles before 0.70 [0.53-0.87], Veles after 0.87 [0.73-0.97]; HOLD/REVISE accuracy before 0.96, after 1.00; objection recall before 0.85 [0.70-0.96], after 0.93 [0.81-1.00].
+- **Held-out (10 cases, n=18 PASS runs, n=12 HOLD/REVISE runs)**: PASS accuracy: plain 0.22 [0.06-0.44], Veles before 0.33 [0.11-0.56], Veles after 0.50 [0.28-0.72]; HOLD/REVISE accuracy: plain 1.00, before 1.00, after 1.00 (all [1.00-1.00]); objection recall (loose keyword predicate, weak signal) 1.00 for all arms. Held-out cases were written without reading the rule wording but the author had seen earlier critic output on the tuning set. Verdict: held-out PASS accuracy rose (CIs overlap) and HOLD/REVISE accuracy did not drop, but held-out PASS accuracy is 0.50, below the 0.8 absolute bar; the improvement is directional, not established.
+
+size-budget-raise: .claude/skills/idea-critic/SKILL.md 15011→16062 concrete-failure-scenario calibration rule
+
 ## [1.556.0] — 2026-10-09
 
 ### Added
