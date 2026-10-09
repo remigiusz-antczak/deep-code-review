@@ -3,6 +3,11 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.555.0] — 2026-10-09
+
+### Changed
+- `/review` for `DIFF` and `FILE` scope no longer loads the full `deep-code-review` SKILL.md (about 23k chars, about 6k tokens re-read on every turn); `FULL` and `--high-stakes` still do. Measured on a 2-file sample repo with two planted bugs (SQL injection, off-by-one), fresh Perun install, Sonnet, 3 runs each: cost per review $0.164 -> $0.132 (-20%), turns 6.7 -> 5, output tokens 1688 -> 1323; a plain agentic review costs $0.113 (4 turns). Both planted bugs were found in 3/3 runs before and after. Cost drivers measured: SKILL.md load and re-read (largest), extra method turns and longer reports; AGENTS.md block (821 B), SessionStart brief (130 chars) and UserPromptSubmit hook output are negligible.
+
 ## [1.554.0] — 2026-10-09
 
 High-stakes review default changed from two independent passes plus union to one agentic pass on Opus (measured on 90 held-out bugs: recall 0.744 against 0.644 for one Sonnet pass, $0.131 per review against $0.144 for two Sonnet passes). Normal default stays one Sonnet pass. `/review --high-stakes` selects it. Refs #1380.
