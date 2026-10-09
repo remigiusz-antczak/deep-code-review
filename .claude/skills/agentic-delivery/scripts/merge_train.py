@@ -201,6 +201,7 @@ import json
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -248,16 +249,27 @@ class Conflict(Exception):
 def default_runner(args, cwd=None, timeout=3600):
     """Run a command without a shell; return (returncode, stdout, stderr).
 
-    Side-effects: spawns a subprocess. A missing binary is rc 127 and a timeout
-    rc 124, returned rather than raised so callers fail closed uniformly.
+    Side-effects: spawns a subprocess in its OWN process group (new session).
+    A missing binary is rc 127 and a timeout rc 124, returned rather than
+    raised so callers fail closed uniformly. On timeout the whole group is
+    killed, so a grandchild (a browser under a test runner) cannot outlive the
+    timebox; only this call's own group is signalled, never anything else.
     """
     try:
-        proc = subprocess.run(args, cwd=cwd, capture_output=True, text=True, timeout=timeout)
+        proc = subprocess.Popen(args, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                                start_new_session=True)
     except FileNotFoundError as exc:
         return 127, "", str(exc)
+    try:
+        out, err = proc.communicate(timeout=timeout)
     except subprocess.TimeoutExpired:
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except OSError:
+            proc.kill()
+        proc.communicate()
         return 124, "", f"timed out after {timeout}s: {args[0]}"
-    return proc.returncode, proc.stdout, proc.stderr
+    return proc.returncode, out, err
 
 
 def pid_alive(pid) -> bool:

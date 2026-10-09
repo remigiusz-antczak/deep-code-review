@@ -30,6 +30,8 @@ loop, not a single task**. Frame it as the default stance:
   unattended time budget is a work loop** (termination-conditions bullet).
 - **A go-faster tick is not a demand for busywork; holding can be correct.**
   `unattended-trackers.md` **A go-faster signal fires on a clock, not on state**.
+- **A lane decides its own reversible choices.** An A/B hand-back for a reversible choice, or a "lanes never push
+  to their own branch" rule, stalls delivery; the lane picks, states the choice in its handback, and pushes.
 - **A question for an absent owner is deferred, not waited on.** Record it with
   `agentic-ceo/scripts/task_ledger.py defer --id T-### --question "<q>"`. A
   reversible choice takes a default (`--default "<choice>"`), stated in the
