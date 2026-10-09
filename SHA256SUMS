@@ -281,9 +281,10 @@ fbc24fe2b0ebcaa15bcddc856e744d735148af4fb3e437725ac368696bbde5ca  .claude/skills
 4c8047eeb8b174b520c736e7b189d5a49e4a755aad738e9c44c8af4e25fe1067  .claude/skills/growth-analytics/evals/evals.json
 e951eaa63fd0d1870701d69c89c29ef4fe74dbad9b680ab6ef0a4e993fb8bc20  .claude/skills/growth-analytics/evals/triggers.json
 58cb027a29d2e07fd714b3d7ab82682530aa80cd0826a86c598b93b0754c6b1e  .claude/skills/idea-critic/INDEX.md
-f9a5e2588f58bf6f067ae02c8e2c69f27846761326daad600aa1b5deabd6025d  .claude/skills/idea-critic/SKILL.md
+fe6a94aade776bf4ac7105e1fb1ca38bd23e49a8401d72475885cd6fca3172f3  .claude/skills/idea-critic/SKILL.md
 d12a332f51ec8e25919e46449f404ce06992925f221f4fd9a915c859317b4e80  .claude/skills/idea-critic/VERSION
 d532486804aa74d3f531e7d115102acab226db3c908745fb5014eaeee6ade952  .claude/skills/idea-critic/evals/evals.json
+0e1c0db300661a1ab1a427a7157c75e2ed67130ab24d5c6cb02ec3ff9e793f58  .claude/skills/idea-critic/evals/heldout.json
 d8098c5ced63e8b8608867dd144091049563a0553cf62d27ce05b9d52ac54266  .claude/skills/idea-critic/evals/triggers.json
 c5615e5c59bc2e452c2c49619be2ec5e456f3c167e772498316f8b5a45deb2c8  .claude/skills/idea-critic/references/decision-hygiene.md
 612a8b0426f4cad71f88aa5aead935351a6c586b74bf34d8ef39f2df2f9f72d1  .claude/skills/idea-critic/scripts/validate_verdict.py
