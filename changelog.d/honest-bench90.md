@@ -1,2 +1,0 @@
-### Changed
-- README and docs/for-leaders.md now report the 87-case held-out benchmark (docs/bench/bench90-results.md): one Perun pass does not find more bugs than a plain prompt; the two-pass default has significantly higher verified precision (+7.6 points) and a non-significant recall gain at about 3.2x the plain cost. The 30-case numbers are marked superseded, including in method-situational.md.
