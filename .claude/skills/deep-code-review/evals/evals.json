@@ -7883,6 +7883,100 @@
         "Requires an ephemeral runner under a low-privilege account or VM",
         "Notes untrusted or fork PRs must not share a runner with privileged jobs"
       ]
+    },
+    {
+      "id": "union-whole-tree-scan-test",
+      "prompt": "Review branch A, which adds a test that scans every file in the repo for a forbidden token. Branch B, headed for the same merge train, adds that token in an unrelated file. A is green alone.",
+      "expected_output": "Flag the whole-tree-scan test as non-hermetic under union (High: its verdict decides a merge); report the base-plus-branch run as its own status, and call 'green alone' unverified for the union.",
+      "expectations": [
+        "Flags the whole-tree scan as depending on files other branches add, High when it gates a merge",
+        "Asks to pin its scope to the diff or a fixture",
+        "Reports the combined base-plus-branch result as a separate status and treats green-alone as unverified for the union"
+      ]
+    },
+    {
+      "id": "stored-baseline-sha-provenance",
+      "prompt": "Review a gate that compares counts against a committed baseline file. The baseline records SHA old111, but the comparison base is new222. A second variant records new222.",
+      "expected_output": "Flag the first variant: a stored baseline must record its SHA and the gate must fail closed when it is not the current comparison base. No finding on the variant whose recorded SHA equals the base.",
+      "expectations": [
+        "Fails closed on recorded SHA != comparison base instead of silently reusing the baseline",
+        "Raises no finding when the recorded SHA equals the comparison base",
+        "Distinguishes provenance (when computed) from same-host or same-invocation placement"
+      ]
+    },
+    {
+      "id": "copy-paste-command-unbraced-refspec",
+      "prompt": "Review a README block: `git push origin $b:$b` run by a reader in zsh, with no dry run. A second block uses `${b}:${b}` preceded by an echo of the refspec.",
+      "expected_output": "Flag the first block (High: a push) for an unbraced variable before a colon in a command that is executed as typed in the interactive shell; the braced, echo-first block passes. The eval asserts the form, not the zsh mechanism.",
+      "expectations": [
+        "Treats a fenced Markdown block as a command run in zsh and bash",
+        "Flags the unbraced variable followed by a colon, High because it pushes",
+        "Passes the braced form with a dry-run echo",
+        "Does not assert a specific zsh expansion mechanism"
+      ]
+    },
+    {
+      "id": "inferred-ownership-reaper",
+      "prompt": "Review a reaper that kills processes whose parent is init, older than 3 hours and under the scratch root, with --apply by default. A long detached build matches. A variant records a spawn-time owner token and pgid.",
+      "expected_output": "Flag the selector: destructive predicate from inferred attributes with no recorded owner token (Critical, since --apply runs without a dry-run gate). Require a positive-control fixture for a detached long job and report-only default listing each victim with evidence. The owner-token variant passes.",
+      "expectations": [
+        "Flags a kill predicate built only from inferred attributes with no recorded owner token",
+        "Rates it Critical because it applies without a dry-run gate",
+        "Requires a positive-control fixture of a legitimate detached long job",
+        "Requires report-only default that prints victims with evidence",
+        "Passes the variant with a spawn-time owner token and recorded pgid"
+      ]
+    },
+    {
+      "id": "admission-coverage-direct-runner",
+      "prompt": "Review a repo whose test suite is run by a script wrapped in the shared slot primitive and by an agent brief that calls the runner directly. Another case: load is above core count and the wrapper is used.",
+      "expected_output": "Flag the direct path from the brief (High, reachable from an agent brief): enumerate every entry point that runs a heavy tool. With load above core count the wrapper must wait, not start.",
+      "expectations": [
+        "Enumerates every entry point that runs the heavy command",
+        "Flags the direct invocation that bypasses the admission primitive, High from an agent brief",
+        "Expects admission to wait when load exceeds core count"
+      ]
+    },
+    {
+      "id": "evidence-gate-form-only-predicate",
+      "prompt": "Review a gate requiring UI evidence: it accepts a justification over 20 characters, an image embed by URL syntax with no fetch, and a receipt present but unbound to HEAD.",
+      "expected_output": "Flag each form-only predicate with its exact bypass input (20 irrelevant characters; an unreachable image URL; a receipt for a non-head SHA) and require adversarial tests for short justification, unreachable URL, and wrong-commit artifact.",
+      "expectations": [
+        "States what each accept predicate actually verifies",
+        "Flags the three form-only predicates with an exact bypass input each",
+        "Requires at least three adversarial inputs in the gate's own tests"
+      ]
+    },
+    {
+      "id": "rule-to-enforcement-map-full",
+      "prompt": "FULL review of a repo whose agent doc has three NEVER/MUST rules, one naming an existing test, and a closed-regression list of two issues where one cites a pinning test.",
+      "expected_output": "Two rule findings (Medium; High if guarding publish, spend or destructive action) and one closed-regression finding. Ask for a classification (pin or exempt with reason), not an automatic test.",
+      "expectations": [
+        "Extracts MUST/NEVER/ALWAYS rules and requires a gate id or test name per row",
+        "Reports exactly two unmapped rules",
+        "Reports the closed regression without a pinning test",
+        "Asks for a pin-or-exempt classification instead of generating a test"
+      ]
+    },
+    {
+      "id": "quarantine-expiry-and-updater-write-path",
+      "prompt": "Review a quarantine file with owner 'unassigned' and no expiry, and a ratchet --update command that raises the pinned limit and deletes fragments without checking violations.",
+      "expected_output": "Flag the unowned, unexpiring quarantine entry (the gate reading the list must fail on expiry) and review the updater as a write path: refuse to raise a limit without an explicit flag, run the violation check first, and not delete unvalidated inputs.",
+      "expectations": [
+        "Flags a placeholder owner and missing expiry",
+        "Requires the quarantine reader to fail on an expired entry",
+        "Reviews the updater as a write path that refuses a raise without an explicit flag",
+        "Flags deleting inputs the updater did not validate"
+      ]
+    },
+    {
+      "id": "effective-config-vs-invoked-flag",
+      "prompt": "Review a runner config with retries 0 and a gate script that invokes the runner with a retries 1 flag.",
+      "expected_output": "Flag the disagreement and state the effective value: retries is 1, because the CLI flag overrides the config the review read.",
+      "expectations": [
+        "Compares the config file to the flags in the invoking script",
+        "Reports the effective value (1) not the config value (0)"
+      ]
     }
   ]
 }

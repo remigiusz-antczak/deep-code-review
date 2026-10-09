@@ -47,6 +47,13 @@ timeout/flake enters the findings table, re-run the specific failing check in
 isolation. Cap concurrent heavy lanes per machine to a stated ceiling, distinct
 from the candidate-count tiering above.
 
+**Admission-coverage enumeration.** A shared admission primitive (slot pool, lock, semaphore) is correct only if
+every entry point uses it. List every command in scripts, hooks, Makefiles, agent briefs and docs that runs a
+heavy tool (test runner, build, browser, type-check); each must acquire the primitive or it is a finding (High
+when reachable from an agent brief). Admission compares load to core count and waits above the threshold
+rather than starting the job. Whether a hook exists is the delivery skill's concern; this is the review-time
+enumeration of paths that bypass it.
+
 **Mega-files / huge blobs:** when a single file is too large to hold in one
 context (tens of KB of dense logic, generated bundles, vendored trees), split by
 **named concern** (auth surface, write path, egress, parser) with overlapping

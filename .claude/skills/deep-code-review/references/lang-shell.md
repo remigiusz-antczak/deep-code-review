@@ -92,3 +92,11 @@ Read this when the target runs any shell — CI `run:` steps, hooks, Dockerfile 
   failure.
 
 - **A gate piped to `tail`/`head`/`grep` masks its exit code, and doctrine alone did not stop the recurrence** (two branches reported pushed after failing a pre-push gate). The operating layer ships a `PreToolUse` Bash hook, `agentic-delivery/scripts/pipe_mask_guard.py`, that warns (or blocks with `PIPE_MASK_MODE=block`) on a gate/push/merge piped to `tail`/`head`/`grep` without `pipefail` or `PIPESTATUS`.
+
+- **Copy-paste commands in docs, briefs and skill files are executed as typed, in the reader's interactive shell.**
+  Treat every fenced shell block in Markdown as a command run in the default interactive shell (zsh on macOS) and
+  in bash, and check both. An unbraced `$name` followed by `:` or other punctuation must be `${name}`, for example
+  `git push origin ${b}:${b}`. A variable-built refspec or destination is shown by a dry run (`echo` or
+  `--dry-run`) before the mutating command in the same block. Mechanise as a grep over fenced blocks in `*.md`
+  for an unbraced variable followed by `:`; Low, or High when the block pushes, deletes or deploys. This rule
+  pins the form, not a specific zsh expansion mechanism.

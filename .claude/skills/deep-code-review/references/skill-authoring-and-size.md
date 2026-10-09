@@ -50,6 +50,10 @@ mechanically, the same way this repo gates routing:
 - **A self-test that proves the detector fires** on an oversized fixture, so the
   ratchet cannot decay into decoration.
 
+- **The updater is a write path.** An `--update`, regenerate or re-pin command that writes the baseline is
+  reviewed as code: it must refuse to raise a limit without an explicit flag, run the violation check before
+  writing, and not delete inputs (fragments, rows) it did not validate.
+
 ## Review checklist
 
 - [ ] `SKILL.md` is a thin core + routed index, not a monolith. Situational depth
