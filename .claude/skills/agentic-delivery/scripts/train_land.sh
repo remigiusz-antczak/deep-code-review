@@ -108,7 +108,9 @@ for n in "${PRS[@]}"; do
   git checkout -q --detach "$base"; bad=0
   if git fetch -q "$REMOTE" "pull/$n/head" && git merge -q --no-edit FETCH_HEAD >/dev/null 2>&1; then
     while IFS= read -r id; do
-      TEST=$id bash -c "$RERUN_CMD" >/dev/null 2>&1 </dev/null || bad=1
+      br=0; RERUN_CMD=$RERUN_CMD bash "$HERE/train_flake.sh" --one "$id" || br=$?  # same fresh store + setup hook as the triage
+      [ "$br" -ne 125 ] || { git merge --abort 2>/dev/null || true; git checkout -q --detach "$base"; echo "fresh store or FLAKE_SETUP_CMD failed in the bisect for $id; nothing landed" >&2; exit 1; }
+      [ "$br" -eq 0 ] || bad=1
     done < <(sed -nE 's/^REAL //p' "$LOG.flake")
   fi
   git merge --abort 2>/dev/null || true

@@ -23,11 +23,19 @@ FLAKE_HOST=hostA bash "$SC/train_flake.sh" --record "$WORK/ids" >/dev/null 2>&1;
 # --- each re-run of each test title gets its own fresh FLAKE_STORE, created by FLAKE_SETUP_CMD ---
 printf 'a\nb\n' >"$WORK/two"
 export WORK
-FLAKE_SETUP_CMD='mkdir "$FLAKE_STORE" && echo "$TEST" >>"$WORK/setups"' RERUN_CMD='[ -d "$FLAKE_STORE" ] && echo "$TEST $FLAKE_STORE" >>"$WORK/runs"; false' \
+FLAKE_SETUP_CMD='echo "$TEST" >>"$WORK/setups"' RERUN_CMD='[ -d "$FLAKE_STORE" ] && echo "$TEST $FLAKE_STORE" >>"$WORK/runs"; false' \
   FLAKE_RUNS=2 FLAKE_REAL_AT=2 bash "$SC/train_flake.sh" "$WORK/two" >"$WORK/out"
 [ "$(wc -l <"$WORK/runs" | tr -d ' ')" = 4 ] && [ "$(cut -d' ' -f2 "$WORK/runs" | sort -u | wc -l | tr -d ' ')" = 4 ] \
   && [ "$(sort "$WORK/setups" | tr '\n' ' ')" = "a a b b " ] && grep -q '^REAL a$' "$WORK/out"; ok $? "fresh store: 4 distinct stores, one setup per re-run, per test title"
 FLAKE_SETUP_CMD=false bash "$SC/train_flake.sh" "$WORK/two" >/dev/null 2>&1; [ $? -eq 2 ]; ok $? "setup hook failure: fails closed (exit 2)"
+
+# --- the train_land bisect re-run goes through the same helper: a stale shared store fails without it, passes with it ---
+mkdir "$WORK/stale"; echo dirty >"$WORK/stale/x"; export STALE="$WORK/stale"
+FLAKE_SETUP_CMD='echo seed >"$FLAKE_STORE/s"' RERUN_CMD='[ -n "${FLAKE_STORE:-}" ] && [ ! -e "$FLAKE_STORE/x" ] && [ -e "$FLAKE_STORE/s" ]' bash "$SC/train_flake.sh" --one t1 2>/dev/null
+ok $? "bisect helper: --one gives a fresh seeded store (a stale shared store would fail)"
+RERUN_CMD='[ -n "${FLAKE_STORE:-}" ]' bash -c 'unset FLAKE_STORE; bash -c "$RERUN_CMD"'; [ $? -ne 0 ]; ok $? "without the helper FLAKE_STORE is unset, so a stale-store re-run fails"
+grep -q 'train_flake.sh" --one' "$SC/train_land.sh"; ok $? "train_land bisect calls train_flake.sh --one"
+! grep -nE '\brm\b' "$SC/train_flake.sh"; ok $? "train_flake.sh contains no rm"
 
 # --- timebox kills the whole process group (grandchild included), only its own ---
 python3 -I - "$SC" "$WORK/gc.pid" <<'PY'
