@@ -13,6 +13,11 @@ LINT = os.path.join(ROOT, ".claude/skills/communication-structure/scripts/status
 EVALS = os.path.join(ROOT, ".claude/skills/communication-structure/evals/evals.json")
 
 
+def write(path, text):
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(text)
+
+
 def run(args, cwd=None):
     p = subprocess.run(args, cwd=cwd, capture_output=True, text=True)
     return p.returncode, p.stdout + p.stderr
@@ -24,10 +29,10 @@ class Receipt(unittest.TestCase):
         g = lambda *a: subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@example.com", *a],
                                       cwd=d, check=True, capture_output=True, text=True).stdout.strip()
         g("init", "-q", "-b", "main")
-        open(os.path.join(d, "a.txt"), "w").write("x")
+        write(os.path.join(d, "a.txt"), "x")
         g("add", "."), g("commit", "-qm", "base")
         g("checkout", "-qb", "lane")
-        open(os.path.join(d, changed), "w").write("y")
+        write(os.path.join(d, changed), "y")
         g("add", "."), g("commit", "-qm", "change")
         self.d, self.sha = d, g("rev-parse", "HEAD")
         return d
@@ -36,7 +41,7 @@ class Receipt(unittest.TestCase):
         args = [sys.executable, GUARD, "handback", "--sha", self.sha, "--base", "main", "--branch", "lane", *extra]
         if receipt_text is not None:
             r = os.path.join(self.d, "receipt.txt")
-            open(r, "w").write(receipt_text)
+            write(r, receipt_text)
             args += ["--receipt", r]
         return run(args, self.d)
 
@@ -93,7 +98,8 @@ class StatusLint(unittest.TestCase):
         self.assertEqual(run([sys.executable, LINT, "--file", "/nonexistent"])[0], 2)
 
     def test_eval_case_present(self):
-        ids = {e["id"] for e in json.load(open(EVALS))["evals"]}
+        with open(EVALS, encoding="utf-8") as f:
+            ids = {e["id"] for e in json.load(f)["evals"]}
         self.assertIn("status-vocabulary-merged-deployed-verified", ids)
 
 

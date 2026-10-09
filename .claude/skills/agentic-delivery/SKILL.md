@@ -135,11 +135,11 @@ independent verification or a human approval that actually applies.
 | G2 Plan | Spec | Acyclic work graph | Role triggers, one writer per worktree; **every lane with a paid model call names a per-lane token/dollar budget before G4 starts — no budget set is blocked, not unlimited** (a cap that defaults to off is not a cap); in a multi-repo plan, classify each item provider vs consumer before cutting lanes (`references/roles.md` *No scope creep*) |
 | G3 Design | Graph | ADRs / contracts | Interfaces, NFR budgets, data/security decisions explicit. Shape: `references/template-adr.md` |
 | G4 Implement | Work packets | Patch/commit per lane | Tests before or with the change; packet names review skill + immutable base SHA |
-| G5 Verify | Exact revision | Test receipts | **Local stack up** (project's one-command / compose / devcontainer) then build, lint, type, unit, and applicable integration/E2E **green at that SHA**. A gate that never started the app is `UNVERIFIED`, not pass. **UI change (domain P):** headed-browser evidence on the exact route after the action. Unit tests alone are not a UI gate; a user-facing UI change is DONE only with a `journey: <page> <steps> PASS` receipt line (`references/verification-handback.md` **Done means verified**) |
+| G5 Verify | Exact revision | Test receipts | **Local stack up** then build, lint, type, unit, and applicable integration/E2E **green at that SHA**; a gate that never started the app is `UNVERIFIED`. **UI change (domain P):** headed-browser evidence on the exact route after the action. Unit tests alone are not a UI gate; UI DONE needs `journey: <page> <steps> PASS` (`verification-handback.md`) |
 | G6 Review | Exact revision + receipts | `deep-code-review` + QA + security verdicts | Independent of the builder; applies the `deep-code-review` severity rubric — Blocker/Critical block, High needs a named owner's acceptance, Medium is tracked and non-blocking |
 | G7 Integrate | Accepted lanes | Integration receipt + `deep-code-review DIFF` | One integration owner; rerun affected gates on the exact final SHA |
 | G8 Release | Exact integrated SHA | Release manifest | Rollback proven; **owner approves** outward/production action |
-| G9 Production verify | Deployed SHA | Verification receipt (`postdeploy-logs: clean \| <errors>`; absent = deployed, unverified) | Served behaviour and SLOs; rollback on breach |
+| G9 Production verify | Deployed SHA | Verification receipt + `postdeploy-logs:` | Served behaviour and SLOs; rollback on breach |
 | G10 Learn | Receipts | Retrospective | Escaped gap → regression test in this repo. Reusable lessons are generalized, third-party identifiers stripped, before leaving the project (`contribution` overlay proposes them upstream). Mandatory-trigger criteria, blameless shape, action-item-closure gate: `references/retrospective.md` + `references/template-postmortem.md` |
 
 **Missing evidence is `UNVERIFIED`, never pass. Missing price is `UNPRICED`,
@@ -287,9 +287,9 @@ Delivery owns the running stack, not only the diff.
 
 Five steps — discover the documented one-command path, bring it up in the writer's worktree, **(3) verify against the running process**, tear down, never build into a served dir: `references/dev-env-ownership.md` **Local environment — the five-step stack procedure**; read it before any G5 run.
 
-G5 is not green until step 3 ran or is `UNVERIFIED` with the missing
-prerequisite named; for a change that can alter a rendered page, step 3's receipt
-is the **headed-browser** evidence G5 requires (`product-ux-quality.md`).
+G5 is not green until step 3 ran or is `UNVERIFIED` (prerequisite named); for a
+rendered-page change its receipt is the **headed-browser** evidence G5 needs
+(`product-ux-quality.md`).
 
 ---
 
