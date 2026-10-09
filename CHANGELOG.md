@@ -3,17 +3,23 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
-## [1.558.0] — 2026-10-09
+## [1.559.0] — 2026-10-09
 
 ### Added
-- FULL-scope audits gain `references/full-audit.md` (entry-point table of server actions, routes, jobs and webhooks with auth, rate limit, external calls, timeout budget and idempotency; optional domains loaded only when a recorded grep probe finds the surface) and a conditional `references/nextjs-app-router.md`. New probes in existing references: handler latency budget, partial-success cursors, alert paths, audit coverage, shared fixed-name QA DB or port, config hygiene and fail-closed kill switches, delegated-session revocation. The DIFF `/review` path and `commands/review.md` are unchanged; the Phase 0-2 floors rise 21 tokens for one routing line (re-pinned with a comment). Refs #1380.
+- `train_flake.sh` baselines now carry the host and an invocation hash (`--record`); a baseline from another host or invocation, or one without the header, is refused (exit 2) instead of creating phantom new failures. `FLAKE_SETUP_CMD` gives every per-test-title re-run a fresh `FLAKE_STORE`.
+- `merge_train.py` `default_runner` runs each gate in its own process group and stops that group on timeout, so a browser grandchild cannot outlive the timebox.
+- Doctrine: no weaker-proof gate swap, train by footprint, one-at-a-time merges under churn, contract-pinned guards, lanes decide reversible choices, and no self-hosted runner on a developer machine (checklist row plus evals, including an idea-critic HOLD case).
 
-size-budget-raise: .claude/skills/deep-code-review/SKILL.md 23535→23657 field-audit probes
-size-budget-raise: .claude/skills/deep-code-review/references/appsec-design.md 6796→7297 field-audit probes
-size-budget-raise: .claude/skills/deep-code-review/references/appsec-login.md 4656→5160 field-audit probes
-size-budget-raise: .claude/skills/deep-code-review/references/concurrency-shared-state.md 42331→42853 field-audit probes
-size-budget-raise: .claude/skills/deep-code-review/references/observability.md 18418→19476 field-audit probes
-size-budget-raise: .claude/skills/deep-code-review/references/reliability-error-handling.md 45745→46842 field-audit probes
+size-budget-raise: .claude/skills/deep-code-review/references/domain-k.md 4865→5078 one self-hosted-runner checklist row
+size-budget-raise: .claude/skills/agentic-delivery/references/unattended-operating-mode.md 26509→26732 one reversible-choice doctrine line
+size-budget-raise: .claude/skills/agentic-delivery/references/merge-queue-worktrees.md 68717→69576 one fleet-rules section
+
+## [1.558.0] — 2026-10-09
+
+### Fixed
+- Operating-layer hook commands (template and doc snippets) now use quoted `"$CLAUDE_PROJECT_DIR/..."` paths, so hooks no longer break when the cwd is not the repo root or is a worktree. `install.sh --apply-operating-layer` upgrades old relative entries in place (no duplicates, idempotent); the install summary says running sessions pick up hook changes after a restart. `perun_doctor.py` WARNs on relative hook paths. Migration: re-run `install.sh --apply-operating-layer` in each repo, then restart open sessions.
+- `perun_doctor.py` and `operating_selfcheck.py` WARN when `CLAUDE_CODE_SUBAGENT_MODEL_FORCE=1` pins subagents to a haiku-class model (it overrode lane agents: junk commits, lost hand-backs). The operating-layer template and `host-enforcement.md` now pin lanes to `sonnet`; haiku only for explicitly mechanical tasks. Existing installs keep their own env value; change it by hand.
+- Lane preamble: stage explicit paths only (never `git add -A` or `git stash`); findings that do not fit one line go to a file. `operating-discipline.md`: ship from a dedicated worktree; sandboxed browser smoke needs an exact-prefix `excludedCommands` rule with no output redirects.
 
 ## [1.557.0] — 2026-10-09
 

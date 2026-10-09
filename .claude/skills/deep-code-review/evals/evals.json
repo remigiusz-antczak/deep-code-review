@@ -7873,6 +7873,16 @@
         "Reviews in a repo checkout with read and search tools rather than on the pasted diff alone",
         "Does not pile extra instructions on top of the repo access, which measured no gain"
       ]
+    },
+    {
+      "id": "self-hosted-runner-on-dev-machine",
+      "prompt": "Review a PR whose workflow sets runs-on: self-hosted, and the README says the runner is the maintainer's laptop so builds are faster. The workflow triggers on pull_request.",
+      "expected_output": "Flag as a supply-chain finding: the runner executes every PR's code as the laptop user (home directory, keys, signed-in sessions), and a persistent runner carries residue between jobs. Require an ephemeral runner under a low-privilege account or in a VM, and never co-schedule fork PRs with privileged jobs.",
+      "expectations": [
+        "Flags self-hosted runner on a developer machine as running every PR's code as that user",
+        "Requires an ephemeral runner under a low-privilege account or VM",
+        "Notes untrusted or fork PRs must not share a runner with privileged jobs"
+      ]
     }
   ]
 }

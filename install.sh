@@ -531,7 +531,11 @@ if [[ "${WITH_OPERATING_LAYER}" -eq 1 ]]; then
       def dm($a; $b): if ($a|type) == "object" and ($b|type) == "object"
           then reduce ($a + $b | keys_unsorted[]) as $k ({}; .[$k] = (if ($a|has($k)) and ($b|has($k)) then dm($a[$k]; $b[$k]) elif ($b|has($k)) then $b[$k] else $a[$k] end))
         elif ($a|type) == "array" and ($b|type) == "array" then $b + ($a - $b) else $b end;
-      reduce ($t.hooks | keys[]) as $e (.;
+      # Upgrade old relative hook paths in place (cwd-dependent: break outside the repo root), so the union below sees no duplicate.
+      def up: sub("python3 (?<p>\\.claude/skills/[A-Za-z0-9_./-]+\\.py)"; "python3 \"$CLAUDE_PROJECT_DIR/\(.p)\"")
+              | sub("HOUSE_DEFAULTS_FILE=(?<p>\\.claude/[A-Za-z0-9_./-]+)"; "HOUSE_DEFAULTS_FILE=\"$CLAUDE_PROJECT_DIR/\(.p)\"");
+      (.hooks[]?[]?.hooks[]? | select((.command? | type) == "string") | .command) |= up
+      | reduce ($t.hooks | keys[]) as $e (.;
           (.hooks[$e] // []) as $a
           | .hooks[$e] = $a + ($t.hooks[$e] | map(select(((.matcher // "") | contains("<") | not) and (. as $x | $a | index([$x]) | not)))))
       | .env = ($t.env + (.env // {}))
@@ -627,7 +631,7 @@ if [[ "${WITH_OPERATING_LAYER}" -eq 1 && "${APPLY_OPLAYER}" -eq 1 ]]; then
 What changed in ${TARGET_DIR}:
   1. Skills copied to .claude/skills (+ .cursor, .agents); any existing copy moved to <host>/skill-backups/.
   2. .claude/settings.local.json: operating-layer hooks (PreToolUse incl. heavy_gate.py, SessionStart session_brief.py + auto-update, UserPromptSubmit auto-update, SubagentStart, SubagentStop), env, and the model pin ${OPLAYER_MODEL_NOTE} merged in; previous file saved as .bak.<timestamp>.
-     Skills, hooks and permissions apply to open sessions without a restart; only a model change waits for the next session.
+     Skills and permissions apply to open sessions without a restart; a hook change (new entries, or old relative paths upgraded to "\$CLAUDE_PROJECT_DIR" paths) and a model change reach already-running sessions only after a restart.
      Auto-update: that hook runs release code from the Perun remote in the background (newest vX.Y.Z tag, at most every 6h).
      Opt out: re-run install.sh with --no-auto-update, or set "auto_update": "off" in .perun/policy.json.
   3. .claude/agents/delivery-lane.md added if absent; .claude/.perun-install.json and .dcr-install-flags record what was added.

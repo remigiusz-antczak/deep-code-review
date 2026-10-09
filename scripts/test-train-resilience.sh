@@ -18,7 +18,7 @@ echo "$TEST" >>"$WORK/reruns.log"; [ "$r" != F ]
 STUB
 export WORK; export RERUN_CMD="bash $WORK/rerun.sh"
 printf 'FFP' >"$WORK/seq.real1"; printf 'FPP' >"$WORK/seq.flaky1"; printf 'PP' >"$WORK/seq.pass1"; printf 'F' >"$WORK/seq.base1"
-printf 'real1\nflaky1\npass1\nbase1\n' >"$WORK/fails"; echo base1 >"$WORK/baseline"
+printf 'real1\nflaky1\npass1\nbase1\n' >"$WORK/fails"; echo base1 >"$WORK/b1"; FLAKE_INVOCATION=x bash "$SC/train_flake.sh" --record "$WORK/b1" >"$WORK/baseline"; export FLAKE_INVOCATION=x
 out=$(bash "$SC/train_flake.sh" "$WORK/fails" "$WORK/baseline"); rc=$?
 [ $rc -eq 1 ] && grep -q '^REAL real1$' <<<"$out" && grep -q '^FLAKE flaky1' <<<"$out" && grep -q '^FLAKE pass1' <<<"$out" \
   && ! grep -q base1 <<<"$out" && [ "$(grep -c '^real1$' "$WORK/reruns.log")" -eq 2 ] && ! grep -q '^base1$' "$WORK/reruns.log"
@@ -26,7 +26,7 @@ ok $? "flake triage: fail 2 of 3 is REAL (stops at 2), 1 of 3 is FLAKE, baseline
 printf 'FPP' >"$WORK/seq.flaky1"; echo flaky1 >"$WORK/fails1"
 bash "$SC/train_flake.sh" "$WORK/fails1" >/dev/null; ok $? "flake triage: flakes only exits 0"
 
-unset RERUN_CMD
+unset RERUN_CMD FLAKE_INVOCATION
 # --- (2)+(1) train_land end to end: 3 PRs, #2 really breaks t2, t1 is a load flake ---
 R="$WORK/clone"; g() { git -C "$R" -c user.email=t@example.com -c user.name=T "$@"; }
 git init -q --bare "$WORK/origin.git" -b main; git clone -q "$WORK/origin.git" "$R" 2>/dev/null
@@ -138,7 +138,7 @@ done
 cat >"$WORK/browser-base.sh" <<'STUB'
 echo "FAIL tb"; echo "FAILURES 1"; exit 1
 STUB
-echo tb >"$WORK/baseline2"; : >"$WORK/merged.log"
+echo tb >"$WORK/b2"; FLAKE_INVOCATION="bash $WORK/browser-base.sh" bash "$SC/train_flake.sh" --record "$WORK/b2" >"$WORK/baseline2"; : >"$WORK/merged.log"
 out=$(RERUN_CMD=true BASELINE_FAILS="$WORK/baseline2" VERIFY_CMD="bash $WORK/verify.sh \"\$@\"" UNION_DIRS="$R" LOG_DIR="$WORK" BROWSER_CMD="bash $WORK/browser-base.sh" bash "$SC/train_land.sh" tb 1 3 2>&1); rc=$?
 [ $rc -eq 1 ] && grep -q 'BROWSER RED' <<<"$out" && [ ! -s "$WORK/merged.log" ]; ok $? "train_land: a baseline-only browser red lands nothing"
 echo 'echo crash; exit 1' >"$WORK/browser-crash.sh"

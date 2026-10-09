@@ -91,7 +91,7 @@ if [ $rc -eq 0 ]; then git checkout -q --detach "$REMOTE/$BASE_BRANCH"; break; f
 BR="BROWSER RED: union $U fails browser specs (see $LOG.browser); nothing landed"
 [ -n "${RERUN_CMD:-}" ] || { git checkout -q --detach "$REMOTE/$BASE_BRANCH"; echo "$BR" >&2; exit 1; }
 sed -nE 's/^FAIL +//p' "$LOG.browser" >"$LOG.fails"
-renew; t=0; RERUN_CMD=$RERUN_CMD bash "$HERE/train_flake.sh" "$LOG.fails" "${BASELINE_FAILS:-/dev/null}" >"$LOG.flake" || t=$?
+renew; t=0; RERUN_CMD=$RERUN_CMD FLAKE_INVOCATION=${FLAKE_INVOCATION:-$BROWSER_CMD} bash "$HERE/train_flake.sh" "$LOG.fails" "${BASELINE_FAILS:-/dev/null}" >"$LOG.flake" || t=$?
 git checkout -q --detach "$REMOTE/$BASE_BRANCH"  # isolated re-runs above ran at the union; bisect below starts from the base
 cat "$LOG.flake"
 # Landable only when at least one NEW failure was listed and every new one re-ran and classified FLAKE: a red run with no
@@ -108,7 +108,9 @@ for n in "${PRS[@]}"; do
   git checkout -q --detach "$base"; bad=0
   if git fetch -q "$REMOTE" "pull/$n/head" && git merge -q --no-edit FETCH_HEAD >/dev/null 2>&1; then
     while IFS= read -r id; do
-      TEST=$id bash -c "$RERUN_CMD" >/dev/null 2>&1 </dev/null || bad=1
+      br=0; RERUN_CMD=$RERUN_CMD bash "$HERE/train_flake.sh" --one "$id" || br=$?  # same fresh store + setup hook as the triage
+      [ "$br" -ne 125 ] || { git merge --abort 2>/dev/null || true; git checkout -q --detach "$base"; echo "fresh store or FLAKE_SETUP_CMD failed in the bisect for $id; nothing landed" >&2; exit 1; }
+      [ "$br" -eq 0 ] || bad=1
     done < <(sed -nE 's/^REAL //p' "$LOG.flake")
   fi
   git merge --abort 2>/dev/null || true
