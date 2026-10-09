@@ -1,2 +1,0 @@
-### Fixed
-- Review benchmark harness: every `bench_corpus.py run` now writes a fresh run dir `runs/<arm>-<rep>-<timestamp>/` made with `mkdir` (a second driver that picks the same name is refused), with a `manifest.json` (model, skill SHA-256, settings) and a `COMPLETE` marker; `verify` and `report` read exactly one complete run dir. Previously arms shared one `--out` dir, so a stray driver overwrote finished records mid-analysis.
