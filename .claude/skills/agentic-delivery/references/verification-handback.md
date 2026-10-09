@@ -665,3 +665,19 @@ Moved from `SKILL.md` **Worktrees and occupancy**; "the tree-sharing risk above"
 
 
 A hand-back pastes the test runner's exact count string (for example `Tests: 219/219`), not a paraphrase of it.
+
+## Done means verified
+
+Merged + tests green + deploy ready is a proxy, not delivery: buttons did nothing, comments landed on the wrong
+page, a header clipped, and an integration returned 4xx for days while every handback said "live".
+
+- **Journey receipt (UI).** A user-facing UI change is DONE only when QA ran, on the page where the request
+  originated, control clicked → effect persisted → page reloaded → persistence asserted, and the receipt holds
+  `journey: <page> <steps> PASS`. `lane_guard.py handback --receipt FILE` refuses a diff touching UI files
+  (tsx/jsx/vue/svelte/html/css/scss/...) when the line is absent or says anything but PASS.
+- **Post-deploy log check.** After every deploy, read runtime logs for the first ~5 minutes for errors and
+  integration 4xx; record `postdeploy-logs: clean | <errors>`. No record = "deployed, unverified", never "live".
+  `lane_guard.py handback --deployed --receipt FILE` refuses a missing line or any value but `clean`.
+- **Say the state you have.** merged, deployed and verified-on-<page> are different words (`communication-structure`).
+- **Secrets and env.** Before asking the owner for a secret, check what the platform and its config already store.
+  A required-env list names only variables that already have values; an empty required field blocks deploy forms.
