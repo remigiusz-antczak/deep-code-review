@@ -39,6 +39,15 @@
 # Without that `git config` line, Git never looks in `.githooks/` and this
 # file is inert.
 #
+# MECHANISM GATE (refs #1380): CI's "Fix commits carry a pinned test" and
+# "Prose lessons carry a mechanism" steps judge the WHOLE PR range, so a
+# follow-up commit that edits a SKILL.md/reference without a test/eval in
+# the same commit fails CI even when the lane's earlier gate run was green.
+# When the repo has .github/workflows/ci.yml, this hook extracts those two
+# steps' `run:` blocks (single source: the globs are never copied here, so
+# they cannot drift) and runs them over merge-base(default branch)..HEAD,
+# not just the pushed delta. No ci.yml: skipped.
+#
 # VERDICT CACHE (issue #1153): under heavy concurrent load (many agent lanes
 # committing and pushing on one host), this hook re-running DCR_PREPUSH_CMD
 # every time the identical push is retried or re-invoked (a flaky network
@@ -298,6 +307,30 @@ while read -r local_ref local_sha remote_ref remote_sha; do
     printf 'pre-push-verify: FAIL -- rejecting push of %s (leftover conflict marker)\n' "${local_ref}" >&2
     fail=1
     continue
+  fi
+
+  # Mechanism gate (#1380): CI's fix-class steps over the whole branch range.
+  ci_yml=".github/workflows/ci.yml"
+  if [ -f "${ci_yml}" ]; then
+    mg_base="${base_sha}"
+    default_ref="refs/remotes/${remote_name}/$(resolve_default_branch)"
+    if git rev-parse --verify -q "${default_ref}" >/dev/null 2>&1; then
+      mg_base="$(git merge-base "${default_ref}" "${local_sha}" 2>/dev/null || printf '%s' "${base_sha}")"
+    fi
+    if ! command -v python3 >/dev/null 2>&1 || [ ! -f .claude/skills/deep-code-review/scripts/fix_class_gate.py ]; then
+      die "pre-push: python3 (or fix_class_gate.py) missing — cannot verify mechanism rule; install python3 or push with --no-verify knowingly"
+    fi
+    mg_fail=0
+    for mg_step in "Fix commits carry a pinned test" "Prose lessons carry a mechanism"; do
+      mg_script="$(awk -v n="- name: ${mg_step}" 'index($0,n){f=1;next} f&&/run: \|/{r=1;next} r&&/^ {0,9}[^ ]/{exit} r' "${ci_yml}")"
+      [ -n "${mg_script}" ] || continue
+      if ! BASE_SHA="${mg_base}" HEAD_SHA="${local_sha}" bash -c "${mg_script}" </dev/null >&2; then
+        printf 'pre-push-verify: FAIL -- "%s" would fail CI for %s..%s. Fix: add the test/eval to the same commit, or squash onto %s.\n' \
+          "${mg_step}" "${mg_base}" "${local_sha}" "${default_ref}" >&2
+        mg_fail=1
+      fi
+    done
+    [ "${mg_fail}" -eq 0 ] || { fail=1; continue; }
   fi
 
   # Warn-only scope-creep report (new files/deps/single-impl types); never fails the push.
