@@ -286,6 +286,7 @@ jobs:
           python3 scripts/test_token_ratchet.py
           python3 scripts/test_tokens_per_pr_parity.py
           python3 scripts/test_bench_corpus.py
+          python3 scripts/test_bench_run_isolation.py
           python3 scripts/test_impact_map.py
           python3 scripts/test_resource_policy.py
           python3 scripts/test_policy_ux.py

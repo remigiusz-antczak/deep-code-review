@@ -3,9 +3,14 @@
 
   bench_corpus.py split IDS...                    print the deterministic split for case ids
   bench_corpus.py public-manifest --corpus D      manifest safe to commit (TEST ids hashed, SHAs dropped)
-  bench_corpus.py run    --corpus D --arm A --out O [--split test] [--skill DIR] [--jobs N]
-  bench_corpus.py verify --corpus D --arm A --out O [--split test]
-  bench_corpus.py report --corpus D --out O [--split test]
+  bench_corpus.py run    --corpus D --arm A --runs R [--rep N] [--base RUN] [--split test] [--skill DIR] [--jobs N]
+  bench_corpus.py verify --corpus D --arm A --out RUN [--split test]
+  bench_corpus.py report --corpus D --out RUN [--split test]
+
+Every `run` writes a fresh immutable run dir R/<arm>-<rep>-<UTC timestamp>/ made with mkdir (never reused: a second
+driver that picks the same name is refused), holding manifest.json (model, skill SHA, settings) and, once every case
+finished, a COMPLETE marker. `verify` and `report` read exactly one run dir and refuse one without COMPLETE.
+`perun-gap` needs --base, a complete run dir of the perun arm; its records are copied in, the base stays untouched.
 
 Corpus layout (one dir per case): change.patch (what the reviewer sees), ground-truth.json (score_review.py
 format: one bug with a `match` regex), meta.json (url, licence, SHAs, label), optional context/ (pre-fix file
@@ -72,15 +77,19 @@ def public_manifest(man):
     return sorted(out, key=lambda m: (m["split"] == "test", m["id"]))  # hashed ids sorted: order must not leak real names
 
 
-def claude(prompt, cwd, model="sonnet"):
+MODEL = "sonnet"
+CLAUDE_ARGS = ["-p", "--setting-sources", "project,local", "--output-format", "json",
+               "--no-session-persistence", "--allowedTools", "Read", "Grep", "Glob"]
+
+
+def claude(prompt, cwd, model=MODEL):
     """One read-only `claude -p` session; returns (final text, cost usd, seconds, turns, error).
 
     No user settings, no persistence. `error` is "" on success; a timeout, spawn failure, non-zero exit, unparsable
     JSON, an `is_error` result or empty output all set it, so the caller records the case as errored, never as a miss."""
     t = time.time()
     try:
-        p = subprocess.run(["claude", "-p", "--model", model, "--setting-sources", "project,local", "--output-format", "json",
-                            "--no-session-persistence", "--allowedTools", "Read", "Grep", "Glob"],
+        p = subprocess.run(["claude", *CLAUDE_ARGS[:1], "--model", model, *CLAUDE_ARGS[1:]],
                            input=prompt, capture_output=True, text=True, cwd=cwd, timeout=1500)
     except (subprocess.TimeoutExpired, OSError) as e:
         return "", 0.0, time.time() - t, 0, type(e).__name__
@@ -227,11 +236,43 @@ def metrics(corpus, ids, arm, out):
                 verify_cost_usd=round(vcost, 3), seconds=round(sec, 1))
 
 
+def tree_sha(skill):
+    """sha256 over the sorted relative paths and bytes of the skill dir; None for an arm without a skill."""
+    if not skill:
+        return None
+    h = hashlib.sha256()
+    for f in sorted(p for p in Path(skill).rglob("*") if p.is_file() and "__pycache__" not in p.parts):
+        h.update(f.relative_to(skill).as_posix().encode() + b"\0" + f.read_bytes())
+    return h.hexdigest()
+
+
+def start_run(runs, arm, rep, skill=None, split="test", jobs=1, base=None):
+    """Create runs/<arm>-<rep>-<UTC timestamp>/ with mkdir (no exist_ok) and write manifest.json; returns the new dir.
+
+    Raises FileExistsError when that name is taken, so two drivers can never share a run dir. Side effect: creates
+    `runs` if missing."""
+    runs = Path(runs); runs.mkdir(parents=True, exist_ok=True)
+    d = runs / f"{arm}-{rep}-{time.strftime('%Y%m%dT%H%M%SZ', time.gmtime())}"
+    d.mkdir()
+    man = dict(arm=arm, rep=rep, model=MODEL, claude_args=CLAUDE_ARGS, skill_sha256=tree_sha(skill), split=split, jobs=jobs,
+               base=str(base) if base else None, started=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
+    (d / "manifest.json").write_text(json.dumps(man, indent=1))
+    return d
+
+
+def require_complete(run):
+    """Refuse anything that is not one finished run dir (manifest + COMPLETE marker)."""
+    if not ((run / "manifest.json").is_file() and (run / "COMPLETE").is_file()):
+        raise SystemExit(f"{run}: not a complete run dir (needs manifest.json and COMPLETE); refusing to read it")
+    return run
+
+
 def main(argv):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("cmd", choices=("split", "public-manifest", "run", "verify", "report"))
     ap.add_argument("ids", nargs="*")
     ap.add_argument("--corpus", type=Path); ap.add_argument("--out", type=Path); ap.add_argument("--arm", choices=ARMS)
+    ap.add_argument("--runs", type=Path); ap.add_argument("--rep", type=int, default=1); ap.add_argument("--base", type=Path)
     ap.add_argument("--split", default="test"); ap.add_argument("--skill", type=Path); ap.add_argument("--jobs", type=int, default=4)
     a = ap.parse_args(argv)
     if a.cmd == "split":
@@ -239,12 +280,30 @@ def main(argv):
     if a.cmd == "public-manifest":
         print(json.dumps(public_manifest(json.loads((a.corpus / "manifest.json").read_text())), indent=1)); return 0
     ids = cases(a.corpus, a.split)
+    if a.cmd == "run":
+        if not a.runs:
+            ap.error("run needs --runs")
+        if a.arm == "perun-gap":
+            if not a.base:
+                ap.error("perun-gap needs --base, a complete perun run dir")
+            require_complete(a.base)
+        try:
+            a.out = start_run(a.runs, a.arm, a.rep, a.skill, a.split, a.jobs, a.base)
+        except FileExistsError as e:
+            raise SystemExit(f"refusing to start: run dir exists: {e.filename}")
+        if a.arm == "perun-gap":
+            shutil.copytree(a.base / "perun", a.out / "perun")
+        print("run dir:", a.out, flush=True)
+    else:
+        require_complete(a.out)
     if a.cmd == "report":
         print(json.dumps([metrics(a.corpus, ids, arm, a.out) for arm in ARMS if (a.out / arm).is_dir()], indent=1)); return 0
     with cf.ThreadPoolExecutor(a.jobs) as ex:
         fn = (lambda c: run_case(a.corpus, c, a.arm, a.out, a.skill)) if a.cmd == "run" else (lambda c: verify_case(a.corpus, c, a.arm, a.out))
         for r in ex.map(fn, ids):
             print(*r, flush=True)
+    if a.cmd == "run":
+        (a.out / "COMPLETE").write_text(f"{len(ids)} cases\n")
     return 0
 
 
