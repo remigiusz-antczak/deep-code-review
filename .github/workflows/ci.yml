@@ -302,5 +302,6 @@ jobs:
           python3 scripts/test_auto_update.py
           python3 scripts/test_fleet_hooks.py
           bash scripts/test-land-release-tag.sh
+          bash scripts/test-prepush-fix-class.sh
           python3 scripts/test_scan_tracked_only.py
           python3 scripts/test_review_gate.py
