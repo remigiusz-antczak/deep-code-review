@@ -8,7 +8,8 @@ normalized title, then the id) when first-evidence lines are within 10, keeping 
 (the first on a tie) and unioning evidence; rank Blocker>Critical>High>Medium>Low>Nit/Info (stable); keep the top
 --cap (default 20). Strength rows pass through uncapped. Output: {"findings": [...], "dropped":
 {"ungrounded": n, "duplicate": n, "over_cap": n}} on stdout. An empty `findings` list is a valid result:
-a clean diff yields NONE. Exit 0, or 2 on usage/unreadable input. Side effects: none.
+a clean diff yields NONE. If an input carries a machine-report `coverage` map, a `not-applicable` row without non-empty `probe` (what was
+searched) and `fact` (what fired) is prose-only: it is downgraded to `not-scanned` and listed under `na_flagged` in the output. Exit 0, or 2 on usage/unreadable input. Side effects: none.
 """
 import json, os, re, sys
 
@@ -56,6 +57,18 @@ def merge(rows, cap=20, root=".", ref=None):
     return {"findings": ranked[:cap] + strengths, "dropped": drop}
 
 
+def na_gate(coverage):
+    """Downgrade prose-only not-applicable coverage rows to not-scanned; return (coverage, flagged domains)."""
+    out, flagged = {}, []
+    for d, row in coverage.items():
+        row = dict(row) if isinstance(row, dict) else {}
+        if row.get("status") == "not-applicable" and not (str(row.get("probe", "")).strip() and str(row.get("fact", "")).strip()):
+            row["status"] = "not-scanned"
+            flagged.append(d)
+        out[d] = row
+    return out, flagged
+
+
 def main(argv):
     args, cap, root, ref = argv[1:], 20, os.getcwd(), None
     while args[:1] in (["--cap"], ["--root"], ["--ref"]):
@@ -74,14 +87,19 @@ def main(argv):
         print("usage: merge_findings.py [--cap N] [--root DIR] [--ref REF] <findings.json>...", file=sys.stderr)
         return 2
     try:
-        rows = []
+        rows, cov = [], {}
         for p in args:
             with open(p, encoding="utf-8") as fh:
-                rows += json.load(fh)["findings"]
+                d = json.load(fh)
+            rows += d["findings"]
+            cov.update(d.get("coverage") or {})
     except (OSError, ValueError, KeyError, TypeError) as e:
         print(f"merge_findings: cannot read findings: {type(e).__name__}", file=sys.stderr)
         return 2
-    print(json.dumps(merge(rows, cap, root, ref), indent=2))
+    out = merge(rows, cap, root, ref)
+    if cov:
+        out["coverage"], out["na_flagged"] = na_gate(cov)
+    print(json.dumps(out, indent=2))
     return 0
 
 

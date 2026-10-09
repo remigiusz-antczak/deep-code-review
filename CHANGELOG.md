@@ -3,6 +3,15 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.556.0] — 2026-10-09
+
+### Added
+- Coverage rows marked `not-applicable` must carry `probe:` and `fact:`; `merge_findings.py` downgrades a prose-only row to `not-scanned` and lists it in `na_flagged` (from an independent evaluator, issue 1418). No change to the review prompt.
+- `score_review.py --repeat` reports per-finding presence and severity agreement (with direction) across replicate runs; optional bench output (from an independent evaluator, issue 1418).
+- Considered for a future opt-in, not built: deriving severity from descriptors (issue 1418 item 1).
+- Migration: existing not-applicable coverage rows without probe:/fact: are downgraded to not-scanned and listed in na_flagged (no hard failure); add probe and fact to keep them N/A.
+- size-budget-raise: machine-report.md and SKILL.md grow by a few hundred bytes for the N/A probe rule (no prompt-side instructions added).
+
 ## [1.555.0] — 2026-10-09
 
 ### Changed
