@@ -239,6 +239,85 @@
         "Verdict is PASS_TO_USER",
         "Does not invent opposition to a verified, reversible docs deletion"
       ]
+    },
+    {
+      "id": "control-infra-pool-pass",
+      "prompt": "Agent-originated: raise the database connection pool from 10 to 20 per instance for the orders service. Evidence: metrics for the last 14 days show the pool at 10/10 during 12% of requests, p99 acquire wait 800 ms; autoscaling is capped at 3 instances and the database allows 200 connections, so the new maximum is 60 of 200 and nothing else shares the database. Kill criterion: revert if database CPU exceeds 70% or p99 acquire wait does not fall by 30% within 3 days. Rollback: a config value, reverted in one commit.",
+      "expected_output": "PASS_TO_USER. The one concrete risk (exhausting database connections) is answered by the headroom arithmetic; anything else is a note.",
+      "expectations": [
+        "Verdict is PASS_TO_USER",
+        "strongest_attack_survived names connection exhaustion and the 60-of-200 arithmetic",
+        "Does not block on a generic risk (may/might/consider); at most one non-blocking note"
+      ]
+    },
+    {
+      "id": "control-feature-csv-pass",
+      "prompt": "Agent-originated: add a CSV export button to the reports page. Evidence: 31 of the 40 reporting-related support tickets last quarter asked for CSV; the button reuses the existing JSON export endpoint and its tests, and adds a serializer that prefixes text cells starting with = + - @ tab or carriage return with a quote while writing numeric cells unquoted, covered by planted-payload and negative-number unit tests. Ships behind a flag at 10% of accounts. Kill criterion: remove it if fewer than 5% of weekly active users in flagged accounts use it after 4 weeks. Rollback: turn the flag off.",
+      "expected_output": "PASS_TO_USER. Demand is evidenced, scope is small and reversible.",
+      "expectations": [
+        "Verdict is PASS_TO_USER",
+        "Names a specific objection tried (e.g. formula-injection in cells, large exports) and how the evidence or tests answer it",
+        "Does not block on a generic risk (may/might/consider); at most one non-blocking note"
+      ]
+    },
+    {
+      "id": "control-process-screen-pass",
+      "prompt": "Agent-originated: replace the unstructured first-round phone screen with a 3-question structured rubric scored by two interviewers. Evidence: a pilot on 15 candidates showed inter-rater agreement of 0.7; the last 20 hires were back-scored from recorded notes by someone outside the hiring panel with outcomes redacted, and rubric scores correlate with onsite outcomes (Spearman 0.45). For the first 20 candidates both screens run, and anyone the old screen would pass but the rubric rejects still gets the old interview. Kill criterion, measured over those 20 and the next 30 candidates: revert if the onsite pass rate of screened-in candidates falls below the prior 40%, if more than 2 rubric rejects pass the old interview and then the onsite, or if time-to-screen, measured after the dual run ends, grows by more than 20%. Rollback: the old screen document is kept and can be reinstated the same day.",
+      "expected_output": "PASS_TO_USER. A reversible process change with a measured pilot and numeric stop condition.",
+      "expectations": [
+        "Verdict is PASS_TO_USER",
+        "Names a specific objection tried (e.g. small pilot sample) and why the kill criterion bounds it",
+        "Does not block on a generic risk (may/might/consider); at most one non-blocking note"
+      ]
+    },
+    {
+      "id": "control-refactor-date-pass",
+      "prompt": "Agent-originated: extract the date-parsing function duplicated in three modules into one shared helper. Evidence: a diff shows the three bodies are identical apart from the name; 42 existing tests exercise all three call sites and pass locally; no public API changes. Kill criterion: revert if any test fails or the build size grows. Rollback: a single revertable commit.",
+      "expected_output": "PASS_TO_USER. Identical bodies plus full call-site tests leave no concrete failure scenario.",
+      "expectations": [
+        "Verdict is PASS_TO_USER",
+        "Names behavior drift between the copies and how the byte-identical diff and tests answer it",
+        "Does not block on a generic risk (may/might/consider); at most one non-blocking note"
+      ]
+    },
+    {
+      "id": "control-pricing-test-pass",
+      "prompt": "Agent-originated: run a 4-week randomized test of a 10% higher Starter plan price for new signups only. Evidence: baseline conversion is 6.1% on 200,000 signups last quarter, so 4 weeks brings about 61,000 signups, 30,500 per arm; a power calculation shows 28,500 per arm detects, at 80% power, the 0.55-point conversion drop at which a 10% price rise breaks even on revenue, and the decision metric is revenue per signup; existing customers are grandfathered and unaffected. Kill criterion: stop early if treatment conversion is more than 1.5 points lower after 2 weeks or refund requests double. Rollback: flip the price flag back; nobody is billed retroactively.",
+      "expected_output": "PASS_TO_USER. Bounded, randomized, powered and reversible.",
+      "expectations": [
+        "Verdict is PASS_TO_USER",
+        "Names a specific objection tried (e.g. novelty or seasonality bias) and why the design or stop rule answers it",
+        "Does not block on a generic risk (may/might/consider); at most one non-blocking note"
+      ]
+    },
+    {
+      "id": "control-docs-troubleshoot-pass",
+      "prompt": "Agent-originated: add a Troubleshooting section for the 'port already in use' error to the quickstart. Evidence: 14 of the last 60 issues were this error; the two fix commands were run on Linux and macOS this session and worked. Kill criterion: remove or rewrite the section if an issue reports the commands failing. Rollback: git revert of one docs commit.",
+      "expected_output": "PASS_TO_USER; at most one non-blocking note.",
+      "expectations": [
+        "Verdict is PASS_TO_USER",
+        "Does not invent opposition to a verified, reversible docs addition"
+      ]
+    },
+    {
+      "id": "miss-drop-staging-for-flags",
+      "prompt": "Agent-originated: delete the staging environment and deploy straight to production behind feature flags, to save about 900 a month. Evidence: staging cost is 900 a month and flags let us turn features off instantly. Kill criterion: revert if there is a production incident. Rollback: recreate staging from the infrastructure code.",
+      "expected_output": "Verdict REVISE (or HOLD). Key objection: flags do not exercise schema migrations or deploy-time config before production, and the evidence covers only the saving, not what staging has caught; the kill criterion fires only after customer harm.",
+      "expectations": [
+        "Verdict is HOLD or REVISE, never PASS_TO_USER",
+        "Names a concrete failure: a migration or config change that only staging would have caught, hitting production",
+        "Asks what staging caught in the past, or proposes a cheaper ephemeral pre-production check"
+      ]
+    },
+    {
+      "id": "miss-skip-review-small-prs",
+      "prompt": "Agent-originated: drop the second-reviewer requirement for pull requests under 50 changed lines, to speed up merges. Evidence: median wait for the second review is 2 days. Kill criterion: revert if merge time does not improve. Rollback: re-enable the branch-protection rule.",
+      "expected_output": "Verdict REVISE (or HOLD). Key objection: line count is not risk; a one-line change to auth or config can cause an incident, and the evidence shows only the delay, not the defect rate of small changes. The kill criterion tracks speed, not escaped defects.",
+      "expectations": [
+        "Verdict is HOLD or REVISE, never PASS_TO_USER",
+        "Names a concrete failure: a small change to a sensitive path merging with one reviewer",
+        "Asks for the escaped-defect rate of small PRs, or scopes the waiver to non-sensitive paths"
+      ]
     }
   ]
 }
