@@ -1,6 +1,6 @@
 # Perun for leaders
 
-**Bottom line:** Perun is a free checklist that makes an AI coding assistant review software the same careful way every time. It finds more real bugs than a plain "review this" request, at about 1.75 times the usage cost for one pass and 3.5 times for the two-pass setting. Running the plain assistant twice recovers part of the gain more cheaply ([source](../.claude/skills/deep-code-review/references/method-situational.md)). The evidence is one test, so treat the gain as probable, not proved. A small pilot will tell you whether it pays off for your team.
+**Bottom line:** Perun is a free checklist that makes an AI coding assistant review software the same careful way every time. In an 87-case test, one Perun pass did not find more bugs than a plain "review this" request. Its two-pass setting, the default for high-stakes reviews, produced significantly fewer false alarms (precision +7.6 points) and a recall gain too small to be sure of, at about 3.2 times the plain usage cost ([source](bench/bench90-results.md)). The earlier 30-case numbers are superseded. A small pilot will tell you whether it pays off for your team.
 
 ## What Perun does
 
@@ -9,16 +9,16 @@ It is a set of plain-text instructions your engineers' AI assistant reads before
 ## What changes for a team
 
 - Reviews follow one method instead of the assistant's mood that day. Source: [README](#the-story-one-change-five-steps).
-- Each review costs more model usage: one Perun pass costs about $0.121 per case against $0.069 for a plain review (about 1.75 times); two merged passes cost $0.239 (about 3.5 times). Source: [measured table](../.claude/skills/deep-code-review/references/method-situational.md).
+- Each review costs more model usage: one Perun pass costs about $0.096 per case against $0.059 for a plain review (about 1.6 times); two merged passes cost $0.188 (about 3.2 times). Source: [bench90 results](bench/bench90-results.md).
 - Engineers still decide what to fix. Perun reports; it does not change code on its own.
 
 ## Measured numbers
 
-All numbers come from one test of 30 held-out real bug fixes, 3 runs per setup, described in the [measured table](../.claude/skills/deep-code-review/references/method-situational.md). Each line below cites its source.
+All numbers come from one test of 87 held-out real bug fixes, one run per setup, described in the [bench90 results](bench/bench90-results.md). This replaces the earlier 30-case test, which is superseded. Each line below cites its source.
 
-- Bugs found: plain assistant 21%, Perun one pass 31%, Perun two merged passes 41%, plain assistant run twice 36% (about $0.132 per case). The 41% costs $0.239 per case. Source: [measured table](../.claude/skills/deep-code-review/references/method-situational.md).
-- Share of flagged issues that were real: plain 66%, Perun 77%. Source: [measured table](../.claude/skills/deep-code-review/references/method-situational.md).
-- Gain over plain: +0.10, but the margin of error runs from 0.00 to +0.21, so "probably better". Source: [measured table](../.claude/skills/deep-code-review/references/method-situational.md).
+- Bugs found: plain assistant 37.9%, Perun one pass 35.6%, Perun two merged passes 42.5%. One pass is not better than plain (difference -2.3 points, margin of error -9.2 to +4.6). Two passes: +4.6 points over plain, margin of error -2.3 to +11.5, so not proved. Source: [bench90 results](bench/bench90-results.md).
+- Share of flagged issues that were real: plain 59.4%, Perun one pass 63.3%, Perun two passes 67.0%. The two-pass gain over plain is +7.6 points with a margin of error of +1.3 to +13.9, so it is significant. Source: [bench90 results](bench/bench90-results.md).
+- Cost per review: plain $0.059, Perun one pass $0.096, Perun two passes $0.188 (3.2 times plain). Source: [bench90 results](bench/bench90-results.md).
 - Other AI models: unmeasured for review recall, so do not assume the gain carries over.
 - Time saved, money saved, customer count: unmeasured. Nobody has measured these yet.
 
@@ -95,11 +95,11 @@ Inbound webhook accepts unsigned body
 
 ## Limits
 
-- **It misses most bugs.** One pass caught 31% of the benchmark's bugs, so about 7 in 10 were missed; two passes caught 41%. Treat a clean report as "no evidence of problems found", not "no problems". ([source](../.claude/skills/deep-code-review/references/method-situational.md))
+- **It misses most bugs.** Even the two-pass setting caught only 42.5% of the benchmark's bugs, so well over half were missed. Treat a clean report as "no evidence of problems found", not "no problems". ([source](bench/bench90-results.md))
 - **It is not a replacement** for human review, tests, or a security scanner. It
   checks what an assistant can read; it cannot see production behaviour.
-- **One corpus, one model family.** The benchmark is 30 cases measured with one model family. Results are directional, and the recall gain's lower bound touches zero. ([source](../.claude/skills/deep-code-review/references/method-situational.md))
-- **A review costs more than a plain prompt.** About 1.75 times for one pass and 3.5 times for two in the benchmark, in exchange for the gains above. ([source](../.claude/skills/deep-code-review/references/method-situational.md))
+- **One corpus, one model family.** The benchmark is 87 cases measured once each with one model family. Results are directional, and the recall intervals include zero. In the two-pass run, 23 records were re-run after a mid-run overwrite. ([source](bench/bench90-results.md))
+- **A review costs more than a plain prompt.** About 1.6 times for one pass and 3.2 times for two in the benchmark; only the two-pass setting showed a measurable gain (fewer false alarms). ([source](bench/bench90-results.md))
 - **Your code goes where your agent sends it.** Perun sends nothing itself. Use
   an agent whose data handling you accept.
 - **Quality follows the agent.** Weaker models follow the checklist less well.

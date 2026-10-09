@@ -115,7 +115,7 @@ bb541f96bd7d0c3bb4adff8dcaac0f50efa2493b8215b6aa671805bfbb89c42b  .claude/skills
 6108f7f8d13cefb9a23ca3960cc3bc73200f8ef88fe39c9d1a9b49b9ec7222f1  .claude/skills/contribution/scripts/learning_to_pr.py
 a3872cb524e3b1faa5632636abc317fdab5cd8b28a6da5989a8fbc1747cdeb4d  .claude/skills/contribution/scripts/prefile_check.sh
 36bee017dcdf6b3fcc00b85c361b27987c0a610e088115eb07318a56c878ccfb  .claude/skills/contribution/scripts/share_learning.py
-b80ada91de804c72f2644f86fe01104a995cf2770da085af02da6c0b4d3743c6  .claude/skills/deep-code-review/INDEX.md
+3f536e23db5d52e3fe4456e8b86cba7c880717cd2e7e3f051d2df4739696f30c  .claude/skills/deep-code-review/INDEX.md
 78f0ac93862dd7c9ed51327db41545bcea0d602d1b460c9164f0906bcd89acf6  .claude/skills/deep-code-review/SKILL.md
 4beb44cb57c68774f3d843d5f881825a756a258033bad50d3c68901bdf4259cb  .claude/skills/deep-code-review/VERSION
 cad0029c42549781aec334924d2683a90950cbda9800afdc5624effb48ff59d8  .claude/skills/deep-code-review/evals/evals.json
@@ -194,7 +194,7 @@ f2374ef94de331d8a965a4647c6039bf43dc9b198f697b365825ccc744d30175  .claude/skills
 47f374382f3b62ee97efae591d00eaab56ab6c3001add76b812c78f1611e26a3  .claude/skills/deep-code-review/references/machine-report.md
 1151fb8b61cdb401ee2478bd6aa65545b4d3cccc67619a3dba48eb7442fc57b6  .claude/skills/deep-code-review/references/merge-operations.md
 43ce8532a5f85d5784bcfd1d052ed6d7e832902602d2f7e5e8c4fafebef0b8e2  .claude/skills/deep-code-review/references/method-report.md
-50cb26955d6f1f47aedf0de21a17fa049b1e523fbf7752291da662b45f0463ab  .claude/skills/deep-code-review/references/method-situational.md
+76b63e926396d0a9bb010373d57caf1cf663d0a52a6a50cc162058c48df19f1f  .claude/skills/deep-code-review/references/method-situational.md
 b3a9c8bb9b3ba7e1cf849892a4145d9341567efbab06d2e6291dd9b9ee8560ca  .claude/skills/deep-code-review/references/method.md
 5f36ad64a585d3f9f17b1b5ed27fa4b8a7d68ca52cdd8c1e3bc780f6100be7e5  .claude/skills/deep-code-review/references/migration-parity.md
 503c7a02eec45805f445e1b0c04b4c754227a6b6f4e3e67df0d5cebc3bfc2271  .claude/skills/deep-code-review/references/mobile-appsec.md

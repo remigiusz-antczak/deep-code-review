@@ -14,28 +14,26 @@ your team, a pilot plan, limits and an FAQ.
 
 ## Why it matters
 
-The numbers below come from one test. The assistant (Claude Code, run by
-[`scripts/bench_corpus.py`](scripts/bench_corpus.py)) was shown the code change
-behind each of 30 real bugs that open-source projects later fixed, three runs
-each. It saw only the change, not the fix. These 30 cases are held out: only the
-test runner reads their answers, so Perun can't be tuned to them. The [public manifest](scripts/eval-fixtures/bench/manifest.json)
-lists 27 other cases (18 test, 9 train) to show how cases are built; it is not
-the set behind these numbers. A bug counts as "caught" if the review named it.
-Each review number links to
-[the results table](.claude/skills/deep-code-review/references/method-situational.md).
+The numbers below come from one test of 87 held-out real bug fixes from
+open-source projects ([full results](docs/bench/bench90-results.md)). The
+assistant (Claude Code, run by [`scripts/bench_corpus.py`](scripts/bench_corpus.py))
+saw only the code change, not the fix, and ran once per case. The cases' answers
+are read only by the test runner, so Perun can't be tuned to them. The
+[public manifest](scripts/eval-fixtures/bench/manifest.json) lists 27 other
+cases to show how cases are built; it is not the set behind these numbers. A bug
+counts as "caught" if the review named it. This replaces an earlier 30-case test
+(31% vs 21%), which is superseded.
 
-- **More bugs caught in review.** With Perun, the assistant caught
-  [31% of the bugs](.claude/skills/deep-code-review/references/method-situational.md).
-  Asked only to "review this", the same assistant caught
-  [21%](.claude/skills/deep-code-review/references/method-situational.md).
-  The test is small, so the true gain could be anywhere from
-  [0 to 21 points](.claude/skills/deep-code-review/references/method-situational.md).
+- **A single Perun pass does not find more bugs than a plain prompt.**
+  It caught [35.6% of the bugs against 37.9%](docs/bench/bench90-results.md) for
+  asking the assistant to "review this". That gap is within the margin of error,
+  so the two are indistinguishable here.
+- **The two-pass setting (the default for high-stakes reviews) raises more
+  true flags.** [67.0% of its flags were real against 59.4%](docs/bench/bench90-results.md):
+  7.6 points fewer false alarms, a gain the margin of error does not cover. It
+  also caught [42.5% of the bugs, +4.6 points](docs/bench/bench90-results.md),
+  but that recall gain is not statistically significant.
   Perun still misses most bugs, so keep people reviewing too.
-- **More of its flags were real.**
-  [77% of what Perun flagged](.claude/skills/deep-code-review/references/method-situational.md)
-  were real problems, against
-  [66%](.claude/skills/deep-code-review/references/method-situational.md)
-  without it.
 - **Shorter instructions to read.** AI tools charge by the *token* (a piece of a word).
   The instructions the assistant must read before each review shrank by
   [19%](CHANGELOG.md) (release 1.501.0, counted as characters divided by 4).
@@ -45,8 +43,8 @@ Each review number links to
   the effect has not been measured ([host safety](docs/host-safety.md)).
 
 **Cost.** A review with Perun costs more than a plain one:
-[$0.121 per code change reviewed against $0.069](.claude/skills/deep-code-review/references/method-situational.md),
-as reported by the test runner.
+[$0.096 per code change for one pass and $0.188 for two, against $0.059](docs/bench/bench90-results.md)
+(about 1.6 and 3.2 times), as reported by the test runner.
 
 Time saved and money saved have not been measured, so none are claimed. To
 estimate them for your team, use the worked formula and the three-step pilot in
