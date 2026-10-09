@@ -361,7 +361,7 @@ A diff's size sets the review mode, never its title. One small preprint (150 sam
 - **Default N = 1 pass.** Use two only for a release, security, or data-loss-path gate. Do not add a third.
 - **Run the two passes independently.** The second pass gets the same inputs as the first and none of its findings. Most of the multi-pass gain is sampling variance, so an independent resample beats a seeded follow-up: seeding the second pass with the first pass's findings bought no measurable recall at higher cost and lower precision.
 - **Union and dedupe, then verify.** Merge the two finding lists, collapse duplicates by location and root cause, and check each finding that only one pass raised against the code at the pinned SHA. Drop any that does not reproduce.
-- **Measured (issue #1372; 30 held-out real OSS bug fixes, 3 replicates per arm, 0 errored cases; directional, one corpus):**
+- **Measured, superseded by [bench90](../../../../docs/bench/bench90-results.md) (#1372; 30 cases, 3 replicates):**
 
 | Arm | Recall | Verified precision | Cost per case |
 |---|---|---|---|
