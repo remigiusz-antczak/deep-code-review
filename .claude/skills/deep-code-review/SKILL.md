@@ -8,17 +8,16 @@ description: >-
 license: MIT
 metadata:
   author: deep-code-review contributors
-  version: "1.552.0"
+  version: "1.553.0"
 ---
 
 # Deep Code Review
 
-A language- and stack-agnostic **review bar**. Same method on any coding
-agent. Optional sibling skills in this repository inject a gated delivery
-pattern (`agentic-delivery`) and a pre-owner idea attack (`idea-critic`) into
-a target repo — default install is **review-only**. An agent should recommend
-those overlays from the target's shape; the owner decides. Do not dump every
-overlay into every clone.
+A language- and stack-agnostic **review bar**. Same method on any coding agent.
+Overlays (`agentic-delivery`, `idea-critic`) are optional: install is
+**review-only**; recommend from the target's shape, the owner decides.
+
+**Run with repo access** (checkout + read/search tools). Measured: +28 pts recall, +21 pts precision vs diff-only; extra instructions did not help (docs/bench/bench90-results.md).
 
 This file is the map: scope, principles, gates, routing. Depth lives in
 `references/` and is loaded on demand. Lookup table: `INDEX.md`; read it
