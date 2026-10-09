@@ -44,5 +44,18 @@ g checkout -q b; git -C "$R" rev-parse HEAD >"$R/.git/qa-receipt"
   DCR_PREPUSH_CMD=true bash "$PPV" origin) >"$WORK/log" 2>&1; rc=$?
 { [ "$rc" -ne 0 ] && grep -q 'does not match the commit being pushed' "$WORK/log"; }
 ok $? "non-HEAD branch push with a HEAD receipt is refused"
+# python3 missing: refuse with the explicit message (fail closed). PATH holds only the tools the hook needs.
+mkdir -p "$WORK/nopy"
+for t in git awk bash head date mkdir find grep dirname cat sed tr; do ln -sf "$(command -v $t)" "$WORK/nopy/$t"; done
+(cd "$R" && printf 'refs/heads/b %s refs/heads/b 0000000000000000000000000000000000000000\n' "$(g rev-parse HEAD)" |
+  PATH="$WORK/nopy" DCR_PREPUSH_ALLOW_UNSET=1 "$WORK/nopy/bash" "$PPV" origin) >"$WORK/log" 2>&1; rc=$?
+{ [ "$rc" -ne 0 ] && grep -q 'python3 (or fix_class_gate.py) missing' "$WORK/log"; }
+ok $? "missing python3 is refused with the explicit message"
+
+# A branch delete (zero local sha) is never blocked by the mechanism gate.
+(cd "$R" && printf 'refs/heads/b 0000000000000000000000000000000000000000 refs/heads/b %s\n' "$(g rev-parse HEAD)" |
+  PATH="$WORK/nopy" "$WORK/nopy/bash" "$PPV" origin) >"$WORK/log" 2>&1; rc=$?
+{ [ "$rc" -eq 0 ] && grep -q 'is a delete -- skipping' "$WORK/log"; }
+ok $? "branch delete push is not blocked"
 echo "Tests: $pass/$((pass + fail))"
 [ "$fail" -eq 0 ]

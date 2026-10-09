@@ -317,6 +317,9 @@ while read -r local_ref local_sha remote_ref remote_sha; do
     if git rev-parse --verify -q "${default_ref}" >/dev/null 2>&1; then
       mg_base="$(git merge-base "${default_ref}" "${local_sha}" 2>/dev/null || printf '%s' "${base_sha}")"
     fi
+    if ! command -v python3 >/dev/null 2>&1 || [ ! -f .claude/skills/deep-code-review/scripts/fix_class_gate.py ]; then
+      die "pre-push: python3 (or fix_class_gate.py) missing — cannot verify mechanism rule; install python3 or push with --no-verify knowingly"
+    fi
     mg_fail=0
     for mg_step in "Fix commits carry a pinned test" "Prose lessons carry a mechanism"; do
       mg_script="$(awk -v n="- name: ${mg_step}" 'index($0,n){f=1;next} f&&/run: \|/{r=1;next} r&&/^ {0,9}[^ ]/{exit} r' "${ci_yml}")"
