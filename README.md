@@ -14,25 +14,24 @@ your team, a pilot plan, limits and an FAQ.
 
 ## Why it matters
 
-The numbers below come from one test of 87 held-out real bug fixes from
+The numbers below come from one test of held-out real bug fixes from
 open-source projects ([full results](docs/bench/bench90-results.md)). The
 assistant (Claude Code, run by [`scripts/bench_corpus.py`](scripts/bench_corpus.py))
 saw only the code change, not the fix, and ran once per case. The cases' answers
 are read only by the test runner, so Perun can't be tuned to them. The
 [public manifest](scripts/eval-fixtures/bench/manifest.json) lists 27 other
 cases to show how cases are built; it is not the set behind these numbers. A bug
-counts as "caught" if the review named it. This replaces an earlier 30-case test
-(31% vs 21%), which is superseded.
+counts as "caught" if the review named it. This replaces an earlier 30-case test,
+which is superseded. A clean full re-run is pending, so treat the numbers as
+provisional.
 
 - **A single Perun pass does not find more bugs than a plain prompt.**
-  It caught [35.6% of the bugs against 37.9%](docs/bench/bench90-results.md) for
-  asking the assistant to "review this". That gap is within the margin of error,
-  so the two are indistinguishable here.
-- **The two-pass setting (the default for high-stakes reviews) raises more
-  true flags.** [67.0% of its flags were real against 59.4%](docs/bench/bench90-results.md):
-  7.6 points fewer false alarms, a gain the margin of error does not cover. It
-  also caught [42.5% of the bugs, +4.6 points](docs/bench/bench90-results.md),
-  but that recall gain is not statistically significant.
+  Both caught [39.1% of the bugs](docs/bench/bench90-results.md) in the 64 cases
+  with intact records (difference 0.0 points, margin of error -7.8 to +7.8).
+- **A second independent pass adds little.** Merging two passes caught
+  [41.6%, +1.6 points over one pass](docs/bench/bench90-results.md), a gain not
+  shown to be real. No claim is made about false alarms: precision has not been
+  re-measured yet.
   Perun still misses most bugs, so keep people reviewing too.
 - **Shorter instructions to read.** AI tools charge by the *token* (a piece of a word).
   The instructions the assistant must read before each review shrank by
@@ -43,8 +42,8 @@ counts as "caught" if the review named it. This replaces an earlier 30-case test
   the effect has not been measured ([host safety](docs/host-safety.md)).
 
 **Cost.** A review with Perun costs more than a plain one:
-[$0.096 per code change for one pass and $0.188 for two, against $0.059](docs/bench/bench90-results.md)
-(about 1.6 and 3.2 times), as reported by the test runner.
+[$0.096 per code change for one pass against $0.059](docs/bench/bench90-results.md)
+(about 1.6 times), as reported by the test runner.
 
 Time saved and money saved have not been measured, so none are claimed. To
 estimate them for your team, use the worked formula and the three-step pilot in
