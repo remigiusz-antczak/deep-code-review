@@ -47,3 +47,10 @@ SHALL NOT impose other composition rules (e.g., requiring mixtures of different 
 require subscribers to change passwords periodically" (but "SHALL force a change if there is evidence that the
 authenticator has been compromised"). Screen new passwords against a known-breached-credential list and set a length
 floor instead; a mandated 90-day rotation or a complexity regex is itself the finding, not its absence.
+
+### Delegated-session revocation (SSO-bridged apps)
+
+When the app trusts an identity provider but mints its own session, check that deprovisioning or disabling the user
+at the provider ends the local session too: the local session needs a bounded lifetime or a periodic re-check against
+the provider (introspection, a back-channel logout endpoint, or a short-lived token refreshed upstream). A local
+session that outlives provider revocation, or a refresh that never re-asks the provider, is a finding.

@@ -67,6 +67,14 @@ failure paths that *produce* these signals are section F /
 
 ---
 
+### Alert and notification paths
+
+Probe the code that sends alerts, digests, or notifications for three defects: (1) **batch N>1**: a message built or
+dedup-keyed for one item that mis-handles a batch of several (only the first reported, or one failure hides the
+rest); (2) **a send returning false**: the sender reports failure by return value (not by throwing) and the caller
+ignores it, so the alert is silently lost; (3) **mark-before-send**: the "already alerted" flag is persisted before
+the send is confirmed, so a failed send suppresses every retry. Mark after a confirmed send, or use an outbox.
+
 ## Logs & traces: secrets, PII, injection
 
 - **Redact by default**: an allow-list of loggable fields beats a deny-list of
@@ -249,6 +257,13 @@ unconditional zero-init at startup.
   `privacy-compliance.md`, not "log everything about everyone forever."
 
 ---
+
+### Audit coverage: privileged mutations vs audit-helper callers
+
+List every privileged mutation (role or permission change, deletes, exports, config or billing changes, impersonation,
+secret rotation) and every caller of the audit helper (grep its name). The set difference is the finding list: a
+privileged mutation with no audit call, or an audit call placed before the mutation can fail, or outside its
+transaction. Record both lists as evidence.
 
 ## Backup & restore
 

@@ -94,6 +94,10 @@ class StatusLint(unittest.TestCase):
                   "Merged. Deployed, unverified."):
             self.assertEqual(self.lint(t)[0], 0, t)
 
+    def test_code_and_substrings_not_flagged(self):
+        for t in ("We deliver it, alive and well.", "Run `make done` now.", "```\nstatus: live\ndone\n```"):
+            self.assertEqual(self.lint(t)[0], 0, t)
+
     def test_unreadable_is_usage_error(self):
         self.assertEqual(run([sys.executable, LINT, "--file", "/nonexistent"])[0], 2)
 
