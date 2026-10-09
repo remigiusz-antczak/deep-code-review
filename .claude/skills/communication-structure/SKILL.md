@@ -40,6 +40,9 @@ shorthand. This is about shape and length, not vocabulary. Lookup table:
   working on the surface they use, in plain value terms (what changed for them), checked on that live surface
   before you write it. No effort counts ("12 tasks done", lines, PRs, "% complete") and no "coming next week"
   promises. The backlog-count rule below applies to backlog items, not to effort.
+- **Status vocabulary: merged, deployed, verified-on-<page> are distinct.** "live", "live now", "shipped to
+  users" and "done" claim the last one and need a `verified-on-<page>` or `journey:` reference nearby; else say
+  "merged" or "deployed, unverified". `python3 .claude/skills/communication-structure/scripts/status_vocab_lint.py --file <update.md>` flags the rest (exit 1).
 - **Numbers over adjectives.** "40s to 6s" beats "significantly faster." Every headline metric states the
   **exact measured value and the exact target on the same line** (`X / Y`, or `X of Y`), computed at report time,
   not asserted from memory or rounded toward the desired outcome — "the vast majority" of a target where the

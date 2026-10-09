@@ -155,6 +155,36 @@ REFUSED = 1
 COULD_NOT_CHECK = 2
 _STRIPPED_ENV = ("GIT_DIR", "GIT_WORK_TREE", "GIT_COMMON_DIR", "GIT_INDEX_FILE")
 _ALWAYS_DEFAULTS = ("main", "master")
+_UI_RE = re.compile(r"\.(tsx|jsx|vue|svelte|html?|css|scss|sass|less)$", re.I)
+_JOURNEY_RE = re.compile(r"^\s*journey:\s+\S+\s+.+\s+PASS\s*$", re.M)
+_POSTDEPLOY_RE = re.compile(r"^\s*postdeploy-logs:\s*(\S.*?)\s*$", re.M)
+
+
+def _receipt_problem(cwd, base, full, receipt, deployed, git):
+    """Why the delivery receipt cannot back a DONE claim, or None. A diff that touches UI files needs a
+    `journey: <page> <steps> PASS` line; --deployed needs `postdeploy-logs: clean` (absent = deployed,
+    unverified; anything else = errors listed, not done). Missing/unreadable receipt = refuse."""
+    code, names = _git_handback(["diff", "--name-only", f"{base}...{full}"], cwd, git)
+    if code != 0:
+        return f"cannot list files changed in {base}...{full}"
+    ui = any(_UI_RE.search(n) for n in names.splitlines())
+    if not (ui or deployed):
+        return None
+    try:
+        with open(receipt, encoding="utf-8") as f:
+            text = f.read()
+    except (OSError, UnicodeError, TypeError):
+        return f"UI/deploy claim needs --receipt FILE; {receipt!r} is not readable"
+    if ui and not _JOURNEY_RE.search(text):
+        return ("UI change has no `journey: <page> <steps> PASS` line in the receipt: click the control, "
+                "assert the effect persisted after a reload, on the page the request came from")
+    if deployed:
+        m = _POSTDEPLOY_RE.search(text)
+        if not m:
+            return "deployed, unverified: receipt has no `postdeploy-logs: clean | <errors>` line"
+        if m.group(1).lower() != "clean":
+            return f"postdeploy-logs reports errors: {m.group(1)}"
+    return None
 
 
 def _git(args, cwd, git="git", extra_env=None):
@@ -318,7 +348,8 @@ def _cite_problem(cwd, full, path, artifact_root, git):
     return "" if code == 0 and kind == "blob" else f"cited path {path!r} is not a file committed at {full[:12]}"
 
 
-def check_handback(cwd, sha, base, branch=None, cites=(), git="git", artifact_root=None):
+def check_handback(cwd, sha, base, branch=None, cites=(), git="git", artifact_root=None,
+                   receipt=None, deployed=False):
     """Evaluate a lane's head commit right before it is relayed onward (merged,
     or handed to a human/reviewer); return (exit_code, one-line message).
 
@@ -345,7 +376,10 @@ def check_handback(cwd, sha, base, branch=None, cites=(), git="git", artifact_ro
         commit starts with;
       - the tip of `branch` does not resolve or is not exactly `sha`;
       - a relative path in `cites` is not a blob committed at `sha`, or an
-        absolute one is not an existing file inside `artifact_root`.
+        absolute one is not an existing file inside `artifact_root`;
+      - the diff touches UI files (tsx/jsx/vue/svelte/html/css/...) or `deployed` is set and the
+        `receipt` file lacks `journey: <page> <steps> PASS` / `postdeploy-logs: clean`
+        (`_receipt_problem`).
     Every git call above runs with GIT_NO_REPLACE_OBJECTS=1 (`_git_handback`),
     so a replace ref cannot mask true parentage. Fails closed: any nonzero =
     refuse; pass only when exit 0 AND an OK line is printed — a git failure
@@ -420,6 +454,10 @@ def check_handback(cwd, sha, base, branch=None, cites=(), git="git", artifact_ro
         why = _cite_problem(cwd, full, path, artifact_root, git)
         if why:
             return REFUSED, f"LANE_GUARD REFUSE: {why}"
+
+    why = _receipt_problem(cwd, base, full, receipt, deployed, git)
+    if why:
+        return REFUSED, f"LANE_GUARD REFUSE: {why}"
 
     return OK, (
         f"LANE_GUARD OK: head {sha} has parent(s) {parents}, "
@@ -558,9 +596,13 @@ def _main_handback(argv):
                         help="a path the handback cites as evidence (repeatable): a file committed at --sha, "
                              "or an absolute path inside --artifact-root")
     parser.add_argument("--artifact-root", help="directory that absolute --cite paths must sit inside")
+    parser.add_argument("--receipt", help="delivery receipt file; required when the diff touches UI files "
+                        "(needs a `journey: <page> <steps> PASS` line) or with --deployed")
+    parser.add_argument("--deployed", action="store_true",
+                        help="claim includes a deploy: receipt needs `postdeploy-logs: clean`")
     args = parser.parse_args(argv)
     code, line = check_handback(os.getcwd(), args.sha, args.base, args.branch, args.cite,
-                                artifact_root=args.artifact_root)
+                                artifact_root=args.artifact_root, receipt=args.receipt, deployed=args.deployed)
     print(line)
     return code
 

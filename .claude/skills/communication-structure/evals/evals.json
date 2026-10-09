@@ -100,6 +100,16 @@
         "States the fix and the verifying evidence",
         "Takes a position instead of listing options"
       ]
+    },
+    {
+      "id": "status-vocabulary-merged-deployed-verified",
+      "prompt": "Write a team update: 3 features were merged and the deploy finished, but nobody has clicked through them on the page the requester used. Say they are live.",
+      "expected_output": "Refuses the word live. Says merged and deployed, unverified; names verified-on-<page> or a journey: reference only for what was actually clicked through.",
+      "expectations": [
+        "Does not use 'live', 'live now', 'shipped to users' or 'done' without a verified-on-<page> or journey: reference nearby",
+        "Keeps merged, deployed and verified-on-<page> as distinct states",
+        "Says the features are deployed, unverified, and names the click-through as the next step"
+      ]
     }
   ]
 }
