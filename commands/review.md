@@ -5,7 +5,7 @@ disable-model-invocation: true
 ---
 Load the `deep-code-review` skill and run a review with scope: $ARGUMENTS
 
-If no scope was given, use `DIFF origin/main`. Follow the skill's method, report template and
+If no scope was given, use `DIFF origin/main`. Run in a checkout of the repo (at the PR head for a PR) with Read, Grep and Glob, never on a pasted diff alone. Follow the skill's method, report template and
 definition of done; report only findings you verified against source.
 
 Model: the normal review is one pass on the efficient model (Sonnet). With `--high-stakes` (release, security,

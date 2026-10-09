@@ -7864,6 +7864,15 @@
         "Records out_of_diff_opened N of M in ground_truth.notes of the machine report",
         "Treats zero out-of-diff files opened on a contract change as a warning that caps the verdict below Approve and lists unopened files as unverified"
       ]
+    },
+    {
+      "id": "repo-access-default",
+      "prompt": "You are handed only a pasted diff of a PR that renames a helper's parameter. How should the review run?",
+      "expected_output": "Run in a checkout of the repo at the PR head with Read, Grep and Glob, with a minimal prompt, not extra instructions; a diff-only review measured about 28 points lower recall (docs/bench/bench90-results.md).",
+      "expectations": [
+        "Reviews in a repo checkout with read and search tools rather than on the pasted diff alone",
+        "Does not pile extra instructions on top of the repo access, which measured no gain"
+      ]
     }
   ]
 }
