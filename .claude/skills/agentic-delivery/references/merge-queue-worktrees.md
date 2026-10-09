@@ -761,6 +761,18 @@ signature. Policy key `review_gate` in `.perun/policy.json`: `warn` (default; **
 WARN and merges anyway), `enforce` (skips the PR; `land_train.sh` prints `REFUSE #N no independent review`), `off`
 (opt out). Expect `enforce` to become the default in a later release.
 
+## Releases publish right after each land, from the lander's box, not a CI runner
+
+Tags and GitHub releases lag main when publishing is a manual afterthought (the latest tag sat 21 versions behind). The
+lander runs `scripts/land-release.sh publish` immediately after each merge lands on `origin/main`. It is a no-op unless
+`origin/main` is at this checkout's version; otherwise it pushes the annotated tag (as `tag` does), then runs
+`gh release create v<X> --title "Perun v<X>" --notes-file <file> --verify-tag --latest`, the notes being the CHANGELOG
+section for `<X>` plus a link to the full CHANGELOG. Re-running is safe: an existing release only has its notes updated
+(exit 0), and an existing tag is never moved (a tag on another commit, local or remote, is refused). Batching option:
+policy key `release_every` in `.perun/policy.json` (integer, default 1 = every merge) publishes only when the minor
+version is a multiple of N, so `release_every: 5` releases every fifth merge; skipped merges are covered by the next
+release's CHANGELOG section. Publishing every merge needs no GitHub Actions minutes, so `github_actions=off` stays off.
+
 ## Fleet delivery rules: keep the gate real, size trains by footprint, merge one at a time, pin every guard
 
 - **Never swap a slow or hanging gate for a weaker proof.** Replacing the browser run with unit-only let about 900 merges

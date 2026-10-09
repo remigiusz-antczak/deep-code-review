@@ -17,16 +17,29 @@
 # `land-release.sh tag` (run AFTER the release commit is on origin/main): creates and pushes annotated tag vX.Y.Z
 # on the commit that introduced that VERSION on origin/main; refuses if origin/main is not at that version;
 # an existing local tag is skipped with a message. Land itself never tags.
+# `land-release.sh publish` = `tag` plus a GitHub release (gh release create --verify-tag --latest) whose notes are the
+# CHANGELOG section for the version plus a link to the full CHANGELOG. No-op (exit 0) unless origin/main is at this
+# checkout's version, or when policy `release_every` (.perun/policy.json, default 1) = N and the minor is not a
+# multiple of N. Idempotent: an existing release only gets its notes updated. Never moves a tag: a local or remote
+# tag on another commit is refused. Env also: GH (gh).
 # Env: REMOTE (origin), BASE_BRANCH (main), RELEASE_DATE (today). Exit 0 ok, 1 failure, 2 usage.
 set -euo pipefail
 cd "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REMOTE=${REMOTE:-origin} BASE_BRANCH=${BASE_BRANCH:-main}
 mode=land
-case "${1:-}" in "") ;; --regen) mode=regen ;; tag) mode=tag ;; *) echo "usage: land-release.sh [--regen|tag]" >&2; exit 2 ;; esac
+case "${1:-}" in "") ;; --regen) mode=regen ;; tag|publish) mode=$1 ;; *) echo "usage: land-release.sh [--regen|tag|publish]" >&2; exit 2 ;; esac
 
-if [ "$mode" = tag ]; then
+if [ "$mode" = tag ] || [ "$mode" = publish ]; then
   git fetch -q "$REMOTE" "$BASE_BRANCH"
   ver=$(git show "$REMOTE/$BASE_BRANCH:.claude/skills/deep-code-review/VERSION" | tr -d '[:space:]')
+  if [ "$mode" = publish ]; then
+    [ "$ver" = "$(tr -d '[:space:]' <.claude/skills/deep-code-review/VERSION)" ] \
+      || { echo "land-release publish: $REMOTE/$BASE_BRANCH is at $ver, not this checkout; nothing to publish"; exit 0; }
+    every=$(python3 .claude/skills/agentic-delivery/scripts/perun_policy.py get release_every) \
+      || { echo "land-release publish: bad .perun/policy.json" >&2; exit 1; }
+    [ $(( $(cut -d. -f2 <<<"$ver") % every )) -eq 0 ] \
+      || { echo "land-release publish: release_every=$every, skipping $ver"; exit 0; }
+  fi
   [ "$ver" = "$(tr -d '[:space:]' <.claude/skills/deep-code-review/VERSION)" ] \
     || { echo "land-release tag: $REMOTE/$BASE_BRANCH is at $ver, this checkout is not; merge the release first, then run tag" >&2; exit 1; }
   sha=$(git log -1 --format=%H "$REMOTE/$BASE_BRANCH" -S"$ver" -- .claude/skills/deep-code-review/VERSION)
@@ -37,10 +50,23 @@ if [ "$mode" = tag ]; then
   else
     git tag -a "v$ver" -m "release $ver" "$sha"
   fi
-  if git ls-remote --exit-code --tags "$REMOTE" "refs/tags/v$ver" >/dev/null 2>&1; then
+  rtag=$(git ls-remote "$REMOTE" "refs/tags/v$ver" "refs/tags/v$ver^{}" | tail -1 | cut -f1)
+  if [ -z "$rtag" ]; then
+    git push -q "$REMOTE" "refs/tags/v$ver"; echo "land-release tag: pushed v$ver"
+  elif [ "$rtag" = "$sha" ]; then
     echo "land-release tag: v$ver already on $REMOTE"
   else
-    git push -q "$REMOTE" "refs/tags/v$ver"; echo "land-release tag: pushed v$ver"
+    echo "land-release tag: $REMOTE v$ver points at $rtag, not $sha; never moved" >&2; exit 1
+  fi
+  [ "$mode" = publish ] || exit 0
+  notes=$(mktemp "${TMPDIR:-/tmp}/land-notes.XXXXXX"); trap 'rm -f "$notes"' EXIT
+  { git show "$REMOTE/$BASE_BRANCH:CHANGELOG.md" | awk -v h="## [$ver]" 'index($0,h)==1{p=1;next} p&&/^## /{p=0} p'
+    printf '\nFull changelog: https://github.com/remigiusz-antczak/deep-code-review/blob/main/CHANGELOG.md\n'; } >"$notes"
+  if "${GH:-gh}" release view "v$ver" >/dev/null 2>&1; then
+    "${GH:-gh}" release edit "v$ver" --notes-file "$notes"; echo "land-release publish: updated notes of v$ver"
+  else
+    "${GH:-gh}" release create "v$ver" --title "Perun v$ver" --notes-file "$notes" --verify-tag --latest
+    echo "land-release publish: created release v$ver"
   fi
   exit 0
 fi
