@@ -3,6 +3,11 @@
 All notable changes to this repository are documented here. Format loosely
 follows Keep a Changelog; versioning follows Semantic Versioning.
 
+## [1.553.0] — 2026-10-09
+
+### Changed
+- Reviews run with repo access by default: `/review` and the opt-in PR workflow template run in a checkout with Read, Grep and Glob and a minimal prompt (measured +28 points recall, +21 points precision against diff-only; extra instructions on top did not help). Results added to `docs/bench/bench90-results.md` and the README. Refs #1380.
+
 ## [1.552.0] — 2026-10-09
 
 ### Changed

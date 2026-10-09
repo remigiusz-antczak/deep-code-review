@@ -289,7 +289,8 @@ agent / LLM / MCP	19610
 IaC / platform	4342
 lib / SDK	11038
 # 1.539.0: SKILL.md routes references/compact-mode.md for non-Claude models (one line). Floors: phase-floor-light 23257->23274, phase-floor-full 31476->31493 (+17 each); no archetype row changed.
-phase-floor-light	23274
-phase-floor-full	31493
+# Re-pin (review yellow): phase-floor-light 23274->23272, phase-floor-full 31493->31491 after the SKILL.md agentic-default edit (-6 bytes SKILL.md).
+phase-floor-light	23272
+phase-floor-full	31491
 phase-conditional	method-situational.md
 phase-conditional	redflags-situational.md

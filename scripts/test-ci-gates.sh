@@ -3773,6 +3773,13 @@ else
   record 1 "perun-review.yml: least-privilege permissions, pull_request only, opt-in"; tail -8 "$WORK/pr-review-wf.log"
 fi
 
+# Repo-access review default: own per-feature file (scripts/test_agentic_review_default.py), one case here.
+if python3 "$ROOT/scripts/test_agentic_review_default.py" >"$WORK/agentic-default.log" 2>&1; then
+  record 0 "agentic default: /review, PR workflow and SKILL.md require repo access"
+else
+  record 1 "agentic default: /review, PR workflow and SKILL.md require repo access"; tail -8 "$WORK/agentic-default.log"
+fi
+
 # must-load floor cut: own per-feature file (scripts/test-mustload-split.sh), one case here.
 if bash "$ROOT/scripts/test-mustload-split.sh" >"$WORK/mustload-split.log" 2>&1; then
   record 0 "mustload split: moved sections stay present and routed; INDEX has no Headings column"
