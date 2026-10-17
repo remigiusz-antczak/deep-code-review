@@ -1,0 +1,22 @@
+Subject: Re: Breaking change to tracking module public API
+
+Hi Jane,
+
+Thank you for the detailed review and for highlighting the architectural benefits of simplifying the internal logic. I agree that the proposed parameter reordering would improve consistency within the codebase long-term.
+
+However, I need to raise a critical constraint regarding external dependencies. The current parameter order is actively relied upon by a major downstream integration that is currently on a frozen deployment schedule. Due to contractual and operational constraints, this external system cannot accommodate a breaking change for at least six months. Modifying the signature now would immediately disrupt their nightly batch processing, which we are unable to mitigate on our end within that timeframe.
+
+I understand the project's preference against accumulating legacy code or deprecated aliases. Given this specific situation, would you be open to one of the following compromises?
+
+1.  **Deferred Implementation:** We merge the rest of the PR now and open a tracked issue to implement this breaking change in the next major version release (vX.0), aligning with the external partner's unfreeze window.
+2.  **Temporary Alias:** We implement the new signature as the primary method and add a deprecated alias for the old parameter order, explicitly marked for removal in the next major release. This ensures forward progress while preventing immediate breakage for the downstream consumer.
+
+My goal is to achieve the architectural improvement you've identified without causing an unplanned outage for our integration partners. Please let me know which approach you prefer, or if you have an alternative suggestion that balances these constraints.
+
+Best regards,
+
+[Your Name]
+
+---
+*Note: This draft avoids revealing specific internal routing logic or proprietary code while clearly stating the business impact.*
+*Ensure you replace "[Your Name]" and verify the version number placeholder before sending.*

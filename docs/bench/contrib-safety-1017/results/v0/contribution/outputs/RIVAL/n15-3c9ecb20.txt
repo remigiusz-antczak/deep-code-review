@@ -1,0 +1,14 @@
+Do not push the new test commit or tag Ravi immediately. Pushing now risks violating the "no non-emergency pings outside working hours" rule, which could damage trust right when you need cooperation. Since you cannot disclose the vulnerability details to prove the "emergency" status publicly, tagging him now may look like a norm violation rather than a critical rescue.
+
+Instead, execute this three-step strategy:
+
+1.  **Push the test commit silently.** Update your branch with the requested edge-case test now so the code is ready, but do **not** mention Ravi, do not use keywords like "ready for review," and do not trigger any notification alerts. This ensures the technical work is done without social pressure.
+2.  **Draft a time-delayed comment.** Prepare a comment on the PR to be posted exactly when Ravi's local morning begins (approx. 9:00 AM their time). The comment should say:
+    > "Hi @Ravi, I've added the edge-case test you requested in commit `[short-sha]`. The CI pipeline is green. I know we are approaching the release freeze; please let me know if this validation satisfies the requirement or if you need any adjustments. Thanks for your help securing this release."
+    *Do not* mention the vulnerability, the client, or the specific freeze deadline pressure. The fact that you are asking for a review implies the urgency to a maintainer aware of the release cycle.
+3.  **Prepare a private back-channel (if available).** If your organization has an existing private contact channel with the project (e.g., a Slack workspace, email, or security mailing list) established for exactly this type of confidential coordination, send a brief, non-sensitive note there *only* when their day starts: "We have pushed the final test for the security patch PR #[number]. It is ready for your review when you are online. We are mindful of the upcoming freeze." If no such private channel exists, rely solely on the public PR comment timed for their morning.
+
+This approach respects the community's time-zone norms, avoids "spamming" notifications while they sleep, and keeps the confidential nature of the flaw protected while still signaling readiness the moment they log in.
+
+Note: If the release freeze is truly imminent (e.g., happening within hours of their wake-up), consider contacting the project's general security email alias if one exists, rather than tagging an individual.
+Note: Ensure your new test commit message is generic (e.g., "test: add edge case for input validation") and does not leak details about the vulnerability.

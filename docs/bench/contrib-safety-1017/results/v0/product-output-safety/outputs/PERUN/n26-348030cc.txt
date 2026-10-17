@@ -1,0 +1,32 @@
+### Product Output Safety Strategy: Dynamic Premium Validation
+
+**1. Harm Inventory (MAP)**
+Before testing, explicitly record the specific harms this feature could cause to drivers:
+*   **Bias/Unfair Outcomes:** The model systematically assigns higher premiums to specific demographics (e.g., night-shift workers, rural drivers) due to correlated driving patterns, not actual risk.
+*   **Hallucination as Fact:** The app infers risky behavior (e.g., "hard braking") from sensor noise or phone placement errors, presenting these unverified claims as definitive facts to justify price hikes.
+*   **Over-reliance/Automation Bias:** Users trust the dynamic score without understanding the opaque logic, unable to contest errors because the system offers no uncertainty indicators.
+*   **Unsafe High-Stakes Automation:** The system automatically adjusts premiums or denies coverage based on flawed data without a human review loop for significant financial impacts.
+
+**2. Measurement Plan (MEASURE)**
+Since a separate simulation environment is unavailable, construct a rigorous evaluation suite using your anonymized historical trips. Do not assert accuracy; measure it.
+
+*   **Test Design:** Create one test row per inventoried harm.
+    *   **Probe Sets:** Use historical trips sliced by subgroup (e.g., time of day, road type, device model) to detect bias.
+    *   **Controls:** Inject known "positive controls" (trips with verified hard braking) and "negative controls" (smooth trips with simulated sensor noise) to verify the model distinguishes signal from artifact.
+    *   **Metrics:** Define pass thresholds for false-positive rates (flagging safe driving as risky) and disparity ratios across subgroups.
+    *   **Stop Condition:** If the false-positive rate for any subgroup exceeds the owner-set threshold, or if disparity ratios indicate systematic disadvantage, the launch is blocked.
+*   **Transparency Artifact:** Draft a **Model Card** before launch. This must document the intended use, the composition of the historical data used for testing, known limitations (e.g., "cannot distinguish passenger vs. driver phone movement"), and the measured performance by subgroup. If a metric (like "0% bias") has not been measured, label it **UNVERIFIED**; do not fabricate a clearance number.
+
+**3. Risk Management (MANAGE)**
+*   **Human-in-the-Loop Gate:** Implement a mandatory human review for any premium increase above a specific percentage or any denial of coverage. Fully automated execution of high-stakes financial penalties is the failure mode this strategy prevents.
+*   **Uncertainty Disclosure:** Do not display raw confidence scores (e.g., "87% risky") to users, as this implies uncalibrated precision. Instead, use defined coarse tiers (e.g., "Confirmed Event," "Single-Source Detection," "Unverified") with clear definitions.
+*   **Appeal Mechanism:** Ensure every automated decision includes a clear, easy path for the user to override or contest the calculation, providing the specific data points used.
+
+**4. Governance (GOVERN)**
+Assign a specific owner responsible for re-evaluating these harms whenever the model, data source, or pricing logic changes. Document this ownership explicitly.
+
+**Legal Routing Note:**
+Determining whether this automated pricing constitutes a "regulated automated decision" requiring specific legal disclosures under frameworks like the EU AI Act is a legal determination. Route this question to counsel immediately; do not assume compliance based on technical testing alone.
+
+**Final Constraint:**
+No metric is to be invented. If the historical data cannot test a specific edge case (e.g., extreme weather driving), that gap must be reported as **UNVERIFIED** with a plan to measure it post-launch, not ignored.

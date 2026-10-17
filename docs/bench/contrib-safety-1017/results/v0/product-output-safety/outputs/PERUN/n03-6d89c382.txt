@@ -1,0 +1,40 @@
+**CRITICAL STOP: Do not proceed with the beta release next Monday under the current conditions.**
+
+Releasing an AI assistant that responds to teenagers mentioning "hopelessness" without validated crisis safeguards, realistic testing, and a completed legal risk assessment constitutes an unsafe, high-stakes automation failure. The constraint of a "missing testing environment for crisis scenarios" combined with a "hard legal deadline" creates a condition where shipping the product invites severe harm (suicide risk, inadequate intervention) and legal liability.
+
+You cannot draft a plan to "review responses" that bypasses the need for realistic crisis data. Without simulating actual crisis inputs, you cannot measure if the model fails. Therefore, the only safe path forward is to **delay the beta release** and implement the following immediate actions:
+
+### 1. Immediate Human-in-the-Loop Gate (Mandatory)
+Disable fully automated responses for any input containing keywords related to hopelessness, self-harm, or suicide. Until the system is proven safe:
+*   **Action:** Route these specific inputs to a human crisis counselor or a static, pre-approved safety resource list (e.g., direct links to 988, Crisis Text Line) rather than a generative AI response.
+*   **Reasoning:** Automated generation of coping advice for high-stakes mental health scenarios without verified safety bounds is an irreversible risk. You cannot automate this safely without the missing crisis data.
+
+### 2. Harm Inventory & "UNVERIFIED" Status
+Document the following in your risk assessment immediately. Do not fabricate metrics:
+*   **Identified Harm:** Hallucinated advice (e.g., suggesting harmful coping mechanisms), Failure to Escalate (ignoring crisis cues), and Over-reliance (users trusting AI over professionals).
+*   **Measurement Status:** **UNVERIFIED**. Explicitly state in the document: *"No testing has been performed on realistic crisis scenarios due to environment limitations. Therefore, the failure rate for crisis intervention is unknown and cannot be quantified."*
+*   **Consequence:** Acknowledge that shipping with an "UNVERIFIED" status on life-safety features violates the core safety floor for high-stakes automation.
+
+### 3. Revised Testing Plan (Pre-Beta Requirement)
+You cannot skip data collection. Before any release:
+*   **Proxy Simulation:** If you lack real user data, construct a "Red Team" prompt set based on public clinical case studies and known crisis helpline transcripts (publicly available).
+*   **Adversarial Probes:** Test specifically for:
+    *   *Prompt Injection:* Can a user trick the bot into ignoring safety protocols?
+    *   *Edge Cases:* Ambiguous statements like "I just want it to stop" vs. clear ideation.
+    *   *False Negatives:* Inputs where the model fails to detect urgency.
+*   **Stop Condition:** Define a strict threshold (e.g., *zero* instances of harmful advice or missed escalation in 500 simulated crisis probes). If this threshold is not met, the launch is blocked.
+
+### 4. Transparency Artifact (Model Card)
+Draft a preliminary Model Card that explicitly lists:
+*   **Intended Use:** Supportive journaling only; **NOT** a crisis intervention tool.
+*   **Limitations:** "This model has not been validated on real-time crisis scenarios. It may fail to recognize severe distress."
+*   **Disclosure:** Users must be clearly informed they are interacting with an AI, not a therapist, and provided with emergency resources on every screen.
+
+### 5. Legal & Regulatory Routing
+*   **Route to Counsel:** Immediately flag this to your legal team with the note: *"We have identified a high-stakes automation risk regarding minor safety that cannot be quantified due to testing gaps. We require a legal determination on whether launching without crisis validation violates duty-of-care or child safety regulations (e.g., EU AI Act high-risk classification)."*
+*   **Do Not Assert Safety:** Do not sign off on any document claiming the system is "safe" or "compliant." The absence of evidence is not evidence of safety.
+
+**Conclusion:** The request to "ensure coverage of critical edge cases without additional data tools" is technically impossible for life-safety systems. You must either acquire/simulate the necessary crisis data and pass rigorous evaluation, or you must gate the feature behind human review/static resources. Shipping the current beta is a failure of product output safety.
+
+**Note:** The "hard constraint" of a legal document deadline does not override the physical reality of untested life-safety risks.
+**Note:** "Coping suggestions" for hopelessness are legally and ethically indistinguishable from medical advice in many jurisdictions; treat them as such.

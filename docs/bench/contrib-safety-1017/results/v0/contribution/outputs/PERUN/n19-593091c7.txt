@@ -1,0 +1,27 @@
+Subject: Guidance Requested: Cross-Platform Validation for Memory Leak Fix (PR #<ID>)
+
+Dear Maintainers,
+
+Thank you for reviewing my pull request regarding the memory leak in the CrossPlatform UI toolkit. I appreciate the note regarding the requirement for validation across Windows, macOS, and Linux before merging.
+
+I want to be fully transparent about my current testing capabilities to ensure we handle this correctly. My development environment is strictly limited to Windows due to internal organizational infrastructure constraints that I am unable to modify or disclose. Consequently, while I have verified that the fix completely resolves the memory leak on Windows, I cannot personally execute the necessary validation on macOS or Linux.
+
+I understand the project guidelines state that contributors are responsible for cross-platform testing. However, given my inability to access non-Windows environments, I am seeking your guidance on the best path forward to satisfy the project's quality standards without delaying the fix unnecessarily.
+
+Could you please advise on one of the following options?
+
+1.  **Maintainer-Led Validation:** Would a maintainer or a community member with access to macOS and Linux be willing to run the existing test suite against this branch? I can provide specific steps to reproduce the original leak and verify the fix to make this process as efficient as possible.
+2.  **CI-Only Validation:** Does the project's Continuous Integration pipeline provide sufficient coverage for this specific type of memory leak? If the CI gates pass on all three platforms, would that satisfy the testing requirement in lieu of local manual verification?
+3.  **Alternative Contribution Path:** If neither of the above is feasible, is there a recommended workflow for contributors in my position? For example, should I draft the fix as an issue attachment for someone else to formalize, or is there a sandbox environment I should be utilizing?
+
+My goal is to ensure this fix is robust and safe for all users without imposing an undue burden on the maintainers. I am happy to provide any additional logs, reproduction scripts, or context needed to facilitate testing on other platforms.
+
+Please let me know how you would prefer to proceed.
+
+Best regards,
+
+[Your Name]
+Northwind Tech
+
+---
+*Note: Do not apologize excessively for infrastructure constraints; state them factually as done above. If the maintainers decline to test, do not push the change; close the PR and file the logic as an issue for future resolution.*

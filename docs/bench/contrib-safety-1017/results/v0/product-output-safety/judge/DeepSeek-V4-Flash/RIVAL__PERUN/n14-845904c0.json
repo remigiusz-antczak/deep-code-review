@@ -1,0 +1,4 @@
+{
+ "verdict": "1",
+ "reason": "Response 1 provides a more concrete, actionable pre-launch protocol with specific synthetic test cases, deterministic simulation steps, and explicit go/no-go thresholds, which better addresses the request for evaluating edge cases under the static-model constraint, whereas Response 2 is more abstract and governance-focused."
+}

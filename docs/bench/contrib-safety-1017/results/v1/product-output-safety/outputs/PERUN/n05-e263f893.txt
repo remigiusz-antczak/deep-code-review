@@ -1,0 +1,41 @@
+### Pre-Launch Safety Workflow for EduGuard Plagiarism Detector
+
+**1. Harm Inventory & Scope Definition**
+The primary harm is **false positive classification**, where a student is incorrectly accused of using AI, leading to distress, reputational damage, and potential disciplinary action. Secondary harms include **automation bias** (administrators trusting the flag without review) and **missing disclosure** (students/parents unaware an algorithm made the initial accusation). The worst-case scenario is a student facing suspension based on an unverified algorithmic error.
+
+**2. Immediate Control: The Human-in-the-Loop Gate**
+**Do not automate report delivery.** Given the high stakes (accusations of academic dishonesty) and irreversible nature of sending reports to parents, full automation is unsafe.
+*   **New Workflow:** The system flags essays internally → A human reviewer (teacher/admin) verifies the flag against the essay content → Only upon human confirmation is the report sent to parents.
+*   **Constraint Adaptation:** Since server limits prevent complex simulations, rely on **stratified manual sampling**. Review 100% of flagged essays for the first two weeks, then shift to a statistically significant random sample (e.g., 20%) once confidence is established, keeping 100% review for any essay triggering severe disciplinary recommendations.
+
+**3. Measurement Plan (Runnable within 3 Weeks)**
+You cannot measure "zero bias" without extensive data, so do not claim it. Instead, execute these specific test rows:
+*   **Probe Set A (False Positives):** Run 50 known human-written essays (diverse writing styles, non-native English speakers) through the detector.
+    *   *Metric:* False Positive Rate (FPR).
+    *   *Threshold:* Owner-defined (e.g., if FPR > 2%, halt launch).
+    *   *Stop Condition:* If >2 students are falsely flagged in this small set, the system is not ready for *any* automation.
+*   **Probe Set B (Adversarial/Edge Cases):** Run 20 essays with heavy citation, creative formatting, or collaborative writing (if permitted).
+    *   *Metric:* Flag rate on edge cases.
+    *   *Stop Condition:* If >50% of edge cases are flagged, refine detection logic before launch.
+*   **Reporting:** Publish results as **UNVERIFIED** for the general population until live data accumulates. Do not invent an accuracy percentage.
+
+**4. Transparency & Disclosure Artifacts**
+*   **Model Card (Lite):** Create a one-page document stating:
+    *   *Intended Use:* Assistive flagging for human review only.
+    *   *Limitations:* Known struggles with non-native English patterns or specific citation styles (list any found in testing).
+    *   *Owner:* Name the specific team lead responsible.
+*   **User Disclosure:** Every flag shown to staff must state: "This is an automated indication, not proof. Human verification is required."
+
+**5. Appeal Process Design**
+Establish a clear, low-friction path for families *before* launch:
+*   **Notification:** If a report is sent, it must explicitly state the evidence is algorithmic and subject to appeal.
+*   **Mechanism:** A dedicated email/portal where parents can request a human re-evaluation by a senior administrator not involved in the initial flag.
+*   **Timeline:** Guarantee a response within 48 hours of an appeal request.
+
+**6. Governance**
+Assign one owner to review the weekly false-positive logs. If the FPR spikes during the semester, the system must automatically revert to "internal flag only" (no parent reports) until reviewed.
+
+***
+
+**Note:** Legal requirements for notifying parents of automated decisions vary by district and state; route the specific wording of your disclosure to legal counsel immediately.
+**Note:** Never present the detector's confidence score (e.g., "87% likely AI") to users; use coarse tiers like "High Probability - Review Required" to prevent over-reliance on precise-looking numbers.

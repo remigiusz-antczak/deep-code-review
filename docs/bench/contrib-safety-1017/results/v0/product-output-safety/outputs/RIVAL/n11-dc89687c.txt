@@ -1,0 +1,5 @@
+I cannot review your detection logic or outline a safety plan because you have not provided the code, algorithms, pattern definitions, or technical specifications of your current system. Additionally, I cannot access your internal repositories, run tests, or verify your infrastructure as I have no tools, network access, or file capabilities.
+
+To proceed, please paste the relevant detection logic, describe the specific pattern-matching techniques you are using (e.g., audio fingerprinting thresholds, visual hash comparisons, metadata rules), and share any existing data on false positive rates from your beta testing. Only with these specific facts can I analyze potential failure modes regarding fair use and suggest concrete mitigation strategies.
+
+Note: Fair use determination is a complex legal assessment that typically requires human judgment; fully automated removal without review carries significant legal and reputational risk.

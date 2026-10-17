@@ -1,0 +1,43 @@
+You can safely rebase and force-push your branch without closing the pull request or losing Jane's review comments. On GitHub (and most similar platforms), review comments are anchored to specific lines of code or file paths, not to commit hashes. When you rebase and force-push, the platform automatically migrates existing comments to the new commits as long as the surrounding code context remains recognizable.
+
+Follow this procedure to align your fork while preserving the conversation:
+
+1.  **Fetch the latest upstream changes:**
+    Ensure your local repository knows about the current state of the main branch.
+    ```bash
+    git fetch upstream main
+    ```
+    *(Note: Replace `upstream` with the remote name for the official LogFlow repository if you named it differently, e.g., `origin` if you only have one remote pointing upstream.)*
+
+2.  **Checkout your feature branch:**
+    Switch to the branch associated with your open pull request.
+    ```bash
+    git checkout your-branch-name
+    ```
+
+3.  **Perform the rebase:**
+    Replay your changes on top of the latest `main`.
+    ```bash
+    git rebase upstream/main
+    ```
+    If conflicts arise, Git will pause. Resolve the conflicts in your files, stage them with `git add`, and continue with `git rebase --continue`. Repeat until the rebase finishes.
+
+4.  **Verify the history:**
+    Check that your history is now linear and sits on top of `main`.
+    ```bash
+    git log --oneline --graph
+    ```
+
+5.  **Force-push to your fork:**
+    Since you previously force-pushed to clean up messages, you must do so again to update the remote branch with this new rebased history.
+    ```bash
+    git push --force-with-lease origin your-branch-name
+    ```
+    *Always use `--force-with-lease` instead of `--force`. It ensures you do not accidentally overwrite changes if someone else (or another machine) pushed to your fork in the meantime.*
+
+**Regarding your specific concerns:**
+*   **Review Context:** Jane's comments will remain visible. If you moved code blocks significantly during the rebase, some comments might appear "outdated," but they will not be deleted; GitHub provides a "Resolve" or "View outdated" toggle for these.
+*   **Closing the PR:** Do **not** close and reopen the PR. Doing so breaks the link to the existing discussion, loses the review history, and forces the maintainer to start over. Updating the existing branch is the standard workflow.
+*   **Proprietary Data:** You mentioned working for Initech and using standard logging fixes. Since you confirmed no proprietary algorithms are involved, standard open-source contribution practices apply. However, always double-check that no internal URLs, employee names, or specific infrastructure details from Initech leaked into commit messages or code comments before pushing.
+
+**Summary:** The safest path is to rebase locally, resolve any conflicts, and force-push to your existing branch. This satisfies the project's linear history requirement while keeping the review thread intact.

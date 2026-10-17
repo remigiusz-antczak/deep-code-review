@@ -1,0 +1,35 @@
+### Pre-Launch Safety Protocol: Bed-Allocation Edge Case Evaluation
+
+**Objective**
+Establish a static, simulation-based safety gate to validate the bed-allocation recommender's behavior under high-stress edge cases without requiring real-time model retraining. This protocol ensures that patients with urgent but non-obvious critical needs are not systematically deprioritized during volume surges.
+
+**1. Synthetic Stress-Test Dataset Construction**
+Since real-time retraining is unavailable, create a fixed "Challenge Corpus" of 500 synthetic patient profiles to be run against the frozen model. This corpus must explicitly over-represent edge cases that typically fail triage logic:
+*   **The "Quiet" Critical:** Patients with stable vital signs but rapidly deteriorating underlying conditions (e.g., silent hypoxia, early sepsis with normal blood pressure).
+*   **Complex Comorbidities:** Patients whose urgency is masked by conflicting data points (e.g., elderly patients with chronic conditions masking acute failure).
+*   **Surge Scenarios:** Simulated time-blocks where bed demand exceeds supply by 150%, forcing the algorithm to make hard trade-offs.
+*   **Data Latency Simulations:** Profiles with missing or delayed lab results to test how the system handles incomplete information under pressure.
+
+**2. Static Scenario Simulation Suite**
+Execute the frozen model against the Challenge Corpus using a deterministic simulation engine. Do not test for average accuracy; test for worst-case failure modes.
+*   **Ranking Stability Test:** Run the same surge scenario 100 times with minor, clinically irrelevant data noise. If a "Quiet Critical" patient's priority score fluctuates wildly, the model is too sensitive to noise.
+*   **Threshold Breach Analysis:** Identify the exact patient volume point where the system begins to downgrade urgent-but-complex cases in favor of straightforward acute cases.
+*   **Fairness Slice Evaluation:** Manually audit the bottom 20% of recommended allocations. Verify if specific demographics or complex condition clusters are disproportionately represented in the "delayed care" group.
+
+**3. The "Human-in-the-Loop" Override Validation**
+Simulate the nursing coordinator's workflow during the simulation.
+*   **Flagging Mechanism:** Ensure the system explicitly flags "high uncertainty" cases rather than presenting a confident but potentially wrong low-priority score.
+*   **Override Tracking:** In the simulation, force a human override for any "Quiet Critical" patient deprioritized by the model. Record whether the system provides adequate explanatory context to justify the human's decision to override. If the explanation is generic, the protocol fails.
+
+**4. Go/No-Go Safety Gates**
+Define strict pass/fail criteria before rollout. The system must not launch if:
+*   Any "Quiet Critical" synthetic profile is ranked below a stable, non-urgent patient in >5% of surge simulations.
+*   The system fails to flag data insufficiency for complex comorbidity cases.
+*   Explanation logs do not cite specific clinical risk factors when deprioritizing a patient.
+
+**5. Documentation and Handoff**
+Compile a "Risk Boundary Report" detailing exactly where the model's logic degrades. This document serves as the operational manual for nursing coordinators, explicitly listing the types of cases where they must distrust the algorithm and rely on clinical intuition during the three-month static period.
+
+***
+
+*Note: This protocol relies entirely on pre-computed synthetic data and deterministic simulation to bypass your infrastructure constraints. Ensure your medical liaisons validate the clinical realism of the "Quiet Critical" synthetic profiles before running the suite.*

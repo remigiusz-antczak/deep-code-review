@@ -1,0 +1,33 @@
+### Pre-Launch Safety Plan: Automated Copyright Takedown Filter
+
+**1. Harm Inventory (MAP)**
+Before rollout, we must explicitly record the following risks specific to removing content without prior notice:
+*   **Unsafe High-Stakes Automation:** The system executes an irreversible action (removal) affecting a user's livelihood without human review or prior notice. This is the primary failure mode.
+*   **Bias/Unfair Outcomes:** Internal pattern matching may systematically flag niche genres, non-English content, or specific editing styles common in fair-use commentary as infringements.
+*   **Hallucination as Fact:** The system treats a pattern match as definitive proof of infringement, ignoring context required for fair-use determination (e.g., parody, criticism).
+*   **Missing Disclosure:** Users may not immediately understand *why* content vanished or that an automated system made the decision.
+*   **Over-Reliance:** Engineers may trust the "match" score too highly, assuming internal logic equals legal certainty.
+
+**2. Measurement Plan (MEASURE)**
+We cannot certify the system as "safe" or "accurate." Instead, we must run specific evaluations:
+*   **Adversarial Probe Set:** Construct a test suite containing known fair-use examples (parody, news reporting, educational clips) and known infringements.
+    *   *Positive Control:* Known infringing video (must be flagged).
+    *   *Negative Control:* Known fair-use video (must **not** be flagged).
+*   **Metric & Threshold:** Measure the False Positive Rate (FPR) specifically on the fair-use subset.
+    *   *Stop Condition:* If the system flags *any* known fair-use control for immediate removal without human review, the automated removal feature must not launch.
+*   **Residual Risk Reporting:** Report the FPR as `UNVERIFIED` for any content type not included in the probe set. Do not invent a global accuracy percentage.
+
+**3. Risk Management Controls (MANAGE)**
+Given the high stakes (livelihood impact) and the constraint of no external legal database, the following controls are mandatory:
+*   **Human-in-the-Loop Gate (Critical):** Immediate, fully automated removal of content based solely on internal pattern matching is unsafe for launch.
+    *   *Action:* Modify the workflow so that high-confidence matches result in a **hold** (video not published) rather than a **removal**, triggering an immediate human review queue. Only low-confidence or repeat-offender cases (if legally vetted) might consider automation, but for beta launch, **no irreversible action should occur without human confirmation**.
+*   **Uncertainty Disclosure:** If a video is held, the user interface must clearly state: "This video was flagged by an automated system for potential copyright issues and is under human review." Do not present the pattern match as a legal fact.
+*   **Defined Confidence Tiers:** Do not show users a raw score (e.g., "92% match"). Use defined tiers: "Confirmed Match" (human verified), "Potential Match" (under review), or "Unverified."
+*   **Rapid Reversal Mechanism:** Ensure a mechanism exists to instantly restore content if a human reviewer determines it is fair use, minimizing downtime for the creator.
+
+**4. Governance & Transparency**
+*   **Owner Assignment:** Name a specific product owner responsible for reviewing every false positive incident post-launch.
+*   **Model/Data Card:** Publish an internal document detailing the limitations of the internal pattern matching, explicitly stating it does not access external legal databases and cannot definitively determine fair use.
+*   **Legal Routing:** The question of whether this automated takedown process complies with DMCA safe harbor provisions or other regional laws is a legal determination. This plan recommends human review as a safety control, but you must route the specific legal duty of care and disclosure requirements to counsel before public rollout.
+
+**Note:** This plan identifies that fully automated removal without human review constitutes an unsafe high-stakes action; the primary mitigation is inserting a human gate before any content is deleted. No metric can certify the system as "fair-use compliant"; only rigorous testing and human oversight can manage the residual risk.

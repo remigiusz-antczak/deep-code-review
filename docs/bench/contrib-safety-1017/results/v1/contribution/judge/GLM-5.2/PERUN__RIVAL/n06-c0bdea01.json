@@ -1,0 +1,4 @@
+{
+ "verdict": "1",
+ "reason": "Response 1 provides a ready-to-paste comment, clear decision branches for each possible response, a practical sanitization check, and a well-reasoned fallback if both assignee and maintainers go silent."
+}

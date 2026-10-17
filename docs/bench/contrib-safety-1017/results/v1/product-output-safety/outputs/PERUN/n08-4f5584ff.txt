@@ -1,0 +1,42 @@
+### Pre-Launch Safety Protocol: VoyageAI Beta
+
+**1. Harm Inventory & Scope Definition**
+Before testing, explicitly record the worst-case scenarios for your specific constraints:
+*   **Unsafe Automation:** Booking the wrong date/price or sending money to the wrong entity without user confirmation.
+*   **Hallucination as Fact:** Generating non-existent flight numbers or routes that appear valid to the user.
+*   **Financial Error:** Incorrect currency conversion leading to user overcharge or failed settlement.
+*   **Affected Parties:** The traveler (financial loss, missed travel) and VoyageAI (reputation, gateway fees).
+
+**2. Measurement Plan (Low-Cost, High-Coverage)**
+Do not rely on live transactions for validation. Implement a "Dry-Run" architecture where the agent generates a booking payload but never calls the payment gateway's "charge" endpoint during testing.
+
+*   **Test Row A: Hallucination & Data Integrity**
+    *   **Probe Set:** 50 natural language requests covering edge cases (e.g., "next Tuesday," "cheapest flight to nowhere," ambiguous city names).
+    *   **Controls:** Include 5 known-bad inputs (non-existent airports) and 5 known-good inputs (verified routes).
+    *   **Metric:** Percentage of outputs containing invalid IATA codes or flight numbers not found in the static reference dataset.
+    *   **Stop Condition:** Any single hallucinated flight number blocks launch.
+    *   **Budget Impact:** $0 (uses static data validation, no API calls).
+
+*   **Test Row B: Currency & Price Accuracy**
+    *   **Probe Set:** 20 requests involving multi-currency scenarios (e.g., USD user booking EUR flights).
+    *   **Controls:** Hard-coded exchange rate snapshots for the test date.
+    *   **Metric:** Deviation between agent-calculated total and expected total (must be 0.00 variance on static rates).
+    *   **Stop Condition:** Any variance > $0.01 blocks launch.
+    *   **Budget Impact:** $0 (calculation only).
+
+*   **Test Row C: The "Human Gate" Verification**
+    *   **Action:** For the beta, disable fully autonomous payment. The agent must generate a "Booking Summary" card requiring explicit user click-to-confirm before the payment gateway is triggered.
+    *   **Validation:** Run 10 end-to-end flows where the agent attempts to bypass this confirmation.
+    *   **Stop Condition:** If the system processes a payment without the explicit confirmation event, launch is blocked.
+    *   **Budget Impact:** Minimal (only 5–10 live transactions needed to verify the gateway hook works *after* the gate).
+
+**3. Risk Management Controls**
+*   **Mandatory Human-in-the-Loop:** Given the "irreversible" nature of spending money, full autonomy is the failure mode. The beta must require user confirmation for every transaction. Do not ship "seamless execution" for payments until the model proves stability over thousands of dry runs.
+*   **Uncertainty Display:** If the agent's confidence in a flight number or price is not derived from a direct database match, label the output "Unverified" rather than displaying a precise percentage (e.g., avoid "87% sure").
+*   **Transparency Artifact:** Create a one-page "Model Card" for the beta users stating: intended use (travel booking), limitations (may hallucinate rare routes), and the fact that all bookings require user confirmation.
+
+**4. Governance**
+*   **Owner:** Assign one engineer to own the "Booking Accuracy" metric.
+*   **Legal Routing:** Consult counsel regarding whether "automated financial decision" disclosures are legally required in your target jurisdictions; do not assume the user confirmation button satisfies all regulatory duties.
+
+**Note:** This plan prioritizes dry-run validation to preserve your transaction budget. The "Human Gate" is non-negotiable for beta; remove it only after post-beta data proves near-zero error rates.

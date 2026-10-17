@@ -1,0 +1,29 @@
+# Pre-Launch Safety Review Plan: Northwind Gig Ranking Tool
+
+Given the two-week deadline and limited access to historical data, this plan prioritizes high-impact manual checks using your current team of eight product managers and data scientists. The goal is to identify ranking biases and ensure the "bottom 20%" cutoff does not unfairly suppress qualified freelancers before the marketing campaign launch.
+
+### 1. Data Sanity & Input Verification (Days 1–3)
+Before assessing the output, verify the inputs driving the ranking.
+*   **Field Completeness Audit:** Manually inspect 50 random proposals across different job categories. Check for missing fields (e.g., years of experience, specific skill tags) that the algorithm might penalize as "low quality." If the system defaults missing data to zero, new but qualified freelancers will be unfairly ranked low.
+*   **Keyword Sensitivity Test:** Create 10 synthetic proposals varying only in terminology (e.g., "developer" vs. "coder," "graphic design" vs. "visual artist"). Submit these to a staging environment if possible, or simulate the scoring logic manually using the known ranking criteria. Determine if semantic variations cause significant score drops unrelated to actual skill.
+
+### 2. The "Bottom 20%" Boundary Analysis (Days 4–7)
+The automatic hiding of the bottom quintile is the highest risk area for false negatives.
+*   **The "Near-Miss" Manual Review:** Extract the raw scores for all proposals in a specific job category. Identify the exact cutoff score for the bottom 20%. Then, manually review the profiles of the 10 freelancers immediately *below* the cutoff and the 10 immediately *above* it.
+    *   **Check:** Are the hidden freelancers objectively less qualified, or do they simply lack a specific keyword or have a non-standard resume format?
+    *   **Action:** If >20% of the "hidden" group appears qualified upon human review, the threshold is too aggressive.
+*   **Demographic Proxy Check:** With limited historical data, use available metadata to check for disparate impact. Group the hidden 20% by available attributes (e.g., geographic region, language, or self-reported experience level). If one group is disproportionately represented in the hidden tier compared to the total applicant pool, flag this as a potential bias requiring immediate algorithm adjustment.
+
+### 3. Scenario-Based Stress Testing (Days 8–10)
+Use your team of eight to run structured "what-if" scenarios on a controlled dataset.
+*   **The "New Freelancer" Scenario:** Simulate profiles with high skills but no platform history. Verify they are not automatically relegated to the hidden 20% solely due to a lack of past gig data.
+*   **The "Specialist" Scenario:** Test profiles with niche skills that might not match broad category tags. Ensure the ranking tool values specificity rather than penalizing narrow expertise.
+*   **Execution:** Divide the team into four pairs. Each pair generates 5 distinct persona profiles. Score them manually based on the documented ranking rules, then compare your manual scores against the tool's output. Discrepancies greater than 10% indicate logic errors or hidden weighting factors.
+
+### 4. Final Go/No-Go Criteria (Days 11–14)
+Compile findings into a simple dashboard for stakeholders.
+*   **False Negative Rate:** Report the percentage of "hidden" freelancers who passed the manual "Near-Miss" review. If this exceeds 15%, recommend delaying the auto-hide feature or raising the cutoff threshold.
+*   **Bias Flags:** Document any demographic or geographic clusters found in the hidden tier.
+*   **Recommendation:** If critical biases are found, propose a "Soft Launch" where the bottom 20% are tagged as "Low Priority" rather than hidden, allowing client visibility while the model is retrained with more data.
+
+**Note:** This plan relies on manual inspection of small, targeted samples rather than large-scale statistical validation, fitting your current data constraints. Ensure all synthetic test data is clearly marked to prevent contamination of the live database.

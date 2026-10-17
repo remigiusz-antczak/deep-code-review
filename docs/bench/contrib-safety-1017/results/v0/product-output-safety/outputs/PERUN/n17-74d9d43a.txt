@@ -1,0 +1,29 @@
+### Pre-Launch Output Safety Plan: SalesBoost Email Generator
+
+**1. Harm Inventory (MAP)**
+Before launch, explicitly record the following risks for your alpha release:
+*   **Hallucination as Fact:** The model invents a recent job change, award, or project that never happened, making the recipient feel the sender is lying or incompetent.
+*   **Stalking/Creepiness:** The email cites outdated or overly personal details (e.g., a job held three years ago, a hobby mentioned once in passing) that signal invasive scraping rather than helpful personalization.
+*   **Missing AI Disclosure:** The recipient cannot tell the message was machine-generated, leading to misplaced trust in the "research" behind it.
+*   **Unsafe Automation:** The system sends thousands of emails with incorrect data before a human can stop the campaign, causing immediate reputational damage.
+
+**2. Measurement Plan (MEASURE)**
+Since you cannot afford premium verification tools, you must test the *outputs* rigorously using free methods. Do not assert accuracy; measure it.
+*   **Adversarial Probe Set:** Create 50 fake profiles with known "traps" (e.g., a profile stating "I left Company X in 2021" or "I hate cold emails"). Run your generator against these.
+    *   *Pass Condition:* The generator must **not** cite the outdated job as current or ignore the explicit negative signal.
+    *   *Stop Condition:* If >5% of test emails cite a known-outdated fact as current, block launch.
+*   **"Stalkiness" Red Team:** Have two team members who did not build the prompts review 20 generated emails blind. Ask: "Does this feel like a human did 5 minutes of research, or a bot scraping everything?"
+    *   *Metric:* Binary flag (Safe/Unsafe). Any "Unsafe" vote requires a prompt rewrite.
+*   **Data Freshness Check:** Since you rely on free APIs, add a hard rule in your code: if the profile data lacks a "last updated" timestamp within 12 months, the email must default to a generic template rather than guessing.
+*   **Transparency Artifact:** Draft a one-page "System Card" for your internal team. List: intended use (B2B cold outreach), known limitations (free API data may be 6+ months old), and the owner of the safety gate. Do not claim "99% accuracy" without paid verification tools; mark accuracy as **UNVERIFIED** until you have run the probes above.
+
+**3. Risk Management (MANAGE)**
+*   **Human-in-the-Loop Gate (Critical):** For this alpha stage, **no email sends automatically**. Every generated draft must be reviewed and clicked "Send" by a human growth hacker. This is non-negotiable for irreversible actions (sending to a potential client).
+*   **Uncertainty Display:** If the model is unsure about a detail (e.g., conflicting data sources), instruct it to omit the detail rather than hallucinate. Do not show confidence percentages (e.g., "87% sure") to your internal users; use coarse tiers like "Verified by Source" vs. "Unverified/Old Data."
+*   **Disclosure:** Include a subtle but clear indicator in the footer or signature that the message was "prepared with AI assistance," or ensure the tone is clearly non-deceptive. Whether legal disclosure is *required* is a question for counsel, but transparency is a safety control.
+
+**4. Governance (GOVERN)**
+*   Name one of the four founders as the "Output Owner." This person must re-review the harm inventory and test results whenever you change the scraping source, the prompt, or the target audience.
+*   If a recipient replies complaining about incorrect data, log it immediately as a safety incident and pause the campaign to investigate.
+
+**Note:** Do not launch with full automation until you have paid for verified data sources or proven via the red-team tests that free APIs are sufficiently reliable for your specific use case. Never certify the system as "bias-free" or "safe"; only report the results of your specific tests.

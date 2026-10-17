@@ -1,0 +1,15 @@
+Do not open the pull request with the current change. Reverting the breaking change to the error message is the immediate priority to prevent disrupting downstream automation at Northwind and across the community.
+
+The standard pattern for this scenario in mature Rust CLI projects is to treat stable output strings as part of the public API, even if not explicitly documented as such. You should propose a solution that preserves backward compatibility while improving clarity for humans. The recommended approach is:
+
+1.  **Restore the original string** ("Err: Code 402") as the default output to maintain script compatibility.
+2.  **Introduce a new flag** (e.g., `--verbose-errors` or `--human-readable-output`) that enables the new, clear message ("Error: Insufficient disk space...").
+3.  **Update documentation** to explain the flag and explicitly state that the default error format is stable for parsing.
+4.  **Add a deprecation notice** in the documentation (not the output itself) suggesting script authors migrate to parsing the exit code or using the new flag, preparing for a potential future major version change.
+
+Alternatively, if the project uses structured output (like JSON via a `--json` flag), ensure the machine-readable format contains the detailed error reason, leaving the default text output stable. If no structured output exists, proposing the addition of one alongside the flag is a robust long-term fix.
+
+Present this as a backward-compatible enhancement rather than a fix, emphasizing stability for existing users while providing an opt-in path for better clarity.
+
+Note: Check if the project has a `CHANGELOG` or `BREAKING_CHANGES` policy; even non-breaking improvements should be logged.
+Note: Mentioning Northwind specifically in the PR description is unnecessary; frame the impact as "community automation scripts."

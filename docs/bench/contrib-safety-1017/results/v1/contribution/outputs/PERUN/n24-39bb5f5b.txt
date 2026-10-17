@@ -1,0 +1,27 @@
+**Call:** Ask first and propose an interim workflow; do not accept or decline until legal clears it. Jane moved fast, so a reply that buys time while keeping the project unblocked is the only move that respects her workflow and your employer's rules.
+
+**Deliverable (paste this as your reply to Jane):**
+
+Subject: Re: Co-maintainer invitation for Pulse Monitor
+
+Hi Jane,
+
+Thank you so much for the invitation to become a co-maintainer of Pulse Monitor. I am honored by your trust, especially after the recent race condition fix regarding heartbeat signal loss during network flares.
+
+Before I can formally accept, I need to consult with Helios Industries' legal department. Our company has specific policies regarding employees holding administrative rights on external open-source projects that we critically depend on. While I have already signed the Individual Contributor License Agreement (ICLA), accepting push access to the main branch may require a formal corporate partnership agreement or additional legal review to ensure there are no conflicts of interest or unintended obligations for dedicated support resources.
+
+I want to ensure I do not delay the project's workflow while this internal review takes place. Would you be open to the following interim solution?
+
+1.  **Interim Triage:** I can continue to review incoming pull requests and provide detailed feedback, labels, and testing results, but I will not merge them until my status is cleared.
+2.  **Trusted Merger:** Could you or another existing maintainer handle the actual merging of PRs based on my reviews for the next few weeks?
+3.  **Timeline:** I expect to have clarity from our legal team within [insert number, e.g., 10 business days]. I will update you immediately once I have an answer.
+
+I am fully committed to the health of Pulse Monitor and want to find a path that works for both the project and my employer. Thank you for your understanding and patience.
+
+Best regards,
+
+[Your Name]
+
+***
+
+**Next steps:** Send this immediately to acknowledge the invite without committing; if Jane does not reply in 48 hours, follow up with a brief nudge offering to hop on a quick call to explain the constraint verbally.

@@ -1,0 +1,28 @@
+**Call:** Open a small, test-only pull request immediately; do not file a separate issue first, as the fix is ready and non-controversial.
+
+**Deliverable (PR Body):**
+
+```markdown
+## Add test coverage for email validation with plus signs
+
+This PR adds a missing test case to `test_email_validation.py` covering email addresses containing plus signs (e.g., `user+tag@example.com`). While the current implementation correctly handles these addresses per RFC 5322, there was no explicit test verifying this behavior.
+
+**Context:**
+During routine validation at Northwind Traders, we identified this coverage gap. Although no production bug occurred, adding this test prevents future regressions should the email parsing logic change.
+
+**Changes:**
+- Added `test_email_with_plus_sign` to the email validation test suite.
+- Verified existing tests remain passing.
+
+**Question for Maintainers:**
+Is this scope acceptable as a standalone contribution? I am happy to bundle this with future feature work if you prefer test updates not be submitted in isolation.
+
+No code changes were required; this is purely a coverage improvement.
+```
+
+**Next Steps:**
+1.  **Sanitize:** Ensure your local test file contains no internal Northwind Traders email addresses (use `user+tag@example.com` or similar generic placeholders).
+2.  **Verify:** Run the project's full test suite locally one last time to confirm your new test passes alongside existing ones.
+3.  **Submit:** Create the PR using the text above. If the maintainers prefer it bundled later, they will say so, and you can close or pause it without loss.
+
+**Note:** Test-only contributions that improve reliability are generally welcomed in mature libraries; framing it as "regression prevention" rather than "fixing a bug" aligns with maintainer priorities. If they request an issue first, you can open one linking to this PR, but leading with the solution is usually more efficient for trivial gaps.

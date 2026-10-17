@@ -1,0 +1,30 @@
+I cannot confirm that your algorithm is equally accurate for all body types and cycle variations, nor can I assert that there is zero risk of harmful misinformation. No test proves a system is "unbiased" or "safe," and claiming zero risk when your training data lacks diversity would be a fabrication that endangers users.
+
+Given your constraints—a narrow demographic dataset, high-stakes outcomes (unintended pregnancy), and a hard deadline—you must adopt the following harm inventory and management plan immediately:
+
+**1. Harm Inventory (MAP)**
+*   **Bias/Unfair Outcomes:** The model will likely underperform for users outside your narrow training demographic, leading to inaccurate fertile window estimates for specific body types or cycle variations.
+*   **Hallucination as Fact:** Predictive dates presented as definitive biological facts rather than probabilistic estimates.
+*   **Unsafe Automation:** Sending automated reminders for contraception or conception without uncertainty disclosures could lead to irreversible life events.
+*   **Over-reliance:** Users may trust the app's prediction over their own physiological signs due to the interface design.
+
+**2. Measurement Plan (MEASURE)**
+*   **Do not invent metrics.** Any claim of "equal accuracy" is currently **UNVERIFIED**.
+*   **Run subgroup evals:** Before launch, test the model specifically on edge cases and synthetic profiles representing body types and cycle variations missing from your training set.
+*   **Define stop conditions:** If error rates for any subgroup exceed a threshold set by your clinical advisors, that segment must be excluded from the predictive feature until resolved.
+*   **Transparency Artifact:** You must ship a **Model Card** stating clearly: "Training data is limited to [Demographic X]; performance for other groups is unverified." Hiding this limitation is a safety failure.
+
+**3. Risk Management (MANAGE)**
+*   **Human-in-the-Loop / User Gate:** For a feature impacting family planning, you cannot rely on full automation. The app must require explicit user confirmation before acting on high-stakes predictions (e.g., "Safe to conceive" or "High risk of pregnancy").
+*   **Show Uncertainty:** Never display a raw probability (e.g., "92% fertile"). Instead, use defined coarse tiers such as **"Estimated," "Corroborated,"** or **"Low Confidence,"** with clear definitions for what each tier means.
+*   **Scope Reduction:** If you cannot validate accuracy across diverse groups in three weeks, you must narrow the scope. Consider releasing the feature as "assistive only" (triage) with heavy disclaimers, or restrict it to the demographic where you have verified data. Do not launch a generalized predictor with unverified reach.
+*   **Disclosure:** Clearly disclose that outputs are AI-generated estimates, not medical diagnoses.
+
+**4. Governance (GOVERN)**
+*   Assign a specific owner to review failure modes weekly.
+*   Route the question of legal disclosure requirements and regulated decision status (given the health context) to legal counsel immediately; do not assume compliance based on this technical review.
+
+**Immediate Action:** Stop the claim of "zero risk." Replace it with a visible warning about data limitations and a mechanism for users to override or ignore the prediction. The decision to ship with residual risk belongs to your leadership, not this review, but shipping without these controls is a failure of product safety.
+
+Note: Your lack of diverse data makes a "universal accuracy" claim factually impossible to support at this time.
+Legal counsel must determine if this update triggers specific health-regulatory obligations before release.

@@ -1,0 +1,14 @@
+Do not attempt to open a pull request or contact Ravi to unarchive the repository. Since the project is explicitly archived in read-only mode, the maintainer has signaled an end-of-life status. Respecting this decision is the primary professional etiquette; attempting to reverse it for a single fix is generally considered intrusive and unlikely to succeed.
+
+Your immediate and correct path is to **fork the repository** under the Globex Corporation account. This is the standard industry practice for sustaining critical infrastructure when upstream maintenance ceases. To minimize the risk of drift and address your maintenance concerns, execute the following steps:
+
+1.  **Create the Fork:** Use GitHub's "Create a new fork" feature to copy the code to your organization's namespace. This immediately gives you a writable repository to apply your verified null pointer exception fix.
+2.  **Rename and Rebrand:** Upon forking, rename the repository (e.g., `legacy-connect-maintained` or `globex-connect-toolkit`) and update the `README.md` header. Clearly state: *"This is an actively maintained fork of [Original Repo] based on the final archived version. We assume responsibility for security patches and bug fixes."* This prevents confusion for any external users who might stumble upon your version.
+3.  **Apply the Fix:** Commit your verified patch immediately. Since you have already tested it locally, push this as the first commit in your new maintenance history.
+4.  **Update Dependencies:** Point your internal batch processing jobs to this new forked repository URL. Ensure your build scripts (Maven/Gradle) reference your organization's package registry or the direct Git URL of the fork.
+5.  **Establish a Maintenance Plan:** Drift only matters if the original project revives *and* you need features from that revival. Given the project has been dormant for over a year and is archived, the likelihood of significant community revival is low. If the project ever does unarchive, you can selectively cherry-pick future upstream changes into your fork if they are relevant. Until then, you are the upstream.
+
+This approach secures your production environment immediately without relying on the responsiveness of a dormant maintainer. It respects the original author's wish to step away while fulfilling your duty to maintain your company's operational stability.
+
+Note: Archive status is a hard technical lock; no amount of etiquette will bypass it without the owner's manual intervention.
+Forking transfers the burden of maintenance to you, which is the intended trade-off for gaining control over the codebase.

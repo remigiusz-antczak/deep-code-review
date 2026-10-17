@@ -1,0 +1,33 @@
+### Pre-Launch Safety Protocol for VoyageAI
+
+**1. Establish a "Shadow Ledger" Simulation Layer**
+Before any live API call reaches the payment gateway, route the transaction through a deterministic simulation layer. This layer must:
+*   **Mock the Payment Gateway:** Create a local stub that mimics the third-party gateway's response schema but charges $0. It must validate that the payload contains required fields (amount, currency, merchant ID) without executing a charge.
+*   **Enforce a "Dry-Run" Flag:** Modify the agent's tool-calling logic to require a `dry_run: true` parameter for all beta testing. The real booking tool should physically reject execution if this flag is not explicitly set to `false` by a human operator or a specific production environment variable.
+
+**2. Implement Deterministic Fact-Checking Assertions**
+To catch hallucinations without using live budget, create a static "Ground Truth" dataset containing 50 diverse flight scenarios (varying dates, currencies, and airlines). For each test case:
+*   **Input:** A natural language request (e.g., "Book a flight to London on May 12th under $800").
+*   **Expected Output:** A structured JSON object with specific fields: `flight_number`, `date`, `total_price`, `currency`.
+*   **Automated Assertions:** Run the agent against this dataset locally. The test fails immediately if:
+    *   The `flight_number` does not exist in the Ground Truth list for that route/date.
+    *   The `date` differs from the requested date by more than 24 hours.
+    *   The `currency` does not match the user's locale or the source data.
+    *   The `total_price` deviates from the known price by >1% (catching conversion errors).
+
+**3. The "Two-Step" Confirmation Logic**
+Since users expect seamless execution, avoid intrusive pop-ups, but insert a mandatory internal logic gate:
+*   **Step A (Extraction):** The agent extracts entities and queries the flight database.
+*   **Step B (Verification):** A separate, non-LLM script compares the extracted entities against the raw database response. If the LLM says "Flight BA123" but the database returned "BA124" or no results, the process halts.
+*   **Step C (Currency Lock):** Hard-code the currency conversion rate used in the test environment. If the agent calculates a total using a different rate than the hardcoded standard, flag it as a hallucination.
+
+**4. Budget-Constrained Live Validation**
+With limited transaction credits, reserve live tests only for "End-to-End Connectivity":
+*   Allocate 5 specific test cases (one per engineer) to run against the real payment gateway in a sandbox mode (if available) or with refundable micro-transactions.
+*   Use these runs strictly to verify authentication tokens and network latency, not logic correctness. Logic correctness must be proven by the local Shadow Ledger tests first.
+
+**5. Pre-Commit Gate**
+Integrate the Shadow Ledger tests into your CI/CD pipeline. No code merges to the beta branch unless the agent passes 100% of the static assertion tests regarding flight numbers, dates, and math. This ensures that every iteration is vetted for hallucinations before consuming a single paid transaction token.
+
+*Note: This protocol relies entirely on local simulation and static data validation to preserve your transaction budget.*
+*Ensure your "Ground Truth" dataset is updated weekly to reflect real-world schedule changes.*

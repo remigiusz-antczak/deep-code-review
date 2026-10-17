@@ -1,0 +1,24 @@
+Subject: Proposal: Spanish README Translation for DocuBase
+
+Hello DocuBase Maintainers,
+
+I am a developer who regularly uses DocuBase within my organization and greatly appreciate the clarity and utility of your documentation framework. As the project grows, I noticed that the current documentation is available only in English. To help make DocuBase more accessible to the wider TypeScript community, including many non-English speakers in Latin America and Spain, I would like to propose adding a Spanish translation of the README file (`README.es.md`).
+
+Before investing time in formatting and finalizing the translation, I wanted to inquire about your stance on internationalization:
+
+1.  **Interest:** Would the project welcome a community-contributed Spanish README, or do you prefer to keep documentation monolingual to avoid the maintenance burden of keeping multiple versions in sync?
+2.  **Strategy:** If translations are welcome, do you have a preferred strategy or naming convention for localized files (e.g., `README.es.md`, a `/docs/i18n` folder, or a specific front-matter tag)?
+3.  **Process:** Should I proceed with drafting the Pull Request immediately based on standard contribution guidelines, or would you prefer to discuss the scope and maintenance plan in an issue first?
+
+My goal is to ensure this effort aligns with your long-term vision for the project. If there are concerns about maintenance overhead, I am happy to discuss potential workflows (such as locking the translation to specific release tags) to minimize friction for the core team.
+
+Thank you for your time and for maintaining such a valuable tool. I look forward to your guidance.
+
+Best regards,
+
+[Your Name]
+Volunteer Contributor
+
+---
+*Note: This draft intentionally omits your employer's name to keep the focus on the technical contribution and avoid unnecessary corporate signaling unless specifically relevant to the maintainers.*
+*Wait for a response before creating the PR to ensure your effort matches the project's current capacity and policies.*

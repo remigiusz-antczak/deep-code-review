@@ -1,0 +1,23 @@
+**Call:** Disclose the AI usage upfront in your pull request description; do not wait for the maintainer to detect patterns, as retroactive discovery looks like deception.
+
+**Deliverable (Paste this into your PR description):**
+
+> **Authorship and Tooling Disclosure**
+>
+> This contribution refactors the streaming library to [briefly state the specific technical goal, e.g., reduce latency in the buffer manager]. Approximately 80% of the code in this patch was generated using an AI coding assistant to accelerate boilerplate and standard pattern implementation.
+>
+> **Human Review & Verification:**
+> *   I have manually reviewed every line of the generated code for correctness, security, and alignment with BlueOcean Media's coding standards.
+> *   The code has been tested locally and passes all existing project tests.
+> *   I take full responsibility for the contents of this patch as if I had written every character manually.
+>
+> **Note on Prompts:** The prompts used to generate this code contained proprietary context regarding my employer's internal architecture and cannot be shared publicly. However, the resulting code contains no proprietary secrets, internal URLs, or confidential logic—only generic implementations suitable for this open-source project.
+>
+> I am happy to discuss any specific section of this code or provide additional context on the logic if needed. My goal is full transparency regarding the development process while ensuring the quality of the contribution meets the project's bar.
+
+**Why this works for the maintainer:**
+Maintainers care about **liability, quality, and license compliance**, not the tool used. By explicitly stating you reviewed every line and take responsibility, you remove the fear of "unvetted AI slop." By proactively addressing the prompt secrecy (explaining *why* you can't share them while asserting the *output* is clean), you prevent them from assuming you are hiding proprietary leaks. Silence creates suspicion; transparency builds trust.
+
+**Next Steps:**
+1.  Submit the PR with the text above.
+2.  If a maintainer raises concerns, focus the conversation on the **code's merit** and your **review process**, not the ethics of AI usage. If they reject it solely due to AI involvement, respect their project culture and consider contributing to a different project with more explicit AI-friendly guidelines. Do not attempt to resubmit the same code without disclosure.

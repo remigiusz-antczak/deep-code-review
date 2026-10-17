@@ -1,0 +1,18 @@
+Do not share the raw benchmark logs containing Hooli's internal hostnames and IP addresses. Instead, recreate the benchmark results in a neutral format that focuses exclusively on relative performance metrics, which is the standard practice for open-source performance contributions.
+
+**Recommended Action Plan:**
+
+1.  **Sanitize by Aggregation:** Re-run your benchmarks locally if necessary, but capture only the aggregated statistical output (e.g., operations per second, milliseconds per run, standard deviation). Most benchmarking tools (like `benchmark.js` or `k6`) allow exporting to JSON or CSV. Strip any metadata fields containing `hostname`, `ip`, `user`, or `path` before including them in your PR.
+2.  **Focus on Relative Delta:** Maintainers care about the *percentage improvement* and the *consistency* of the fix, not your specific hardware. Present the data as:
+    *   **Baseline:** Current main branch performance (e.g., "1,200 ops/sec").
+    *   **Patch:** Your fixed branch performance (e.g., "1,800 ops/sec").
+    *   **Improvement:** "~50% increase in throughput."
+    *   **Environment Note:** Briefly state the hardware class (e.g., "Tested on a standard developer laptop, Node v20") without specific identifiers.
+3.  **Provide a Reproducible Script:** The most convincing evidence is a script the maintainers can run themselves. Add a `benchmarks/fix-verification.js` script to your PR that isolates the specific recursion logic you fixed. Include instructions in the PR description: "Run `node benchmarks/fix-verification.js` to reproduce the 50% gain." This shifts the burden of proof from your private logs to their public verification.
+4.  **PR Description Structure:**
+    *   **Summary:** "Fixes 50% performance regression in nested object parsing caused by recursion logic."
+    *   **Evidence:** Insert a Markdown table showing the "Before" vs. "After" numbers.
+    *   **Methodology:** "Benchmarks executed using [Tool Name] with 10,000 iterations. Results represent mean time over 5 runs. Full raw data available upon request (sanitized)."
+    *   **Reproduction:** "See `benchmarks/fix-verification.js`."
+
+**Note:** Never attempt to "redact" sensitive IPs from raw logs manually; it is error-prone and risky. Regenerating clean, aggregated statistics is safer and more professional. If the maintainers require raw logs for deep analysis, offer to provide a sanitized version via a private channel only after they request it.

@@ -1,0 +1,18 @@
+Do not submit the pull request yet. Submitting a PR that explicitly fails a hard numerical criterion (4,200 vs. 5,000 users) without prior approval will almost certainly result in an immediate "closed without merge" response, damaging your reputation with the maintainers. The contribution guideline regarding user count is a stability filter, not a formatting suggestion; bypassing it via a note in the PR description is ineffective because maintainers cannot verify internal logs behind a firewall.
+
+Instead, execute the following three-step process before touching the code repository:
+
+1.  **Open a Pre-Submission Discussion Issue:** Navigate to the project's issue tracker and open a new issue titled "Proposal: Nexus Stream Plugin for Northwind Dynamics (Enterprise Waiver Inquiry)." Do not link a PR yet. In the body, clearly state:
+    *   Your plugin has 4,200 active internal instances.
+    *   You cannot provide third-party verification due to security/firewall constraints.
+    *   You are requesting a specific waiver or alternative validation path for enterprise tools.
+    *   Offer to sign a Non-Disclosure Agreement (NDA) or provide a sanitized, redacted report from your internal monitoring system that proves the count without revealing infrastructure topology.
+
+2.  **Propose Alternative Validation Metrics:** Since you cannot meet the public user count, propose equivalent stability indicators in your discussion. Suggest providing:
+    *   Uptime statistics (e.g., "99.9% uptime over 6 months").
+    *   Error rate logs (anonymized) showing stability under load.
+    *   A letter of intent or support contact from your organization's CTO/Engineering Lead verifying the deployment scale.
+
+3.  **Wait for Maintainer Guidance:** Only proceed to draft the PR once a maintainer explicitly comments on the issue granting a waiver or defining an alternative acceptance path. If they deny the waiver, do not submit the PR; the project's risk tolerance simply does not align with your current deployment visibility.
+
+**Note:** Never include raw internal logs or infrastructure details in a public PR, even if anonymized, without explicit legal clearance from your security team. The "waiver process" you are looking for is almost always an informal conversation in the issue tracker, not a documented form.

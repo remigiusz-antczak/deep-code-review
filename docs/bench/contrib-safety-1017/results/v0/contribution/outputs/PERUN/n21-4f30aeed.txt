@@ -1,0 +1,14 @@
+Do not submit the pull request yet. Submitting a PR that explicitly fails the "5,000 active users" criterion with a note about having only 4,200 internal instances will almost certainly result in immediate closure for not meeting the stated stability requirements. Open source maintainers of large projects rely on these hard thresholds to filter contributions because they lack the resources to individually vet every exception; bypassing the rule via a note shifts the burden of verification onto them, which contradicts the purpose of the rule.
+
+Regarding your specific constraints:
+1.  **Anonymized Data:** You likely cannot use anonymized aggregate data if your corporate security policy prohibits revealing infrastructure details. Even aggregated numbers can sometimes be reverse-engineered to reveal capacity or usage patterns that your security team has flagged. Do not risk a policy violation to solve an open source administrative hurdle.
+2.  **Waiver Process:** If the documentation does not mention a waiver process for enterprise tools, one likely does not exist in a formal capacity. Creating a precedent for internal tools to bypass public metrics undermines the "stability" guarantee the project promises to its users.
+
+**Recommended Action Plan:**
+
+Instead of filing the PR immediately, open a **GitHub Issue** (or the project's equivalent discussion forum) titled "Proposal: Criteria for Enterprise/Internal Plugins with Private Deployment." In this issue:
+*   Explain the value your plugin brings to the ecosystem.
+*   Transparently state that you have 4,200 active internal instances but cannot provide public verification due to security air-gapping.
+*   Ask the maintainers directly if there is an alternative path for verification (e.g., a signed letter from a CTO, a third-party audit summary, or a temporary "beta" listing) or if they would consider a policy amendment for enterprise-grade internal tools.
+
+This approach respects the maintainers' governance model. It allows them to decide if an exception is warranted without forcing them to reject a non-compliant PR. If they indicate there is no flexibility, you have saved yourself a rejected contribution record. If they offer a path forward, you can then submit the PR with the specific waiver or alternative evidence they requested, ensuring acceptance. Do not attempt to obscure the numbers or frame the limitation as a minor detail; the user count is a binary gatekeeper in this context.

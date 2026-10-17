@@ -1,0 +1,47 @@
+### Recommended Contribution Strategy
+
+**1. Do not open a separate issue first.**
+For a test-only addition that validates existing behavior (not a new feature or bug fix), opening a standalone issue often creates unnecessary noise. Most maintainers prefer the context to live directly with the code change. Instead, frame the PR itself as the proposal.
+
+**2. Frame the PR as "Risk Reduction," not "Clutter."**
+Your hesitation about "trivial changes" is common, but missing test coverage for supported features is a technical debt item, not clutter. Since your team at Northwind Traders already encountered an incident due to this gap, you have a concrete "Why." Frame the contribution as closing a verification gap that could lead to future regressions, rather than just adding lines of code.
+
+**3. The "Test-Only" Policy Check.**
+Since the documentation is silent, the most polite and efficient way to ask is to embed the question in the PR description itself. This allows maintainers to review the actual quality of the test before deciding on the policy. If they reject the policy, they can close the PR with a clear explanation, saving everyone the round-trip of an issue ticket.
+
+### Draft PR Description Template
+
+Use this structure to maximize the chance of acceptance while respecting maintainer time:
+
+```markdown
+## Summary
+Adds missing test coverage for email addresses containing plus signs (`+`) in the local part. The implementation already supports this RFC-compliant format, but no existing test verified it, creating a risk of accidental regression.
+
+## Motivation
+While integrating VeriCheck at Northwind Traders, we encountered a validation uncertainty regarding plus-signed emails. Although the library handled them correctly, the lack of explicit tests made it difficult to guarantee stability during our upgrade cycle. This PR locks in the current correct behavior.
+
+## Changes
+- `tests/test_email_validation.py`: New test case `test_email_with_plus_sign` covering standard and edge-case placements of `+`.
+- No changes to source code (`src/`); this is a verification-only update.
+
+## Test Plan
+- Runs successfully with existing suite: `pytest tests/test_email_validation.py -v`
+- Verified against current main branch (commit: `<insert-short-sha>`).
+
+## Policy Question for Maintainers
+I noticed the CONTRIBUTING.md does not explicitly state a preference for standalone test additions. If the project prefers test coverage updates to be bundled with feature work or bug fixes, please let me know, and I am happy to close this PR and contribute this test case when the next related issue is addressed. However, if standalone risk-reduction tests are welcome, this PR is ready for merge.
+
+## Checklist
+- [x] New test passes locally.
+- [x] No existing tests broken.
+- [x] Follows existing test style/naming conventions.
+```
+
+### Execution Steps
+
+1.  **Branching:** Create your branch off the latest `main` (`git fetch origin && git switch -c test/email-plus-coverage origin/main`).
+2.  **Commit Message:** Use a clear conventional commit: `test(validation): add coverage for plus-sign email addresses`.
+3.  **Submission:** Push the branch and open the PR with the description above.
+4.  **Follow-up:** If a maintainer comments that they prefer bundled tests, thank them, close the PR, and save the test file locally to attach to a future relevant issue. This demonstrates respect for their workflow without wasting their time on a preliminary discussion.
+
+This approach minimizes friction by doing the work upfront while explicitly granting the maintainers an easy "off-ramp" if their policy differs from your assumption.

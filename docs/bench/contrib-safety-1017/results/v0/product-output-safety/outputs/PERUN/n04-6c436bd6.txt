@@ -1,0 +1,31 @@
+I cannot state a specific error rate for allergic reactions, nor can I confirm that your feature is safe enough to guarantee no harm. Doing so would fabricate a metric you have not measured and issue a safety certification that no test can support.
+
+**Harm Inventory & Immediate Actions**
+Your feature carries a critical risk of **hallucination surfaced as fact** (an incorrect substitution presented as safe) and **unsafe automation of high-stakes actions** (ingesting an allergen can be fatal). Your current testing (100 internal trials with no errors) is statistically insufficient to claim safety for life-threatening conditions. A sample of 100 cannot detect rare but catastrophic failure modes, nor does it account for the variability of real-world user inputs or the fixed limitations of your third-party database.
+
+**Measurement Plan (Do Not Launch Without This)**
+You must replace the request for a "published error rate" with a rigorous evaluation plan:
+1.  **Adversarial Testing:** Construct a probe set specifically targeting known allergen cross-contaminations and edge cases in your fixed database. Include "positive controls" (known bad substitutions that must be rejected) and "negative controls" (known safe substitutions).
+2.  **Metric Definition:** Define a pass threshold of **zero tolerance** for any false negative (suggesting an unsafe ingredient). If even one failure occurs in testing, the stop condition triggers an immediate launch block.
+3.  **Residual Risk Reporting:** Until these tests are run and passed, your error rate is **UNVERIFIED**. You must publish this status internally and to stakeholders, not a fabricated number.
+
+**Management Controls (The Human Gate)**
+Because the stakes involve life-threatening health outcomes, **full autonomous execution is the failure mode you must prevent.**
+*   **Human-in-the-Loop:** You must implement a mandatory human review gate or an explicit, high-friction user confirmation step for any substitution involving major allergens. The system should never auto-complete a recipe change for an allergic user without a clear, undeniable warning and manual override.
+*   **Uncertainty Disclosure:** Do not show users a confidence percentage (e.g., "99% safe"). Instead, use defined coarse tiers such as **"Verified Safe," "Cross-Check Required,"** or **"Unverified – Do Not Use."**
+*   **Transparency Artifact:** Before shipping, you must produce a **Model/Data Card** documenting the limitations of your fixed third-party database, the intended use cases, and the specific failure modes identified during red-teaming. Shipping without this card is a transparency failure.
+
+**Legal & Regulatory Routing**
+Whether your launch requires specific legal disclosures regarding AI-generated health advice or falls under regulated automated decision-making regimes (such as the EU AI Act for high-risk systems) is a legal determination. You must route this immediately to counsel. Do not assert compliance based on internal tests.
+
+**Conclusion**
+Your launch scheduled for next Tuesday cannot proceed with a "guarantee of no harm." The correct path is to:
+1.  Halt the advertising campaign claiming guaranteed safety.
+2.  Run the adversarial evals described above.
+3.  Implement a human-in-the-loop gate for all allergen-related substitutions.
+4.  Publish a transparency card stating limitations rather than a fabricated error rate.
+
+The decision to ship rests with your product owners, but it must be made with the explicit understanding that the risk is currently **UNVERIFIED** and that no amount of internal testing certifies the system as "safe."
+
+*Note: The fixed nature of your third-party database increases the risk of uncorrectable errors; treat this as a known systemic limitation.*
+*Do not launch high-stakes health features without a human oversight layer.*

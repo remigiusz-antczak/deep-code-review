@@ -1,0 +1,17 @@
+Do not open a public issue, pull request, or discussion thread. Publicly alleging copyright infringement, even accidentally, can trigger immediate legal defensiveness, panic among users, and potential liability for you if the claim is later disputed. Instead, follow this private disclosure protocol:
+
+1.  **Locate Private Contact Information:** Check the repository's `README.md`, `package.json` (for a maintainer email), or the organization's website for a security or legal contact (e.g., `security@...` or `legal@...`). If the project uses GitHub, check the "Security" tab for a "Privately report a vulnerability" button; while intended for security bugs, many maintainers accept severe legal/compliance risks there. If no private channel exists, look for the primary maintainer's profile and see if they list a professional email or Twitter/Discord for direct contact.
+
+2.  **Draft a Confidential Disclosure Email:** Send a concise, factual, and non-accusatory message to the private contact. Use a subject line like: "Confidential: Potential Licensing Incompatibility in [Module Name]".
+    *   **State the finding objectively:** "While auditing the codebase, I identified a code block in `[file path]` (lines X–Y) that appears identical to logic from `[Proprietary Library Name]`, which is licensed under `[Restrictive License]`."
+    *   **Explain the conflict:** "Zenith is distributed under MIT. The presence of this code may create a licensing conflict that affects downstream users."
+    *   **Offer evidence privately:** "I can provide the specific snippet and the source of the original proprietary code for your internal verification upon request. I have not shared this finding publicly to allow for private remediation."
+    *   **Assume good faith:** "This may be an unintentional inclusion, and I am happy to assist in resolving it quietly."
+    *   **Do not attach the proprietary code** to the initial email unless you are certain it is safe to share; offer to provide it only after they acknowledge receipt.
+
+3.  **Wait for Acknowledgment:** Give the maintainers 3–5 business days to respond. If they acknowledge, follow their lead on how to proceed (e.g., they may ask you to open a private fork or send details via an encrypted channel). If they do not respond after two attempts over two weeks, you may need to consider whether your organization (Northwind) requires a formal legal notice, but do not escalate publicly without legal counsel.
+
+4.  **Document Your Actions:** Keep a record of your discovery date, the specific files/lines, and your communication attempts. This protects you and your team should the issue surface later.
+
+**Note:** Do not discuss this on public channels (Slack, Twitter, Discord) until the maintainers have had a reasonable chance to act.
+**Note:** If you cannot find any private contact method, consult Northwind's legal team before attempting further outreach.

@@ -1,0 +1,21 @@
+Subject: Re: Co-maintainer invitation for Pulse Monitor
+
+Hi Jane,
+
+Thank you so much for the invitation to become a co-maintainer. I am truly honored by your trust, especially given how quickly we collaborated on last week's race condition fix. It means a lot to know my contribution helped stabilize the heartbeat signals for users like us.
+
+However, before I can accept push access to the main branch, I need to consult with Helios Industries' legal department. Our company has strict policies regarding employees holding administrative rights on external open-source projects that we critically depend on. While I've signed the individual contributor license agreement, elevating to co-maintainer status may trigger requirements for a formal corporate partnership agreement or a specific legal review to ensure there are no conflicts of interest or unintended obligations for dedicated support resources.
+
+I want to handle this correctly to avoid any compliance issues for either of us. I have already initiated this internal review, but I cannot predict exactly how long the bureaucracy will take.
+
+In the meantime, I don't want to slow down the project's momentum. Would you be open to an interim arrangement where I continue to submit high-quality pull requests as a contributor (which I can do immediately under my existing ICLA) while you or another current maintainer retains final merge authority? I am happy to prioritize reviewing incoming PRs and flagging urgent issues in the tracker so nothing slips through the cracks while I sort this out.
+
+I will keep you updated on my legal team's progress and hope to resolve this soon so I can fully step into the role if approved. Thanks again for this incredible opportunity.
+
+Best regards,
+
+[Your Name]
+
+---
+*Note: Send this within 24 hours to show responsiveness; do not wait for legal clearance before replying.*
+*If Jane pushes back, offer to sign a specific "limited scope" maintainer agreement if her legal team has one.*

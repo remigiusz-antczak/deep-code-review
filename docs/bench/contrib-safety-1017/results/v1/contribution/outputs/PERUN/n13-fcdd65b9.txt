@@ -1,0 +1,29 @@
+**Call:** Do not list Sam's name, Northwind Financial, or any corporate affiliation in the commit message or pull request yet. Submit the code with anonymous authorship or your own handle only, and explicitly ask the maintainers to hold the merge pending internal legal clearance for co-author attribution.
+
+**Deliverable (Paste this into your PR draft):**
+
+**Title:** perf: optimize transaction query latency by 40%
+
+**Description:**
+This PR reduces database query latency by approximately 40% in the GlobalPay transaction processor by optimizing [insert specific query pattern, e.g., N+1 select patterns] in the core settlement module.
+
+**Authorship & Sign-off Note:**
+This contribution includes code developed collaboratively. Per project policy requiring multi-author sign-offs, I am currently seeking internal legal clearance to publicly attribute my co-author, [Initials], and our shared organization. To avoid premature disclosure of proprietary workflow information or unintended corporate obligations before this clearance is finalized, I am submitting this PR with my own attribution only for now.
+
+I request that maintainers **do not merge** this PR until I can update the commit message and description with the full, cleared author list and explicit sign-offs. I will provide the updated commits with full co-author trailers (`Co-authored-by: ...`) as soon as internal approval is granted.
+
+**Technical Summary:**
+- Refactored [Module X] to batch database calls.
+- Reduced average transaction processing time from [X]ms to [Y]ms in load tests.
+- No breaking changes to the public API.
+
+**Checklist:**
+- [ ] Internal legal clearance for co-author attribution obtained (Pending).
+- [ ] Updated commit message with `Co-authored-by` trailers (Pending).
+- [ ] All existing tests pass.
+
+---
+
+**Next Steps for You:**
+1.  **Strip Metadata:** Ensure your local git config does not auto-inject your corporate email or Sam's details into the commit headers before you push.
+2.  **Internal Action:** Immediately forward this PR link to your legal team with the specific question: "Does listing Sam [Last Name] and Northwind Financial as co-authors on this public PR violate our IP or non-disclosure policies regarding project visibility?"

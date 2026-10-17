@@ -1,0 +1,38 @@
+### Immediate Action Plan to Scrub Local History
+
+**1. Isolate and Rewrite History**
+Since the commit exists only locally and has not been pushed, you can safely rewrite history. Identify the commit hash where the secret was introduced (let's call it `<bad-commit>`). Run an interactive rebase starting from the commit *before* the bad one:
+`git rebase -i <bad-commit>^`
+
+In the editor that opens, change the word `pick` to `edit` for the specific commit containing the token. Save and close. Git will stop at that commit.
+
+**2. Remove the Secret from the Snapshot**
+Remove the file containing the token from the staging area but keep your other changes in the working directory:
+`git reset HEAD^`
+
+Delete the sensitive file entirely or replace its content with a placeholder (e.g., `API_TOKEN="REDACTED"`). Add the remaining legitimate changes back:
+`git add .` (Ensure the sensitive file is NOT added).
+Commit the corrected changes:
+`git commit -m "Fix: Remove accidental secret and update logging timeout"`
+
+**3. Resume and Clean Reflogs**
+Continue the rebase to apply any subsequent commits:
+`git rebase --continue`
+
+Once the rebase finishes, the bad commit is gone from your branch history. However, Git's reflog still records the old state. To permanently erase all traces of the old commits and the dangling blob containing the secret, run:
+`git reflog expire --expire=now --all`
+`git gc --prune=now --aggressive`
+
+**4. Verification Before Pushing**
+Verify the secret is gone from the entire history:
+`git log -p --all | grep -i "<partial-token-string>"`
+This command should return nothing. Also check for the filename if it was unique:
+`git log --all -- <filename>`
+If these return no results, the secret is scrubbed from the history.
+
+**5. Final Safety Check**
+Before pushing, ensure your local branch matches the cleaned history. Since you have not pushed yet, a standard `git push -u origin <branch-name>` is safe. Do **not** use `--force` unless you had previously pushed this specific branch (which you stated you did not).
+
+### Critical Notes
+*   **Token Status:** You correctly revoked the token; even if a trace remained, the credential is now useless, but the history cleanup prevents future confusion or accidental exposure of the revoked key's context.
+*   **Future Prevention:** Configure a pre-commit hook (e.g., using `gitleaks` or `detect-secrets`) to block secrets from ever being committed again.

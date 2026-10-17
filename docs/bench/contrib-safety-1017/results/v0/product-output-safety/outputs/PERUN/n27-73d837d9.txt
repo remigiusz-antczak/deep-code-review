@@ -1,0 +1,34 @@
+**Do not switch this system to fully automated mode.**
+
+Freezing a customer's bank card is a high-stakes, irreversible action with immediate real-world consequences (stranding users without funds for food or travel). Deploying an autonomous agent to execute this without a human-in-the-loop gate violates the fundamental safety floor for product outputs. No latency constraint justifies removing the human review step for actions this costly.
+
+**Required Immediate Controls:**
+
+1.  **Human-in-the-Loop Gate:** The system must not freeze cards autonomously. Instead, high-confidence alerts should trigger an immediate temporary hold (e.g., 15 minutes) while routing the case to a human agent for verification. Only the human agent executes the permanent freeze. If human staffing cannot meet the 200ms decision window, the system must default to allowing the transaction and flagging it for post-hoc review, rather than risking a false positive block.
+2.  **Defined Uncertainty Tiers:** Do not use raw probability scores (e.g., "87% fraud risk") to drive decisions or display status to users. Replace these with defined coarse tiers:
+    *   **Confirmed:** Multiple strong signals + human verification. Action: Freeze.
+    *   **Corroborated:** Strong signals + pattern match. Action: Temporary hold + urgent human review.
+    *   **Unverified:** Single weak signal. Action: Allow transaction, log for analysis.
+3.  **Harm Inventory & Measurement Plan:** Before any deployment, you must document the following for each harm category:
+    *   **Bias:** Who is disproportionately affected? (e.g., travelers, specific demographics). *Test:* Run adversarial prompts and edge-case inputs segmented by user group.
+    *   **False Positives:** What is the worst-case scenario? (Customer stranded). *Test:* Inject known-good transaction patterns that resemble fraud; measure the rate of incorrect holds.
+    *   **Over-reliance:** Does the interface encourage agents to blindly trust the score? *Test:* Observe agent override rates when the system is wrong.
+    *   **Metric Reporting:** Do not invent a "false positive rate." If you have not run the specific evals above, the rate is **UNVERIFIED**. Publish the evaluation plan and the residual risk, not a fabricated clearance number.
+
+**Transparency Artifact:**
+You must produce a **Model Card** before shipping. This document must state:
+*   **Intended Use:** Real-time fraud detection with human oversight.
+*   **Limitations:** Explicitly state that the model cannot distinguish between fraud and legitimate unusual spending (e.g., travel) without human context.
+*   **Performance:** Report accuracy metrics **by subgroup** (e.g., domestic vs. international users), not just aggregate.
+*   **Owner:** Name the specific individual responsible for the output harm.
+
+**Legal Routing:**
+Whether this automated decision triggers specific regulatory requirements (such as the EU AI Act or local banking laws regarding consequential decisions) is a legal determination. Route this immediately to counsel via your business-ops lane. Do not assert compliance here; simply name the regimes that may apply and await legal guidance.
+
+**Next Steps:**
+1.  Halt the switch to full automation.
+2.  Implement the human-gate workflow.
+3.  Run the red-team evals for bias and false positives.
+4.  Draft the Model Card with UNVERIFIED metrics where data is missing.
+
+*Note: Latency constraints cannot override the requirement for human oversight on irreversible financial actions. If the 200ms limit prevents human review, the system architecture must change to allow a two-stage process (instant temporary hold, delayed final decision).*

@@ -1,0 +1,25 @@
+**Call:** Do not close the pull request; safely rebase and force-push to preserve Jane's review thread.
+
+**Deliverable (paste this as your next comment on the PR):**
+
+> "Hi Jane, thanks for the nudge to rebase. I realized my local history had diverged due to some earlier cleanup, so I am performing a rebase onto the latest `main` now to ensure a linear history as requested.
+>
+> This will require a force-push to my fork, which may rewrite the commit hashes in this thread, but it will not delete your existing comments or the conversation context. I will verify the diff remains identical (excluding the history alignment) immediately after pushing.
+>
+> **Status:** Rebasing locally now... [Wait for completion] ... Done. Pushed with `git push --force-with-lease`. The CI should restart shortly. Please let me know if the history view looks correct on your end."
+
+**Procedure to execute locally:**
+
+1.  **Fetch the latest upstream state:**
+    Run `git fetch upstream` (assuming `upstream` points to the official LogFlow repo; if not, use `git fetch origin` if you track main directly).
+2.  **Rebase your branch:**
+    Checkout your feature branch and run `git rebase upstream/main` (replace `upstream/main` with the correct upstream branch name).
+    *   If conflicts arise, resolve them, then run `git rebase --continue`.
+3.  **Safe Force-Push:**
+    Once the rebase completes successfully, run `git push --force-with-lease`.
+    *   *Why this command:* `--force-with-lease` is safer than `--force` because it aborts if someone else (or another machine) pushed to your fork branch since you last fetched, preventing accidental data loss of your own work. It does not affect the PR conversation.
+
+**What happens to the PR:**
+GitHub automatically updates the PR diff when you force-push. Jane's inline comments remain attached to the specific lines of code they reference, even if the commit hash changes. If a comment was on a line that moved slightly due to the rebase, GitHub usually adds a "Outdated" label but keeps the text visible. Closing and reopening the PR would lose this context and fragment the discussion, so rebasing is the correct path.
+
+**Note:** Since you confirmed no proprietary algorithms are involved, standard logging fixes are safe to share in this public interaction. Ensure you have committed or stashed any local changes before starting the rebase to avoid losing work.

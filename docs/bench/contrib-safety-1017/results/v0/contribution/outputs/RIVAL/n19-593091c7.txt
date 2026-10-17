@@ -1,0 +1,16 @@
+Do not submit the PR in its current state. Since the project guidelines explicitly state that contributors are responsible for cross-platform testing, submitting a fix verified only on Windows violates the contribution contract and will likely result in the PR being closed or ignored. Maintainers of large open-source projects generally do not have the bandwidth to act as QA for unverified contributions, and asking them to test your code on your behalf shifts the burden improperly.
+
+Instead, pause the PR and take one of the following three paths before re-engaging:
+
+1.  **Leverage Cloud-Based CI/CD:** Most C# projects use GitHub Actions, Azure Pipelines, or similar CI tools that automatically build and test on macOS and Linux runners. Check if the repository's CI configuration already includes these platforms. If it does, push your branch and let the CI run. If the tests pass on all platforms in the CI environment, you can confidently update your PR description stating, "Validation confirmed via CI runners for macOS and Linux," which satisfies the requirement without needing physical hardware.
+2.  **Use Free Local Emulation:** You do not need to buy new hardware. For macOS, you can use free tiers of cloud Mac services (like MacInCloud's trial) or set up a macOS virtual machine using open-source tools like OSX-KVM on your existing Windows machine if your CPU supports virtualization. For Linux, use WSL2 (Windows Subsystem for Linux) or a standard VirtualBox VM, which requires minimal resources. These setups are standard for cross-platform developers and demonstrate due diligence.
+3.  **Request a "Work-in-Progress" Review:** If you absolutely cannot generate cross-platform evidence immediately, convert your PR to a "Draft." In the description, explicitly state: "This fix resolves the memory leak on Windows. I am currently unable to verify macOS/Linux locally due to infrastructure constraints. I am seeking guidance on whether the existing CI pipeline is sufficient for validation or if there are specific emulation strategies recommended by the team before I finalize this contribution." This frames the issue as a collaborative hurdle rather than negligence.
+
+**Recommended Communication Template (if choosing Option 3):**
+
+> "Thank you for the feedback. I want to ensure full compliance with the cross-platform testing requirement. Currently, my local environment is limited to Windows, preventing me from physically verifying the fix on macOS and Linux.
+>
+> Could you clarify if passing the project's automated CI checks on all three platforms is considered sufficient validation for this specific type of fix? If manual verification is strictly required, could you point me toward any recommended lightweight emulation strategies the team uses? I want to ensure I provide the necessary evidence without overburdening the maintainers."
+
+**Note:** Do not mention your company's internal constraints or Northwind Tech; keep the focus strictly on your personal ability to meet the project's technical requirements.
+**Note:** If the CI pipeline does not cover all three platforms, you must find a way to emulate them; there is no acceptable shortcut for mandatory contribution requirements in mature open-source projects.

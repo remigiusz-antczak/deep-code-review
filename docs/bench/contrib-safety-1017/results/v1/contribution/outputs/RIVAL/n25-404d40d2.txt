@@ -1,0 +1,25 @@
+Do not open the pull request yet. Submitting a change that breaks downstream automation without a mitigation strategy will likely result in an immediate rejection, given the maintainers' strict stance on stability and the project's size.
+
+Your proposed solution introduces a silent breaking change. Even though error messages feel like "UI," in CLI tools they are part of the public contract if scripts parse them. The fact that Northwind and other community members rely on "Err: Code 402" makes this a functional regression, not just a text tweak.
+
+You must pivot your approach to one of the following three strategies before writing any PR description:
+
+1.  **Hybrid Output (Recommended):** Modify the code to emit *both* the human-readable message and the machine-parseable code. For example:
+    `Error: Insufficient disk space required for operation (Code 402)`
+    This allows humans to understand the issue immediately while preserving the specific token "Code 402" that regex parsers rely on. This is the standard pattern for evolving CLI output without breaking semver.
+
+2.  **Structured Output Flag:** If the project supports JSON or machine-readable flags (e.g., `--format=json` or `--machine`), ensure the numeric code is prominent there, and update the docs to tell script authors to parse the structured output instead of stdout. However, this still breaks existing scripts immediately, so it must be paired with a deprecation cycle.
+
+3.  **Deprecation Cycle with Feature Flag:** If a hybrid message is impossible, implement the new message behind a feature flag or environment variable (e.g., `TERRAFORM_NEW_ERROR_FORMAT=1`). Default it to *off*. Announce the change in the changelog as "deprecated," giving users 1–2 release cycles to update their scripts before the default flips in a future major version.
+
+**Immediate Next Steps:**
+
+*   **Revert the breaking change** in your local branch. Implement the "Hybrid Output" approach first.
+*   **Open an Issue, not a PR.** Title it: "Proposal: Improve low-disk error clarity while preserving backward compatibility."
+*   **In the issue body:** Explicitly state that you discovered downstream dependencies parsing the old string. Propose the hybrid format as the solution. Ask the maintainers if this aligns with their stability guarantees.
+*   **Do not mention AI assistance** unless the project specifically requires it; focus entirely on the technical risk to the ecosystem.
+
+By leading with the problem of broken automation rather than the benefit of clearer text, you demonstrate the "scope discipline" and "backward compatibility" awareness that strict maintainers value. You shift the conversation from "Will you merge this?" to "How should we evolve this safely?", which is the only frame where this PR has a chance of acceptance.
+
+Note: Check if the project uses `clap` or a specific error handling crate that might already have a built-in mechanism for error codes separate from display strings.
+Note: If Northwind has a relationship with the maintainers, leverage that channel to validate the hybrid approach before posting publicly.

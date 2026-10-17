@@ -1,0 +1,24 @@
+Subject: Proposal: Spanish README Translation for DocuBase
+
+Hello DocuBase Maintainers,
+
+I am a developer at Umbrella Corporation and an active user of DocuBase. While our internal usage is separate from this contribution, I am writing to propose a voluntary effort to translate the project's `README.md` into Spanish to help broaden accessibility for non-English speakers.
+
+Currently, the documentation is available only in English, and I noticed that `CONTRIBUTING.md` does not yet specify a policy regarding translations or internationalization. I fully appreciate the maintenance burden that comes with keeping multiple language versions in sync as the project evolves. Therefore, before investing time in formatting and submitting a pull request, I wanted to inquire about your preferences:
+
+1.  **Interest:** Would the project welcome a Spanish translation of the README, or do you prefer to keep documentation monolingual for now?
+2.  **Strategy:** If translations are welcome, do you have a preferred strategy for handling them? (e.g., a single `README.es.md` file, a `/docs/locales` directory, or a specific naming convention).
+3.  **Process:** Should I proceed with opening a draft pull request immediately to demonstrate the format, or would you prefer to discuss the approach in this thread first?
+
+This effort is entirely voluntary and contains no confidential information from my employer. I am happy to adapt to whatever workflow minimizes friction for your core team.
+
+Thank you for your time and for maintaining such a useful tool.
+
+Best regards,
+
+[Your Name]
+[Your GitHub Handle]
+
+---
+*Note: Since the project lacks an i18n policy, opening an issue (or discussion) before coding prevents your PR from being closed due to scope mismatch.*
+*If they approve, ensure your future PR strictly contains only the translation file and no unrelated refactors.*

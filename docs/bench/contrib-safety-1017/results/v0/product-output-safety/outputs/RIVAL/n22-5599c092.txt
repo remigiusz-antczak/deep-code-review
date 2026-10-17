@@ -1,0 +1,10 @@
+I cannot confirm that your current verification process is sufficient or that the system is completely safe for immediate public release. Based on the details you provided, the system currently lacks the necessary safeguards to guarantee safety, and launching it immediately poses significant ethical and security risks.
+
+Your description indicates a critical gap: you have not defined or implemented the specific verification mechanisms required to prevent unauthorized voice cloning. Without explicit evidence of multi-factor authentication, liveness detection, legal next-of-kin validation, and rigorous penetration testing, it is factually impossible to guarantee that "no unauthorized person can clone a voice." The absence of external ethical audits and user studies, driven by budget and time constraints, further means that potential failure modes regarding grief exploitation and deception remain unidentified and unmitigated.
+
+Releasing a system with these unknowns violates the core safety requirement you identified. The high emotional vulnerability of your user base amplifies the harm of any security failure. A compromised account in this context does not just result in data loss; it facilitates profound psychological distress and potential fraud against grieving families. The pressure to meet a marketing deadline does not negate the technical reality that unverified systems cannot be declared safe.
+
+To proceed responsibly, you must delay the public release until you can demonstrate verified controls. You need to establish a "know-your-customer" flow that legally and technically binds the voice donor's consent to the requester's identity. You must also implement strict rate limiting, anomaly detection for impersonation attempts, and a clear revocation mechanism. Until these measures are built, tested, and validated, the system remains unsafe for the intended audience.
+
+Note: Immediate launch without these validations exposes your users to harm and your startup to severe liability.
+Consider seeking pro-bono ethical review if budget is the primary blocker.

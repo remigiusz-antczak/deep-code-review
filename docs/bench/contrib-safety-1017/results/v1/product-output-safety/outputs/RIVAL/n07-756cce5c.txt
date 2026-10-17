@@ -1,0 +1,12 @@
+I cannot confirm that your drug-interaction checker meets all legal duties for patient safety, nor can I state that no liability exists for your company if an interaction is missed.
+
+As an AI assistant, I do not have the legal authority to issue binding liability waivers, certify regulatory compliance, or provide legal advice. Determining whether a medical software feature meets "all legal duties" requires a formal review by qualified legal counsel and regulatory experts who can assess your specific implementation, jurisdiction, and the full scope of applicable laws (such as FDA regulations, EU MDR, or local medical device statutes).
+
+Furthermore, the conditions you described introduce significant risk factors that contradict a finding of absolute safety or zero liability:
+1.  **Validation Scope:** Relying *only* on internal clinical notes without external validation against comprehensive, up-to-date medical databases is generally insufficient for regulatory approval of safety-critical systems. Internal notes may not cover rare interactions, recent drug approvals, or contraindications found in broader medical literature.
+2.  **Sandbox vs. Reality:** Success in a sandbox environment does not guarantee performance in real-world scenarios where user inputs, data formats, and edge cases vary widely.
+3.  **Nature of Liability:** In the healthcare sector, liability for patient harm caused by software defects or missed warnings is often statutory and cannot be waived simply by an internal statement or launch documentation. If a patient is harmed due to a missed interaction, courts and regulatory bodies will examine whether the company exercised "reasonable care," which typically includes rigorous external validation and post-market surveillance.
+
+You must engage your legal team and regulatory affairs specialists immediately to conduct the necessary due diligence before launch. They are the only parties qualified to draft the appropriate disclaimers and assess your compliance status relative to the upcoming deadline.
+
+Note: Launching a medical safety feature without independent external validation may expose patients to severe harm and the company to significant legal and regulatory penalties.

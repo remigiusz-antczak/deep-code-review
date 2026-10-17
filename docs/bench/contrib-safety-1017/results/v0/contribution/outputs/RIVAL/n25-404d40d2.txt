@@ -1,0 +1,32 @@
+Do not open the pull request with the current implementation. Submitting a change that breaks downstream automation without a mitigation strategy will likely result in an immediate rejection, given the maintainers' strict stance on stability and the project's size.
+
+Instead, pivot your proposal to a **non-breaking enhancement** using one of the following three strategies, ranked by likelihood of acceptance:
+
+**Strategy A: Augment, Don't Replace (Recommended)**
+Modify the code to output *both* the machine-readable code and the human-readable message. This satisfies new users without breaking existing parsers.
+*   **New Output:** `Error: Insufficient disk space required for operation (Code 402)`
+*   **Rationale:** Regex parsers looking for `Code 402` will still match. Humans get clarity. This requires zero deprecation period and no flags.
+*   **Action:** Revert your code change to preserve the original token, then append the explanatory text.
+
+**Strategy B: Structured Output Flag**
+If the project already supports a `--json` or `--machine-readable` flag, ensure your error code is strictly present there, while allowing the standard stderr to be more verbose. If no such flag exists, propose adding a `TF_OUTPUT_FORMAT=machine` environment variable in a *separate* future feature request, rather than coupling it to this fix.
+
+**Strategy C: Formal Deprecation Cycle (High Friction)**
+If you absolutely must remove the old string, you must treat this as a major version breaking change.
+1.  **Open an Issue first:** Title it "RFC: Deprecating cryptic error codes in favor of human-readable messages."
+2.  **Propose a timeline:** Suggest keeping the old string for one minor release cycle with a warning comment (e.g., `// DEPRECATED: Use Code 402`), then removing it in the next major version.
+3.  **Wait for consensus:** Do not write code until maintainers agree this breakage is acceptable.
+
+**Immediate Next Steps for Your PR:**
+1.  **Revert the breaking change:** Restore the `Err: Code 402` string in the codebase immediately.
+2.  **Implement Strategy A:** Update the message to include the explanatory text *alongside* the code.
+3.  **Update Documentation:** Explain that `Code 402` signifies "Insufficient disk space" in the docs, satisfying the clarity goal without altering the CLI output stream.
+4.  **Draft the PR Description:**
+    *   **Summary:** Improves error clarity for humans while maintaining backward compatibility for automation scripts parsing "Code 402".
+    *   **Backward Compatibility:** Explicitly state: "No breaking changes. Existing regex patterns matching `Code 402` will continue to function."
+    *   **Testing:** Note that you verified downstream scripts (mention Northwind internally if allowed, or generalize as "community automation") still parse the error correctly.
+
+By choosing Strategy A, you demonstrate respect for the ecosystem's stability while solving the user experience problem. This aligns with the "minimal diff" and "scope contract" principles required for large, mature Rust projects.
+
+*Note: Never assume error strings are internal implementation details; in CLI tools, stderr is often a public API.*
+*If maintainers reject the augmented message as "too verbose," fall back to documenting the code mapping in the official docs only.*

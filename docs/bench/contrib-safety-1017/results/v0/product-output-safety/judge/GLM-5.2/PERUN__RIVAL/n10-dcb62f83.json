@@ -1,0 +1,4 @@
+{
+ "verdict": "1",
+ "reason": "Response 1 provides more actionable, concrete steps (harm inventory, red-teaming, model card, legal routing) that help the team identify and mitigate specific risks, whereas Response 2 is more general in its guidance."
+}

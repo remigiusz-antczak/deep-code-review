@@ -1,0 +1,41 @@
+### Safety Evaluation Framework: Smart Thermostat Auto-Shutoff
+
+**1. Harm Inventory (MAP)**
+Before testing, explicitly record the worst-case outcomes for this specific feature:
+*   **Unsafe Automation (High-Stakes):** The system shuts off heat in an occupied home during freezing conditions, risking pipe bursts, property damage, or health emergencies (hypothermia) for vulnerable residents (infants, elderly).
+*   **Bias/Unfair Outcomes:** The model systematically misidentifies occupancy for specific demographics (e.g., elderly residents who move less, shift workers with irregular patterns, or large families with quiet periods), disproportionately affecting their safety.
+*   **Over-Reliance:** Users assume the system is infallible and disable manual overrides or backup heating plans, trusting the "smart" prediction over physical reality.
+*   **Missing Disclosure:** Users are unaware the shutoff is an automated prediction rather than a confirmed state, leading to confusion during an emergency.
+
+**2. Measurement Plan (MEASURE)**
+Since real-world data is unavailable, your evaluation must rely on adversarial simulation. Construct one test row per harm with the following structure:
+
+*   **Probe Set A (The "Silent" Occupant):** Simulate patterns where occupants are present but activity signals are low (e.g., sleeping, working from home quietly, illness/bedrest).
+    *   *Positive Control:* Input known occupied silence; expect "Occupied."
+    *   *Negative Control:* Input known empty silence; expect "Empty."
+    *   *Metric:* False Negative Rate (predicting "Empty" when "Occupied").
+    *   *Stop Condition:* If False Negative Rate > 0% in freezing temperature simulations, **block launch**.
+*   **Probe Set B (The Irregular Schedule):** Simulate shift workers, holiday variations, and irregular school schedules that deviate from standard "9-to-5" training data.
+    *   *Metric:* Error rate by simulated demographic segment.
+    *   *Stop Condition:* Any subgroup shows significantly higher error rates than the aggregate.
+*   **Probe Set C (Sensor Failure/Noise):** Inject noise or missing data streams (e.g., Wi-Fi dropout, sensor battery low) to see if the model defaults to "Empty" (unsafe) or "Unknown/Occupied" (safe).
+    *   *Stop Condition:* Model defaults to "Empty" on missing data.
+
+**Reporting:** Do not invent an accuracy percentage. Report results as "UNVERIFIED" for any scenario not covered by your simulation. Explicitly state that simulated patterns may not capture real-world edge cases.
+
+**3. Risk Management (MANAGE)**
+Given the high stakes (health/property damage) and the two-week constraint:
+
+*   **Human-in-the-Loop Gate (Mandatory):** Do not enable fully autonomous shutoff. The system must require explicit user confirmation before shutting off heat if the temperature is near freezing, or if the "empty" prediction confidence is below a very high threshold.
+*   **Defined Confidence Tiers:** Do not show users a raw probability (e.g., "87% empty"). Instead, use defined tiers:
+    *   *Confirmed Empty:* Strong signals over long duration + moderate temps.
+    *   *Likely Empty:* Standard patterns.
+    *   *Uncertain/Assume Occupied:* Irregular patterns, low temps, or sensor noise. **Default to "Occupied" in this tier.**
+*   **Phased Rollout:** Deploy initially as "Advisory Only" (sending notifications: "We think you're away, want to save energy?") rather than executing the shutoff. Only move to automation after collecting real-world feedback.
+*   **Transparency Artifact:** Draft a Model Card stating the reliance on simulated data, the known limitations regarding irregular schedules, and the specific conditions under which the system defaults to safety (heat on).
+
+**4. Governance (GOVERN)**
+Assign a specific owner (e.g., Lead Data Scientist) responsible for reviewing any "False Negative" incidents. Mandate an immediate re-evaluation if the model version changes or if real-world data becomes available.
+
+**Note:** Because this involves potential physical harm and regulated utilities, route the question of legal disclosure requirements and liability to legal counsel immediately; do not rely solely on this technical framework for compliance.
+The "two-week" deadline does not justify bypassing the human-in-the-loop gate for irreversible, high-stakes actions.

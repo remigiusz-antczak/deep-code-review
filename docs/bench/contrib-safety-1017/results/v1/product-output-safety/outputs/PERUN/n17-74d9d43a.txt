@@ -1,0 +1,41 @@
+### Pre-Launch Output Safety Plan: SalesBoost Email Generator
+
+**1. Harm Inventory (MAP)**
+Before launch, explicitly record the following risks for your alpha release:
+*   **Hallucination as Fact:** The model invents a recent job change, award, or project that never happened, making the recipient feel the sender is lying or incompetent.
+*   **Stalking/Creepiness:** The email cites outdated or overly personal data (e.g., a job held 5 years ago, a hobby mentioned once), causing distress or fear.
+*   **Missing AI Disclosure:** The recipient believes a human spent hours researching them, creating a false sense of relationship depth.
+*   **Unsafe Automation:** Sending thousands of emails with incorrect details before a human notices the pattern, causing immediate reputational damage.
+
+**2. Measurement Plan (MEASURE)**
+Since you cannot afford premium verification tools, you must test the *outputs* rigorously using free methods. Create one test row for each harm above:
+
+*   **Probe Set:** Construct a "Golden Dataset" of 20 fake profiles with known facts (e.g., "Job A ended in 2021," "No award won"). Include "poisoned" inputs where public APIs return conflicting or old data.
+*   **Positive Control:** Input a profile where the only correct answer is "Do not mention X." If the email mentions X, it fails.
+*   **Negative Control:** Input a profile with clear, recent data. The email should reference it accurately without over-interpreting.
+*   **Metric:** "Hallucination Rate" = (Number of emails citing false/outdated facts) / (Total emails generated).
+*   **Pass Threshold:** **Zero tolerance** for citing definitively false facts (e.g., wrong current employer). For ambiguous/outdated data, the threshold is <5% of outputs.
+*   **Stop Condition:** If any email in the test batch makes up a specific achievement or cites a job title known to be old, **block launch**.
+*   **Owner:** One of the four growth hackers must manually review every failed test case.
+
+*Note on Constraints:* Use free API sandboxes to simulate "noisy" data. Do not rely on the model's self-correction; verify outputs against your known Golden Dataset manually.
+
+**3. Risk Management (MANAGE)**
+*   **Human-in-the-Loop Gate (Critical):** Because sending a cold email is an irreversible action that impacts reputation, **do not fully automate sending** in alpha. Every generated email must be queued for human review. The human reviewer checks: "Is this fact currently true? Does this sound like stalking?"
+*   **Show Uncertainty:** Instruct the generator to omit details if confidence is low. If the scraped data is older than 12 months, the prompt should force the model to write a generic opener rather than guessing.
+*   **Confidence Tiers:** Do not show the user a percentage (e.g., "87% confident"). Instead, use defined tiers in your internal logic:
+    *   *Confirmed:* Data found in multiple recent sources.
+    *   *Single-Source:* Data found in one place, >6 months old. (Action: Do not personalize based on this).
+    *   *Unverified:* Conflicting data. (Action: Skip personalization).
+*   **Disclosure:** Add a subtle footer or signature indicating the message was "prepared with AI assistance" to manage expectations about the research depth.
+
+**4. Governance (GOVERN)**
+*   **Owner:** Assign one team member as the "Output Safety Owner" responsible for re-running the Golden Dataset test whenever the scraping logic or prompt changes.
+*   **Transparency Artifact:** Create a simple one-page "Model Card" for internal use documenting: intended use (cold outreach), known limitations (cannot verify real-time job changes), and the manual review process. This is required even for a lean team.
+
+**Immediate Next Steps:**
+1.  Build the 20-profile Golden Dataset today.
+2.  Implement the human review queue; do not bypass it for "speed."
+3.  Run the test. If the model hallucinates a single fake award, do not ship.
+
+*Note: Legal requirements for AI disclosure in cold outreach vary by region; consult counsel before wide release. This plan measures technical output safety, not legal compliance.*

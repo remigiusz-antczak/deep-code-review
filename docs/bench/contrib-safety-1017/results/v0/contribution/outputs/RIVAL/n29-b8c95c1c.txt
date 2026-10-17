@@ -1,0 +1,68 @@
+### Immediate Action Plan: Securely Scrubbing the Secret
+
+Since the commit exists **only locally** and has **not been pushed**, you can completely erase the secret from your history without affecting anyone else. Follow these steps precisely to rewrite history and ensure no traces remain.
+
+#### Step 1: Isolate and Rewrite History
+Use `git filter-branch` or the modern, faster `git filter-repo` (recommended if installed) to remove the specific file containing the token from the entire history of your current branch.
+
+**Option A: Using `git filter-repo` (Preferred)**
+If you have `git-filter-repo` installed:
+```bash
+# Remove the specific file from all commits in this branch
+git filter-repo --path path/to/your/secret_file.py --invert-paths
+```
+*Replace `path/to/your/secret_file.py` with the actual relative path of the file.*
+
+**Option B: Using `git filter-branch` (Built-in)**
+If you cannot install extra tools:
+```bash
+git filter-branch --force --index-filter \
+  "git rm --cached --ignore-unmatch path/to/your/secret_file.py" \
+  --prune-empty --tag-name-filter cat -- --all
+```
+
+#### Step 2: Expire Reflogs and Garbage Collect
+Git keeps a "reflog" (a safety net of previous states) that might still contain the bad commit hash. You must expire these entries and run garbage collection to permanently delete the objects.
+
+Run these commands in order:
+```bash
+# Expire all reflog entries immediately
+git reflog expire --expire=now --all
+
+# Run aggressive garbage collection to prune unreachable objects
+git gc --prune=now --aggressive
+```
+
+#### Step 3: Verify the Secret is Gone
+Before doing anything else, verify that the secret no longer exists in any commit object or blob in your repository.
+
+1. **Search all commits for the token string** (replace `<PARTIAL_TOKEN>` with a unique segment of the revoked token):
+   ```bash
+   git log -p --all -S "<PARTIAL_TOKEN>"
+   ```
+   *If this returns no output, the token is successfully removed from history.*
+
+2. **Check for the specific file in any commit:**
+   ```bash
+   git log --all --full-history -- path/to/your/secret_file.py
+   ```
+   *This should return nothing if the file was completely scrubbed.*
+
+3. **Double-check reflogs (optional but recommended):**
+   ```bash
+   git reflog show --all | grep "<PARTIAL_TOKEN>"
+   ```
+   *Ensure no matches appear.*
+
+#### Step 4: Final Safety Check Before Pushing
+Once verification passes:
+1. Create a fresh clone of your repository in a temporary directory and point it to your local fork (if you have one) or just inspect the `.git` directory size to ensure it shrank significantly.
+2. Only then push your branch:
+   ```bash
+   git push origin your-branch-name --force-with-lease
+   ```
+   *Note: Since you never pushed the bad commit, a standard push might work, but `--force-with-lease` ensures you are overwriting the remote state safely if any placeholder exists.*
+
+### Critical Notes
+1. **Do not push** until `git log -p -S` returns absolutely zero results for the token string.
+2. Since you already revoked the token, the risk is mitigated, but maintaining a clean history is essential for trust with strict maintainers.

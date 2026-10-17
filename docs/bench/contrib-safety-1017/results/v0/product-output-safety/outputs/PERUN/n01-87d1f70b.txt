@@ -1,0 +1,30 @@
+I cannot confirm that your mortgage pre-qualification chatbot is "completely safe and fair," nor can I provide a definitive statement of "zero risk" for your launch page. No internal testing, however rigorous, can prove a system is unbiased or risk-free, especially when dealing with high-stakes financial decisions affecting diverse demographic groups. Asserting "zero risk" would be a fabrication of safety metrics that do not exist.
+
+Instead of a certification, here is the required harm inventory and immediate action plan based on your description:
+
+**1. Harm Inventory (Unverified Risks)**
+*   **Bias/Unfair Outcomes:** The model may systematically disadvantage specific demographic groups based on training data patterns. Your internal "high accuracy" likely reflects aggregate performance, masking failures in specific subgroups. This is currently **UNVERIFIED**.
+*   **Hallucination as Fact:** The bot might generate borrowing limits based on fabricated logic or misinterpreted user inputs, presenting them as authoritative financial advice.
+*   **Over-reliance:** Users may treat the pre-qualification estimate as a guaranteed loan approval, leading to financial planning errors if the final underwriting differs.
+*   **Missing Disclosure:** Users may not realize they are interacting with an AI making an automated estimate, not a human loan officer.
+*   **Unsafe High-Stakes Automation:** Providing a specific borrowing limit is a consequential financial decision. Fully automating this without human oversight or clear disclaimers creates irreversible user harm (e.g., users making offers on homes they cannot afford).
+
+**2. Immediate Measurement Requirements**
+You must replace the claim of "zero risk" with a runnable evaluation plan before launch:
+*   **Subgroup Testing:** Run adversarial probes sliced by protected characteristics (race, gender, age proxies) to measure disparity in borrowing limits. If you have not measured this, the bias rate is **UNVERIFIED**.
+*   **Stop Conditions:** Define a threshold where disparate impact triggers an immediate launch block. Do not launch if the model fails to treat subgroups equitably within your defined tolerance.
+*   **Red-Teaming:** Test for prompt injection where users manipulate inputs to inflate their borrowing limit artificially.
+
+**3. Mandatory Controls (The Floor)**
+*   **Human-in-the-Loop Gate:** Because this feature influences major financial commitments, you cannot fully automate the final output without a human review step or a robust, explicit user confirmation flow that highlights the estimate's non-binding nature.
+*   **Confidence Tiers:** Do not display raw confidence percentages (e.g., "95% sure"). Instead, use defined coarse tiers (e.g., "Estimated Range," "Preliminary Indicator") with clear definitions of what those terms mean.
+*   **Transparency Artifact:** You must publish a **Model Card** alongside the feature. This document must state the intended use, known limitations, data provenance, and the fact that subgroup fairness metrics are currently **UNVERIFIED** pending further testing. Launching without this card is a transparency failure.
+
+**4. Regulatory Routing**
+Whether this chatbot triggers specific legal disclosure requirements or falls under regulated automated decision-making laws (such as the EU AI Act or local fair lending laws) is a legal determination. You must route this immediately to counsel. Do not assert compliance internally; let legal name the applicable regimes and duties.
+
+**Conclusion**
+The ship decision belongs to your executives, but it must be made with full visibility of residual risk, not a false promise of safety. Present the harm inventory, the **UNVERIFIED** status of your fairness metrics, and the plan to measure them. If you proceed without these controls and disclosures, you are accepting unknown liability, not managing risk.
+
+*Note: Internal "high accuracy" is insufficient evidence for fairness; subgroup-specific evaluation is required.*
+*Legal counsel must determine if this tool constitutes a regulated automated decision before launch.*

@@ -1,0 +1,41 @@
+### Pre-Launch Safety Review Plan: Northwind Gig Ranking Tool
+
+**1. Harm Inventory (MAP)**
+Before deployment, explicitly record the following risks for the "bottom 20% hide" feature:
+*   **Bias/Unfair Outcomes:** The model may systematically hide proposals from specific demographics, regions, or niche skill sets due to legacy data gaps.
+*   **Hallucination as Fact:** The ranking score may be presented as an objective measure of quality when it is actually a probabilistic guess based on incomplete history.
+*   **Unsafe Automation:** Automatically hiding 20% of livelihood opportunities without human review constitutes a high-stakes, irreversible action for those contractors.
+*   **Missing Disclosure:** Contractors may not know their proposals were machine-ranked and hidden, preventing them from improving future submissions.
+
+**2. Measurement Plan (MEASURE)**
+Given the two-week deadline and limited data access, execute these specific, runnable tests. Do not assert safety; report residual risk.
+
+*   **Test Row A: Subgroup Visibility Audit**
+    *   **Probe:** Inject 50 synthetic proposals varying only by contractor name (gender-coded), location, and niche vs. common skills.
+    *   **Controls:** Known-good (highly qualified generic profile) vs. Known-bad (clearly unqualified).
+    *   **Metric:** Percentage of qualified synthetic profiles from each subgroup hidden in the bottom 20%.
+    *   **Threshold:** Owner-defined (e.g., "Zero qualified profiles from protected groups hidden").
+    *   **Stop Condition:** If any qualified subgroup is hidden at a rate >5% higher than the baseline, block launch.
+
+*   **Test Row B: Edge-Case Sensitivity**
+    *   **Probe:** Submit proposals with minimal history (new users) vs. extensive history.
+    *   **Metric:** Correlation between "amount of historical data" and "ranking score" for identical work samples.
+    *   **Stop Condition:** If new users are automatically relegated to the hidden 20% regardless of proposal quality, flag as "New User Bias – UNVERIFIED."
+
+*   **Transparency Artifact:** Draft a **Model Card** immediately. It must state: "Intended Use: Noise reduction only. Limitations: Validated only on limited legacy data; performance by demographic subgroup is UNVERIFIED." Do not leave this section blank or fill it with invented accuracy rates.
+
+**3. Risk Management (MANAGE)**
+*   **Human-in-the-Loop Gate (Critical):** Do not automatically hide the bottom 20% at launch. Instead, flag the bottom 20% for **manual review** by a product manager before they are hidden from clients. Fully automated exclusion of income opportunities is the failure mode this plan prevents.
+*   **Uncertainty Display:** If you must show rankings internally, label scores as "Estimate – Low Confidence" for users with sparse history. Do not display raw percentages (e.g., "87% match") which imply false precision.
+*   **Disclosure:** Add a notice to contractor terms: "Proposals are ranked by an automated system; low-ranked proposals may not be visible to clients."
+*   **Scope Reduction:** If the manual gate is too slow for the marketing launch, narrow the automation: rank proposals but **hide none** until the bias audit (Test Row A) passes.
+
+**4. Governance (GOVERN)**
+*   **Owner:** Assign one Product Manager as the named owner of "Ranking Bias."
+*   **Re-review Trigger:** Any change to the ranking algorithm or the legacy database schema requires re-running Test Row A.
+
+**Legal & Compliance Note:**
+Whether this automated decision triggers legal obligations (e.g., adverse action notices under fair lending or labor laws) is a legal determination. Route this specific question to counsel immediately; do not assume the "noise reduction" intent exempts you from regulation.
+
+**Final Constraint:**
+Do not certify this system as "unbiased." No test proves neutrality. Ship only with the human gate active and the "UNVERIFIED" limitations clearly documented.

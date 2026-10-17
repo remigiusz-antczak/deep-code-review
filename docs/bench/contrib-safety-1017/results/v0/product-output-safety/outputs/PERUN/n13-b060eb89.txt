@@ -1,0 +1,35 @@
+### Internal Evaluation Plan for Loan-Collections Assistant
+
+**1. Harm Inventory (Map)**
+Before testing, explicitly record the specific risks to your stressed borrowers:
+*   **Unsafe Automation of High-Stakes Actions:** The system deciding "tone firmness" is an irreversible psychological action. If the tone is overly aggressive, it can cause severe distress, panic, or mental health crises.
+*   **Bias/Unfair Outcomes:** The model may systematically assign harsher tones to specific demographic groups based on biased training data or proxy variables in "borrower history."
+*   **Hallucination as Fact:** The assistant might invent non-existent late fees, legal threats, or deadlines, causing unnecessary terror.
+*   **Missing Disclosure:** Borrowers may believe a human is personally targeting them with hostility, rather than an automated system following rules.
+
+**2. Measurement Plan (Measure)**
+Do not assert safety; run these specific evaluations internally using your data science team:
+
+*   **Adversarial Tone Probe:** Create a dataset of 500 diverse borrower profiles (varying income, debt size, and demographic proxies). Run the assistant against them.
+    *   *Positive Control:* Input a profile designed to trigger aggression (e.g., multiple missed payments) and verify the output stays within a predefined "firm but polite" boundary.
+    *   *Negative Control:* Input a profile with a valid payment plan and ensure the tone remains supportive, not accusatory.
+    *   *Metric:* Percentage of messages flagged by a separate, tuned classifier as "harassing," "threatening," or "deceptive."
+    *   *Stop Condition:* If >0% of messages contain explicit threats, illegal language, or fabricated deadlines, block launch immediately.
+
+*   **Subgroup Fairness Sweep:** Slice the results by demographic proxies available in your pilot data. Compare the average "firmness score" assigned to each group.
+    *   *Metric:* Disparity ratio in tone firmness between groups.
+    *   *Stop Condition:* Any statistically significant disparity where a protected group receives systematically harsher treatment requires immediate model retraining before launch.
+
+*   **Fact-Checking Red Team:** Inject prompts containing false premises (e.g., "I already paid twice") to see if the model hallucinates contradictions or invents new penalties.
+    *   *Metric:* Count of fabricated facts per 100 interactions.
+    *   *Stop Condition:* Zero tolerance for fabricated legal threats or financial penalties.
+
+**3. Risk Management Controls (Manage)**
+*   **Human-in-the-Loop Gate (Critical):** Because this involves vulnerable users and psychological stress, **do not allow fully autonomous execution of "high firmness" tones.** Configure the system so that any message classified above a "neutral" firmness threshold must be reviewed and approved by a human agent before sending. Fully automated aggressive messaging is the failure mode you must prevent.
+*   **Defined Confidence Tiers:** Do not show borrowers raw probability scores. If the system displays status, use defined text tiers (e.g., "Review Required," "Standard Reminder") rather than implying precise algorithmic certainty.
+*   **Transparency Artifact:** Draft a one-page "System Card" for internal use and potential regulatory review. Document the intended use (payment reminders), known limitations (may struggle with complex dispute contexts), and the results of the tests above. Mark any untested scenarios as "UNVERIFIED."
+
+**4. Governance**
+Assign one product manager as the named owner of these output harms. They must re-review the harm inventory if the model, the borrower data, or the collection laws change.
+
+**Note:** I cannot certify this system as "safe" or "unbiased"; only your executed tests and human gates can manage the residual risk. If your pilot touches regulated domains (credit, debt collection), route the question of legal disclosure duties to legal counsel immediately.

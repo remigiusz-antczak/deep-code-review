@@ -1,0 +1,15 @@
+To validate scoring fairness before pilot testing, implement the following steps using your current constraints:
+
+1.  **Construct a Synthetic "Golden Set"**: Since historical data is limited, manually create 50–100 synthetic grant applications representing diverse applicant profiles (e.g., varying geographic locations, organization sizes, mission types, and demographic leadership). Assign these applications ground-truth scores based on your explicit scoring rubric, ensuring a mix of clear approvals, clear rejections, and borderline cases. This set serves as your unbiased benchmark.
+
+2.  **Perform Counterfactual Testing**: Take pairs of identical synthetic applications and alter only one protected or sensitive attribute (e.g., changing the organization's location from urban to rural, or the founder's name). Run these through your scoring logic. Any significant score deviation between the paired applications indicates bias in how the model weighs that specific attribute, independent of merit.
+
+3.  **Audit Feature Importance via Perturbation**: Systematically vary individual input fields within your synthetic set while holding others constant. Observe which changes cause the largest score fluctuations. If minor, irrelevant details (e.g., font choice in the text description or specific phrasing unrelated to criteria) cause large score swings, the model is likely latching onto noise rather than signal.
+
+4.  **Blind Human Baseline Comparison**: Have your six team members independently score the same "Golden Set" of synthetic applications using only the written rubric, without seeing the AI's output. Calculate the inter-rater reliability (agreement) among humans. Then, compare the AI's scores against the human average. The AI should not deviate significantly from the consensus human score; if it consistently scores specific categories of applicants lower than the human average, investigate those specific decision boundaries.
+
+5.  **Stress-Test Edge Cases**: Create synthetic applications that deliberately test the boundaries of your eligibility criteria (e.g., an applicant with perfect metrics but missing one minor document, or an applicant with low metrics but a compelling emergency context). Verify that the scoring logic degrades gracefully and applies rules consistently rather than producing erratic outputs for non-standard inputs.
+
+6.  **Document Failure Modes**: Before piloting, record specific scenarios where the model is known to struggle or where the rubric is ambiguous. Establish a protocol for human review of any application falling within these identified risk zones or receiving a score within a narrow "review band" (e.g., the top 10% of rejected and bottom 10% of accepted).
+
+Note: These steps rely entirely on your internal rubric and synthetic data, requiring no external network access or additional historical datasets. Prioritize the counterfactual tests first, as they offer the highest confidence in detecting attribute-based bias with minimal data.

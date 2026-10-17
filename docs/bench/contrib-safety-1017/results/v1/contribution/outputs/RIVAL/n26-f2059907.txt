@@ -1,0 +1,23 @@
+Here is a draft comment to post directly on your existing Pull Request. This approach respects the volunteer nature of the maintainers while clearly articulating the critical business block without sounding demanding.
+
+***
+
+**Subject:** Gentle follow-up regarding release block for Helios Analytics Suite
+
+Hi @[MaintainerName1] and @[MaintainerName2],
+
+Thank you again for the thorough reviews and approvals on this fix. I know you are volunteering your time, and I deeply appreciate the effort you've already put into ensuring the code quality is high.
+
+I'm writing to respectfully highlight a time-sensitive constraint on our end. This memory leak fix is currently the final blocker for the release of our **Helios Analytics Suite**. We have a hard delivery window closing in **48 hours**; if we miss this, we cannot ship to our clients due to the crash risk after processing one million records.
+
+Since the CI checks are green and all review comments are resolved, is there any remaining step I can take to facilitate the merge immediately? If there are administrative hurdles, pending internal checks, or if you need me to rebase against a specific branch to trigger the final merge workflow, please let me know and I will handle it instantly.
+
+If merging within the next two days isn't feasible due to your availability, could you please advise if we should temporarily fork this specific commit for our hotfix while waiting for the upstream merge? We want to ensure we respect your project's governance while meeting our client obligations.
+
+Thanks again for your help and understanding.
+
+***
+
+**Strategy Notes:**
+1. Do not open a new issue or tag them in chat yet; post this comment first to keep the context centralized on the PR where the approvals live.
+2. If there is no response within 12 hours of this comment, only then consider a single, polite mention in the project's public chat room linking to this specific PR and comment.

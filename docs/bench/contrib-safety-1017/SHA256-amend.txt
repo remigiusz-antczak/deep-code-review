@@ -1,0 +1,5 @@
+6ba22135898daa8a543a16de0aec08ffab65ec3a9b2aa9a969221e52952b250f  docs/bench/contrib-safety-1017/bench.py
+94a7d051efe799b83245c14e3e61962339e53e601005e9e7e3e7cab5869dbbf7  docs/bench/contrib-safety-1017/PREREGISTERED-ADDENDUM-1.md
+6eaa4d78f99ee7c36a38c22a4417550b41a7221c6d5b9cda6da694aa8676d3fc  docs/bench/contrib-safety-1017/PREREGISTERED-ADDENDUM-2.md
+ac42060c3ada2dfe23ff01c8d1ab156228ec7ab27cce7f7b8abaaaf2c574fef8  scripts/eval-fixtures/rival/contribution/heldout30.json
+6b834294f953794632c0dbd20c34eeefa921a6e8835147185021a2314324d802  scripts/eval-fixtures/rival/product-output-safety/heldout30.json

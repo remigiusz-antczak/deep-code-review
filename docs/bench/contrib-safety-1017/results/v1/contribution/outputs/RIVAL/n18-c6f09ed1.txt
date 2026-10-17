@@ -1,0 +1,29 @@
+### Proposed Issue Comment / PR Description Draft
+
+**Title:** Revert coordinate parsing change to restore spec-compliant edge case handling
+
+**Summary**
+This proposal reverts the recent coordinate parsing update to restore behavior aligned with the original specification. The current implementation introduces a regression for standard edge cases defined in the spec, resulting in integration failures (error 503) for downstream consumers relying on documented behavior.
+
+**Technical Regression & Specification Mismatch**
+The merged change altered how coordinate data is parsed, specifically ignoring an edge case explicitly covered in the original RiverCity Mapping specification. While the intent to optimize parsing is understood, the new logic fails when encountering [describe the generic edge case, e.g., "null values in the Z-axis" or "non-standard delimiter sequences"] which the spec mandates must be handled gracefully.
+
+Evidence of this mismatch includes:
+1.  **Spec Deviation:** Section [X.Y] of the RiverCity spec requires [quote the generic requirement], which the current code path bypasses.
+2.  **Observed Failure:** Downstream integrations adhering to the spec now encounter error 503 when processing valid, spec-compliant inputs. This suggests the change breaks backward compatibility for standard use cases, not just proprietary configurations.
+
+**Proposed Path Forward**
+To minimize disruption while a robust, consensus-based solution is developed:
+1.  **Immediate Revert:** Revert the specific commit to restore the previous, spec-compliant behavior. This unblocks downstream users immediately.
+2.  **New Issue for Discussion:** Open a dedicated issue to discuss the optimization goal. This allows time to gather broader community input and design a solution that handles the edge case without violating the spec or breaking existing integrations.
+
+**Confidentiality Note**
+The failure mode described (error 503 on spec-compliant input) is reproducible using standard test vectors defined in the public specification; no proprietary data formats are required to validate this regression.
+
+**Next Steps**
+I am happy to assist with the revert PR or help draft the follow-up design discussion. My goal is to ensure RiverCity remains robust and spec-compliant for all users.
+
+---
+
+*This draft focuses strictly on public specification deviations to avoid revealing proprietary data.*
+*Opening an issue before the PR is recommended if the project strictly requires consensus for reverts.*

@@ -1,0 +1,15 @@
+Do not send your proprietary schema, sample data, or a synthetic generator that mimics your specific field names or relationships. Instead, provide the maintainer with a **minimal, abstract C++ test case** that hard-codes only the structural properties required to trigger the crash, stripped of all domain context.
+
+Construct this reproduction as follows:
+1.  **Isolate the Structural Trigger:** Identify the exact memory layout causing the offset 4096 error (e.g., a specific nesting depth, a struct size alignment, or a count of nested elements).
+2.  **Create Generic Primitives:** Write a standalone C++ file using only standard types (`struct`, `std::vector`, `int`, `void*`). Name variables generically (`node_a`, `child_list`, `payload_size`) rather than using logistics terms (`shipment`, `route_id`).
+3.  **Hard-Code the Crash:** Initialize these generic structures directly in the code with values that reproduce the specific memory alignment or access pattern causing the segfault. Do not read from external files or databases.
+4.  **Verify Independence:** Ensure this file compiles and crashes using only the public Vertex Grid headers and your local build. If it runs without the library, it is not a valid reproduction; if it requires your internal headers, it is not safe to share.
+5.  **Submit the Artifact:** Share only this single `.cpp` file and the specific compiler flags used. Explicitly state: "This file contains no proprietary logic, field names, or data. It reproduces the invalid memory access at offset 4096 using only generic structures."
+
+If you cannot isolate the crash without your specific schema logic, reply to the maintainer: "The segmentation fault is strictly dependent on a complex interaction of proprietary nested types that cannot be legally exported or abstracted without losing the failure condition. I can offer a remote debugging session (e.g., via gdb server or a screened video call) where you can observe the crash live on our secure infrastructure, or I can run specific memory sanitizers you provide and share only the resulting stack traces."
+
+Never attempt to "sanitize" real data by stripping names; the structural relationships themselves are often confidential. The goal is to prove the library's defect, not to describe your data.
+
+Note: If the maintainer refuses remote debugging and insists on data you cannot legally provide, escalate the issue within your organization's legal or security team before proceeding further.
+Note: Document your attempt to provide a minimal reproduction in your internal incident log to demonstrate due diligence.

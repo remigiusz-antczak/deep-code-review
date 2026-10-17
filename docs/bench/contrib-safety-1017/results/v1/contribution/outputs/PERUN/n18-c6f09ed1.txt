@@ -1,0 +1,32 @@
+**Call:** Do not open a revert PR yet. Instead, file a bug report with a minimal, sanitized reproduction and ask Jane for her perspective on the specification mismatch; propose the revert only if consensus forms that the change broke the standard behavior.
+
+**Deliverable (Issue Body ready to paste):**
+
+**Title:** Regression in coordinate parsing (Error 503) following recent merge – potential specification mismatch
+
+**Body:**
+Hi @Jane and the RiverCity Mapping team,
+
+Following the recent update to the coordinate data parser, our integration tests began returning Error 503 when processing specific edge cases. We believe this may indicate a regression against the original specification regarding [insert specific edge case from spec, e.g., "handling of null islands" or "negative zero normalization"], which the previous implementation appeared to support.
+
+We have reproduced this behavior in a minimal, standalone script that requires no proprietary data or internal Acme Geospatial formats. The script isolates the parsing logic and demonstrates the failure against the documented standard.
+
+**Minimal Reproduction:**
+```python
+# [Paste your sanitized, generic script here that triggers the 503 using only standard spec values]
+# This script uses only values defined in the public specification, Section X.Y.
+```
+
+**Observed Behavior:**
+The parser returns Error 503 when encountering [describe generic input], whereas the specification (Section X.Y) implies this should be handled as [describe expected behavior].
+
+**Question for the team:**
+Was the change intended to deprecate this specific edge case, or might it be an unintentional regression? If the latter, would the team be open to a temporary revert of the parsing change while we collaboratively design a solution that satisfies both the new requirements and the existing specification?
+
+We want to ensure we aren't missing context from the original discussion that led to the merge. Any insight into the intended behavior here would be greatly appreciated.
+
+Thanks for your time and maintenance of this project.
+
+---
+
+**Note:** Replace the bracketed placeholders with the specific section of the public specification and a generic script that uses only standard values; do not include any Acme-specific data paths or formats. If Jane responds that the change was intentional, ask for guidance on how to adapt your integration rather than pushing for a revert.

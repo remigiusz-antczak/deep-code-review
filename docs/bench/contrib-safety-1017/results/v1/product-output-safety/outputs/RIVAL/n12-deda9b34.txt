@@ -1,0 +1,40 @@
+### Comprehensive Review: Podcast Transcript Summarization Risks & Internal Tests
+
+Given your two-week deadline and the critical need to maintain host trust and listener accuracy, here is a focused review of potential risks in your summarization pipeline and specific internal tests to validate the system before launch.
+
+#### 1. Risk: Tone and Voice Drift
+**The Issue:** The model may sanitize colorful language, over-formalize casual speech, or inadvertently inject a "corporate" or "robotic" tone that clashes with the host's unique personality. This breaks the listener's expectation of authenticity.
+**Internal Test: The "Blind Voice" Match**
+*   **Setup:** Select 5 diverse episodes (humorous, serious, technical, interview-heavy, solo rant). Generate summaries for each.
+*   **Action:** Present the summary alongside two short, raw transcript excerpts (one from the actual episode, one from a different host with a similar topic) to three team members who know the host's voice well.
+*   **Success Criteria:** Reviewers must correctly identify the source episode 100% of the time based *only* on the tone of the summary matching the raw excerpt. If they hesitate or pick the wrong source, the prompt needs tuning to preserve specific linguistic markers (e.g., slang, sentence structure).
+
+#### 2. Risk: Contextual Hallucination & Attribution Errors
+**The Issue:** The model might attribute a guest's controversial opinion to the host, or fabricate a conclusion that was implied but never explicitly stated. This is the highest liability risk.
+**Internal Test: The "Claim Trace" Audit**
+*   **Setup:** Generate summaries for 3 episodes featuring strong guest opinions or complex debates.
+*   **Action:** For every definitive statement in the generated blurb (e.g., "The host argues that X is true"), a reviewer must locate the exact timestamp in the transcript where the host says this.
+*   **Success Criteria:** Zero instances of misattribution. If the summary says "The host believes..." but the transcript shows the host only asked a question about it, the test fails. Implement a strict rule: if the model cannot find a direct anchor, it must use hedging language (e.g., "The discussion explores...") rather than asserting host belief.
+
+#### 3. Risk: Nuance Collapse in Complex Topics
+**The Issue:** In an effort to be concise, the summarizer might flatten a nuanced "on the one hand, on the other hand" argument into a single, misleading definitive stance.
+**Internal Test: The "Steel-Man" Check**
+*   **Setup:** Choose 2 episodes where the host presents a balanced view or changes their mind mid-conversation.
+*   **Action:** Have a team member who listened to the full episode rate the summary on a scale of 1–5 for "Fairness to Complexity."
+*   **Success Criteria:** Any score below 5 requires a prompt iteration. Specifically, test if the summary captures the *conditionality* of the host's views (e.g., "The host supports X, *provided that* Y happens") rather than just the support.
+
+#### 4. Risk: Sensitivity and Brand Safety
+**The Issue:** The model might inadvertently highlight sensitive topics (health, finance, politics) in a way that violates platform guidelines or misrepresents the host's intent as advice rather than opinion.
+**Internal Test: The "Advisor" Simulation**
+*   **Setup:** Run summaries through a secondary check (manual or automated keyword scan) looking for imperative verbs (e.g., "You should," "Buy," "Avoid").
+*   **Action:** Verify that no summary sounds like financial, medical, or legal advice unless the host is a licensed professional explicitly giving it.
+*   **Success Criteria:** All summaries must clearly frame content as "discussion," "storytelling," or "opinion" rather than "instruction."
+
+#### Immediate Next Steps for Your 2-Week Sprint
+1.  **Create a "Golden Set":** Immediately curate 10 episodes with manually written, perfect summaries. Use these as your regression test suite. Every time you tweak the prompt, re-run these 10 to ensure you haven't broken existing quality.
+2.  **Prompt Guardrails:** Update your system prompt to explicitly forbid attribution without evidence. Example instruction: *"Never attribute an opinion to the host unless they explicitly state it. If a guest speaks, label it as the guest's view."*
+3.  **Human-in-the-Loop:** For the first month of launch, mandate a 5-minute human review of every summary before publication. Automation is not yet safe enough for full autonomy given your brand risks.
+
+By focusing on these four specific failure modes and running the associated targeted tests, you can significantly reduce the risk of misrepresentation before your marketing campaign goes live.
+
+*Note: Prioritize the "Claim Trace" audit above all else; attribution errors are the most damaging to host trust. Ensure your "Golden Set" includes edge cases like crosstalk and overlapping speakers.*

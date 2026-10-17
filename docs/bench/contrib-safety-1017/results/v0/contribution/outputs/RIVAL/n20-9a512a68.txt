@@ -1,0 +1,29 @@
+Subject: Re: Critical bug where recurring payments are skipped
+
+Hi Ravi,
+
+Thank you so much for opening this issue and for taking the time to investigate the billing system. It's fantastic to see new contributors diving deep into the codebase, and your concern about payments being skipped is completely understandable given how critical that functionality is.
+
+I've reviewed your report alongside our public documentation and the current implementation, and I want to clarify what's happening here to ensure we're all on the same page. The behavior you observed—where a payment appears to be "skipped" on the due date but processes shortly after—is actually an intentional feature known as the **grace period**.
+
+Here is how it works according to our design:
+1.  **Grace Period Window:** When a recurring payment date arrives, the system intentionally waits for a configured duration (the grace period) before attempting to charge. This is designed to accommodate bank processing delays or temporary funding issues without immediately flagging the account as delinquent.
+2.  **Delayed Execution:** During this window, the payment status may look like "pending" or appear skipped in certain views, but the system is simply pausing before execution.
+3.  **Automatic Processing:** Once the grace period elapses, the payment processes automatically unless the user has explicitly cancelled or failed to fund the account by the end of the window.
+
+It looks like the current documentation might not highlight this timing nuance clearly enough, which led to your (very reasonable) assumption that this was a bug. While the code is functioning as intended, your report has highlighted a genuine gap in our user-facing explanations.
+
+**Next Steps**
+Since this is not a code defect, I propose we:
+1.  **Close this issue** as "working as designed."
+2.  **Open a new documentation issue** (or I can open one now) to track an improvement to our docs. We should explicitly explain the grace period behavior in the "Recurring Payments" section so future users and contributors know what to expect.
+
+Would you be interested in tackling that documentation update? It would be a great first contribution to help clarify this for others, and I'd be happy to guide you through the process if you're keen.
+
+Thanks again for helping us improve the project's clarity!
+
+Best regards,
+[Your Name]
+
+---
+*Note: This draft validates the contributor's effort while firmly correcting the technical misunderstanding using only public logic. It pivots the conversation toward a documentation fix to keep the contributor engaged without wasting dev time on a non-bug.*

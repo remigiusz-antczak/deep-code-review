@@ -1,0 +1,35 @@
+**Call:** Draft a private, evidence-based disclosure to the maintainers now; do not open a public issue yet.
+
+**Deliverable (paste into a private email or direct message to the lead maintainer):**
+
+Subject: Private security/legal disclosure: Potential licensing conflict in date formatting module
+
+Hello Zenith Maintainers,
+
+I am writing to privately disclose a potential licensing violation I discovered while auditing the Zenith UI library source code. I believe this was likely an honest mistake rather than malicious intent, but it requires immediate attention to prevent legal liability for your users.
+
+**The Issue:**
+In the date formatting module (specifically the leap year calculation logic), I identified a code block that appears to be copied verbatim from a proprietary library previously sold by Globex Corporation. That code is governed by restrictive commercial terms that are incompatible with Zenith's stated MIT license.
+
+**Evidence Provided:**
+To assist your verification without public exposure, I have prepared the following:
+1. **Line-by-line comparison:** A sanitized diff showing the identical logic between the Zenith source and the proprietary reference, highlighting the specific leap year algorithms.
+2. **License text excerpt:** The relevant clauses from the proprietary license that conflict with MIT redistribution.
+3. **File coordinates:** Exact file paths and line numbers within the Zenith repository where this code resides.
+
+I have not opened a public issue or discussed this elsewhere to allow you to investigate and remediate safely. Given the potential impact on the entire ecosystem of Zenith users (including my own team at Northwind), I wanted to ensure you could address this before it becomes a public liability.
+
+**Next Steps:**
+Could you please confirm receipt of this message and indicate a timeline for your internal review? I am happy to provide the full comparison data via a secure channel of your choice or assist in identifying clean-room alternatives if needed.
+
+Thank you for your stewardship of this project.
+
+Sincerely,
+[Your Name]
+[Your Contact Info]
+
+***
+
+**Notes:**
+1. Send this only to a verified private contact (e.g., email listed in `package.json` or a direct maintainer DM); if no private channel exists, ask a trusted community member for an introduction before proceeding.
+2. Retain your original audit notes locally but do not share the actual proprietary code snippet publicly until the maintainers confirm their investigation process.

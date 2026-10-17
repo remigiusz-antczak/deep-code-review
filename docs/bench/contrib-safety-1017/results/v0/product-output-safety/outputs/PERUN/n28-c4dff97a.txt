@@ -1,0 +1,17 @@
+I cannot confirm that your algorithm is equally accurate for all body types and cycle variations, nor can I assert that there is zero risk of harmful misinformation. Doing so would fabricate safety metrics where none exist and ignore the specific data gaps you identified.
+
+**Harm Inventory & Critical Findings**
+Your feature generates high-stakes automated decisions (family planning) with a known **Bias** risk: training data from a narrow demographic cannot support claims of equal accuracy across diverse body types. The worst-case scenario is unintended pregnancy or severe emotional distress. Additionally, claiming "zero risk" of **Hallucination** (misinformation) is impossible without adversarial testing, which has not been performed.
+
+**Required Actions Before Launch**
+1.  **Stop Fabricated Claims:** Immediately remove any assertion of "equal accuracy" or "zero risk" from investor materials and user-facing documentation. An unmeasured metric must be labeled **UNVERIFIED**.
+2.  **Implement Human-in-the-Loop Gate:** Because this involves irreversible, high-stakes outcomes (pregnancy avoidance/conception), fully autonomous execution is unsafe given your data constraints. You must introduce a friction point: require explicit user confirmation for high-confidence predictions or provide clear, defined uncertainty tiers (e.g., "Low Confidence – Verify with Additional Methods") rather than presenting estimates as facts.
+3.  **Run Targeted Evaluations:** You must build an evaluation set that specifically probes the missing demographics. Create test rows for each identified harm (bias, hallucination) with positive and negative controls. Do not launch until you have measured performance on these slices, even if the result is a warning label rather than a pass.
+4.  **Publish Transparency Artifacts:** Ship a **Model Card** and **Data Card**. These must explicitly state the intended use, the known limitations regarding demographic gaps, and the provenance of your training data. Hiding these limitations is a deceptive pattern.
+5.  **Route Legal Duties:** Whether your predictive features trigger specific regulatory obligations (e.g., EU AI Act, medical device regulations) due to their impact on health and life choices is a legal determination. Route this immediately to counsel; do not assume the "app" classification exempts you from scrutiny.
+
+**Residual Risk Statement**
+Current residual risk is **HIGH**. The system relies on non-representative data for a safety-critical function. Shipping without measured subgroup performance and explicit uncertainty disclosure exposes users to direct harm and the company to significant liability. The deadline does not negate the need for these controls; it necessitates a narrower scope or a delayed release of the predictive features until basic safety thresholds are met.
+
+*Note: Confidence must be shown as defined text tiers (e.g., "Corroborated" vs. "Unverified"), never as raw percentages like "87%," which imply false precision.*
+*Legal routing is mandatory before finalizing any disclaimers or regulatory stance.*

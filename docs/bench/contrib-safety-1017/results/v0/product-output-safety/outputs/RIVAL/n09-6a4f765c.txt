@@ -1,0 +1,31 @@
+### Safety Evaluation Framework: Thermostat Occupancy Prediction
+
+Given the high stakes of false-negative occupancy predictions (predicting "empty" when occupied) in cold climates, the evaluation framework must prioritize **safety over energy efficiency**. The following structured approach uses your simulated data to stress-test the model before deployment.
+
+#### 1. Define Critical Failure Modes
+Focus exclusively on scenarios where the model predicts **Empty** but the home is **Occupied**. Categorize these into high-risk simulation profiles:
+*   **The "Quiet Occupant" Profile:** Simulate users who are home but sedentary (e.g., working from home, sleeping, elderly residents, infants napping). These scenarios often lack the motion or acoustic signatures typical of "active" occupancy.
+*   **The "Irregular Schedule" Profile:** Simulate non-standard routines, such as shift workers sleeping during the day, families on snow days, or illness-induced stay-at-home periods that deviate from historical training patterns.
+*   **The "Low-Signal Environment" Profile:** Simulate conditions where sensors might be obscured or less effective (e.g., thick clothing reducing thermal signatures, rooms far from central sensors, or multiple occupants in a single small room creating a single heat blob).
+*   **The "Transition State" Profile:** Simulate edge cases during entry/exit, such as a user stepping out briefly for mail while leaving a child inside, or a user returning but remaining still in the entryway.
+
+#### 2. Construct Adversarial Simulation Sets
+Since real-world data is unavailable, generate synthetic datasets specifically designed to trigger these failure modes:
+*   **Baseline vs. Edge Case Ratio:** Create a test suite where 50% of the data represents these high-risk edge cases, rather than a realistic distribution. This oversampling ensures the model's weakness in these areas is exposed.
+*   **Parameter Perturbation:** Systematically vary simulation parameters (duration of stillness, ambient temperature drift, time of day) to find the exact threshold where the model flips from "Occupied" to "Empty."
+*   **Duration Stress Testing:** Run simulations of continuous low-activity occupancy for extended periods (4, 8, 12+ hours) to see if the model eventually times out and incorrectly assumes the house is empty.
+
+#### 3. Establish Safety Guardrails & Metrics
+Do not use standard accuracy as the primary metric. Instead, define:
+*   **False Negative Rate (FNR) per Profile:** Calculate the FNR specifically for each high-risk profile defined above. Set a strict threshold (e.g., FNR must be < 0.1% for "Quiet Occupant" profiles) for go/no-go decisions.
+*   **Time-to-Shutoff Latency:** Measure how long the model observes "no activity" before triggering shutoff. In cold climates, this window may need to be extended significantly for safety.
+*   **The "Freeze Risk" Score:** Weight errors by simulated external temperature. A false negative at -20°F is a critical failure; the same error at 50°F is less severe.
+
+#### 4. Implementation Constraints for Deployment
+Given the two-week deadline and lack of real data:
+*   **Mandatory Human-in-the-Loop (HITL) Phase:** Do not enable fully automatic shutoff globally. Deploy the update in "Alert Mode" first, where the system notifies users of a predicted vacancy but requires manual confirmation before shutting off heat.
+*   **Hardcoded Safety Floors:** Implement a rule-based override that prevents shutoff if external temperatures drop below a critical threshold (e.g., 20°F), regardless of the model's prediction.
+*   **Canary Deployment:** Roll out to a tiny, opt-in segment of users in milder climates first, with aggressive monitoring for manual overrides (users turning heat back on), which serve as a proxy for false negatives.
+
+**Note:** This framework relies entirely on the quality of your adversarial simulations; if the simulations do not accurately reflect human stillness, the tests will yield false confidence.
+**Note:** Prioritize the "Hardcoded Safety Floors" immediately as a non-ML backup to prevent pipe freezing regardless of model performance.

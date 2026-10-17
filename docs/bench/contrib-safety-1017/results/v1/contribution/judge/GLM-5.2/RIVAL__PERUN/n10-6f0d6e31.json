@@ -1,0 +1,4 @@
+{
+ "verdict": "1",
+ "reason": "Response 1 provides a clearer rationale for why the private route is required despite the public vulnerability, and its email draft is more actionable with specific guidance on how to share the patch."
+}

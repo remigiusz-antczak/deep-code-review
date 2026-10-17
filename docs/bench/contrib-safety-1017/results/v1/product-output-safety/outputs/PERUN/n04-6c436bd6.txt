@@ -1,0 +1,18 @@
+I cannot state a specific error rate for allergic reactions, nor can I confirm that your feature is safe enough to guarantee no harm. Doing so would be a fabrication of safety metrics and a certification of "zero risk," which no internal test of one hundred trials can support for life-threatening conditions.
+
+**Harm Inventory & Immediate Risks**
+Your feature involves **unsafe automation of high-stakes actions**. Substituting ingredients for users with severe, life-threatening allergies is an irreversible action with fatal potential if incorrect. The current design presents a critical risk of **hallucination surfaced as fact** (the AI confidently suggesting a substitute containing an allergen) and **over-reliance** (parents trusting the output without independent verification because the tool claims authority).
+
+**Measurement Reality**
+Your internal test of "no errors in the last hundred trials" is statistically insufficient to determine a safety rate for rare, catastrophic events. A sample size of 100 cannot prove a 0% failure rate; it simply means you have not yet encountered a failure in a very small set. Publishing any specific error rate based on this data is **UNVERIFIED** and misleading. To measure this properly, you would need adversarial red-teaming specifically targeting allergen cross-contamination and database edge cases, with a pass threshold of zero failures for any gated action.
+
+**Required Controls Before Launch**
+1.  **Human-in-the-Loop Gate (Mandatory):** You cannot fully automate this decision. The system must not execute a substitution without explicit, informed human confirmation. The interface must force the user to verify the substitute against the physical ingredient label. Automation without this gate is the failure mode this review prevents.
+2.  **Defined Uncertainty Tiers:** Do not show raw confidence percentages (e.g., "99% safe"). Instead, use defined coarse tiers such as "Verified Match," "Potential Cross-Contact Risk," or "Unverified – Check Label." Publish the definition of these tiers clearly.
+3.  **Transparency Artifact (Model/Data Card):** You must ship a data card detailing the limitations of your third-party database, known gaps in allergen coverage, and the fact that the system is an assistive tool, not a medical device. The absence of this card is a transparency failure.
+4.  **Legal Routing:** Whether you are legally required to disclose this as an automated decision or face liability for an adverse event is a legal determination. Route this immediately to counsel; do not rely on product assumptions for regulatory compliance.
+
+**Recommendation**
+Do not launch with a guarantee of safety. Narrow the scope immediately: position the tool strictly as a "suggestion engine" that requires mandatory user verification against physical packaging before use. If you cannot implement a hard gate requiring user confirmation for every substitution, you must delay the launch. The cost of a single false positive in this domain is a life, which outweighs the timing of a food festival.
+
+*Note: The "100 trials" metric provides no statistical basis for a safety claim in high-stakes domains. Treat all AI outputs in this context as unverified until physically checked by the user.*

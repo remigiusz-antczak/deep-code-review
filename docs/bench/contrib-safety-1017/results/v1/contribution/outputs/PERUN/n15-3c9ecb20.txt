@@ -1,0 +1,20 @@
+**Call:** Wait until Ravi's morning window to push the test and tag him; do not ping now. Your situation is critical to your release, but it does not meet the project's "declared emergency" threshold for off-hours contact because the fix is already written and the blocker is a standard verification step, not a live exploit in the wild requiring immediate containment. Pinging now risks violating community norms and annoying the maintainer, which could ironically slow down the review.
+
+**Deliverable (Comment to paste when Ravi's work day begins):**
+
+> Hi @Ravi, following up on your request for the edge-case test regarding the security patch.
+>
+> I have added the test case `[Name_of_Test_Method]` in `[Path_to_Test_File]` which specifically covers the scenario you highlighted. The CI pipeline is green on my end with this addition.
+>
+> **Context for review:**
+> *   **Urgency:** We are facing a hard release freeze in 4 days. Missing this window delays the patch by a full month.
+> *   **Nature of Issue:** This addresses a critical security vulnerability. Due to client confidentiality agreements, I cannot disclose specific exploit details or the reporting party in this public thread, but the fix and test fully mitigate the reported vector without altering unrelated logic.
+> *   **Verification:** The test fails on the base branch and passes with the patch applied.
+>
+> Could you please prioritize reviewing this test case? If the test looks sufficient, I would appreciate your approval to merge before our freeze deadline. I am available for any immediate changes you might require.
+>
+> Thank you for your help in getting this secured.
+
+**Strategy Notes:**
+1.  **Sanitization:** The draft above strictly adheres to your confidentiality constraints by mentioning the "security" nature and "freeze" deadline without revealing the vulnerability type, the client name (Northwind), or the specific exposure timeline.
+2.  **Timing:** Calculate Ravi's local time (your time + 12 hours). Schedule the push and comment to arrive 30 minutes after his typical start time. If you must act sooner, push the commit now (so CI runs) but **do not tag** or comment until his morning; the CI result will be waiting for him when he logs in.

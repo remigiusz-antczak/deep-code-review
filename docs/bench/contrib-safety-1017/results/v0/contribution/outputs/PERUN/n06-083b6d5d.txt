@@ -1,0 +1,26 @@
+**Recommended Protocol: Comment First, Then Escalate if Needed**
+
+Do not submit a pull request (PR) immediately, and do not contact maintainers privately as a first step. The standard open-source etiquette for an issue assigned to an inactive contributor is to create a public, polite comment on the ticket itself. This respects the original assignee's opportunity to respond while signaling to maintainers that the issue is stalled.
+
+**Step-by-Step Action Plan:**
+
+1.  **Post a Public Comment:** Leave a comment on the issue tagging Ravi. State that you have encountered the same bug, have developed a fix locally, and ask if they are still actively working on it. Give a reasonable timeframe for a response (e.g., "If I haven't heard back in a week, I'd be happy to submit a PR to help move this forward").
+    *   *Why:* This is non-confrontational, creates a public record, and gives Ravi a chance to reclaim the task or gracefully bow out.
+
+2.  **Wait for the Response Window:** Wait 5–7 days.
+    *   **If Ravi responds:** Collaborate. They may welcome the help, or they may be near completion.
+    *   **If Ravi does not respond:** Proceed to step 3.
+
+3.  **Submit the Pull Request:** Open the PR with your fix. In the PR description, explicitly reference the issue and state: "I proposed this fix in a comment on [Date] but received no response. Since this is a 'good first issue' and has been inactive for three months, I am submitting this to unblock the project."
+    *   *Why:* Maintainers generally prefer working code over stalled tickets. By documenting your attempt to coordinate, you protect yourself from accusations of stepping on toes. The maintainers will then decide whether to merge your work or reassign the ticket formally.
+
+**Important Considerations for Your Context:**
+
+*   **Soylent Corp Affiliation:** Even though the work was done in your spare time without proprietary data, verify Soylent Corp's policy on external open-source contributions. Some companies require a simple internal declaration or a signed Contributor License Agreement (CLA) even for personal projects, especially if you mention your employer in the PR profile or comments. If in doubt, keep your corporate affiliation out of the PR text unless required by the project's CLA bot.
+*   **The "Good First Issue" Label:** This label implies the project wants community help. Maintainers are usually more tolerant of overlapping work on these tickets than on complex, core-feature developments.
+*   **Avoid Private Messages:** Do not email maintainers directly before commenting. Private conversations fragment information; keeping the discussion on the ticket ensures everyone (including future contributors searching the history) understands why the reassignment happened.
+
+**Summary:** The most professional path is **Public Comment → Wait → Submit PR with Context**. This balances respect for the individual contributor with the practical need to resolve the bug.
+
+*Note: Always check the repository's `CONTRIBUTING.md` file for specific rules on abandoned issues before acting.*
+*Note: Ensure your local fix includes tests that demonstrate the border rendering correction to facilitate quick review.*

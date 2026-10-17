@@ -1,0 +1,30 @@
+### Comprehensive Review: Podcast Transcript Summarization Risks & Internal Tests
+
+Given your two-week deadline and the critical need to maintain host trust, focus your internal review on these four high-risk areas where AI summarization commonly distorts voice and intent.
+
+#### 1. Tone and Sentiment Drift
+**Risk:** The model may sanitize strong opinions, amplify minor frustrations into anger, or flatten nuanced humor into literal statements. This misrepresents the host's personality, which is often the primary value proposition for listeners.
+**Internal Test:** Create a "Tone Golden Set" of 10–15 transcript excerpts where the host's tone is distinct (e.g., sarcasm, solemnity, excitement). Run these through your pipeline and have a human evaluator blind-score the output against the original on a scale of "Accurate," "Too Soft," or "Too Harsh." Any deviation greater than 10% requires prompt engineering adjustments before launch.
+
+#### 2. Contextual Hallucination and Attribution Errors
+**Risk:** The system might attribute a guest's controversial statement to the host, or invent a conclusion the host never explicitly reached but implied. This is the highest liability risk for misrepresentation.
+**Internal Test:** Perform "Adversarial Guest Simulation." Feed the system transcripts where a guest explicitly contradicts the host. Verify that the summary clearly distinguishes between "Host says X" and "Guest argues Y." Additionally, insert a "canary phrase" (a unique, nonsensical sentence) into raw transcripts; if this phrase or a variation appears in the summary without context, your hallucination controls are insufficient.
+
+#### 3. Nuance Loss in Complex Arguments
+**Risk:** In an effort to be concise, the summarizer may strip away necessary qualifiers (e.g., changing "I generally avoid sugar" to "I hate sugar"), turning a preference into an absolute rule.
+**Internal Test:** Conduct a "Qualifier Audit." Select five episodes discussing complex topics. Highlight every instance of hedging language (e.g., "sometimes," "in my experience," "potentially") in the source text. Check if the summary retains these limits. If the summary presents a qualified view as an absolute fact, flag it as a failure.
+
+#### 4. Consistency Across Episode Types
+**Risk:** The model might perform well on interview formats but fail on monologue-style episodes, leading to inconsistent brand voice across the season.
+**Internal Test:** Run a "Format Matrix." Test the pipeline against one monologue, one co-hosted debate, and one interview episode. Compare the output style. If the monologue summary sounds robotic while the interview sounds natural (or vice versa), your prompt instructions likely lack robustness for different input structures.
+
+#### Recommended Immediate Action Plan
+With only two weeks remaining, do not attempt to fix every edge case. Instead:
+1.  **Freeze the Prompt:** Once you achieve passing scores on the tests above, lock the system instructions.
+2.  **Human-in-the-Loop Gate:** Mandate that for the first month of launch, no summary is published without a 2-minute host review. Frame this not as a lack of trust in the tech, but as a premium quality assurance feature for the hosts.
+3.  **Feedback Loop:** Add a simple "Report Inaccuracy" button for listeners to capture real-world drift post-launch.
+
+Prioritize the "Tone Golden Set" and "Attribution Errors" tests immediately, as these directly impact the trust relationship between your platform and the hosts.
+
+*Note: These tests require no external tools, only your existing transcript data and team members for evaluation.*
+*Ensure all test data used is anonymized if it contains unreleased content.*

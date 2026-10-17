@@ -1,0 +1,21 @@
+**Call:** Ask the maintainer to explicitly choose between "local consistency" (matching Ravi's camelCase) or "global standards" (your snake_case) before you adjust a single line; do not guess, and do not refactor legacy code without permission.
+
+**Deliverable (Reply to Maintainer):**
+
+"Thanks for catching the visual inconsistency. I want to ensure this PR respects both the project's strict style guide and the existing module context without overstepping my scope.
+
+Currently, my three new helper functions use `snake_case` to comply with the official global style guide. However, the surrounding legacy code in this module uses `camelCase`. Since I do not have permission to refactor the entire module or change Ravi's existing functions, I see two valid paths forward and need your direction on which you prefer:
+
+1.  **Prioritize Local Consistency:** I rename my three new functions to `camelCase` so they blend seamlessly with the immediate surroundings, even though this technically deviates from the global style guide for this specific file.
+2.  **Prioritize Global Standards:** I keep my functions as `snake_case` to adhere to the official rules, accepting the visual mismatch in this specific module until a broader refactor can address the legacy code later.
+
+I am happy to implement either approach immediately. Which direction would you like me to take?"
+
+**Why this works:** It shifts the decision from a stylistic debate to a scoped trade-off. You are not refusing to change; you are asking the authority to define the rule priority for this specific edge case. It protects you from "scope creep" (refactoring Ravi's code) while showing respect for the codebase's history.
+
+**Next Steps:**
+*   If they say **Local Consistency**: Rename your three functions to `camelCase`, update your PR, and explicitly note in the commit message: "Renamed helpers to camelCase for local module consistency per maintainer request."
+*   If they say **Global Standards**: Keep your code as-is, reply confirming you will maintain the standard, and perhaps suggest (in a separate comment or future issue) that the module might need a future cleanup ticket to align the legacy code.
+*   **Wait Time:** Give them 24–48 hours to respond. If silence persists after that, add a gentle follow-up: "Just bumping this for a quick decision so I can finalize the PR."
+
+**Note:** Never change existing code you didn't touch to "fix" the inconsistency; that violates your permission scope and risks breaking unrelated logic. Your fix is the stock count bug; the naming is secondary to the maintainer's preference.

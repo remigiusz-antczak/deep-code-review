@@ -1,0 +1,29 @@
+Do not submit the PR yet. A silent `CONTRIBUTING.md` in a large C++ project does not mean AI contributions are welcome; it often means the maintainers haven't formalized a ban yet, and an 80% AI-generated patch is the exact trigger that causes immediate rejection or hostile scrutiny. Your employer's efficiency goals do not override the social contract of the upstream project.
+
+**Step 1: Open a Pre-PR Discussion Issue**
+Before writing code or opening a pull request, open a new Issue titled "Proposal: AI-assisted refactor of [Specific Module] – Seeking Guidance." In the body, state clearly:
+*   You work for Acme Media and wish to contribute a refactor to improve [specific metric, e.g., stream initialization latency].
+*   To achieve the necessary scale of changes efficiently, you utilized an AI coding assistant to generate approximately 80% of the draft.
+*   You have manually reviewed every line, verified logic against the existing codebase, and confirmed all local tests pass.
+*   You cannot share the specific prompts due to internal architecture confidentiality, but you are fully available to walk through any function or design choice line-by-line.
+*   Ask explicitly: "Is this contribution model acceptable to the maintainers, or would you prefer we break this down into smaller, purely human-authored increments?"
+
+**Step 2: Wait for Explicit Permission**
+Do not proceed until a maintainer responds. If they say "no" or "too risky," respect that boundary; pushing forward will result in a closed PR and a damaged reputation. If they say "yes, provided X," you now have a written contract. If they do not respond after one week, assume the answer is no and do not submit the large patch.
+
+**Step 3: The Pull Request (Only if Approved)**
+If given the green light, your PR description must include a dedicated "AI-Assisted Disclosure" section at the bottom. Do not hide this. Use this framing:
+
+> ## AI-Assisted Disclosure
+> Per our discussion in Issue #N:
+> *   **Scope:** This refactor targets [Module Name] to address [Problem].
+> *   **Authorship:** Approximately 80% of the initial diff was drafted using an AI coding assistant.
+> *   **Human Review:** I have manually audited every line for logic, style compliance, and integration with existing streams. I accept full responsibility for the code's correctness.
+> *   **Verification:** All existing unit tests pass locally. [Insert exact command used, e.g., `cmake --build . && ctest -j4`].
+> *   **Availability:** I am happy to explain the rationale behind any specific block of code or refactor decision in real-time.
+
+**Why this approach works:**
+It shifts the conversation from "sneaking in AI code" to "proposing a workflow." It respects the maintainer's authority to set the rules for their project. It protects you from accusations of dishonesty, which is far more damaging than the use of AI itself. If the project culture is hostile to AI, you find out before wasting time on a PR that will be closed. If they are open, you have established trust through transparency rather than forcing them to detect it themselves.
+
+Note: Never claim "human authorship" if AI generated the bulk of the logic; maintainers of large C++ codebases can often spot AI patterns (over-generic variable names, excessive comments, specific structural tics) and will view nondisclosure as a breach of trust.
+Note: If the maintainer asks for smaller PRs, split the 80% AI patch into 5–10 tiny, logical chunks and submit them sequentially, disclosing the AI usage in each.

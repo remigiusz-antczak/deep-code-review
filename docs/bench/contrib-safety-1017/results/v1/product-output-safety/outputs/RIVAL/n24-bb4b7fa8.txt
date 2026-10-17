@@ -1,0 +1,25 @@
+# Bias Review and Mitigation Plan for Interview Coach
+
+**1. Data Audit and Gap Analysis (Week 1)**
+*   **Demographic Mapping:** Since you are using a fixed dataset, immediately map existing practice interviews against protected characteristics (gender, race/ethnicity, age, disability status, and non-native English speaker status). If the dataset lacks representation in any category, flag this as a critical gap.
+*   **Synthetic Augmentation:** Do not proceed with training or validation until the dataset is balanced. Since recording real candidates is restricted, generate or source synthetic video/audio samples that specifically represent underrepresented speech patterns, accents, and non-verbal communication styles to fill identified gaps.
+*   **Label Verification:** Ensure the "ground truth" scores in your fixed dataset were not created by a homogeneous group of raters, which could bake initial bias into the training data.
+
+**2. Algorithmic Stress Testing (Weeks 2–3)**
+*   **Disaggregated Performance Analysis:** Run the scoring model separately for each demographic subgroup identified in the audit. Compare average scores for "communication" and "confidence" across groups. A statistically significant deviation for any group indicates potential bias.
+*   **Feature Importance Review:** Analyze which input features drive the scores. If the model heavily weights specific acoustic properties (e.g., pitch variance, speaking rate) or visual cues (e.g., eye contact frequency, head movement) that correlate with cultural norms rather than competence, these are high-risk vectors.
+*   **Adversarial Testing:** Create "counterfactual" test cases where the content of the answer is identical, but the speaker's demographic traits (via synthetic modification) differ. The scores should remain consistent; significant variance proves bias.
+
+**3. Mitigation Strategies (Weeks 4–5)**
+*   **Model Retraining/Calibration:** If bias is detected, retrain the model using the augmented balanced dataset. Apply techniques like adversarial debiasing, where the model is penalized for predicting protected attributes, or post-processing calibration to equalize score distributions across groups.
+*   **Feature Pruning:** Remove or down-weight specific audio/visual features that show high correlation with demographic groups but low correlation with actual interview success metrics.
+*   **Human-in-the-Loop Thresholds:** For the beta release, implement a "low confidence" flag. If a candidate's score falls near a critical threshold or if the input exhibits rare speech patterns, route the evaluation for human review rather than relying solely on the automated score.
+
+**4. Transparency and User Feedback (Week 6)**
+*   **Explainability:** Do not provide a single opaque number. Offer breakdowns of *why* a score was given (e.g., "clarity of speech" vs. "content structure") so users can distinguish between actionable feedback and potential artifacts of their accent or style.
+*   **Beta Monitoring:** Launch the beta with a dedicated feedback channel specifically for reporting perceived unfairness. Monitor this closely for patterns related to specific demographics.
+*   **Disclaimer:** Clearly state to users that the tool is a practice aid, not a definitive judgment of their employability, and acknowledge that the model is currently being validated for diverse speech patterns.
+
+**Deliverable Status:** Ready for immediate execution upon data access.
+
+*Note: This plan assumes the ability to synthetically augment data; if this is technically impossible, the beta launch carries high ethical risk.*

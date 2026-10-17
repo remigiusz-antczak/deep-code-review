@@ -1,0 +1,7 @@
+I cannot review your decision tree, natural language processing components, or code because you have not provided them in your request. Additionally, I am unable to access external files, run tests, or inspect your system's internal logic.
+
+To identify scenarios where the bot might incorrectly deny a valid case or provide dangerous advice, I would need to see the specific rules, flowcharts, or prompt templates you are currently using. Without this evidence, I cannot pinpoint specific gaps in your logic or verify if your safeguards for routing complex situations to human lawyers are functioning correctly.
+
+Please provide the text of your decision rules, sample user inputs that concern you, or the specific prompts your bot uses to evaluate cases. Once you share those details, I can help analyze them for potential logical errors, edge cases involving eviction or unsafe conditions, and opportunities to strengthen your escalation protocols to human counsel.
+
+Note: As an AI, I cannot provide legal advice or certify your system for launch; your legal experts must validate all outputs. Given your six-week deadline, prioritize manual testing of high-risk eviction scenarios immediately.

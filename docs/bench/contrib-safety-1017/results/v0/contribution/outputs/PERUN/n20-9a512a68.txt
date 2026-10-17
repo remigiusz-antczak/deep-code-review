@@ -1,0 +1,24 @@
+Subject: Clarification on recurring payment timing and grace period behavior
+
+Hi Ravi,
+
+Thank you so much for opening this issue and for taking the time to investigate the recurring payment system. We truly appreciate new contributors like you helping us stress-test the platform. It is completely understandable why the behavior you observed looked like a bug; on the surface, a payment that does not process on the exact due date can certainly appear to be "skipped."
+
+After reviewing your report against the project's documented architecture, I wanted to offer some clarification that might resolve the confusion. The OpenSource Billing project includes a designed **grace period** feature. This is an intentional safety mechanism that delays payment processing slightly after the due date to accommodate bank transfer variances and prevent premature failure notifications for users who are merely a few hours late.
+
+What you identified as a "skipped" payment is actually the system correctly engaging this grace period. The payment is not lost or ignored; it is held in a pending state until the grace window closes, at which point the standard processing logic takes over. This behavior is described in the `docs/payment-lifecycle.md` file under the "Grace Periods and Delays" section, though I admit this detail is easy to miss if you aren't looking specifically for it.
+
+Since the system is functioning according to its design specifications, there isn't a code defect to fix here. However, your report highlights a very real usability issue: if a knowledgeable contributor like yourself mistook this feature for a bug, our documentation likely isn't explaining the grace period clearly enough.
+
+Would you be open to us closing this specific issue as "working as intended," and perhaps opening a new, separate issue (or updating this one) to track a **documentation improvement**? We could use this as an opportunity to make the grace period behavior more prominent in the guides so future users and contributors aren't puzzled by the delay.
+
+Thanks again for your sharp eye and for caring about the reliability of the billing system. We'd love to see you stick around, and clarifying these docs would be a fantastic first contribution!
+
+Best regards,
+
+[Your Name]
+Project Maintainer
+
+---
+*Note: This draft relies solely on public documentation references to avoid disclosing any private operational data or internal logs.*
+*No internal Acme Finance details were included to ensure customer data privacy.*

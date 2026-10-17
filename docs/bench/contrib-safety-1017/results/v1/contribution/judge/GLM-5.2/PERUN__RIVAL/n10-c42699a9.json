@@ -1,0 +1,4 @@
+{
+ "verdict": "2",
+ "reason": "Response 2 provides stronger reasoning for why the private process matters even when the vulnerability is public, and its email draft is more specific to the Go ecosystem (referencing go.sum and go test ./...)."
+}

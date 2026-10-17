@@ -1,0 +1,7 @@
+Do not reopen the pull request yourself, as this can disrupt the maintainer's workflow and trigger the bot again immediately. Instead, post a single, polite comment on the closed thread addressing the maintainer directly. Use the following template:
+
+"Hi @Alex, thanks for your earlier note saying you'd look into this. I know life gets busy, but this timezone fix is currently blocking a global deployment for us at Stark Industries. Since the bot closed this due to inactivity, could you please advise if you'd prefer I reopen this PR or submit a fresh one linked to this discussion? I want to ensure I follow the project's preferred process without creating noise. Thanks for your help!"
+
+If the maintainer does not respond within three to five business days, close the loop by opening a new pull request. In the description of the new PR, clearly link to the closed one, summarize the original fix, and mention that you are resubmitting per the project's stale policy to ensure visibility. This approach respects the maintainer's authority while clearly communicating the urgency of your business need.
+
+Note: Avoid pinging the bot or using aggressive language; maintainers are volunteers and respond best to clear, courteous communication. Always check the project's `CONTRIBUTING.md` for specific resurrection policies before acting.

@@ -1,0 +1,32 @@
+**Call:** Rewrite the documentation from scratch using your internal wiki as a private reference only; do not copy-paste any text. This approach ensures you capture the nuanced security advice while structurally preventing the leakage of Acme-specific infrastructure, ticket numbers, or proprietary tools.
+
+**Deliverable (Draft Documentation for SkyHigh Cloud CLI):**
+
+```markdown
+# Encryption Flag: `--key-rotation-interval`
+
+## Overview
+The `--key-rotation-interval` flag allows users to define a custom time duration for automatic encryption key rotation. By default, the CLI uses a standard interval suitable for most workloads. This flag is intended for environments with specific compliance requirements or heightened security postures that necessitate more frequent rotation.
+
+## Usage
+```bash
+skyhigh-cli encrypt --input data.bin --key-rotation-interval <duration>
+```
+*Replace `<duration>` with a valid time string (e.g., `1h`, `30m`, `24h`).*
+
+## Security Best Practices
+Based on operational experience in high-security environments, consider the following guidelines when configuring this flag:
+
+1.  **Balance Frequency and Performance:** While frequent rotation reduces the window of exposure for a compromised key, it increases computational overhead and latency during handshakes. Avoid setting intervals below 5 minutes unless strictly required by regulatory mandates, as diminishing returns on security may be outweighed by performance degradation.
+2.  **Synchronization Windows:** Ensure all nodes in a distributed system have synchronized clocks (e.g., via NTP). Aggressive rotation intervals can cause decryption failures if clock skew exceeds the validity window of a key.
+3.  **Audit Trail Integrity:** Frequent rotation generates a higher volume of key lifecycle events. Verify that your logging infrastructure can handle the increased throughput without dropping audit records, which are critical for forensic analysis.
+4.  **Failure Modes:** In the event of a rotation failure (e.g., inability to fetch a new key from a KMS), the system should fail closed (stop processing) rather than reverting to an expired key, depending on your risk tolerance. Test this behavior in a staging environment before production deployment.
+
+## Warnings
+- **Do not** set rotation intervals shorter than the time required to establish a secure connection, as this may cause infinite retry loops.
+- Changing this value on an active stream without a coordinated rollout may result in temporary data access interruptions.
+```
+
+**What was stripped:** All references to "Acme Secure," internal ticket numbers, specific incident reports, proprietary configuration management tools, and internal wiki links were removed. The advice was generalized from "our production usage" to "operational experience in high-security environments."
+
+**Next Step:** Paste this draft into the repository's documentation folder, run the project's standard linting/formatting checks, and submit the PR. If the maintainer requests more specific examples, provide hypothetical scenarios rather than real historical data.

@@ -1,0 +1,24 @@
+**Call:** Stop and do not publish the current screenshots; obtain formal written permission from your company's communications or legal team before posting any material derived from the internal dashboard.
+
+**Deliverable (Draft Inquiry to Internal Team):**
+"Subject: Request for Review: Technical Blog Post on Vector Charting Fix
+
+I have resolved a rendering glitch in our C++ Vector Charting tool and intend to write a technical blog post to share the solution with the developer community. The post explains the root cause and the code fix.
+
+To illustrate the issue, I captured before-and-after screenshots from our internal Acme Logistics dashboard. Although the data values are anonymized, the screenshots include:
+1. Real-time shipment data layouts.
+2. Proprietary metric names specific to our operations.
+3. Dashboard structures that could reveal our operational logic to competitors.
+
+I need guidance on whether:
+A) I can sanitize these specific screenshots (e.g., blurring metrics, replacing labels) while retaining the visual context of the glitch.
+B) I must recreate the visuals using completely synthetic dummy data that mimics the bug but contains no real structural elements.
+C) This topic requires a full legal review before any external publication due to the sensitivity of the operational context.
+
+The project's contribution guidelines encourage sharing success stories but do not address employer data usage in external blogs. I want to ensure full compliance with my employment contract and internal publicity policies before proceeding."
+
+**Next Steps for You:**
+1.  **Do not recreate the screenshots yet.** Wait for the team's decision on whether synthetic data is mandatory or if sanitization is acceptable. Recreating them now might waste effort if the policy forbids the topic entirely.
+2.  **Prepare a synthetic fallback.** If they approve the post but forbid real dashboard captures, be ready to build a minimal, local C++ test case that reproduces the glitch using random numbers. This ensures the technical explanation remains valid without needing any corporate context.
+
+**Note:** Even if data is anonymized, unique combinations of metrics and UI layout can act as a fingerprint for your company's proprietary logic; treat the dashboard structure itself as confidential. Never assume "contribution guidelines" override employment contracts regarding data leakage.

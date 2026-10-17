@@ -1,0 +1,16 @@
+**Recommended Action: Fork the repository under your organization's account.**
+
+Given the constraints—an archived read-only repository, a critical production blocker, and the inability to submit formal contributions upstream—forking is the only viable path to immediately secure your operations. Attempting to contact the original author to unarchive the project introduces unacceptable delay and uncertainty for a nightly job failure. The author's decision to archive the project signals a withdrawal of maintenance; respecting that decision means accepting the project's current state as final and taking responsibility for your own instance rather than demanding a change in their status.
+
+**Implementation Strategy:**
+1.  **Execute the Fork:** Create the fork under the Globex Corporation organization immediately to apply your verified fix.
+2.  **Rename and Rebrand:** To avoid confusion with the archived upstream and to signal that this is a maintained divergent version, rename the repository (e.g., `legacy-connect-globex` or `legacy-connect-maintained`). Update the `README` to clearly state: "This is a maintained fork of [Original Project] by Globex Corporation to address critical issues no longer accepted upstream."
+3.  **Document the Change:** Clearly document the null pointer exception fix, the specific file size threshold, and the testing performed in your new repository's issue tracker or changelog.
+4.  **Internal Governance:** Treat this fork as a new internal asset. Establish a clear ownership model within your team for future maintenance, as you will now be solely responsible for security patches and compatibility updates.
+
+**Regarding Professional Etiquette:**
+You may send a polite, low-pressure notification to Ravi informing him that you have forked the project to address a critical production issue for your organization, but do not ask him to unarchive the repo or expect a response. This acknowledges his original work without imposing an obligation on him to resume maintenance. This approach balances respect for his decision to step away with your imperative to maintain system stability.
+
+Forking minimizes risk by giving you full control over the codebase and release schedule, ensuring your nightly jobs remain functional without dependency on external revival efforts.
+
+*Note: Monitor the original repository occasionally in case it is unarchived or a community fork gains traction, but do not base your current stability on this possibility.*

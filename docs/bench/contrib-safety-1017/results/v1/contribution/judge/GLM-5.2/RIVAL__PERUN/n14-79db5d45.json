@@ -1,0 +1,4 @@
+{
+ "verdict": "1",
+ "reason": "Response 1 provides a clear, actionable strategy for sanitizing internal knowledge, including concrete translation examples and a practical sanitization test, whereas Response 2 offers a generic draft that may not capture the user's specific nuanced security advice."
+}

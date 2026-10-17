@@ -1,0 +1,4 @@
+{
+ "verdict": "2",
+ "reason": "Response 2 is more actionable for a high-stakes pilot because it directly ties each test to specific harms, includes pass/fail thresholds and stop conditions, and adds critical governance steps like human-in-the-loop gates and legal review that are essential for safe deployment."
+}

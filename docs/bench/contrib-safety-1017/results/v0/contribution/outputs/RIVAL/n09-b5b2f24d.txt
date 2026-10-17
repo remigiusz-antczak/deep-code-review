@@ -1,0 +1,19 @@
+Do not reopen the closed pull request yourself; on most GitHub projects, only maintainers have permission to reopen, and attempting to do so via force-push or branch manipulation can break the historical link to the bot's closure logic. Instead, execute the following three-step revival protocol:
+
+1.  **Comment on the Closed Thread Immediately**
+    Post a concise, polite comment directly on the closed PR addressed to @Alex. Acknowledge the stale closure as an automated process, not a rejection. Use this template:
+    > "Hi @Alex, thanks for the earlier note that you'd look into this. I understand the bot closed this due to the 14-day inactivity rule, but since we were awaiting your review, I wanted to bump this before creating noise with a new PR. The timezone fix is still valid and critical for our deployment. If you prefer, I can open a fresh PR referencing this one, but I didn't want to duplicate the conversation history unnecessarily. Let me know your preference!"
+
+    This respects the maintainer's previous intent, shows you understand the project rules, and places the decision power in their hands.
+
+2.  **Prepare a "Shadow" Branch Locally**
+    While waiting for a reply (give it 48–72 hours), ensure your local branch is rebased against the current upstream `main`. Do not push this yet. If the project has moved significantly in the last two weeks, your original diff might now conflict. Having a ready-to-push, conflict-free branch ensures that if Alex asks for a new PR, you can deliver it within hours, demonstrating responsiveness.
+
+3.  **Open a New PR Only If Explicitly Asked or After 5 Days of Silence**
+    If Alex replies asking for a new PR, open it immediately with a link to the old one in the description ("Supersedes #<old_number>, closed by stale-bot"). If there is absolutely no response after 5 business days, open a new PR. In the description, clearly state: "Re-opening #<old_number> which was auto-closed by the stale bot while awaiting review. Original discussion and context are preserved there." This avoids "pinging the bot" (which is impossible on closed threads anyway) and treats the new PR as a fresh, clean slate that references the past without cluttering the active queue.
+
+**Critical Constraints:**
+*   **Do not** @mention the bot or try to "trick" it; stale bots generally do not monitor closed issues for revival unless specifically configured, and human maintainers dislike gaming the system.
+*   **Do not** mention "Stark Industries" as a pressure tactic; frame the urgency purely around the technical impact ("critical for global deployment") to maintain open-source neutrality.
+
+Note: Since your changes contain no proprietary tech, you are safe to discuss the bug details publicly. If the repo allows "stale" exemptions via labels (e.g., `no-stale`), you cannot apply this yourself, but Alex can if they reopen the thread.

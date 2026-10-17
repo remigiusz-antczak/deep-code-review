@@ -1,0 +1,41 @@
+# HR Chatbot Evaluation Plan
+
+**Objective:** Validate accuracy, detect hallucinations, and ensure policy compliance for the HR chatbot prior to open enrollment, using only open-source models and static evaluation methods.
+
+### 1. Ground Truth Dataset Construction
+Since custom fine-tuning is unavailable, the evaluation relies entirely on a robust "Golden Dataset" derived from your official policy documents.
+*   **Extraction:** Manually extract 50–100 high-stakes Q&A pairs from leave policies, benefits enrollment guides, and compliance manuals.
+*   **Categorization:** Tag each pair by risk level (High: financial/legal impact; Medium: procedural; Low: general info).
+*   **Negative Controls:** Create 20 "trick questions" containing false premises (e.g., "How do I claim the non-existent 'Q4 Bonus'?") to test hallucination resistance.
+*   **Temporal Checks:** Include questions specifically targeting outdated rules vs. current year policies to verify the model relies on the provided context, not pre-training data.
+
+### 2. Evaluation Architecture (RAG-as-Judge)
+Utilize a "Retrieval-Augmented Generation as Judge" pattern using a separate, strong open-source model (e.g., Llama 3 70B or Mixtral via local inference or free-tier APIs) to grade the chatbot's outputs.
+*   **Input:** The employee question + the chatbot's answer + the specific source policy chunk.
+*   **Grading Prompt:** Instruct the judge model to act as a strict compliance officer. It must output a binary Pass/Fail and a confidence score based *only* on the provided source text.
+*   **Criteria:**
+    *   **Faithfulness:** Does the answer contradict the source text?
+    *   **Completeness:** Did the model miss critical conditions (e.g., eligibility windows)?
+    *   **Hallucination Check:** Did the model invent policies, dates, or dollar amounts not present in the context?
+
+### 3. Execution Strategy
+*   **Batch Testing:** Run the Golden Dataset through the chatbot. Capture all inputs, retrieved context, and outputs.
+*   **Automated Grading:** Feed the results into the Judge model. Flag any response with a "Fail" verdict or confidence score below 90% for human review.
+*   **Adversarial Simulation:** Simulate 10 ambiguous user queries (e.g., "I'm sick and need time off, what do I get?") where the correct behavior is to ask clarifying questions rather than guessing the specific leave type.
+
+### 4. Human-in-the-Loop Review
+Given the high stakes, automation cannot be the final gate.
+*   **Triage:** Your team of four must manually review every "High Risk" failure and any flagged hallucination.
+*   **Root Cause Analysis:** For each error, determine if the failure was due to:
+    *   Poor retrieval (wrong policy chunk fetched).
+    *   Reasoning error (model misinterpreted the text).
+    *   Ambiguity in the source document itself.
+*   **Mitigation:** Update the retrieval indexing, refine system prompts to enforce stricter citation requirements, or add explicit "I don't know" guardrails for low-confidence scenarios.
+
+### 5. Deployment Gate Criteria
+Do not deploy general access until:
+*   100% of High-Risk test cases pass automated and human review.
+*   Hallucination rate on negative controls is 0%.
+*   The system consistently cites the specific policy section for every factual claim.
+
+**Note:** This plan assumes you can host or access open-source models for the "Judge" role; if local compute is insufficient, use a distinct, low-cost API provider for evaluation only. Ensure all test data is anonymized before processing.

@@ -1,0 +1,11 @@
+Do not publish the screenshots containing your company's internal dashboard, even with anonymized data. The risk of revealing operational logic through layout and metric combinations outweighs the benefit of visual authenticity. Instead, recreate the screenshots using a local build of the Vector Charting tool populated with clearly fabricated dummy data that mimics the structure of the bug without exposing real business contexts.
+
+Before writing the post, formally consult your company's communications or legal team to verify your employment contract's stance on external technical publications. Many contracts require pre-approval for any public mention of work-related achievements, regardless of whether code is shared. Obtain explicit written permission to ensure you are not violating confidentiality clauses or publicity policies.
+
+To balance helpfulness with security:
+1.  **Reproduce Locally:** Set up the open-source project on your personal machine.
+2.  **Inject Synthetic Data:** Create a dataset that triggers the rendering glitch but uses generic labels (e.g., "Metric A," "Shipment X") and random values.
+3.  **Capture Clean Screenshots:** Take your before-and-after images from this isolated, safe environment.
+4.  **Focus on the Code:** In the blog post, emphasize the C++ logic, the debugging process, and the specific fix rather than the business context of the data.
+
+This approach protects your employer's proprietary information while still providing the community with a clear, reproducible example of the technical challenge and solution.

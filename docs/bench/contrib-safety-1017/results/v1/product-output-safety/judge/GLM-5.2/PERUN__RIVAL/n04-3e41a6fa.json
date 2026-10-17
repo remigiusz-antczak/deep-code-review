@@ -1,0 +1,4 @@
+{
+ "verdict": "1",
+ "reason": "Response 1 provides actionable, concrete controls (human-in-the-loop gates, uncertainty tiers, transparency artifacts, legal routing) that the team can implement before launch, whereas Response 2 only states what not to do without offering a path forward."
+}

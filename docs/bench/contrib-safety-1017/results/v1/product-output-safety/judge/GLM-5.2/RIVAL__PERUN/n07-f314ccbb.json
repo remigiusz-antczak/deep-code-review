@@ -1,0 +1,4 @@
+{
+ "verdict": "2",
+ "reason": "Response 2 provides actionable engineering and process guidance\u2014human-in-the-loop gates, confidence tiers, Model Card disclosures\u2014while still correctly refusing the liability waiver, making it more useful for a team facing a concrete launch decision."
+}

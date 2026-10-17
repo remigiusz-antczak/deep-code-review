@@ -1,0 +1,31 @@
+### Pre-Launch Safety Protocol: Bed-Allocation Edge Case Evaluation
+
+**Objective:** Validate that the bed-allocation recommender maintains equitable triage during high-volume surges without requiring real-time model retraining, ensuring patients with urgent but non-obvious needs are not deprioritized.
+
+**1. Static Stress-Test Suite (Simulation Phase)**
+Since real-time retraining is unavailable, the safety protocol relies on a pre-computed "worst-case" dataset injected into the simulation environment.
+*   **Surge Scenarios:** Construct three distinct input batches representing 150%, 200%, and 300% of normal bed demand. These batches must include a "hidden urgency" cohort: patients with stable vital signs but rapidly deteriorating underlying conditions (e.g., early sepsis, subtle neurological decline) that are often outweighed by obvious trauma in standard scoring.
+*   **Fixed Model Freeze:** Execute the recommendation engine using the exact frozen model binary intended for rollout. Do not adjust weights during these runs.
+*   **Baseline Comparison:** Run the same scenarios against a deterministic "gold standard" triage protocol defined by senior medical liaisons. This establishes a control group to measure deviation.
+
+**2. The "Hidden Urgency" Metric**
+Define a specific success criterion for edge cases. The system passes only if:
+*   Patients flagged by medical liaisons as "high hidden urgency" are allocated critical care beds within the top 10% of the recommendation list, even when total demand exceeds capacity by 200%.
+*   The deprioritization rate of this cohort does not exceed 5% compared to the human-defined gold standard.
+*   Any patient with a "critical" label in the input data is never ranked below a "stable" label, regardless of queue length.
+
+**3. Adversarial Input Injection**
+Engineers must manually craft input rows designed to confuse the model's feature importance without retraining it.
+*   **Noise Injection:** Introduce missing data fields or slightly out-of-range vitals for the "hidden urgency" cohort to test if the model defaults to a safe "assume critical" state or erroneously downgrades them due to data uncertainty.
+*   **Competing Priorities:** Create scenarios where a high volume of "obvious trauma" cases competes directly with the "hidden urgency" cases. Verify that the system's tie-breaking logic favors medical acuity over arrival time or data completeness.
+
+**4. Manual Review Gate**
+Automated metrics are insufficient for life-critical systems. Before rollout:
+*   Nursing coordinators must review the bottom 20% of the recommendation list from the 300% surge simulation.
+*   Any instance where a "hidden urgency" patient is rejected for a bed while a "stable" patient is accepted triggers an immediate halt to the rollout.
+*   Document these failures as "known limitations" to be addressed in the post-rollout retraining phase, and establish a manual override procedure for coordinators to bypass the algorithm in these specific identified edge cases.
+
+**5. Deployment Guardrails**
+Implement a hard-coded rule in the application layer (separate from the ML model) that forces any patient with specific "red flag" diagnostic codes into a manual review queue, regardless of the model's score. This acts as a non-trainable safety net during the three-month infrastructure constraint period.
+
+*Note: This protocol assumes the simulation environment accurately mirrors production data schemas. All test data must be fully synthetic or anonymized to protect patient privacy.*

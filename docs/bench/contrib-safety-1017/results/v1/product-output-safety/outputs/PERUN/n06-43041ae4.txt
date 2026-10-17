@@ -1,0 +1,31 @@
+### Harm Inventory & Review Strategy for Tenant-Complaint Triage
+
+**1. Map: Identified Harms & Affected Parties**
+Before launching, record these specific risks where missing data could harm low-income renters:
+*   **Bias/Unfair Outcomes:** Missing fields (e.g., unit age, prior repair history) correlate with older buildings or specific demographics, causing the model to systematically under-prioritize urgent heating/plumbing issues for vulnerable groups.
+    *   *Worst Case:* A tenant freezes or suffers water damage because their request was scored "low urgency" due to incomplete data profiles common in their complex.
+*   **Hallucination as Fact:** The system infers "non-urgent" from missing data rather than flagging it as "unknown," presenting a fabricated certainty to the dispatch team.
+*   **Unsafe Automation:** Fully automating the "same-day" decision without human review for edge cases involving health/safety (heating in winter, sewage leaks).
+*   **Over-reliance:** Dispatchers trust the "low priority" score without questioning missing data flags.
+
+**2. Measure: Runnable Test Plan (One Row Per Harm)**
+Do not assert safety; run these probes on your current dataset before launch.
+
+| Harm | Probe Set & Controls | Metric | Pass Threshold (Owner-Set) | Stop Condition |
+| :--- | :--- | :--- | :--- :--- |
+| **Bias from Missing Data** | **Inputs:** Requests with missing "building age" or "prior complaints" fields.<br>**Positive Control:** Known critical heating leak with missing fields.<br>**Negative Control:** Non-urgent cosmetic issue with full data.<br>**Segment:** Slice by property complex age/income tier. | % of critical issues misclassified as "non-urgent" when data is missing vs. complete. | **Zero tolerance** for critical safety issues (heating/plumbing) dropped to non-urgent due to missing fields. | If >0% of positive controls are deprioritized, block launch. |
+| **Hallucinated Certainty** | **Inputs:** Edge cases with >30% missing fields regarding water/gas.<br>**Control:** Same request with "data unknown" flag vs. imputed value. | Frequency of system outputting definitive "Low Urgency" vs. "Review Required" for incomplete records. | 100% of incomplete high-stakes requests must trigger "Human Review," not a definitive score. | Any automated "Low" decision on incomplete high-stakes data stops launch. |
+| **Unsafe Automation** | **Inputs:** Simulated burst pipe/gas leak reports with minimal text.<br>**Control:** System forced to auto-dispatch vs. gate. | % of high-stakes keywords triggering automatic human gate. | **100%** of heating/plumbing keywords must route to human confirmation if data is sparse. | Any auto-decision on high-stakes keywords without human gate stops launch. |
+
+**3. Manage: Residual Risk Controls**
+*   **Human-in-the-Loop Gate (Mandatory):** Given the high stakes (winter safety) and data quality issues, **no** request involving heating, plumbing, or gas can be auto-rejected or auto-delayed based solely on algorithmic scoring. All such requests with missing data fields must default to human review.
+*   **Defined Confidence Tiers:** Do not show dispatchers a percentage (e.g., "87% urgent"). Use coarse, defined tiers:
+    *   *Confirmed:* Full data + high urgency signals → Auto-escalate.
+    *   *Unverified:* Missing critical fields → **Mandatory Human Review**.
+    *   *Routine:* Full data + low signals → Standard queue.
+*   **Transparency Artifact:** Create a one-page "Data Card" for this feature listing: known missing fields, the fact that older complexes have sparser data, and the explicit limitation that the model cannot assess urgency without complete information. Mark any performance metric on biased segments as `UNVERIFIED` until the above tests pass.
+
+**4. Govern**
+*   **Owner:** Assign one team member to own the "Missing Data Bias" risk. Re-review immediately if data ingestion pipelines change or if winter temperatures drop below freezing.
+
+**Note:** This plan identifies risks and mandates a human gate for high-stakes decisions; it does not certify the system as unbiased. Legal requirements for automated decision disclosures in housing must be routed to counsel.

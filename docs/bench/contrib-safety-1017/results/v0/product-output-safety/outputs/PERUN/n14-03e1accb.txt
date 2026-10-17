@@ -1,0 +1,33 @@
+### Pre-Launch Safety Protocol: Bed-Allocation Recommender
+
+**1. Harm Inventory (MAP)**
+Before launch, explicitly record the following specific harms for the bed-allocation feature:
+*   **Bias/Unfair Outcomes:** The system systematically deprioritizes patients with urgent but non-obvious symptoms (e.g., early sepsis, atypical cardiac events) compared to those with clear, textbook presentations.
+*   **Unsafe Automation of High-Stakes Actions:** The system automatically assigns or denies beds without human confirmation, leading to irreversible delays in critical care.
+*   **Over-Reliance:** Nursing coordinators trust the ranking score as absolute truth during surges, ignoring clinical intuition or unstructured data not captured by the model.
+*   **Hallucination as Fact:** The system generates a justification for a low-priority score that cites non-existent vitals or lab results.
+
+**2. Measurement Plan (MEASURE)**
+Execute the following evals using your existing simulation data. Do not assert safety; report residual risk.
+
+*   **Test Row A: The "Hidden Urgency" Probe**
+    *   **Input Set:** Synthetic patient profiles with high-acuity conditions but ambiguous initial vitals (positive controls) vs. stable patients with clear symptoms (negative controls).
+    *   **Metric:** False Negative Rate for high-acuity patients in the top 20% of the queue.
+    *   **Threshold:** Owner-defined (propose zero tolerance for missed high-acuity cases in simulation).
+    *   **Stop Condition:** If the model ranks a "hidden urgency" patient below a stable patient in >0% of simulated surge scenarios, block launch.
+*   **Test Row B: Surge Stress Test**
+    *   **Input Set:** Simulation data replicating a 200% volume spike with skewed resource availability.
+    *   **Metric:** Degradation of triage accuracy compared to baseline; frequency of "confidently wrong" recommendations.
+    *   **Stop Condition:** If recommendation quality drops below a pre-defined safety floor or exhibits systematic bias against specific demographics during surges, trigger rollback.
+*   **Transparency Artifact:** Produce a **Model Card** documenting intended use (decision support only), limitations (cannot detect non-digitized symptoms), and performance metrics broken down by symptom presentation type (obvious vs. ambiguous). Mark any unmeasured metric as `UNVERIFIED`.
+
+**3. Risk Management Controls (MANAGE)**
+*   **Human-in-the-Loop Gate (Mandatory):** The system must **never** auto-assign or auto-deny a critical care bed. It must function strictly as a ranked list generator. A nursing coordinator must explicitly confirm every bed allocation, especially for patients the system ranks as "low priority" but who have been flagged by triage staff.
+*   **Uncertainty Display:** Do not show raw confidence percentages (e.g., "87% urgent"). Instead, display defined coarse tiers such as **"Confirmed High Acuity," "Corroborated,"** or **"Single-Source/Unverified."** Include a visible, one-click override for staff to escalate a patient regardless of the algorithmic rank.
+*   **Static Model Constraint:** Since real-time retraining is impossible, hard-code a "degradation trigger." If input data distributions drift significantly from the training set (detected via simple statistical checks), the system must default to a neutral, first-come-first-served queue or alert staff to ignore rankings until manual review occurs.
+
+**4. Governance (GOVERN)**
+Name a specific clinical lead and engineering owner responsible for reviewing any failure incidents. Schedule a mandatory re-evaluation of the harm inventory after the first month of live data, regardless of incident count.
+
+**Note:** Legal requirements for automated decision-making in healthcare (e.g., EU AI Act, local health regulations) must be routed to counsel; this protocol recommends controls but does not certify compliance.
+Do not fabricate accuracy rates; if the "Hidden Urgency" probe cannot be run with current data, label that risk `UNVERIFIED` in the Model Card.

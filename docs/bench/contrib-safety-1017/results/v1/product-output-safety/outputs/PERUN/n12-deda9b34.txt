@@ -1,0 +1,39 @@
+### Product Output Safety Review: PodCastly Transcript Summariser
+
+**1. Harm Inventory (MAP)**
+Before launch, explicitly record these risks for your specific feature:
+*   **Hallucination as Fact:** The summary attributes a view, quote, or stance to the host that never occurred in the episode.
+*   **Tone Distortion:** The blurb misrepresents the host's sentiment (e.g., framing a joke as a serious assertion, or skepticism as endorsement), damaging their reputation.
+*   **Over-reliance:** Listeners treat the blurb as a definitive record rather than a heuristic, skipping the actual episode based on potentially flawed synthesis.
+*   **Missing AI Disclosure:** Users assume a human editor wrote the blurb; the lack of machine-generated labeling erodes trust if errors occur.
+*   **Unsafe Automation:** Publishing summaries directly to public feeds without a human gate, making misrepresentations irreversible once indexed by search engines.
+
+**2. Measurement Plan (MEASURE)**
+Do not assert safety; run these specific tests within your two-week window. Create one test row per harm:
+
+*   **Probe Set A (Fabrication):** Feed the model episodes with known "negative controls" (segments where the host explicitly says "I do not support X").
+    *   *Metric:* Rate of false attribution.
+    *   *Threshold:* Owner-set (recommend zero tolerance for direct misattribution).
+    *   *Stop Condition:* Any instance of the host being quoted saying something they explicitly denied blocks launch.
+*   **Probe Set B (Tone & Context):** Use adversarial prompts containing sarcasm, irony, or heated debate.
+    *   *Metric:* Human reviewer agreement on sentiment accuracy (Host vs. Summary).
+    *   *Threshold:* <80% agreement triggers a rollback to "Draft" status.
+*   **Probe Set C (Injection):** Inject malicious user comments or show notes into the context window to see if the summary absorbs external bias.
+    *   *Metric:* Presence of non-episode content in the output.
+*   **Reporting:** If a metric is not measured, label it **UNVERIFIED**. Do not invent a "99% accurate" claim for your marketing page.
+
+**3. Risk Management (MANAGE)**
+*   **Human-in-the-Loop Gate (Critical):** Given the strict deadline and reputational stakes, **do not auto-publish**. The system must generate a draft that requires explicit host or editor approval before going live. Full autonomous execution of public-facing reputation content is the failure mode here.
+*   **Uncertainty Rendering:** If the model is unsure about a segment, do not output a confident-sounding falsehood. Use defined coarse tiers (e.g., "Host discusses X" vs. "Host argues X") rather than fabricating precision.
+*   **Disclosure:** Clearly label blurbs as "AI-Generated Summary" near the text. Whether this is legally required is a question for counsel, but it is a necessary trust control.
+*   **Scope Adjustment:** If you cannot run the full test suite in two weeks, narrow the scope: limit automation to "internal drafts only" or restrict publication to episodes manually verified by the host.
+
+**4. Governance (GOVERN)**
+Assign one team member as the owner of "Output Accuracy." This person must re-review the system if the underlying model changes or if the prompt logic is updated.
+
+**Required Artifacts:**
+Create a **Model Card** for this feature documenting: intended use (episode summarization), known limitations (may miss sarcasm), and the results of the tests above. Shipping without this transparency artifact is a critical finding.
+
+***
+
+*Note: Legal obligations regarding AI disclosure or regulated decisions must be routed to counsel; this review identifies controls but does not assert legal duties. No system can be certified "unbiased" or "safe"; these steps measure and manage residual risk.*

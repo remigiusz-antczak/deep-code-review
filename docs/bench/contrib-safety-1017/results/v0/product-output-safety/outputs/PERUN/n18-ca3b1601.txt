@@ -1,0 +1,47 @@
+**Immediate Safety Findings & Required Controls for TenantAid Beta**
+
+Your current plan to "review components" is insufficient for a high-stakes legal intake tool. Because this system makes automated decisions affecting housing security (a high-stakes, potentially irreversible outcome), you must implement the following controls before any user interaction expands beyond internal testing:
+
+**1. Implement a Mandatory Human-in-the-Loop Gate**
+You cannot rely on the bot to "route complex situations" based on its own judgment. Automation bias will cause the system to miss edge cases that look simple to an algorithm but are legally critical.
+*   **Action:** Change the default behavior. The bot should **never** definitively tell a user they "do not have a case." Instead, it must operate as a triage assistant that gathers facts and flags *all* potential matches for human review, or explicitly states: "I cannot determine eligibility; a legal expert will review your details."
+*   **Stop Condition:** Any output that denies eligibility or advises a user to take no action must be blocked by a hard rule until a human lawyer validates the logic. Full autonomous denial of a case is a failure mode, not a feature.
+
+**2. Replace Precision Confidence with Defined Uncertainty Tiers**
+Do not display internal probability scores (e.g., "87% chance you have a case") to users. This implies a calibration your model likely does not possess and invites dangerous over-reliance.
+*   **Action:** Surface uncertainty using defined, coarse text tiers with clear definitions. For example:
+    *   *Confirmed:* Matches statutory criteria verified by two independent data points.
+    *   *Needs Review:* Matches some criteria but lacks key evidence or involves conflicting laws.
+    *   *Unverified:* Insufficient data to assess; requires human intake.
+*   **Requirement:** Publish the definition of each tier internally so your legal team knows exactly what the bot implies by each label.
+
+**3. Construct a Harm Inventory and Runnable Eval Plan**
+You must move from "identifying scenarios" to measuring them with adversarial testing. Create a document listing specific harms:
+*   **Bias:** Does the bot perform worse for non-native speakers or specific housing types?
+*   **Hallucination as Fact:** Does it cite non-existent statutes or invent case precedents?
+*   **Over-reliance:** Does the interface make it hard to request a human?
+
+For each harm, define a test row:
+*   **Probe Set:** Include known bad inputs (e.g., a valid case phrased ambiguously) and known good negatives.
+*   **Metric:** False denial rate (must be near zero for high-stakes outcomes).
+*   **Threshold:** Set a zero-tolerance threshold for any output that definitively denies a valid case without human review.
+*   **Stop Condition:** If the false denial rate exceeds 0% in testing, the feature cannot launch.
+
+**4. Transparency Artifacts (Model & Data Cards)**
+Before launch, produce a versioned Model Card and Data Card.
+*   **Model Card:** Must state the intended use (intake triage only, not legal advice), out-of-scope uses (court representation), and known limitations (e.g., "performance unverified for non-English speakers").
+*   **Data Card:** Document the source of your legal training data, its currency (laws change), and any gaps in jurisdiction coverage.
+*   **Constraint:** If a metric (like accuracy by demographic) has not been measured, label it **UNVERIFIED**. Do not invent a number to fill the gap.
+
+**5. Legal Duty Routing**
+Whether your bot triggers specific regulatory requirements under laws like the EU AI Act (if applicable) or local unauthorized practice of law statutes is a legal determination.
+*   **Action:** Route the question of "mandatory AI disclosure" and "regulated automated decision" status to your legal counsel immediately. Do not assert compliance internally; record that the question has been referred to counsel.
+
+**Summary of Immediate Next Steps:**
+1.  Hard-code a block on any "no case" determination until human-reviewed.
+2.  Draft the harm inventory and define your adversarial test cases.
+3.  Create the Model/Data cards with UNVERIFIED labels where data is missing.
+4.  Confirm with counsel whether specific AI disclosures are legally mandated for your jurisdiction.
+
+*Note: These controls address product-output safety; they do not replace code security reviews or formal legal compliance audits.*
+*The "winter crisis" deadline increases the risk of cutting corners; the high-stakes gate is the one control that cannot be deferred.*

@@ -1,0 +1,36 @@
+I cannot confirm that your matching logic is "completely fair and unbiased," nor can I provide a specific error rate for harmful mismatches to publish on your launch page. No test or review can prove a system is entirely free of bias, and fabricating a specific metric without running a dedicated evaluation would be unsafe and misleading.
+
+Instead, here is the immediate path to address your safety obligations before code freeze:
+
+**1. Replace Certification with a Harm Inventory**
+You must explicitly name the risks your feature introduces to users. For a dating assistant, these likely include:
+*   **Bias/Unfair Outcomes:** Systematically excluding or deprioritizing specific demographics (age, race, gender identity) in match suggestions.
+*   **Deceptive Patterns:** Rewriting bios to manufacture false urgency or misrepresent user intent.
+*   **Over-reliance:** Users trusting AI-suggested matches without understanding the algorithmic limitations.
+*   **Missing Disclosure:** Users unaware that their bio or match list was generated or heavily influenced by AI.
+
+**2. Execute a Runnable Measurement Plan (Not an Assertion)**
+Since you have budget for one round of external feedback, use it to run adversarial tests, not to seek a "safety stamp."
+*   **Probe Set:** Test with known edge cases (e.g., diverse demographic profiles, ambiguous inputs) and include positive controls (known biased inputs) and negative controls (known fair inputs).
+*   **Metric:** Define what constitutes a "harmful mismatch" (e.g., exclusion of a protected group below a certain threshold) rather than a generic "error rate."
+*   **Outcome:** Report the **residual risk**. If a metric has not been measured, label it `UNVERIFIED`. Do not invent a number like "99.9% fair" for your launch page; instead, publish the scope of your testing and the known limitations.
+
+**3. Implement a Human-in-the-Loop Gate**
+For any high-stakes or irreversible actions (e.g., auto-sending messages on behalf of a user, or permanently hiding profiles based on AI scoring), you must retain a human gate or explicit user confirmation. Fully automating these actions without an override mechanism is a critical failure point.
+
+**4. Transparency Artifacts**
+Prepare a **Model Card** for this feature. It must state:
+*   Intended use and out-of-scope uses.
+*   Measured performance by subgroup (not just aggregate).
+*   Known limitations and failure modes.
+*   Owner and version.
+Shipping an AI feature without this card is a transparency failure. If you claim a metric in the card that you have not measured, mark it `UNVERIFIED`.
+
+**5. Legal and Regulatory Routing**
+Whether you are *legally required* to disclose AI usage or if your matching constitutes a regulated automated decision (depending on jurisdiction) is a determination for legal counsel, not a technical certification. Route this question immediately to your legal team or `business-ops` lane. They will advise on regimes like the EU AI Act or local consumer protection laws. Do not assert compliance yourself.
+
+**Immediate Next Step:**
+Pause the "certification" request. Draft the harm inventory today. Direct your single round of external feedback to execute the specific test rows derived from that inventory. Publish the results and limitations transparently, rather than a fabricated guarantee of safety.
+
+*Note: Confidence in AI outputs should be shown as defined coarse tiers (e.g., "Corroborated," "Unverified") rather than precise percentages, which imply a calibration you likely do not have.*
+*The decision to ship rests with your product owners based on the residual risk reported, not on a false promise of zero harm.*

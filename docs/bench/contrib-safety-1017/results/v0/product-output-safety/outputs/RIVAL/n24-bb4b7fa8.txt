@@ -1,0 +1,30 @@
+# Bias Review and Mitigation Plan for Interview Coach
+
+**1. Data Audit and Gap Analysis (Week 1)**
+*   **Demographic Mapping:** Since you are using a fixed dataset, immediately catalog the demographic attributes of every speaker (gender, race/ethnicity, age, native language, accent, and disability status if known). If these labels are missing, you cannot measure bias; you must pause integration until the dataset is annotated by a diverse human panel.
+*   **Representation Check:** Calculate the distribution of these groups. If any group represents less than 15% of the data, the model will likely underperform for them. Identify these gaps immediately.
+*   **Speech Pattern Inventory:** Tag samples for specific linguistic features often penalized by AI, such as code-switching, non-standard grammar, pauses for thought, or varying speech rates common in different cultures.
+
+**2. Baseline Model Evaluation (Weeks 2–3)**
+*   **Disaggregated Scoring:** Run your current algorithm on the dataset but do not look only at the average accuracy. Break down the scores by each demographic group identified in step 1.
+*   **Statistical Parity Check:** Compare the average "confidence" and "communication" scores across groups. If candidates with Accent A consistently score 10% lower than those with Accent B despite similar human-rated quality, you have a confirmed bias.
+*   **False Positive/Negative Analysis:** Determine if the model systematically flags nervousness in one group as "low confidence" while interpreting similar behaviors in another group as "thoughtful pausing."
+
+**3. Human-in-the-Loop Validation (Weeks 3–4)**
+*   **Blind Review Panel:** Assemble a review panel reflecting the diversity of your target user base. Have them score a random subset of 50–100 videos without seeing the AI's score.
+*   **Correlation Study:** Compare human scores against AI scores per demographic group. A low correlation for a specific group indicates the model is misinterpreting their communication style.
+*   **Qualitative Feedback:** Ask the panel to identify specific moments where the AI's likely logic (e.g., penalizing lack of eye contact or specific hand gestures) conflicts with cultural norms of respect or engagement.
+
+**4. Mitigation Strategies (Weeks 4–5)**
+*   **Data Augmentation:** If specific groups are underrepresented or consistently mis-scored, prioritize acquiring or synthesizing more practice data for those specific profiles to retrain or fine-tune the model.
+*   **Feature Suppression:** If the model relies heavily on acoustic features correlated with accent rather than semantic content, work with your engineers to reduce the weight of those specific features in the scoring formula.
+*   **Calibration Layers:** Apply post-processing calibration. If Group X is systematically scored 5 points lower, apply a statistical correction factor to equalize the distribution, ensuring the score reflects relative skill within the group rather than absolute alignment with a dominant norm.
+*   **Confidence Intervals:** Instead of a single precise number, display scores as a range (e.g., "75–85") with a disclaimer that the tool is a practice aid, not a definitive judgment, to reduce psychological harm from outliers.
+
+**5. Pre-Release Safeguards (Week 6)**
+*   **Hard Limits:** Implement logic that prevents the system from generating extremely low scores for users who speak clearly but have non-standard patterns, flagging these for human review if possible, or capping the penalty.
+*   **User Feedback Loop:** Build a "Disagree with Score" button in the beta. Allow users to explain why they feel the score was unfair. This data is critical for post-launch iteration.
+*   **Transparency Documentation:** Publish a "Model Card" for users explaining what the tool measures, what it does not measure (e.g., cultural nuance), and the known limitations regarding accents and dialects.
+
+**Note:** Given the six-week deadline, if significant bias is found in Week 3 that cannot be mitigated by calibration, you must delay the launch or disable the automated scoring feature for affected demographics to prevent reputational and ethical harm.
+Do not release the tool with a "black box" scorer; unknown bias is a greater risk than no scorer at all.

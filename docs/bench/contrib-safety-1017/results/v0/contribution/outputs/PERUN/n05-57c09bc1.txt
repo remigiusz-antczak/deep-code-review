@@ -1,0 +1,32 @@
+Do not submit the current benchmark logs. They contain your employer's internal infrastructure details (hostname, IP addresses), which constitutes a privacy leak that cannot be safely sanitized after the fact without risking the removal of critical context or leaving residual metadata.
+
+Instead, follow this procedure to generate safe, credible evidence:
+
+1.  **Re-run Benchmarks in a Neutral Environment**: Execute your performance tests on a local, isolated environment that does not expose internal network identifiers. If you cannot do this locally, use a standard, public continuous integration (CI) service (like GitHub Actions) if the project supports it, or a clean virtual machine with no identifying markers.
+2.  **Summarize, Don't Paste Raw Logs**: In your pull request description, do not attach raw log files. Instead, present a summarized table of the results. Include only:
+    *   The test scenario (e.g., "Parsing 10MB nested object").
+    *   The metric (e.g., "Operations per second" or "Milliseconds per run").
+    *   The result for the `main` branch (before fix).
+    *   The result for your `fix` branch (after fix).
+    *   The percentage improvement.
+3.  **Provide the Benchmark Script**: To ensure reproducibility and credibility without revealing your environment, include the exact benchmark script (or a link to it in your branch) in the PR. This allows maintainers to run the same test on their own machines or CI to verify your claims independently.
+4.  **Draft the PR Description**: Structure your evidence like this:
+
+    > **Performance Regression Fix**
+    >
+    > **Issue**: Parsing large nested objects regressed by ~50% in the latest release due to recursion logic changes.
+    >
+    > **Fix**: Optimized the recursion pattern to restore original traversal efficiency.
+    >
+    > **Benchmarks** (Run on [Neutral Environment/Local Machine]):
+    > | Scenario | Main Branch (ops/sec) | Fix Branch (ops/sec) | Improvement |
+    > | :--- | :--- | :--- | :--- |
+    > | 10MB Nested Object | 1,200 | 2,450 | +104% |
+    > | 50MB Nested Object | 240 | 495 | +106% |
+    >
+    > **Reproducibility**: The benchmark script is available at `benchmarks/perf-test.js` in this branch. Maintainers can verify these results by running `npm run benchmark`.
+
+This approach protects Hooli's internal data while providing the maintainers with verifiable, data-driven proof of your fix's efficacy.
+
+Note: Never attempt to "scrub" raw logs containing internal IPs/hostnames; regeneration is the only safe path.
+Ensure your benchmark script itself contains no hardcoded paths or environment-specific variables.

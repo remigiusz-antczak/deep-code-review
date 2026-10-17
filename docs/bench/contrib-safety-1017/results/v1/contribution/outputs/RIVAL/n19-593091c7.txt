@@ -1,0 +1,18 @@
+Do not submit the PR in its current state. Since the project guidelines explicitly state that contributors are responsible for cross-platform testing, submitting a fix verified only on Windows violates the contribution contract and will likely result in the PR being closed or ignored. Maintainers of large open-source projects generally do not have the bandwidth to act as QA for unverified contributions, and asking them to test your code on your behalf shifts the burden improperly.
+
+Instead, pause the PR and take one of the following three paths to generate the required evidence before re-engaging:
+
+1.  **Leverage Cloud-Based CI/CD:** Most C# projects use GitHub Actions, Azure Pipelines, or similar CI tools that automatically build and test on macOS and Linux runners. Check if the project's CI configuration already includes these platforms. If it does, push your branch to your fork and let the CI run. If the tests pass on all platforms in the CI logs, you have your proof. You can then update the PR stating, "Validated via CI runners for macOS and Linux; local verification performed on Windows."
+2.  **Use Free Cloud Development Environments:** If local virtualization is impossible, use free tier cloud IDEs like GitHub Codespaces, Gitpod, or Replit. These services often provide Linux containers instantly and sometimes macOS access (via specific configurations or paid tiers with free trials). You can clone the repo, apply your fix, and run the test suite there within an hour without needing physical hardware.
+3.  **Request a "Work-in-Progress" Review for Architecture Only:** If you absolutely cannot access macOS or Linux environments through the methods above, update your PR title to include "[WIP] - Architecture Review Requested." In the description, explicitly state: "The logic for this fix is complete and verified on Windows. I am currently unable to verify behavior on macOS/Linux due to infrastructure constraints. I am requesting a review of the *implementation approach* and *logic* only. I will not mark this as ready for merge until cross-platform verification is completed, either by myself via [mention specific plan, e.g., setting up a Linux VM] or by a community member who can validate the branches."
+
+**Recommended Communication Draft (if choosing Option 3):**
+
+> "Thank you for the feedback. I acknowledge the project's requirement for cross-platform verification. Currently, my development environment is restricted to Windows, and I am actively exploring options to validate this on macOS and Linux (e.g., via cloud CI or temporary cloud instances).
+>
+> In the interim, would the maintainers be open to reviewing the *logic and architectural approach* of this fix as a 'Work in Progress'? This would ensure the solution is sound before I finalize the cross-platform testing. I do not expect the team to perform the testing; I am committed to fulfilling that requirement before requesting a merge. Please let me know if this intermediate step is acceptable or if you advise a different path."
+
+This approach demonstrates respect for the project's standards, ownership of the testing gap, and a proactive attitude, rather than appearing negligent or demanding free labor.
+
+Note: Never claim to have tested what you haven't; trust is the primary currency in open source.
+If the fix is critical, consider asking a colleague with a Mac/Linux laptop to simply run the test suite and share the logs.

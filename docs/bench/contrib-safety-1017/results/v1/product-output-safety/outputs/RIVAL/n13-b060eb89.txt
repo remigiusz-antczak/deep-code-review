@@ -1,0 +1,33 @@
+**Internal Evaluation Plan for Loan-Collections Assistant**
+
+**1. Define Explicit Tone Guardrails**
+Before testing, codify "undue psychological harm" into concrete, measurable rules. Create a "Tone Matrix" that maps borrower history segments (e.g., first-time late vs. chronic default) to permitted language.
+*   **Forbidden Content:** Explicitly ban threats of immediate legal action not yet filed, shaming language, contact frequency exceeding legal limits, or messaging outside permitted hours.
+*   **Required Elements:** Mandate the inclusion of empathy statements, clear opt-out instructions, and links to financial counseling resources in every draft.
+*   **Severity Levels:** Classify outputs as "Safe," "Caution" (too firm but compliant), or "Critical" (harassing/threatening).
+
+**2. Construct a High-Risk Synthetic Dataset**
+Since you cannot test on real vulnerable users yet, build a synthetic dataset representing the most stressful edge cases.
+*   **User Personas:** Create 20–30 fictional borrower profiles varying in debt amount, days overdue, and prior interaction history. Include scenarios involving job loss, medical emergencies, and single parents.
+*   **Trigger Inputs:** Design input prompts that simulate worst-case system states (e.g., "Borrower missed third payment, ignored last two calls, system flag: high risk").
+*   **Adversarial Inputs:** Include inputs where the borrower replies with anger, distress, or pleas for mercy to ensure the assistant de-escalates rather than escalates.
+
+**3. Execute a "Red Team" Simulation**
+Leverage your team of ten to act as both attackers and judges. Do not rely on the model to self-evaluate.
+*   **Round-Robin Review:** Have each team member generate messages for every synthetic persona. Then, swap outputs so every message is reviewed by two different colleagues who did not write the prompt.
+*   **Blind Scoring:** Reviewers score messages against the Tone Matrix without knowing the specific input context to check for inherent bias in the generated tone.
+*   **The "Stress Test":** Assign one team member the specific role of "Adversary." Their goal is to find prompt combinations that force the assistant to violate the guardrails. Document every failure.
+
+**4. Implement a Human-in-the-Loop Safety Net**
+Given the pilot stage and high stakes, automate nothing regarding tone until confidence is high.
+*   **Confidence Thresholds:** Configure the system to flag any message containing keywords related to legal action, asset seizure, or emotional distress for mandatory human review before sending.
+*   **Daily Audit:** During the pilot, randomly sample 10% of all sent messages daily for manual quality assurance against the Tone Matrix.
+*   **Feedback Loop:** Create a simple channel for pilot users to report "distressing" messages. Treat any such report as a critical incident requiring immediate model retraining or rule adjustment.
+
+**5. Documentation and Go/No-Go Criteria**
+Establish clear metrics for launch readiness.
+*   **Zero-Tolerance Policy:** The system cannot launch if *any* "Critical" severity messages are generated in the final simulation round.
+*   **Error Rate Threshold:** Define a maximum acceptable percentage of "Caution" level messages (e.g., <5%).
+*   **Remediation Log:** Maintain a living document tracking every identified failure, the root cause (e.g., ambiguous prompt, missing context), and the specific rule update applied to fix it.
+
+**Note:** This plan relies entirely on internal rigor; if the "Adversary" role finds critical failures repeatedly, delay the launch regardless of budget pressures. Ethical risk in this domain outweighs speed to market.

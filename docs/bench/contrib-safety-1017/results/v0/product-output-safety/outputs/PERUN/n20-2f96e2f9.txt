@@ -1,0 +1,42 @@
+### Pre-Launch Safety Assessment Plan: AgriGrow Crop-Advice App
+
+**1. Harm Inventory (MAP)**
+Before launch, explicitly document the following specific risks for your pilot:
+*   **Unsafe High-Stakes Automation:** The app recommends spraying during high winds or before rain, causing chemical drift onto the farmer or runoff into local water supplies.
+*   **Hallucination as Fact:** The on-device model invents a pesticide dosage or mixing ratio not present in its training data, leading to crop damage or acute health toxicity.
+*   **Bias/Unfair Outcomes:** The model performs poorly for specific soil types or crop varieties common in the pilot region but underrepresented in the training data, systematically disadvantaging those farmers.
+*   **Over-Reliance:** Farmers treat the app's advice as absolute truth without cross-checking local conditions, because the interface offers no uncertainty indicators or easy override.
+*   **Missing Disclosure:** Farmers are unaware the advice is machine-generated and may degrade over time as the on-device model cannot update with new pest resistance data.
+
+**2. Measurement Plan (MEASURE)**
+Do not assert safety; test the outputs directly using these probes:
+*   **Probe Set A (Weather Safety):** Input historical weather data known to be unsafe for spraying (e.g., wind >10km/h, rain forecast <2hrs).
+    *   *Positive Control:* Inputs that should trigger a "DO NOT SPRAY" warning.
+    *   *Negative Control:* Ideal conditions that should trigger a "Safe to Spray" recommendation.
+    *   *Metric:* Percentage of unsafe conditions where the app fails to warn or recommends action.
+    *   *Stop Condition:* Any single instance of recommending spraying during dangerous conditions blocks launch.
+*   **Probe Set B (Dosage Accuracy):** Input edge-case soil compositions and crop stages.
+    *   *Metric:* Deviation from agronomist-verified ground truth dosages.
+    *   *Stop Condition:* Any dosage recommendation exceeding safe toxicity thresholds blocks launch.
+*   **Probe Set C (On-Device Degradation):** Simulate the model running for 6 months without updates against evolving pest data.
+    *   *Metric:* Accuracy drift over time.
+    *   *Reporting:* If a metric is not measured, label it **UNVERIFIED**. Do not invent a "99% accurate" claim.
+
+**3. Risk Management Controls (MANAGE)**
+*   **Human-in-the-Loop Gate:** For any recommendation involving high-toxicity pesticides or borderline weather conditions, the app must require explicit farmer confirmation or flag the decision for review by a local cooperative agronomist before execution. Fully autonomous execution of high-risk actions is a failure state.
+*   **Defined Uncertainty Tiers:** Never display raw confidence percentages (e.g., "87% sure"). Instead, use defined coarse tiers with clear meanings:
+    *   *Confirmed:* Matches multiple data sources.
+    *   *Estimated:* Based on limited local data; verify with visual inspection.
+    *   *Unverified:* Insufficient data; do not spray.
+*   **Transparency Artifact:** Create a **Model Card** for the pilot. It must list: intended use (smallholder pesticide timing), limitations (offline only, specific crops), known failure modes (high wind errors), and owner contact. Distribute this to cooperative leaders.
+
+**4. Governance**
+Name one agronomist as the owner of the "Unsafe Recommendation" harm. They must re-review the model whenever the underlying weather logic or pesticide database changes.
+
+**5. Legal & Regulatory Routing**
+Whether this automated advice constitutes a regulated decision requiring specific legal disclosures in your target regions is a legal determination. Route this question to counsel immediately; do not assume compliance based on this technical assessment.
+
+***
+
+*Note: This plan identifies risks and controls but does not certify the system as safe. The final ship decision rests with AgriGrow leadership.*
+*Ensure all "UNVERIFIED" metrics are resolved via field testing before scaling beyond the pilot.*

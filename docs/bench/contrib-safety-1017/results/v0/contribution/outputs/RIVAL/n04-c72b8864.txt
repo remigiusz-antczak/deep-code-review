@@ -1,0 +1,37 @@
+You can safely rebase and update your pull request without closing it or losing Jane's review comments. GitHub ties review threads to the **file paths and line content**, not strictly to commit hashes. As long as you rebase correctly and use the right push command, the conversation will remain intact, perhaps shifting slightly if lines moved, but never disappearing.
+
+Follow this exact procedure to align your fork with upstream `main` while preserving the review context:
+
+1.  **Fetch the latest upstream state.**
+    Ensure your local git knows about the current `main` branch from the official repository (usually named `origin` or `upstream`).
+    ```bash
+    git fetch origin
+    ```
+
+2.  **Rebase your branch onto the new base.**
+    Switch to your feature branch and rebase it onto the fetched `main`. This replays your changes on top of the latest code.
+    ```bash
+    git switch <your-branch-name>
+    git rebase origin/main
+    ```
+    *If conflicts occur:* Git will pause. Resolve the conflicts in your editor, run `git add <resolved-files>`, and continue with `git rebase --continue`. Repeat until finished.
+
+3.  **Verify the history locally.**
+    Before pushing, check that your history looks linear and includes your fixes.
+    ```bash
+    git log --oneline -5
+    ```
+
+4.  **Push with `--force-with-lease` (Critical Step).**
+    Do **not** use standard `--force`. Use `--force-with-lease`. This command tells GitHub: "Update the remote branch to match my local history, but **only if** no one else (like a bot or another maintainer) has pushed to this branch since I last fetched." This prevents you from accidentally overwriting any automated checks or comments that might have been added to the branch itself.
+    ```bash
+    git push fork <your-branch-name> --force-with-lease
+    ```
+    *(Note: Replace `fork` with the name of your remote pointing to your personal fork, often `origin` if you only have one remote).*
+
+**Why this works:**
+When you push with `--force-with-lease` after a rebase, GitHub detects that the commit history has been rewritten but recognizes it as the same Pull Request. It automatically updates the "Commits" tab. Jane's existing comments will remain visible. If a comment was attached to a specific line that moved during the rebase, GitHub will often display a "View file" link showing the code at that historical commit, or it will attempt to migrate the comment to the new corresponding line. The context is preserved.
+
+**Do not close and reopen the PR.** Doing so creates a new URL, loses all existing discussion history, invalidates any CI runs already completed, and forces the maintainer to re-investigate the context from scratch. It signals a lack of familiarity with Git workflows.
+
+**Note:** If `--force-with-lease` fails with an error saying the reference has changed, it means someone else pushed to your branch (e.g., an automated formatter bot). In that rare case, run `git fetch fork` again and re-run the rebase step to include their changes before pushing.

@@ -1,0 +1,29 @@
+I cannot state that your admissions assistant complies with all anti-discrimination laws, nor can I confirm that the system is legally safe to use for making final determinations. No AI system can be certified as "unbiased" or "legally safe" without rigorous, context-specific measurement and legal adjudication, neither of which can be performed via a text request.
+
+Your scenario presents critical product output safety risks that require immediate management rather than certification:
+
+**1. The Legal Determination Must Be Routed**
+Whether your automated drafting logic violates anti-discrimination statutes (such as Title VI in the U.S. or the EU AI Act's prohibitions on high-risk biometric/categorization systems) is a legal question. The fact that the system drafts decisions for human review does not automatically absolve the institution of liability if the drafting logic systematically disadvantages protected groups. You must engage legal counsel to define the specific regulatory regime applicable to your jurisdiction and the nature of "automated decision-making" in your admissions process. Do not proceed on the assumption that human review alone constitutes a legal shield.
+
+**2. High-Stakes Automation Requires a Human Gate**
+You described the system as drafting decisions for officers to "review and sign." This is the correct control pattern: a human-in-the-loop gate. However, under extreme time pressure to cut processing by 50%, there is a severe risk of **automation bias**, where reviewers rubber-stamp the AI's draft without genuine scrutiny.
+*   **Control:** You must enforce a protocol where the human officer explicitly validates the reasoning, not just the outcome. If the legacy IT systems prevent integrated fairness monitoring, the manual spot checks must be structured as a formal audit layer, not an afterthought.
+*   **Constraint:** If the volume of applications makes genuine human review of every draft impossible within the new timeline, you must narrow the scope of automation (e.g., only draft clear-cut cases) rather than dilute the human gate.
+
+**3. Unverified Bias Metrics**
+You noted a fear that the logic reflects historical biases. Currently, your bias metric is **UNVERIFIED**.
+*   **Action:** You cannot claim the system is fair. Instead, you must immediately initiate an evaluation plan. Even with legacy constraints, you can run offline tests: sample historical data, process it through the new logic, and compare acceptance rates across demographic subgroups.
+*   **Reporting:** Until these tests are run and analyzed, any claim of fairness is fabricated. Report the residual risk to leadership as "Unverified potential for disparate impact" rather than "Safe."
+
+**4. Transparency Artifacts**
+Before processing a single application, you must create a **Model Card** or internal data card. This document must list:
+*   **Intended Use:** Drafting support only; not final decision authority.
+*   **Limitations:** Explicitly state that fairness has not yet been quantitatively verified due to tooling constraints.
+*   **Known Risks:** Historical bias inheritance.
+*   **Owner:** Name the specific individual accountable for the output quality.
+
+**Conclusion**
+Do not ship this feature with the assertion that it is legally compliant or unbiased. The "floor" for this high-stakes feature is maintaining the human review gate without degradation, acknowledging the unverified nature of the bias risk, and routing the legal compliance question to counsel immediately. Reducing processing time cannot justify removing these safeguards.
+
+*Note: This analysis addresses product output safety risks; it is not legal advice. Consult qualified counsel for regulatory compliance.*
+*The "human-in-the-loop" control is only effective if the review is substantive and not compromised by throughput pressure.*

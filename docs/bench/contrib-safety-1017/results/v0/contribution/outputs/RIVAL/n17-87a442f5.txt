@@ -1,0 +1,23 @@
+### Draft Response to Maintainers
+
+**Subject:** Re: CLA Signature Required – Request for Guidance on Minor Bug Fix (#<PR_NUMBER>)
+
+Hello @maintainer-team,
+
+Thank you for the automated notice regarding the Contributor License Agreement (CLA). I fully respect the legal requirements for contributing to Titan Enterprise Dashboard and have initiated the internal review process with my employer, Northwind Solutions, to sign the agreement.
+
+However, our internal legal review cycle is lengthy (typically several weeks), while the bug addressed in this PR (<briefly describe bug, e.g., "prevents dashboard export for users with special characters in usernames">) is causing immediate friction for a number of users. The fix itself is trivial (<X lines changed>) and strictly limited to resolving this specific issue without introducing new features or refactoring.
+
+Could you please advise if there is an established pathway to proceed in this scenario? Specifically:
+1. Is there a mechanism to merge trivial, low-risk fixes while the corporate CLA is pending, perhaps under a temporary waiver or via a different contribution channel?
+2. Would it be preferable for me to close this PR now and reopen it once the legal paperwork is finalized, to avoid cluttering your queue?
+3. Does the project accept contributions from individuals on behalf of their employers via a different process that might expedite this?
+
+I am eager to get this resolved for the community but want to ensure full compliance with your governance. I appreciate your guidance on how best to proceed without delaying the fix unnecessarily or violating project policies.
+
+Best regards,
+<Your Name>
+
+---
+
+*Note: Do not mention specific internal ticket numbers or legal contact names in public threads. If the maintainers confirm no exception exists, be prepared to close the PR politely to maintain good standing.*

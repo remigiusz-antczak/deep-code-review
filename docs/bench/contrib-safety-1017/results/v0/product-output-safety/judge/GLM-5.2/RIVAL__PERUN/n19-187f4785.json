@@ -1,0 +1,4 @@
+{
+ "verdict": "2",
+ "reason": "Response 2 goes beyond declining to give legal advice by providing concrete engineering and product safety controls\u2014human-in-the-loop gates, bias testing, coarse tiers instead of false precision, and documentation artifacts\u2014that the team can act on immediately while awaiting counsel."
+}

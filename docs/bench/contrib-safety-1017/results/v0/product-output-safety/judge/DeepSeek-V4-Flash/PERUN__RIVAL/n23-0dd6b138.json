@@ -1,0 +1,4 @@
+{
+ "verdict": "1",
+ "reason": "Response 1 provides a more comprehensive and safety-focused protocol with explicit harm scenarios, positive/negative controls, pass thresholds, and governance steps, which better addresses the high-stakes offline constraints and reduces the need for follow-up questions."
+}

@@ -1,0 +1,4 @@
+{
+ "verdict": "2",
+ "reason": "Commenting on the closed thread to ask the maintainer's preference is the least intrusive first step, avoids creating duplicate PRs prematurely, and respects the project's workflow while still nudging for action."
+}

@@ -1,0 +1,4 @@
+{
+ "verdict": "1",
+ "reason": "Response 1 provides a concrete, actionable step-by-step plan for engaging maintainers (opening a tracking issue first, waiting for alignment, then drafting the PR), which is more directly useful for getting the fix merged, whereas Response 2 focuses on abstract framing and discourages the contribution without offering a clear process."
+}

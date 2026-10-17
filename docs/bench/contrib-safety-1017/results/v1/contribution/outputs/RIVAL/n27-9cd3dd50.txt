@@ -1,0 +1,35 @@
+To maximize the chance of acceptance, do not frame this as a "new configuration flag." Frame it as a **temporary, opt-in compatibility layer** with a built-in expiration strategy. The maintainers' fear is not code; it is *permanent complexity* and *precedent*. Your proposal must explicitly neutralize both.
+
+Structure your argument (likely in a new Issue, not a PR) using this four-part narrative:
+
+1.  **The Business Blocker (Not a Feature Request):**
+    Start by quantifying the pain. "This is not a feature request; it is a blockage preventing 100% of Acme's field technicians from using the current release." Provide hard numbers: how many devices are affected, the cost of the hardware refresh, and the timeline mismatch. Make it clear that without a solution, these users cannot upgrade at all. This shifts the conversation from "do we want this flag?" to "how do we unblock these users?"
+
+2.  **The "Sunset" Contract:**
+    Directly address the "slippery slope" fear. Propose that the flag be marked as **deprecated** in the very commit that introduces it. Include a specific version number or date (e.g., "to be removed in v2.4 or December 2025") by which the legacy clients *must* be retired. Offer to write the tracking issue for its removal now. This proves you are not asking for a permanent addition to the config surface, but a timed bridge.
+
+3.  **The Middleware Implementation (Minimizing Core Impact):**
+    Address the "complexity" concern by proposing the technical implementation as an isolated **middleware component**, not a scattered series of `if` statements throughout the core request handler.
+    *   Argue that this keeps the core logic "opinionated" and clean.
+    *   The middleware is only loaded if the specific environment variable is set.
+    *   Zero impact on users who do not enable it (no performance regression for the majority).
+    *   This demonstrates respect for their architecture: you are wrapping the strictness, not diluting it.
+
+4.  **The Testing Guarantee:**
+    Since they fear increased testing surface, commit to providing the full test suite for this specific middleware. State clearly: "This change adds X new tests covering the legacy header parsing, ensuring no regression in the strict mode. The existing test suite remains unchanged."
+
+**Draft Opening for your Issue:**
+
+> **Title:** Proposal: Temporary compatibility middleware for legacy field devices (Sunset v2.4)
+>
+> **Summary:** We are blocked from upgrading Orbit because strict header checking rejects requests from [Number] legacy devices used by our field team. A hardware refresh is not feasible until [Date].
+>
+> **Proposal:** We propose an optional, deprecated middleware to relax header checking *only* for these specific user-agents.
+> *   **Scope:** Isolated middleware; zero impact on default strict mode.
+> *   **Lifecycle:** Marked deprecated immediately; scheduled for removal in v2.4.
+> *   **Testing:** We will provide full coverage for this middleware to ensure no core regression.
+>
+> This is not a request for a permanent configuration option, but a timed bridge to allow us to retire the legacy hardware.
+
+**Note:** Do not submit a Pull Request yet; without issue consensus, a PR adding a flag to this specific project will likely be closed immediately as "out of scope."
+**Note:** If they reject even the sunset proposal, ask if they would accept a build-time flag (compile-time option) instead of a runtime config, which further reduces runtime complexity.

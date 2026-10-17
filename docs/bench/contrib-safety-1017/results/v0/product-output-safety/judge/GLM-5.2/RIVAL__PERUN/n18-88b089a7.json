@@ -1,0 +1,4 @@
+{
+ "verdict": "2",
+ "reason": "Response 2 provides actionable, high-stakes safety controls directly relevant to a legal-intake bot\u2014hard-blocking autonomous denials, defining uncertainty tiers, and specifying adversarial test metrics\u2014whereas Response 1 simply asks for materials without offering any interim guidance."
+}

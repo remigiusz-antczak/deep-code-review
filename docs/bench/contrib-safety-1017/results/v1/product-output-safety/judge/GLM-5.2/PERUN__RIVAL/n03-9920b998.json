@@ -1,0 +1,4 @@
+{
+ "verdict": "1",
+ "reason": "Response 1 provides more rigorous safety controls (deterministic keyword bypass, zero-tolerance thresholds, injection testing) and a clearer governance structure, making it better suited for the high-stakes teen mental health context."
+}

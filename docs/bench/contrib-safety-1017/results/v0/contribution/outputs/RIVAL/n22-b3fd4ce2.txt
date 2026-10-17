@@ -1,0 +1,33 @@
+Create a **synthetic schema generator** that mimics the structural properties of your data without including any real field names, values, or business logic. This is the only safe approach that satisfies both the maintainer's need for a reproducible crash and your NDA obligations.
+
+**Implementation Strategy:**
+
+1.  **Abstract the Structure, Not the Content:**
+    Identify the specific structural traits causing the crash (e.g., "a nested table with 3 levels of depth," "a custom field type occupying 64 bytes," "a circular reference between Table A and Table B"). Create a C++ script or Python tool that generates a `.sql` or binary test file containing *only* these structural elements.
+    *   *Bad:* `CREATE TABLE Shipments (client_id VARCHAR...)`
+    *   *Good:* `CREATE TABLE T1 (F1 CUSTOM_TYPE_64B, F2 NESTED_TABLE(T2))`
+
+2.  **Target the Offset:**
+    Since the error cites "invalid memory access at offset 4096," ensure your synthetic data is large enough or aligned in a way that triggers this specific boundary condition. You may need to pad fields or create a specific count of rows to force the memory layout into the failing state. The goal is to reproduce the *memory geometry*, not the business meaning.
+
+3.  **Verify Locally Before Sharing:**
+    Run your synthetic generator against your local build of Vertex Grid. Confirm it produces the exact same segmentation fault with the same offset error. If it crashes differently or not at all, refine the structural mimicry until the crash is identical.
+
+4.  **Provide a Minimal Build Script:**
+    Along with the synthetic data file, provide a simple `CMakeLists.txt` or `Makefile` snippet and a `main.cpp` that loads *only* this synthetic file and calls the initialization function. This removes any dependency on your employer's build system or proprietary libraries.
+
+**Draft Response to Maintainer:**
+
+> "I cannot share our production schema due to NDAs, but I have created a standalone, synthetic reproduction case that triggers the exact same segfault at offset 4096.
+>
+> Attached is a minimal C++ project (`repro_case.zip`) containing:
+> 1. `generate_data.cpp`: Creates a synthetic binary/schema mimicking the nested depth and custom field alignment of our internal data.
+> 2. `test_repro.cpp`: Loads the generated data and calls the initialization routine.
+> 3. `CMakeLists.txt`: Build instructions.
+>
+> Running `./test_repro` immediately reproduces the crash on my end. The data contains no real field names or client information—only structural placeholders designed to match the memory layout that causes the failure. Please let me know if this reproduces on your end."
+
+This approach demonstrates good faith, provides immediate actionable evidence, and rigorously protects your employer's intellectual property.
+
+Note: Do not attempt to describe the schema purely in text; memory alignment bugs are notoriously difficult to reproduce from descriptions alone.
+Ensure your synthetic generator is deterministic so the maintainer gets the exact same binary output every time they run it.

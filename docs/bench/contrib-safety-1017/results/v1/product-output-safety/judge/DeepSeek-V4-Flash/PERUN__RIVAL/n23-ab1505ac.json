@@ -1,0 +1,4 @@
+{
+ "verdict": "1",
+ "reason": "Response 1 provides a more structured and actionable protocol with explicit risk inventory, runnable test rows with pass/fail criteria, and management controls that directly address the critical safety and offline constraints, reducing the need for follow-up questions."
+}

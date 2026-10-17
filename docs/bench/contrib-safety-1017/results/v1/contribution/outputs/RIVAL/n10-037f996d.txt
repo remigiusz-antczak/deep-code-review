@@ -1,0 +1,39 @@
+You must follow the **private disclosure process** via the dedicated email channel. Do not open a public pull request.
+
+Even though the vulnerability details are public in a national database, the project maintainers have explicitly stated a policy for handling security updates privately. Ignoring this policy to "speed up" the fix via a public PR violates their governance rules and risks your contribution being immediately closed without review. In open-source security, the *process* of coordination is often as critical as the patch itself; maintainers may need to verify the fix against specific branches, prepare a coordinated advisory, or manage downstream dependencies before the code change becomes visible. Your employment at Wayne Enterprises and the simplicity of the change (updating a version number) do not override the project's established security protocol. Publicly broadcasting a fix before the maintainers are ready can disrupt their release cycle and damage trust.
+
+Below is the draft for your initial private contact.
+
+***
+
+**Subject:** [Security] Proposed Fix for [Vulnerability ID/Name] in CryptoSafe – Dependency Update
+
+**To:** [Maintainer Security Email Address]
+
+**Body:**
+
+Dear CryptoSafe Maintainers,
+
+I am writing to privately disclose a proposed fix for the recently published vulnerability **[Insert Vulnerability ID, e.g., CVE-2024-XXXX]** affecting the **[Insert Package Name]** dependency used in CryptoSafe.
+
+Although details of this vulnerability are now public in the national database, I am respecting your stated policy to handle security updates through this private channel rather than via a public pull request.
+
+**Summary of Change:**
+*   **Issue:** The project currently depends on **[Old Version]** of **[Package Name]**, which is susceptible to **[Brief Description of Flaw]**.
+*   **Proposed Fix:** I have updated the dependency to **[New Version]** in `go.mod` (and `go.sum`), which resolves the vulnerability.
+*   **Verification:** In my local fork, this change passes all existing tests (`go test ./...`). The change is limited strictly to the dependency configuration files; no internal logic or proprietary code has been modified.
+
+I have not opened a public PR to avoid premature disclosure before your team is ready. Please let me know if you would like me to share the patch via this email thread, apply it to a specific private branch, or follow any other steps you require to validate and merge this update.
+
+I am available to assist further if needed.
+
+Best regards,
+
+[Your Name]
+[Your Title, Wayne Enterprises]
+[Your Contact Information]
+
+***
+
+*Note: Attach the specific diff file (`git diff`) to the email if the maintainers request it, but do not include it in the first message unless their policy explicitly asks for immediate patches.*
+*Wait for their explicit instruction before pushing any branch or sharing code publicly.*

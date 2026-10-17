@@ -1,0 +1,38 @@
+### Pre-Launch Safety Protocol: VoyageAI Travel Agent
+
+**1. Mandatory Human-in-the-Loop Gate (Immediate Implementation)**
+Despite the goal of "seamless execution," fully autonomous booking and payment for flights constitutes a **high-stakes, irreversible action**. You cannot verify safety via testing alone given your budget constraints.
+*   **Protocol:** The system must generate a booking proposal (flight details, total price, currency) and pause. No transaction is sent to the payment gateway until the user explicitly confirms the specific line items in a dedicated review step.
+*   **Rationale:** Automation bias (users trusting the AI too much) is a known failure mode. A "confirm before pay" step is the only guaranteed control against hallucinated flight numbers or incorrect conversions causing financial loss. This is not a bug; it is the primary safety feature.
+
+**2. Synthetic "Dry-Run" Evaluation Suite (Budget-Conscious Testing)**
+Do not use live transactions to test logic. Build a local evaluation harness that simulates the booking flow without calling the payment gateway.
+*   **Adversarial Probe Set:** Create 50–100 synthetic natural language requests covering edge cases:
+    *   Ambiguous dates ("next Friday" vs. specific dates).
+    *   Complex routing (multi-city, open-jaw).
+    *   Currency traps (requests involving non-USD currencies where conversion errors are likely).
+    *   Non-existent flights (prompts designed to trigger hallucination).
+*   **Positive/Negative Controls:**
+    *   *Positive Control:* A prompt with a known, valid flight ID that must return an exact match.
+    *   *Negative Control:* A prompt requesting a flight that does not exist; the system must refuse to book or flag uncertainty, not invent a flight number.
+*   **Metric & Stop Condition:** The pass threshold for "autonomous execution readiness" is **0% hallucination rate** on the probe set. If the model generates *any* fake flight number or incorrect price in the dry-run, the feature remains locked behind the human gate. Do not invent a "99% accurate" metric; if it fails once, it is **UNVERIFIED**.
+
+**3. Uncertainty Rendering & Disclosure**
+*   **Confidence Tiers:** Do not display raw model confidence scores (e.g., "87% sure") to users, as this implies false precision. Instead, map internal confidence to defined coarse tiers:
+    *   *Confirmed:* Matched against live inventory API with exact price/date.
+    *   *Unverified:* Data derived from cached sources or ambiguous user input (triggers mandatory human review).
+*   **AI Disclosure:** Clearly label the booking proposal as "AI-Generated Recommendation." While legal requirements for disclosure depend on jurisdiction (route to counsel for final determination), transparent labeling is a necessary product control to manage user expectations and reduce over-reliance.
+
+**4. Data & Model Transparency Artifact**
+Before beta, produce a one-page **Model Card** for internal and beta-user visibility. It must list:
+*   **Intended Use:** Domestic and international flight booking assistance.
+*   **Known Limitations:** Potential for hallucinating flight numbers when inventory APIs are slow; currency conversion latency.
+*   **Evaluation Status:** State clearly that live transaction testing was limited; safety relies on the dry-run suite and the human confirmation gate.
+*   **Owner:** Name the specific engineer responsible for monitoring booking failures.
+
+**Summary of Deliverables:**
+1.  Code change enforcing a user confirmation step before any payment API call.
+2.  A local script running the adversarial probe set with a "fail-fast" stop condition.
+3.  A Model Card documenting the "UNVERIFIED" status of live metrics and the reliance on the human gate.
+
+*Note: Legal obligations regarding automated financial decisions vary by region; consult counsel to determine if additional regulatory disclosures are required for your specific markets. This protocol prioritizes harm prevention over seamless automation until live reliability is proven.*

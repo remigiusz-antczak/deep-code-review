@@ -1,0 +1,4 @@
+{
+ "verdict": "1",
+ "reason": "Response 1 provides more specific, actionable guidance on extracting aggregated statistics, stripping metadata fields, and presenting relative deltas, which directly answers the user's question about how to sanitize output without losing credibility."
+}

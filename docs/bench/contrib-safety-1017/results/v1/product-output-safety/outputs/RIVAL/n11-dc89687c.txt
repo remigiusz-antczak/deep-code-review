@@ -1,0 +1,3 @@
+I cannot review your detection logic or outline a safety plan because you have not provided the code, algorithms, pattern definitions, or technical specifications of your current system. Additionally, I cannot access your internal repositories, run tests, or verify your infrastructure as I have no tools, network access, or file capabilities.
+
+To proceed, please paste the relevant detection logic, describe your pattern-matching rules, and specify how your system currently distinguishes between direct infringement and potential fair use. Once you provide these details, I can help analyze potential failure modes and suggest mitigation strategies based strictly on the information you share.

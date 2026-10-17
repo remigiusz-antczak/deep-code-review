@@ -1,0 +1,20 @@
+For a one-line bug fix in a mature C library like Chronos, the best approach is to **open the Pull Request directly** but structure it so that the PR body *serves* as the issue documentation. Creating a separate issue first for a trivial, self-evident off-by-one error often creates unnecessary friction; maintainers of established projects generally prefer seeing the fix immediately rather than triaging a "bug exists" ticket that will be closed minutes later when the PR arrives.
+
+Your workflow should be:
+1.  **Branch from upstream `main`**: Ensure you are not working off a stale fork.
+2.  **Commit with precision**: Use a conventional commit message like `fix(parser): accept Feb 29 in leap years`. The body of the commit should briefly explain the logic error (e.g., "Boundary check used `<` instead of `<=` for day validation in `is_leap_year` contexts").
+3.  **Draft the PR Description**: Since no issue exists, your PR description must act as the bug report. Include:
+    *   **Summary**: "Fixes off-by-one error rejecting Feb 29 in leap years."
+    *   **Reproduction**: Briefly state the input that failed (e.g., `chronos_parse("2024-02-29")` returned error code X).
+    *   **Verification**: State clearly that you verified the fix locally with the specific test case.
+    *   **Scope**: Explicitly state this is a single-line logic fix with no side effects on other months or years.
+
+Regarding your employer, **do not mention Apex Dynamics in the commit message**. Commit messages are part of the permanent technical history of the project, not legal ledgers. Mentioning your company here adds noise and can look like corporate signaling, which some open-source maintainers view skeptically. Instead:
+*   If the project has a `CONTRIBUTING.md` that requires a Developer Certificate of Origin (DCO) or asks for employer disclosure, follow that specific rule.
+*   If there is no such rule, your contribution is implicitly made as an individual.
+*   If your company requires legal attribution, the standard place is often the `COPYRIGHT` file or a specific `CONTRIBUTORS` list, which you can propose adding to in the PR description or a separate tiny commit if the project maintains such a list. Do not clutter the code history with corporate names unless the project culture explicitly demands it.
+
+Finally, before pushing, quickly scan the last 10 merged PRs in the repository. If you see other one-line fixes merged without prior issues, you have confirmation that your direct-PR approach aligns with their norms. If every recent fix has a linked issue number, then create a minimal issue titled "Bug: Feb 29 rejected in leap years" and link it in your PR immediately after creation.
+
+Note: Ensure you run the project's specific C test suite (e.g., `make test` or `ctest`) and mention the exact command in your PR to prove the fix doesn't break existing functionality.
+Keep the PR strictly to the logic fix; do not reformat surrounding code or update documentation in the same commit.

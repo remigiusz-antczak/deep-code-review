@@ -1,0 +1,14 @@
+Do not file the issue with the raw stack trace containing your company's internal paths. Doing so would violate your security policies and potentially expose Acme Corp's infrastructure to targeted attacks.
+
+Instead, follow this three-step approach to remain compliant with the project's contribution guidelines while protecting sensitive data:
+
+1.  **Sanitize the Public Issue:** Replace the absolute file paths in the stack trace with generic, clearly marked placeholders. For example, change `/home/jenkins/workspace/acme-internal-build/netsecure/src/main/java/...` to `[REDACTED_INTERNAL_PATH]/netsecure/src/main/java/...`. In the "Operating System" or "Environment" section of the template, explicitly state: *"Full stack trace contains proprietary internal paths; sensitive segments have been redacted to comply with corporate security policy. The exception type, line numbers, and method calls remain intact."* Most open-source maintainers prioritize the logical flow of the error (exception type and line numbers) over the specific filesystem path of the reporter.
+
+2.  **Offer a Secure Channel:** In the body of your public issue, add a note offering to provide the unredacted logs via a secure, private channel if the maintainers deem it strictly necessary for debugging. You can write: *"I can provide the full, unredacted stack trace privately via encrypted email or a secure file transfer service upon request from a maintainer."* This demonstrates good faith and willingness to cooperate without publicly broadcasting secrets.
+
+3.  **Check for Existing Private Channels:** Before filing, quickly scan the project's `README.md`, `CONTRIBUTING.md`, or security policy page for a specific email address (e.g., `security@...` or `maintainers@...`) designated for sensitive reports. If one exists, you may send the full logs there first, referencing that correspondence in your public, sanitized issue ticket.
+
+Your fix itself can be submitted as a Pull Request linked to this sanitized issue once the ticket is accepted. Since your code changes do not contain private information, the PR review process will proceed normally. Maintainers generally prefer a slightly redacted but safe report over a complete report that compromises a contributor's security.
+
+Note: If the project strictly rejects redacted traces, they are prioritizing form over security; in that rare case, insist on the private channel before proceeding.
+Always prioritize your organization's security policies over third-party template requirements.

@@ -1,0 +1,28 @@
+Subject: Proposal: Spanish README Translation for DocuBase
+
+Hello DocuBase Maintainers,
+
+I am a developer at Umbrella Corporation and an active user of DocuBase. While our internal team relies on your framework, I am reaching out in a personal capacity to propose a voluntary contribution: a Spanish translation of the project's README file.
+
+Currently, the documentation is available only in English. Given the growing adoption of DocuBase in Latin American and Spanish-speaking developer communities, a localized README could significantly lower the barrier to entry for non-native speakers. However, I recognize that maintaining multiple language versions introduces ongoing synchronization challenges as the project evolves.
+
+Before investing time in formatting and translating the file, I wanted to inquire about your preferences regarding internationalization:
+
+1.  **Interest:** Would the project welcome a `README.es.md` file, or do you prefer to keep documentation monolingual to avoid maintenance overhead?
+2.  **Strategy:** If translations are welcome, do you have a preferred naming convention or directory structure (e.g., keeping it in the root vs. a `/docs/locales` folder)?
+3.  **Process:** Should I open a formal issue to track this discussion first, or is it acceptable to proceed directly with a Pull Request once we align on the approach?
+
+Please note that this contribution contains no confidential information from Umbrella Corporation and is offered purely to support the open-source community.
+
+I am happy to adapt to whatever workflow best suits your maintenance goals. If you prefer to defer internationalization until the project reaches a different maturity level, I completely understand.
+
+Thank you for your time and for building such a useful tool.
+
+Best regards,
+
+[Your Name]
+[Optional: Link to your GitHub profile]
+
+---
+*Send this via GitHub Issues (as a new "Question" or "Feature Request") rather than email to ensure public visibility and community input.*
+*If they approve, reference this issue number in your future PR description to satisfy the "issue-first" heuristic common in TypeScript projects.*

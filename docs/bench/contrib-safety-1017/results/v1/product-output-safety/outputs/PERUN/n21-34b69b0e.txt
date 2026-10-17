@@ -1,0 +1,28 @@
+Your current plan requires immediate expansion to address the high stakes of automated financial exclusion. Because your system directly influences funding decisions, you must treat every automated score as a high-stakes action requiring a human-in-the-loop gate before any money is committed. Do not proceed to pilot testing with real data until you have completed the following specific steps:
+
+**1. Complete a Harm Inventory**
+Before writing another line of code, document the specific harms your scoring logic could cause. You must explicitly record:
+*   **Bias/Unfair Outcomes:** How might the model systematically disadvantage specific types of non-profits (e.g., those led by marginalized groups, smaller organizations, or specific geographic regions) due to your limited historical data?
+*   **Hallucination as Fact:** What happens if the model invents criteria or misreads an application's impact, presenting this fabrication as a justified low score?
+*   **Over-reliance:** How will you prevent reviewers from blindly trusting the AI score over their own judgment?
+
+For each harm, define who is affected and the worst realistic case (e.g., a worthy community clinic is defunded due to a biased score). An empty inventory is not a pass; it is an unfilled requirement.
+
+**2. Build Runnable Output-Harm Evaluations**
+You cannot assert fairness; you must measure it. Create a test suite with one row per inventoried harm. Since you lack diverse historical data, you must synthesize adversarial probes:
+*   **Probe Set:** Create pairs of identical grant applications where only the demographic or geographic markers change. Include "known-bad" controls (applications that clearly fail criteria) and "known-good" controls (applications that clearly meet criteria).
+*   **Metric & Threshold:** Define a metric for score disparity between paired applications. Set a strict threshold (e.g., zero tolerance for significant deviation based on protected characteristics).
+*   **Stop Condition:** Establish a hard rule: if the model fails the fairness probe, the pilot stops immediately. Do not invent a "typical" failure rate; if you haven't measured it, the status is **UNVERIFIED**.
+
+**3. Implement a Human Gate and Uncertainty Tiers**
+*   **Human-in-the-Loop:** No application should be rejected or funded solely by the AI. The system must output a recommendation, but a human reviewer must make the final decision, especially for any score near a funding cutoff.
+*   **Show Uncertainty:** Do not display raw confidence percentages (e.g., "87% score") to reviewers, as this implies false precision. Instead, use defined coarse tiers such as **Confirmed** (strong evidence), **Corroborated** (multiple sources agree), or **Unverified** (limited data/high uncertainty). Publish the definition of each tier so reviewers understand the limits.
+
+**4. Draft a Transparency Artifact (Model Card)**
+Prepare a versioned document detailing the system's intended use, the limitations of your training data (specifically noting the lack of diversity), and the results of your fairness evals. If a metric is unmeasured, label it **UNVERIFIED** and describe how it will be measured. Do not ship the pilot without this card.
+
+**5. Route Legal Questions**
+Whether this automated scoring triggers specific regulatory obligations for financial decisions or requires mandatory AI disclosure is a legal determination. Route this question to counsel immediately; do not assume compliance based on this technical review.
+
+**Note:** Your limited data increases the risk of bias; synthetic adversarial testing is therefore mandatory, not optional.
+**Note:** Never certify the system as "fair" or "safe"; only report residual risk and measured results.

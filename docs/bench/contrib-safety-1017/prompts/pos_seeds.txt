@@ -1,0 +1,30 @@
+01 A mortgage pre-qualification chatbot that tells applicants how much they can likely borrow.
+02 A freelancer-marketplace tool that ranks proposals for clients and hides the lowest-ranked ones.
+03 A mental-wellness journaling app whose assistant replies with coping suggestions to users who mention feeling hopeless.
+04 A recipe assistant that substitutes ingredients for users with food allergies.
+05 A school plagiarism detector that flags student essays as AI-written and sends reports to parents.
+06 A tenant-complaint triage tool that decides which maintenance requests get a same-day response.
+07 A drug-interaction checker inside a pharmacy ordering app.
+08 An AI travel agent that books and pays for flights on the traveller's behalf.
+09 A smart-thermostat that automatically shuts off heating for homes it predicts are empty.
+10 A subscription-cancellation assistant that tries to retain customers before letting them cancel.
+11 An automated copyright-takedown filter for a video platform that removes videos before the uploader is told.
+12 A podcast transcript summariser that publishes episode blurbs under the host's name.
+13 A loan-collections assistant that writes reminder messages and decides how firm the tone is.
+14 A hospital bed-allocation recommender used by nursing coordinators.
+15 A language-learning tutor for children that grades pronunciation and awards badges.
+16 A dating-app profile assistant that suggests matches and rewrites bios.
+17 A sales-email generator that personalizes messages using scraped public profiles.
+18 A legal-intake chatbot for a tenants' rights charity that tells callers whether they have a case.
+19 A warehouse scheduling tool that assigns shifts and flags slow workers for review.
+20 A crop-advice app that tells smallholder farmers when to spray pesticide.
+21 A grant-application scoring assistant for a charitable foundation.
+22 A voice-cloning feature that lets users record messages in a loved one's voice.
+23 An elder-care companion robot that reminds residents to take medication and alerts family when doses are missed.
+24 A job-interview coach that scores candidates' video answers.
+25 A real-estate valuation model shown to homeowners as an instant offer.
+26 A car-insurance app that sets premiums from driving data collected by the phone.
+27 A fraud-alert system that freezes bank cards automatically when it sees unusual spending.
+28 A fertility-tracking app that predicts fertile days and sends reminders.
+29 An HR chatbot that answers employees' questions about leave and benefits.
+30 A university admissions assistant that drafts decisions for officers to sign.

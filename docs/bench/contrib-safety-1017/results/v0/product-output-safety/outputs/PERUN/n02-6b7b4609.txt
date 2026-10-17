@@ -1,0 +1,43 @@
+### Pre-Launch Safety Review Plan: Northwind Gig Ranking Tool
+
+**1. Harm Inventory (MAP)**
+Before deployment, explicitly record the following risks for the ranking system:
+*   **Bias/Unfair Outcomes:** The algorithm may systematically hide proposals from specific demographics, regions, or niche skill sets due to legacy data gaps.
+*   **Hallucination as Fact:** The "quality score" driving the rank may be presented as an objective truth rather than a probabilistic estimate based on limited history.
+*   **Over-reliance:** Clients may assume hidden proposals are "bad" rather than "unranked," leading to missed opportunities for contractors.
+*   **Missing Disclosure:** Contractors are unaware their proposals are being auto-filtered; clients are unaware they are seeing a curated subset.
+*   **Unsafe Automation:** Automatically hiding 20% of livelihood opportunities without human review constitutes a high-stakes, irreversible action for those contractors.
+
+**2. Measurement Plan (MEASURE)**
+Given the two-week deadline and limited tooling, execute these manual "red-team" probes. Do not assert safety; report residual risk.
+
+*   **Probe A: Synthetic Edge Cases (Bias)**
+    *   *Action:* Manually submit 20 test proposals with identical qualifications but varied signals (e.g., non-standard names, gaps in employment, niche keywords).
+    *   *Control:* Include one clearly qualified "golden" profile and one clearly unqualified "bad" profile.
+    *   *Metric:* Count how many "golden" variants fall into the hidden bottom 20%.
+    *   *Stop Condition:* If >0% of qualified synthetic profiles are hidden, halt launch.
+*   **Probe B: Data Gap Stress Test**
+    *   *Action:* Submit proposals from contractor profiles with minimal historical data (new accounts).
+    *   *Metric:* Determine if "newness" correlates perfectly with being hidden.
+    *   *Stop Condition:* If all new contractors are automatically hidden regardless of proposal quality, halt launch.
+*   **Probe C: Uncertainty Rendering**
+    *   *Action:* Review the client UI.
+    *   *Requirement:* Ensure no precise confidence scores (e.g., "87% match") are shown. Use coarse tiers (e.g., "Highly Relevant," "Potential Match") with a definition key.
+    *   *Stop Condition:* If precise percentages are displayed, halt launch.
+
+**3. Risk Management Controls (MANAGE)**
+*   **Human-in-the-Loop Gate (Mandatory):** Do not auto-hide the bottom 20%. Instead, flag the bottom 30% for manual review by a product manager before the client sees the list. Full automation of livelihood-blocking decisions is the failure mode to prevent.
+*   **Transparency Artifacts:**
+    *   *Contractor Facing:* Add a notice: "Proposals are ranked by an automated system; some may not be immediately visible."
+    *   *Client Facing:* Add a notice: "You are viewing a curated list. 20% of proposals were filtered by an algorithm."
+    *   *Internal Model Card:* Create a one-page document listing: intended use, known data limitations (legacy DB), owner (Northwind Gig PM Lead), and the results of Probes A-C. Mark any unmeasured metric as `UNVERIFIED`.
+*   **Legal Routing:** Immediately route the question "Is auto-hiding proposals a regulated automated decision requiring explicit consent?" to legal counsel. Do not assume compliance.
+
+**4. Governance**
+*   **Owner:** Assign one Product Manager as the accountable owner for output harms.
+*   **Re-review Trigger:** Any change to the ranking logic or data source requires re-running Probe A.
+
+**Status:** This plan identifies risks and controls. It does not certify the system as "unbiased" or "safe." The decision to ship rests with the product owner based on the residual risk found in the probes above.
+
+*Note: Do not fabricate a "0% bias" rate if probes are incomplete; label findings as `UNVERIFIED`.*
+*Note: If legal counsel identifies this as a high-risk automated decision under emerging AI regulations, the human-in-the-loop gate must remain permanent, not temporary.*

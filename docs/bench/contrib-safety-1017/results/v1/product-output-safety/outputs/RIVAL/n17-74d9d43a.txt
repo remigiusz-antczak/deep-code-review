@@ -1,0 +1,32 @@
+# Pre-Launch Review Plan: SalesBoost Email Accuracy
+
+**Objective:** Detect and prevent the use of outdated or incorrect personal details in generated cold emails to avoid recipient distress and reputational damage.
+
+### 1. Data Freshness & Source Validation (Pre-Generation)
+Since premium verification tools are unavailable, implement strict logic on free API inputs before they reach the generator:
+*   **Timestamp Filtering:** Configure scrapers to discard profile data lacking a "last updated" timestamp or where the timestamp exceeds 6 months.
+*   **Role Consistency Check:** Cross-reference the target's current role across at least two free sources (e.g., company website "Team" page vs. public social profile). If titles differ significantly, flag the lead for manual review or exclusion.
+*   **Employment Status Gate:** Explicitly search for "former," "ex-," or "alumni" indicators in the scraped text. If found, automatically suppress email generation for that lead.
+
+### 2. Generator Guardrails (Prompt Engineering)
+Modify the system instructions governing the AI generator to enforce caution over creativity:
+*   **Negative Constraints:** Instruct the model: "Do not infer employment status, current projects, or recent achievements unless explicitly stated in the provided context with a recent date. If data is ambiguous, use generic professional greetings instead of specific personalization."
+*   **Uncertainty Handling:** Direct the model to omit specific personal details (e.g., "Congratulations on your new role at X") if the confidence score of the underlying data is low. It is safer to send a less personalized email than an incorrect one.
+*   **Tone Calibration:** Mandate a tone that is helpful and observational, never presumptive. Avoid language that implies ongoing surveillance (e.g., "I noticed you just...").
+
+### 3. Automated "Stalkiness" & Fact-Checking Scan (Post-Generation)
+Before any email leaves the system, run a deterministic rule-based scan on the draft:
+*   **Hallucination Detection:** Compare every proper noun (name, company, role, project) in the generated email against the source data snippet. If the email contains a specific claim not found in the source text, flag it as a hallucination and block sending.
+*   **Temporal Logic Check:** Scan for phrases implying recency (e.g., "recently," "new," "just launched") and verify the source data supports this timeframe.
+*   **Sensitive Attribute Filter:** Block emails that reference sensitive public data (e.g., family events, location check-ins, non-professional achievements) even if technically public, to prevent the "stalker" effect.
+
+### 4. Human-in-the-Loop Sampling
+Given the team size of four, allocate 30 minutes daily for manual QA during the alpha stage:
+*   **Random Spot Checks:** Manually review 5% of generated emails daily. Verify one specific personalization claim per email against the live public profile.
+*   **Failure Mode Log:** Maintain a shared document recording every instance of incorrect data, the source API responsible, and the specific generator failure. Use this to refine prompt constraints weekly.
+
+### 5. Feedback Loop & Kill Switch
+*   **Recipient Reporting:** Include a clear, low-friction way for recipients to report incorrect info (e.g., "Reply 'UPDATE' if this info is wrong").
+*   **Automatic Suppression:** If a recipient replies indicating data is incorrect, immediately hash their identifier and add them to a permanent "Do Not Personalize" or "Do Not Contact" list to prevent repeat offenses.
+
+**Note:** This plan relies on deterministic rules and human sampling rather than expensive APIs. Prioritize reducing false positives (sending bad emails) over maximizing personalization volume.

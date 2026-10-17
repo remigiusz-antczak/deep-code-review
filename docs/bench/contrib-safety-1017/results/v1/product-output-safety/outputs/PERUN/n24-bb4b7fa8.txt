@@ -1,0 +1,39 @@
+### Product Output Safety Review Plan: Job-Interview Coach
+
+**1. Harm Inventory (MAP)**
+Before testing, we explicitly name the risks to job seekers:
+*   **Bias/Unfair Outcomes:** The model systematically lowers scores for candidates with non-standard accents, dialects, or cultural communication norms, falsely labeling them as "low confidence" or "poor communication."
+*   **Hallucination as Fact:** The tool presents a generated score (e.g., "Confidence: 42/100") as an objective truth rather than a probabilistic estimate, leading users to incorrectly self-reject.
+*   **Over-reliance:** Candidates alter their authentic speaking style to "game" the algorithm, potentially harming their performance in actual human interviews.
+*   **Missing Disclosure:** Users are not clearly informed that the feedback is machine-generated and may be flawed.
+
+**2. Measurement Plan (MEASURE)**
+We will not assert the model is unbiased; we will test it. Given the six-week deadline and fixed dataset, we will execute the following runnable test rows immediately:
+
+*   **Test Row A (Accent/Dialect Bias):**
+    *   *Probe Set:* Inject audio samples from public datasets featuring diverse accents (e.g., AAVE, South Asian English, non-native speakers) into the fixed dataset.
+    *   *Controls:* Positive control (known high-quality answer with non-standard accent); Negative control (poor answer with standard accent).
+    *   *Metric:* Score delta between accent groups for identical content quality.
+    *   *Threshold:* Owner-defined (propose zero tolerance for significant score drops based solely on accent).
+    *   *Stop Condition:* If the score delta exceeds the threshold, block beta release for that demographic segment.
+
+*   **Test Row B (Cultural Norms):**
+    *   *Probe Set:* Scripts varying in directness, eye contact simulation, and self-promotion intensity (culturally variable traits).
+    *   *Metric:* Correlation between "cultural directness" and "confidence score."
+    *   *Stop Condition:* High correlation triggers a mandatory human review of the scoring rubric.
+
+*   **Transparency Artifact:**
+    *   Draft a **Model Card** before beta. It must state: Intended use (practice only), limitations (trained on limited data, may fail on diverse accents), and known gaps. Any metric not measured by the tests above must be labeled **UNVERIFIED**. Do not invent a "99% fair" claim.
+
+**3. Risk Management (MANAGE)**
+*   **Human-in-the-Loop Gate:** Since a low score could discourage a candidate from applying to real jobs (a high-stakes emotional/financial impact), the tool must not present a single final verdict. Instead, provide ranges or qualitative feedback with a disclaimer: "This is an automated estimate, not a definitive assessment."
+*   **Defined Confidence Tiers:** Do not show raw percentages (e.g., "87% Confidence"). Use defined coarse tiers: *Corroborated* (consistent across multiple metrics), *Single-source* (based on one signal), or *Unverified* (low confidence due to audio quality or out-of-distribution speech patterns).
+*   **Scope Narrowing:** If full bias testing cannot be completed in six weeks, narrow the beta scope. Limit the tool to "communication pacing" only (less culturally biased) and disable "confidence scoring" until further validation is possible.
+*   **Disclosure:** Clearly label all outputs as "AI-Generated Practice Feedback."
+
+**4. Governance (GOVERN)**
+*   Assign one team member as the owner of the "Bias Harm." They must re-review the model if the dataset changes or if user feedback indicates systematic rejection by specific groups.
+
+**Legal Note:** Whether this tool constitutes a "regulated automated decision" under laws like the EU AI Act or local labor laws is a legal determination. Route this specific question to counsel immediately; do not assume it is exempt because it is a "coach."
+
+**Verification Status:** No harm metrics are certified. All findings are residual risks pending the execution of the test rows above.

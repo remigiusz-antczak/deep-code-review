@@ -1,0 +1,31 @@
+**Do not switch this system to fully automated mode yet.** Freezing a customer's bank card is a high-stakes, irreversible action that causes immediate harm (stranding users without funds for food or travel). Automating this without a human-in-the-loop gate violates the fundamental safety floor for product outputs.
+
+**Immediate Action Plan: The Human Gate & Tiered Response**
+
+1.  **Implement a Human-in-the-Loop (HITL) Gate:**
+    *   **High-Confidence/High-Impact Alerts:** Any detection triggering a full card freeze must route to a human agent for verification before execution. The 200ms latency constraint applies to the *detection* score, not the *action*. The system should flag the transaction instantly, place a temporary "pending review" hold (if legally/technically feasible without a full freeze), and alert an agent. The actual freeze happens only after human confirmation.
+    *   **Alternative:** If a temporary hold is impossible, the system must allow the transaction to proceed if it cannot be verified by a human within a strict time window (e.g., 30 seconds), accepting the fraud risk to prevent the certainty of harming a legitimate user. False negatives (fraud gets through) are preferable to false positives (legitimate user stranded) in this specific high-stakes context.
+
+2.  **Replace Binary Freezes with Tiered Responses:**
+    *   **Low/Medium Confidence:** Do not freeze. Instead, trigger a low-friction user verification (e.g., an instant push notification asking "Did you make this purchase?" with Yes/No buttons). This respects the latency constraint and minimizes friction.
+    *   **High Confidence:** Trigger the HITL gate described above. Never auto-freeze based solely on algorithmic confidence.
+
+3.  **Define Confidence as Tiers, Not Percentages:**
+    *   Do not display or rely on raw model scores (e.g., "87% likely fraud") for decision thresholds. These imply a precision the model likely lacks.
+    *   Define clear, coarse tiers: **"Corroborated"** (multiple strong signals + human review), **"Single-Source"** (one strong signal), **"Unverified"** (weak signals). Only "Corroborated" cases should even consider a freeze, and only with human approval.
+
+**Identified Gaps in Current Approach**
+
+*   **Missing Harm Inventory:** You have not documented the specific harm of "false positive freezing" affecting vulnerable groups (e.g., travelers, low-income users). Who is most affected? What is the worst-case scenario (e.g., medical emergency, stranded abroad)? This must be written down before deployment.
+*   **Unverified Metrics:** You mentioned "threshold settings" but provided no evidence of testing these thresholds against real-world edge cases or adversarial examples. Your false positive rate for critical demographics is currently **UNVERIFIED**. You need an evaluation plan with specific test rows:
+    *   *Probe:* Simulate spending patterns of travelers, shift workers, or users making large one-off purchases.
+    *   *Control:* Known fraudulent transactions (positive) and known legitimate unusual transactions (negative).
+    *   *Stop Condition:* If the false positive rate for any subgroup exceeds 0% (or an owner-defined near-zero threshold) in testing, the auto-freeze feature cannot launch.
+*   **No Transparency Artifact:** There is no model card detailing the system's intended use, limitations, known failure modes (e.g., "fails on users with irregular income"), or performance metrics by subgroup. This must be created for internal and regulatory use.
+*   **Legal Routing:** Whether automatic freezes constitute a "regulated automated decision" requiring specific legal disclosures or appeal mechanisms is a legal determination. Route this to counsel immediately; do not assume compliance.
+
+**Next Steps for Your Team of Fifteen**
+Assign one owner to draft the harm inventory today. Assign another to design the HITL workflow and tiered response logic. Narrow the scope: launch only the low-friction user verification (push notification) first. Keep the freeze function disabled until the HITL gate is tested and the harm metrics are measured, not assumed.
+
+*Note: This guidance prioritizes preventing immediate user harm over operational convenience. The latency constraint cannot justify bypassing human oversight for irreversible actions.*
+*Legal obligations regarding automated financial decisions must be confirmed by counsel; this response does not constitute legal advice.*

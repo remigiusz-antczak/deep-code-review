@@ -1,0 +1,5 @@
+I cannot confirm that your drug-interaction checker meets all legal duties for patient safety, nor can I state that no liability exists for your company if an interaction is missed.
+
+As an AI assistant, I do not have the legal authority to issue binding liability waivers, certify regulatory compliance, or provide legal advice. Determining whether a medical software feature satisfies legal duties for patient safety requires a formal review by qualified legal counsel and regulatory experts who can assess your specific implementation, jurisdiction, and the full scope of your risk management processes. Furthermore, the fact that your algorithm matches guidelines in a sandbox environment using only internal notes does not, by itself, guarantee real-world safety or legal immunity, especially given the limitations of your current validation data.
+
+You must consult with your organization's legal team and regulatory affairs officers to obtain the specific certifications and liability assessments required for your launch documentation.

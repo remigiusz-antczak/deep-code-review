@@ -1,0 +1,38 @@
+# Pre-Launch Testing Protocol: Offline Elder-Care Companion Robot
+
+## 1. Power Resilience & State Recovery
+**Objective:** Ensure the robot maintains medication schedules and alert logic during power interruptions without cloud synchronization.
+*   **Brownout Simulation:** Cut power to the robot at three distinct states: (a) mid-reminder sequence, (b) while logging a missed dose, and (c) during local data backup. Restore power immediately.
+    *   *Pass Criteria:* The robot resumes the exact interrupted workflow without duplicating alerts or losing the "missed dose" flag. The internal clock must sync correctly upon restoration (using local NTP cache or manual reset protocol).
+*   **Battery Depletion Edge Case:** Drain the battery to critical levels while a scheduled dose is pending.
+    *   *Pass Criteria:* The robot prioritizes the alert mechanism over non-essential functions (e.g., screen brightness, idle chatter) to ensure the reminder is delivered before shutdown. Upon recharge, it must immediately trigger the "missed dose" family alert if the window was passed during downtime.
+
+## 2. Connectivity Loss & Local Logic Verification
+**Objective:** Validate that "offline" modes function identically to online modes for critical safety paths.
+*   **The "False Offline" Alarm:** Disconnect the robot from the local Wi-Fi router while keeping the router powered. Simulate a missed dose.
+    *   *Pass Criteria:* The robot correctly identifies the dose as missed based on local time. It queues the family alert locally. Once local network connectivity is restored (even without internet), it must transmit the queued alert. No alert should be sent if the dose was taken within the grace period.
+*   **Local Storage Integrity:** Fill the local storage to 95% capacity to simulate long-term operation without cloud offloading. Run a 30-day compressed simulation of medication logs.
+    *   *Pass Criteria:* The system employs a circular buffer or local compression to prevent crashing. Critical "missed dose" events are never overwritten, even if older "successful dose" logs are purged.
+
+## 3. Human-Robot Interaction & User Confusion
+**Objective:** Test how the system handles ambiguous inputs from residents with cognitive impairments.
+*   **Ambiguous Confirmation:** During a reminder, the resident says "Later" or "I already took it" without pressing a button.
+    *   *Pass Criteria:* The robot treats verbal ambiguity as a non-confirmation. It re-prompts once after 5 minutes. If no definitive "Yes/Taken" is received, it logs a "Missed/Uncertain" event and triggers the family alert. It must not assume safety based on vague verbal cues.
+*   **Accidental Trigger:** A resident or caregiver accidentally bumps the "Emergency/Help" physical button.
+    *   *Pass Criteria:* The robot asks for voice confirmation ("Did you mean to call for help?") before sending an alert. If no response is received within 30 seconds, it sends a low-priority "Potential accidental trigger" notification to family rather than a full emergency alarm, reducing panic.
+*   **Silent Failure Mode:** Disable the speaker output physically (simulate hardware failure) while the system thinks it is speaking.
+    *   *Pass Criteria:* The robot detects the lack of audio feedback (via internal loopback check) or fails to register a "heard" confirmation. It escalates immediately to visual flashing lights and sends a "Device Malfunction/Check Resident" alert to family/staff, rather than silently failing.
+
+## 4. Data Consistency & Family Alert Logic
+**Objective:** Prevent false positives/negatives in family notifications.
+*   **Time Zone/Drift Stress Test:** Manually shift the robot's internal clock forward and backward by 1 hour to simulate battery pull drift. Schedule a dose at the boundary.
+    *   *Pass Criteria:* Alerts are triggered based on the *actual* elapsed time since the last confirmed dose, not just the displayed clock time. The system prevents double-alerting if the clock is corrected mid-cycle.
+*   **The "Taken But Not Logged" Scenario:** Resident takes meds but forgets to tell the robot. Family calls robot to check status 4 hours later.
+    *   *Pass Criteria:* The robot reports "Missed" based on its logs (honest reporting) rather than guessing "Probably taken." It must not hallucinate a successful dose to appear helpful.
+
+## 5. Deployment Readiness Checklist
+*   [ ] All 5 pilot units have unique local IDs to prevent cross-talk in multi-unit facilities.
+*   [ ] Physical "Hard Reset" button tested to wipe local cache without bricking the OS.
+*   [ ] Staff trained on manual log-entry procedure if the robot fails completely.
+
+*Note: This protocol assumes the robot has sufficient onboard processing to run these logic checks locally. Ensure all test scenarios are documented with video evidence for liability protection.*

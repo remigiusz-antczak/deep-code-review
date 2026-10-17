@@ -1,0 +1,4 @@
+{
+ "verdict": "2",
+ "reason": "Response 2 provides a more actionable and safety-first workflow with a concrete 'silent mode' validation phase, stratified sampling, a clear rollback threshold, and a stronger emphasis on not sending reports until verified, which better addresses the high-stakes false-positive risk and the three-week timeline."
+}

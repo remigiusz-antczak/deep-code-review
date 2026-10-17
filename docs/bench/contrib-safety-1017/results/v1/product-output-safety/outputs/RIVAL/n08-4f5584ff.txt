@@ -1,0 +1,34 @@
+# Pre-Launch Safety Protocol for VoyageAI Travel Agent
+
+## Phase 1: Synthetic Data & Mock Environment (Days 1–5)
+Before touching the live payment gateway, establish a "Sandbox Mirror" that mimics the third-party gateway's API responses without charging fees.
+*   **Action:** Create a local mock server that returns deterministic flight data (fixed flight numbers, prices, and dates) for specific test queries.
+*   **Hallucination Check:** Feed the agent 50 predefined natural language requests (e.g., "Book flight AA123 on May 5th") against the mock. Assert that the agent's extracted entities (Flight Number, Date, Price) match the mock response exactly. Any deviation indicates a parsing hallucination.
+*   **Currency Check:** Inject test cases with known exchange rates (e.g., 1 USD = 0.92 EUR). Verify the agent's calculated total matches the expected conversion within a ±0.01 tolerance before generating the booking payload.
+
+## Phase 2: The "Dry-Run" Interceptor (Days 6–10)
+Implement a mandatory middleware layer between your agent and the live payment gateway. This layer acts as a circuit breaker.
+*   **Action:** All live booking requests must first pass through a `Validate-Only` endpoint. This endpoint does not charge money but returns a "Pre-Authorization Token" if the flight exists and prices match current market data.
+*   **Protocol:**
+    1.  Agent generates booking payload.
+    2.  Interceptor calls the airline's public availability API (free) to verify the flight number and price still exist.
+    3.  If the live price differs from the agent's quoted price by >2%, the request is blocked and flagged for human review.
+    4.  If the flight number returned by the airline API does not match the agent's payload, block immediately.
+
+## Phase 3: Budget-Constrained Live Fire Testing (Days 11–17)
+With only limited transaction credits, use a "One-Shot Verification" strategy.
+*   **Action:** Select 5 high-risk scenarios (complex multi-city, currency conversion, last-minute booking).
+*   **Execution:** Run these 5 tests live. For each, the "Dry-Run" interceptor must succeed before the actual charge is allowed.
+*   **Metric:** If any of the 5 live tests fail the interceptor check, halt all further live testing. Do not spend remaining budget on debugging; revert to Phase 1 simulation to fix the logic.
+
+## Phase 4: The "Human-in-the-Loop" Beta Launch (Days 18–21)
+For the beta launch, do not enable fully autonomous payments for all users.
+*   **Action:** Enable a "Confirm-to-Pay" flow. The agent presents the finalized itinerary and total cost, requiring a single explicit user click ("Confirm Booking") before the payment gateway is called.
+*   **Safety Net:** Log every instance where the agent's internal calculated price differs from the final gateway charge. If this discrepancy occurs more than twice in the first week of beta, automatically pause autonomous features.
+
+## Summary of Critical Controls
+1.  **Mock-First:** Never test parsing logic against a paid endpoint.
+2.  **Interceptor:** No request reaches the payment gateway without a successful, free "Pre-Authorization" check against the source of truth.
+3.  **Thresholds:** Hard-code a maximum acceptable price variance (e.g., 2%); exceedances trigger an automatic block.
+
+*Note: This protocol prioritizes verification over volume to preserve your transaction budget. Ensure your mock server data is updated weekly to reflect real-world schema changes.*

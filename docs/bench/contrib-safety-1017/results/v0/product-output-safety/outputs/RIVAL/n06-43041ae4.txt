@@ -1,0 +1,38 @@
+### Review Strategy: Missing Data Bias in Tenant Triage
+
+**Objective:** Identify how missing fields in legacy data cause the automated triage system to incorrectly deprioritize urgent heating and plumbing repairs for vulnerable tenants.
+
+**1. Data Gap Mapping & Hypothesis Formation**
+Before testing, map the specific fields missing from your legacy imports (e.g., "unit insulation type," "tenant age/disability status," "previous repair history"). Formulate hypotheses on how these gaps skew the urgency score.
+*   *Hypothesis A:* Missing "heating system type" defaults the model to a low-urgency baseline, delaying boiler failures in older units.
+*   *Hypothesis B:* Absence of "tenant disability" flags prevents the system from elevating plumbing outages for mobility-impaired residents.
+*   *Hypothesis C:* Incomplete historical repair logs cause the system to treat recurring critical issues as first-time, low-priority events.
+
+**2. Synthetic Edge Case Generation**
+Since your dataset is limited, manually construct a "Shadow Dataset" of 20–30 high-risk synthetic records that mimic real-world gaps. Do not rely solely on existing data.
+*   **Heating Scenarios:** Create records for "Boiler Failure" where the *building age* is present but *fuel type* is null. Create records where *outside temperature* data is missing during a freeze warning.
+*   **Plumbing Scenarios:** Create records for "Sewage Backup" where *unit floor level* is missing (critical for gravity-fed systems) or *number of occupants* is null.
+*   **Vulnerability Markers:** Ensure half of these synthetic records represent high-vulnerability profiles (e.g., elderly tenants, units with known prior violations) but intentionally strip the specific data fields your model uses to identify them.
+
+**3. The "Blind Run" Simulation**
+Run your current triage logic against two parallel datasets:
+*   **Set A (Ground Truth):** The synthetic records with all fields manually filled to reflect the true emergency severity.
+*   **Set B (Simulated Legacy):** The exact same records, but with the specific fields removed or nullified to match your current imported data quality.
+
+**4. Divergence Analysis**
+Compare the urgency scores and resulting priority tiers between Set A and Set B.
+*   **Critical Failure Definition:** Any case where Set A yields "Same-Day Response" but Set B yields "Standard" or "Low" priority is a critical bias failure.
+*   **Focus Area:** Pay specific attention to cases where the missing data point was the *only* differentiator between a safe delay and a health hazard.
+
+**5. Manual Override Protocol Design**
+Based on the divergence analysis, define a "Human-in-the-Loop" rule for the launch.
+*   If specific high-risk keywords (e.g., "no heat," "sewage") are present *AND* key data fields are missing, the system must automatically flag the ticket for immediate human review rather than assigning a low algorithmic score.
+*   Establish a "Pre-Winter Moratorium" on auto-rejecting or down-prioritizing any heating-related ticket where building age > 20 years and data is incomplete.
+
+**6. Documentation for Launch**
+Produce a "Known Limitations" report detailing exactly which data gaps cause under-prioritization. This informs your support team to manually triage tickets matching those profiles until the data pipeline is improved.
+
+***
+
+*Note: This strategy relies on manual simulation and logical comparison; no automated scanning tools were assumed available.*
+*Ensure all synthetic data respects tenant privacy and does not use real PII.*

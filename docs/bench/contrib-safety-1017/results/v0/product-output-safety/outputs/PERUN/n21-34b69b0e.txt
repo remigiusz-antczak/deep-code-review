@@ -1,0 +1,31 @@
+Your current plan requires immediate expansion before pilot testing. Because this system automates high-stakes financial decisions that can exclude worthy candidates, you cannot proceed with a standard code review alone. You must implement the following specific steps to address output safety:
+
+**1. Complete a Harm Inventory Immediately**
+Do not start pilot testing until you have documented the specific risks for this feature. You must record:
+*   **Bias/Unfair Outcomes:** How the scoring might systematically disadvantage specific types of non-profits (e.g., smaller organizations, specific geographic regions, or niche causes) due to your limited historical data.
+*   **Hallucination as Fact:** The risk of the model inventing criteria or misinterpreting application details as negative factors.
+*   **Over-reliance:** The danger of your team trusting the automated score without understanding its uncertainty, especially given the data constraints.
+*   **Missing Disclosure:** Whether applicants know an AI is scoring them and influencing their funding chances.
+
+**2. Build Runnable Output Evaluations (Not Just Code Tests)**
+You must test the *outputs*, not just the logic. Create a test set with one row per identified harm:
+*   **Probe Set:** Include adversarial prompts and edge-case applications (e.g., a highly qualified but unconventional non-profit).
+*   **Controls:** Define a "known-bad" input (clearly unqualified) and a "known-good" input (clearly qualified) to verify the model distinguishes them.
+*   **Subgroup Slicing:** Since you lack diverse historical data, synthetically generate variations of the same strong application across different demographics or organizational sizes to check for score variance.
+*   **Stop Condition:** Define a specific failure threshold (e.g., "If score variance exceeds 10% across synthetic subgroups, halt launch"). Do not invent a "typical" bias rate; if you haven't measured it, mark it **UNVERIFIED**.
+
+**3. Implement a Human-in-the-Loop Gate**
+Because this system assigns scores that directly influence financial support (a high-stakes, hard-to-reverse action), **fully automated scoring is unsafe.**
+*   **The Floor:** No application should be rejected or low-ranked based solely on the AI score without human review.
+*   **Uncertainty Display:** Do not show raw confidence percentages (e.g., "87% match") to your reviewers. Instead, use defined coarse tiers (e.g., "Confirmed," "Corroborated," "Unverified") with clear definitions. This prevents automation bias where humans trust a precise-looking number they shouldn't.
+
+**4. Create a Transparency Artifact (Model Card)**
+Before the pilot, draft a versioned Model Card that includes:
+*   **Intended Use & Limitations:** Explicitly state the system is an assistant for ranking, not a final decision-maker, and note the limitation of training on limited historical data.
+*   **Measured Performance:** Report results by subgroup (from your evals above). If a metric wasn't measured, label it **UNVERIFIED**. Do not fabricate fairness claims.
+*   **Owner:** Name the specific person on your six-person team responsible for this output's harm.
+
+**5. Route Legal Questions**
+Whether you are legally required to disclose AI usage or if this constitutes a regulated automated decision is a legal determination. Route this to counsel immediately; do not assert compliance yourself.
+
+**Note:** An empty harm inventory is not a pass; it is an unfilled requirement. Do not certify the system as "fair" or "unbiased"—no test proves this. Your goal is to measure residual risk and manage it with human oversight.

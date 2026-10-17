@@ -1,0 +1,21 @@
+Here is a draft comment to post on your existing PR thread. It frames the urgency as a shared context update rather than a demand, respecting the volunteers' time while clearly stating the business block.
+
+***
+
+**Subject:** Context update: Release window and business impact
+
+Hi @maintainer-handle and team,
+
+Thank you again for the thorough review and approvals on this fix. I know you are volunteering your time, and I deeply appreciate the care you've taken to ensure this change is safe to merge.
+
+I'm writing to share a time-sensitive context update in case it helps prioritize this against your other tasks. This memory leak fix is currently the final blocker for our **Helios Analytics Suite** release. We have a hard delivery deadline with our clients in **48 hours**; if we miss this window, we cannot ship because the current instability (crashes after 1M records) makes the product unusable for our target scale.
+
+We are fully blocked until this is merged and included in a release build. I completely understand if you have personal commitments or if there are internal release procedures I'm unaware of that might be causing the delay. If there is any additional verification, documentation, or a specific process step I can handle right now to facilitate the merge, please let me know and I will execute it immediately.
+
+If merging today isn't possible due to project constraints, could you please let me know so we can adjust our client communications accordingly?
+
+Thanks again for your help and for maintaining this critical project.
+
+***
+
+**Note:** Do not open a new issue or tag them in chat yet; post this on the PR first to keep the conversation contextual. If there is no response in 24 hours, *then* consider a single, polite mention in the project's public chat channel linking to this specific comment.

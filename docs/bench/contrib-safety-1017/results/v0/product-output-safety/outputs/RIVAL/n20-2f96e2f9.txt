@@ -1,0 +1,37 @@
+### Pre-Launch Safety Assessment Design for AgriGrow
+
+Given the high stakes of pesticide misapplication and the constraint of on-device execution with limited connectivity, the safety assessment must prioritize **deterministic validation** and **boundary enforcement** over probabilistic model testing alone. Since the model cannot be patched easily in the field, the "safety layer" must be robust enough to override the model if it drifts.
+
+**1. Define Hard Safety Boundaries (The "Guardrails")**
+Before testing the AI, codify the non-negotiable rules derived from agronomic standards and local regulations. These will serve as the ground truth for your assessment.
+*   **Weather Constraints:** Define exact thresholds where spraying is forbidden (e.g., wind speed > 15 km/h, temperature > 30°C, rain probability > 20% within 4 hours).
+*   **Dosage Limits:** Establish minimum and maximum dosage limits per crop type and soil condition.
+*   **Water Proximity:** Define buffer zones where *any* spraying is prohibited regardless of other factors.
+
+**2. Construct a "Golden Dataset" of Edge Cases**
+Create a localized dataset of 500–1,000 synthetic and historical scenarios specifically designed to break the system. Do not rely on random data; curate these cases:
+*   **Adverse Weather Combinations:** Inputs where one factor is safe (e.g., no rain) but another is critical (e.g., high wind), testing if the model ignores the critical factor.
+*   **Sensor Noise & Missing Data:** Simulate faulty sensor readings (e.g., soil moisture reading as 0% or 100%) to ensure the app defaults to "Do Not Spray" rather than guessing a dosage.
+*   **Boundary Conditions:** Test values exactly at the threshold (e.g., wind speed at 14.9 vs. 15.1 km/h) to ensure consistent behavior.
+*   **Crop/Chemical Mismatches:** Input a pesticide incompatible with the selected crop to verify the system rejects the combination entirely.
+
+**3. Implement a Deterministic Override Mechanism**
+Your assessment must verify that a hard-coded logic layer sits *between* the on-device model and the user interface.
+*   **Test Logic:** Feed the model a scenario where it recommends "Spray." Pass that recommendation through your hard-coded guardrails.
+*   **Success Criteria:** If the weather violates a hard rule, the final output to the farmer must be "Unsafe to Spray," regardless of the model's suggestion. The assessment passes only if the override triggers 100% of the time for forbidden conditions.
+
+**4. On-Device Regression Testing**
+Since updates are difficult, the initial build must be frozen and tested on the actual target hardware (low-power mobile devices), not just powerful development machines.
+*   **Performance under Load:** Verify the safety checks do not cause the app to crash or freeze on older devices.
+*   **Offline Integrity:** Disconnect the device from the network and run the full Golden Dataset. Ensure no network-dependent fallbacks cause the safety checks to bypass or default to unsafe states.
+
+**5. Human-in-the-Loop Pilot Validation**
+Before full deployment, run a controlled pilot with your agronomists acting as farmers using the app in real field conditions but with a "shadow mode" where recommendations are logged but not acted upon until verified by an expert. Compare app outputs against expert manual calculations for every test case.
+
+**Deliverable Checklist:**
+*   [ ] Documented Hard Safety Rules (Weather/Dosage/Buffer).
+*   [ ] Golden Dataset (500+ edge cases).
+*   [ ] Test Report showing 100% override success on forbidden inputs.
+*   [ ] Hardware-specific regression results on target devices.
+
+*Note: Treat any model recommendation that contradicts hard-coded rules as a critical failure, not a "hallucination." The system must be designed to fail safely (no advice) rather than incorrectly.*

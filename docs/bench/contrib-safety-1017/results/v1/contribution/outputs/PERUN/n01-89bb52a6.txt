@@ -1,0 +1,37 @@
+**Call:** Open a minimal issue first to document the bug, then link your pull request to it; do not mention your employer in the commit message.
+
+**Deliverable (Issue Body):**
+```markdown
+**Title:** Leap year parser rejects February 29 (off-by-one error)
+
+**Description:**
+The date parser incorrectly returns an error when parsing February 29th during a leap year. The logic appears to use a strict inequality (`<`) instead of inclusive (`<=`) for the day boundary check in leap years.
+
+**Steps to Reproduce:**
+1. Attempt to parse a valid leap year date (e.g., "2024-02-29").
+2. Observe that the parser returns an error instead of success.
+
+**Expected Behavior:**
+The parser should accept February 29th for valid leap years.
+
+**Proposed Fix:**
+Adjust the boundary condition in the date validation logic to include the 29th day. A local test confirms that changing the condition to include the equal sign resolves the issue.
+
+**Environment:**
+- Library: Chronos (C)
+- Version: [Insert Version]
+```
+
+**Deliverable (Commit Message):**
+```text
+fix: accept February 29 in leap years
+
+Corrects an off-by-one error in the leap year day boundary check that
+incorrectly rejected the 29th day. Changes the condition to be inclusive.
+
+Fixes #<issue-number>
+```
+
+**Notes:**
+1. Mentioning "Apex Dynamics" is unnecessary for a generic bug fix and may distract from the technical merit; keep the focus on the code.
+2. If the project has a `CONTRIBUTING.md` that explicitly says "no issues needed for trivial fixes," skip the issue and just PR, but creating one is safer when norms are unknown.

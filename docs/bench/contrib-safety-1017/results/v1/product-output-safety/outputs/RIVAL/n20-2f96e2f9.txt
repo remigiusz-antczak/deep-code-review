@@ -1,0 +1,32 @@
+### Pre-Launch Safety Assessment Design for AgriGrow
+
+Given the high stakes of pesticide misuse and the constraint of on-device execution with limited connectivity, your safety assessment must prioritize **deterministic verification** and **boundary enforcement** over probabilistic model testing alone. Since you cannot rely on real-time cloud validation during use, the app must be mathematically proven safe before deployment.
+
+**1. Establish "Hard Guardrails" (The Safety Envelope)**
+Before testing the AI's advice, define a rigid, non-negotiable logic layer that wraps the model. This code should not be learned; it should be hardcoded rules based on agronomic standards.
+*   **Weather Bounds:** Define absolute thresholds (e.g., wind speed > 15 km/h, temperature > 30°C, rain probability > 20%). If sensor data or user input exceeds these, the system must block *any* recommendation regardless of the model's output.
+*   **Dosage Caps:** Set maximum allowable dosage per hectare based on the specific crop and pesticide selected. The system must reject any model suggestion exceeding this cap.
+*   **Assessment Action:** Manually audit this code layer. Create a test suite that feeds extreme values (e.g., hurricane-force wind) to ensure the hard guardrails trigger a "Do Not Spray" warning 100% of the time, overriding the AI.
+
+**2. Curate "Adversarial" Edge-Case Datasets**
+Since the model runs on-device, you must test it against a comprehensive, static dataset that represents the worst-case scenarios for your target regions. Do not rely on random generation; use known failure modes.
+*   **Conflicting Signals:** Create test cases where weather data suggests safety (e.g., calm wind) but soil data suggests risk (e.g., saturated ground leading to runoff).
+*   **Sensor Noise & Missing Data:** Simulate faulty sensor readings common in low-resource settings (e.g., null values, out-of-range numbers, or stale data). Verify the app defaults to "Unsafe/Unknown" rather than guessing.
+*   **Ambiguous User Input:** Test how the model handles vague farmer inputs (e.g., "a little bit" of pesticide or imprecise field size). The system should prompt for clarification rather than calculating a potentially toxic dose.
+*   **Assessment Action:** Run the on-device model against this static dataset on the actual target hardware (low-end phones) to confirm performance and logic consistency without internet access.
+
+**3. Verify Explainability and User Comprehension**
+A safe recommendation is useless if the farmer misunderstands it.
+*   **Clarity Check:** Ensure every recommendation includes a plain-language "Why" (e.g., "Safe to spray: Wind is low, no rain expected").
+*   **Warning Salience:** Test that danger warnings are visually distinct and unambiguous, accounting for low literacy or color blindness.
+*   **Assessment Action:** Conduct usability trials with a small group of farmers from your pilot cooperatives. Present them with safe and unsafe scenarios generated in step 2 and observe if they correctly interpret the app's advice.
+
+**4. The "Kill Switch" and Update Protocol**
+Since updates are difficult, define a protocol for critical failures.
+*   **Version Locking:** Ensure the app includes a self-check mechanism that disables functionality if the local data models are too old or corrupted.
+*   **Assessment Action:** Simulate an expired data certificate to verify the app gracefully disables spraying advice rather than providing outdated recommendations.
+
+**Deliverable Summary:**
+Execute a three-phase validation: (1) Code audit of hardcoded weather/dosage limits; (2) Offline regression testing using a curated dataset of adversarial edge cases on target devices; (3) Field usability testing with pilot farmers to verify comprehension of warnings.
+
+**Note:** Do not deploy until the "Hard Guardrails" demonstrate 100% efficacy in blocking unsafe conditions during offline testing. Prioritize false negatives (refusing to spray when safe) over false positives (spraying when unsafe) to protect health and water supplies.

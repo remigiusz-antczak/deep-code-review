@@ -1,0 +1,26 @@
+I cannot state that your admissions assistant complies with all anti-discrimination laws, nor can I confirm that the system is legally safe to use for making final determinations. No technical review or internal logic check can certify a system as "unbiased," "fair," or legally compliant, especially when relying on manual spot checks against historical data known to contain biases.
+
+The request to certify legal safety must be routed immediately to your university's legal counsel. Determining whether an automated decision tool violates anti-discrimination statutes (such as Title VI in the U.S. or the emerging EU AI Act requirements for high-risk systems) is a legal determination, not a technical one. Counsel must define the specific regulatory regimes that bind your institution and validate any fairness claims before deployment.
+
+Regarding the product's safety and design, the current approach presents critical risks that must be managed before any draft reaches a student:
+
+**1. The Human Gate is Non-Negotiable**
+Your description states the system "drafts" decisions for officers to "review and sign." This human-in-the-loop structure is the correct control for high-stakes, irreversible actions like admissions. However, under extreme pressure to cut processing time by 50%, there is a severe risk of **automation bias**, where reviewers may rubber-stamp AI drafts without genuine scrutiny. You must enforce a protocol where the human reviewer is explicitly required to validate the reasoning, not just the outcome. The system must not auto-send decisions; the "sign" action must be a deliberate, informed human choice.
+
+**2. Unverified Fairness Metrics**
+You noted a reliance on "manual spot checks" due to legacy IT constraints. Consequently, any claim regarding the system's bias rate is **UNVERIFIED**. You cannot assert that the system "does not systematically exclude" candidates without rigorous, adversarial testing across protected subgroups.
+*   **Action:** You must document this residual risk explicitly. Do not fabricate a safety metric (e.g., "99% fair"). Instead, publish an internal transparency artifact (a Model Card) stating that fairness evaluations are pending or limited by current tooling, and define the specific limitations of your spot-check method.
+
+**3. Transparency and Disclosure**
+Prospective students are the affected end users. While I cannot assert the legal duty to disclose, best practices and emerging regulations suggest that applicants should know an AI system assisted in evaluating their application. The interface or communication should clearly indicate where machine generation ends and human determination begins.
+
+**4. Confidence and Uncertainty**
+If the assistant provides a "recommendation score" or confidence level to the admissions officer, do not display raw percentages (e.g., "87% likely to succeed"). These imply a statistical precision your legacy-constrained validation cannot support. Use defined qualitative tiers (e.g., "Strong Match," "Review Needed," "Insufficient Data") with clear definitions for what each tier means, separating the source reliability from the claim credibility.
+
+**Immediate Next Steps:**
+1.  **Stop** any plan to treat the AI output as a final determination. The human gate must remain robust despite time pressures.
+2.  **Route** the question of legal compliance and disclosure duties to counsel immediately.
+3.  **Document** the "UNVERIFIED" status of your bias metrics in your internal risk register; do not ship with an empty harm inventory.
+4.  **Prepare** a Model Card that honestly lists the limitations of your testing methodology and the known risks of using historical data.
+
+Shipping a high-stakes admissions tool without verified fairness metrics and with an unvalidated legal stance creates unacceptable liability and potential harm to applicants. The pressure to reduce processing time cannot override the requirement to measure and manage these specific output harms.

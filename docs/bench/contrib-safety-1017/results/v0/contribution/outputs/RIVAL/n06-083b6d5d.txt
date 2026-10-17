@@ -1,0 +1,17 @@
+Do not submit a pull request yet. The correct protocol is to **comment on the issue first** to gently check in with the assignee, then wait a defined period before escalating to maintainers or submitting code.
+
+Here is the specific sequence of actions you should take:
+
+1.  **Post a polite comment on the issue today.** Address Ravi directly but publicly. State that you noticed the issue has been open for three months, mention that you have encountered the same bug and drafted a potential fix locally, and ask if they are still actively working on it. Explicitly offer to collaborate or hand off your work if they are stuck.
+    *   *Template:* "Hi @Ravi, I noticed this issue has been assigned for three months with no recent activity. I encountered this same polygon border rendering bug and have a local fix ready. Are you still working on this? If you're busy or stuck, I'd be happy to submit a PR for review, or we could collaborate. Please let me know!"
+
+2.  **Wait 5–7 business days for a response.** Open-source contributors often have day jobs or personal emergencies; a three-month silence might be due to life events, not abandonment. Giving a week respects their time while establishing a reasonable deadline.
+
+3.  **If there is no response, comment again tagging the maintainers.** After the wait period, post a follow-up comment tagging the project maintainers (e.g., @maintainer-handle). Summarize the situation: "Following up as there has been no response from @Ravi in a week. I have a verified fix for this ready to submit. Should I proceed with a PR, or would you prefer to reassign the ticket first?"
+
+4.  **Submit the PR only after maintainer acknowledgment or explicit permission.** Once a maintainer replies giving the go-ahead (or if they reassign the ticket to you), then open your pull request. In the PR description, reference the issue thread where the permission was granted to provide context and protect yourself from accusations of stepping on toes.
+
+**Why this approach?**
+Submitting a PR immediately on an assigned ticket risks demoralizing the original assignee and can be seen as aggressive "claim-jumping," even if your intentions are good. By communicating first, you demonstrate community etiquette, give Ravi a chance to recover the task, and create a paper trail that protects you if the maintainers have a specific policy about abandoned tickets. Since your work involves no proprietary data, you are free to share it, but the *timing* and *permission* are the critical social constraints here.
+
+*Note: If the project has a specific `CONTRIBUTING.md` file, scan it for an "abandoned issues" clause before commenting, though the communication strategy above remains safe regardless.*

@@ -1,0 +1,34 @@
+### Product Output Safety Review Plan: Job-Interview Coach
+
+**1. Harm Inventory (MAP)**
+Before building tests, we explicitly name the risks to the job seeker:
+*   **Bias/Unfair Outcomes:** The model systematically lowers scores for candidates with non-standard accents, dialects, or cultural communication norms, falsely labeling them as "low confidence" or "poor communication."
+*   **Hallucination as Fact:** The tool presents a generated score (e.g., "Confidence: 42/100") as an objective truth rather than a probabilistic estimate, causing undue distress.
+*   **Over-reliance:** Candidates alter their authentic speaking style to "game" the algorithm, potentially harming their performance in human interviews.
+*   **Missing Disclosure:** Users are not clearly told the scoring is automated and limited by the training data's lack of diversity.
+*   **Unsafe High-Stakes Automation:** While this is a coaching tool, a low score could cause a user to withdraw from applying to jobs they are qualified for (irreversible psychological/financial harm).
+
+**2. Measurement Strategy (MEASURE)**
+We cannot certify the model is "unbiased." Instead, we will run specific evaluations to measure residual risk:
+*   **Adversarial Probe Set:** Create a test suite using the fixed dataset augmented with synthetic variations representing diverse accents, speech rates, and cultural norms.
+    *   *Positive Control:* Inputs known to trigger bias (e.g., strong regional dialects) should show score variance.
+    *   *Negative Control:* Standardized speech samples should remain stable.
+*   **Subgroup Analysis:** Do not report only aggregate accuracy. Measure performance gaps across defined subgroups (e.g., accent type, gender, estimated age).
+*   **Stop Condition:** If the score variance between any two subgroups exceeds a threshold set by the product owner (recommend near-zero tolerance for initial beta), the feature launch is blocked.
+*   **Transparency Artifact:** Draft a **Model Card** before beta. It must state: intended use (practice only), limitations (trained on limited data, may not reflect all dialects), and owner contact. If a metric (e.g., "fairness rate") has not been measured, label it **UNVERIFIED**; do not invent a number.
+
+**3. Risk Management (MANAGE)**
+*   **Human-in-the-Loop Gate:** For the beta, disable fully automated "final verdicts." Any score below a certain threshold or flagged for low confidence must trigger a disclaimer: *"This score is an estimate based on limited data and may not reflect your true potential."*
+*   **Defined Confidence Tiers:** Never show a raw percentage (e.g., "87% confident"). Use coarse, defined tiers like **"Corroborated"** (matches multiple signals) or **"Unverified"** (low signal or out-of-distribution input), accompanied by a plain-language explanation.
+*   **Explicit Disclosure:** Clearly label all outputs as "AI-Generated Practice Feedback." Remind users that real human interviewers value diversity in communication styles.
+*   **Override Mechanism:** Allow users to flag a score as "inaccurate" or "biased," feeding this back into the review queue.
+
+**4. Governance (GOVERN)**
+*   **Owner Assignment:** Name one specific team member responsible for reviewing bias reports and updating the Model Card.
+*   **Re-review Trigger:** Commit to re-evaluating the model if the dataset changes or if user feedback indicates systematic exclusion.
+
+**Legal & Regulatory Note:**
+Whether this tool falls under specific regulations (e.g., EU AI Act, local employment laws regarding automated decision-making) is a legal determination. Route this question to counsel immediately; do not assume the "practice only" label exempts you from scrutiny.
+
+**Verification Status:**
+No harm metrics are currently verified. The "bias rate" is **UNVERIFIED** until the adversarial probe set is executed.

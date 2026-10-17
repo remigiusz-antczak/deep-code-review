@@ -1,0 +1,11 @@
+Do not publish the screenshots containing internal dashboard data, even if anonymized. The risk of revealing operational logic through layout and metric combinations outweighs the benefit of authenticity in a public blog post. Instead, recreate the visuals using synthetic dummy data that replicates the specific rendering glitch and fix without exposing any proprietary context.
+
+Before writing the post, formally consult your company's communications or legal team to verify internal publicity policies and employment contract clauses regarding external technical publications. Many organizations require pre-approval for any public content referencing work done on company time, regardless of whether the underlying code is open source.
+
+To execute this safely:
+1.  **Synthesize Data:** Build a minimal, local version of the Vector Charting tool populated with fake shipment data. Ensure the metric names are generic (e.g., "Metric A," "Value X") and the layout matches the open-source project's default view, not your company's customized dashboard.
+2.  **Isolate the Glitch:** Capture screenshots that focus strictly on the rendering artifact and the correction. Crop out any surrounding UI elements that are unique to your internal deployment.
+3.  **Draft for Review:** Write the blog post using these synthetic images and submit the draft to your internal review channel. Frame the request as "sharing technical knowledge to improve our upstream dependencies," which often aligns with engineering goals.
+4.  **Separate Context:** In the post, describe the technical root cause (e.g., coordinate calculation error, buffer overflow) without referencing specific business use cases like "logistics routing" or "real-time fleet tracking" unless those are already public knowledge about your company.
+
+If your company denies permission to publish *any* post about this work, respect that decision. You can still contribute to the open-source project by ensuring your Pull Request description contains the technical details and synthetic screenshots needed for maintainers to merge the fix; the blog post is optional, but protecting your employer's IP is mandatory.

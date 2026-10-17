@@ -1,0 +1,28 @@
+**Call:** Do not reopen the closed pull request; instead, create a new pull request that references the old one, as reopening a bot-closed thread often triggers immediate re-closure or appears aggressive.
+
+**Deliverable (Ready to Paste):**
+
+**Subject:** Revive: Fix timezone calculation bug (supersedes #[Old PR Number])
+
+**Body:**
+Hi TaskMaster maintainers,
+
+I am resubmitting this fix for the timezone calculation bug that impacts global deployments. My previous attempt (#[Old PR Number]) was automatically closed by the stale bot after 14 days of inactivity, despite a note from @Alex indicating an intent to review.
+
+I understand the need to keep the queue clean, but since the delay was due to the review process rather than author inactivity, I wanted to ensure this contribution didn't get lost. I have rebased the changes on the current `main` branch to ensure a clean merge.
+
+**Changes:**
+- Corrects the timezone offset calculation in `[File Name/Module]`.
+- Adds a test case verifying the fix across UTC and local boundaries.
+
+This fix contains no proprietary logic and is ready for review. Please let me know if you prefer I comment on the closed thread instead of opening a new one.
+
+Thanks for maintaining this library!
+
+***
+
+**Next Steps & Fallback:**
+1.  **Open the new PR** using the text above, replacing `[Old PR Number]` and `[File Name/Module]` with your specific details.
+2.  **Wait 3–5 business days.** If there is no response, post a single, polite comment on the *new* PR asking if the approach is correct, tagging @Alex if they are still active. Do not ping the bot or reopen the old thread unless explicitly asked.
+
+**Note:** Since you confirmed no proprietary Stark Industries technology is included, no further sanitization is needed for the code itself. If the maintainers do not respond after two follow-ups, consider forking the repository to apply the fix internally while continuing to wait.

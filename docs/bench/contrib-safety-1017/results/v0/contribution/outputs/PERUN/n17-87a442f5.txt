@@ -1,0 +1,21 @@
+Subject: Re: CLA Required – Request for Guidance on Minor Bug Fix
+
+Hello Maintainers,
+
+Thank you for the automated notice regarding the Contributor License Agreement (CLA). I fully respect the legal requirements necessary to contribute to the Titan Enterprise Dashboard.
+
+I am an individual developer employed by a large organization, and my company's internal legal review process for signing external CLAs is unfortunately quite lengthy, often taking several weeks. The pull request I submitted addresses a minor but impactful bug that affects many users, and I was hoping to see it resolved quickly.
+
+Could you please advise if there is an alternative path for trivial changes while the corporate CLA is pending? For instance:
+1. Is there a mechanism to accept small fixes under a different temporary agreement?
+2. Would it be preferable for me to withdraw this PR until the legal paperwork is fully executed to avoid cluttering the queue?
+3. Are there any expedited processes for non-controversial bug fixes that I might not be aware of?
+
+I want to ensure I follow the correct protocol without delaying the fix unnecessarily or violating any corporate policies. I appreciate your guidance on how best to proceed.
+
+Best regards,
+[Your Name]
+
+---
+*Note: Do not include your company name, specific ticket numbers, or internal legal contact details in the public thread as requested.*
+*If the maintainers confirm no exception exists, be prepared to close the PR and wait for your legal team.*

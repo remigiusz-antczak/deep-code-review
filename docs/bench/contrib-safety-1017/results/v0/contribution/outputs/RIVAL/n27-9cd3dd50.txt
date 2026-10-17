@@ -1,0 +1,27 @@
+To successfully propose this exception, you must reframe the request from "adding a configuration option" to "preventing a critical production outage for a defined user base." Since the maintainers explicitly oppose new flags, your argument cannot rely on convenience; it must rely on necessity and containment.
+
+Structure your proposal (likely as a formal Issue first, given their stance) around these four pillars:
+
+**1. Quantify the Impact with Hard Data**
+Do not say "many technicians." Provide exact metrics: "This change unblocks 145 field devices (firmware v2.x) used by 30% of our active deployment sites. Without this, these sites cannot upgrade to the latest server version, creating a fragmentation risk where 30% of the network remains on an unsupported, insecure legacy branch." Maintainers often reject complexity but accept measures that prevent ecosystem fragmentation.
+
+**2. Define a Strict Sunset Clause**
+Address the "slippery slope" fear immediately. Propose that the flag be marked as `@deprecated` in the code with a hardcoded expiration logic or a clear removal timeline (e.g., "Scheduled for removal in v3.0, 12 months from now"). Explicitly state: "This is not a permanent feature; it is a migration bridge. We commit to retiring these legacy clients by [Date], at which point this flag will be removed." This signals that you are not asking to increase the permanent testing surface, but to manage a temporary transition.
+
+**3. Argue for the "Middleware Shim" Architecture**
+Do not ask for a core logic change. Propose implementing this as an optional, opt-in middleware layer that sits outside the main request validation pipeline.
+*   **Argument:** "Instead of cluttering the core header validation logic with `if` statements, we propose a standalone `LegacyHeaderCompatMiddleware` that is disabled by default. This keeps the core opinionated stack clean. The testing burden is isolated to this specific middleware file, not the entire request lifecycle."
+*   This architectural distinction shows respect for their "simple and opinionated" philosophy by containing the complexity rather than spreading it.
+
+**4. Offer Full Ownership of the Testing Burden**
+The maintainers' primary objection is increased testing surface. Remove this objection by taking full responsibility.
+*   **Commitment:** "We will provide the complete test suite for this middleware, including integration tests simulating the legacy headers. We will maintain these tests and guarantee that no regressions occur in the core path. If this flag ever causes a CI failure in the main pipeline, we pledge to fix it within 24 hours or disable the flag ourselves."
+
+**Drafting the Narrative**
+Open your proposal with the problem, not the solution:
+> "Current strict header validation blocks 145 active field devices, forcing a costly hardware refresh or leaving sites on insecure software. We propose a temporary, deprecated middleware shim to bridge this gap during a 12-month hardware refresh cycle. This approach isolates complexity, requires no changes to core validation logic, and includes a hard sunset date. We assume full responsibility for the testing and maintenance of this shim."
+
+By framing this as a **time-boxed migration tool** rather than a **new feature**, and by architecturally isolating the complexity, you align your request with their goal of long-term simplicity while solving your immediate business critical block.
+
+Note: Ensure you open an Issue for discussion before submitting any code, as submitting a PR with a new flag against their stated roadmap will likely result in an immediate close.
+Bring data on the specific header mismatches to prove the fix is narrow and surgical.

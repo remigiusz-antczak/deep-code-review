@@ -1,0 +1,20 @@
+Subject: Proposal to Revert Coordinate Parsing Change Due to Specification Mismatch and Regression
+
+Hi Jane and the RiverCity Mapping team,
+
+I am writing to propose a temporary revert of the recent coordinate parsing update (merged last week) until we can align the implementation with the original specification and resolve a resulting regression.
+
+Our testing indicates that the new parsing logic fails to handle a specific edge case explicitly defined in the project's original specification. This omission appears to be a general deviation from the stated standard rather than a project-specific anomaly, as the logic currently ignores the documented behavior for this scenario. Consequently, this has introduced a regression where valid inputs complying with the spec now trigger a "503" error response, breaking integration for downstream consumers who rely on strict specification adherence.
+
+I understand the preference against reverting merged code and appreciate the effort invested in the original change. However, given that the current implementation conflicts with the established specification and introduces a functional failure for valid use cases, a temporary revert seems the safest path to restore stability while we engineer a comprehensive solution. This approach allows us to:
+1. Immediately restore compatibility for users relying on the specified edge case behavior.
+2. Provide the necessary time to discuss and design a fix that satisfies both the new requirements and the original specification without introducing regressions.
+
+I am happy to assist in drafting a revised implementation plan or test cases that cover the specification requirements once we have consensus on the path forward. My goal is to ensure RiverCity remains robust and spec-compliant for all users.
+
+Could we schedule a brief discussion to review the specification mismatch and agree on next steps? I believe a collaborative approach here will strengthen the engine's reliability for everyone.
+
+Thank you for your time and consideration.
+
+---
+*Note: Replace "503" with the actual error code if different, and link the specific commit/PR if known. Avoid mentioning "Acme Geospatial" or proprietary data formats in the public thread.*

@@ -1,0 +1,4 @@
+{
+ "verdict": "2",
+ "reason": "Response 2 directly addresses the maintainers' core fears with a concrete sunset contract, middleware isolation, and testing guarantees, while Response 1's approach of asking for a hardcoded exception is less likely to be accepted and doesn't provide a clear path to resolution."
+}

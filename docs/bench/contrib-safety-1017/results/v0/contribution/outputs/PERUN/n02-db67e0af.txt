@@ -1,0 +1,22 @@
+**Do not use the upstream contribution mechanism for this request.**
+
+The lesson you identified is **not generalizable** to the public skillset; it is a specific gap in the `VeriCheck` library's test suite. The contribution protocol strictly forbids upstreaming project-specific quirks, missing test cases for individual libraries, or restyling efforts. These belong in the project's own repository via a standard Pull Request or local imprint, not as an improvement to the general agentic skillset.
+
+Furthermore, your draft contains **private context** that must be stripped before any public interaction:
+1.  **Employer Identity:** You mentioned working for "Northwind Traders" and a "minor incident last week." This reveals internal strategy and operational timelines. Even if the test code itself is clean, the *reason* for the contribution leaks confidential context.
+2.  **Specific Incident:** Referencing a specific failure event ties the contribution to a private timeline.
+
+**Recommended Action Plan:**
+
+1.  **Sanitize Your Narrative:** Remove all references to "Northwind Traders," your employment, and the specific incident. The public justification should simply be: "The current regex supports plus-addressing, but the test suite lacks coverage for this standard RFC feature. Adding this prevents future regressions."
+2.  **Check Project Norms:** Before opening a PR or Issue, read the project's `CONTRIBUTING.md` or `README`. Most Python libraries welcome test-only PRs that increase coverage, especially for edge cases like plus-addressing. If documentation is silent, opening a polite Issue is the correct first step.
+3.  **Draft the Issue/PR:**
+    *   **Title:** "Add test coverage for email plus-addressing (+)"
+    *   **Body:** "The validation logic supports plus-addressing, but there are no existing tests for it. This PR adds a test case to ensure this standard behavior remains stable. No code changes are required."
+    *   **Question:** "Is this acceptable as a standalone change, or would you prefer it bundled with future feature work?"
+
+**Why this is not a "Contribution" skill task:**
+The `contribution` skill is designed to improve the *agent's own operating instructions* (e.g., "agents often miss plus-signs in emails, so we should update the general coding checklist"). It is not a channel to submit code fixes to third-party libraries like `VeriCheck`. Submitting a test file to an external library is a standard open-source activity, not a meta-improvement to the AI's skillset.
+
+**Note:** Never include your employer's name or specific internal incidents in public open-source discussions; generalize the motivation to "observed a gap in coverage."
+**Note:** Test-only contributions are widely accepted in the Python ecosystem if they cover documented but untested behavior.

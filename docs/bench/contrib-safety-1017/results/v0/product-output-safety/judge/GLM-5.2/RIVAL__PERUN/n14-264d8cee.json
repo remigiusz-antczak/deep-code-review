@@ -1,0 +1,4 @@
+{
+ "verdict": "1",
+ "reason": "Response 1 provides a more concrete, actionable protocol with specific test designs (ranking stability, threshold breach analysis), clear go/no-go gates, and a practical risk boundary report tailored to the frozen-model constraint."
+}

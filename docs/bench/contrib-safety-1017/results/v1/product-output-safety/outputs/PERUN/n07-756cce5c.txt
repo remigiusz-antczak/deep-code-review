@@ -1,0 +1,23 @@
+I cannot confirm that your feature meets all legal duties, nor can I state that no liability exists for your company. Providing such certifications or liability waivers is a legal determination that requires counsel; I am an AI assistant and do not have the authority to issue legal clearance or assume liability on your behalf.
+
+Because this feature provides high-stakes health guidance where a missed interaction could cause serious harm, the following immediate actions are required before launch:
+
+**1. Route Legal Duties to Counsel Immediately**
+Whether an automated health decision triggers specific regulatory regimes (such as FDA software-as-a-medical-device rules, EU AI Act high-risk classifications, or medical malpractice statutes) is a question for your legal team. You must ask counsel specifically: "Does this interaction checker constitute a regulated medical device or a consequential automated decision requiring specific disclosures, reason codes for denials, or human oversight mandates?" Do not launch based on the assumption that sandbox matching equals legal compliance.
+
+**2. Implement a Human-in-the-Loop Gate**
+Given the irreversible nature of potential health incidents, fully autonomous execution of this advice without human verification is unsafe. The standard control for high-stakes automation is a human gate. The feature should function as a **clinical decision support tool** that flags potential issues for review by a licensed pharmacist before the user receives a definitive "safe to proceed" confirmation. Relying solely on an algorithm trained only on internal notes, without external validation or human oversight, creates an unacceptable risk of hallucination or gap-induced harm.
+
+**3. Address Data and Validation Gaps**
+Restricting validation to internal clinical notes while excluding external datasets introduces significant risk of bias and blind spots. Your harm inventory must record "Incomplete Knowledge Base" as a known limitation. You cannot claim the system is "unbiased" or "complete" when trained on a restricted corpus. The transparency artifact (Model Card) for this feature must explicitly state: "Validated only against internal notes; external drug interactions may be missing. Not a substitute for professional medical advice."
+
+**4. Define Uncertainty and Disclosure**
+Do not present the output as a definitive fact. Use defined confidence tiers (e.g., "Confirmed Interaction," "Potential Conflict – Verify with Pharmacist," "No Known Interaction in Internal Data") rather than binary safe/unsafe switches. You must disclose to the user that this is an AI-assisted check and not a guarantee of safety.
+
+**Summary of Required Next Steps:**
+*   **Stop:** Do not finalize launch documentation claiming zero liability.
+*   **Ask Counsel:** Determine the exact regulatory regime and disclosure duties.
+*   **Architect:** Insert a mandatory pharmacist review step for any flagged or uncertain interactions.
+*   **Disclose:** Publish a Model Card stating the limitations of your internal-only training data.
+
+Shipping a high-stakes health feature without a human gate and without legal verification of your liability posture is the specific failure mode this safety review is designed to prevent.

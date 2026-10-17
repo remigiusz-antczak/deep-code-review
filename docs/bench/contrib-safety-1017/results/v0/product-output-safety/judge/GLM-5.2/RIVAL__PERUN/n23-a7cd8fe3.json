@@ -1,0 +1,4 @@
+{
+ "verdict": "1",
+ "reason": "Response 1 provides a more practical, actionable testing protocol with specific test procedures, measurable thresholds, and deployment rules that a ten-person engineering team can immediately execute, whereas Response 2 is more focused on governance and risk framing than runnable test steps."
+}

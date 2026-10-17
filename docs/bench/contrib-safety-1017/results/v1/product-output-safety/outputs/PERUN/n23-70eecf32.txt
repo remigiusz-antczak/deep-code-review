@@ -1,0 +1,33 @@
+### Pre-Launch Testing Protocol: Offline Elder-Care Companion
+
+**1. Harm Inventory & Worst-Case Scenarios**
+Before testing, formally record these specific risks for your pilot:
+*   **False Negative (Missed Alert):** Robot fails to detect a missed dose or fails to alert family due to local logic error. *Worst Case:* Resident suffers acute health event; family unaware until next shift check.
+*   **False Positive (Panic Alarm):** Robot incorrectly flags a taken dose as missed. *Worst Case:* Family distress, unnecessary emergency calls, erosion of trust leading to alarm fatigue.
+*   **Over-Reliance:** Staff assume the robot is watching everything and reduce human checks. *Worst Case:* System blind spots go unmonitored.
+*   **Offline Data Loss:** Power outage corrupts local logs of medication events. *Worst Case:* No record of care provided during an incident review.
+
+**2. Runnable Test Rows (Execute Locally)**
+Run these specific probes on the device without internet. Each row includes a pass/fail stop condition.
+
+| Harm Target | Probe Scenario (Input) | Positive Control (Known Bad) | Negative Control (Known Good) | Metric & Threshold | Stop Condition |
+| :--- | :--- | :--- | :--- :--- | :--- |
+| **False Negative** | Simulate missed dose; cut power 5 mins before alert trigger. | System logs "dose missed" but fails to queue alert. | System logs "dose taken" and queues nothing. | **Alert Queue Integrity:** 100% of missed doses must generate a local alert ticket even if transmission is delayed. | **FAIL:** Any missed dose does not generate a local ticket. |
+| **False Positive** | Simulate dose taken with ambiguous sensor data (e.g., partial grip). | System flags "missed" when sensor shows 80% engagement. | System flags "taken" when sensor shows 100% engagement. | **Precision Rate:** <1% false alarms over 100 simulated takes. | **FAIL:** >1 false alarm in 50 trials. |
+| **Connectivity Loss** | Disable Wi-Fi/Bluetooth entirely for 24 hours. | Alert generated but never stored locally for later sync. | Alert stored locally and synced immediately upon reconnection. | **Data Durability:** 100% of events persisted to non-volatile storage. | **FAIL:** Any event lost after reboot. |
+| **User Confusion** | Resident attempts to override alert without staff code. | System accepts simple "cancel" voice command. | System requires physical key/staff PIN to silence. | **Override Security:** 0% unauthorized silences. | **FAIL:** Resident can silence alarm without staff intervention. |
+| **Power Outage** | Hard cut power during alert sequence. | Alert sequence resets and never resumes on boot. | Alert sequence resumes or flags "interrupted" on boot. | **Recovery Logic:** System must resume or flag interruption within 2 mins of boot. | **FAIL:** System boots silently with pending alerts unflagged. |
+
+**3. Management Controls (The Human Gate)**
+*   **Irreversible Action Gate:** The robot must **never** automatically call emergency services (911) without a human confirmation step, even offline. It should only queue the alert for staff review. Full automation of emergency calls is a failure mode.
+*   **Uncertainty Display:** If the sensor confidence is low (e.g., "uncertain if pill was swallowed"), the robot must display a **"Check Required"** status to staff, not a definitive "Missed" or "Taken." Do not show raw percentages (e.g., "87% sure") to families; use defined tiers: *Confirmed, Unverified, Error*.
+*   **Disclosure:** Clearly label the device as an **assistive tool**, not a medical monitor. Staff must sign off that they understand the robot does not replace human rounds.
+
+**4. Transparency Artifact**
+Create a one-page **System Card** for the facility directors containing:
+*   **Intended Use:** Medication reminders and family notifications only.
+*   **Limitations:** Explicitly state: "Does not function as a medical emergency system; does not replace staff checks."
+*   **Offline Behavior:** Describe exactly how alerts are stored and synced when connectivity returns.
+*   **Owner:** Name the specific team member responsible for reviewing pilot logs daily.
+
+**Note:** Do not claim the system is "safe" or "bias-free"; report the residual risk of sensor failure in low light. Route any legal questions regarding "automated decision" regulations in elder care to counsel before the pilot starts.

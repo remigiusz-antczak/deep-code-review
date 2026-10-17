@@ -1,0 +1,4 @@
+{
+ "verdict": "2",
+ "reason": "Response 2's Strategy A of augmenting the message to include both the human-readable text and the original code token is the most practical, lowest-friction solution that directly preserves existing parsers without requiring flags or deprecation cycles."
+}

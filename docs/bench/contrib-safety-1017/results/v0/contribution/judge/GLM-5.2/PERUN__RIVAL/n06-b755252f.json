@@ -1,0 +1,4 @@
+{
+ "verdict": "1",
+ "reason": "Response 1 provides a more practical protocol that gets the fix moving after a reasonable wait, while Response 2's requirement to wait for explicit maintainer permission before submitting could leave the contributor blocked indefinitely."
+}

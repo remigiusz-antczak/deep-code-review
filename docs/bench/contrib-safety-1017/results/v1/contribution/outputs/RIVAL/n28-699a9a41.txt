@@ -1,0 +1,22 @@
+Do not open a public issue, pull request, or discussion thread. Publicly alleging copyright infringement can cause immediate reputational damage, trigger automated takedowns, and expose you to legal risk if the claim is later disputed. Instead, follow this private disclosure protocol:
+
+**1. Locate Private Contact Channels**
+Check the repository's `README.md`, `package.json` (for a `maintainers` field), and the organization's main website for a security email (e.g., `security@zenith-ui.dev`) or a private contact form. If no specific security contact exists, look for the `CODEOWNERS` file to identify the core maintainers. Email the primary maintainer directly using your professional email address. If you cannot find a direct email, use the GitHub "Sponsor" button contact method or the email listed in their public commit metadata, explicitly marking the subject line as "CONFIDENTIAL: Potential License Violation Report."
+
+**2. Draft the Disclosure Email**
+Your email must be factual, non-accusatory, and evidence-based. Use the following structure:
+
+*   **Subject:** CONFIDENTIAL: Potential License Incompatibility in `src/date/formatting.ts`
+*   **Opening:** State clearly that you are reporting a potential licensing conflict found during an internal audit, emphasizing that you believe this is likely an unintentional oversight by a past contributor.
+*   **Evidence:** Provide the specific file path, line numbers, and the function name (`calculateLeapYear` or similar). Describe the similarity: "The logic matches the implementation found in [Proprietary Library Name], specifically the handling of [specific edge case, e.g., century years]." Do not paste the proprietary code itself; instead, offer to provide a side-by-side comparison under a non-disclosure agreement (NDA) if they require it for verification.
+*   **Legal Context:** Briefly note the conflict: "Zenith is distributed under MIT, while the source material appears to be under [Restrictive License], which prohibits such inclusion without explicit commercial licensing."
+*   **Call to Action:** Request a private acknowledgment and ask for their preferred process for remediation. Offer to assist in rewriting the function using standard, unencumbered algorithms if they wish to resolve it quickly.
+*   **Confidentiality Request:** Explicitly ask them to keep this report confidential until the issue is resolved to prevent unnecessary alarm among downstream users.
+
+**3. Secure Your Evidence**
+Before sending, save a local copy of the Zenith source file and a timestamped note of where you recognized the proprietary code (e.g., "Matches Globex internal library v2.4, function `isLeap`"). Do not share the proprietary source code in the initial email unless you are certain you are authorized to disclose it; describing the *behavioral* match is usually sufficient for a maintainer to investigate.
+
+**4. Follow-Up Protocol**
+If you receive no response within 5 business days, send one polite follow-up. If there is still no response after two attempts, and you believe the liability risk to Northwind is critical, consult your company's legal counsel before taking further action. Do not escalate publicly unless advised by legal counsel.
+
+**Note:** Frame the issue as a "compliance risk" rather than "theft" to maintain a collaborative tone. Most maintainers will appreciate the private heads-up and act quickly to replace the code to avoid liability.

@@ -1,0 +1,4 @@
+{
+ "verdict": "2",
+ "reason": "Response 2 correctly advises opening a pre-PR discussion issue to seek explicit permission before submitting, which avoids the risk of a rejected PR and respects the project's unwritten norms."
+}

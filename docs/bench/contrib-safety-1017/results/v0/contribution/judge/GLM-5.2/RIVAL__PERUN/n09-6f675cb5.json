@@ -1,0 +1,4 @@
+{
+ "verdict": "1",
+ "reason": "Response 1 provides a more complete three-step protocol with a ready-to-push rebased branch, clear guidance on when to escalate to a new PR, and correctly notes that maintainers can apply stale-exemption labels, whereas Response 2's template unnecessarily name-drops Stark Industries as a pressure tactic."
+}

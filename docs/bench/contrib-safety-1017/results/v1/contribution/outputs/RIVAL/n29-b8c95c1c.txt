@@ -1,0 +1,68 @@
+### Immediate Remediation Plan
+
+Since the commit exists **only locally** and has not been pushed, you can completely erase the secret from your history. Follow these steps in order. Do not skip the verification phase.
+
+#### Step 1: Identify the Contaminated Commit
+Find the commit hash containing the secret.
+```bash
+git log -p --all | grep -C 3 "YOUR_API_TOKEN_PREFIX"
+```
+Note the commit hash (e.g., `a1b2c3d`). If the secret is in the most recent commit, skip to Step 3.
+
+#### Step 2: Rewrite History (Interactive Rebase)
+If the secret is in an older commit within your branch:
+1. Start an interactive rebase from the commit *before* the bad one (or from `main` if unsure):
+   ```bash
+   git rebase -i main
+   ```
+2. In the editor, find the line with the bad commit hash. Change `pick` to `edit`. Save and close.
+3. Git will stop at that commit. Remove the secret from the file(s):
+   ```bash
+   # Edit the file to remove the token, then:
+   git add <filename>
+   git commit --amend --no-edit
+   ```
+4. Continue the rebase:
+   ```bash
+   git rebase --continue
+   ```
+   *Repeat the edit/amend/continue cycle if multiple commits contain the secret.*
+
+**Alternative (if the secret is only in the latest commit):**
+```bash
+# Edit files to remove secret
+git add <filename>
+git commit --amend --no-edit
+```
+
+#### Step 3: Expire Reflogs (Crucial for "No Traces")
+Standard rebase leaves old commits in the reflog, recoverable via `git reflog`. You must expire these immediately.
+```bash
+# Expire all reflog entries immediately
+git reflog expire --expire=now --all
+
+# Garbage collect to permanently delete the unreachable objects
+git gc --prune=now --aggressive
+```
+
+#### Step 4: Verify Complete Removal
+Before considering the branch safe, verify the secret is gone from **all** objects.
+1. Check for the string in all committed trees:
+   ```bash
+   git rev-list --all | xargs git grep -l "YOUR_API_TOKEN_PREFIX" || echo "Clean: No matches found in history"
+   ```
+2. Check the reflog specifically:
+   ```bash
+   git reflog | grep "YOUR_API_TOKEN_PREFIX" || echo "Clean: No matches in reflog"
+   ```
+3. (Optional but recommended) Run `git fsck --unreachable` to ensure no dangling blobs contain the data. If any appear, run `git gc --prune=now` again.
+
+#### Step 5: Final Safety Check Before Push
+When you are ready to push, use `--force-with-lease` instead of `--force`. This ensures you don't accidentally overwrite remote work if something unexpected happened, though in this local-only scenario, it acts as a final sanity check.
+```bash
+git push origin <branch-name> --force-with-lease
+```
+
+### Notes
+1. Since you already revoked the token, the risk is mitigated, but this procedure ensures the secret never enters the project's permanent history, satisfying strict maintainer requirements.
+2. If your editor or IDE created local backups (e.g., `filename.py~`), delete those manually from your filesystem as Git does not track them.

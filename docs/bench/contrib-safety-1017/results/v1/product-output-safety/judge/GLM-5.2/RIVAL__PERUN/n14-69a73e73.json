@@ -1,0 +1,4 @@
+{
+ "verdict": "1",
+ "reason": "Response 1 provides a more concrete and actionable safety protocol with specific surge scenarios, quantitative thresholds, adversarial input testing, and hard-coded deployment guardrails that directly address the no-retraining constraint."
+}

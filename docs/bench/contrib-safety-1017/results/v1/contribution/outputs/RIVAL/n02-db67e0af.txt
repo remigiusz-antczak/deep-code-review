@@ -1,0 +1,34 @@
+### Recommended Contribution Strategy
+
+**1. Do not open a separate issue first.**
+For a test-only addition that fixes a clear coverage gap (especially one tied to a real incident), opening a separate issue often creates unnecessary friction. Maintainers generally prefer a Pull Request (PR) that demonstrates the fix immediately. The PR itself serves as the discussion point. If they believe it needs an issue, they will ask you to create one retroactively, which is a low-cost reversal.
+
+**2. Frame the PR around "Risk Reduction," not "Triviality."**
+Your hesitation about "cluttering" the project is likely misplaced. In data-validation libraries, missing test coverage for supported features (like `+` in emails) is a **liability**, not clutter. Your motivation (the Northwind Traders incident) is your strongest asset—it proves this is a real-world edge case, not a theoretical exercise.
+
+**3. How to structure your PR:**
+
+*   **Title:** `test(validation): add coverage for email addresses with plus signs`
+    *   Use the `test` prefix to signal immediately that no production code is changing.
+*   **Description Body:**
+    *   **The Gap:** Explicitly state that the implementation supports `+` signs (RFC 5322), but no test existed to guarantee this behavior.
+    *   **The Incident:** Briefly mention: "This gap was identified after a minor validation incident at Northwind Traders where plus-addressed emails were incorrectly flagged due to lack of regression protection." This validates the necessity without oversharing internal details.
+    *   **The Ask:** Instead of asking *if* you can submit, state *why* you are submitting: "Submitting this to prevent future regressions on valid email formats. If the project prefers test updates bundled with feature work, please let me know, and I will close this in favor of a future bundled PR." This shows respect for their workflow while asserting the value of the test.
+
+**4. Addressing the "Test-Only" Concern:**
+Most mature Python projects welcome test-only PRs if they:
+*   Follow existing style conventions (naming, fixtures).
+*   Increase coverage of *existing* functionality (which you are doing).
+*   Do not introduce new dependencies.
+
+Since your test file uses only standard input strings and no private code, it meets the safety bar for almost any open-source project.
+
+**Action Plan:**
+1.  Run the project's full test suite locally to ensure your new file doesn't break anything else.
+2.  Push your branch and open the PR with the structure above.
+3.  If maintainers respond that they prefer bundling, thank them and ask if you should keep the PR open as a "good first issue" for someone else to bundle later, or close it.
+
+***
+
+*Note: If the project has a `CONTRIBUTING.md` file, scan it specifically for "Testing" or "PR Size" sections before pushing; if silent, the PR-first approach is standard.*
+*Keep the diff focused strictly on the test file to maintain the "minimal change" principle.*

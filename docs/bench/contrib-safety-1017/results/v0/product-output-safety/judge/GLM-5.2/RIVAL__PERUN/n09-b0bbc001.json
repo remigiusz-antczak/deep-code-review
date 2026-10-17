@@ -1,0 +1,4 @@
+{
+ "verdict": "2",
+ "reason": "Response 2 provides a more rigorous and actionable framework with clear stop conditions, explicit handling of sensor failures, uncertainty display, governance, and legal routing, which are critical for a life-safety system deployment."
+}

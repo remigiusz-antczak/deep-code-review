@@ -1,0 +1,20 @@
+**Call:** Ask the maintainers for a targeted testing path immediately; do not wait, do not attempt to fake cross-platform results, and do not withdraw the fix yet. Your constraint is a common contributor reality, and maintainers prefer an honest gap over a silent assumption that breaks their macOS users.
+
+**Deliverable (Paste this as a comment on your PR):**
+
+> "Thank you for reviewing the memory leak fix. I want to be transparent about a testing gap: my validation confirms the leak is resolved on Windows, but I currently lack access to macOS and Linux environments to verify the fix on those platforms.
+>
+> I understand the project requires cross-platform verification before merging. Since I cannot immediately provide those results, could you advise on the preferred next step?
+>
+> 1.  **Maintainer Verification:** Would a maintainer be willing to run the existing test suite against this branch on macOS/Linux to confirm no regressions? I can ensure the branch is stable and ready for immediate pulling.
+> 2.  **CI-Only Merge:** Does the project's CI pipeline provide sufficient coverage for this specific type of memory allocation change to allow a merge pending post-merge monitoring?
+> 3.  **Hold Status:** Should I mark this PR as 'Work in Progress' while I attempt to provision a remote testing environment, acknowledging this may delay the fix?
+>
+> My goal is to ensure this fix is safe for all users without imposing an undue burden on the team. Please let me know which path aligns best with your contribution workflow."
+
+**Next Steps & Fallback:**
+1.  **Wait 48 hours** for a response. Maintainers often have automated lab access you do not; they may simply trigger a job and merge.
+2.  **If they insist you test:** Reply asking if they can recommend a free, low-friction cloud CI service (like GitHub Actions, Azure Pipelines, or a specific macOS VM provider) that integrates with their repo, stating you are willing to configure it if they provide the target configuration snippets.
+3.  **If silence persists after 5 days:** Add a polite nudge tagging the specific maintainer who commented, reiterating that the Windows fix is ready but blocked by the platform gap.
+
+**Note:** Never claim you tested a platform you did not; a single crash report from a macOS user later will permanently damage your credibility. The draft above frames your limitation as a request for workflow alignment rather than an excuse.

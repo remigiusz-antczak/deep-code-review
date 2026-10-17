@@ -1,0 +1,15 @@
+Do not reopen the closed pull request, and do not create a new one yet. Instead, post a single, polite comment on the **closed** pull request thread addressing the maintainer directly.
+
+Draft your comment using this structure:
+
+1.  **Acknowledge the closure:** "Hi @Alex, I noticed this PR was closed automatically by the stale bot after 14 days."
+2.  **Reference their prior interest:** "You mentioned previously that you intended to review this soon; I want to ensure this didn't get lost in the shuffle."
+3.  **Reiterate value without pressure:** "This fix resolves a critical timezone calculation error affecting global deployments for our team at Stark Industries. Since the code changes are ready and tested, I'd love to know if you prefer I:
+    *   Reopen this specific PR (if the project allows), or
+    *   Close this and open a fresh PR referencing this thread to reset the stale timer."
+4.  **Call to action:** "Please let me know which workflow you prefer, and I will execute it immediately."
+
+**Why this approach:**
+Reopening a closed PR without permission can annoy maintainers who rely on the bot to keep their queue clean. Creating a duplicate PR immediately looks like spam. By asking Alex for their preference on the closed thread, you show respect for their workflow while gently nudging them to either merge your existing work or authorize a resubmission. If they do not respond within 3–5 business days, *then* you should close the old thread yourself and open a new PR with a link to this conversation in the description.
+
+**Note:** Ensure your fork is up-to-date with the upstream `main` branch before taking any further action, as the repository may have changed in the last two weeks.

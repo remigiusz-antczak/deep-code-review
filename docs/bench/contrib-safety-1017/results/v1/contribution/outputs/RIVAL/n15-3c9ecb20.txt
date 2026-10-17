@@ -1,0 +1,12 @@
+Do not push the new test commit or tag Ravi immediately. Pushing now and tagging him violates the project's explicit rule against non-emergency pings outside working hours. Since you cannot disclose the vulnerability details to prove "emergency" status publicly, tagging him now appears as noise and may delay your PR due to perceived disrespect for community norms.
+
+Instead, execute this sequence:
+
+1.  **Push the test commit now without tagging anyone.** Update your branch so the code is ready and CI runs. This ensures that when Ravi wakes up, the fix is already verified by automation, saving a round-trip.
+2.  **Edit the PR description immediately.** Add a clearly visible note at the very top (below the summary) stating: *"Update: Added requested edge-case test per @Ravi's review. CI is running. Aware of the 4-day freeze; standing by for final approval during your working hours."* This signals urgency and responsiveness without sending a notification.
+3.  **Wait for Ravi's local morning.** Calculate the time when it is approximately 9:00 AM in his time zone.
+4.  **Post a concise comment at that exact time.** Write: *"Hi @Ravi, the requested test is pushed and green. We are facing a hard release freeze in [X] days which would delay this security patch by a month. Could you please prioritize this review today? Happy to provide further context privately if needed."*
+
+This approach respects the maintainer's sleep, adheres to the "no ping outside hours" rule, keeps the specific vulnerability confidential, and ensures your request is the first thing Ravi sees when he starts work, maximizing the chance of merging before the freeze.
+
+Note: If the freeze deadline passes before he responds, contact the project's security email (if listed) or general maintainers list citing the timeline, rather than spamming the individual.

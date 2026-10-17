@@ -1,0 +1,26 @@
+**Call:** Fork the project under your organization's account immediately to restore production stability; do not wait for or rely on contacting the original maintainer for this critical fix.
+
+**Deliverable (Internal Memo / Decision Record):**
+
+**Subject:** Critical Remediation Plan for Legacy Connect Toolkit
+**Decision:** Proceed with an organizational fork to apply the null pointer exception fix for files >2GB.
+
+**Rationale:**
+1.  **Production Continuity:** The nightly batch jobs are currently failing. An archived repository signals that the original maintainer (Ravi) is no longer supporting the project. Waiting for a response to an unarchive request introduces unacceptable downtime risk for a known, verified fix.
+2.  **Respect for Maintainer Intent:** Archiving a repository is a explicit declaration of "end of life" or "no further changes." Attempting to persuade Ravi to unarchive it for a single patch contradicts his stated boundary and places an undue burden on a dormant maintainer. Forking respects his decision to step away while allowing us to sustain our own operations.
+3.  **Risk Mitigation:**
+    *   **Drift Risk:** While forking creates a divergence, the alternative is a broken production pipeline. Since the project is already archived, "future community efforts" are currently non-existent. If the project ever revives, our fork can serve as a reference implementation or be rebased then.
+    *   **Maintenance:** We will treat this as an internal vendorization. The fork will be tagged clearly (e.g., `globex-maintained-v1.x`) to distinguish it from the upstream archived state.
+
+**Action Plan:**
+1.  **Execute Fork:** Create the fork under the Globex Corporation organization immediately.
+2.  **Apply Patch:** Commit the verified fix for the 2GB file handling issue.
+3.  **Documentation:** Update the `README.md` in the fork to state: *"This is a maintained fork by Globex Corporation to address critical stability issues (specifically the >2GB NPE). The upstream project is archived."*
+4.  **Notification (Optional but Professional):** Send a brief, non-intrusive email to Ravi (if contact info is public) simply stating: *"We encountered a critical blocker in Legacy Connect and, respecting your archive status, have forked the project to apply a local fix for our internal use. Thank you for your past work."* This closes the loop without asking for labor.
+
+**Fallback:**
+If legal or compliance blocks the fork, isolate the toolkit in a containerized environment with a wrapper script to handle the large file preprocessing, though this is a higher engineering cost than the fork.
+
+---
+*Note: Ensure your internal security team scans the forked codebase before deploying to CI/CD, as you are now the sole maintainer of this dependency.*
+*Do not attempt to push to the upstream archived repo; it will technically fail and waste time.*

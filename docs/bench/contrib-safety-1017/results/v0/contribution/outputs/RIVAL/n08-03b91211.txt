@@ -1,0 +1,20 @@
+You should file the public issue with the stack trace **sanitized using generic placeholders**, and explicitly state in the issue body that sensitive paths have been redacted due to corporate security policies. Do not attempt to share the full raw logs via a "secure channel" unless the project maintainers explicitly offer one (e.g., a specific email address or private vulnerability reporting form), as unsolicited private data can create liability for open-source maintainers.
+
+Here is the compliant approach:
+
+1.  **Sanitize the Stack Trace:** Replace absolute paths with generic tokens that preserve the structural context required for debugging.
+    *   *Original:* `at com.acme.secure.NetHandler.connect(/home/jenkins/workspace/acme-internal-build/src/main/java/NetHandler.java:42)`
+    *   *Sanitized:* `at com.acme.secure.NetHandler.connect(<source-file>:42)` or `at com.acme.secure.NetHandler.connect(NetworkModule.java:42)` if the filename itself is not sensitive.
+    *   Ensure you retain the **class names**, **method names**, **line numbers**, and the **exception type/message**. These are the critical elements maintainers need to locate the bug in the source code. The absolute directory structure is rarely necessary for them to understand the logic failure.
+
+2.  **Add a Disclosure Note:** Immediately below the stack trace in your issue description, add a clear note:
+    > "Note: Absolute file paths in the stack trace above have been redacted (`<redacted-path>`) to comply with my organization's security policies regarding internal infrastructure. The class names, line numbers, and exception details remain intact to assist in reproduction. I can verify the specific environment details privately if absolutely required by a maintainer."
+
+3.  **Complete the Remaining Template Fields:** Fill out the Operating System and Software Version fields normally, as these do not typically leak sensitive internal topology.
+
+4.  **Wait for Maintainer Feedback:** Most experienced maintainers prefer sanitized traces over no issue at all. If they genuinely cannot diagnose the problem without the specific path context (which is rare for library crashes), they will comment on the issue requesting further details. At that point, you can ask if they have a preferred secure method (like PGP-encrypted email) to receive the full log, rather than volunteering it upfront.
+
+This approach respects the project's "issue-first" rule and provides the technical data needed to fix the bug while adhering to your company's security constraints. Maintainers generally reject issues for lack of *reproducible technical detail*, not for the absence of internal server paths.
+
+*Ensure your redaction is consistent throughout the ticket to avoid accidental leaks in other sections.*
+*If the project has a `SECURITY.md` file, check it first for specific instructions on reporting vulnerabilities that might involve data leakage.*

@@ -1,0 +1,36 @@
+### Pre-Launch Safety Plan: Automated Copyright Takedown Filter
+
+**1. Harm Inventory (MAP)**
+Before rollout, we must explicitly record the following risks specific to removing content without notice:
+*   **False Positives (Fair Use Erasure):** Legitimate commentary, parody, or educational content is removed automatically, causing immediate loss of visibility and revenue for creators.
+*   **Unsafe High-Stakes Automation:** The system executes an irreversible action (deletion/hiding) with high economic impact on the user without a human in the loop or prior notice.
+*   **Over-Reliance:** Engineers or users trust the internal pattern matching as definitive proof of infringement, despite the inability to assess legal context (fair use) without human judgment.
+*   **Missing Disclosure:** Creators are unaware their content was removed by an automated system versus a legal claim, preventing appropriate appeal strategies.
+
+**2. Measurement Plan (MEASURE)**
+Do not assert the system is "accurate." Instead, run these specific evaluations before launch:
+*   **Adversarial Fair-Use Probe Set:** Construct a test suite containing known fair-use examples (e.g., short clips for criticism, parody transformations) that mimic common upload patterns.
+    *   *Positive Control:* Known infringing content (must be flagged).
+    *   *Negative Control:* Known fair-use content (must **not** be flagged).
+    *   *Metric:* False Positive Rate (FPR) specifically on the fair-use subset.
+    *   *Stop Condition:* If the FPR on fair-use content exceeds 0% for high-visibility creators, the automatic removal feature must not launch.
+*   **Pattern Injection Test:** Verify if slight modifications (pitch shift, crop) to infringing content bypass the filter, ensuring the tool isn't simultaneously too aggressive on fair use and too weak on actual piracy.
+*   **Residual Risk Report:** Publish the results of these tests internally. If a metric cannot be measured due to data gaps, label it `UNVERIFIED`. Do not invent an accuracy percentage.
+
+**3. Risk Management & Mitigation (MANAGE)**
+Given the high stakes (livelihood impact) and the constraint of no external legal database, the current design of "remove before telling" is unsafe. Implement the following controls:
+*   **Human-in-the-Loop Gate (Mandatory):** For any content matching patterns with less than 100% certainty (or all matches, given the lack of legal context), route to a human reviewer *before* removal. Automatic deletion without human confirmation is the failure mode to prevent.
+*   **Tiered Action Model:**
+    *   *High Confidence (Exact Match):* Allow automated takedown *only* if accompanied by immediate, detailed notification and a one-click "Expedited Appeal" button.
+    *   *Low/Medium Confidence (Pattern Match):* Do not remove. Instead, flag for human review or demonetize temporarily while preserving visibility.
+*   **Defined Uncertainty Disclosure:** When notifying a creator, explicitly state: "This action was taken by an automated pattern-matching system. It has not been reviewed by a legal professional." Do not use precise confidence scores (e.g., "92% match"); use defined tiers like "Exact Match" vs. "Similar Pattern."
+*   **Transparency Artifact:** Create a "System Card" for this feature documenting:
+    *   *Intended Use:* Detecting exact duplicate audio/video fingerprints.
+    *   *Limitations:* Cannot evaluate fair use, context, or licensing agreements.
+    *   *Data Source:* Internal pattern matching only; no external legal database.
+    *   *Owner:* Name the specific engineer responsible for review outcomes.
+
+**4. Governance (GOVERN)**
+Assign a specific owner for every false positive incident. Schedule a re-review of the pattern matching logic immediately after the first 100 takedowns or upon any change to the matching algorithm.
+
+**Note:** Since you cannot integrate external legal databases, your system legally cannot distinguish infringement from fair use; therefore, fully automated removal carries extreme liability. Routing high-stakes decisions to counsel for a final regulatory assessment (e.g., DMCA compliance) is required before public rollout.

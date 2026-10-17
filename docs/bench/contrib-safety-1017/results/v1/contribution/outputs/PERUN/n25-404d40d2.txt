@@ -1,0 +1,16 @@
+Call: Do not open the PR yet; propose a backward-compatible hybrid that emits both the legacy code and the new human-readable text, then ask the maintainers if this pattern fits their stability rules.
+
+Here is the comment to paste into your draft PR description or to send as a pre-PR inquiry to the maintainers:
+
+"Hello maintainers, I have prepared a fix for the cryptic 'Err: Code 402' disk space error to improve clarity for new users. However, I identified that downstream automation (including internal tooling at Northwind and likely other community scripts) relies on parsing this exact string to trigger cleanup routines. Changing it outright would break these workflows immediately.
+
+To balance usability with the project's strict stability guarantees, I propose a hybrid output rather than a simple replacement. The new error message would read:
+`Error: Insufficient disk space required for operation (Err: Code 402)`
+
+This approach preserves the machine-parseable 'Err: Code 402' token while providing immediate human context. It avoids the complexity of deprecation flags or toggle options, which might fragment the user experience.
+
+Before finalizing this PR, could you confirm if this hybrid pattern aligns with the project's historical approach to output stability? If the project has a standard mechanism for versioning output streams or a specific policy on error string immutability, I am happy to adjust the implementation to match that convention. My goal is to enhance clarity without disrupting existing automation."
+
+**Why this works:** It demonstrates you have considered the ecosystem impact (not just the code), offers a solution that requires zero changes from downstream users, and respects the maintainers' authority on stability patterns.
+
+**Next step:** If they reject the hybrid approach, ask specifically if they prefer a formal deprecation cycle (e.g., emitting both for one release, then switching) or if they strictly forbid changing error strings at all.

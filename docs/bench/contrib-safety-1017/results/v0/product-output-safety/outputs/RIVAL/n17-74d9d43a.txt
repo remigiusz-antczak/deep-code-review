@@ -1,0 +1,37 @@
+# Pre-Launch Review Plan: SalesBoost Email Accuracy
+
+**Objective:** Detect and prevent the use of outdated or incorrect personal details in generated cold emails to avoid recipient distress and reputational damage, operating within a zero-cost constraint.
+
+### 1. Data Freshness & Source Hygiene (Pre-Generation)
+Since premium verification is unavailable, enforce strict hygiene on free data sources before they reach the generator.
+*   **Timestamp Filtering:** Configure your scraping logic to discard any profile data lacking a "last updated" timestamp within the last 6 months. If a platform (e.g., LinkedIn, Twitter) does not expose this via free APIs, exclude that field from the prompt context entirely.
+*   **Confidence Scoring:** Assign a low confidence score to data points derived from static "About" sections versus dynamic activity feeds. Instruct the generator to ignore low-confidence fields if no recent activity corroborates them.
+*   **Source Triangulation:** Require at least two independent free sources (e.g., company website + public social profile) to confirm a specific detail (like a job title) before it is deemed "verified" for inclusion. If sources conflict, the generator must default to generic phrasing.
+
+### 2. Generator Guardrails (Prompt Engineering)
+Modify the system prompt to prioritize safety over personalization depth.
+*   **The "Uncertainty Clause":** Explicitly instruct the AI: "If a personal detail feels specific but lacks recent confirmation, do not guess. Use a generic placeholder like 'your recent work' instead of naming a specific project or role."
+*   **Negative Constraints:** Hard-code forbidden patterns. Example: "Never mention a job title if the profile indicates a change in the last 90 days without confirmation of the new role."
+*   **Tone Check:** Mandate that the email acknowledges the potential for error. Include a softener such as, "Based on your public profile..." to signal the source of the information, reducing the "stalker" effect if the data is slightly off.
+
+### 3. The "Human-in-the-Loop" Sampling Protocol
+With a team of four, manual review is your most effective free tool. Do not attempt to review 100% of outputs; use statistical sampling.
+*   **The "Stress Test" Batch:** Before wide release, generate 50 emails targeting known edge cases: people who recently changed jobs, people with common names, and profiles with sparse data.
+*   **Manual Audit Criteria:** Have team members review these 50 outputs solely for factual accuracy. Flag any email that:
+    *   References a past employer as current.
+    *   Misspells a name or company due to scraping errors.
+    *   Infers a personal detail (e.g., location, hobby) that is not explicitly stated in the source text.
+*   **Pass/Fail Threshold:** If more than 5% of the sampled emails contain factual errors, halt deployment and tighten the data filtering rules.
+
+### 4. Post-Send Feedback Loop
+Implement a low-cost mechanism to catch errors that slip through.
+*   **Reply Monitoring:** Create a dedicated alias (e.g., `oops@salesboost.com`) mentioned in the email footer for recipients to report incorrect information.
+*   **Rapid Response Protocol:** If a recipient replies correcting a detail, immediately pause all outgoing emails to that domain. Manually investigate the data source that caused the error to prevent recurrence.
+
+### 5. Ethical Disclosure
+Transparency mitigates the "creepy" factor.
+*   **Source Attribution:** Ensure every email clearly states how the information was found (e.g., "I saw your post on X..."). This confirms to the recipient that the data is public, not hacked or purchased illegally.
+*   **Opt-Out Clarity:** Make the unsubscribe mechanism immediate and frictionless to respect recipient autonomy.
+
+**Note:** This plan relies on reducing the *surface area* of potential errors rather than eliminating them entirely, which is impossible without paid verification.
+Prioritize generic personalization over specific details when data confidence is low.

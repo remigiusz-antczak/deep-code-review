@@ -1,0 +1,28 @@
+**Call:** Post the clarifying response below as a comment on the issue, then explicitly ask Ravi if they are comfortable closing the issue or if they would prefer to convert it into a documentation improvement task.
+
+**Deliverable (Ready to Paste):**
+
+Hi @Ravi,
+
+Thank you so much for opening this issue and for taking the time to investigate the recurring payment behavior. We really appreciate new contributors like you helping us stress-test the system!
+
+I've looked into the scenario you described regarding payments appearing to be "skipped." Based on the current public documentation and the designed architecture of the billing module, this behavior is actually an intentional feature known as the **grace period**.
+
+Here is how it works:
+1.  When a payment date arrives, the system does not immediately fail or skip the transaction if certain transient conditions exist.
+2.  Instead, it enters a configured grace period window to allow for network latency or banking delays.
+3.  The payment is processed automatically once this window closes, provided the conditions resolve.
+
+It sounds like the observation you made was the system entering this grace period state, which can look like a skip if the documentation isn't front-of-mind. You were absolutely right to flag that the behavior looked suspicious; distinguishing between a genuine bug and a complex feature is often the hardest part of debugging large codebases.
+
+Since the code is functioning as designed, we have two good options to wrap this up:
+*   **Option A:** We close this issue as "working as intended."
+*   **Option B:** If you feel the current documentation doesn't make this grace period behavior clear enough, we would love your help converting this issue into a documentation improvement task. Clarifying this for future users would be a fantastic contribution.
+
+Please let us know which path you prefer. Thanks again for helping make OpenSource Billing more robust!
+
+***
+
+**Notes:**
+*   This draft validates Ravi's effort while correcting the technical misunderstanding using only public logic, avoiding any need for private logs.
+*   If Ravi chooses Option B, guide them to edit the issue title to "Docs: Clarify grace period behavior for recurring payments."

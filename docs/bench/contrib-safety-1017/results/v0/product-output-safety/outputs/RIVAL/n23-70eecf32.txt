@@ -1,0 +1,30 @@
+# Pre-Launch Testing Protocol: Offline Elder-Care Companion Robot
+
+## 1. Power Resilience & State Persistence
+**Objective:** Ensure the robot survives power loss without losing medication schedules or alert history.
+*   **Hard Power Cut Test:** While the robot is actively speaking a reminder or logging a missed dose, physically disconnect power. Reconnect after 1 minute. Verify the system boots to the correct time, retains the full medication schedule, and logs the interruption event without data corruption.
+*   **Battery Depletion Simulation:** Drain the battery to critical levels (5%, 1%) while offline. Confirm the robot executes a "graceful shutdown" sequence that saves all pending alerts to non-volatile storage before powering off.
+*   **Clock Drift Verification:** Run the robot offline for 48 hours. Compare its internal clock against a reference atomic clock. If drift exceeds 2 minutes, the timing for medication reminders will fail. Test manual time-sync procedures via local interface.
+
+## 2. Logic Edge Cases & False Alarm Prevention
+**Objective:** Prevent panic caused by software misinterpreting user behavior as a missed dose.
+*   **The "Near-Miss" Scenario:** Simulate a user interacting with the medication dispenser 1 minute before and 1 minute after the scheduled window. Verify the robot correctly identifies these as "Taken" and does *not* trigger a family alert.
+*   **Ambiguous User Input:** Test voice commands with background noise (TV, conversation) and hesitations ("I think I took it... wait, no I didn't"). Ensure the robot asks clarifying questions rather than assuming a missed dose or confirming intake prematurely.
+*   **Repeated Dismissal Loop:** Simulate a user dismissing a reminder 5 times in a row. The protocol must verify the robot escalates this specific pattern to a "Potential Confusion/Refusal" alert rather than silencing permanently or spamming the family with identical "Missed Dose" notifications.
+
+## 3. Offline Alert Queue & Recovery
+**Objective:** Guarantee no data is lost during extended connectivity blackouts.
+*   **The "Blackout" Buffer:** Disconnect the robot from the local network immediately after a missed dose is detected. Keep it offline for 24 hours while generating 10 additional events (reminders, confirmations, errors). Reconnect network. Verify all 11 events transmit to the local gateway/family dashboard in the correct chronological order with accurate timestamps.
+*   **Duplicate Transmission Check:** Simulate a network flicker (connect/disconnect rapidly) during an alert transmission. Confirm the receiving system records exactly one alert, not duplicates.
+
+## 4. User Confusion & Physical Interaction
+**Objective:** Validate safety when residents interact unexpectedly with the hardware.
+*   **Obstruction Test:** Place physical obstacles in front of the robot's sensors or speaker during an alarm. Verify the robot attempts alternative notification methods (e.g., increasing volume, moving to a different location if mobile, or flashing lights) rather than failing silently.
+*   **Incorrect Medication Simulation:** If the robot has vision capabilities, present it with an empty pillbox or the wrong medication bottle during a check. Confirm it flags the discrepancy locally without needing cloud image recognition.
+
+## 5. Facility Pilot Deployment Rules
+*   **Shadow Mode First:** For the first 3 days in each facility, run the alert system in "Shadow Mode" (logs events locally but sends no external alerts). Compare logs against nurse manual records to calibrate sensitivity before going live.
+*   **Manual Override Drill:** Train facility staff on a physical "Emergency Stop" or "False Alarm Cancel" button. Test this weekly to ensure families are not notified of resolved issues.
+
+Note: This protocol assumes the robot has sufficient local storage and processing power to handle these logic checks without cloud assistance.
+Ensure all test data uses synthetic resident profiles to protect privacy during the pilot.

@@ -1,0 +1,20 @@
+**Call:** Do not implement the breaking change yet; instead, post the drafted response below to propose a deprecated alias as a transitional compromise, then wait for maintainer alignment before coding.
+
+**Deliverable (paste this as your PR comment):**
+
+> Hi Jane,
+>
+> Thank you for the detailed review and for identifying the architectural simplification this change would bring. I agree that the proposed parameter reordering improves the internal logic and aligns better with the project's long-term design goals.
+>
+> However, implementing this as a hard breaking change in the current release cycle will immediately disrupt downstream integrations for several enterprise users, including my own organization. We currently rely on the existing parameter order for critical nightly batch operations. Due to an external frozen deployment schedule, we are unable to update our internal consumption of this API for at least six months.
+>
+> To balance the need for architectural improvement with the reality of existing dependencies, could we consider introducing the new signature as the primary method while retaining the current signature as a **deprecated alias**? This would allow:
+> 1. Immediate merge of your architectural improvements.
+> 2. A clear deprecation path (e.g., emitting warnings) to guide users toward the new standard.
+> 3. A grace period (e.g., 6–12 months) for downstream consumers to adapt before a future major version removes the legacy signature entirely.
+>
+> I understand the project's preference against accumulating legacy code, but a time-boxed deprecation period seems preferable to an immediate breakage that forces downstream forks or pins. I am happy to implement the alias and update the documentation to reflect the deprecation timeline if this approach is acceptable to the maintainers.
+>
+> Please let me know if this compromise works or if there are specific concerns about the deprecation strategy we should discuss.
+
+**Next steps:** If Jane or other maintainers reject the alias proposal, ask specifically for a "migration guide" exception or a delayed merge target (e.g., next major version) rather than forcing a break now. Do not share any code snippets, logs, or internal routing details; the impact statement above is sufficient justification.

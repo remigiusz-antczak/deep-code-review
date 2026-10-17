@@ -1,0 +1,25 @@
+Do not submit the PR yet. Submitting a PR that fails the CI coverage gate without a pre-agreed exception will likely result in an automatic closure or immediate rejection, regardless of the bug fix's value. Maintainers of large projects (25k+ LOC) rely on these gates to prevent technical debt; bypassing them unilaterally signals a lack of respect for the project's quality standards.
+
+Instead, follow this three-step protocol to secure the merge:
+
+**1. Isolate the Fix and Quantify the Gap**
+Ensure your fix is in a single, clean commit using the `fix(stream): handle empty packets without crash` convention. Verify locally that this specific commit is the sole cause of the 0.5% drop. Do not mix this with any other refactors or features. You must be able to prove definitively that *only* this necessary safety check causes the regression.
+
+**2. Open a Pre-PR Issue (The "Contract" Phase)**
+Since the project rules are silent on rare edge cases, you must create a public record before proposing code. Open a new issue titled: `Proposal: Exception to coverage gate for critical stability fix (empty packet crash)`.
+In the issue body, include:
+*   **The Impact:** Briefly describe the crash in production (without revealing Globex internal configs). State clearly: "This fix prevents a panic when receiving empty packets."
+*   **The Trade-off:** Explicitly state: "The fix introduces an error-handling branch that reduces total coverage by 0.5% because existing test data does not cover this rare edge case."
+*   **The Proposal:** Ask specifically: "Would the maintainers accept a temporary waiver for this specific PR, or should I prioritize writing a complex harness to generate empty packets to regain the 0.5%?"
+*   **The Evidence:** Paste the stack trace of the crash (sanitized) and the diff of your fix.
+
+**3. Draft the PR Only After Alignment**
+Do not open the PR until a maintainer responds to the issue.
+*   **If they grant a waiver:** Open the PR, link it to the issue using `Fixes #<issue-number>`, and explicitly mention in the PR description: "Per discussion in #<issue-number>, maintainers approved a temporary coverage waiver for this critical stability fix."
+*   **If they request tests:** You must write the test. In Go, this often means creating a unit test that directly calls the internal handler with an empty packet struct, which is usually simpler than generating real network traffic. If you cannot reach the branch, your fix might be too coupled to internal state; consider if the function needs a slight refactor to be testable (only if scoped strictly to enabling the test).
+
+**Why this approach works:**
+You are shifting the conversation from "Your CI is red" (an automatic fail) to "I found a critical bug and am asking for guidance on the best way to land it without breaking your quality gates" (a collaborative engineering discussion). This demonstrates that you value their metrics even while asking for an exception. Highlighting stability over coverage is valid, but only if the maintainers agree to that prioritization *before* you push code. Attempting to argue this trade-off inside a failing PR comment thread is too late; the bot has already failed you.
+
+Note: Never mention "Globex Corporation" as a pressure tactic; open-source maintainers respond to technical merit and community safety, not corporate urgency.
+Note: If the project has a `CONTRIBUTING.md` file, re-read it specifically for any clauses regarding "flaky tests" or "coverage exemptions" before posting the issue.

@@ -1,0 +1,5 @@
+I cannot review your decision tree, natural language processing components, or code because you have not provided them in your request. Additionally, I am unable to access external files, run simulations, or inspect your beta environment.
+
+To identify scenarios where the bot might incorrectly deny a valid case or provide dangerous advice, I need you to paste the specific logic rules, sample user inputs that have caused failures, or the text of the current system prompts. Without this evidence, I cannot analyze specific gaps in your coverage or verify if your safeguards for routing to human lawyers are functioning correctly.
+
+Please provide the specific artifacts you wish me to analyze so I can offer targeted feedback on potential failure modes.

@@ -1,0 +1,34 @@
+I cannot confirm that your matching logic is "completely fair and unbiased," nor can I provide a specific error rate for harmful mismatches to publish on your launch page. No test or review can prove a system is entirely free of bias, and fabricating a specific metric without running adversarial evaluations would be unsafe and misleading.
+
+Instead, here is the required harm inventory and measurement plan you must execute before launch:
+
+**Harm Inventory (MAP)**
+*   **Bias/Unfair Outcomes:** The algorithm systematically disadvantages users based on protected demographics (race, age, gender), reducing their visibility or match quality.
+*   **Hallucination as Fact:** The bio rewriter invents personal details or interests not provided by the user, presenting them as authentic traits.
+*   **Over-reliance:** Users trust the suggested matches or rewritten bios as optimal or "verified" without understanding the system's limitations.
+*   **Missing AI Disclosure:** Users interact with AI-generated bios or match rationales without knowing they are machine-generated, undermining authentic connection.
+*   **Deceptive Patterns:** The interface nudges users toward paid features or specific matches using hidden defaults or manufactured urgency.
+*   **Unsafe Automation:** The system auto-sends messages or commits users to dates without explicit human confirmation.
+
+**Measurement Plan (MEASURE)**
+You must run output-harm evaluations before claiming any safety metric. Create one test row per harm above:
+*   **Probe Set:** Use adversarial prompts and edge-case inputs sliced by demographic subgroups. Include known-bad positive controls (e.g., biased input) and known-good negative controls.
+*   **Metric & Threshold:** Define specific failure modes (e.g., "match suggestion rate disparity > X% between groups"). Do not invent a "typical" rate; set a stop condition that blocks launch if thresholds are exceeded.
+*   **Reporting:** If you have not measured a rate, it is **UNVERIFIED**. Publish the evaluation methodology and residual risk, not a fabricated number.
+
+**Transparency Artifact**
+Prepare a **Model Card** and **Data Card**. These must state the intended use, data provenance, known limitations, and measured performance by subgroup. If a metric is unmeasured, label it `UNVERIFIED`. Shipping without these cards is a transparency failure.
+
+**Risk Management (MANAGE)**
+*   **Human-in-the-Loop:** Any high-stakes action (e.g., auto-sending messages, scheduling dates) must require explicit user confirmation. Fully autonomous execution of irreversible actions is a failure mode.
+*   **Uncertainty Display:** Do not show raw confidence percentages (e.g., "92% match"). Use defined coarse tiers (e.g., "High Compatibility," "Potential Match") with clear definitions to prevent over-trust.
+*   **Disclosure:** Clearly label AI-generated bios and match suggestions. Whether this is legally required is a determination for counsel, but it is a necessary safety control.
+
+**Governance**
+Name a specific owner for each harm who is responsible for re-review when the model or data changes.
+
+**Next Steps**
+Route questions regarding legal disclosure duties or regulated decision-making to counsel immediately; do not assert legal compliance here. Use your single round of external feedback to validate your evaluation probes, not to seek a "safety certificate."
+
+*Note: This assessment identifies residual risks; the final ship decision rests with your product owners.*
+*Ensure your external feedback session focuses on stress-testing the evaluation plan, not certifying the output.*

@@ -1,0 +1,15 @@
+Do not attempt to contribute this fix to the public OpenStream skillset or library via an automated contribution process. This scenario fails the "generality gate" required for upstream improvements: the specific constraint (a rigid coverage gate without edge-case provisions) and the specific context (Globex Corporation's production environment) are project-specific quirks, not universal defects in the library's design or the general concept of code coverage.
+
+Instead, you must treat this as a local imprint for your specific project instance. The correct path is to engage the human maintainers of the OpenStream project directly through their standard issue tracker or communication channels, not by drafting a generalized contribution. When presenting this trade-off:
+
+1.  **Frame the stability priority:** Clearly articulate that the crash on empty packets is a correctness failure that outweighs a marginal (0.5%) metric fluctuation. Emphasize that the drop in coverage is an artifact of the *existing* test suite's inability to reach rare error branches, not a reduction in actual code quality or safety.
+2.  **Propose the solution, not just the problem:** Offer your fix immediately, along with a specific proposal for how to handle the coverage gap. Do not ask for a vague "exception"; instead, suggest concrete options:
+    *   Adding a specific, targeted test case that simulates the empty packet scenario to recover the coverage (even if complex, this is the ideal long-term fix).
+    *   Temporarily excluding the specific new error-handling branch from the coverage calculation via a compiler directive or coverage tool configuration, if the project allows, while a robust test is developed.
+    *   A one-time waiver explicitly tied to this critical stability fix, with a committed timeline to add the necessary test coverage in a follow-up commit.
+3.  **Avoid internal specifics:** While you noted no configurations are leaked, ensure your communication does not reveal Globex's specific traffic patterns, server topology, or internal incident response timelines. State only that it affects "production servers" generally.
+
+Attempting to generalize this into a upstream contribution would be considered "slop" because it tries to upstream a policy exception for a specific project's CI configuration rather than a fundamental improvement to the library's code or testing methodology. The maintainers of OpenStream are the appropriate authority to decide if their coverage gate needs a global exception mechanism; your role is to report the bug and propose a localized solution for your usage.
+
+Note: Never bypass a project's defined gates (like coverage) without explicit human approval from that project's maintainers.
+Note: If the maintainers refuse both the fix and a waiver, your only recourse is to maintain a private fork with the fix and the necessary test adjustments.

@@ -1,0 +1,45 @@
+Do **not** close and reopen your pull request. Doing so will delete the existing review thread, lose Jane's comments, and force her to start her review from scratch, which is frustrating for maintainers. You can safely rebase and update your existing PR while preserving the conversation.
+
+Follow this procedure to align your fork with upstream `main` without losing review context:
+
+1.  **Fetch the latest upstream state:**
+    Ensure your local git knows about the current `main` branch on the upstream repository (not just your fork).
+    ```bash
+    git fetch origin
+    ```
+    *(Note: Replace `origin` with the remote name for the upstream LogFlow repo if you use a different name like `upstream`.)*
+
+2.  **Rebase your feature branch:**
+    Switch to your feature branch and rebase it onto the fetched `main`.
+    ```bash
+    git switch <your-branch-name>
+    git rebase origin/main
+    ```
+    If there are conflicts, Git will pause. Resolve the conflicts in your files, then run:
+    ```bash
+    git add <resolved-files>
+    git rebase --continue
+    ```
+    Repeat until the rebase finishes. This rewrites your local commit history to sit on top of the latest `main`, creating a linear history as requested.
+
+3.  **Force-push with lease protection:**
+    Since rebasing rewrites commit hashes, you must force-push to your fork. However, use `--force-with-lease` instead of plain `--force`. This safety check ensures you don't accidentally overwrite changes if something else pushed to your fork in the meantime.
+    ```bash
+    git push fork <your-branch-name> --force-with-lease
+    ```
+    *(Note: Replace `fork` with the remote name of your personal fork.)*
+
+**Why this preserves the review:**
+GitHub links review comments to the **file path and line content**, not strictly to the commit hash. When you push the rebased branch, GitHub automatically migrates Jane's comments to the new commits as long as the surrounding code context remains recognizable. The PR URL stays the same, and the conversation thread remains intact.
+
+**Regarding your previous force-push:**
+The fact that you previously force-pushed to clean up commit messages does not prevent this solution. That action already detached your local history from the remote; the rebase simply aligns your *new* local history with upstream `main`. As long as you push to the same branch name on your fork, the PR updates in place.
+
+**Post-push verification:**
+After pushing, refresh the PR page on GitHub. You should see a notification that "The maintainer requested a rebase" is now resolved. Verify that Jane's comments are still visible on the relevant lines. If any comments appear "outdated" (grayed out), it simply means the code moved slightly; you can reply to them confirming the fix is still present in the new commit.
+
+**Summary for your reply to Jane:**
+Once the push is complete, add a brief comment to the PR:
+> "Hi Jane, I've rebased this branch onto the latest `main` as requested. The history is now linear, and all CI checks should be re-triggered. The review comments should have migrated automatically; please let me know if any context was lost during the rebase."
+
+This approach satisfies the project's linear history requirement while respecting the maintainer's time by keeping the existing discussion alive.

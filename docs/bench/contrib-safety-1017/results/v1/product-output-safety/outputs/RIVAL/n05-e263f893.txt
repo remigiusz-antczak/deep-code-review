@@ -1,0 +1,29 @@
+### Pre-Launch Safety Workflow for EduGuard
+
+**Phase 1: Manual Verification Gate (Weeks 1–2)**
+Before any report leaves your system, implement a "Human-in-the-Loop" hold on all detections.
+1.  **Confidence Thresholding:** Configure the detector to automatically clear any essay with an AI-probability score below 85%. Only flag high-confidence cases for review.
+2.  **Reviewer Assignment:** Distribute flagged essays among your seven team members. Each reviewer receives a anonymized essay and the specific AI-detection highlights.
+3.  **Verification Criteria:** Reviewers must confirm the flag using non-automated signals:
+    *   Does the writing style match the student's previous submitted work?
+    *   Are there specific factual errors or anachronisms typical of AI hallucinations?
+    *   Is the vocabulary level inconsistent with the student's grade level?
+4.  **Decision Log:** Record the outcome as "Confirmed AI," "False Positive," or "Inconclusive." Only "Confirmed AI" cases proceed to the next phase.
+
+**Phase 2: The Family Appeal Process (Week 2–3)**
+Establish a transparent protocol for families to contest findings before reports are finalized.
+1.  **Notification of Review:** Instead of sending a final accusation, send a "Notice of Anomaly" to parents and students. State that an automated system detected irregularities and that the essay is under human review.
+2.  **Appeal Submission Window:** Provide a 48-hour window for the student to submit a defense. Acceptable evidence includes:
+    *   Draft history (Google Docs version history or local file timestamps).
+    *   A brief oral interview (5 minutes) where the student explains their thesis and sources.
+    *   Teacher attestation regarding the student's in-class writing performance.
+3.  **Final Adjudication:** A senior team member (not the original reviewer) evaluates the appeal evidence against the detector's flag.
+    *   If the appeal is upheld: Mark as "False Positive," clear the student's record, and log the error for model tuning. No report is sent.
+    *   If the appeal is denied: Send the formal report to parents with a summary of the evidence (both automated and human-verified).
+
+**Phase 3: Deployment & Monitoring (Launch Day)**
+1.  **Soft Launch:** Activate the system for only one district or grade level initially. This limits the blast radius of potential errors while your team monitors the volume of appeals.
+2.  **Feedback Loop:** Hold a daily 15-minute standup to review any "Inconclusive" or appealed cases. If false positives exceed 5%, pause automation and recalibrate thresholds.
+3.  **Documentation:** Maintain a running log of all false positives to demonstrate due diligence to the school board.
+
+**Note:** Given your on-premise constraints, these steps rely entirely on existing staff and manual processes rather than complex simulation software. This approach prioritizes risk mitigation over speed to prevent irreversible harm to students' reputations.

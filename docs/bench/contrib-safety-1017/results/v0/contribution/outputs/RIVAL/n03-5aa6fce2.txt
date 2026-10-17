@@ -1,0 +1,31 @@
+Do not submit the PR yet. Submitting a PR that fails the CI coverage gate without a pre-agreed exception will likely result in an immediate "close without merge," regardless of the bug's severity. Maintainers of large projects (25k+ LOC) rely on automated gates to manage scale; bypassing them unilaterally signals that you haven't read the contribution guidelines.
+
+**Step 1: Open a Tracking Issue First**
+Since the project rules are silent on this specific edge case, you must create a public record before proposing code. Open a new issue titled: `Proposal: Exception to coverage gate for critical crash fix (empty packet handler)`.
+
+In the issue body, structure your argument exactly as follows:
+1.  **The Crash:** Provide a minimal stack trace or log snippet showing the crash on empty packets. Do not mention Globex internal configs; sanitize logs to show only the OpenStream library output.
+2.  **The Fix:** Explain that the fix adds a necessary guard clause.
+3.  **The Coverage Trade-off:** Explicitly state: "The fix introduces an error-handling branch that reduces overall coverage by 0.5% because current test data generators do not produce empty packets. Writing a generator for this specific rare case would require significant refactoring of the test harness."
+4.  **The Request:** Ask specifically: "Can we merge this fix with a temporary coverage waiver, with a follow-up issue (#NextIssueNumber) to improve test data generation within 30 days?"
+
+**Step 2: Wait for Maintainer Alignment**
+Do not write the complex tests yet. Wait for a maintainer to comment.
+*   **If they say "Yes, open the PR":** You now have political cover. In your PR description, link directly to this issue and quote their approval.
+*   **If they say "No, fix the tests":** You now know that 0.5% is non-negotiable. Only then should you invest time in building the complex test data generator.
+*   **If they suggest an alternative:** They might offer a way to mock the packet reader that you haven't considered.
+
+**Step 3: Drafting the PR (Once Approved)**
+When you eventually open the PR, your description must lead with the stability argument, not the code changes.
+*   **Summary:** "Fixes panic on empty packets. Approved coverage exception in #<IssueNumber>."
+*   **Test Plan:** Show the command that reproduces the crash *before* the fix and proves stability *after*.
+*   **Coverage Note:** Reiterate the plan to restore coverage in the follow-up issue. Do not apologize for the drop; frame it as a calculated technical debt taken to stop production outages.
+
+**Regarding Globex Corporation:**
+Do not leverage your company's name as pressure ("This affects our production servers"). Instead, frame it as a generic reliability issue: "This affects production deployments processing variable-length streams." Maintainers respond to technical universality, not corporate urgency. If the bug is real, it affects others too; if you make it sound like a custom Globex problem, they may deprioritize it.
+
+**Final Recommendation:**
+The "stability over metric" argument only works if the maintainer agrees that the metric is secondary in this specific instance. You cannot make that decision for them. By opening the issue first, you transform the conversation from "Your PR fails CI" (a hard no) to "How do we solve this crash together?" (a collaboration). This approach respects their governance while highlighting the critical nature of the fix.
+
+*Note: If the maintainers do not respond to the issue within 48 hours, do not ping aggressively; large projects often have slow triage cycles.*
+*Ensure your fix commit uses `fix(stream): handle empty packets to prevent panic` to align with Conventional Commits.*

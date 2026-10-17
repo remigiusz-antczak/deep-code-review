@@ -1,0 +1,44 @@
+### Documentation Strategy: Generalizing Internal Knowledge
+
+Do not copy-paste from the internal wiki. Instead, use your internal document as a **private reference checklist** to ensure accuracy, while writing the public documentation entirely from scratch using only generalized concepts. This approach protects your NDA and ensures the content meets the project's self-contained requirement.
+
+**1. Extract Principles, Not Incidents**
+Review your internal wiki and identify the underlying security principles behind every warning.
+*   *Internal:* "As seen in Acme Ticket #402, rotating keys every 12 hours caused latency spikes on our specific load balancer configuration."
+*   *Public Translation:* "Frequent rotation intervals (e.g., under 24 hours) may introduce latency during key handshakes. Monitor application performance when configuring short intervals."
+*   *Action:* Strip all proper nouns (Acme, specific tool names), ticket numbers, and dates. Keep only the cause-and-effect relationship.
+
+**2. Structure for the SkyHigh CLI User**
+Organize the new markdown file to match the repository's existing documentation style. A recommended structure:
+
+*   **Overview:** Briefly explain what the `--key-rotation-interval` flag does.
+*   **Usage Examples:** Provide 2–3 generic CLI command examples (e.g., rotating every 7 days, disabling rotation).
+*   **Security Considerations:**
+    *   Explain the trade-off between security (frequent rotation) and performance.
+    *   Warn about the risk of setting intervals shorter than the client cache timeout.
+    *   Mention the importance of synchronized clocks across nodes (general NTP advice, not your internal NTP setup).
+*   **Troubleshooting:** List common error messages related to rotation failures and their generic resolutions.
+
+**3. The "Stranger Test" for Sanitization**
+Before submitting, read every sentence and ask: "If I worked at a competitor company, would this sentence reveal anything about Acme's infrastructure?"
+*   If the answer is yes, delete or rewrite it.
+*   Ensure no links point to private IPs, internal dashboards, or proprietary configuration management systems.
+*   Verify that all "best practices" are framed as industry-standard advice rather than lessons learned from specific internal outages.
+
+**4. Validation Without Disclosure**
+You can validate the accuracy of your generalized advice by comparing it against your internal wiki *locally*.
+*   Check: Does the public doc capture the same *risk* identified internally? Yes.
+*   Check: Does the public doc reveal *how* Acme specifically mitigates it? No.
+*   If the nuance feels lost, try to express it as a "rule of thumb" rather than a specific case study.
+
+**Deliverable Checklist for Your PR:**
+1.  [ ] New `.md` file created in the docs folder following repo conventions.
+2.  [ ] Zero mentions of "Acme," internal ticket IDs, or proprietary tools.
+3.  [ ] All security warnings converted from "incident reports" to "general guidance."
+4.  [ ] Examples use generic values (e.g., `7d`, `24h`) rather than production-specific constants.
+5.  [ ] Commit message follows Conventional Commits (e.g., `docs(cli): add key-rotation-interval usage guide`).
+
+By treating your internal wiki as a source of *truth* but not a source of *text*, you provide high-quality, battle-tested documentation without violating confidentiality.
+
+*Note: If a specific security nuance feels impossible to generalize without revealing sensitive context, omit it and add a comment in the PR asking the maintainer if they want to open a broader discussion issue.*
+*Always run the project's local doc linting tool (e.g., `cargo doc --document-private-items` or markdown linters) before pushing.*

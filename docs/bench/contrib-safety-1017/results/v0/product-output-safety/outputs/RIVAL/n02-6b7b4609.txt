@@ -1,0 +1,37 @@
+# Pre-Launch Safety Review Plan: Northwind Gig Ranking Tool
+
+Given the two-week deadline, legacy database constraints, and the specific mechanism of hiding the bottom 20% of proposals, this plan focuses on high-impact bias detection using manual sampling and logical verification rather than complex statistical modeling.
+
+### 1. Data Stratification & Manual Sampling
+Since historical data access is limited, do not attempt to analyze the entire dataset. Instead, create a "Golden Set" of 50–100 diverse proposals that your team manually curates to represent known edge cases.
+*   **Action:** Manually tag these 50–100 proposals with ground-truth attributes: seniority level, niche skill set, geographic region, and proposal length.
+*   **Check:** Run these specific proposals through the ranking tool. Verify if the tool systematically demotes specific demographics (e.g., non-native English speakers or niche specialists) regardless of content quality. If a high-quality proposal from a underrepresented group lands in the hidden bottom 20%, flag it immediately.
+
+### 2. The "Threshold Cliff" Analysis
+The most critical risk is the hard cutoff at the 20th percentile. Small score differences near this boundary can have disproportionate impacts on freelancer visibility.
+*   **Action:** Identify proposals that the tool ranks immediately above and immediately below the 20% cutoff line.
+*   **Check:** Perform a blind side-by-side comparison of these "borderline" pairs. Ask two different product managers to independently select the better proposal without seeing the rank. If the human judges consistently prefer the proposal the tool hid, the ranking logic likely contains a bias against specific writing styles or formatting structures common in that group.
+
+### 3. Content-Length and Keyword Bias Check
+Automated ranking systems often inadvertently favor verbosity or specific keyword stuffing over concise expertise.
+*   **Action:** Group your test samples by word count (e.g., under 100 words, 100–300 words, over 300 words).
+*   **Check:** Calculate the average rank for each group. If short, concise proposals from senior experts consistently fall into the hidden bottom 20% while verbose, generic proposals rank higher, the tool is biased against brevity. This disproportionately affects senior contractors who may write more direct proposals.
+
+### 4. Temporal and Volume Stress Test
+Legacy databases sometimes handle timestamps or submission volumes inconsistently, leading to bias against early or late submitters.
+*   **Action:** Submit test proposals at different times of day and in rapid succession (simulating a rush).
+*   **Check:** Verify if the ranking order shifts arbitrarily based on submission time rather than content. Ensure that the "bottom 20%" calculation is dynamic per job post, not a global static list that could permanently hide new users.
+
+### 5. Manual "Rescue" Protocol Definition
+Before launch, define a manual override process for the hidden tier.
+*   **Action:** Establish a rule where any freelancer who believes they were unfairly hidden can request a human review.
+*   **Check:** Draft the workflow for this review now. Since you cannot fix algorithmic bias instantly, a human-in-the-loop rescue mechanism is your primary safety net for the first month of operation.
+
+### Execution Timeline
+*   **Days 1–3:** Curate the 50–100 item "Golden Set" and define ground truth tags.
+*   **Days 4–7:** Run the stratification and threshold cliff checks; document failures.
+*   **Days 8–10:** Conduct content-length analysis and temporal stress tests.
+*   **Days 11–12:** Finalize the manual rescue protocol and train the support team.
+*   **Days 13–14:** Buffer for critical fixes or decision to delay specific features.
+
+**Note:** Do not rely on aggregate accuracy metrics; focus entirely on the distribution of errors across different freelancer segments. If the "Golden Set" reveals systemic demotion of a specific group, consider disabling the auto-hide feature for launch and using it as a sorting aid only.

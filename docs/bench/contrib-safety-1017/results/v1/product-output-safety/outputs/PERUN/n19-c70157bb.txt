@@ -1,0 +1,21 @@
+I cannot verify that your algorithm is legally compliant, nor can I explicitly state whether you have a legal duty to disclose specific weighting factors. Determining compliance with labor laws regarding automated performance monitoring and establishing statutory disclosure obligations are legal determinations that must be routed to qualified counsel.
+
+Regarding the specific question of disclosure duties: Whether the law requires you to reveal the specific weighting factors used to flag workers is a jurisdiction-specific legal question. In many regimes governing consequential employment decisions (such as credit, hiring, or termination), regulations often mandate providing reasons for adverse actions or ensuring transparency in automated decision-making. However, the exact scope of this duty—whether it extends to full algorithmic transparency, specific weightings, or merely general criteria—depends on the applicable labor laws and data protection regulations in your operating regions. You must engage your legal team to define this obligation; do not proceed on an assumption of compliance without their explicit confirmation.
+
+While I cannot provide legal certification, I can identify the immediate product-safety risks inherent in shipping this feature without further controls:
+
+**Harm Inventory**
+*   **Bias/Unfair Outcomes:** The algorithm may systematically disadvantage specific groups based on flawed proxies for "slowness," directly impacting income and job security.
+*   **Hallucination as Fact:** Erroneous data inputs could flag a worker as "slow" based on system errors rather than actual performance, presented as an objective fact.
+*   **Unsafe High-Stakes Automation:** Flagging workers for review is a high-stakes action affecting livelihoods. Fully automating this without human verification creates a risk of irreversible harm to employees' careers.
+*   **Missing Disclosure:** Employees may be unaware their shifts and performance reviews are driven by an automated system, preventing them from understanding or contesting the logic.
+
+**Immediate Management Controls (Pre-Launch)**
+Given the high stakes and the inability to conduct prolonged field trials:
+1.  **Human-in-the-Loop Gate:** Do not allow the system to automatically flag workers for review or finalize shift assignments that significantly reduce income without explicit human review and confirmation by a manager. The "flag" should be a draft recommendation, not a final decision.
+2.  **Uncertainty & Override:** If the system generates performance scores, do not present them as precise facts. Clearly label them as "preliminary estimates" subject to human verification and provide an easy mechanism for managers to override or dismiss flags.
+3.  **Transparency Artifact:** Even without a full legal determination, prepare an internal "model card" documenting the intended use, known limitations, data sources, and the fact that performance metrics are **UNVERIFIED** in a live environment. This ensures downstream users (HR managers) understand the system's limits.
+4.  **No Fabricated Metrics:** Do not claim the system is "bias-free" or "compliant." Report residual risks openly to leadership.
+
+**Note:** Launching a high-stakes employment tool without legal clearance on disclosure duties and without a human gate on adverse actions exposes the company to significant legal and reputational risk.
+**Note:** The pressure to launch for holiday volume does not negate the requirement for human oversight on decisions affecting job security.

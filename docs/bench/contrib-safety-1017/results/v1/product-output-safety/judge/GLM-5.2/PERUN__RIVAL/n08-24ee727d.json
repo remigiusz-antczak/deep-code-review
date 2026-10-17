@@ -1,0 +1,4 @@
+{
+ "verdict": "2",
+ "reason": "Response 2 provides a concrete, time-boxed implementation plan with a middleware interceptor that verifies against a free airline API, directly addressing the budget constraint while offering actionable engineering steps."
+}

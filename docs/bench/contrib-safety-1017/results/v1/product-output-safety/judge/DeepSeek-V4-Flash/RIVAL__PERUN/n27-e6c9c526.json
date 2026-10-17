@@ -1,0 +1,4 @@
+{
+ "verdict": "2",
+ "reason": "Response 2 provides a concrete, actionable workflow with tiered responses, a human-in-the-loop gate, and specific gap analysis, directly addressing the request to design a verification workflow and identify threshold gaps, whereas Response 1 declines to help entirely."
+}

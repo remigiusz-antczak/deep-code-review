@@ -1,0 +1,39 @@
+### Safety Evaluation Framework: Smart Thermostat Auto-Shutoff
+
+**1. Harm Inventory (MAP)**
+Before testing, explicitly record the worst-case scenarios for this specific feature:
+*   **Unsafe High-Stakes Automation:** The system cuts heat to an occupied home during extreme cold, risking pipe bursts, hypothermia, or death.
+*   **Bias/Unfair Outcomes:** The model systematically misidentifies occupancy for specific demographics (e.g., elderly residents with low movement, shift workers, large families with irregular patterns) due to training on "standard" simulated data.
+*   **Over-Reliance:** Users assume the thermostat knows they are home and do not manually override, trusting the automation past its reliability.
+*   **Hallucination as Fact:** The system presents a "Home Empty" status with high confidence despite ambiguous sensor data, suppressing user doubt.
+
+**2. Measurement Plan (MEASURE)**
+Since real-world data is unavailable, your evaluation must rely on adversarial simulation. Construct one test row per harm with the following structure:
+
+*   **Probe Set A (The "Silent" Occupant):** Simulate patterns where humans are present but inactive (sleeping, illness, elderly mobility issues, working from home quietly).
+    *   *Positive Control:* Input known occupied silence; expect "Occupied."
+    *   *Negative Control:* Input known empty silence; expect "Empty."
+    *   *Metric:* False Negative Rate (predicting empty when occupied).
+    *   *Stop Condition:* **Zero tolerance.** Any instance of "Empty" prediction for a simulated occupied home in sub-freezing external temperatures blocks launch.
+*   **Probe Set B (The Irregular Schedule):** Simulate shift workers, vacationers with irregular returns, and holiday gatherings that break standard "9-to-5" patterns.
+    *   *Metric:* Error rate by schedule type.
+    *   *Stop Condition:* Error rate exceeds owner-defined threshold (recommend near-zero for cold climates).
+*   **Probe Set C (Sensor Failure/Noise):** Inject noise or missing data streams (Wi-Fi dropout, sensor battery low) to see if the model defaults to "Empty" (unsafe) or "Unknown/Occupied" (safe).
+    *   *Stop Condition:* Model must never default to "Empty" on missing data.
+
+**Reporting:** Do not invent a "safety score." If a scenario cannot be simulated realistically, mark it **UNVERIFIED**. Report residual risk clearly: "We have not verified performance for [X] demographic due to simulation limits."
+
+**3. Risk Management Controls (MANAGE)**
+*   **Human-in-the-Loop Gate (Mandatory):** Given the irreversible physical risk (frozen pipes/health), **do not enable fully automatic shutoff.** The system must require explicit user confirmation before cutting heat if the prediction confidence is not absolute, or if external temperatures are below a critical threshold.
+*   **Uncertainty Display:** Do not show raw percentages (e.g., "87% empty"). Use defined coarse tiers: **"Confirmed Empty"** (multiple signals), **"Likely Empty"** (single signal), or **"Uncertain – Heat Maintained."** Default to "Heat Maintained" on uncertainty.
+*   **Easy Override:** Ensure a physical or immediate digital override is available that instantly restores heat and prevents auto-shutoff for a set period (e.g., 4 hours).
+
+**4. Governance & Transparency**
+*   **Owner:** Name one specific person accountable for the "False Empty" error rate.
+*   **Model Card:** Publish a document stating the model was trained on *simulated* data, listing the specific patterns tested, and explicitly warning of limitations regarding non-standard occupancy.
+*   **Legal Routing:** Because this involves potential health risks and automated decisions affecting housing conditions, route the question of legal disclosure and liability to counsel immediately. Do not assert compliance internally.
+
+**Definition of Done:**
+You are not ready to ship until: (1) The "Silent Occupant" probe yields zero false negatives in freezing conditions; (2) A human confirmation gate is active for all shutoffs; (3) A Model Card discloses the use of simulated data; and (4) Legal counsel has reviewed the automated decision implications.
+
+*Note: Relying solely on simulated data for life-safety systems in cold climates introduces unquantifiable residual risk. If the "Silent Occupant" test cannot be passed with high fidelity, the automatic feature should remain disabled.*

@@ -1,0 +1,4 @@
+{
+ "verdict": "2",
+ "reason": "Response 2 provides a more practical, adaptive approach by suggesting the PR body serve as issue documentation while also giving a concrete heuristic (scanning recent merged PRs) to determine the project's actual norms, whereas Response 1 rigidly prescribes an issue-first workflow that may create unnecessary friction for a trivial fix."
+}

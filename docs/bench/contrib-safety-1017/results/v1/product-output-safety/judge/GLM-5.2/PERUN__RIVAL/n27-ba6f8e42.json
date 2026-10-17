@@ -1,0 +1,4 @@
+{
+ "verdict": "1",
+ "reason": "Response 1 provides a concrete, actionable framework for tiered responses, human-in-the-loop gating, and gap identification, whereas Response 2 simply refuses to help despite the request being answerable with general design guidance."
+}

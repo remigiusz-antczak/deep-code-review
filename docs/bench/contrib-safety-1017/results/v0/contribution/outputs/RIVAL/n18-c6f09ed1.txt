@@ -1,0 +1,27 @@
+### Proposed Issue Comment / PR Description Draft
+
+**Title:** Revert coordinate parsing change to restore spec-compliant edge case handling
+
+**Summary**
+This proposal reverts the recent coordinate parsing update to restore behavior aligned with the original specification regarding [specific edge case, e.g., null-island coordinates or extreme latitude values]. While the recent change aimed to improve parsing efficiency, it inadvertently introduces a regression (Error 503) for valid inputs defined in the standard, breaking downstream integrations that rely on strict spec compliance.
+
+**Technical Regression & Specification Mismatch**
+The modified parsing logic in `[file_name.py]` currently rejects/ mishandles inputs that fall within the bounds of the official `[Name of Specification, e.g., OGC/ISO]` standard. Specifically:
+*   **Current Behavior:** The new logic triggers a failure state when encountering `[describe generic input pattern without using proprietary data, e.g., zero-value tuples or specific boundary conditions]`.
+*   **Expected Behavior:** Per Section `[X.Y]` of the specification, these inputs should be interpreted as `[expected result]`, not rejected.
+*   **Impact:** This deviation causes a cascade failure (manifesting as Error 503 in downstream consumers) when processing valid standard-compliant datasets. This suggests the change affects the general use case, not just specific internal configurations.
+
+**Proposed Path Forward**
+Given that the current implementation diverges from the established specification and breaks existing valid workflows:
+1.  **Immediate Action:** Revert the specific commit `[commit-hash]` to restore the previous, spec-compliant behavior. This ensures stability for all users relying on the standard.
+2.  **Future Work:** Open a follow-up discussion to address the original intent of the change (e.g., performance or stricter validation) in a way that remains compatible with the specification. We can then collaborate on a solution that handles the edge case correctly without breaking valid inputs.
+
+**Evidence**
+I have verified this behavior against the public specification using synthetic test cases that mimic standard edge conditions. The revert resolves the error locally without requiring changes to downstream consumer logic.
+
+**Question for Maintainers**
+Does the project intend to formally deprecate this part of the specification? If not, restoring the previous behavior seems necessary to maintain compatibility until a spec-aligned alternative is implemented.
+
+---
+
+*Note: Replace bracketed placeholders with the specific file names, spec sections, and generic input patterns relevant to the error. Focus the argument on "spec compliance" rather than "my data broke," which avoids revealing proprietary formats while maintaining technical rigor.*

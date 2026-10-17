@@ -1,0 +1,19 @@
+Call: **Create a synthetic generator that mimics the structure without using real field names or data values.** Do not describe the schema in text alone; code is reproducible, text is ambiguous.
+
+**Deliverable (paste this as your reply to the maintainer):**
+
+> "I understand the urgency. To respect our NDA regarding Acme Logistics' proprietary schema and client data, I cannot share our actual database dump or field names. However, I have written a standalone C++ generator (`repro_gen.cpp`) that constructs a synthetic table structure matching the exact memory layout and nesting depth that triggers the segfault at offset 4096.
+>
+> This generator uses generic placeholders (e.g., `Field_Type_A`, `Nested_Rel_B`) but replicates the specific alignment, padding, and recursive depth of our failing case. When compiled and run, it produces a binary blob (`repro_data.bin`) that crashes the current library build with the same 'invalid memory access' error you reported.
+>
+> You can verify the crash by running:
+> `g++ -std=c++17 repro_gen.cpp -o repro_gen && ./repro_gen && ./vertex_grid_loader repro_data.bin`
+>
+> The source contains no proprietary logic, real identifiers, or routing information—only the structural geometry required to reproduce the memory violation. Please let me know if this reproduces the issue on your end or if you need adjustments to the alignment parameters."
+
+**Next Steps for You:**
+1.  **Write the generator:** Create a small C++ program that manually allocates structs or buffers using `sizeof` and offsets to match your crash condition exactly. Hard-code the *dimensions* (e.g., "nested 3 levels deep," "field size 64 bytes") but use dummy names like `Type_X`.
+2.  **Verify locally:** Run this generator against your local copy of the Vertex Grid library to confirm it still crashes before sending anything.
+3.  **Sanity Check:** Ensure the generated binary (`repro_data.bin`) contains no readable strings related to "Acme," "Logistics," or real client IDs.
+
+**Fallback:** If the maintainer claims the synthetic data does not crash their build, ask them specifically which alignment or padding differs, and adjust the generator's constants accordingly—do not send real data even if they press for it.

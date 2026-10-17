@@ -1,0 +1,44 @@
+### Testing Strategy: Pronunciation Grading Fairness for LinguaKids
+
+**1. Harm Inventory (Map)**
+*   **Risk:** Systematic bias against non-native accents, regional dialects, or speech impediments (e.g., lisps, stuttering).
+*   **Affected Users:** Children aged 6–12 with diverse linguistic backgrounds or speech differences.
+*   **Worst Case:** Persistent low scores lead to discouragement, loss of motivation, and effective exclusion from badge rewards, causing children to abandon the app.
+
+**2. Measurement Plan (Measure)**
+Execute one test row per identified risk within the 10-day window. Do not assert fairness; measure residual risk.
+
+*   **Probe Set A (Accent Diversity):**
+    *   *Inputs:* Audio samples of target phrases spoken by children (or adult proxies mimicking child speech) across 5+ distinct accent groups relevant to your user base.
+    *   *Positive Control:* Known clear pronunciation (expected high score).
+    *   *Negative Control:* Known incorrect pronunciation (expected low score).
+    *   *Metric:* Score disparity between accent groups for identical correct phonemes.
+    *   *Threshold:* Owner-defined maximum allowable score variance (e.g., <5% drop for non-dominant accents).
+    *   *Stop Condition:* If variance exceeds threshold, block badge automation for affected groups.
+
+*   **Probe Set B (Speech Impediments):**
+    *   *Inputs:* Audio samples simulating common impediments (stuttering, lisping) saying correct phrases.
+    *   *Metric:* False negative rate (correct intent marked as incorrect).
+    *   *Threshold:* Zero tolerance for penalizing known impediment patterns if the semantic content is correct.
+    *   *Stop Condition:* Any systematic penalty triggers a manual review gate.
+
+*   **Probe Set C (Adversarial/Edge Cases):**
+    *   *Inputs:* Background noise, overlapping speech, or very quiet whispers.
+    *   *Metric:* Stability of scoring under non-ideal conditions.
+    *   *Stop Condition:* High volatility in scoring triggers a "try again" prompt instead of a low grade.
+
+**3. Risk Management (Manage)**
+*   **Human-in-the-Loop Gate:** For the initial school term launch, disable fully automated badge awards for any session where the confidence score falls below a defined "Confirmed" tier. Route these to educator review or allow manual override by the teacher.
+*   **Uncertainty Display:** Do not show raw percentage scores (e.g., "87%") to children. Use coarse, defined tiers: "Great Job," "Good Try," or "Let's Practice." This prevents false precision and reduces discouragement from minor fluctuations.
+*   **Scope Adjustment:** If the 10-day window prevents full subgroup testing, narrow the launch to a "Beta" mode where badges are provisional until the evaluation is complete. Do not expand automation until metrics are verified.
+
+**4. Transparency Artifact**
+Draft a preliminary **Model Card** before launch. Document:
+*   Intended use: Educational feedback for children 6–12.
+*   Limitations: Explicitly state which accents or speech patterns have *not* yet been verified (mark as `UNVERIFIED`).
+*   Owner: Name the specific team member responsible for reviewing bias reports.
+
+**5. Governance**
+Assign one owner to review failure logs weekly. If the model or data source changes, re-run Probe Sets A and B.
+
+**Note:** Legal requirements regarding automated decisions affecting minors must be routed to counsel; this plan addresses product safety, not regulatory compliance. Never fabricate a "0% bias" metric; report only measured results.

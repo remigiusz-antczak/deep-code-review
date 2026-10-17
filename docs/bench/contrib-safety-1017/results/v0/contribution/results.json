@@ -1,0 +1,22 @@
+{
+ "skill": "contribution",
+ "split": "heldout30",
+ "rival": "daymade github-contributor (MIT)",
+ "n": 0,
+ "n_scenarios": 30,
+ "gen_model": "Qwen3.5-397B-A17B",
+ "judge": null,
+ "slot1_rate": {
+  "DeepSeek-V4-Flash": 0.627,
+  "GLM-5.2": 0.633
+ },
+ "spend_usd": 0.0,
+ "per_scenario": {},
+ "errors": [
+  "no judge with slot-1 rate in (0.4, 0.6): {'DeepSeek-V4-Flash': 0.627, 'GLM-5.2': 0.633}"
+ ],
+ "stopped": "",
+ "perun_sha256": "8cc9152d21947ee7",
+ "rival_sha256": "98e03b822320f555",
+ "bootstrap": "10000 resamples, seed 1, percentile, over scenarios"
+}

@@ -1,0 +1,38 @@
+{
+ "judge": "DeepSeek-V4-Flash",
+ "slot1_rate": {
+  "DeepSeek-V4-Flash": 0.552
+ },
+ "n": 30,
+ "win_rate": 0.867,
+ "ci95": [
+  0.75,
+  0.95
+ ],
+ "strict": {
+  "win": 24,
+  "tie_or_split": 4,
+  "loss": 2
+ },
+ "pass": true,
+ "sensitivity": {
+  "DeepSeek-V4-Flash": {
+   "n": 30,
+   "win_rate": 0.867,
+   "ci95": [
+    0.75,
+    0.95
+   ],
+   "slot1": 0.552
+  },
+  "GLM-5.2": {
+   "n": 30,
+   "win_rate": 0.717,
+   "ci95": [
+    0.567,
+    0.85
+   ],
+   "slot1": 0.517
+  }
+ }
+}

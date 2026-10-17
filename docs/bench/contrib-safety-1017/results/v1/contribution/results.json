@@ -1,0 +1,58 @@
+{
+ "skill": "contribution",
+ "split": "heldout30",
+ "rival": "daymade github-contributor (MIT)",
+ "n": 29,
+ "n_scenarios": 30,
+ "gen_model": "Qwen3.5-397B-A17B",
+ "judge": "GLM-5.2",
+ "slot1_rate": {
+  "DeepSeek-V4-Flash": 0.667,
+  "GLM-5.2": 0.559
+ },
+ "spend_usd": 0.0,
+ "per_scenario": {
+  "n01": 0.0,
+  "n02": 0.5,
+  "n03": 0.0,
+  "n04": 0.0,
+  "n05": 0.0,
+  "n06": 0.5,
+  "n07": 0.5,
+  "n08": 0.0,
+  "n09": 0.0,
+  "n10": 0.0,
+  "n11": 0.5,
+  "n12": 1.0,
+  "n13": 1.0,
+  "n14": 0.5,
+  "n15": 0.5,
+  "n16": 0.0,
+  "n17": 0.0,
+  "n18": 1.0,
+  "n19": 0.0,
+  "n20": 0.0,
+  "n21": 0.0,
+  "n22": 0.5,
+  "n23": 1.0,
+  "n24": 1.0,
+  "n25": 0.0,
+  "n26": 0.0,
+  "n28": 0.0,
+  "n29": 0.0,
+  "n30": 0.0
+ },
+ "errors": [
+  "judge n27: no verdict"
+ ],
+ "stopped": "",
+ "perun_sha256": "5d0e045e92c454de",
+ "rival_sha256": "98e03b822320f555",
+ "bootstrap": "10000 resamples, seed 1, percentile, over scenarios",
+ "win_rate": 0.293,
+ "ci95": [
+  0.155,
+  0.431
+ ],
+ "verdict": "tuning only (no verdict)"
+}

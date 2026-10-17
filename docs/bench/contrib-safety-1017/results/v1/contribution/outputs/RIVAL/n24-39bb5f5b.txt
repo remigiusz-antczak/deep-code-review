@@ -1,0 +1,21 @@
+Subject: Re: Co-maintainer invitation – Pulse Monitor
+
+Hi Jane,
+
+Thank you so much for the invitation to join as a co-maintainer. I am truly honored by your trust, especially after the recent race condition fix. It means a lot to know my contribution helped stabilize the heartbeat signals for users like us.
+
+However, I need to pause briefly before accepting push access to `main`. My employer, Helios Industries, has strict legal guidelines regarding employees holding administrative rights on external projects we critically depend on. While I've signed the individual CLA, accepting this role likely triggers a requirement for a formal corporate partnership review or a specific legal waiver to ensure there are no conflicts of interest or unintended support obligations.
+
+I want to respect your workflow and ensure the project doesn't stall while I navigate this internal bureaucracy. I am immediately initiating the conversation with our legal team to clarify what is permissible.
+
+In the interim, would you be open to a temporary arrangement where I continue to prioritize reviewing and testing incoming PRs without direct merge rights? I can flag ready-to-merge contributions for you or another existing maintainer to hit the button until my legal status is resolved. This way, the project keeps moving, and I can still contribute heavily to the review load.
+
+I expect to have clarity from our legal department within [insert timeframe, e.g., one week]. I'll keep you posted the moment I have an update. Thanks again for this incredible opportunity—I'm eager to find a path that works for both the project and my company's compliance requirements.
+
+Best regards,
+
+[Your Name]
+
+---
+*Note: Replace the bracketed timeframe with your realistic legal review estimate.*
+*If Jane insists on immediate access, suggest adding you to a specific "triage" team with limited permissions instead of full admin rights.*

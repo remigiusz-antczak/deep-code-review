@@ -1,0 +1,38 @@
+Do not open a pull request immediately. Even for a one-line fix, skipping the issue tracker in an unfamiliar project risks your PR being closed as a violation of "issue-first" norms.
+
+**Step 1: Verify the "Issue-First" Rule**
+Before acting, read the repository's `CONTRIBUTING.md`. If it explicitly states "no PRs without issues" or "discuss bugs first," you must create an issue. If the file is missing or silent, check the last 10 merged PRs using `gh pr list`. If you see PRs referencing issue numbers (e.g., "Fixes #123"), assume an issue is required. Only if you see direct "fix" PRs with no issue links should you consider skipping this step.
+
+**Step 2: Open a Minimal Bug Report**
+Since you found no existing ticket, create a new issue titled: `bug: Leap year Feb 29 parsing fails with off-by-one error`.
+In the body, include:
+*   **Reproduction:** A minimal C snippet showing the failing date string.
+*   **Expected:** Successful parse of Feb 29 in leap years.
+*   **Actual:** Error returned.
+*   **Root Cause:** Briefly mention the suspected off-by-one boundary check (no need for code yet).
+*   **Proposal:** State that you have a local fix and are ready to submit a PR if maintainers agree.
+
+This approach respects maintainer autonomy—they can confirm the bug, assign it, or tell you to proceed. It turns your PR from an unsolicited change into a requested solution.
+
+**Step 3: Submit the PR (After Acknowledgement)**
+Once a maintainer comments "Go ahead" or labels the issue "accepted":
+1.  Branch from upstream `main`: `git switch -c fix/leap-year-boundary origin/main`.
+2.  Apply your one-line change. Do not reformat unrelated lines or "clean up" surrounding code.
+3.  Commit with a conventional message: `fix(parser): include boundary in leap year day check`.
+4.  In the PR description, link the issue (`Fixes #<new-issue-number>`) and provide the exact test command you ran locally to verify the fix.
+
+**Regarding Your Employer (Apex Dynamics)**
+Do **not** mention Apex Dynamics in the commit message or PR body unless:
+1.  Your company's legal team requires a specific "Signed-off-by" or copyright line for external contributions.
+2.  The project has a Corporate Contributor License Agreement (CCLA) process that demands disclosure upfront.
+
+For a trivial bug fix in an open-source library, adding corporate branding often signals "legal overhead" to maintainers and can slow down review. Your contribution is yours as an individual unless your employment contract states otherwise. If asked later, you can clarify you use the library at work, but unsolicited employer mentions in tiny fixes are unnecessary noise.
+
+**Summary Checklist**
+1.  Read `CONTRIBUTING.md` for issue requirements.
+2.  Open a concise bug report issue; wait for a nod.
+3.  Submit a scoped, one-commit PR referencing that issue.
+4.  Omit employer details unless legally mandated.
+
+*Note: If the project has no activity in 6+ months, you may skip the issue step and submit directly, but add a note in the PR explaining why.*
+*Always run the project's specific test suite (e.g., `make test` or `cmake --build`) before pushing, not just your local snippet.*

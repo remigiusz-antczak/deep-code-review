@@ -1,0 +1,19 @@
+Subject: Re: Naming convention for new helper functions in inventory module
+
+Hi [Maintainer Name],
+
+Thank you for catching the visual inconsistency in the `inventory` module. I completely agree that introducing `snake_case` functions amidst the existing `camelCase` legacy code creates unnecessary noise and disrupts the reading flow for future maintainers.
+
+My initial intent was to strictly adhere to the global style guide for all new code. However, I recognize that applying a global standard to a localized, legacy module without a broader refactoring mandate creates a "patchwork" effect that harms readability more than it helps consistency. Since I do not have permission to refactor the entire module to align everything to `snake_case`, and given that changing the existing functions would inflate the diff unnecessarily, I believe the pragmatic approach is to prioritize local consistency over global standardization for this specific fix.
+
+**Proposed Resolution:**
+I will rename the three new helper functions to use `camelCase` to match the surrounding legacy code in this specific file. This ensures the fix remains focused on the logic bug (the double-decrement issue) without introducing stylistic churn or visual distraction. I will treat the global `snake_case` rule as the target for future, authorized refactoring efforts rather than enforcing it piecemeal in legacy areas.
+
+I'll push the updated commit with the renamed functions shortly. Thanks again for the guidance on balancing style rules with practical code maintenance.
+
+Best regards,
+[Your Name]
+
+***
+
+**Note:** This approach respects the "do no harm" principle by minimizing diff noise while acknowledging the style guide as a future goal rather than an immediate blocker. It shifts the burden of stylistic debt back to a planned refactor rather than your bug fix.

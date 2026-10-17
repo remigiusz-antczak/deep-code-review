@@ -1,0 +1,16 @@
+Do not submit a pull request yet. The correct protocol is to **comment on the issue first** to gently check in with the assignee, then wait a defined period before escalating to maintainers or submitting code.
+
+Here is the specific sequence of actions you should take:
+
+1.  **Post a polite comment on the issue today.** Address Ravi directly but publicly. State that you noticed the issue has been open for three months and that you have independently developed a fix for the polygon border rendering bug. Ask if they are still actively working on it.
+    *   *Template:* "Hi @Ravi, I noticed this 'good first issue' has been assigned for three months with no recent activity. I've encountered this same polygon border rendering bug and have a working fix locally. Are you still planning to submit a PR for this? If you've moved on or are busy, I'd be happy to submit my fix so the project can move forward. Please let me know!"
+2.  **Wait 5–7 business days.** This gives Ravi a reasonable window to respond without feeling ambushed. Open-source contributors often have day jobs or personal emergencies; a week is standard etiquette for a "nudge."
+3.  **If there is no response, comment again tagging the maintainers.** Explicitly state that you are offering to take over the task due to lack of response.
+    *   *Template:* "Bumping this for visibility. @maintainer-handle, since there hasn't been a response from @Ravi in a week, would you be open to me submitting a PR for this fix? I want to ensure we don't duplicate effort if Ravi is still working on it offline."
+4.  **Only after maintainer approval (or explicit abandonment by Ravi) should you open the PR.** If the maintainers say "go ahead" or if Ravi replies saying they are stuck, then you proceed. Submitting a PR while the ticket is still assigned to someone else without this communication is often seen as aggressive "ticket sniping" and can harm your reputation in the community.
+
+**Why this approach?**
+Even though you have solved the bug, the social contract of open source prioritizes communication over speed. Ravi may be dealing with a complex edge case you haven't considered, or they may have simply forgotten. By asking first, you demonstrate respect for their effort and adherence to community norms, which increases the likelihood of your eventual PR being welcomed warmly. Since your work contains no proprietary Soylent data, you are clear to contribute once the social clearance is obtained.
+
+*Note: If the project has a specific `CONTRIBUTING.md` file, check it for a clause on "abandoned issues" before commenting, as some projects have automated bots for this exact scenario.*
+*Note: Keep your local fix ready but do not push it until you have the green light from the thread.*

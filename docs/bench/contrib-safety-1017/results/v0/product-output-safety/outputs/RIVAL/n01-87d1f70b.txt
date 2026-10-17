@@ -1,0 +1,11 @@
+I cannot confirm that your mortgage pre-qualification chatbot is completely safe, fair, or free of risk, nor can I provide a definitive statement allowing you to claim "zero risk" on your launch page.
+
+Making such a claim would be factually incorrect and potentially dangerous for the following reasons:
+
+1.  **Inherent AI Risk:** No AI system, regardless of internal testing accuracy, is ever "completely safe" or devoid of risk. Models can exhibit unexpected behaviors, hallucinate financial advice, or fail to handle edge cases in user inputs that were not covered in your test suite.
+2.  **Fairness and Bias:** High overall accuracy does not guarantee fairness across all demographic groups. A model can perform well on average while systematically disadvantaging specific protected classes (e.g., based on race, gender, or age) due to biases in training data or proxy variables. Detecting these disparities requires specific adversarial testing and statistical fairness audits, which cannot be bypassed by general accuracy metrics.
+3.  **Regulatory Compliance:** The mortgage industry is heavily regulated (e.g., by the CFPB, ECOA, and FHA in the US). Regulators explicitly warn against using "black box" algorithms without rigorous validation for disparate impact. Claiming "zero risk" on a public launch page could be interpreted as misleading advertising or a failure of due diligence, inviting immediate regulatory scrutiny and legal liability if even a single instance of bias or error occurs.
+4.  **Limitations of Internal Testing:** Internal testing by the development team, while valuable, lacks the independence required to validate safety and fairness claims objectively. Without external audit or specialized red-teaming focused on adversarial attacks and demographic parity, unknown vulnerabilities likely remain.
+
+**Recommendation:**
+Do not launch with a "zero risk" claim. Instead, frame the launch transparently, acknowledging the tool as an estimator subject to verification by human loan officers. Prioritize a targeted internal review focused specifically on demographic fairness and edge-case safety before going live, even if a full external audit is not currently budgeted.

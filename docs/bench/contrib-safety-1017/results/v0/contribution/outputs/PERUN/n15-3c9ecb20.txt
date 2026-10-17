@@ -1,0 +1,18 @@
+Do not push or tag the maintainer yet. The risk of violating community norms and potentially leaking sensitive context through premature notification outweighs the benefit of immediate visibility, especially since the maintainer is currently offline.
+
+Instead, execute this strategy:
+
+1.  **Commit Locally, Do Not Push:** Ensure your edge-case test is committed in your local branch. Verify that the test fails without your fix and passes with it. Do not push this commit to the remote repository yet.
+
+2.  **Draft a Non-Sensitive Comment:** Prepare a comment on the existing pull request that addresses Ravi's request without revealing confidential details. Use generic language such as: "I have added the requested edge-case test to cover the scenario discussed. The test validates the fix against the specific condition mentioned." Do not mention "security," "vulnerability," "client," or specific timelines.
+
+3.  **Schedule the Notification:** Use your email client or project management tool to schedule the delivery of this comment (or a direct message if the platform allows) to arrive at the start of Ravi's next working day. If scheduling is not possible, wait manually.
+
+4.  **Leverage Project Emergency Protocols:** If your organization (Northwind Logistics) has a formal channel for declaring emergencies with this project (e.g., a specific mailing list, a designated security contact, or an escalation path defined in the project's `SECURITY.md`), use that channel *only* to declare the existence of a time-sensitive blocker, not to disclose technical details. State: "We have a critical time-sensitive fix ready for review that meets all criteria, including requested tests. We are holding notification to respect working hours but request expedited review upon availability due to an external deadline."
+
+5.  **Prepare for Immediate Response:** Once you notify them at the appropriate time, be ready to respond instantly to any further questions to minimize back-and-forth delay.
+
+This approach respects the maintainer's time, adheres to community norms regarding non-emergency pings, protects your client's confidentiality by avoiding premature or detailed public disclosure, and positions your fix for immediate attention as soon as the maintainer is online. If the project has a formal security team or emergency contact listed, prioritize contacting them through the official secure channel rather than tagging an individual maintainer.
+
+Note: Pushing the test now without the maintainer seeing it immediately provides no advantage and risks appearing spammy.
+Note: If the freeze deadline is truly immovable and no official emergency channel exists, consult your legal/compliance team about whether a formal, sanitized emergency declaration to the project's general leadership is warranted before the maintainer's morning.

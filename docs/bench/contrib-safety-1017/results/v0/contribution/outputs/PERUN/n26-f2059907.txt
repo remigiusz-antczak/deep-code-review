@@ -1,0 +1,18 @@
+Subject: Urgent: Aurora Cache PR #<ID> Blocking Helios Analytics Suite Release
+
+Dear Maintainers,
+
+Thank you again for the thorough reviews and approvals on my pull request regarding the memory leak in the Aurora Cache system. I truly appreciate the time and expertise you volunteered to ensure the fix meets the project's high standards.
+
+I am writing to respectfully highlight a time-sensitive constraint on our end. Our team is preparing to release the Helios Analytics Suite, which depends on this fix to prevent crashes when processing large datasets (specifically after one million records). Our release window closes in 48 hours; missing this deadline will directly impact our client deliveries.
+
+I understand that you are volunteers with your own schedules, and I do not wish to add pressure. However, given the critical nature of this block, could you please let me know if there is any additional information I can provide or any final step I can take to facilitate the merge before our window closes? If you are unavailable to merge it within the next two days, would you be open to me opening a tracking issue to document the release dependency, or is there another maintainer I should contact?
+
+Thank you for your continued support of the project.
+
+Best regards,
+
+[Your Name]
+
+---
+Send this via the existing PR comment thread to keep context intact; avoid opening a separate issue unless they explicitly request it. If there is a project chat room, you may post a brief, polite link to this comment there only if the maintainers are active there and have previously encouraged such notifications.

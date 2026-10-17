@@ -1,0 +1,37 @@
+### Documentation Strategy: Generalizing Internal Knowledge
+
+Do not copy-paste from the internal wiki. Instead, use your internal document as a **private reference checklist** to ensure accuracy, while writing entirely new content for the public repository. This approach protects your NDA and adheres to the project's self-contained requirement.
+
+**1. Extract Principles, Not Incidents**
+Review your internal wiki and identify the underlying security principles behind every warning.
+*   *Internal:* "As seen in Incident #402 where Acme's Vault cluster lagged..."
+*   *Public Translation:* "Warning: Setting rotation intervals shorter than the network latency of your key management service may cause temporary authentication failures during high load."
+*   *Action:* Replace specific ticket numbers and tool names (e.g., "Acme Vault") with generic categories (e.g., "external KMS", "secrets manager").
+
+**2. Structure the Markdown File**
+Create a new file (e.g., `docs/features/key-rotation.md`) or update the existing CLI help section using this structure:
+
+*   **Overview:** One sentence explaining that the flag overrides the default rotation schedule.
+*   **Usage Example:** Provide a generic command example.
+    ```bash
+    skyhigh-cli encrypt --key-rotation-interval=24h
+    ```
+*   **Recommended Values:** Based on your production experience, suggest safe ranges (e.g., "For most workloads, 12–48 hours balances security and performance"). Do not mention Acme's specific choice unless it is an industry standard.
+*   **Security Considerations:** This is where your internal knowledge adds the most value. List 3–4 nuanced risks you discovered internally, but describe them generically:
+    *   *Frequency vs. Latency:* Explain the trade-off between rotation speed and KMS availability.
+    *   *Cache Invalidation:* Warn about clients holding stale keys during the transition window.
+    *   *Audit Logging:* Note that frequent rotation increases log volume, which may impact monitoring systems.
+*   **Troubleshooting:** List common error messages users might see if the interval is misconfigured and how to resolve them.
+
+**3. The "Stranger Test" for Sanitization**
+Before submitting, read every sentence and ask: "If I worked at a competitor company, would this sentence reveal anything about Acme's infrastructure?"
+*   If the answer is yes, rewrite it until it applies to *any* organization using the tool.
+*   Ensure no internal URLs, IP ranges, specific cloud provider configurations unique to Acme, or proprietary script names remain.
+
+**4. Final Review Against Project Guidelines**
+Verify that the document stands alone. A user should not need to click an external link to understand how to use the flag safely. Since you cannot link to the internal wiki, ensure all "best practices" are fully explained within the markdown file itself.
+
+By translating your specific operational war stories into universal engineering advice, you provide the high-quality, nuanced documentation the maintainer needs without violating your confidentiality agreements.
+
+*Note: If you are unsure whether a specific technical detail is proprietary, omit it rather than risk a leak; you can always add it later after legal review.*
+*Consider adding a comment in the PR description stating: "Documentation derived from production usage patterns, sanitized for public release."*

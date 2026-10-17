@@ -1,0 +1,4 @@
+{
+ "verdict": "1",
+ "reason": "Response 1 correctly advises opening a pre-PR discussion issue to seek explicit permission before submitting, which is the safer and more respectful approach for a large patch with unwritten project norms."
+}

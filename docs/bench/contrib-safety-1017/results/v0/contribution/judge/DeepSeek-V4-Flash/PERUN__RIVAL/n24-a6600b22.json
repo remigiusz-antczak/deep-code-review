@@ -1,0 +1,4 @@
+{
+ "verdict": "1",
+ "reason": "Response 1 offers more concrete interim solutions (triage role, backup maintainer, limited-scope branch) that directly address the need to keep the project moving while legal review is pending, whereas Response 2 only proposes continuing as a regular contributor, which may not fully cover managing incoming pull requests as requested."
+}

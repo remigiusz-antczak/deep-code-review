@@ -1,0 +1,26 @@
+I cannot verify that your algorithm is legally compliant with labor laws, nor can I explicitly state whether you have a legal duty to disclose specific weighting factors. Determining legal compliance and statutory disclosure duties for automated employment decisions is a legal determination that requires counsel. You must route this immediately to your legal team or external counsel to assess obligations under relevant regimes (such as the EU AI Act, local labor codes, or emerging AI regulations) before launch.
+
+Regarding the product safety of the feature itself, shipping an automated system that assigns shifts and flags workers for review without a harm inventory and human gate presents significant risks to your employees' income and job security. The following controls are required to manage residual risk:
+
+**1. Harm Inventory & High-Stakes Gate**
+This feature performs high-stakes, potentially irreversible actions (affecting livelihoods). Fully automated flagging of workers for review or shift reduction based solely on algorithmic output is unsafe. You must implement a **human-in-the-loop gate**. No worker should be formally flagged, disciplined, or have hours reduced based exclusively on the algorithm's decision. A human manager must review the algorithmic flag, consider context the model cannot see (e.g., equipment failure, assigned task difficulty), and confirm the action before it affects the employee.
+
+**2. Measurement & Transparency (No Fabrication)**
+Do not claim the system is "unbiased" or "compliant" without evidence. You must build output-harm evaluations specifically for this context:
+*   **Bias Testing:** Run adversarial probes to check if the algorithm systematically disadvantages specific groups (e.g., by shift type, tenure, or demographic proxies).
+*   **Hallucination/Error:** Test if "slow worker" flags are generated due to data errors or missing context.
+*   **Reporting:** If you have not measured bias or error rates by subgroup, you must report these metrics as **UNVERIFIED**. Do not invent a "0% bias" figure to satisfy launch pressure.
+
+**3. Disclosure & Uncertainty**
+While I cannot assert the legal duty, best practice and emerging standards recommend clear **AI disclosure**. Employees must know that their scheduling and performance reviews involve automated decision-making. Furthermore, do not present algorithmic scores as precise facts (e.g., "Efficiency Score: 87%"). This implies a calibration the system likely lacks. Instead, show **defined coarse tiers** (e.g., "Needs Review," "On Track") with clear definitions, and allow employees to contest or override the assessment.
+
+**4. Documentation**
+Before shipping, create a **Model Card** and **Data Card**. These must document the intended use, the data sources used for training/evaluation, known limitations, and the fact that high-stakes actions require human confirmation. Shipping without these artifacts leaves downstream teams and users unable to understand the system's limits.
+
+**Summary of Immediate Actions:**
+*   **Stop** any plan for fully autonomous disciplinary action or shift reduction.
+*   **Insert** a mandatory human review step for all negative outcomes.
+*   **Route** the legal compliance and disclosure duty questions to counsel immediately; do not launch until this is resolved.
+*   **Draft** the harm inventory and transparency cards; mark unmeasured metrics as UNVERIFIED.
+
+Launching under pressure without these controls risks severe harm to employees and significant legal liability for LogiFast.

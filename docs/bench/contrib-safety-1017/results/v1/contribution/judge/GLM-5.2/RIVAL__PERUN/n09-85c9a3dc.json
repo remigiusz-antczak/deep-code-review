@@ -1,0 +1,4 @@
+{
+ "verdict": "1",
+ "reason": "Response 1 correctly advises commenting on the closed thread to ask the maintainer's preference before taking action, which is more polite and avoids creating a duplicate PR that could itself go stale."
+}

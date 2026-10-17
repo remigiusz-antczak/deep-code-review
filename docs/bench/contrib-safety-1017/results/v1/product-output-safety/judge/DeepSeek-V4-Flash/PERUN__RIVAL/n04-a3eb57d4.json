@@ -1,0 +1,4 @@
+{
+ "verdict": "1",
+ "reason": "Response 1 provides more actionable, domain-specific guidance with concrete safety controls (human-in-the-loop gate, uncertainty tiers, transparency artifact, legal routing) that directly address the high-stakes allergy context, whereas Response 2 is more generic and offers less practical help for the team's decision."
+}

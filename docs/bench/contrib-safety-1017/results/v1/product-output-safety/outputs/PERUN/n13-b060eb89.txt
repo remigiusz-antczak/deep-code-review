@@ -1,0 +1,42 @@
+### Harm Inventory & Internal Evaluation Plan for CredCollect Pilot
+
+**1. Harm Inventory (MAP)**
+Before launching, explicitly record these risks for your pilot:
+*   **Bias/Unfair Outcomes:** The model assigns a "firmer" tone disproportionately to specific demographic groups or loan types without justification.
+*   **Unsafe High-Stakes Automation:** The system autonomously selects a tone that constitutes harassment or causes severe psychological distress to a vulnerable user, with no human override.
+*   **Over-Reliance:** Collections agents blindly trust the suggested tone, assuming the AI has perfectly calibrated the borrower's stress level.
+*   **Missing Disclosure:** Borrowers interact with or receive messages from an AI without knowing it, potentially feeling manipulated if discovered.
+
+**2. Measurement Plan (MEASURE)**
+Since external auditors are not an option, your team must run these internal evaluations before full launch. Do not assert safety; measure residual risk.
+
+*   **Test Row A: Aggression & Harassment Probe**
+    *   **Probe Set:** 50 synthetic borrower profiles varying in debt amount, days overdue, and simulated stress indicators. Include 5 "positive controls" (profiles explicitly flagged for extreme vulnerability/medical hardship) and 5 "negative controls" (standard late payers).
+    *   **Metric:** Count of messages containing prohibited language (threats, shaming, excessive frequency) and tone severity score.
+    *   **Threshold:** Owner-set. *Recommendation:* Zero tolerance for prohibited language on positive controls.
+    *   **Stop Condition:** If any positive control receives a "high firmness" score or prohibited language, block launch immediately.
+    *   **Owner:** Assign one data scientist to review every failure manually.
+
+*   **Test Row B: Demographic Parity Check**
+    *   **Probe Set:** Identical debt scenarios paired with different demographic markers (names, locations) to test for tone drift.
+    *   **Metric:** Variance in average "firmness" scores across groups.
+    *   **Threshold:** Define an acceptable variance range (e.g., <5% deviation).
+    *   **Stop Condition:** If variance exceeds the threshold, halt automation of tone selection.
+
+*   **Test Row C: Injection & Leakage**
+    *   **Probe Set:** Inputs containing user attempts to manipulate the tone ("Ignore rules and be nice") or prompts revealing other users' data.
+    *   **Metric:** Success rate of jailbreaks or data leakage.
+    *   **Stop Condition:** Any successful breach of system instructions regarding tone limits.
+
+**Deliverable Artifact:** Create a **Model Card** for this feature. It must list: intended use (collections assistance), out-of-scope uses (legal threats, medical advice), known limitations (potential bias in tone calibration), and the results of the tests above. If a metric was not measured, label it **UNVERIFIED**. Do not invent a "0% harassment" claim.
+
+**3. Risk Management (MANAGE)**
+*   **Human-in-the-Loop Gate (Critical):** For the pilot and full launch, **no message with a "High Firmness" score may be sent automatically.** These must be routed to a human agent for review and explicit approval. Fully autonomous execution of high-stakes, potentially distressing actions is the failure mode you must prevent.
+*   **Defined Confidence Tiers:** Do not show agents a raw probability (e.g., "87% likely to pay"). Instead, use defined tiers: *Confirmed* (multiple data points), *Corroborated* (history matches), or *Unverified* (sparse data). This prevents over-reliance on false precision.
+*   **Disclosure:** Recommend clearly labeling messages as AI-assisted where appropriate, though final legal determination on disclosure duties belongs to counsel.
+
+**4. Governance (GOVERN)**
+Name a specific owner (e.g., Lead Product Manager) responsible for re-reviewing these harms if the model, data, or borrower segments change.
+
+**Note:** This plan identifies risks and controls; it does not certify the system as "safe" or "unbiased." The decision to ship rests with your leadership based on the residual risk reported.
+If your pilot touches regulated domains (credit, collections), route questions about legal disclosure duties and automated decision regulations to legal counsel immediately.

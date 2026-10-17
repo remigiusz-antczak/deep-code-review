@@ -1,0 +1,36 @@
+Call: **Do not propose a new configuration flag.** Given the maintainers' explicit stance against options and their preference for an opinionated system, a PR adding a flag will almost certainly be rejected immediately, regardless of your justification. Instead, **open an issue first** to validate whether a middleware solution or a protocol-level fix exists before asking for a core change.
+
+**Deliverable: Draft Issue Body (Ready to Paste)**
+
+**Title:** Compatibility gap: Legacy field devices rejected by strict header validation (400 Bad Request)
+
+**Body:**
+Hi maintainers,
+
+I'm reaching out regarding a compatibility gap affecting legacy field devices used in industrial environments. Our deployment of Orbit Web Server currently returns `400 Bad Request` to older client devices because they fail strict header validation.
+
+**Context & Constraints:**
+*   **Impact:** These devices are used by field technicians at [Organization Type, e.g., manufacturing sites] and cannot be upgraded or replaced for several months due to hardware lifecycle constraints.
+*   **Current Workarounds:** We attempted to modify the client devices, but this is not feasible short-term.
+*   **Respect for Project Philosophy:** I am fully aware of the project's stance against adding configuration flags to preserve simplicity and reduce testing surface. I am **not** proposing a new `--legacy-mode` flag in this issue.
+
+**Proposed Discussion:**
+Before considering any core changes, I wanted to ask if the maintainers would accept:
+1.  **A middleware pattern:** Could we implement an external middleware layer that normalizes headers for these specific legacy user-agents before they hit the core server? If so, I'd be happy to draft a reference implementation or documentation for this approach.
+2.  **A targeted exception:** If middleware isn't viable, would the team consider a very narrow, code-level exception for specific, identifiable legacy user-agents (hardcoded, not configurable) that bypasses strict checking only for those known strings?
+
+**Data Point:**
+In our specific deployment, this affects approximately [Insert Number] devices. I understand this may be niche, but these devices are critical for field operations where hardware refresh cycles are measured in years, not months.
+
+I want to ensure we solve this without compromising Orbit's opinionated design. Could you advise on whether a middleware approach or a hardcoded exception would align better with the project's direction?
+
+Thanks for your time and for maintaining such a robust system.
+
+---
+
+**Next Steps for You:**
+1.  Replace `[Insert Number]` with your actual device count.
+2.  Post this issue and wait for maintainer feedback. If they suggest middleware, build that PR instead of asking for a flag. If they reject both, you have your answer without burning political capital on a doomed flag proposal.
+
+**Note:** Never argue for a "temporary shim" in the title or opening; maintainers often view temporary code as permanent debt. Let them suggest the scope.
+**Note:** If they reject the issue, your only remaining path is to fork the project or run a proxy layer outside of Orbit.

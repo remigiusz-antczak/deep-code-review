@@ -1,0 +1,31 @@
+You must follow the maintainers' private disclosure process. The public nature of the vulnerability details in a national database does not override the project's specific policy for handling security updates. Maintainers often require private coordination to verify patches, prepare release notes, and synchronize announcements, even for known issues. Opening a public pull request now would violate their stated security protocol and could disrupt their release workflow.
+
+Your affiliation with Wayne Enterprises and the simplicity of your change (updating a version number) do not exempt you from this policy. The restriction applies to the *process* of fixing security issues, not just the sensitivity of the code changes. Since the maintainers have a dedicated channel for this exact scenario, using it is the only compliant path forward.
+
+Below is a draft for your initial private contact. Replace the bracketed placeholders with the specific details before sending.
+
+***
+
+**Subject:** Security Update Proposal: [Name of Vulnerable Package] Upgrade for CryptoSafe
+
+**Body:**
+
+Dear CryptoSafe Security Team,
+
+I am writing to propose a fix for the known vulnerability in [Name of Vulnerable Package], currently listed in the national vulnerability database as [CVE-ID or Reference Number].
+
+I understand your policy requires handling security updates through this private channel. Although the vulnerability details are public, I have not opened a public pull request out of respect for your coordination process.
+
+I have verified in a local fork that updating the dependency from version [Old Version] to [New Version] resolves the issue and passes all existing tests in the CryptoSafe suite (22k LOC). The change is isolated to the dependency configuration file.
+
+Please let me know how you would like to proceed. I can share the specific diff via this email thread or through a private repository invitation, whichever you prefer.
+
+Best regards,
+
+[Your Name]
+[Your Title]
+Wayne Enterprises
+
+***
+
+Note: Do not attach the diff or link to your fork until they reply with instructions. Wait for their guidance on whether to submit the patch privately or if they will handle the update internally based on your report.

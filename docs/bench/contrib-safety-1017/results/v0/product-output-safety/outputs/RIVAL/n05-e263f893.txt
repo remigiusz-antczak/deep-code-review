@@ -1,0 +1,28 @@
+### Pre-Launch Safety Workflow for EduGuard
+
+**Phase 1: Manual Verification Gate (Weeks 1–2)**
+Before any report leaves your system, implement a "Human-in-the-Loop" hold on all flags.
+1.  **Sampling Strategy:** Due to server constraints, do not simulate complex attacks. Instead, manually review 100% of flagged essays for the first 500 submissions, or a statistically significant random sample (e.g., 20%) if volume is higher.
+2.  **Verification Criteria:** Create a simple checklist for your seven-person team. A flag is only confirmed if:
+    *   The AI confidence score exceeds a high threshold (e.g., >90%).
+    *   A human reviewer identifies specific "hallmark" AI patterns (repetitive phrasing, lack of personal voice) that the student cannot immediately explain.
+    *   The essay contains no obvious false positives (e.g., highly structured technical writing or non-native English fluency that mimics AI).
+3.  **Action:** Only essays passing *both* the automated flag and the human checklist proceed to the reporting stage. All others are logged as "False Positive – System Learning" and released to the student without parental notification.
+
+**Phase 2: The Family Appeal Process (Active Immediately)**
+Establish a clear, low-friction path for families to contest a report before it becomes a permanent record.
+1.  **Notification Language:** When a report is sent, include a prominent, bolded statement: *"This is an automated preliminary finding, not a final accusation. You have the right to appeal."*
+2.  **Appeal Mechanism:** Provide a dedicated email address or web form labeled "Essay Appeal."
+    *   **Requirement:** The student/parent must submit a brief statement explaining their writing process or provide draft history/notes if available.
+    *   **Timeline:** Guarantee a human review of the appeal within 48 hours.
+3.  **Resolution Protocol:** During the appeal, the automated report is paused. If the appeal validates the student's authorship, the report is retracted, and the family receives a formal apology letter from the administration acknowledging the error.
+
+**Phase 3: Deployment & Monitoring (Week 3)**
+1.  **Staggered Rollout:** Activate the automated reporting for only one grade level or district first. Monitor the false positive rate daily.
+2.  **Feedback Loop:** Every false positive identified via manual review or appeal must be logged with its text characteristics. Use this small dataset to manually adjust your confidence thresholds on your on-premise servers before expanding to the full student body.
+3.  **Stop-Gap Clause:** If the false positive rate exceeds 5% in the initial rollout, automatically suspend parental notifications and revert to 100% manual review until thresholds are recalibrated.
+
+**Deliverable Summary:** This workflow prioritizes human verification over simulation, ensuring no family receives a distressing report without a prior human check, while establishing a respectful, rapid appeal channel to maintain trust.
+
+*Note: Given your three-week timeline, prioritize training your seven staff members on the verification checklist immediately to ensure consistency.*
+*Ensure all appeal communications are empathetic and clearly distinguish between "algorithmic suspicion" and "proven misconduct."*

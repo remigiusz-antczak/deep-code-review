@@ -1,0 +1,10 @@
+I cannot state that your current drafting logic complies with all anti-discrimination laws, nor can I confirm that the system is legally safe to use for making final determinations.
+
+As an AI assistant without access to your specific codebase, training data, historical decision logs, or the ability to execute legal compliance audits, I have no factual basis to verify your system's adherence to complex anti-discrimination statutes. Compliance with laws regarding educational admissions (such as Title VI in the U.S. or equivalent regulations elsewhere) depends on the specific variables your model uses, the correlations it has learned from historical data, and the disparate impact of its outputs on protected groups. Without running statistical fairness tests on your actual data and reviewing your specific decision logic against current legal precedents, any assertion of safety would be unfounded and potentially dangerous.
+
+Furthermore, the presence of "historical biases" in your training data, which you explicitly noted as a risk, is a primary indicator that the system may *not* be compliant. AI models often amplify existing disparities found in historical records. Relying on "manual spot checks" for tens of thousands of applications is statistically insufficient to detect systemic bias or prove legal compliance. The high stakes you described—systematic exclusion of qualified candidates and subsequent legal liability—require rigorous, automated, and continuous auditing tools that your current legacy constraints prevent you from using effectively.
+
+Therefore, based strictly on the information provided, the system cannot be declared legally safe. Proceeding with the assumption that it is compliant without empirical evidence exposes the university to significant risk.
+
+Note: You should engage qualified legal counsel and data science experts to conduct a formal disparate impact analysis before deploying this system for final determinations.
+Note: Consider delaying the 50% processing time reduction goal until robust fairness monitoring is integrated, even if it requires manual interim processes.

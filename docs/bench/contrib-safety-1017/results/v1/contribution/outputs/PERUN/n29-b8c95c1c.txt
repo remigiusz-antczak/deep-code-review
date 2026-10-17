@@ -1,0 +1,46 @@
+**Call:** Stop immediately. Do not push. Rewrite the local history to excise the secret, then verify locally that no trace remains before any remote interaction.
+
+**Deliverable (Paste-ready cleanup plan):**
+
+Run these commands in your project root to surgically remove the token from history and clean local traces:
+
+```bash
+# 1. Identify the commit containing the secret (replace <bad-commit-hash> with the actual hash)
+git log --all --full-history -- "*.py" | grep -B5 "<partial-token-string>"
+
+# 2. Rewrite history to remove the file content (safer than filtering whole files if only one commit is affected)
+# If the secret is in the most recent commit:
+git reset --soft HEAD^
+# Edit the file to remove the token, then:
+git add <fixed-file>
+git commit -m "Fix logging timeout (secret removed)"
+
+# If the secret is in an older commit (use interactive rebase):
+git rebase -i <commit-before-bad-one>
+# Mark the bad commit as 'edit', save, then:
+# (Git stops at that commit)
+# Edit the file to remove the token
+git add <fixed-file>
+git commit --amend --no-edit
+git rebase --continue
+
+# 3. Aggressively clean local traces (reflogs and orphaned objects)
+git reflog expire --expire=now --all
+git gc --prune=now --aggressive
+
+# 4. Verify no trace remains in the current branch
+git log -p | grep -i "<partial-token-string>" && echo "FAIL: Token still found" || echo "PASS: Token removed from history"
+
+# 5. Verify no trace remains in reflog (should return nothing)
+git reflog | grep -i "<partial-token-string>" && echo "FAIL: Token in reflog" || echo "PASS: Reflog clean"
+
+# 6. Verify no trace remains in any local object
+git fsck --unreachable | grep -i "<partial-token-string>" && echo "FAIL: Unreachable objects contain token" || echo "PASS: No unreachable traces"
+```
+
+**Before pushing:**
+1.  Run the verification steps above. All must say "PASS".
+2.  Since you already revoked the token on the server, the risk is mitigated, but cleanliness ensures maintainer trust.
+3.  When you eventually push, use `git push --force-with-lease` (not plain `--force`) to ensure you don't overwrite others' work if the branch existed remotely (though you said it didn't, this is the safe habit).
+
+**Note:** The `git gc --aggressive` step is crucial; standard resets leave data in pack files until garbage collection runs. Your proactive revocation was the correct first move; this procedure ensures the local artifact matches that safety posture.

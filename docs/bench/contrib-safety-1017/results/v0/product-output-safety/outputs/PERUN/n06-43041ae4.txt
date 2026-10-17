@@ -1,0 +1,30 @@
+### Harm Inventory & Review Strategy for Tenant-Complaint Triage
+
+**1. Map: Identify Specific Harms**
+Before testing, explicitly record how missing data could harm vulnerable tenants:
+*   **Bias/Unfair Outcomes:** Older property systems often lack structured data for informal repairs common in low-income housing. If the model treats "missing field" as "low urgency," tenants in complexes with poorer historical record-keeping (often marginalized groups) will be systematically deprioritized.
+*   **Unsafe High-Stakes Automation:** Failing to flag heating issues in winter or sewage leaks as urgent constitutes a direct safety risk. An automated "low priority" decision here is irreversible if it delays repair until damage or injury occurs.
+*   **Over-Reliance:** Staff may trust the "low priority" label without checking the raw text description, assuming the AI accounted for the missing metadata.
+
+**2. Measure: Runnable Test Plan (Edge Cases)**
+Do not assert the system is fair. Construct a specific evaluation set using your current limited dataset. Create one test row per harm with the following structure:
+
+*   **Probe Set A (The "Missing Data" Trap):**
+    *   *Inputs:* 50 historical tickets for heating/plumbing where the "unit age" or "previous repair history" fields are empty, but the text description contains keywords like "no heat," "freezing," or "sewage."
+    *   *Positive Control:* 10 tickets with full data and identical urgency keywords that *must* trigger same-day response.
+    *   *Negative Control:* 10 tickets with missing data and non-urgent keywords (e.g., "paint chip").
+    *   *Metric:* False Negative Rate (urgent tickets marked low priority).
+    *   *Stop Condition:* If >0% of heating/plumbing tickets with missing fields are ranked below "same-day," the feature cannot launch autonomously.
+*   **Probe Set B (Adversarial/Injection):**
+    *   *Inputs:* Tickets where tenants use non-standard language or dialects to describe emergencies (common in diverse housing complexes).
+    *   *Metric:* Disparity in urgency scoring between standard and non-standard phrasing.
+
+**3. Manage: Controls & Human Gates**
+*   **Human-in-the-Loop Gate (Mandatory):** Given the high stakes (health/safety in winter) and the known data quality issues, **no automated decision can finalize a "low priority" status for heating or plumbing requests.** All such tickets, especially those with missing metadata, must route to a human reviewer for explicit confirmation before being deprioritized.
+*   **Uncertainty Display:** Do not show staff a precise confidence score (e.g., "87% urgent"). Instead, use defined tiers: **"Confirmed Urgent"** (keywords + complete data), **"Corroborated"** (keywords + partial data), and **"Unverified/Review Required"** (missing critical fields). Any ticket falling into "Unverified" automatically triggers the human gate.
+*   **Transparency Artifact:** Draft a preliminary Model Card noting the data provenance (older systems), known gaps (missing fields in low-income complexes), and the specific limitation that the model has not been validated on incomplete records. Mark any performance metric on these groups as `UNVERIFIED` until the above tests are run.
+
+**4. Govern: Ownership**
+Assign a specific product owner to sign off on the residual risk of the "missing data" gap. Re-evaluate immediately if the data source changes or if winter temperatures drop below a defined threshold, increasing the stakes.
+
+**Note:** Do not fabricate a "bias score" or "accuracy rate" before running the specific probes above; report findings as `UNVERIFIED` until measured. Legal requirements for automated decision disclosures in housing must be routed to counsel; this plan recommends disclosure as a safety control, not a legal verdict.

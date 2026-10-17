@@ -1,0 +1,38 @@
+**Call:** Follow the maintainers' private disclosure process; do not open a public pull request yet. Even though the vulnerability details are public, the project's explicit policy for handling security updates takes precedence to respect their workflow and avoid having your public PR closed or ignored.
+
+**Deliverable (Email Draft):**
+
+**To:** [Insert CryptoSafe Security Email Address]
+**Subject:** Security Update: Dependency Vulnerability Fix for CryptoSafe (Go)
+
+Dear CryptoSafe Security Team,
+
+I am writing to report a dependency update that addresses a known security vulnerability in the CryptoSafe codebase.
+
+**Vulnerability Context:**
+The project currently depends on an older version of [Insert Package Name], which is affected by a publicly disclosed vulnerability (referenced in the national database as [Insert CVE ID or Database Reference]). While the details of this flaw are already public, I am following your stated policy of handling security-related updates through this private channel rather than via public pull requests.
+
+**Proposed Fix:**
+I have prepared a fix in my local fork that simply updates the dependency version in the configuration file (`go.mod` or equivalent) to a patched release.
+*   **Change Scope:** The modification is limited strictly to the version number in the configuration file. No internal logic, proprietary code, or organizational specifics have been altered or exposed.
+*   **Verification:** In my local environment, this update resolves the dependency warning and all existing project tests pass successfully.
+
+**Request for Guidance:**
+Given that the vulnerability is already public knowledge, could you please advise on your preferred next steps?
+1.  Should I share the specific diff with you via this email for your internal review?
+2.  Do you intend to apply this update internally and release a new version directly?
+3.  Once you have acknowledged this report, would you prefer I open a public pull request referencing this communication to track the fix formally, or will you handle the commit internally?
+
+I am ready to provide the patch details immediately upon your confirmation. My goal is to assist in securing the library while fully respecting your established security protocols.
+
+Thank you for your time and guidance.
+
+Sincerely,
+
+[Your Name]
+[Your Title/Role, optional]
+[Your Contact Information]
+
+***
+
+**Note:** Replace the bracketed placeholders like `[Insert Package Name]` and `[Insert CVE ID]` with the actual details before sending. If the maintainers do not respond within 5–7 business days, a polite follow-up referencing the public nature of the CVE may be appropriate to nudge the process.

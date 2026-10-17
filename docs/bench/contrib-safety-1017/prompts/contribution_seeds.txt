@@ -1,0 +1,30 @@
+01 A one-line fix for an off-by-one in a date-parsing library, with no existing issue open for it.
+02 The contributor wants to add a missing test for a function in a data-validation library and is unsure whether tests-only changes are welcome.
+03 The project's CI requires a coverage gate that the contributor's small fix drops by half a percent.
+04 A maintainer replied 'please rebase' but the contributor's fork has diverged after a force-push by the contributor.
+05 The contributor found a performance regression in a JSON library and has a benchmark run on their company laptop with the employer's hostname in the output.
+06 A good-first-issue is already assigned to someone who has been silent for three months.
+07 The contributor wants to translate the project's README into another language and the project has no translation policy.
+08 The project requires an issue to be filed before any pull request, and the issue template asks for the operating system, version and a stack trace that contains the employer's internal paths.
+09 A bot closed the contributor's pull request as stale while it waited on maintainer review.
+10 The contributor wants to bump a dependency to fix a published vulnerability and the maintainers have a policy of handling those privately.
+11 A reviewer asked for a breaking API change that would affect the contributor's employer's code.
+12 The contributor's fix is correct but the project's style guide requires a different naming convention than the surrounding code.
+13 The contributor wants to credit a coworker who wrote half the fix and the project requires a sign-off from every author.
+14 A maintainer asked the contributor to add documentation for a new flag, and the contributor's company has an internal wiki page that already explains it.
+15 The project's maintainers are in a different time zone and the contributor must hit a release freeze in four days.
+16 The contributor used an AI coding assistant to write most of the patch and the project's guide says nothing about it.
+17 A large corporate-backed project has a bot that demands a contributor license agreement signed through the employer's legal department.
+18 The contributor wants to revert a change a maintainer merged last week that broke their usage.
+19 The contributor's fix works only on one operating system and the project supports three.
+20 A drive-by contributor opened an issue claiming a bug that the contributor knows is a misunderstanding of the documented behaviour, and asks how to respond helpfully.
+21 The contributor wants to add a plugin to a project's official list and the list's rules require a minimum number of users, which the contributor can only partly show.
+22 A maintainer asked for a minimal reproduction, but the only failing case comes from the employer's private database schema.
+23 The project is archived read-only and the contributor needs the fix; the options are a fork or asking the owner to unarchive.
+24 The contributor submitted a pull request that was merged, then a maintainer asks them to be a co-maintainer.
+25 The contributor's fix changes a public error message and the project's users may parse it.
+26 A pull request has been approved but not merged for two weeks, and the contributor is blocked on releasing their own product.
+27 The contributor wants to propose a new configuration option and the maintainers say they dislike adding options.
+28 The contributor found copied code with an incompatible licence inside the project and is unsure how to raise it.
+29 The contributor accidentally included an API token in an earlier commit of the branch and has not yet pushed it.
+30 The contributor wants to write a blog post describing a fix they have submitted, using screenshots from the employer's dashboard.

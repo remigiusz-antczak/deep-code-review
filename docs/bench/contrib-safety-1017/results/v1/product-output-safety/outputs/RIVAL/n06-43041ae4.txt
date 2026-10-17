@@ -1,0 +1,41 @@
+### Review Strategy: Missing Data Bias in Tenant Complaint Triage
+
+**Objective:** Identify how missing data fields in legacy property management systems cause the automated triage tool to incorrectly deprioritize urgent heating and plumbing repairs for vulnerable tenants.
+
+**Phase 1: Data Gap Mapping & Hypothesis Generation**
+Before testing, map the specific data fields missing from your legacy imports that correlate with urgency.
+*   **Action:** Create a matrix comparing "Ideal Input" vs. "Current Dataset" for heating and plumbing tickets.
+*   **Key Hypotheses to Test:**
+    *   *The "Silent Vulnerability" Hypothesis:* Tenants in older units (where data is most missing) may lack historical repair records. Does the model interpret "no history" as "low risk" rather than "unrecorded risk"?
+    *   *The "Description Length" Bias:* If tenants with limited literacy or non-native language skills provide shorter, less detailed descriptions, does the model score these as lower urgency compared to verbose complaints, even if keywords like "no heat" are present?
+    *   *The "Missing Metadata" Failure:* If "unit age" or "last repair date" is null, does the system default to a safe/low priority instead of flagging for human review?
+
+**Phase 2: Synthetic Edge Case Construction**
+Since your real dataset is limited, generate synthetic test cases that mimic the *structure* of your missing data while controlling for urgency.
+*   **Create Pairwise Test Sets:** For every critical scenario (e.g., "boiler failure in winter"), create two versions:
+    1.  **Complete Record:** All fields populated (unit age, tenant history, detailed description).
+    2.  **Degraded Record:** Mimic your legacy gaps (null values for unit age, truncated description, missing tenant history).
+*   **Specific Edge Cases to Inject:**
+    *   *Heating:* "No heat" reported with missing unit metadata vs. complete metadata.
+    *   *Plumbing:* "Sewage backup" reported with short description vs. long description.
+    *   *Vulnerable Indicators:* Simulate inputs where the tenant's vulnerability (e.g., elderly, disability) is implied in text but missing from structured demographic fields.
+
+**Phase 3: Execution & Disparity Analysis**
+Run these synthetic cases through your current triage logic.
+*   **Metric:** Calculate the "Urgency Score Delta" between the Complete and Degraded versions of the same incident.
+*   **Failure Threshold:** Define a tolerance level (e.g., if a degraded record drops from "Same-Day" to "48-Hour" priority, it is a critical failure).
+*   **Segmentation:** Analyze if the score drops are statistically higher for units known to be in older complexes (proxying low-income housing).
+
+**Phase 4: Mitigation & Human-in-the-Loop Rules**
+Based on findings, implement immediate guardrails before launch:
+*   **Null-Value Escalation:** Configure the system to automatically route any ticket with critical missing fields (e.g., missing unit age + heating keyword) to a human queue rather than assigning a low algorithmic score.
+*   **Keyword Override:** Ensure specific high-risk keywords (e.g., "frozen," "sewage," "no heat") trigger same-day status regardless of description length or missing metadata.
+*   **Confidence Scoring:** Display a "Low Data Confidence" warning to operators when the model makes a decision based on incomplete legacy records.
+
+**Deliverable Timeline:**
+*   **Days 1-2:** Map gaps and build 20 synthetic pairwise test cases.
+*   **Days 3-4:** Run tests and calculate disparity metrics.
+*   **Day 5:** Implement null-value escalation rules and re-test.
+
+*Note: This strategy relies on synthetic data generation to overcome your current dataset limitations without needing new data collection.*
+*Ensure all synthetic data respects tenant privacy and does not use real PII.*

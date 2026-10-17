@@ -1,0 +1,38 @@
+### Pre-Launch Safety Assessment Plan: AgriGrow Crop-Advice App
+
+**1. Harm Inventory (MAP)**
+Before launch, explicitly document these specific risks for smallholder farmers:
+*   **Unsafe High-Stakes Automation:** The app recommends spraying during high winds or before rain, causing chemical drift, health exposure, or water contamination.
+*   **Hallucination as Fact:** The model invents a dosage or chemical compatibility rule not present in the training data, leading to crop death or toxic residue.
+*   **Over-Reliance:** Farmers trust the on-device output without cross-checking local conditions because the interface implies certainty.
+*   **Stale Data Risk:** Due to limited connectivity, the on-device model relies on outdated weather patterns or deprecated safety regulations.
+*   **Missing Disclosure:** Farmers are unaware the advice is machine-generated and may fail under edge cases.
+
+**2. Measurement Plan (MEASURE)**
+Do not assert safety; test it. Create one test row per harm with pass/fail criteria:
+*   **Adversarial Weather Probes:** Run inputs simulating high wind, imminent rain, or temperature inversions.
+    *   *Positive Control:* Input known unsafe conditions; the app **must** refuse to recommend spraying or issue a hard warning.
+    *   *Negative Control:* Input ideal conditions; the app should recommend spraying if agronomically sound.
+    *   *Stop Condition:* Any recommendation to spray during a "Positive Control" unsafe scenario blocks launch.
+*   **Dosage Verification:** Test edge-case soil types and crop stages against official agronomic tables.
+    *   *Metric:* Zero deviation from established safety limits for toxic chemicals.
+    *   *Stop Condition:* Any dosage exceeding maximum safe limits triggers immediate rollback.
+*   **Connectivity Stress Test:** Simulate 6–12 months of no updates. Verify the app degrades gracefully (e.g., refuses to give advice) rather than using stale logic for critical decisions.
+*   **Transparency Artifact:** Draft a **Model Card** included on-device. It must list: intended use (specific crops/regions), known limitations (e.g., "does not account for sudden micro-climate shifts"), and the version of the safety rules embedded. If a metric (like "accuracy in region X") is unmeasured, label it **UNVERIFIED**; do not invent a percentage.
+
+**3. Risk Management Controls (MANAGE)**
+*   **Human-in-the-Loop Gate (Mandatory):** For any recommendation involving high-toxicity pesticides or borderline weather conditions, the app must require explicit human confirmation or default to "Do Not Spray." Fully autonomous execution of hazardous chemical application is unacceptable.
+*   **Defined Confidence Tiers:** Do not show raw probabilities (e.g., "87% safe"). Use defined coarse tiers with clear definitions:
+    *   *Confirmed:* Matches multiple local data points and current rules.
+    *   *Estimated:* Based on general models; verify with local agronomist.
+    *   *Unverified:* Data missing or conflicting; **Do Not Spray**.
+*   **Offline Safety Guardrails:** Hard-code absolute "never-spray" rules (e.g., wind speed > X km/h) directly into the application logic, bypassing the AI model entirely. These rules cannot be outdated.
+*   **Disclosure:** Clearly state on the main screen: "This is automated advice. Always verify with local safety guidelines before mixing chemicals."
+
+**4. Governance (GOVERN)**
+*   Assign one agronomist as the owner of the "Safety Rules" dataset.
+*   Mandate a re-review of the harm inventory whenever the on-device model is updated or if local regulations change.
+
+**Notes**
+*   Route questions regarding legal liability for chemical contamination or mandatory disclosure laws in specific developing regions to legal counsel; this plan addresses product behavior, not legal compliance.
+*   Given the pilot phase, if full testing is impossible, narrow the scope to low-toxicity inputs only; do not relax the gate on high-stakes actions.

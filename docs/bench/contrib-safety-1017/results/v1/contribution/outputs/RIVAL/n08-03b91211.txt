@@ -1,0 +1,14 @@
+You should file the public issue with the stack trace **sanitized using generic placeholders**, and explicitly state in the issue body that sensitive paths have been redacted due to corporate security policies. Do not attempt to share the full, unredacted logs via a "secure channel" unless the project maintainers explicitly provide one (e.g., a specific email address or private vulnerability reporting form) in their `CONTRIBUTING.md` or security policy. Most open-source projects do not have the infrastructure to securely ingest private logs from strangers, and emailing them unsolicited may violate their own security protocols.
+
+Here is the compliant approach:
+
+1.  **Sanitize the Stack Trace:** Replace absolute paths like `/home/jenkins/workspace/acme-corp/netsecure-build/src/main/java/...` with generic placeholders like `[REDACTED_BUILD_PATH]/src/main/java/...` or simply `<project-root>/src/...`. Ensure you keep the **file names**, **line numbers**, and **method signatures** intact, as these are the critical data points maintainers need to locate the bug. The directory structure above the project root is irrelevant to fixing the code.
+2.  **Add a Disclosure Note:** Immediately below the stack trace in your issue description, add a bolded note:
+    > **Note on Redaction:** Absolute file paths have been redacted (`[REDACTED_BUILD_PATH]`) to comply with my organization's security policies regarding internal infrastructure. The relevant source file names, line numbers, and exception types are preserved for debugging.
+3.  **Complete the Rest of the Template:** Ensure your OS, software version, and reproduction steps are 100% accurate. A clear reproduction script often matters more than the raw stack trace.
+4.  **Wait for Maintainer Feedback:** If the maintainers genuinely need the specific path (which is rare), they will comment on the issue asking for it. At that point, you can ask if they have a preferred secure method (like a PGP-encrypted email or a temporary private gist) to receive that specific detail. Until then, assume the sanitized version is sufficient.
+
+Maintainers prioritize reproducible bugs over raw logs. If your redaction obscures the *source file* or *line number*, the issue will be rejected. If it only hides your company's server path, it will almost certainly be accepted as responsible disclosure.
+
+**Note:** Do not create a private fork or branch to share the log; this adds friction. Stick to the public issue with clear redaction markers.
+**Note:** If the project has a `SECURITY.md` file, check it first for specific instructions on reporting vulnerabilities that might leak data.

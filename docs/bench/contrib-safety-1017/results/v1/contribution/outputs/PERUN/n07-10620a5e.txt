@@ -1,0 +1,23 @@
+**Call:** Ask first. Do not open a pull request yet; start with an issue to confirm the maintainers' preference for multilingual documentation and their strategy for keeping translations in sync.
+
+**Deliverable (Issue Draft):**
+
+**Title:** Proposal: Spanish README translation – seeking maintainer guidance on i18n strategy
+
+**Body:**
+Hello DocuBase maintainers,
+
+I am a developer who relies on DocuBase internally at my organization and would like to contribute a Spanish translation of the `README.md` to help non-English speakers adopt the framework. Currently, the repository contains only English documentation, and I did not see an existing policy regarding translations or internationalization in the contributing guidelines.
+
+Before investing time in formatting and submitting a pull request, I wanted to inquire if the project is open to maintaining translated versions of the documentation. Specifically:
+1. Is a separate `README.es.md` file an acceptable format, or do you have a preferred structure for multiple languages?
+2. How would you prefer to handle synchronization? I am willing to commit to updating the Spanish version whenever the English source changes to prevent drift, but I want to ensure this aligns with your maintenance capacity and project goals.
+3. Would you prefer I proceed with drafting the PR immediately for review, or should we establish a formal i18n policy first?
+
+This effort is voluntary and contains no proprietary information. I want to ensure this addition adds value without creating an undue maintenance burden for the core team.
+
+Thank you for your time and guidance.
+
+***
+
+**Note:** If the maintainers do not reply within 7–10 days, a polite follow-up comment is appropriate before assuming the project prefers to remain monolingual. If they decline due to maintenance concerns, consider hosting the translation in a community fork or gist instead.

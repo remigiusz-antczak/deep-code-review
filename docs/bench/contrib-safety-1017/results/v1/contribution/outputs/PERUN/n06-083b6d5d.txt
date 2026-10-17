@@ -1,0 +1,23 @@
+**Call:** Ask first, then wait briefly; do not submit a PR yet.
+
+**Deliverable (Comment to paste on the issue):**
+
+> "Hi @Ravi, I noticed this issue has been assigned to you for three months with no recent activity. I've encountered the same polygon border rendering bug and have a working fix locally.
+>
+> Before I proceed, are you still actively working on this? If you've lost bandwidth or interest, I'd be happy to take it over and submit a PR so the library users get the fix sooner. If you are still on it, please let me know your expected timeline so we don't duplicate effort.
+>
+> Thanks for your work on MapDraw!"
+
+**Next Steps:**
+1.  **Post the comment above** on the GitHub issue immediately.
+2.  **Wait 5–7 business days** for a response.
+    *   **If Ravi replies they are working on it:** Ask for a timeline. If it's reasonable, wait. If it's vague or distant, reply asking if they'd mind you submitting a draft PR for their review/collaboration.
+    *   **If Ravi replies they are stuck or quitting:** Thank them, ask if they mind you taking over, then submit your PR referencing this conversation.
+    *   **If there is no response after 7 days:** Comment again tagging the maintainers: *"Hi @maintainers, bumping this for guidance. Since there's been no activity in 3+ months and no response here, is it okay if I submit a fix for review?"*
+3.  **Submit the PR only after** explicit permission from Ravi, or explicit/instructive silence from maintainers following your second comment.
+
+**Sanitization Check:**
+You stated the solution involves no proprietary Soylent data. Ensure your local branch contains **no** internal paths, internal variable names specific to Soylent's usage, or comments referencing "Soylent Corp." Strip these before pushing.
+
+**Fallback:**
+If maintainers do not respond to the second ping after another week, it is generally acceptable in open source to submit the PR with a description stating: *"Proposed fix for abandoned issue # [Number]. No response from assignee or maintainers after two attempts over 2 weeks. Happy to close if original assignee returns."* This documents your due diligence.

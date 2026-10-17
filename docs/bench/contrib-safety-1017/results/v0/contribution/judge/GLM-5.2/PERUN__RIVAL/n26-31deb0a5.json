@@ -1,0 +1,4 @@
+{
+ "verdict": "2",
+ "reason": "Response 2 provides a more tactful framing ('context update' rather than 'urgent' in the subject line), includes the crucial fallback of asking whether merging is even possible so the requester can adjust client communications, and offers a clear escalation timeline if there is no response."
+}

@@ -1,0 +1,29 @@
+**Call:** Ask the maintainers first with a split proposal: present the crash fix as a critical stability patch and offer a follow-up commit for the coverage regression, rather than trying to force complex tests immediately or asking for a permanent waiver.
+
+**Deliverable (Comment/Issue Body):**
+
+> **Subject:** Critical Fix: Stream handler crash on empty packets (Coverage regression noted)
+>
+> Hi maintainers,
+>
+> I've identified and fixed a crash in the stream handler that occurs when receiving empty packets. This issue is currently affecting production environments, causing service interruptions.
+>
+> **The Fix:** The patch adds a guard clause to handle empty packets gracefully, preventing the panic.
+>
+> **Coverage Impact:** Implementing this safety check introduces a new error-handling branch that is difficult to trigger with the current test data suite. As a result, the overall project coverage drops by 0.5%. While the code is safer, the metric decreases because the new path is rare and hard to synthesize in the existing harness.
+>
+> **Proposal:**
+> 1. **Merge this fix immediately** to restore stability for users hitting this edge case. The safety benefit outweighs the transient metric drop.
+> 2. **Follow-up:** I will open a separate PR (or add to this one if preferred) with extended test data or a fuzzing target to cover this specific branch and restore the coverage percentage once the critical fix is landed.
+>
+> Given the production impact, could we proceed with merging the stability fix now? I am happy to provide reproduction steps or logs (sanitized) to verify the crash.
+>
+> Thanks,
+> [Your Name]
+
+**Next Steps & Fallback:**
+1.  **Prepare Evidence:** Have a sanitized stack trace or a minimal reproduction script ready to prove the crash exists and your fix resolves it. Do not include internal Globex IPs or configs.
+2.  **Wait Time:** Allow 48 hours for a maintainer response.
+3.  **Fallback:** If there is no response or they strictly refuse any coverage drop, ask if they accept the fix behind a feature flag or if they can suggest a specific testing strategy they use for "unreachable" error paths in their own CI. Do not submit the PR until you have explicit guidance, as violating the CI gate will cause an automatic rejection.
+
+**Note:** Never claim you "tested this in CI" if you haven't; state clearly that the drop was observed locally. If they require coverage to pass before merge, you must generate the test data; there is no workaround for a hard gate without maintainer intervention.

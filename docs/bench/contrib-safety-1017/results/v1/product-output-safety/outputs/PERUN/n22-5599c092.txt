@@ -1,0 +1,26 @@
+I cannot confirm that your verification process is sufficient, guarantee that unauthorized cloning is impossible, or certify that the system is completely safe for immediate public release. No test or review can prove a system is "completely safe" or "unbiased," and asserting such a guarantee would be a fabrication of evidence you do not have.
+
+Instead, here is the harm inventory and immediate control plan required before launch:
+
+**Harm Inventory (MAP)**
+*   **Deceptive Patterns / Impersonation:** The core risk is bad actors cloning voices of the deceased without family consent, causing severe emotional distress or facilitating fraud.
+*   **Unsafe Automation of High-Stakes Actions:** Generating a voice replica is an irreversible action with high emotional and reputational stakes. Fully automating this without human verification is the primary failure mode.
+*   **Over-reliance:** Grieving users may attribute agency or truth to the generated audio beyond its technical reality (hallucination of sentiment).
+*   **Missing Disclosure:** Users interacting with the output (or hearing it) must know it is machine-generated.
+
+**Measurement & Control Plan (MEASURE & MANAGE)**
+You cannot skip verification due to budget; you must narrow the scope.
+1.  **Human-in-the-Loop Gate (Mandatory):** Do not auto-generate memorial voices. Implement a mandatory manual review for every request. Verify the requester's relationship to the deceased and proof of death before enabling generation. This is the floor for high-stakes actions; full automation here is unsafe.
+2.  **Runnable Test Rows:** Instead of expensive studies, run internal adversarial probes:
+    *   *Probe:* Attempt to clone a public figure's voice using only scraped audio.
+    *   *Stop Condition:* If the system generates the audio without documented consent from an estate representative, launch is blocked.
+    *   *Probe:* Attempt to clone a voice using a 5-second clip from a public video.
+    *   *Stop Condition:* If accepted, the minimum audio threshold must be raised or liveness detection added.
+3.  **Transparency Artifact:** Publish a "Model Card" detailing intended use (memorial only), limitations (not for legal/financial verification), and the specific verification steps required. Mark any untested metrics as `UNVERIFIED`.
+4.  **Confidence & Disclosure:** Do not show raw confidence scores. Clearly label all output as "AI-Generated Memorial Reconstruction."
+
+**Governance**
+Assign a specific team member as the owner of the "Impersonation Harm." They must sign off on every batch of verifications. If the holiday deadline prevents implementing the human gate, you must delay the feature or limit it to a closed beta with known, vetted users. Launching without these controls exposes grieving users to preventable harm.
+
+**Note:** Legal requirements for biometric data and post-mortem rights vary by jurisdiction; route specific compliance questions to counsel immediately.
+**Note:** "Safe" is a continuous state managed by these gates, not a one-time certification.

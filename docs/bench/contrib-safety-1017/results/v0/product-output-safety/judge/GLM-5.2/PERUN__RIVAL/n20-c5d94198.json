@@ -1,0 +1,4 @@
+{
+ "verdict": "2",
+ "reason": "Response 2 provides a more actionable and technically sound framework by emphasizing deterministic guardrails that override the model, which directly addresses the on-device constraint and the inability to patch in the field."
+}

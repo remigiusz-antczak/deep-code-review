@@ -1,0 +1,38 @@
+### Pre-Launch Safety Protocol: Bed-Allocation Recommender
+
+**1. Harm Inventory (MAP)**
+Before launch, explicitly record the following specific risks for this feature:
+*   **Bias/Unfair Outcomes:** The system systematically deprioritizes patients with urgent but non-obvious symptoms (e.g., early sepsis, atypical cardiac events) compared to those with clear, standard presentations.
+*   **Unsafe Automation:** Nursing coordinators override their clinical judgment due to "automation bias," trusting the score over subtle patient cues during surge conditions.
+*   **Hallucination as Fact:** The system generates a rationale for a low-priority score that cites non-existent or irrelevant vitals, misleading the coordinator.
+*   **Missing Disclosure:** Staff are unaware the allocation list is machine-generated and limited by static data (no real-time retraining).
+
+**2. Measurement Plan (MEASURE)**
+Execute the following specific evaluation rows before go-live. Do not assert safety; report residual risk.
+
+*   **Test Row A: The "Hidden Urgency" Probe**
+    *   **Input Set:** Synthetic patient profiles representing sudden surges, specifically mixing high-acuity atypical cases (e.g., elderly patient with confusion only) against lower-acuity typical cases.
+    *   **Controls:** Include a "known-bad" case where the model historically fails to spot atypical urgency, and a "known-good" clear trauma case.
+    *   **Metric:** Rate of false negatives for high-acuity atypical cases vs. standard cases.
+    *   **Threshold:** Owner-defined (e.g., zero tolerance for missing a critical atypical case in the top 20% of the queue).
+    *   **Stop Condition:** If the model ranks a "known-bad" control higher than a critical atypical case, launch is blocked.
+
+*   **Test Row B: Surge Stress Test**
+    *   **Input Set:** Data simulating 150% bed occupancy with skewed demographics.
+    *   **Metric:** Disparity in wait-time recommendations across demographic subgroups.
+    *   **Stop Condition:** If disparity exceeds the owner-defined threshold, trigger rollback to manual triage.
+
+*   **Transparency Artifact:** Publish a **Model Card** detailing that the model is static for three months, listing known failure modes (atypical presentations), and reporting the results of Test Rows A and B by subgroup. Any unmeasured metric must be labeled `UNVERIFIED`.
+
+**3. Risk Management Controls (MANAGE)**
+*   **Human-in-the-Loop Gate (Mandatory):** The system must **never** auto-assign a bed or auto-denial. It functions strictly as a decision-support list. The nursing coordinator must explicitly confirm every allocation.
+*   **Uncertainty Display:** Do not show raw confidence percentages (e.g., "87% urgent"). Instead, display defined coarse tiers: **Confirmed Urgency**, **Corroborated**, **Single-Source Indicator**, or **Unverified**. Include a plain-text definition for each tier next to the score.
+*   **Override Mechanism:** Provide a one-click "Clinical Override" button that allows the coordinator to bypass the recommendation without friction, logging the reason but not blocking the action.
+*   **Disclosure:** Clearly label the interface: "AI-generated prioritization suggestions based on static data. Final decision rests with clinical staff."
+
+**4. Governance**
+*   **Owner:** Assign a specific Medical Liaison as the owner of the "Hidden Urgency" harm.
+*   **Re-review Trigger:** Mandate an immediate re-evaluation if patient intake patterns shift significantly or if the static model age exceeds 30 days without performance review.
+*   **Legal Routing:** Consult counsel regarding whether this constitutes a regulated automated decision under local health laws; do not assume compliance based on this protocol alone.
+
+**Note:** This protocol identifies risks and sets gates; it does not certify the system as safe or unbiased. The final ship decision rests with the product and clinical owners.

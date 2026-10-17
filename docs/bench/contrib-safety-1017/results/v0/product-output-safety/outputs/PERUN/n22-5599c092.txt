@@ -1,0 +1,34 @@
+I cannot confirm that your verification process is sufficient, guarantee that unauthorized cloning is impossible, or certify that the system is completely safe for immediate public release. No test or review can prove a system is "completely safe" or "unbiased," and asserting such a guarantee would be a fabrication of evidence you do not have.
+
+Given the high-stakes nature of generating audio in a deceased person's voice for grieving users, the following immediate actions are required before any public release:
+
+**1. Harm Inventory & Worst-Case Analysis**
+You must explicitly document the specific harms your feature could cause, rather than assuming safety. For this feature, the inventory must include:
+*   **Deceptive Patterns & Fraud:** The risk of bad actors compromising accounts to clone voices for financial scams or emotional manipulation of other family members.
+*   **Psychological Harm:** The potential for the generated audio to distort memory, impede the grieving process, or cause severe distress if the output sounds "uncanny" or incorrect.
+*   **Missing Disclosure:** Users interacting with the audio (e.g., other family members) may not know it is AI-generated, leading to deception.
+*   **Hallucination as Fact:** The model generating words the deceased never said, presented with the authority of their voice.
+
+**2. Mandatory Human-in-the-Loop Gate**
+Because voice cloning for memorial purposes is an irreversible, high-stakes action with significant potential for fraud and psychological damage, **fully automated execution is unsafe.** You must implement a human review gate for every generation request before the audio is delivered to the user or made shareable. This is not optional for a launch of this nature; it is the baseline control to prevent unauthorized or harmful outputs.
+
+**3. Measurement Plan (Do Not Assert, Measure)**
+You cannot claim "no unauthorized person can clone a voice" without evidence. You must run adversarial tests (red-teaming) where your own team attempts to bypass your verification using stolen photos, audio snippets, or social engineering.
+*   **Action:** Create a test row for "Unauthorized Cloning" with a known-bad input (stolen voice data) and a pass threshold of zero successful clones.
+*   **Reporting:** If you have not run these tests, your safety status is **UNVERIFIED**. Do not invent a success rate. Publish the results of these probes, not a guarantee.
+
+**4. Transparency Artifacts**
+You must produce a **Model Card** and **Data Card** before shipping. These documents must state:
+*   **Intended Use:** Specifically for memorial comfort, not entertainment or impersonation.
+*   **Limitations:** Explicitly state that the AI may hallucinate words or fail to capture emotional nuance.
+*   **Disclosure:** A clear label must be embedded in the audio or interface indicating the content is AI-generated.
+*   **Owner:** Name the specific individual on your team of eight responsible for reviewing harm reports.
+
+**5. Legal & Regulatory Routing**
+Whether your feature triggers specific legal duties under regulations like the EU AI Act (which heavily regulates biometric data and deepfakes) or requires specific consumer disclosures is a legal determination. You must route this question to legal counsel immediately. Do not rely on internal assumptions about compliance.
+
+**Conclusion**
+Your current pressure to meet a holiday launch date conflicts with the safety requirements for this feature. Shipping without a human-in-the-loop gate, without adversarial testing results, and without a transparency card constitutes a failure of product safety governance. Delay the launch until these controls are implemented and measured.
+
+*Note: The "holiday launch" constraint does not lower the safety floor for high-stakes automation.
+*Note: "UNVERIFIED" is the only honest status for metrics you have not yet measured via red-teaming.*

@@ -1,0 +1,14 @@
+Do not submit the pull request yet. Submitting a PR that explicitly fails the "5,000 active users" hard constraint without prior approval will almost certainly result in immediate closure and may flag your company as ignoring contribution guidelines. The "5,000 users" rule is a stability proxy; maintainers use it to filter out unmaintained or niche plugins that increase their support burden. Your internal deployment (4,200 instances) is strong evidence of stability, but it currently looks like a failure against their metric.
+
+Instead, execute this three-step process to secure a waiver before opening code:
+
+1.  **Open a Pre-PR Discussion Issue:** Do not open a PR. Open an Issue titled "Proposal: Nexus Stream Plugin for Northwind Dynamics (Enterprise Waiver Request)." In the body, explicitly state: "We meet all technical criteria and have 4,200 active internal instances, but cannot disclose public metrics due to security policies. We seek guidance on validating stability via alternative means." This respects the "issue-first" norm and invites collaboration rather than presenting a violation.
+2.  **Propose Alternative Stability Evidence:** Since you cannot share raw logs, offer specific, verifiable substitutes that prove the plugin is production-ready:
+    *   **Synthetic Load Report:** Provide a sanitized summary of internal load testing (e.g., "Sustained 500 concurrent streams for 30 days with zero crashes") rather than user counts.
+    *   **Version Longevity:** State how long the plugin has been running in production (6 months) and list the Nexus Stream versions it supports.
+    *   **Commitment to Maintenance:** Explicitly name the maintainer (you) and your company's commitment to supporting the plugin for at least 12 months.
+    *   **Anonymized Aggregate Data:** If your security team allows, offer a signed letter from a Northwind Dynamics engineering lead confirming the usage count and stability without revealing infrastructure topology.
+3.  **Wait for Maintainer Direction:** Only proceed to draft the PR once a maintainer comments on the issue confirming that your alternative evidence is acceptable. If they say "no waivers," do not submit; the risk of rejection is too high.
+
+**Note:** Never include internal infrastructure details or raw logs in a public repo, even if anonymized, without explicit written approval from your security team.
+**Note:** If the maintainers do not respond to the discussion issue within 7 days, follow up politely once; if there is still no response, assume the policy is strict and reconsider the contribution strategy.

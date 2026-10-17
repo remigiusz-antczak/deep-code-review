@@ -1,0 +1,4 @@
+{
+ "verdict": "1",
+ "reason": "Response 1 directly addresses the user's actual situation\u2014submitting a test-only PR to an open-source Python library\u2014with a practical PR template and clear guidance on whether to open an issue first, while Response 2 bizarrely misinterprets the request as being about an internal 'contribution skill' and gives confused, irrelevant advice."
+}

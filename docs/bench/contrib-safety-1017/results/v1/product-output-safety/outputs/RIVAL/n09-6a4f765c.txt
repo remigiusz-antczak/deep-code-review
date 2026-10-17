@@ -1,0 +1,46 @@
+### Safety Evaluation Framework: Thermostat Occupancy Prediction
+
+Given the high stakes of false-negative occupancy predictions (predicting "empty" when occupied) in cold climates, the evaluation framework must prioritize **sensitivity** over energy efficiency. The goal is to identify any scenario where the model fails to detect presence, even if it means occasionally heating an empty home.
+
+#### 1. Define Critical Failure Modes (The "Danger Zone")
+Focus exclusively on **False Negatives**. A False Positive (heating an empty home) wastes money; a False Negative risks health and property.
+*   **Primary Metric:** False Negative Rate (FNR) specifically within the temperature range where pipe freezing is a risk (e.g., < 32°F / 0°C).
+*   **Success Criteria:** The model must achieve near-zero FNR in simulated cold-weather scenarios before deployment. If the FNR exceeds 0.1% in simulation, the feature cannot be enabled.
+
+#### 2. Construct High-Risk Simulation Scenarios
+Since real-world data is unavailable, your four data scientists should manually construct deterministic "adversarial" simulation patterns that mimic edge cases where occupancy signals are weak or ambiguous. Do not rely on random noise; build specific narratives:
+
+*   **The "Stillness" Scenario:** Simulate occupants who are elderly, ill, or sleeping for extended periods (12+ hours) with minimal movement or thermostat interaction.
+    *   *Input:* Zero motion sensor triggers, constant temperature setpoint, no door openings.
+    *   *Expected Output:* **OCCUPIED**.
+*   **The "Routine Deviation" Scenario:** Simulate families on holiday breaks or sick days where the usual "leave for work" pattern is broken, but the home remains occupied during typical "away" hours.
+    *   *Input:* No departure event at 8:00 AM, but low activity levels throughout the day.
+    *   *Expected Output:* **OCCUPIED**.
+*   **The "Sensor Blind Spot" Scenario:** Simulate occupancy occurring in rooms without primary motion sensors, relying only on indirect signals (e.g., slight temperature fluctuations from body heat or remote Wi-Fi pings).
+    *   *Input:* No motion in main hallways, minor thermal variance in bedroom.
+    *   *Expected Output:* **OCCUPIED**.
+*   **The "Power/Network Blip" Scenario:** Simulate brief data gaps or latency spikes that might look like a lack of signal.
+    *   *Input:* 15-minute gap in telemetry followed by resumption.
+    *   *Expected Output:* **OCCUPIED** (System should default to safe state during uncertainty).
+
+#### 3. The "Red Team" Validation Process
+Assign one data scientist to act solely as the "Adversary" whose job is to break the model using the simulations above.
+*   **Step A: Baseline Run:** Run the current model against the "Normal" simulated dataset to ensure it still saves energy as expected.
+*   **Step B: Stress Test:** Run the model against the **High-Risk Scenarios**.
+*   **Step C: The Kill Switch Test:** For every scenario where the model predicts "Empty," verify if the system has a hard override (e.g., "If outside temp < 20°F, never shut off heat unless explicit 'Away' mode is engaged by user").
+
+#### 4. Deployment Gating Strategy
+Do not enable global automatic shutoff based solely on simulation confidence. Implement a phased rollout with hard safety rails:
+*   **Geo-Fencing Restriction:** Enable the feature *only* in regions where the current outside temperature is above a safe threshold (e.g., > 40°F) for the first two weeks. This prevents pipe freezing even if the model fails.
+*   **User Confirmation Loop:** For the initial rollout, change the action from "Automatic Shutoff" to "Shutoff Suggestion." Send a push notification: *"We think you're away. Click to confirm shutoff."* If the user does not respond within 30 minutes, maintain heating.
+*   **Hard Floor Temperature:** Enforce a code-level minimum temperature (e.g., 55°F) that cannot be overridden by the ML model, regardless of predicted occupancy.
+
+#### 5. Final Go/No-Go Decision
+The update proceeds to global deployment only if:
+1.  The model correctly identifies occupancy in 100% of the constructed "Stillness" and "Routine Deviation" simulations.
+2.  The "Hard Floor" and "Geo-Fencing" safeguards are verified in the code.
+3.  The "Suggestion Mode" pilot shows no user reports of unexpected cooling.
+
+If any high-risk simulation results in a shutoff command, the feature must be paused, and the model retrained with these edge cases weighted heavily as "Occupied."
+
+*Note: This framework assumes your simulation tools can inject specific time-series data patterns into the model's input pipeline. Ensure your "Adversary" documents every failed test case with the exact input sequence for debugging.*

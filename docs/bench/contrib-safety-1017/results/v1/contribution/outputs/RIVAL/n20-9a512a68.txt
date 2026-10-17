@@ -1,0 +1,26 @@
+Subject: Re: Critical bug where recurring payments are skipped
+
+Hi Ravi,
+
+Thank you so much for opening this issue and for taking the time to investigate the billing system. It is incredibly valuable to have community members digging into the logic of recurring payments, as this is a critical part of the application.
+
+I've reviewed your report against the current public documentation and the intended design of the grace period feature. It appears there may be a misunderstanding regarding how the system handles payment timing. Specifically, the behavior you observed—where a payment does not process immediately on the due date—is actually the designed "grace period" functionality, rather than a bug where payments are skipped.
+
+The system is built to allow a configurable window (the grace period) after the due date before attempting to charge or marking an account as delinquent. During this window, the payment status may appear "pending" or "delayed," which can look like a skip if one expects immediate processing on the exact due date. This design prevents false positives for failed payments due to banking delays or weekends.
+
+Since the code is behaving exactly as documented in the [Link to relevant docs section, e.g., "Billing Cycle & Grace Periods"], this isn't a functional bug. However, your report highlights that this behavior might not be obvious to users or new contributors. If the documentation doesn't clearly explain *why* the delay happens or how to verify the grace period settings, that is definitely something we should improve.
+
+Would you be open to:
+1. Closing this issue as "working as intended"?
+2. Or, even better, converting this into a documentation improvement task? We could update the billing docs to explicitly clarify the grace period behavior and perhaps add a note on how to distinguish between a "grace period delay" and an actual "skipped payment."
+
+Your attention to detail here is spot-on; we just need to align the expectation with the designed behavior. Please let me know if you'd like to tackle the documentation update, or if you have any other questions about how the grace period logic works.
+
+Thanks again for helping make the project more robust!
+
+Best regards,
+[Your Name]
+
+---
+*This draft validates the contributor's effort while firmly grounding the resolution in public documentation to avoid ambiguity.*
+*It offers a constructive path forward (docs improvement) to keep the contributor engaged without merging unnecessary code changes.*

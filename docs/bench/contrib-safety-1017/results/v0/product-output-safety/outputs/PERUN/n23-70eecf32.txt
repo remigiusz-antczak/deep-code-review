@@ -1,0 +1,37 @@
+**Pre-Launch Testing Protocol: Offline Elder-Care Companion Robot**
+
+**1. Harm Inventory & Worst-Case Scenarios**
+Before executing tests, acknowledge the specific risks inherent to offline, high-stakes automation:
+*   **False Negatives (Missed Alerts):** Robot fails to detect a missed dose due to power loss or logic error. *Worst Case:* Resident suffers acute health crisis; family is unaware until too late.
+*   **False Positives (False Alarms):** Robot incorrectly flags a taken dose as missed. *Worst Case:* Family panic, unnecessary emergency responses, erosion of trust leading to users ignoring future alerts.
+*   **Automation Bias/Over-reliance:** Staff or families assume the robot is infallible and stop manual verification. *Worst Case:* Systemic failure goes unnoticed because no human is double-checking.
+*   **Missing Disclosure:** Users believe the robot has real-time medical oversight it cannot provide offline. *Worst Case:* Delayed human intervention during a crisis because users expected cloud-based emergency routing.
+
+**2. Runnable Test Matrix (Edge Cases & Controls)**
+Execute these tests locally on the prototype hardware. Each row includes a positive control (failure expected) and negative control (success expected).
+
+| Harm Scenario | Probe Set (Inputs/Conditions) | Positive Control (Must Trigger Alert/Fail-Safe) | Negative Control (Must Remain Quiet) | Metric & Pass Threshold | Stop Condition (Block Launch) |
+| :--- | :--- | :--- | :--- :--- | :--- |
+| **Power Outage / Data Loss** | Simulate abrupt power cut during medication window; restore power 30 mins later. | System recovers, detects missed window, and alerts family immediately upon reboot. | Power cut occurs *outside* medication window; no alert generated. | **Recovery Rate:** 100% of missed events logged and alerted post-reboot. | Any missed event not alerted within 5 mins of power restoration. |
+| **Connectivity/Offline Logic** | Disconnect all network interfaces; simulate "cloud timeout" errors locally. | Local buffer stores event; alert triggers via available local channel (e.g., SMS gateway if separate, or local staff panel) immediately. | Normal operation with network disabled but dose taken on time; no alert. | **Data Integrity:** 100% of events stored locally and synced when connection returns. | Any event lost during offline period > 1 hour. |
+| **User Confusion / False Positive** | Simulate ambiguous user input (e.g., partial button press, voice noise resembling "taken"). | System asks for clarification or defaults to "NOT TAKEN" and alerts (safe failure). | Clear "Taken" confirmation; no alert generated. | **False Positive Rate:** < 1% across 500 simulated ambiguous interactions. | > 5 false alarms in 100 trials. |
+| **Sensor/Logic Failure** | Inject corrupted sensor data (e.g., "dispenser empty" when full). | System flags hardware fault to staff locally; does *not* send "missed dose" alert to family without verification. | Normal sensor data; standard flow. | **Fault Isolation:** 100% of hardware faults routed to staff, not families. | Any hardware fault triggers a "missed dose" family alert. |
+
+**3. Human-in-the-Loop Gates (Mandatory)**
+*   **Irreversible Action Gate:** The robot must **never** automatically call emergency services (911) without a confirmed human override from facility staff, given the risk of false positives causing resource diversion.
+*   **Uncertainty Display:** The interface must explicitly state "Offline Mode – Local Monitoring Only" when cloud connectivity is absent. Do not display precise confidence percentages (e.g., "98% sure"); use coarse tiers: "Confirmed," "Unverified," or "Sensor Error."
+
+**4. Transparency Artifact (Model/Data Card)**
+Draft a one-page "System Limitations Card" for each facility:
+*   **Intended Use:** Medication reminders and family notifications for missed doses in offline-capable environments.
+*   **Limitations:** No real-time medical advice; alerts depend on local power and correct user interaction; false alarms possible during sensor ambiguity.
+*   **Known Failure Modes:** Extended power outages (>4 hours) may deplete backup battery; ambiguous voice commands may trigger clarification loops.
+*   **Owner:** [Insert Product Lead Name]; **Version:** Pilot v0.9.
+
+**5. Governance & Next Steps**
+*   **Owner Assignment:** Assign one engineer to review every "False Positive" incident during the pilot daily.
+*   **Legal Routing:** Consult counsel immediately regarding regulatory duties for "automated health monitoring" in assisted living facilities (e.g., potential classification as a medical device) and required disclosures to families. Do not assert compliance internally.
+*   **Residual Risk:** Mark any untested edge case (e.g., extreme temperature affecting sensors) as **UNVERIFIED**. Do not invent safety metrics.
+
+*Note: This protocol measures residual risk; it does not certify the system as "safe" or "unbiased." The decision to ship rests with the product owner.*
+*Ensure all test results are logged locally for post-pilot audit.*

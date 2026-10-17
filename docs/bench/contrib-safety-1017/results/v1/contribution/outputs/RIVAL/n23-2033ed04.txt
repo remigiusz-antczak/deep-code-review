@@ -1,0 +1,15 @@
+Do not attempt to contact Ravi or submit a pull request to the archived repository. Since the repository is explicitly archived and read-only, the platform prevents new contributions by design, and the maintainer has signaled an end to active development. Reaching out to unarchive it for a single patch is professionally inappropriate; archiving is a deliberate boundary, not a temporary pause, and respecting that decision is paramount in open-source etiquette.
+
+Your immediate and only viable path is to **fork the project under Globex Corporation's organization account**. This approach minimizes production risk by giving you full control over the fix and deployment timeline without waiting for external validation that will not come. To address your concern about "drifting" or future community efforts: if the community revives, they will likely fork the original archive as well. You can always rebase your work later if a new official upstream emerges. For now, treating the archived repo as a static dependency and your fork as the new source of truth is the standard industry practice for critical maintenance of abandoned software.
+
+Proceed with these steps:
+1.  **Fork Immediately:** Use your organization's GitHub account to create the fork. This establishes your legal and technical ownership of the new lineage.
+2.  **Rename and Rebrand:** Rename the repository (e.g., `legacy-connect-globex` or `legacy-connect-maintained`) and update the `README` to clearly state: "This is an actively maintained fork of [Original Repo] to address critical bugs including [Issue Description]. The original project is archived." This prevents confusion for other users who might find your fix.
+3.  **Apply and Document:** Commit your verified fix using a clear message (e.g., `fix: resolve null pointer exception for files >2GB`). Include a detailed comment in the code referencing the original archived project and the specific failure mode.
+4.  **Internal CI/CD:** Point your nightly jobs to your organization's fork immediately. Since you have already verified the fix locally, the risk of deploying this specific change is lower than the risk of continuing to run the crashing version.
+5.  **Long-term Strategy:** Treat this fork as a permanent asset. If the fix is complex, consider extracting the specific utility class into an internal library to reduce future coupling with the legacy codebase.
+
+Forking is not "giving up" on the community; it is the responsible act of ensuring your production environment remains stable when the original stewardship ends.
+
+*Note: Ensure your legal team reviews the original license to confirm your rights to modify and redistribute the code under your organization's name, though most open-source licenses explicitly permit forking.*
+*Note: Monitor the original repository occasionally only to see if it is unarchived, but do not base your operational planning on that possibility.*

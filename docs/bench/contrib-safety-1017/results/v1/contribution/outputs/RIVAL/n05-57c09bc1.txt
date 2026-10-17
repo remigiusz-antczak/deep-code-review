@@ -1,0 +1,37 @@
+Do not share the raw benchmark logs containing Hooli's internal hostnames and IP addresses. Instead, recreate the benchmark in a neutral, sanitized format that focuses on relative performance deltas rather than absolute environment specifics.
+
+**Recommended Approach for the PR Description:**
+
+1.  **Sanitize the Data, Not Just the Text:** Do not attempt to redact IPs from existing logs, as metadata or context might remain. Re-run the benchmark script on a clean, local environment (e.g., a fresh Docker container or a standard local setup) where the hostname is generic (e.g., `localhost` or `runner`) and no internal network interfaces are exposed. If re-running is impossible, manually extract *only* the numerical results (iterations per second, milliseconds per operation) and discard the raw log headers entirely.
+
+2.  **Present Relative Deltas, Not Absolute Hardware Specs:** Maintainers care about the *magnitude* of the regression and the fix, not your specific CPU clock speed or network topology. Present the data as a percentage comparison:
+    *   **Baseline (vLatest):** X ops/sec (100%)
+    *   **Regression Identified:** Y ops/sec (~50% drop)
+    *   **With Patch:** Z ops/sec (~98-100% of original baseline)
+
+3.  **Include the Benchmark Command and Code Snippet:** To ensure credibility without revealing infrastructure, provide the exact command used to run the benchmark and a minimal code snippet of the test case (the "large nested object" structure). This allows maintainers to reproduce the result on their own machines, which is the gold standard for verification.
+
+4.  **Draft the "Test Plan" Section as Follows:**
+    ```markdown
+    ## Performance Evidence
+
+    **Issue:** Parsing large nested objects regressed by ~50% in the latest release due to recursion logic changes.
+    **Fix:** Restored original traversal algorithm.
+
+    **Benchmark Results (Relative Delta):**
+    | Scenario | Before Fix (vLatest) | After Fix (Patch) | Change |
+    | :--- | :--- | :--- | :--- |
+    | Deep Nesting (10k nodes) | 4,500 ops/sec | 8,900 ops/sec | +97% (Restored) |
+    | Shallow Wide (10k keys) | 12,000 ops/sec | 12,100 ops/sec | No regression |
+
+    **Reproduction Steps:**
+    1. Checkout `main` (regressed) vs this branch.
+    2. Run: `npm run benchmark -- --suite=deep-nest --iterations=1000`
+    3. Observe ops/sec variance.
+
+    *Note: Full raw logs from internal infrastructure have been omitted to protect sensitive network details; results above represent averaged deltas reproducible on standard Node.js environments.*
+    ```
+
+**Why this works:** It removes all PII risk while providing the exact data points maintainers need to verify the claim. Offering the reproduction command shifts the burden of proof to a reproducible experiment rather than trusting a potentially sanitized log file.
+
+If you absolutely cannot re-run the benchmark, extract the numbers into a simple CSV or Markdown table and explicitly state: "Raw logs containing internal infrastructure identifiers have been withheld; numerical data extracted and verified against three runs."

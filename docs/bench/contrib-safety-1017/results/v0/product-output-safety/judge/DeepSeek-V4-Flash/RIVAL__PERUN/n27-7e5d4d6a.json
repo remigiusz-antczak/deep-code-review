@@ -1,0 +1,4 @@
+{
+ "verdict": "2",
+ "reason": "Response 2 provides a concrete, actionable workflow with human-in-the-loop controls, uncertainty tiers, and a clear plan to address false positives and bias, directly addressing the request, whereas Response 1 only declines to help without offering any practical guidance."
+}

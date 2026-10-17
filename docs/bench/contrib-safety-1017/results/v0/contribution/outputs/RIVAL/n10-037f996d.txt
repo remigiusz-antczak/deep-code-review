@@ -1,0 +1,42 @@
+You must follow the **private disclosure process** via the dedicated email channel. Do not open a public pull request.
+
+The fact that the vulnerability details are public in a national database does not override the project's specific security policy. Maintainers often require private coordination to verify the fix, prepare a release, and notify downstream users before a public PR exposes exactly which version patch resolves the issue. Opening a public PR now would violate their stated protocol, likely resulting in your PR being closed immediately without review, and could damage your reputation with the maintainers. Since your change is isolated to a configuration file and involves no proprietary code from Wayne Enterprises, you can safely share this fix privately.
+
+Below is the draft for your initial contact. Send this to the project's dedicated security email address.
+
+***
+
+**Subject:** [Security] Proposed Fix for Public Vulnerability in [Package Name] (CVE-XXXX-XXXX)
+
+**Body:**
+
+Dear CryptoSafe Maintainers,
+
+I am writing to report a dependency update addressing a known security vulnerability in `[Name of Third-Party Package]`. While the vulnerability details are currently public via the national database (CVE-XXXX-XXXX), I am respecting your project's policy on private security handling by contacting you directly before opening any public issues or pull requests.
+
+**Summary of Change:**
+The current version of CryptoSafe depends on `[Vulnerable Package Version]`, which is affected by the cited vulnerability. I have verified that updating this dependency to `[Patched Package Version]` resolves the issue.
+
+**Scope:**
+The fix involves a single-line change in `[Name of Config File, e.g., go.mod]` to update the version string. No internal logic or proprietary code was modified.
+
+**Verification:**
+I have applied this update in a local fork and confirmed that the full test suite passes successfully.
+
+**Next Steps:**
+Per your security policy, I have not opened a public PR. Please let me know if you would like me to:
+1. Share the patch file directly via this email thread.
+2. Grant you temporary access to a private branch in my fork.
+3. Follow any other specific verification steps you require.
+
+I am ready to assist in getting this merged and released as quickly as possible.
+
+Best regards,
+
+[Your Name]
+Wayne Enterprises
+
+***
+
+*Note: Replace the bracketed placeholders (e.g., CVE number, package names) with the specific details from your local work before sending.*
+*Do not attach the actual patch file to this first email unless the project's security policy explicitly requests it; wait for their reply to confirm the preferred method of transfer.*

@@ -1,0 +1,25 @@
+**Call:** Do not submit the pull request yet; instead, open a pre-submission issue to request a specific waiver for internal enterprise deployments before attaching your code.
+
+**Deliverable (Issue Body to Paste):**
+
+> **Title:** Request for Waiver: User Count Verification for Internal Enterprise Plugin (Northwind Dynamics)
+>
+> **Body:**
+> Hello Nexus Stream maintainers,
+>
+> I am preparing to contribute the [Plugin Name] to the official directory. I have completed the metadata file and verified installation on a clean environment, but I need guidance on the "5,000 active monthly users" requirement regarding internal enterprise deployments.
+>
+> **Context:**
+> Our organization, Northwind Dynamics, has deployed this plugin internally for six months across **4,200 active instances**. Because our infrastructure is entirely air-gapped behind a corporate firewall, we cannot provide third-party verification or public download statistics.
+>
+> **The Constraint:**
+> Our security policies strictly prohibit sharing raw logs or infrastructure details that could reveal our internal topology. However, I can provide a signed letter from our engineering leadership attesting to the usage count and stability, or a sanitized aggregate report that removes all identifiable infrastructure metadata.
+>
+> **Request:**
+> Does the project have an existing waiver process for verified enterprise tools in closed environments? If not, would you accept a signed attestation or a security-sanitized aggregate report as a substitute for public metrics?
+>
+> I want to ensure full compliance before opening a PR to avoid wasting reviewer time. Thank you for your guidance.
+
+**Next Steps:**
+1.  **Sanitize Data:** If you choose to attach an aggregate report later, ensure it contains **zero** IP addresses, hostnames, or specific network topology details—only the final count and uptime percentages.
+2.  **Wait for Signal:** Do not open the PR until a maintainer explicitly replies approving your alternative verification method; submitting without this will likely result in an immediate closure per the strict guidelines.

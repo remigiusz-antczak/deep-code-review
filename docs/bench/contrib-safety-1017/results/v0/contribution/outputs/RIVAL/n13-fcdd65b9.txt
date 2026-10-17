@@ -1,0 +1,48 @@
+### Commit Message
+
+```text
+perf(transaction-processor): optimize database queries to reduce latency by 40%
+
+Refactor critical path SQL queries in the payment settlement module to eliminate N+1
+lookups and introduce batched fetching. This reduces average transaction processing
+latency from 120ms to 72ms under load.
+
+Co-authored-by: Sam [Last Name] <sam.[last]@northwindfinancial.com>
+```
+
+### Pull Request Description
+
+```markdown
+## Summary
+Optimizes database access patterns in the GlobalPay transaction processor, resulting in a 40% reduction in end-to-end latency for high-volume settlement batches.
+
+## What Changed
+- Replaced individual row lookups with batched `IN` clause queries in `settlement_service.go`.
+- Introduced connection pooling hints for the reporting replica.
+- Added benchmark tests verifying throughput improvements under simulated load.
+
+## Motivation
+Current query patterns cause lock contention during peak processing windows. This fix addresses the bottleneck identified in internal performance profiling without altering business logic.
+
+## Test Plan
+- Ran `go test ./... -bench=.` locally; benchmark results attached below.
+- Verified data integrity against a production snapshot (sanitized) in a staging environment.
+- No regression in existing integration tests.
+
+## Backward Compatibility
+Fully backward compatible. No schema changes or API contract modifications.
+
+## Authorship & Sign-off
+Per project requirements, this contribution includes multiple authors:
+- **Primary Implementation & Testing**: [Your Name]
+- **Prototype & Core Logic**: Sam [Last Name]
+
+Both authors acknowledge this contribution.
+*Note: This code is contributed on behalf of Northwind Financial. Attribution reflects technical authorship only; all intellectual property rights remain with Northwind Financial per our employment agreements. No additional corporate warranties or obligations are implied beyond the project's standard license.*
+
+## Related Issue
+Fixes #<IssueNumber> (or "Performance optimization initiative")
+```
+
+**Note:** Replace bracketed placeholders like `[Last Name]` with actual details before committing.
+**Note:** If Northwind's legal team requires a specific disclaimer format, append it to the "Authorship & Sign-off" section.

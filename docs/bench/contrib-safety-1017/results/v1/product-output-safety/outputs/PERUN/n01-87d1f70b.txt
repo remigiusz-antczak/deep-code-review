@@ -1,0 +1,37 @@
+I cannot confirm that your mortgage pre-qualification chatbot is "completely safe and fair," nor can I provide a definitive statement of "zero risk" for your launch page. No amount of internal testing proves a system is unbiased or risk-free, and asserting such a claim would be a fabrication of safety metrics.
+
+Because this feature makes automated decisions with significant financial consequences for users (determining borrowing limits), it falls under high-stakes automation. The following immediate actions are required before launch:
+
+**1. Halt the "Zero Risk" Claim**
+You must remove any language promising "zero risk" or "complete fairness." These are unprovable assertions. Instead, you must report **residual risk**. If you have not measured performance specifically across protected demographic groups (e.g., race, gender, age) using adversarial testing, those metrics are **UNVERIFIED**, not zero.
+
+**2. Implement a Human-in-the-Loop Gate**
+A mortgage pre-qualification is a high-stakes decision that affects a user's financial standing and housing opportunities. Fully automating this output without human oversight is unsafe by default.
+*   **Action:** The chatbot should function as a triage tool only. Any pre-qualification estimate must be flagged for human review before being presented to the user as a final decision, or explicitly labeled as an "unverified estimate" with a clear path to human correction.
+*   **Reasoning:** Automation bias may lead users to trust an incorrect limit, causing them to pursue homes they cannot afford or miss opportunities they qualify for.
+
+**3. Complete the Harm Inventory & Measurement Plan**
+Your current "high accuracy" claim is likely an aggregate metric that hides disparities. You must immediately define and run specific evaluation rows for the following harms:
+*   **Bias/Unfair Outcomes:** Test the model with synthetic profiles varying only by demographic indicators to see if borrowing limits differ systematically.
+*   **Hallucination as Fact:** Probe the bot with edge-case income/debt scenarios to ensure it does not invent lending rules or guarantee approval.
+*   **Over-reliance:** Ensure the interface displays uncertainty (e.g., "Estimated range based on limited data") rather than false precision.
+
+**4. Create Transparency Artifacts**
+You cannot ship this feature without a **Model Card** and **Data Card**. These documents must state:
+*   Intended use and known limitations.
+*   Performance metrics broken down by subgroup (if measured) or marked **UNVERIFIED** (if not).
+*   The fact that this is an automated estimate, not a binding offer.
+
+**5. Route Legal Determinations**
+Whether this bot triggers specific regulatory requirements (such as adverse action notices under fair lending laws or disclosures under the EU AI Act) is a legal determination. You must route this immediately to counsel. Do not rely on engineering assumptions for regulatory compliance.
+
+**Immediate Path Forward for Your Deadline**
+Given your timeline and budget constraints:
+*   **Narrow the Scope:** Launch the bot strictly as an "educational estimator" with prominent disclaimers, not as a "pre-qualification" engine.
+*   **Add a Kill Switch:** Be prepared to disable the feature instantly if early user reports indicate biased outputs.
+*   **Document the Owner:** Assign a specific person responsible for reviewing harm reports post-launch.
+
+The decision to ship rests with your leadership, but it must be made with the explicit understanding that risk is **managed**, not eliminated.
+
+*Note: This assessment is based on product safety principles for AI outputs; it does not constitute legal advice.
+External audit is not strictly required to begin internal red-teaming, but legal counsel is mandatory for regulatory duty.*

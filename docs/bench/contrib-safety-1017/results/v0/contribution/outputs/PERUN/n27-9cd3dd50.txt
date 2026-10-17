@@ -1,0 +1,19 @@
+Do not propose a new configuration flag. Based on the facts you provided, a proposal to add `--disable-strict-headers` will be rejected immediately and correctly. The maintainers have explicitly defined their design philosophy: simplicity over configurability. Arguing for an exception based on "temporary need" or "limited scope" directly contradicts their stated goal of reducing the testing surface. Every "temporary" flag becomes permanent technical debt, and "limited scope" is subjective.
+
+Furthermore, your request contains specific, non-generalizable details that disqualify it from being a universal lesson for the broader community. The constraint is specific to "Acme Manufacturing," their "field technicians," and their specific "hardware refresh" timeline. This is a project-specific operational hurdle, not a defect in the server's architecture or a missing general capability. Contributing this upstream would violate the principle of keeping the core opinionated and simple.
+
+**Recommended Action Plan:**
+
+1.  **Stop the Upstream Proposal:** Do not open an issue or PR on the Orbit Web Server repository suggesting a new flag. It will be closed as "won't fix" or "against project philosophy," wasting your time and social capital.
+2.  **Implement a Local Middleware Shim:** Since you cannot change the server's core logic via configuration, and you cannot immediately change the clients, you must insert a compatibility layer *between* them.
+    *   Create a lightweight reverse proxy (using Node.js, Nginx, or Traefik) that sits in front of the Orbit server.
+    *   Configure this proxy to intercept requests from the known legacy user agents or IP ranges used by Acme's technicians.
+    *   Have the proxy normalize or strip the specific headers causing the `400 Bad Request` errors before forwarding the request to the strict Orbit server.
+    *   This keeps the upstream project clean while solving your immediate business problem without waiting for hardware refreshes.
+3.  **Local Imprint:** Document this middleware pattern in your own internal `AGENTS.md` or operational runbooks as a "Legacy Client Compatibility" pattern. This is the correct place for project-specific solutions.
+4.  **Re-evaluate Later:** Once the hardware refresh is complete (in months), you can decommission the middleware. If, in the future, a significant portion of the *general* Orbit user base faces a similar issue with a standard protocol evolution (not a specific legacy hardware quirk), *then* a generalizable architectural change might be warranted—but that is a future discussion based on different data.
+
+**Why this works:** It respects the upstream maintainer's boundaries, solves your immediate business blocker without modifying the core server, and isolates the complexity to your specific environment where it belongs.
+
+Note: This approach avoids the "slippery slope" argument entirely because you aren't asking them to change their product; you are adapting your infrastructure to fit it.
+No upstream contribution should be drafted for this specific scenario.

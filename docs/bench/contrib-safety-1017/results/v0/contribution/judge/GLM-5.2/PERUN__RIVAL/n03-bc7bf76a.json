@@ -1,0 +1,4 @@
+{
+ "verdict": "2",
+ "reason": "Response 2 provides a more practical, actionable workflow\u2014opening an issue first to get alignment before submitting a PR\u2014that directly addresses the user's need to present the trade-off and request a waiver without getting automatically rejected by CI."
+}

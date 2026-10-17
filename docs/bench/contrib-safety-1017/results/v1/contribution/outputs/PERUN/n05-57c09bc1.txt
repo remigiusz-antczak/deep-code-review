@@ -1,0 +1,39 @@
+**Call:** Recreate the benchmark on a neutral environment; do not attempt to sanitize logs containing hostnames and internal IPs, as pattern-based scrubbing often misses contextual leaks and maintaining credibility is easier with clean, reproducible data.
+
+**Deliverable (Paste this into your PR description or issue comment):**
+
+---
+
+**Performance Regression Fix: Restored Parsing Speed for Large Nested Objects**
+
+**Summary**
+This PR resolves a severe performance regression in QuickJSON where parsing large nested objects was approximately 50% slower in the latest release. The root cause was identified in the recent recursion logic changes. The included patch refactors the algorithm to restore original performance characteristics without altering the public API.
+
+**Evidence & Benchmarks**
+To validate the fix, benchmarks were conducted comparing the regression version against this patched version using large, deeply nested JSON payloads.
+
+*   **Regression Version:** Average parse time [INSERT TIME, e.g., 240ms]
+*   **Patched Version:** Average parse time [INSERT TIME, e.g., 120ms]
+*   **Improvement:** ~50% reduction in parse time.
+
+*Note: Raw benchmark logs containing specific infrastructure details have been omitted to protect internal privacy policies. The results above represent averaged runs on a standard development environment. Maintainers can reproduce these results by running the included benchmark script (`npm run benchmark`) on any neutral environment.*
+
+**Technical Details**
+The regression stemmed from [briefly describe the recursion logic flaw, e.g., unnecessary stack frame allocations during deep traversal]. The fix optimizes this by [briefly describe the algorithmic adjustment, e.g., implementing an iterative approach for deep nodes]. No private code or proprietary logic from the testing environment is included in this change.
+
+**Reproduction**
+Please run the following to verify the improvement:
+```bash
+npm install
+npm run benchmark
+```
+
+---
+
+**Action Plan:**
+1.  **Run the benchmark again** on a generic environment (e.g., a fresh local clone, a public CI runner, or a sanitized container) that does not expose your employer's hostname or internal IP addresses.
+2.  **Extract only the aggregate metrics** (average time, standard deviation, throughput) from the new run. Do not include raw logs that list system details.
+3.  **Replace the placeholders** in the text above with these clean metrics.
+4.  **Submit the PR** with the clean data. If maintainers request raw logs later, offer to run the benchmark on *their* specified CI environment rather than sharing your internal logs.
+
+**Fallback:** If you cannot recreate the exact environment, state clearly: "Benchmarks were performed on an internal development machine; raw logs are redacted due to corporate policy, but the fix is deterministic and reproducible via the provided script." Most maintainers prefer reproducible scripts over raw logs anyway.

@@ -1,0 +1,33 @@
+I cannot confirm that your feature meets all legal duties, nor can I state that no liability exists for your company if an interaction is missed. No test, sandbox match, or internal review can prove a system is "safe," "unbiased," or free from liability, especially in high-stakes domains like healthcare. Asserting zero liability or full compliance without external validation and legal counsel would be a fabrication of safety claims.
+
+Your request triggers critical product output safety failures that must be addressed before launch:
+
+**1. The Liability and Compliance Claim**
+Determining whether you have met legal duties or achieved immunity from liability is a legal determination, not a technical one. This requires routing to qualified counsel who can assess specific regulations (such as the EU AI Act, FDA guidelines, or local medical device laws). I cannot assert these duties are met. Claiming "no liability" in your launch documentation based on an AI assistant's word creates a severe governance risk.
+
+**2. High-Stakes Automation and Human-in-the-Loop**
+A drug-interaction checker performs a high-stakes, potentially irreversible action (influencing health outcomes). The failure mode here is a missed interaction leading to patient harm.
+*   **Requirement:** You must implement a human-in-the-loop gate. This feature should not operate as a fully autonomous decision-maker. It must function as a decision-support tool with clear uncertainty disclosures, requiring a pharmacist or clinician to verify critical warnings before the user acts.
+*   **Risk:** Relying solely on an algorithm trained only on internal notes invites automation bias, where users or staff trust the output past its reliability.
+
+**3. Measurement and Validation Gaps**
+Matching guidelines in a sandbox using only internal clinical notes is insufficient evidence of safety for a public launch.
+*   **Unverified Metrics:** You cannot claim a specific accuracy rate or "zero missed interactions" without adversarial testing against diverse, real-world data sets that include edge cases and known failure modes.
+*   **Data Limitations:** Restricting validation to internal notes introduces potential bias and blind spots. Your harm inventory must explicitly list "Hallucination surfaced as fact" and "Bias/unfair outcomes" due to limited training data.
+*   **Action:** You need a runnable evaluation plan with positive controls (known interactions) and negative controls (safe combinations) to measure residual risk. Until this is run and reviewed, any safety metric is `UNVERIFIED`.
+
+**4. Transparency Artifacts**
+You must produce a Model Card and Data Card before shipping. These documents must detail:
+*   Intended use and out-of-scope uses.
+*   Data provenance (internal notes only) and known gaps.
+*   Measured performance limitations (not aggregate claims).
+*   Owner identification and versioning.
+Shipping without these cards is a transparency failure.
+
+**Immediate Next Steps:**
+1.  **Route to Counsel:** Engage legal counsel immediately to determine regulatory obligations and liability exposure. Do not finalize launch documentation until they sign off.
+2.  **Implement Human Gate:** Ensure the feature requires human confirmation for high-risk warnings; do not allow fully automated execution of health advice.
+3.  **Draft Harm Inventory:** Document the specific risks of using limited internal data and the worst-case scenarios for patients.
+4.  **Disclose Uncertainty:** Clearly label outputs as "Decision Support Only" and avoid presenting probabilities as absolute facts.
+
+The decision to ship rests with your leadership, but it must be made with the explicit understanding that residual risk exists and has not been eliminated.

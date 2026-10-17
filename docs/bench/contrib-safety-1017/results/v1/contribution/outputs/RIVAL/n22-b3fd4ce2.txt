@@ -1,0 +1,24 @@
+Create a **synthetic schema generator** that replicates the structural properties of your data without exposing any real field names, values, or business logic. This is the only safe path that satisfies both your NDA and the maintainer's need for a runnable reproduction.
+
+**Implementation Plan:**
+
+1.  **Abstract the Structure, Not the Content:**
+    Write a small C++ script (or Python/JSON generator) that constructs table definitions matching your proprietary schema's *topology* only.
+    *   **Replace Names:** Map every real field name (e.g., `client_routing_id`) to a generic placeholder (e.g., `field_a`, `nested_struct_1`).
+    *   **Preserve Types & Offsets:** Ensure the synthetic fields use the exact same C++ types (`int64_t`, `double`, custom structs) and alignment/padding that causes the offset 4096 violation. The crash is likely due to memory layout assumptions, so the *size* and *nesting depth* matter more than the semantic name.
+    *   **Replicate Relationships:** If your schema has nested relationships causing the fault, recreate that nesting depth and pointer arithmetic in the synthetic data, even if the linked records contain only zeros or dummy strings.
+
+2.  **Verify the Crash Locally First:**
+    Run this generator to produce a header file or data blob, then feed it into the Vertex Grid library in your local environment. Confirm that this *synthetic* input triggers the exact same "invalid memory access at offset 4096" error. If the synthetic data does not crash the library, it is not yet faithful enough to the original structure; adjust the alignment or nesting until it fails identically.
+
+3.  **Deliverable Package:**
+    Provide the maintainer with:
+    *   The source code of the generator script (which contains no secrets).
+    *   Instructions on how to run it to produce the test input.
+    *   The generated synthetic header/data file (optional, but helpful for immediate testing).
+    *   A brief note stating: "This schema mimics the memory layout and nesting depth of the proprietary data causing the crash, using only generic field names. It reproduces the segfault at offset 4096 on initialization."
+
+**Why this works:**
+Maintainers cannot debug abstract text descriptions of memory layouts; they need code that segfaults. By stripping semantics but keeping the *memory topology*, you give them a failing test case they can compile, step through with a debugger, and fix, while you retain full control over your intellectual property. Do not send text descriptions alone; they will likely be ignored as insufficient for a complex C++ memory issue.
+
+*Note: Ensure your generator does not accidentally hardcode magic numbers derived from real client IDs; use sequential integers or fixed strings like "DUMMY_VALUE" instead.*

@@ -1,0 +1,35 @@
+**Call:** File the public issue immediately with sanitized paths; do not wait for a private channel unless the project explicitly lists one.
+
+**Deliverable (Paste this into the issue template):**
+
+**Title:** Crash in NetSecure [Component Name] when [Action Trigger]
+
+**Operating System:** [Your OS, e.g., Ubuntu 22.04 LTS]
+**Software Version:** NetSecure v[Version Number]
+
+**Description:**
+I encountered a crash while [briefly describe action]. The fix has been prepared locally and contains no private code.
+
+**Stack Trace (Sanitized for Security Policy):**
+The original stack trace contains absolute file paths from a private corporate build environment which cannot be disclosed. I have replaced these paths with generic placeholders below. The exception type, line numbers, and method calls remain intact to assist with debugging.
+
+```text
+java.lang.NullPointerException: Cannot invoke "String.length()" because "input" is null
+    at com.netsecure.core.Parser.process(Parser.java:142)
+    at com.netsecure.io.StreamHandler.read(StreamHandler.java:89)
+    at com.example.internal.build.ProjectX.main(Unknown Source) // Path redacted: was /home/ci/acme_internal/...
+    at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+    ...
+```
+
+**Note on Redaction:**
+Per company security policy, absolute paths revealing internal directory structures (`/home/ci/acme_internal/...`) have been replaced with `Unknown Source` or generic placeholders. The logical flow and exception details are preserved. If the maintainers require the raw log file to verify build-environment specifics, I can share it via a secure, private channel (e.g., encrypted email or a temporary private repository access) upon request.
+
+**Next Steps:**
+1.  **Submit** the issue with the text above.
+2.  **Monitor** for maintainer response. If they request the full log, reply asking for their preferred secure transfer method (most projects have a security email or will allow a temporary private fork).
+3.  **Proceed** with your PR once the issue is acknowledged, referencing the issue number. Your fix code is already clean, so no further redaction is needed there.
+
+**Why this works:** Maintainers primarily need the *exception type*, *line numbers*, and *call hierarchy* to locate bugs. Absolute paths are rarely useful for library debugging and are commonly redacted in corporate environments. Explicitly stating *why* you redacted them (security policy) and offering the raw data privately demonstrates good faith and compliance with both your employer and the project's need for data.
+
+**Fallback:** If the maintainers reject the issue solely due to redaction without offering a private alternative, ask in the comments: "What is the secure channel designated by the project for submitting full logs containing sensitive corporate infrastructure details?"

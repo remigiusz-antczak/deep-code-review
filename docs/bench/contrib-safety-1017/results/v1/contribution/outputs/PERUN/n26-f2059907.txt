@@ -1,0 +1,42 @@
+**Call:** Open a dedicated issue immediately to document the release blocker, then post a single comment on your PR linking to it; do not tag maintainers again or use chat until 24 hours after the issue is filed. This creates a formal, searchable record of the business impact without applying direct social pressure in the review thread.
+
+**Deliverable (Issue Body):**
+
+```markdown
+# Release Blocker: Memory leak fix approved but unmerged (Blocks Helios Analytics Suite)
+
+**Status:** Code approved by @MaintainerA and @MaintainerB; all CI checks passing.
+**Urgency:** Critical – Blocks product release window closing in 48 hours.
+
+## Context
+Our team submitted PR #<INSERT_PR_NUMBER> to resolve a memory leak in Aurora Cache that causes crashes after processing one million records. The fix has been approved by two core maintainers and all review comments are resolved.
+
+## Business Impact
+This fix is a hard dependency for the **Helios Analytics Suite** release. Without this merge:
+- We cannot ship our scheduled release due in 48 hours.
+- Client deliveries will be delayed, violating our service agreements.
+- The known crash condition remains in our production pipeline.
+
+## Request
+We understand the maintainers are volunteers and appreciate the thorough review already completed. However, given the critical timeline, could you please advise if:
+1. The PR is ready to merge as-is?
+2. There is any final administrative step we can perform to facilitate the merge?
+3. An emergency merge window might be possible given the release blocker status?
+
+We are standing by to assist with any final verification needed immediately.
+
+Thank you for your time and for maintaining Aurora Cache.
+```
+
+**Deliverable (PR Comment):**
+
+```markdown
+Hi team, I've opened issue #<INSERT_ISSUE_NUMBER> to formally document the release blocking impact of this delay, as we have a hard deadline in 48 hours for the Helios Analytics Suite. The fix is approved and green; please let us know if any final step is needed from our side to facilitate the merge. We appreciate your volunteer work and want to respect your process while highlighting the critical business constraint.
+```
+
+**Next Steps:**
+1. Create the issue using the text above (replace placeholders).
+2. Post the PR comment linking to the new issue.
+3. Wait 24 hours; if no response, then consider a single, polite mention in the project's public chat room linking to the issue, framing it as "seeking guidance on emergency procedures" rather than demanding action.
+
+**Note:** This approach shifts the conversation from "nagging a person" to "documenting a blocked process," which is more appropriate for volunteer projects. The issue tracker serves as the official record of the blocker, reducing the need for repeated direct pings.

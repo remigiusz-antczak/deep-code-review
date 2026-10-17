@@ -1,0 +1,33 @@
+### Recommended Approach: Proactive, Specific Disclosure
+
+Do not hide the AI usage. In a 90k-line C++ codebase, an 80% AI-generated patch will almost certainly exhibit patterns (uniform commenting style, overly verbose boilerplate, or specific structural idioms) that experienced maintainers recognize. If they detect the pattern *after* you submit without disclosure, it reads as deception, which is an immediate trust breaker. If you disclose upfront with evidence of human oversight, it reads as transparency and efficiency.
+
+Since the `CONTRIBUTING.md` is silent, you must set the norm yourself rather than waiting for them to guess. Your goal is to shift the narrative from "AI wrote this" to "I used AI to accelerate a refactor that I have fully validated."
+
+**Action Plan:**
+
+1.  **Split the PR if possible:** An 80% generated patch for a large refactor is likely too large for a single review. If the refactor touches disjoint modules, split them into smaller, logical PRs. This reduces the "AI dump" signal and makes manual verification easier for maintainers.
+2.  **Add a Dedicated Disclosure Section:** Do not bury this in a commit message. Add a clear section at the bottom of your PR description.
+3.  **Frame Around Verification, Not Generation:** Emphasize that you understand every line, have tested it against the full suite, and that the AI was a tool for speed, not a substitute for engineering judgment.
+4.  **Protect Internal Context:** You do not need to share prompts. Simply state that prompts included proprietary context which cannot be shared, but offer to walk through the logic live or via detailed comments.
+
+**Draft Disclosure Text for Your PR:**
+
+```markdown
+## AI-Assisted Contribution Disclosure
+
+While this project's guidelines do not explicitly address AI tools, I believe in full transparency regarding my workflow:
+
+- **Scope of AI Usage:** Approximately 80% of the initial draft for this refactor was generated using an AI coding assistant to accelerate boilerplate restructuring and pattern matching.
+- **Human Oversight:** I have manually reviewed every line of the generated code to ensure it aligns with BlueOcean Media's architectural standards and C++ best practices. No code was accepted without my understanding and approval.
+- **Verification:** The patch has been validated against the full existing test suite with no regressions. I am happy to explain any specific design choice or function logic in the comments.
+- **Proprietary Context:** The prompts used included internal architecture details from my employer (Acme Media) and cannot be shared publicly, but the resulting code contains no proprietary secrets.
+
+My goal was to contribute this refactor efficiently while maintaining the high quality expected of this codebase. If the maintainers prefer a different approach to AI-assisted contributions, please let me know, and I am happy to adjust.
+```
+
+**Why this works:**
+It pre-empts the "uncanny valley" critique by admitting the source, proves you aren't lazy by emphasizing line-by-line review, and offers a path forward if they have objections. It turns a potential rejection reason into a demonstration of professional integrity.
+
+Note: If maintainers push back, be prepared to iterate on the code manually; the disclosure opens the door, but code quality keeps it open.
+Do not argue about "efficiency" if they value "human-only" processes; respect their project culture over your employer's preferences.
